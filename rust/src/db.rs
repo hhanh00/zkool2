@@ -1,12 +1,7 @@
-use std::{os::unix::net, str::FromStr as _};
-
 use anyhow::Result;
-use bip32::ChildNumber;
 use rusqlite::{params, Connection};
-use zcash_keys::keys::{sapling::DiversifiableFullViewingKey, UnifiedSpendingKey};
-use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
-use zcash_protocol::consensus::Network;
-use zcash_transparent::keys::{AccountPrivKey, AccountPubKey, TransparentKeyScope};
+use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
+use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::coin;
 
@@ -56,31 +51,24 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         PRIMARY KEY (account, scope, dindex))",
         [],
     )?;
-    Ok(())
-}
 
-fn upsert_account(
-    connection: &Connection,
-    name: &str,
-    seed: Option<String>,
-    aindex: u32,
-    dindex: u32,
-    def_dindex: u32,
-    icon: Option<&[u8]>,
-    birth: u32,
-    height: u32,
-) -> Result<u32> {
-    let id = connection.query_row(
-        "INSERT INTO accounts
-         (name, seed, aindex, dindex, def_dindex, icon, birth, height, position, saved, hidden)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, FALSE, FALSE)
-         ON CONFLICT(id_account) DO UPDATE SET
-             name = excluded.name
-         RETURNING id_account",
-        params![name, seed, aindex, dindex, def_dindex, icon, birth, height],
-        |r| r.get::<_, u32>(0),
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS sapling_accounts(
+        account INTEGER PRIMARY KEY,
+        xsk BLOB,
+        xvk BLOB NOT NULL)",
+        [],
     )?;
-    Ok(id)
+
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS orchard_accounts(
+        account INTEGER PRIMARY KEY,
+        xsk BLOB,
+        xvk BLOB NOT NULL)",
+        [],
+    )?;
+
+    Ok(())
 }
 
 pub fn store_account_metadata(
@@ -165,6 +153,18 @@ pub fn store_account_transparent_vk(xvk: &AccountPubKey) -> Result<()> {
     Ok(())
 }
 
+pub fn init_account_sapling() -> Result<()> {
+    let mut c = coin!();
+    get_connection!(c, connection);
+
+    connection.execute(
+        "INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')",
+        [c.account],
+    )?;
+
+    Ok(())
+}
+
 pub fn store_account_transparent_addr(
     scope: u32,
     dindex: u32,
@@ -178,6 +178,70 @@ pub fn store_account_transparent_addr(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, pubkey, address)
         VALUES (?, ?, ?, ?, ?)",
         params![c.account, scope, dindex, pk, address],
+    )?;
+
+    Ok(())
+}
+
+pub fn store_account_sapling_sk(xsk: &ExtendedSpendingKey) -> Result<()> {
+    let mut c = coin!();
+    get_connection!(c, connection);
+
+    connection.execute(
+        "UPDATE sapling_accounts
+        SET xsk = ? WHERE account = ?",
+        params![xsk.to_bytes(), c.account],
+    )?;
+
+    Ok(())
+}
+
+pub fn store_account_sapling_vk(xvk: &DiversifiableFullViewingKey) -> Result<()> {
+    let mut c = coin!();
+    get_connection!(c, connection);
+
+    connection.execute(
+        "UPDATE sapling_accounts
+        SET xvk = ? WHERE account = ?",
+        params![xvk.to_bytes(), c.account],
+    )?;
+
+    Ok(())
+}
+
+pub fn init_account_orchard() -> Result<()> {
+    let mut c = coin!();
+    get_connection!(c, connection);
+
+    connection.execute(
+        "INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')",
+        [c.account],
+    )?;
+
+    Ok(())
+}
+
+pub fn store_account_orchard_sk(xsk: &orchard::keys::SpendingKey) -> Result<()> {
+    let mut c = coin!();
+    get_connection!(c, connection);
+
+    connection.execute(
+        "UPDATE orchard_accounts
+        SET xsk = ? WHERE account = ?",
+        params![xsk.to_bytes(), c.account],
+    )?;
+
+    Ok(())
+}
+
+pub fn store_account_orchard_vk(xvk: &orchard::keys::FullViewingKey) -> Result<()> {
+    let mut c = coin!();
+    get_connection!(c, connection);
+
+    connection.execute(
+        "UPDATE orchard_accounts
+        SET xvk = ? WHERE account = ?",
+        params![xvk.to_bytes(), c.account],
     )?;
 
     Ok(())
