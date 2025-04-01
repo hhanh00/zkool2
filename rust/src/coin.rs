@@ -1,9 +1,28 @@
-use std::sync::{Arc, Mutex};
+use std::{cell::RefCell, sync::{Arc, Mutex}};
 
 use anyhow::Result;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use zcash_protocol::consensus::Network;
+
+#[macro_export]
+macro_rules! setup {
+    ($coin: expr, $account: expr) => {
+        let coins = COINS.lock().unwrap();
+        let mut c = coins[$coin as usize].clone();
+        c.account = $account;
+        crate::coin::COIN.with(|cc| {
+            *cc.borrow_mut() = Some(c);
+        });
+    };
+}
+
+#[macro_export]
+macro_rules! get_coin {
+    () => {
+        crate::coin::COIN.with(|cc| cc.borrow().clone().unwrap())
+    };
+}
 
 #[derive(Clone)]
 pub struct Coin {
@@ -60,4 +79,8 @@ lazy_static::lazy_static! {
     pub static ref COINS: Mutex<[Coin; 2]> = Mutex::new([
         Coin::new(0, Network::MainNetwork).unwrap(),
         Coin::new(1, Network::TestNetwork).unwrap()]);
+}
+
+thread_local! {
+    pub static COIN: RefCell<Option<Coin>> = RefCell::new(None);
 }

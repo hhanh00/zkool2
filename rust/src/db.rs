@@ -3,12 +3,14 @@ use rusqlite::{params, Connection};
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::coin;
+use crate::get_coin;
 
 pub fn drop_schema(connection: &Connection) -> Result<()> {
     connection.execute("DROP TABLE IF EXISTS accounts", [])?;
     connection.execute("DROP TABLE IF EXISTS transparent_accounts", [])?;
     connection.execute("DROP TABLE IF EXISTS transparent_address_accounts", [])?;
+    connection.execute("DROP TABLE IF EXISTS sapling_accounts", [])?;
+    connection.execute("DROP TABLE IF EXISTS orchard_accounts", [])?;
 
     Ok(())
 }
@@ -101,7 +103,7 @@ macro_rules! get_connection {
 }
 
 pub fn store_account_seed(phrase: &str, aindex: u32) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -116,7 +118,7 @@ pub fn store_account_seed(phrase: &str, aindex: u32) -> Result<()> {
 }
 
 pub fn init_account_transparent() -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -128,7 +130,7 @@ pub fn init_account_transparent() -> Result<()> {
 }
 
 pub fn store_account_transparent_sk(xsk: &AccountPrivKey) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -141,7 +143,7 @@ pub fn store_account_transparent_sk(xsk: &AccountPrivKey) -> Result<()> {
 }
 
 pub fn store_account_transparent_vk(xvk: &AccountPubKey) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -154,7 +156,7 @@ pub fn store_account_transparent_vk(xvk: &AccountPubKey) -> Result<()> {
 }
 
 pub fn init_account_sapling() -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -171,7 +173,7 @@ pub fn store_account_transparent_addr(
     pk: &[u8],
     address: &str,
 ) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -184,7 +186,7 @@ pub fn store_account_transparent_addr(
 }
 
 pub fn store_account_sapling_sk(xsk: &ExtendedSpendingKey) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -197,7 +199,7 @@ pub fn store_account_sapling_sk(xsk: &ExtendedSpendingKey) -> Result<()> {
 }
 
 pub fn store_account_sapling_vk(xvk: &DiversifiableFullViewingKey) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -210,7 +212,7 @@ pub fn store_account_sapling_vk(xvk: &DiversifiableFullViewingKey) -> Result<()>
 }
 
 pub fn init_account_orchard() -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -222,7 +224,7 @@ pub fn init_account_orchard() -> Result<()> {
 }
 
 pub fn store_account_orchard_sk(xsk: &orchard::keys::SpendingKey) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -235,7 +237,7 @@ pub fn store_account_orchard_sk(xsk: &orchard::keys::SpendingKey) -> Result<()> 
 }
 
 pub fn store_account_orchard_vk(xvk: &orchard::keys::FullViewingKey) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute(
@@ -248,7 +250,7 @@ pub fn store_account_orchard_vk(xvk: &orchard::keys::FullViewingKey) -> Result<(
 }
 
 pub fn update_dindex(dindex: u32, update_default: bool) -> Result<()> {
-    let mut c = coin!();
+    let mut c = get_coin!();
     get_connection!(c, connection);
 
     connection.execute("UPDATE accounts SET dindex = ? WHERE id_account = ?", 
