@@ -1,19 +1,32 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use bip32::{secp256k1::sha2::{Digest as _, Sha256}, PublicKey as _};
+use bip32::{
+    secp256k1::sha2::{Digest as _, Sha256},
+    PublicKey as _,
+};
 use flutter_rust_bridge::frb;
 use orchard::keys::FullViewingKey;
+use sapling_crypto::PaymentAddress;
+use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
-    encoding::AddressCodec,
-    keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
+    address::UnifiedAddress, encoding::AddressCodec, keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey}
 };
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
-use zcash_protocol::consensus::{Network, NetworkConstants};
+use zcash_protocol::consensus::{Network, NetworkConstants, Parameters};
 use zcash_transparent::keys::{NonHardenedChildIndex, TransparentKeyScope};
 
 use crate::{
-    bip38, coin::COINS, db::{create_schema, init_account_orchard, init_account_sapling, init_account_transparent, store_account_metadata, store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk, store_account_sapling_vk, store_account_seed, store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk, update_dindex}, get_coin, setup
+    bip38,
+    coin::COINS,
+    db::{
+        create_schema, init_account_orchard, init_account_sapling, init_account_transparent,
+        store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
+        store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
+        store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
+        update_dindex,
+    },
+    get_coin, setup,
 };
 
 #[frb(sync)]
@@ -73,9 +86,12 @@ pub fn put_account_seed(coin: u8, id: u32, phrase: &str, aindex: u32) -> Result<
     store_account_transparent_sk(tsk)?;
     let tvk = &tsk.to_account_pubkey();
     store_account_transparent_vk(tvk)?;
-    let tpk = tvk.derive_address_pubkey(
-        TransparentKeyScope::EXTERNAL,
-        NonHardenedChildIndex::from_index(dindex).unwrap()).unwrap();
+    let tpk = tvk
+        .derive_address_pubkey(
+            TransparentKeyScope::EXTERNAL,
+            NonHardenedChildIndex::from_index(dindex).unwrap(),
+        )
+        .unwrap();
     let taddr = ua.transparent().unwrap();
     store_account_transparent_addr(
         0,
@@ -106,10 +122,9 @@ pub fn put_account_sapling_secret(coin: u8, id: u32, esk: &str) -> Result<u32> {
     let c = get_coin!();
     let network = c.network;
 
-
     let xsk = zcash_keys::encoding::decode_extended_spending_key(
         network.hrp_sapling_extended_spending_key(),
-        esk
+        esk,
     )?;
     init_account_sapling()?;
     store_account_sapling_sk(&xsk)?;
@@ -128,8 +143,9 @@ pub fn put_account_sapling_viewing(coin: u8, id: u32, evk: &str) -> Result<u32> 
 
     let xvk = zcash_keys::encoding::decode_extended_full_viewing_key(
         network.hrp_sapling_extended_full_viewing_key(),
-        evk
-    )?.to_diversifiable_full_viewing_key();
+        evk,
+    )?
+    .to_diversifiable_full_viewing_key();
     init_account_sapling()?;
     store_account_sapling_vk(&xvk)?;
 
@@ -143,17 +159,19 @@ pub fn put_account_unified_viewing(coin: u8, id: u32, uvk: &str) -> Result<u32> 
     let c = get_coin!();
     let network = c.network;
 
-    let uvk = UnifiedFullViewingKey::decode(&network, uvk)
-        .map_err(|_| anyhow!("Invalid Key"))?;
+    let uvk = UnifiedFullViewingKey::decode(&network, uvk).map_err(|_| anyhow!("Invalid Key"))?;
     let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
     let dindex: u32 = di.try_into()?;
 
     if let Some(tvk) = uvk.transparent() {
         init_account_transparent()?;
         store_account_transparent_vk(tvk)?;
-        let tpk = tvk.derive_address_pubkey(
-            TransparentKeyScope::EXTERNAL,
-            NonHardenedChildIndex::from_index(dindex).unwrap()).unwrap();
+        let tpk = tvk
+            .derive_address_pubkey(
+                TransparentKeyScope::EXTERNAL,
+                NonHardenedChildIndex::from_index(dindex).unwrap(),
+            )
+            .unwrap();
         let address = ua.transparent().unwrap();
         store_account_transparent_addr(0, dindex, &tpk.serialize(), &address.encode(&network))?;
     }
@@ -172,7 +190,6 @@ pub fn put_account_unified_viewing(coin: u8, id: u32, uvk: &str) -> Result<u32> 
 
 pub fn put_account_transparent_secret(coin: u8, id: u32, sk: &str) -> Result<u32> {
     setup!(coin, id);
-
     let c = get_coin!();
     let network = c.network;
 
@@ -188,6 +205,77 @@ pub fn put_account_transparent_secret(coin: u8, id: u32, sk: &str) -> Result<u32
     store_account_transparent_addr(0, 0, &pubkey, &address)?;
 
     Ok(id)
+}
+
+#[frb(sync)]
+pub fn get_account_ufvk(coin: u8, id: u32) -> Result<String> {
+    setup!(coin, id);
+    let c = get_coin!();
+    let network = c.network;
+
+    let ufvk = crate::key::get_account_ufvk()?;
+    Ok(ufvk.encode(&network))
+}
+
+#[frb(sync)]
+pub fn ua_from_ufvk(coin: u8, ufvk: &str, di: Option<u32>) -> Result<String> {
+    setup!(coin, 0);
+    let c = get_coin!();
+    let network = c.network;
+
+    let ufvk = UnifiedFullViewingKey::decode(&network, ufvk)
+        .map_err(|_| anyhow!("Invalid Key"))?;
+    let ua = match di {
+        Some(di) => ufvk.address(di.into(), UnifiedAddressRequest::AllAvailableKeys)?,
+        None => ufvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?.0,
+    };
+
+    Ok(ua.encode(&network))
+}
+
+#[frb(sync)]
+pub fn receivers_from_ua(coin: u8, ua: &str) -> Result<Receivers> {
+    setup!(coin, 0);
+    let c = get_coin!();
+    let network = c.network;
+
+    let (net, ua) = zcash_address::unified::Address::decode(ua)?;
+    if net != network.network_type() {
+        anyhow::bail!("Invalid Network");
+    }
+    
+    let mut receivers = Receivers::default();
+    for item in ua.items() {
+        match item {
+            zcash_address::unified::Receiver::P2pkh(pkh) => {
+                let taddr = TransparentAddress::PublicKeyHash(pkh);
+                receivers.taddr = Some(taddr.encode(&network));
+            },
+            zcash_address::unified::Receiver::P2sh(sh) => {
+                let taddr = TransparentAddress::ScriptHash(sh);
+                receivers.taddr = Some(taddr.encode(&network));
+            }
+            zcash_address::unified::Receiver::Sapling(s) => {
+                let saddr = PaymentAddress::from_bytes(&s).unwrap();
+                receivers.saddr = Some(saddr.encode(&network));
+            }
+            zcash_address::unified::Receiver::Orchard(o) => {
+                let oaddr = orchard::Address::from_raw_address_bytes(&o).into_option().unwrap();
+                let oaddr = UnifiedAddress::from_receivers(Some(oaddr), None, None).unwrap();
+                receivers.oaddr = Some(oaddr.encode(&network));
+            }
+            _ => {}
+        }
+    }
+
+    Ok(receivers)
+}
+
+#[derive(Default)]
+pub struct Receivers {
+    pub taddr: Option<String>,
+    pub saddr: Option<String>,
+    pub oaddr: Option<String>,
 }
 
 /*
