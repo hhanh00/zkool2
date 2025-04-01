@@ -1,0 +1,66 @@
+name: Rust CI Mac
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    env:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+    steps:
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          keychain: build
+      - name: Verify Certificate
+        run: |
+          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application")
+          CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+          echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
+          echo "Certificate imported."
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Build
+        run: flutter build macos
+      - name: Codesign
+        run: ./misc/codesign-notarize.sh
+        env:
+          APPNAME: zkool
+          KEYCHAIN_PWD: azB27DoYCFe5kzd3
+          APPLE_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          APPLE_CERTIFICATE_NAME: ${{ secrets.MACOS_CERTIFICATE_NAME }}
+          APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PWD }}
+          APPLE_TEAM_ID: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
+      - name: Package
+        run: |
+          python3 -m pip install packaging
+          npm install -g appdmg
+          (cd misc; appdmg app.json ../ywallet-universal.dmg)
+      - name: Upload dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zkool.dmg
+          path: src-tauri/target/release/bundle/dmg/*.dmg
+      - name: Create Release
+        if: startsWith(github.ref_name, 'v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/bundle/dmg/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
