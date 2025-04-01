@@ -1,5 +1,6 @@
-use anyhow::Result;
-use rusqlite::{params, Connection};
+use anyhow::{anyhow, Result};
+use orchard::keys::{FullViewingKey, SpendingKey};
+use rusqlite::{params, Connection, OptionalExtension};
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
@@ -253,12 +254,103 @@ pub fn update_dindex(dindex: u32, update_default: bool) -> Result<()> {
     let mut c = get_coin!();
     get_connection!(c, connection);
 
-    connection.execute("UPDATE accounts SET dindex = ? WHERE id_account = ?", 
-        params![dindex, c.account])?;
+    connection.execute(
+        "UPDATE accounts SET dindex = ? WHERE id_account = ?",
+        params![dindex, c.account],
+    )?;
     if update_default {
-        connection.execute("UPDATE accounts SET def_dindex = ? WHERE id_account = ?", 
-            params![dindex, c.account])?;
+        connection.execute(
+            "UPDATE accounts SET def_dindex = ? WHERE id_account = ?",
+            params![dindex, c.account],
+        )?;
     }
 
     Ok(())
+}
+
+pub fn select_account_transparent() -> Result<TransparentKeys> {
+    let mut c = get_coin!();
+    get_connection!(c, connection);
+
+    let r = connection
+        .query_row(
+            "SELECT xsk, xvk FROM transparent_accounts WHERE account = ?",
+            [c.account],
+            |r| Ok((r.get::<_, Option<Vec<u8>>>(0)?, r.get::<_, Vec<u8>>(1)?)),
+        )
+        .optional()?;
+    let (xsk, xvk) = match r {
+        Some((xsk, xvk)) => (xsk, Some(xvk)),
+        None => (None, None),
+    };
+
+    let keys = TransparentKeys {
+        xsk: xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap()),
+        xvk: xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap()),
+    };
+
+    Ok(keys)
+}
+
+pub fn select_account_sapling() -> Result<SaplingKeys> {
+    let mut c = get_coin!();
+    get_connection!(c, connection);
+
+    let r = connection
+        .query_row(
+            "SELECT xsk, xvk FROM sapling_accounts WHERE account = ?",
+            [c.account],
+            |r| Ok((r.get::<_, Option<Vec<u8>>>(0)?, r.get::<_, Vec<u8>>(1)?)),
+        )
+        .optional()?;
+    let (xsk, xvk) = match r {
+        Some((xsk, xvk)) => (xsk, Some(xvk)),
+        None => (None, None),
+    };
+
+    let keys = SaplingKeys {
+        xsk: xsk.map(|xsk| ExtendedSpendingKey::from_bytes(&xsk).map_err(|_| anyhow!("Invalid sdk")).unwrap()),
+        xvk: xvk.map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+    };
+
+    Ok(keys)
+}
+
+pub fn select_account_orchard() -> Result<OrchardKeys> {
+    let mut c = get_coin!();
+    get_connection!(c, connection);
+
+    let r = connection
+        .query_row(
+            "SELECT xsk, xvk FROM orchard_accounts WHERE account = ?",
+            [c.account],
+            |r| Ok((r.get::<_, Option<Vec<u8>>>(0)?, r.get::<_, Vec<u8>>(1)?)),
+        )
+        .optional()?;
+    let (xsk, xvk) = match r {
+        Some((xsk, xvk)) => (xsk, Some(xvk)),
+        None => (None, None),
+    };
+
+    let keys = OrchardKeys {
+        xsk: xsk.map(|xsk| SpendingKey::from_bytes(xsk.try_into().unwrap()).unwrap()),
+        xvk: xvk.map(|xvk| FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+    };
+
+    Ok(keys)
+}
+
+pub struct TransparentKeys {
+    pub xsk: Option<AccountPrivKey>,
+    pub xvk: Option<AccountPubKey>,
+}
+
+pub struct SaplingKeys {
+    pub xsk: Option<ExtendedSpendingKey>,
+    pub xvk: Option<DiversifiableFullViewingKey>,
+}
+
+pub struct OrchardKeys {
+    pub xsk: Option<SpendingKey>,
+    pub xvk: Option<FullViewingKey>,
 }

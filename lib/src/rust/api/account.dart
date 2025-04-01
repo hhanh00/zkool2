@@ -46,6 +46,43 @@ Future<int> putAccountTransparentSecret(
     RustLib.instance.api
         .crateApiAccountPutAccountTransparentSecret(coin: coin, id: id, sk: sk);
 
+String getAccountUfvk({required int coin, required int id}) =>
+    RustLib.instance.api.crateApiAccountGetAccountUfvk(coin: coin, id: id);
+
+String uaFromUfvk({required int coin, required String ufvk, int? di}) =>
+    RustLib.instance.api
+        .crateApiAccountUaFromUfvk(coin: coin, ufvk: ufvk, di: di);
+
+Receivers receiversFromUa({required int coin, required String ua}) =>
+    RustLib.instance.api.crateApiAccountReceiversFromUa(coin: coin, ua: ua);
+
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
         .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);
+
+class Receivers {
+  final String? taddr;
+  final String? saddr;
+  final String? oaddr;
+
+  const Receivers({
+    this.taddr,
+    this.saddr,
+    this.oaddr,
+  });
+
+  static Future<Receivers> default_() =>
+      RustLib.instance.api.crateApiAccountReceiversDefault();
+
+  @override
+  int get hashCode => taddr.hashCode ^ saddr.hashCode ^ oaddr.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Receivers &&
+          runtimeType == other.runtimeType &&
+          taddr == other.taddr &&
+          saddr == other.saddr &&
+          oaddr == other.oaddr;
+}
