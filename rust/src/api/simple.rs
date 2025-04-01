@@ -2,12 +2,12 @@ use std::{cell::RefCell, str::FromStr};
 
 use anyhow::Result;
 use flutter_rust_bridge::frb;
-use zcash_address::TryFromRawAddress;
+use orchard::keys::FullViewingKey;
 use zcash_keys::{
     encoding::AddressCodec,
     keys::{UnifiedAddressRequest, UnifiedSpendingKey},
 };
-use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
+use zcash_primitives::zip32::AccountId;
 use zcash_protocol::consensus::Network;
 use zcash_transparent::keys::{NonHardenedChildIndex, TransparentKeyScope};
 
@@ -78,7 +78,6 @@ pub fn store_account_seed(coin: u8, id: u32, phrase: &str, aindex: u32) -> Resul
     setup!(coin, id);
 
     let c = coin!();
-    let connection = c.connect()?;
 
     let seed_phrase = bip39::Mnemonic::from_str(phrase)?;
     let seed = seed_phrase.to_seed("");
@@ -105,6 +104,17 @@ pub fn store_account_seed(coin: u8, id: u32, phrase: &str, aindex: u32) -> Resul
         &tpk.serialize().to_vec(),
         &taddr.encode(&c.network),
     )?;
+    crate::db::init_account_sapling()?;
+    let sxsk = usk.sapling();
+    crate::db::store_account_sapling_sk(sxsk)?;
+    let sxvk = sxsk.to_diversifiable_full_viewing_key();
+    crate::db::store_account_sapling_vk(&sxvk)?;
+    crate::db::init_account_orchard()?;
+    let oxsk = usk.orchard();
+    crate::db::store_account_orchard_sk(oxsk)?;
+    let oxvk = FullViewingKey::from(oxsk);
+    crate::db::store_account_orchard_vk(&oxvk)?;
+
     crate::db::update_dindex(dindex, true)?;
 
     Ok(id)
