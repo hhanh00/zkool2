@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => -1383890342;
+  int get rustContentHash => -355447823;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -122,6 +122,13 @@ abstract class RustLibApi extends BaseApi {
 
   String crateApiAccountUaFromUfvk(
       {required int coin, required String ufvk, int? di});
+
+  void crateApiAccountUpdateAccount(
+      {required int coin,
+      required int id,
+      String? name,
+      Uint8List? icon,
+      int? birth});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -503,6 +510,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["coin", "ufvk", "di"],
       );
 
+  @override
+  void crateApiAccountUpdateAccount(
+      {required int coin,
+      required int id,
+      String? name,
+      Uint8List? icon,
+      int? birth}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_8(coin, serializer);
+        sse_encode_u_32(id, serializer);
+        sse_encode_opt_String(name, serializer);
+        sse_encode_opt_list_prim_u_8_strict(icon, serializer);
+        sse_encode_opt_box_autoadd_u_32(birth, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiAccountUpdateAccountConstMeta,
+      argValues: [coin, id, name, icon, birth],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiAccountUpdateAccountConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_account",
+        argNames: ["coin", "id", "name", "icon", "birth"],
+      );
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -519,20 +559,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return Account(
-      id: dco_decode_u_32(arr[0]),
-      name: dco_decode_String(arr[1]),
-      seed: dco_decode_opt_String(arr[2]),
-      aindex: dco_decode_u_32(arr[3]),
-      icon: dco_decode_opt_list_prim_u_8_strict(arr[4]),
-      birth: dco_decode_u_32(arr[5]),
-      height: dco_decode_u_32(arr[6]),
-      position: dco_decode_u_8(arr[7]),
-      hidden: dco_decode_bool(arr[8]),
-      saved: dco_decode_bool(arr[9]),
-      enabled: dco_decode_bool(arr[10]),
+      coin: dco_decode_u_8(arr[0]),
+      id: dco_decode_u_32(arr[1]),
+      name: dco_decode_String(arr[2]),
+      seed: dco_decode_opt_String(arr[3]),
+      aindex: dco_decode_u_32(arr[4]),
+      icon: dco_decode_opt_list_prim_u_8_strict(arr[5]),
+      birth: dco_decode_u_32(arr[6]),
+      height: dco_decode_u_32(arr[7]),
+      position: dco_decode_u_8(arr[8]),
+      hidden: dco_decode_bool(arr[9]),
+      saved: dco_decode_bool(arr[10]),
+      enabled: dco_decode_bool(arr[11]),
     );
   }
 
@@ -626,6 +667,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   Account sse_decode_account(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_coin = sse_decode_u_8(deserializer);
     var var_id = sse_decode_u_32(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_seed = sse_decode_opt_String(deserializer);
@@ -638,6 +680,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_saved = sse_decode_bool(deserializer);
     var var_enabled = sse_decode_bool(deserializer);
     return Account(
+        coin: var_coin,
         id: var_id,
         name: var_name,
         seed: var_seed,
@@ -763,6 +806,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_account(Account self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.coin, serializer);
     sse_encode_u_32(self.id, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_opt_String(self.seed, serializer);
