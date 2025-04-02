@@ -5,6 +5,8 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'account.freezed.dart';
 
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
@@ -56,9 +58,29 @@ String uaFromUfvk({required int coin, required String ufvk, int? di}) =>
 Receivers receiversFromUa({required int coin, required String ua}) =>
     RustLib.instance.api.crateApiAccountReceiversFromUa(coin: coin, ua: ua);
 
+Future<List<Account>> listAccounts({required int coin}) =>
+    RustLib.instance.api.crateApiAccountListAccounts(coin: coin);
+
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
         .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);
+
+@freezed
+class Account with _$Account {
+  const factory Account({
+    required int id,
+    required String name,
+    String? seed,
+    required int aindex,
+    Uint8List? icon,
+    required int birth,
+    required int height,
+    required int position,
+    required bool hidden,
+    required bool saved,
+    required bool enabled,
+  }) = _Account;
+}
 
 class Receivers {
   final String? taddr;
