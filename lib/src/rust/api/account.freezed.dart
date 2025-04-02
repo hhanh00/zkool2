@@ -16,6 +16,7 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$Account {
+  int get coin => throw _privateConstructorUsedError;
   int get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String? get seed => throw _privateConstructorUsedError;
@@ -40,7 +41,8 @@ abstract class $AccountCopyWith<$Res> {
       _$AccountCopyWithImpl<$Res, Account>;
   @useResult
   $Res call(
-      {int id,
+      {int coin,
+      int id,
       String name,
       String? seed,
       int aindex,
@@ -68,6 +70,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? coin = null,
     Object? id = null,
     Object? name = null,
     Object? seed = freezed,
@@ -81,6 +84,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? enabled = null,
   }) {
     return _then(_value.copyWith(
+      coin: null == coin
+          ? _value.coin
+          : coin // ignore: cast_nullable_to_non_nullable
+              as int,
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
@@ -137,7 +144,8 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {int id,
+      {int coin,
+      int id,
       String name,
       String? seed,
       int aindex,
@@ -163,6 +171,7 @@ class __$$AccountImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? coin = null,
     Object? id = null,
     Object? name = null,
     Object? seed = freezed,
@@ -176,6 +185,10 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? enabled = null,
   }) {
     return _then(_$AccountImpl(
+      coin: null == coin
+          ? _value.coin
+          : coin // ignore: cast_nullable_to_non_nullable
+              as int,
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
@@ -228,7 +241,8 @@ class __$$AccountImplCopyWithImpl<$Res>
 
 class _$AccountImpl implements _Account {
   const _$AccountImpl(
-      {required this.id,
+      {required this.coin,
+      required this.id,
       required this.name,
       this.seed,
       required this.aindex,
@@ -240,6 +254,8 @@ class _$AccountImpl implements _Account {
       required this.saved,
       required this.enabled});
 
+  @override
+  final int coin;
   @override
   final int id;
   @override
@@ -265,7 +281,7 @@ class _$AccountImpl implements _Account {
 
   @override
   String toString() {
-    return 'Account(id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, height: $height, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, height: $height, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled)';
   }
 
   @override
@@ -273,6 +289,7 @@ class _$AccountImpl implements _Account {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$AccountImpl &&
+            (identical(other.coin, coin) || other.coin == coin) &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.seed, seed) || other.seed == seed) &&
@@ -290,6 +307,7 @@ class _$AccountImpl implements _Account {
   @override
   int get hashCode => Object.hash(
       runtimeType,
+      coin,
       id,
       name,
       seed,
@@ -313,7 +331,8 @@ class _$AccountImpl implements _Account {
 
 abstract class _Account implements Account {
   const factory _Account(
-      {required final int id,
+      {required final int coin,
+      required final int id,
       required final String name,
       final String? seed,
       required final int aindex,
@@ -325,6 +344,8 @@ abstract class _Account implements Account {
       required final bool saved,
       required final bool enabled}) = _$AccountImpl;
 
+  @override
+  int get coin;
   @override
   int get id;
   @override
