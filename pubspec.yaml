@@ -30,6 +30,9 @@ dependencies:
 
   path_provider: ^2.1.5
 
+  data_table_2: ^2.6.0
+  collection: ^1.19.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
