@@ -61,6 +61,15 @@ Receivers receiversFromUa({required int coin, required String ua}) =>
 Future<List<Account>> listAccounts({required int coin}) =>
     RustLib.instance.api.crateApiAccountListAccounts(coin: coin);
 
+void updateAccount(
+        {required int coin,
+        required int id,
+        String? name,
+        Uint8List? icon,
+        int? birth}) =>
+    RustLib.instance.api.crateApiAccountUpdateAccount(
+        coin: coin, id: id, name: name, icon: icon, birth: birth);
+
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
         .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);
@@ -68,6 +77,7 @@ void setDbFilepath({required int coin, required String dbFilepath}) =>
 @freezed
 class Account with _$Account {
   const factory Account({
+    required int coin,
     required int id,
     required String name,
     String? seed,

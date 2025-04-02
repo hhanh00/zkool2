@@ -7,6 +7,7 @@ use bip32::{
 };
 use flutter_rust_bridge::frb;
 use orchard::keys::FullViewingKey;
+use rusqlite::params;
 use sapling_crypto::PaymentAddress;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
@@ -286,8 +287,33 @@ pub fn list_accounts(coin: u8) -> Result<Vec<Account>> {
     Ok(accounts)
 }
 
+#[frb(sync)]
+pub fn update_account(coin: u8, id: u32, 
+    name: Option<String>,
+    icon: Option<Vec<u8>>,
+    birth: Option<u32>,
+) -> Result<()> {
+    setup!(coin, id);
+
+    let c = get_coin!();
+    let connection = c.connect()?;
+
+    if let Some(name) = name {
+        connection.execute("UPDATE accounts SET name = ? WHERE id_account = ?", params![name, id])?;
+    }
+    if let Some(icon) = icon {
+        connection.execute("UPDATE accounts SET icon = ? WHERE id_account = ?", params![icon, id])?;
+    }
+    if let Some(birth) = birth {
+        connection.execute("UPDATE accounts SET birth = ? WHERE id_account = ?", params![birth, id])?;
+    }
+
+    Ok(())
+}
+
 #[frb(dart_metadata = ("freezed"))]
 pub struct Account {
+    pub coin: u8,
     pub id: u32,
     pub name: String,
     pub seed: Option<String>,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zkool/pages/accounts.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,7 +14,7 @@ Future<void> main() async {
 
   Setup.init();
 
-  runApp(MaterialApp(home: const AccountList()));
+  runApp(MaterialApp.router(routerConfig: router));
 }
 
 class Setup {
