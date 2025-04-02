@@ -278,6 +278,29 @@ pub struct Receivers {
     pub oaddr: Option<String>,
 }
 
+pub fn list_accounts(coin: u8) -> Result<Vec<Account>> {
+    setup!(coin, 0);
+
+    let accounts = crate::db::list_accounts()?;
+
+    Ok(accounts)
+}
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct Account {
+    pub id: u32,
+    pub name: String,
+    pub seed: Option<String>,
+    pub aindex: u32,
+    pub icon: Option<Vec<u8>>,
+    pub birth: u32,
+    pub height: u32,
+    pub position: u8,
+    pub hidden: bool,
+    pub saved: bool,
+    pub enabled: bool,
+}
+
 /*
 A:
 - id

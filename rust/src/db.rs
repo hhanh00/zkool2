@@ -4,7 +4,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::get_coin;
+use crate::{api::account::Account, get_coin};
 
 pub fn drop_schema(connection: &Connection) -> Result<()> {
     connection.execute("DROP TABLE IF EXISTS accounts", [])?;
@@ -31,7 +31,8 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         height INTEGER NOT NULL,
         position INTEGER NOT NULL,
         hidden BOOL NOT NULL,
-        saved BOOL NOT NULL
+        saved BOOL NOT NULL,
+        enabled BOOL NOT NULL DEFAULT TRUE
         )",
         [],
     )?;
@@ -81,14 +82,20 @@ pub fn store_account_metadata(
     birth: u32,
     height: u32,
 ) -> Result<u32> {
+    let last_position = connection.query_row(
+        "SELECT MAX(position) FROM accounts",
+        [],
+        |r| r.get::<_, Option<u32>>(0),
+    )?.unwrap_or_default();
+
     let id = connection.query_row(
         "INSERT INTO accounts(name, icon, birth, height,
         aindex, dindex, def_dindex, position, saved, hidden)
-        VALUES (?, ?, ?, ?, 0, 0, 0, 0, FALSE, FALSE)
+        VALUES (?, ?, ?, ?, 0, 0, 0, ?, FALSE, FALSE)
         ON CONFLICT(id_account) DO UPDATE SET
             name = excluded.name
         RETURNING id_account",
-        params![name, icon, birth, height],
+        params![name, icon, birth, height, last_position + 1],
         |r| r.get::<_, u32>(0),
     )?;
 
@@ -353,4 +360,34 @@ pub struct SaplingKeys {
 pub struct OrchardKeys {
     pub xsk: Option<SpendingKey>,
     pub xvk: Option<FullViewingKey>,
+}
+
+pub fn list_accounts() -> Result<Vec<Account>> {
+    let mut c = get_coin!();
+    get_connection!(c, connection);
+
+    let mut stmt = connection.prepare(
+        "SELECT id_account, name, seed, aindex,
+        icon, birth, height, position, hidden, saved, enabled
+        FROM accounts ORDER by position",
+    )?;
+    let accounts = stmt
+        .query_map([], |r| {
+            Ok(Account {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                seed: r.get(2)?,
+                aindex: r.get(3)?,
+                icon: r.get(4)?,
+                birth: r.get(5)?,
+                height: r.get(6)?,
+                position: r.get(7)?,
+                hidden: r.get(8)?,
+                saved: r.get(9)?,
+                enabled: r.get(10)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(accounts)
 }
