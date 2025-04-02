@@ -9,7 +9,7 @@ class AccountListPage extends StatefulWidget {
   const AccountListPage({super.key});
 
   @override
-  State<AccountList> createState() => AccountListState();
+  State<AccountListPage> createState() => AccountListPageState();
 }
 
 final accountListTrigger = Observable(0);

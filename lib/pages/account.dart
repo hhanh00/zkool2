@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mobx/mobx.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/src/rust/api/account.dart';
 
@@ -27,9 +26,6 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    final initials = account.name.substring(0, min(2, account.name.length));
-    final icon = account.icon;
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Account Edit'),
