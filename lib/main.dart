@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:path_provider/path_provider.dart';

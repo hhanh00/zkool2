@@ -374,6 +374,7 @@ pub fn list_accounts() -> Result<Vec<Account>> {
     let accounts = stmt
         .query_map([], |r| {
             Ok(Account {
+                coin: c.coin,
                 id: r.get(0)?,
                 name: r.get(1)?,
                 seed: r.get(2)?,
