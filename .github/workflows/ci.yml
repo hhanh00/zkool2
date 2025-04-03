@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - v*
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch:
+
+jobs:
+
+  release-please:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/release-please.yml
+    secrets: inherit
+
+  build:
+    uses: ./.github/workflows/build-mac.yml
+    secrets: inherit
+    permissions:
+      contents: write
