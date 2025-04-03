@@ -66,7 +66,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         updateAccount(
             update:
                 AccountUpdate(coin: account.coin, id: account.id, name: name));
-        AppStoreBase.loadAccounts(account.coin);
+        AppStoreBase.loadAccounts();
       });
     }
   }
@@ -81,7 +81,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         updateAccount(
             update:
                 AccountUpdate(coin: account.coin, id: account.id, icon: bytes));
-        AppStoreBase.loadAccounts(account.coin);
+        AppStoreBase.loadAccounts();
       });
     }
   }
@@ -93,7 +93,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         updateAccount(
             update:
                 AccountUpdate(coin: account.coin, id: account.id, birth: int.parse(birth)));
-        AppStoreBase.loadAccounts(account.coin);
+        AppStoreBase.loadAccounts();
       });
     }
   }
