@@ -1,43 +1,45 @@
 import 'dart:async';
 
+import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:collection/collection.dart';
-import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 
-class EditableList<T> extends StatefulWidget {
+class EditableList<T extends Object> extends StatefulWidget {
   final String title;
   final List<T> Function() observable;
   final FutureOr<void> Function()? onCreate;
   final FutureOr<void> Function(BuildContext) createBuilder;
   final FutureOr<void> Function(BuildContext, T) editBuilder;
   final FutureOr<void> Function(BuildContext, List<T>) deleteBuilder;
-  final List<DataColumn> columns;
-  final DataRow Function(
+  final Widget Function(
     BuildContext,
     int,
     T, {
     bool? selected,
     void Function(bool?)? onSelectChanged,
   }) builder;
+  final bool Function(T a, T b) isEqual;
+  final void Function(int a, int b) onReorder;
 
   const EditableList({
     super.key,
     required this.observable,
     required this.builder,
     required this.title,
-    required this.columns,
     this.onCreate,
     required this.createBuilder,
     required this.editBuilder,
     required this.deleteBuilder,
+    required this.isEqual,
+    required this.onReorder,
   });
 
   @override
   State<EditableList> createState() => EditableListState<T>();
 }
 
-class EditableListState<T> extends State<EditableList<T>> {
+class EditableListState<T extends Object> extends State<EditableList<T>> {
   List<bool> selected = [];
   List<T> items = [];
   T? selectedValue;
@@ -70,42 +72,37 @@ class EditableListState<T> extends State<EditableList<T>> {
     final anySelected = selected.any(identity);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          if (!anySelected) IconButton(onPressed: onNew, icon: Icon(Icons.add)),
-          if (editEnabled) IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
-          if (anySelected) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(widget.title),
+          actions: [
+            if (!anySelected)
+              IconButton(onPressed: onNew, icon: Icon(Icons.add)),
+            if (editEnabled)
+              IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
+            if (anySelected)
+              IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
           ],
-      ),
-      body: DataTable2(
-          columnSpacing: 8,
-          horizontalMargin: 8,
-          onSelectAll: (v) {
-            if (v != null) {
-              setState(() {
-                for (var i = 0; i < selected.length; i++) 
-                  selected[i] = v;
-                if (v && editEnabled) // can only select 1 item
-                  selectedValue = items.first;
-                else
-                  selectedValue = null;
-              });
-            }
+        ),
+        body: AnimatedReorderableListView<T>(
+          buildDefaultDragHandles: false,
+          items: items,
+          itemBuilder: (context, index) =>
+              widget.builder(context, index, items[index],
+                  selected: selected[index],
+                  onSelectChanged: (value) => setState(() {
+                        selected[index] = value ?? false;
+                        selectedValue = items[index];
+                      })),
+          isSameItem: (T a, T b) => widget.isEqual(a, b),
+          onReorder: (int oldIndex, int newIndex) {
+            widget.onReorder(oldIndex, newIndex);
+            setState(() {
+              final T v = items.removeAt(oldIndex);
+              items.insert(newIndex, v);
+            });
           },
-          columns: widget.columns,
-          rows: items
-              .asMap()
-              .entries
-              .map((e) => widget.builder(context, e.key, e.value,
-                  selected: selected[e.key],
-                  onSelectChanged: (value) =>
-                      setState(() { 
-                        selected[e.key] = value ?? false;
-                        selectedValue = items[e.key];
-                      })))
-              .toList()),
-    );
+        ));
   }
 
   onNew() => widget.createBuilder(context);
@@ -113,7 +110,9 @@ class EditableListState<T> extends State<EditableList<T>> {
     final sv = selectedValue;
     if (sv != null) widget.editBuilder(context, sv);
   }
-  onDelete() => widget.deleteBuilder(context, items.whereIndexed((index, _) => selected[index]).toList());
+
+  onDelete() => widget.deleteBuilder(
+      context, items.whereIndexed((index, _) => selected[index]).toList());
 }
 
 T identity<T>(T t) => t;

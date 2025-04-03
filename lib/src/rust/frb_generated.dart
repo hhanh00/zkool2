@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => 2141782285;
+  int get rustContentHash => 1308949372;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -118,6 +118,9 @@ abstract class RustLibApi extends BaseApi {
 
   Receivers crateApiAccountReceiversFromUa(
       {required int coin, required String ua});
+
+  Future<void> crateApiAccountReorderAccount(
+      {required int coin, required int oldPosition, required int newPosition});
 
   void crateApiAccountSetDbFilepath(
       {required int coin, required String dbFilepath});
@@ -480,6 +483,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiAccountReorderAccount(
+      {required int coin, required int oldPosition, required int newPosition}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_8(coin, serializer);
+        sse_encode_u_32(oldPosition, serializer);
+        sse_encode_u_32(newPosition, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 14, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiAccountReorderAccountConstMeta,
+      argValues: [coin, oldPosition, newPosition],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiAccountReorderAccountConstMeta =>
+      const TaskConstMeta(
+        debugName: "reorder_account",
+        argNames: ["coin", "oldPosition", "newPosition"],
+      );
+
+  @override
   void crateApiAccountSetDbFilepath(
       {required int coin, required String dbFilepath}) {
     return handler.executeSync(SyncTask(
@@ -487,7 +518,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_u_8(coin, serializer);
         sse_encode_String(dbFilepath, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -514,7 +545,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_8(coin, serializer);
         sse_encode_String(ufvk, serializer);
         sse_encode_opt_box_autoadd_u_32(di, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -537,7 +568,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_account_update(update, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,

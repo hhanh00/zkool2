@@ -318,6 +318,12 @@ pub fn delete_account(account: &Account) -> Result<()> {
     Ok(())
 }
 
+pub fn reorder_account(coin: u8, old_position: u32, new_position: u32) -> Result<()> {
+    setup!(coin, 0);
+
+    crate::db::reorder_account(old_position, new_position)
+}
+
 #[frb(dart_metadata = ("freezed"))]
 pub struct Account {
     pub coin: u8,
