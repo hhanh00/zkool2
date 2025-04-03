@@ -11,7 +11,7 @@ Future<void> main() async {
   final dbFilepath = '${dbDir.path}/zkool.db';
   setDbFilepath(coin: 0, dbFilepath: dbFilepath);
 
-  Setup.init();
+  // Setup.init();
 
   runApp(MaterialApp.router(routerConfig: router, debugShowCheckedModeBanner: false));
 }

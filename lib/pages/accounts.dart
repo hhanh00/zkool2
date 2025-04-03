@@ -1,6 +1,6 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -9,38 +9,27 @@ import 'package:zkool/widgets/editable_list.dart';
 
 class AccountListPage extends StatelessWidget {
   final int coin;
-  AccountListPage({required this.coin, super.key});
-
-  final columns = [
-    DataColumn2(
-      label: Text('Icon'),
-      size: ColumnSize.S,
-    ),
-    DataColumn2(
-      label: Text('Name'),
-      size: ColumnSize.L,
-    ),
-    DataColumn2(
-      label: Text('Balance'),
-      size: ColumnSize.M,
-    ),
-  ];
+  const AccountListPage({required this.coin, super.key});
 
   @override
   Widget build(BuildContext context) {
     return EditableList<Account>(
       observable: () => appStore.accounts,
       builder: (context, index, account, {selected, onSelectChanged}) =>
-          DataRow2(
-        selected: selected ?? false,
-        cells: [
-          DataCell(account.avatar),
-          DataCell(Text(account.name)),
-          DataCell(Text("0.000")),
-        ],
-        onSelectChanged: onSelectChanged,
+      Material(key: ValueKey(account.id), child: GestureDetector(child:
+        SizedBox(height: 60, child: Row(children: [
+          Checkbox(value: selected, onChanged: onSelectChanged),
+          const Gap(8),
+          SizedBox(width: 24, child: Text(account.position.toString(), textAlign: TextAlign.end,)),
+          const Gap(8),
+          account.avatar,
+          const Gap(8),
+          Expanded(child: Text(account.name)),
+          Text("0.000"),
+          const Gap(8),
+        ])),
         onTap: () => onOpen(context, account),
-      ),
+      )),
       title: "Account List",
       onCreate: () => AppStoreBase.loadAccounts(coin),
       createBuilder: (context) {},
@@ -74,11 +63,19 @@ class AccountListPage extends StatelessWidget {
           AppStoreBase.loadAccounts(accounts[0].coin);
         }
       },
-      columns: columns,
+      isEqual:(a, b) => a.id == b.id,
+      onReorder: onReorder,
     );
   }
 
   onOpen(BuildContext context, Account account) {
     GoRouter.of(context).push('/account', extra: account);
+  }
+
+  onReorder(int oldIndex, int newIndex) {
+    reorderAccount(coin: coin, 
+      oldPosition: appStore.accounts[oldIndex].position, 
+      newPosition: appStore.accounts[newIndex].position);
+    AppStoreBase.loadAccounts(coin);
   }
 }
