@@ -82,11 +82,11 @@ pub fn store_account_metadata(
     birth: u32,
     height: u32,
 ) -> Result<u32> {
-    let last_position = connection.query_row(
-        "SELECT MAX(position) FROM accounts",
-        [],
-        |r| r.get::<_, Option<u32>>(0),
-    )?.unwrap_or_default();
+    let last_position = connection
+        .query_row("SELECT MAX(position) FROM accounts", [], |r| {
+            r.get::<_, Option<u32>>(0)
+        })?
+        .unwrap_or_default();
 
     let id = connection.query_row(
         "INSERT INTO accounts(name, icon, birth, height,
@@ -107,6 +107,14 @@ macro_rules! get_connection {
         let $connection = $c.connection()?;
         let $connection = $connection.lock().unwrap();
         let $connection = $connection.as_ref().unwrap();
+    };
+}
+
+macro_rules! get_mut_connection {
+    ($c: ident, $connection: ident) => {
+        let $connection = $c.connection()?;
+        let mut $connection = $connection.lock().unwrap();
+        let $connection = $connection.as_mut().unwrap();
     };
 }
 
@@ -316,8 +324,13 @@ pub fn select_account_sapling() -> Result<SaplingKeys> {
     };
 
     let keys = SaplingKeys {
-        xsk: xsk.map(|xsk| ExtendedSpendingKey::from_bytes(&xsk).map_err(|_| anyhow!("Invalid sdk")).unwrap()),
-        xvk: xvk.map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+        xsk: xsk.map(|xsk| {
+            ExtendedSpendingKey::from_bytes(&xsk)
+                .map_err(|_| anyhow!("Invalid sdk"))
+                .unwrap()
+        }),
+        xvk: xvk
+            .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
     };
 
     Ok(keys)
@@ -391,4 +404,38 @@ pub fn list_accounts() -> Result<Vec<Account>> {
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(accounts)
+}
+
+pub fn delete_account() -> Result<()> {
+    let mut c = get_coin!();
+    get_mut_connection!(c, connection);
+
+    let tx = connection.transaction()?;
+    tx.execute(
+        "DELETE FROM transparent_address_accounts WHERE account = ?",
+        [c.account],
+    )?;
+    tx.execute(
+        "DELETE FROM transparent_address_accounts WHERE account = ?",
+        [c.account],
+    )?;
+    tx.execute(
+        "DELETE FROM transparent_accounts WHERE account = ?",
+        [c.account],
+    )?;
+    tx.execute(
+        "DELETE FROM sapling_accounts WHERE account = ?",
+        [c.account],
+    )?;
+    tx.execute(
+        "DELETE FROM orchard_accounts WHERE account = ?",
+        [c.account],
+    )?;
+    tx.execute(
+        "DELETE FROM accounts WHERE id_account = ?",
+        [c.account],
+    )?;
+    tx.commit()?;
+
+    Ok(())
 }
