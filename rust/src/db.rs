@@ -19,6 +19,13 @@ pub fn drop_schema(connection: &Connection) -> Result<()> {
 pub fn create_schema(connection: &Connection) -> Result<()> {
     // drop_schema(connection)?;
     connection.execute(
+        "CREATE TABLE IF NOT EXISTS props(
+        key TEXT PRIMARY KEY,
+        VALUE TEXT NOT NULL)",
+        [],
+    )?;
+
+    connection.execute(
         "CREATE TABLE IF NOT EXISTS accounts(
         id_account INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
@@ -75,6 +82,25 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
     Ok(())
 }
 
+pub fn put_prop(connection: &Connection, key: &str, value: &str) -> Result<()> {
+    connection.execute(
+        "INSERT OR REPLACE INTO props(key, value) VALUES (?, ?)",
+        params![key, value],
+    )?;
+
+    Ok(())
+}
+
+pub fn get_prop(connection: &Connection, key: &str) -> Result<Option<String>> {
+    let value = connection
+        .query_row("SELECT value FROM props WHERE key = ?", [key], |r| {
+            r.get::<_, String>(0)
+        })
+        .optional()?;
+
+    Ok(value)
+}
+
 pub fn store_account_metadata(
     connection: &Connection,
     name: &str,
@@ -102,25 +128,25 @@ pub fn store_account_metadata(
     Ok(id)
 }
 
-macro_rules! get_connection {
-    ($c: ident, $connection: ident) => {
-        let $connection = $c.connection()?;
-        let $connection = $connection.lock().unwrap();
-        let $connection = $connection.as_ref().unwrap();
-    };
-}
+// macro_rules! get_connection {
+//     ($c: ident, $connection: ident) => {
+//         let $connection = $c.connection()?;
+//         let $connection = $connection.lock().unwrap();
+//         let $connection = $connection.as_ref().unwrap();
+//     };
+// }
 
-macro_rules! get_mut_connection {
-    ($c: ident, $connection: ident) => {
-        let $connection = $c.connection()?;
-        let mut $connection = $connection.lock().unwrap();
-        let $connection = $connection.as_mut().unwrap();
-    };
-}
+// macro_rules! get_mut_connection {
+//     ($c: ident, $connection: ident) => {
+//         let $connection = $c.connection()?;
+//         let mut $connection = $connection.lock().unwrap();
+//         let $connection = $connection.as_mut().unwrap();
+//     };
+// }
 
 pub fn store_account_seed(phrase: &str, aindex: u32) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE accounts
@@ -134,8 +160,8 @@ pub fn store_account_seed(phrase: &str, aindex: u32) -> Result<()> {
 }
 
 pub fn init_account_transparent() -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "INSERT INTO transparent_accounts(account) VALUES (?)",
@@ -146,8 +172,8 @@ pub fn init_account_transparent() -> Result<()> {
 }
 
 pub fn store_account_transparent_sk(xsk: &AccountPrivKey) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE transparent_accounts
@@ -159,8 +185,8 @@ pub fn store_account_transparent_sk(xsk: &AccountPrivKey) -> Result<()> {
 }
 
 pub fn store_account_transparent_vk(xvk: &AccountPubKey) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE transparent_accounts
@@ -172,8 +198,8 @@ pub fn store_account_transparent_vk(xvk: &AccountPubKey) -> Result<()> {
 }
 
 pub fn init_account_sapling() -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')",
@@ -189,8 +215,8 @@ pub fn store_account_transparent_addr(
     pk: &[u8],
     address: &str,
 ) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, pubkey, address)
@@ -202,8 +228,8 @@ pub fn store_account_transparent_addr(
 }
 
 pub fn store_account_sapling_sk(xsk: &ExtendedSpendingKey) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE sapling_accounts
@@ -215,8 +241,8 @@ pub fn store_account_sapling_sk(xsk: &ExtendedSpendingKey) -> Result<()> {
 }
 
 pub fn store_account_sapling_vk(xvk: &DiversifiableFullViewingKey) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE sapling_accounts
@@ -228,8 +254,8 @@ pub fn store_account_sapling_vk(xvk: &DiversifiableFullViewingKey) -> Result<()>
 }
 
 pub fn init_account_orchard() -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')",
@@ -240,8 +266,8 @@ pub fn init_account_orchard() -> Result<()> {
 }
 
 pub fn store_account_orchard_sk(xsk: &orchard::keys::SpendingKey) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE orchard_accounts
@@ -253,8 +279,8 @@ pub fn store_account_orchard_sk(xsk: &orchard::keys::SpendingKey) -> Result<()> 
 }
 
 pub fn store_account_orchard_vk(xvk: &orchard::keys::FullViewingKey) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE orchard_accounts
@@ -266,8 +292,8 @@ pub fn store_account_orchard_vk(xvk: &orchard::keys::FullViewingKey) -> Result<(
 }
 
 pub fn update_dindex(dindex: u32, update_default: bool) -> Result<()> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     connection.execute(
         "UPDATE accounts SET dindex = ? WHERE id_account = ?",
@@ -284,8 +310,8 @@ pub fn update_dindex(dindex: u32, update_default: bool) -> Result<()> {
 }
 
 pub fn select_account_transparent() -> Result<TransparentKeys> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     let r = connection
         .query_row(
@@ -308,8 +334,8 @@ pub fn select_account_transparent() -> Result<TransparentKeys> {
 }
 
 pub fn select_account_sapling() -> Result<SaplingKeys> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     let r = connection
         .query_row(
@@ -337,8 +363,8 @@ pub fn select_account_sapling() -> Result<SaplingKeys> {
 }
 
 pub fn select_account_orchard() -> Result<OrchardKeys> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     let r = connection
         .query_row(
@@ -376,8 +402,8 @@ pub struct OrchardKeys {
 }
 
 pub fn list_accounts() -> Result<Vec<Account>> {
-    let mut c = get_coin!();
-    get_connection!(c, connection);
+    let c = get_coin!();
+    let connection = c.connect()?;
 
     let mut stmt = connection.prepare(
         "SELECT id_account, name, seed, aindex,
@@ -407,8 +433,8 @@ pub fn list_accounts() -> Result<Vec<Account>> {
 }
 
 pub fn delete_account() -> Result<()> {
-    let mut c = get_coin!();
-    get_mut_connection!(c, connection);
+    let c = get_coin!();
+    let mut connection = c.connect()?;
 
     let tx = connection.transaction()?;
     tx.execute(
@@ -438,17 +464,21 @@ pub fn delete_account() -> Result<()> {
 }
 
 pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
-    let mut c = get_coin!();
-    get_mut_connection!(c, connection);
+    let c = get_coin!();
+    let mut connection = c.connect()?;
 
     let tx = connection.transaction()?;
-    let id = tx.query_row("
-        SELECT id_account FROM accounts WHERE position = ?", [old_position], 
-    |r| r.get::<_, u32>(0))?;
+    let id = tx.query_row(
+        "
+        SELECT id_account FROM accounts WHERE position = ?",
+        [old_position],
+        |r| r.get::<_, u32>(0),
+    )?;
     if old_position < new_position {
         // moving down the list
         // elements between [old, new) lose 1 position
-        tx.execute("
+        tx.execute(
+            "
             UPDATE accounts
             SET position = position - 1
             WHERE position > ? AND position <= ?",
@@ -458,14 +488,16 @@ pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
     }
     if old_position > new_position {
         // elements between [new, old) gain 1 position
-        tx.execute("
+        tx.execute(
+            "
             UPDATE accounts
             SET position = position + 1
             WHERE position >= ? AND position < ?",
             params![new_position, old_position],
         )?;
     }
-    tx.execute("
+    tx.execute(
+        "
         UPDATE accounts
         SET position = ?
         WHERE id_account = ?",

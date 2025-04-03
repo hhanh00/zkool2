@@ -6,5 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-bool isValidKey({required String key}) =>
-    RustLib.instance.api.crateApiKeyIsValidKey(key: key);
+Future<void> createDatabase({required int coin, required String dbFilepath}) =>
+    RustLib.instance.api
+        .crateApiDbCreateDatabase(coin: coin, dbFilepath: dbFilepath);
+
+Future<void> openDatabase({required String dbFilepath}) =>
+    RustLib.instance.api.crateApiDbOpenDatabase(dbFilepath: dbFilepath);
