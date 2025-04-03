@@ -1,8 +1,9 @@
 use std::str::FromStr as _;
 
 use anyhow::Result;
-use bip32::{XPrv, XPub};
+use bip32::{ExtendedPrivateKey, ExtendedPublicKey};
 use bip39::Mnemonic;
+use secp256k1::{PublicKey, SecretKey};
 use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
 use zcash_keys::{encoding::{decode_extended_full_viewing_key, decode_extended_spending_key}, keys::UnifiedFullViewingKey};
 use zcash_protocol::consensus::{Network, NetworkConstants as _};
@@ -37,11 +38,11 @@ pub fn is_valid_transparent_key(key: &str) -> bool {
         return true;
     }
 
-    if XPrv::from_str(key).is_ok() {
+    if ExtendedPrivateKey::<SecretKey>::from_str(key).is_ok() {
         return true;
     }
     
-    if XPub::from_str(key).is_ok() {
+    if ExtendedPublicKey::<PublicKey>::from_str(key).is_ok() {
         return true;
     }
 

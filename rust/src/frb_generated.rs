@@ -265,11 +265,11 @@ fn wire__crate__api__account__new_account_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_new_account = <crate::api::account::NewAccount>::sse_decode(&mut deserializer);
+            let api_na = <crate::api::account::NewAccount>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok = crate::api::account::new_account(&api_new_account)?;
+                    let output_ok = crate::api::account::new_account(&api_na)?;
                     Ok(output_ok)
                 })(),
             )
@@ -372,7 +372,7 @@ fn wire__crate__api__account__put_account_metadata_impl(
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
                     let output_ok = crate::api::account::put_account_metadata(
-                        &api_name, api_icon, api_birth, api_height,
+                        &api_name, &api_icon, api_birth, api_height,
                     )?;
                     Ok(output_ok)
                 })(),
@@ -825,17 +825,19 @@ impl SseDecode for Vec<u8> {
 impl SseDecode for crate::api::account::NewAccount {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_icon = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_restore = <bool>::sse_decode(deserializer);
         let mut var_key = <String>::sse_decode(deserializer);
-        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_aindex = <u32>::sse_decode(deserializer);
+        let mut var_birth = <Option<u32>>::sse_decode(deserializer);
         return crate::api::account::NewAccount {
             icon: var_icon,
             name: var_name,
             restore: var_restore,
             key: var_key,
-            height: var_height,
+            aindex: var_aindex,
+            birth: var_birth,
         };
     }
 }
@@ -1031,7 +1033,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::NewAccount {
             self.name.into_into_dart().into_dart(),
             self.restore.into_into_dart().into_dart(),
             self.key.into_into_dart().into_dart(),
-            self.height.into_into_dart().into_dart(),
+            self.aindex.into_into_dart().into_dart(),
+            self.birth.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1143,11 +1146,12 @@ impl SseEncode for Vec<u8> {
 impl SseEncode for crate::api::account::NewAccount {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <Vec<u8>>::sse_encode(self.icon, serializer);
+        <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
         <String>::sse_encode(self.name, serializer);
         <bool>::sse_encode(self.restore, serializer);
         <String>::sse_encode(self.key, serializer);
-        <u32>::sse_encode(self.height, serializer);
+        <u32>::sse_encode(self.aindex, serializer);
+        <Option<u32>>::sse_encode(self.birth, serializer);
     }
 }
 
