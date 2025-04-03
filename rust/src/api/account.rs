@@ -11,7 +11,9 @@ use rusqlite::params;
 use sapling_crypto::PaymentAddress;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
-    address::UnifiedAddress, encoding::AddressCodec, keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey}
+    address::UnifiedAddress,
+    encoding::AddressCodec,
+    keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
 use zcash_protocol::consensus::{Network, NetworkConstants, Parameters};
@@ -19,9 +21,8 @@ use zcash_transparent::keys::{NonHardenedChildIndex, TransparentKeyScope};
 
 use crate::{
     bip38,
-    coin::COINS,
     db::{
-        create_schema, init_account_orchard, init_account_sapling, init_account_transparent,
+        init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
@@ -50,14 +51,11 @@ pub fn new_seed(phrase: &str) -> Result<String> {
 
 #[frb(sync)]
 pub fn put_account_metadata(
-    coin: u8,
     name: &str,
     icon: Option<Vec<u8>>,
     birth: u32,
     height: u32,
 ) -> Result<u32> {
-    setup!(coin, 0);
-
     let c = get_coin!();
     let connection = c.connect()?;
     let id = store_account_metadata(&connection, name, icon, birth, height)?;
@@ -66,8 +64,8 @@ pub fn put_account_metadata(
 }
 
 #[frb(sync)]
-pub fn put_account_seed(coin: u8, id: u32, phrase: &str, aindex: u32) -> Result<u32> {
-    setup!(coin, id);
+pub fn put_account_seed(id: u32, phrase: &str, aindex: u32) -> Result<u32> {
+    setup!(id);
 
     let c = get_coin!();
 
@@ -117,8 +115,8 @@ pub fn put_account_seed(coin: u8, id: u32, phrase: &str, aindex: u32) -> Result<
 }
 
 #[frb(sync)]
-pub fn put_account_sapling_secret(coin: u8, id: u32, esk: &str) -> Result<u32> {
-    setup!(coin, id);
+pub fn put_account_sapling_secret(id: u32, esk: &str) -> Result<u32> {
+    setup!(id);
 
     let c = get_coin!();
     let network = c.network;
@@ -136,8 +134,8 @@ pub fn put_account_sapling_secret(coin: u8, id: u32, esk: &str) -> Result<u32> {
 }
 
 #[frb(sync)]
-pub fn put_account_sapling_viewing(coin: u8, id: u32, evk: &str) -> Result<u32> {
-    setup!(coin, id);
+pub fn put_account_sapling_viewing(id: u32, evk: &str) -> Result<u32> {
+    setup!(id);
 
     let c = get_coin!();
     let network = c.network;
@@ -154,8 +152,8 @@ pub fn put_account_sapling_viewing(coin: u8, id: u32, evk: &str) -> Result<u32> 
 }
 
 #[frb(sync)]
-pub fn put_account_unified_viewing(coin: u8, id: u32, uvk: &str) -> Result<u32> {
-    setup!(coin, id);
+pub fn put_account_unified_viewing(id: u32, uvk: &str) -> Result<u32> {
+    setup!(id);
 
     let c = get_coin!();
     let network = c.network;
@@ -189,8 +187,8 @@ pub fn put_account_unified_viewing(coin: u8, id: u32, uvk: &str) -> Result<u32> 
     Ok(id)
 }
 
-pub fn put_account_transparent_secret(coin: u8, id: u32, sk: &str) -> Result<u32> {
-    setup!(coin, id);
+pub fn put_account_transparent_secret(id: u32, sk: &str) -> Result<u32> {
+    setup!(id);
     let c = get_coin!();
     let network = c.network;
 
@@ -209,8 +207,8 @@ pub fn put_account_transparent_secret(coin: u8, id: u32, sk: &str) -> Result<u32
 }
 
 #[frb(sync)]
-pub fn get_account_ufvk(coin: u8, id: u32) -> Result<String> {
-    setup!(coin, id);
+pub fn get_account_ufvk(id: u32) -> Result<String> {
+    setup!(id);
     let c = get_coin!();
     let network = c.network;
 
@@ -219,24 +217,24 @@ pub fn get_account_ufvk(coin: u8, id: u32) -> Result<String> {
 }
 
 #[frb(sync)]
-pub fn ua_from_ufvk(coin: u8, ufvk: &str, di: Option<u32>) -> Result<String> {
-    setup!(coin, 0);
+pub fn ua_from_ufvk(ufvk: &str, di: Option<u32>) -> Result<String> {
     let c = get_coin!();
     let network = c.network;
 
-    let ufvk = UnifiedFullViewingKey::decode(&network, ufvk)
-        .map_err(|_| anyhow!("Invalid Key"))?;
+    let ufvk = UnifiedFullViewingKey::decode(&network, ufvk).map_err(|_| anyhow!("Invalid Key"))?;
     let ua = match di {
         Some(di) => ufvk.address(di.into(), UnifiedAddressRequest::AllAvailableKeys)?,
-        None => ufvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?.0,
+        None => {
+            ufvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?
+                .0
+        }
     };
 
     Ok(ua.encode(&network))
 }
 
 #[frb(sync)]
-pub fn receivers_from_ua(coin: u8, ua: &str) -> Result<Receivers> {
-    setup!(coin, 0);
+pub fn receivers_from_ua(ua: &str) -> Result<Receivers> {
     let c = get_coin!();
     let network = c.network;
 
@@ -244,14 +242,14 @@ pub fn receivers_from_ua(coin: u8, ua: &str) -> Result<Receivers> {
     if net != network.network_type() {
         anyhow::bail!("Invalid Network");
     }
-    
+
     let mut receivers = Receivers::default();
     for item in ua.items() {
         match item {
             zcash_address::unified::Receiver::P2pkh(pkh) => {
                 let taddr = TransparentAddress::PublicKeyHash(pkh);
                 receivers.taddr = Some(taddr.encode(&network));
-            },
+            }
             zcash_address::unified::Receiver::P2sh(sh) => {
                 let taddr = TransparentAddress::ScriptHash(sh);
                 receivers.taddr = Some(taddr.encode(&network));
@@ -261,7 +259,9 @@ pub fn receivers_from_ua(coin: u8, ua: &str) -> Result<Receivers> {
                 receivers.saddr = Some(saddr.encode(&network));
             }
             zcash_address::unified::Receiver::Orchard(o) => {
-                let oaddr = orchard::Address::from_raw_address_bytes(&o).into_option().unwrap();
+                let oaddr = orchard::Address::from_raw_address_bytes(&o)
+                    .into_option()
+                    .unwrap();
                 let oaddr = UnifiedAddress::from_receivers(Some(oaddr), None, None).unwrap();
                 receivers.oaddr = Some(oaddr.encode(&network));
             }
@@ -279,31 +279,37 @@ pub struct Receivers {
     pub oaddr: Option<String>,
 }
 
-pub fn list_accounts(coin: u8) -> Result<Vec<Account>> {
-    setup!(coin, 0);
-
+pub fn list_accounts() -> Result<Vec<Account>> {
     let accounts = crate::db::list_accounts()?;
 
     Ok(accounts)
 }
 
 #[frb(sync)]
-pub fn update_account(update: &AccountUpdate,
-) -> Result<()> {
+pub fn update_account(update: &AccountUpdate) -> Result<()> {
     let id = update.id;
-    setup!(update.coin, id);
+    setup!(id);
 
     let c = get_coin!();
     let connection = c.connect()?;
 
     if let Some(ref name) = update.name {
-        connection.execute("UPDATE accounts SET name = ? WHERE id_account = ?", params![name, id])?;
+        connection.execute(
+            "UPDATE accounts SET name = ? WHERE id_account = ?",
+            params![name, id],
+        )?;
     }
     if let Some(ref icon) = update.icon {
-        connection.execute("UPDATE accounts SET icon = ? WHERE id_account = ?", params![icon, id])?;
+        connection.execute(
+            "UPDATE accounts SET icon = ? WHERE id_account = ?",
+            params![icon, id],
+        )?;
     }
     if let Some(ref birth) = update.birth {
-        connection.execute("UPDATE accounts SET birth = ? WHERE id_account = ?", params![birth, id])?;
+        connection.execute(
+            "UPDATE accounts SET birth = ? WHERE id_account = ?",
+            params![birth, id],
+        )?;
     }
 
     Ok(())
@@ -311,21 +317,19 @@ pub fn update_account(update: &AccountUpdate,
 
 #[frb(sync)]
 pub fn delete_account(account: &Account) -> Result<()> {
-    setup!(account.coin, account.id);
+    setup!(account.id);
 
     crate::db::delete_account()?;
 
     Ok(())
 }
 
-pub fn reorder_account(coin: u8, old_position: u32, new_position: u32) -> Result<()> {
-    setup!(coin, 0);
-
+pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
     crate::db::reorder_account(old_position, new_position)
 }
 
 #[frb(sync)]
-pub fn new_account(coin: u8, new_account: &NewAccount) -> Result<()> {
+pub fn new_account(new_account: &NewAccount) -> Result<()> {
     Ok(())
 }
 
@@ -395,18 +399,6 @@ O:
 - xsk*
 - xvk
 */
-
-#[frb(sync)]
-pub fn set_db_filepath(coin: u8, db_filepath: String) -> Result<()> {
-    let mut coins = COINS.lock().unwrap();
-    let c = &mut coins[coin as usize];
-    c.set_db_filepath(db_filepath)?;
-
-    let connection = c.pool.get()?;
-    create_schema(&connection)?;
-
-    Ok(())
-}
 
 #[frb(init)]
 pub fn init_app() {

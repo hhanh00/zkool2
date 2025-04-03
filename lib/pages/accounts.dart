@@ -2,6 +2,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
@@ -31,8 +32,8 @@ class AccountListPage extends StatelessWidget {
         onTap: () => onOpen(context, account),
       )),
       title: "Account List",
-      onCreate: () => AppStoreBase.loadAccounts(coin),
-      createBuilder: (context) {},
+      onCreate: () => AppStoreBase.loadAccounts(),
+      createBuilder: (context) => GoRouter.of(context).push("/account/new"),
       editBuilder: (context, a) =>
           GoRouter.of(context).push("/account/edit", extra: a),
       deleteBuilder: (context, accounts) async {
@@ -60,7 +61,7 @@ class AccountListPage extends StatelessWidget {
           for (var a in accounts) {
             deleteAccount(account: a);
           }
-          AppStoreBase.loadAccounts(accounts[0].coin);
+          await AppStoreBase.loadAccounts();
         }
       },
       isEqual:(a, b) => a.id == b.id,
@@ -72,10 +73,12 @@ class AccountListPage extends StatelessWidget {
     GoRouter.of(context).push('/account', extra: account);
   }
 
-  onReorder(int oldIndex, int newIndex) {
-    reorderAccount(coin: coin, 
+  onReorder(int oldIndex, int newIndex) async {
+    logger.i("Reorder $oldIndex to $newIndex");
+    
+    await reorderAccount(
       oldPosition: appStore.accounts[oldIndex].position, 
       newPosition: appStore.accounts[newIndex].position);
-    AppStoreBase.loadAccounts(coin);
+    await AppStoreBase.loadAccounts();
   }
 }
