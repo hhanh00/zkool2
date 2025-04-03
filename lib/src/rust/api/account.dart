@@ -61,14 +61,8 @@ Receivers receiversFromUa({required int coin, required String ua}) =>
 Future<List<Account>> listAccounts({required int coin}) =>
     RustLib.instance.api.crateApiAccountListAccounts(coin: coin);
 
-void updateAccount(
-        {required int coin,
-        required int id,
-        String? name,
-        Uint8List? icon,
-        int? birth}) =>
-    RustLib.instance.api.crateApiAccountUpdateAccount(
-        coin: coin, id: id, name: name, icon: icon, birth: birth);
+void updateAccount({required AccountUpdate update}) =>
+    RustLib.instance.api.crateApiAccountUpdateAccount(update: update);
 
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
@@ -90,6 +84,17 @@ class Account with _$Account {
     required bool saved,
     required bool enabled,
   }) = _Account;
+}
+
+@freezed
+class AccountUpdate with _$AccountUpdate {
+  const factory AccountUpdate({
+    required int coin,
+    required int id,
+    String? name,
+    Uint8List? icon,
+    int? birth,
+  }) = _AccountUpdate;
 }
 
 class Receivers {

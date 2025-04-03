@@ -288,23 +288,21 @@ pub fn list_accounts(coin: u8) -> Result<Vec<Account>> {
 }
 
 #[frb(sync)]
-pub fn update_account(coin: u8, id: u32, 
-    name: Option<String>,
-    icon: Option<Vec<u8>>,
-    birth: Option<u32>,
+pub fn update_account(update: &AccountUpdate,
 ) -> Result<()> {
-    setup!(coin, id);
+    let id = update.id;
+    setup!(update.coin, id);
 
     let c = get_coin!();
     let connection = c.connect()?;
 
-    if let Some(name) = name {
+    if let Some(ref name) = update.name {
         connection.execute("UPDATE accounts SET name = ? WHERE id_account = ?", params![name, id])?;
     }
-    if let Some(icon) = icon {
+    if let Some(ref icon) = update.icon {
         connection.execute("UPDATE accounts SET icon = ? WHERE id_account = ?", params![icon, id])?;
     }
-    if let Some(birth) = birth {
+    if let Some(ref birth) = update.birth {
         connection.execute("UPDATE accounts SET birth = ? WHERE id_account = ?", params![birth, id])?;
     }
 
@@ -325,6 +323,15 @@ pub struct Account {
     pub hidden: bool,
     pub saved: bool,
     pub enabled: bool,
+}
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct AccountUpdate {
+    pub coin: u8,
+    pub id: u32,
+    pub name: Option<String>,
+    pub icon: Option<Vec<u8>>,
+    pub birth: Option<u32>,
 }
 
 /*
