@@ -64,8 +64,8 @@ Future<void> reorderAccount(
     RustLib.instance.api.crateApiAccountReorderAccount(
         oldPosition: oldPosition, newPosition: newPosition);
 
-void newAccount({required NewAccount newAccount}) =>
-    RustLib.instance.api.crateApiAccountNewAccount(newAccount: newAccount);
+void newAccount({required NewAccount na}) =>
+    RustLib.instance.api.crateApiAccountNewAccount(na: na);
 
 @freezed
 class Account with _$Account {
@@ -99,11 +99,12 @@ class AccountUpdate with _$AccountUpdate {
 @freezed
 class NewAccount with _$NewAccount {
   const factory NewAccount({
-    required Uint8List icon,
+    Uint8List? icon,
     required String name,
     required bool restore,
     required String key,
-    required int height,
+    required int aindex,
+    int? birth,
   }) = _NewAccount;
 }
 

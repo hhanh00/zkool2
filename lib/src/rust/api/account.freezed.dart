@@ -578,11 +578,12 @@ abstract class _AccountUpdate implements AccountUpdate {
 
 /// @nodoc
 mixin _$NewAccount {
-  Uint8List get icon => throw _privateConstructorUsedError;
+  Uint8List? get icon => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   bool get restore => throw _privateConstructorUsedError;
   String get key => throw _privateConstructorUsedError;
-  int get height => throw _privateConstructorUsedError;
+  int get aindex => throw _privateConstructorUsedError;
+  int? get birth => throw _privateConstructorUsedError;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -598,7 +599,12 @@ abstract class $NewAccountCopyWith<$Res> {
       _$NewAccountCopyWithImpl<$Res, NewAccount>;
   @useResult
   $Res call(
-      {Uint8List icon, String name, bool restore, String key, int height});
+      {Uint8List? icon,
+      String name,
+      bool restore,
+      String key,
+      int aindex,
+      int? birth});
 }
 
 /// @nodoc
@@ -616,17 +622,18 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? icon = null,
+    Object? icon = freezed,
     Object? name = null,
     Object? restore = null,
     Object? key = null,
-    Object? height = null,
+    Object? aindex = null,
+    Object? birth = freezed,
   }) {
     return _then(_value.copyWith(
-      icon: null == icon
+      icon: freezed == icon
           ? _value.icon
           : icon // ignore: cast_nullable_to_non_nullable
-              as Uint8List,
+              as Uint8List?,
       name: null == name
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
@@ -639,10 +646,14 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.key
           : key // ignore: cast_nullable_to_non_nullable
               as String,
-      height: null == height
-          ? _value.height
-          : height // ignore: cast_nullable_to_non_nullable
+      aindex: null == aindex
+          ? _value.aindex
+          : aindex // ignore: cast_nullable_to_non_nullable
               as int,
+      birth: freezed == birth
+          ? _value.birth
+          : birth // ignore: cast_nullable_to_non_nullable
+              as int?,
     ) as $Val);
   }
 }
@@ -656,7 +667,12 @@ abstract class _$$NewAccountImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {Uint8List icon, String name, bool restore, String key, int height});
+      {Uint8List? icon,
+      String name,
+      bool restore,
+      String key,
+      int aindex,
+      int? birth});
 }
 
 /// @nodoc
@@ -672,17 +688,18 @@ class __$$NewAccountImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? icon = null,
+    Object? icon = freezed,
     Object? name = null,
     Object? restore = null,
     Object? key = null,
-    Object? height = null,
+    Object? aindex = null,
+    Object? birth = freezed,
   }) {
     return _then(_$NewAccountImpl(
-      icon: null == icon
+      icon: freezed == icon
           ? _value.icon
           : icon // ignore: cast_nullable_to_non_nullable
-              as Uint8List,
+              as Uint8List?,
       name: null == name
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
@@ -695,10 +712,14 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.key
           : key // ignore: cast_nullable_to_non_nullable
               as String,
-      height: null == height
-          ? _value.height
-          : height // ignore: cast_nullable_to_non_nullable
+      aindex: null == aindex
+          ? _value.aindex
+          : aindex // ignore: cast_nullable_to_non_nullable
               as int,
+      birth: freezed == birth
+          ? _value.birth
+          : birth // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -707,14 +728,15 @@ class __$$NewAccountImplCopyWithImpl<$Res>
 
 class _$NewAccountImpl implements _NewAccount {
   const _$NewAccountImpl(
-      {required this.icon,
+      {this.icon,
       required this.name,
       required this.restore,
       required this.key,
-      required this.height});
+      required this.aindex,
+      this.birth});
 
   @override
-  final Uint8List icon;
+  final Uint8List? icon;
   @override
   final String name;
   @override
@@ -722,11 +744,13 @@ class _$NewAccountImpl implements _NewAccount {
   @override
   final String key;
   @override
-  final int height;
+  final int aindex;
+  @override
+  final int? birth;
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, height: $height)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, aindex: $aindex, birth: $birth)';
   }
 
   @override
@@ -738,12 +762,19 @@ class _$NewAccountImpl implements _NewAccount {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.restore, restore) || other.restore == restore) &&
             (identical(other.key, key) || other.key == key) &&
-            (identical(other.height, height) || other.height == height));
+            (identical(other.aindex, aindex) || other.aindex == aindex) &&
+            (identical(other.birth, birth) || other.birth == birth));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(icon), name, restore, key, height);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(icon),
+      name,
+      restore,
+      key,
+      aindex,
+      birth);
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -756,14 +787,15 @@ class _$NewAccountImpl implements _NewAccount {
 
 abstract class _NewAccount implements NewAccount {
   const factory _NewAccount(
-      {required final Uint8List icon,
+      {final Uint8List? icon,
       required final String name,
       required final bool restore,
       required final String key,
-      required final int height}) = _$NewAccountImpl;
+      required final int aindex,
+      final int? birth}) = _$NewAccountImpl;
 
   @override
-  Uint8List get icon;
+  Uint8List? get icon;
   @override
   String get name;
   @override
@@ -771,7 +803,9 @@ abstract class _NewAccount implements NewAccount {
   @override
   String get key;
   @override
-  int get height;
+  int get aindex;
+  @override
+  int? get birth;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
