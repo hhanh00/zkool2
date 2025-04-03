@@ -7,7 +7,7 @@ final router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => AccountListPage(),
+      builder: (context, state) => AccountListPage(coin: 0),
     ),
     GoRoute(
       path: '/account/edit',

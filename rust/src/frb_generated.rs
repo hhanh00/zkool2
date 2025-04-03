@@ -558,17 +558,11 @@ fn wire__crate__api__account__update_account_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_coin = <u8>::sse_decode(&mut deserializer);
-            let api_id = <u32>::sse_decode(&mut deserializer);
-            let api_name = <Option<String>>::sse_decode(&mut deserializer);
-            let api_icon = <Option<Vec<u8>>>::sse_decode(&mut deserializer);
-            let api_birth = <Option<u32>>::sse_decode(&mut deserializer);
+            let api_update = <crate::api::account::AccountUpdate>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok = crate::api::account::update_account(
-                        api_coin, api_id, api_name, api_icon, api_birth,
-                    )?;
+                    let output_ok = crate::api::account::update_account(&api_update)?;
                     Ok(output_ok)
                 })(),
             )
@@ -622,6 +616,24 @@ impl SseDecode for crate::api::account::Account {
             hidden: var_hidden,
             saved: var_saved,
             enabled: var_enabled,
+        };
+    }
+}
+
+impl SseDecode for crate::api::account::AccountUpdate {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_coin = <u8>::sse_decode(deserializer);
+        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_name = <Option<String>>::sse_decode(deserializer);
+        let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
+        let mut var_birth = <Option<u32>>::sse_decode(deserializer);
+        return crate::api::account::AccountUpdate {
+            coin: var_coin,
+            id: var_id,
+            name: var_name,
+            icon: var_icon,
+            birth: var_birth,
         };
     }
 }
@@ -812,6 +824,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Account>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::account::AccountUpdate {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.coin.into_into_dart().into_dart(),
+            self.id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.icon.into_into_dart().into_dart(),
+            self.birth.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::account::AccountUpdate
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::account::AccountUpdate>
+    for crate::api::account::AccountUpdate
+{
+    fn into_into_dart(self) -> crate::api::account::AccountUpdate {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::account::Receivers {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -863,6 +899,17 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.hidden, serializer);
         <bool>::sse_encode(self.saved, serializer);
         <bool>::sse_encode(self.enabled, serializer);
+    }
+}
+
+impl SseEncode for crate::api::account::AccountUpdate {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.coin, serializer);
+        <u32>::sse_encode(self.id, serializer);
+        <Option<String>>::sse_encode(self.name, serializer);
+        <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
+        <Option<u32>>::sse_encode(self.birth, serializer);
     }
 }
 
