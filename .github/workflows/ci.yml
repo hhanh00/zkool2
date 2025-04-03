@@ -2,8 +2,6 @@ name: ci
 
 on:
   push:
-    branches:
-    - main
     tags:
     - v*
   pull_request:
@@ -19,6 +17,7 @@ jobs:
     secrets: inherit
 
   build:
+    if: "!contains(github.head_ref, 'release-please--')"
     uses: ./.github/workflows/build-mac.yml
     secrets: inherit
     permissions:
