@@ -101,7 +101,6 @@ class NewAccountPageState extends State<NewAccountPage> {
       final icon = iconBytes;
 
       newAccount(
-          coin: 0,
           newAccount: NewAccount(
             icon: icon ?? Uint8List(0),
             name: name,
@@ -109,9 +108,7 @@ class NewAccountPageState extends State<NewAccountPage> {
             key: key,
             height: height,
           ));
-      AppStoreBase.loadAccounts(0);
-    } else {
-      print("Validation failed");
+      AppStoreBase.loadAccounts();
     }
   }
 
@@ -128,7 +125,7 @@ class NewAccountPageState extends State<NewAccountPage> {
     if ((key == null || key.isEmpty)) {
       return restore ? "Key is required" : null;
     }
-    if (!isValidKey(coin: 0, key: key)) {
+    if (!isValidKey(key: key)) {
       return "Invalid Key";
     }
     return null;

@@ -10,8 +10,8 @@ class AppStore = AppStoreBase with _$AppStore;
 abstract class AppStoreBase with Store {
   @observable List<Account> accounts = [];
 
-  static Future<List<Account>> loadAccounts(int coin) async {
-    final as = await listAccounts(coin: coin);
+  static Future<List<Account>> loadAccounts() async {
+    final as = await listAccounts();
     appStore.accounts = as;
     return as;
   }
