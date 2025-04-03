@@ -1,11 +1,10 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 
 class AccountEditPage extends StatefulWidget {
   final Account account;
@@ -102,9 +101,9 @@ class AccountEditPageState extends State<AccountEditPage> {
 
 extension AccountExtension on Account {
   CircleAvatar get avatar {
-    final initials = name.substring(0, min(2, name.length));
+    final i = initials(name);
     return CircleAvatar(
-      child: icon != null ? Image.memory(icon!) : Text(initials),
+      child: icon != null ? Image.memory(icon!) : Text(i),
     );
   }
 }

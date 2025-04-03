@@ -1,8 +1,13 @@
-use anyhow::Result;
-use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
-use zcash_keys::keys::UnifiedFullViewingKey;
+use std::str::FromStr as _;
 
-use crate::db::{select_account_orchard, select_account_sapling, select_account_transparent};
+use anyhow::Result;
+use bip32::{XPrv, XPub};
+use bip39::Mnemonic;
+use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
+use zcash_keys::{encoding::{decode_extended_full_viewing_key, decode_extended_spending_key}, keys::UnifiedFullViewingKey};
+use zcash_protocol::consensus::{Network, NetworkConstants as _};
+
+use crate::{bip38, db::{select_account_orchard, select_account_sapling, select_account_transparent}};
 
 pub fn get_account_ufvk() -> Result<UnifiedFullViewingKey> {
     let tkeys = select_account_transparent()?;
@@ -20,4 +25,41 @@ pub fn get_account_ufvk() -> Result<UnifiedFullViewingKey> {
     let ufvk = UnifiedFullViewingKey::parse(&ufvk)?;
 
     Ok(ufvk)
+}
+
+pub fn is_valid_phrase(phrase: &str) -> bool {
+    let mnemonic = Mnemonic::parse(phrase);
+    mnemonic.is_ok()
+}
+
+pub fn is_valid_transparent_key(key: &str) -> bool {
+    if bip38::import_tsk(key).is_ok() {
+        return true;
+    }
+
+    if XPrv::from_str(key).is_ok() {
+        return true;
+    }
+    
+    if XPub::from_str(key).is_ok() {
+        return true;
+    }
+
+    false
+}
+
+pub fn is_valid_sapling_key(network: &Network, key: &str) -> bool {
+    if decode_extended_spending_key(network.hrp_sapling_extended_spending_key(), key).is_ok() {
+        return true;
+    }
+    
+    if decode_extended_full_viewing_key(network.hrp_sapling_extended_full_viewing_key(), key).is_ok() {
+        return true;
+    }
+
+    false
+}
+
+pub fn is_valid_ufvk(network: &Network, key: &str) -> bool {
+    UnifiedFullViewingKey::decode(network, key).is_ok()
 }
