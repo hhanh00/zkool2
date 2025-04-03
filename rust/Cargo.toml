@@ -35,10 +35,12 @@ zip321 = "0.3"
 zcash_note_encryption = "0.4"
 orchard = "0.11"
 
-bip32 = "0.5.3"
+bip32 = { version = "0.6.0-pre.1", default-features = false }
+secp256k1 = "0.29"
 sapling-crypto = "0.5"
 bs58 = "0.5"
 ripemd = "0.1"
+sha2 = "0.10"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

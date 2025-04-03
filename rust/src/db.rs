@@ -104,7 +104,7 @@ pub fn get_prop(connection: &Connection, key: &str) -> Result<Option<String>> {
 pub fn store_account_metadata(
     connection: &Connection,
     name: &str,
-    icon: Option<Vec<u8>>,
+    icon: &Option<Vec<u8>>,
     birth: u32,
     height: u32,
 ) -> Result<u32> {

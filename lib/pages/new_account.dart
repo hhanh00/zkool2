@@ -78,7 +78,17 @@ class NewAccountPageState extends State<NewAccountPage> {
                 Gap(16),
                 if (restore)
                   FormBuilderTextField(
-                    name: "height",
+                    name: "aindex",
+                    decoration: const InputDecoration(
+                        labelText:
+                            "Account Index (when using a seed phrase)"),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                Gap(16),
+                if (restore)
+                  FormBuilderTextField(
+                    name: "birth",
                     decoration:
                         const InputDecoration(labelText: "Birth Height"),
                     keyboardType: TextInputType.number,
@@ -94,19 +104,21 @@ class NewAccountPageState extends State<NewAccountPage> {
     if (formKey.currentState?.saveAndValidate() ?? false) {
       // Handle the save logic here
       final formData = formKey.currentState?.value;
-      final name = formData?["name"];
-      final restore = formData?["restore"];
-      final key = formData?["key"];
-      final height = formData?["height"];
+      final String? name = formData?["name"];
+      final bool? restore = formData?["restore"];
+      final String? key = formData?["key"];
+      final String? aindex = formData?["aindex"];
+      final String? birth = formData?["birth"];
       final icon = iconBytes;
 
       newAccount(
-          newAccount: NewAccount(
+          na: NewAccount(
             icon: icon ?? Uint8List(0),
-            name: name,
-            restore: restore,
-            key: key,
-            height: height,
+            name: name ?? "",
+            restore: restore ?? false,
+            key: key ?? "",
+            aindex: int.parse(aindex ?? "0"),
+            birth: birth != null ? int.parse(birth) : null,
           ));
       AppStoreBase.loadAccounts();
     }
