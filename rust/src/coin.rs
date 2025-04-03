@@ -1,26 +1,25 @@
-use std::{cell::RefCell, sync::{Arc, Mutex}};
+use std::sync::Mutex;
 
 use anyhow::Result;
-use r2d2::{Pool, PooledConnection};
+use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use zcash_protocol::consensus::Network;
 
 #[macro_export]
 macro_rules! setup {
-    ($coin: expr, $account: expr) => {
-        let coins = crate::coin::COINS.lock().unwrap();
-        let mut c = coins[$coin as usize].clone();
-        c.account = $account;
-        crate::coin::COIN.with(|cc| {
-            *cc.borrow_mut() = Some(c);
-        });
+    ($account: expr) => {
+        let mut coin = crate::coin::COIN.lock().unwrap();
+        coin.account = $account;
     };
 }
 
 #[macro_export]
 macro_rules! get_coin {
     () => {
-        crate::coin::COIN.with(|cc| cc.borrow().clone().unwrap())
+        {
+            let c = crate::coin::COIN.lock().unwrap();
+            c.clone()
+        }
     };
 }
 
@@ -29,58 +28,53 @@ pub struct Coin {
     pub coin: u8,
     pub account: u32,
     pub network: Network,
-    pub db_filepath: Option<String>,
+    pub db_filepath: String,
     pub pool: Pool<SqliteConnectionManager>,
-    pub connection: Arc<Mutex<Option<PooledConnection<SqliteConnectionManager>>>>,
 }
 
 impl Coin {
-    pub fn new(coin: u8, network: Network) -> Result<Coin> {
-        let manager = SqliteConnectionManager::memory();
+    pub fn new(db_filepath: &str) -> Result<Coin> {
+        let manager = SqliteConnectionManager::file(db_filepath);
         let pool = Pool::builder().build(manager)?;
+        let connection = pool.get()?;
+        let coin = crate::db::get_prop(&connection, "coin")?
+            .map(|c| c.parse::<u8>().unwrap()).unwrap_or_default();
+
+        let network = match coin {
+            0 => Network::MainNetwork,
+            1 => Network::TestNetwork,
+            _ => Network::MainNetwork,
+        };
+
         Ok(Coin {
             coin,
             account: 0,
             network,
-            db_filepath: None,
+            db_filepath: db_filepath.to_string(),
             pool,
-            connection: Arc::new(Mutex::new(None)),
         })
-    }
-
-    pub fn set_db_filepath(&mut self, db_filepath: String) -> Result<()> {
-        let manager = SqliteConnectionManager::file(&db_filepath);
-        let pool = Pool::builder().build(manager)?;
-        self.db_filepath = Some(db_filepath);
-        self.pool = pool;
-
-        Ok(())
     }
 
     pub fn connect(&self) -> Result<r2d2::PooledConnection<SqliteConnectionManager>> {
         let connection = self.pool.get()?;
         Ok(connection)
     }
+}
 
-    pub fn connection(&mut self) -> Result<Arc<Mutex<Option<PooledConnection<SqliteConnectionManager>>>>> {
-        {
-            let mut connection = self.connection.lock().unwrap();
-            if (*connection).is_none() {
-                let c = self.connect()?;
-                *connection = Some(c);
-            }
+impl Default for Coin {
+    fn default() -> Self {
+        let pool = Pool::builder().build(SqliteConnectionManager::memory()).unwrap();
+        
+        Coin {
+            coin: 0,
+            account: 0,
+            network: Network::MainNetwork,
+            db_filepath: String::new(),
+            pool,
         }
-
-        Ok(self.connection.clone())
     }
 }
 
 lazy_static::lazy_static! {
-    pub static ref COINS: Mutex<[Coin; 2]> = Mutex::new([
-        Coin::new(0, Network::MainNetwork).unwrap(),
-        Coin::new(1, Network::TestNetwork).unwrap()]);
-}
-
-thread_local! {
-    pub static COIN: RefCell<Option<Coin>> = RefCell::new(None);
+    pub static ref COIN: Mutex<Coin> = Mutex::new(Coin::default());
 }

@@ -1,11 +1,9 @@
 use flutter_rust_bridge::frb;
 
-use crate::{get_coin, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, setup};
+use crate::{get_coin, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}};
 
 #[frb(sync)]
-pub fn is_valid_key(coin: u8, key: &str) -> bool {
-    setup!(coin, 0);
-
+pub fn is_valid_key(key: &str) -> bool {
     let c = get_coin!();
     let network = &c.network;
 

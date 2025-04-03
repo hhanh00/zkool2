@@ -12,54 +12,46 @@ String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
 int putAccountMetadata(
-        {required int coin,
-        required String name,
+        {required String name,
         Uint8List? icon,
         required int birth,
         required int height}) =>
     RustLib.instance.api.crateApiAccountPutAccountMetadata(
-        coin: coin, name: name, icon: icon, birth: birth, height: height);
+        name: name, icon: icon, birth: birth, height: height);
 
 int putAccountSeed(
-        {required int coin,
-        required int id,
-        required String phrase,
-        required int aindex}) =>
-    RustLib.instance.api.crateApiAccountPutAccountSeed(
-        coin: coin, id: id, phrase: phrase, aindex: aindex);
-
-int putAccountSaplingSecret(
-        {required int coin, required int id, required String esk}) =>
+        {required int id, required String phrase, required int aindex}) =>
     RustLib.instance.api
-        .crateApiAccountPutAccountSaplingSecret(coin: coin, id: id, esk: esk);
+        .crateApiAccountPutAccountSeed(id: id, phrase: phrase, aindex: aindex);
 
-int putAccountSaplingViewing(
-        {required int coin, required int id, required String evk}) =>
+int putAccountSaplingSecret({required int id, required String esk}) =>
     RustLib.instance.api
-        .crateApiAccountPutAccountSaplingViewing(coin: coin, id: id, evk: evk);
+        .crateApiAccountPutAccountSaplingSecret(id: id, esk: esk);
 
-int putAccountUnifiedViewing(
-        {required int coin, required int id, required String uvk}) =>
+int putAccountSaplingViewing({required int id, required String evk}) =>
     RustLib.instance.api
-        .crateApiAccountPutAccountUnifiedViewing(coin: coin, id: id, uvk: uvk);
+        .crateApiAccountPutAccountSaplingViewing(id: id, evk: evk);
+
+int putAccountUnifiedViewing({required int id, required String uvk}) =>
+    RustLib.instance.api
+        .crateApiAccountPutAccountUnifiedViewing(id: id, uvk: uvk);
 
 Future<int> putAccountTransparentSecret(
-        {required int coin, required int id, required String sk}) =>
+        {required int id, required String sk}) =>
     RustLib.instance.api
-        .crateApiAccountPutAccountTransparentSecret(coin: coin, id: id, sk: sk);
+        .crateApiAccountPutAccountTransparentSecret(id: id, sk: sk);
 
-String getAccountUfvk({required int coin, required int id}) =>
-    RustLib.instance.api.crateApiAccountGetAccountUfvk(coin: coin, id: id);
+String getAccountUfvk({required int id}) =>
+    RustLib.instance.api.crateApiAccountGetAccountUfvk(id: id);
 
-String uaFromUfvk({required int coin, required String ufvk, int? di}) =>
-    RustLib.instance.api
-        .crateApiAccountUaFromUfvk(coin: coin, ufvk: ufvk, di: di);
+String uaFromUfvk({required String ufvk, int? di}) =>
+    RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di);
 
-Receivers receiversFromUa({required int coin, required String ua}) =>
-    RustLib.instance.api.crateApiAccountReceiversFromUa(coin: coin, ua: ua);
+Receivers receiversFromUa({required String ua}) =>
+    RustLib.instance.api.crateApiAccountReceiversFromUa(ua: ua);
 
-Future<List<Account>> listAccounts({required int coin}) =>
-    RustLib.instance.api.crateApiAccountListAccounts(coin: coin);
+Future<List<Account>> listAccounts() =>
+    RustLib.instance.api.crateApiAccountListAccounts();
 
 void updateAccount({required AccountUpdate update}) =>
     RustLib.instance.api.crateApiAccountUpdateAccount(update: update);
@@ -68,19 +60,12 @@ void deleteAccount({required Account account}) =>
     RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
 
 Future<void> reorderAccount(
-        {required int coin,
-        required int oldPosition,
-        required int newPosition}) =>
+        {required int oldPosition, required int newPosition}) =>
     RustLib.instance.api.crateApiAccountReorderAccount(
-        coin: coin, oldPosition: oldPosition, newPosition: newPosition);
+        oldPosition: oldPosition, newPosition: newPosition);
 
-void newAccount({required int coin, required NewAccount newAccount}) =>
-    RustLib.instance.api
-        .crateApiAccountNewAccount(coin: coin, newAccount: newAccount);
-
-void setDbFilepath({required int coin, required String dbFilepath}) =>
-    RustLib.instance.api
-        .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);
+void newAccount({required NewAccount newAccount}) =>
+    RustLib.instance.api.crateApiAccountNewAccount(newAccount: newAccount);
 
 @freezed
 class Account with _$Account {

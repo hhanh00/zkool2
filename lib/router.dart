@@ -5,7 +5,7 @@ import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 
 final router = GoRouter(
-  initialLocation: "/account/new",
+  initialLocation: "/",
   routes: [
     GoRoute(
       path: '/',
