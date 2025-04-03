@@ -324,6 +324,11 @@ pub fn reorder_account(coin: u8, old_position: u32, new_position: u32) -> Result
     crate::db::reorder_account(old_position, new_position)
 }
 
+#[frb(sync)]
+pub fn new_account(coin: u8, new_account: &NewAccount) -> Result<()> {
+    Ok(())
+}
+
 #[frb(dart_metadata = ("freezed"))]
 pub struct Account {
     pub coin: u8,
@@ -347,6 +352,15 @@ pub struct AccountUpdate {
     pub name: Option<String>,
     pub icon: Option<Vec<u8>>,
     pub birth: Option<u32>,
+}
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct NewAccount {
+    pub icon: Vec<u8>,
+    pub name: String,
+    pub restore: bool,
+    pub key: String,
+    pub height: u32,
 }
 
 /*
