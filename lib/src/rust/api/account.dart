@@ -74,6 +74,10 @@ Future<void> reorderAccount(
     RustLib.instance.api.crateApiAccountReorderAccount(
         coin: coin, oldPosition: oldPosition, newPosition: newPosition);
 
+void newAccount({required int coin, required NewAccount newAccount}) =>
+    RustLib.instance.api
+        .crateApiAccountNewAccount(coin: coin, newAccount: newAccount);
+
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
         .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);
@@ -105,6 +109,17 @@ class AccountUpdate with _$AccountUpdate {
     Uint8List? icon,
     int? birth,
   }) = _AccountUpdate;
+}
+
+@freezed
+class NewAccount with _$NewAccount {
+  const factory NewAccount({
+    required Uint8List icon,
+    required String name,
+    required bool restore,
+    required String key,
+    required int height,
+  }) = _NewAccount;
 }
 
 class Receivers {

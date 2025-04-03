@@ -575,3 +575,208 @@ abstract class _AccountUpdate implements AccountUpdate {
   _$$AccountUpdateImplCopyWith<_$AccountUpdateImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$NewAccount {
+  Uint8List get icon => throw _privateConstructorUsedError;
+  String get name => throw _privateConstructorUsedError;
+  bool get restore => throw _privateConstructorUsedError;
+  String get key => throw _privateConstructorUsedError;
+  int get height => throw _privateConstructorUsedError;
+
+  /// Create a copy of NewAccount
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $NewAccountCopyWith<NewAccount> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $NewAccountCopyWith<$Res> {
+  factory $NewAccountCopyWith(
+          NewAccount value, $Res Function(NewAccount) then) =
+      _$NewAccountCopyWithImpl<$Res, NewAccount>;
+  @useResult
+  $Res call(
+      {Uint8List icon, String name, bool restore, String key, int height});
+}
+
+/// @nodoc
+class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
+    implements $NewAccountCopyWith<$Res> {
+  _$NewAccountCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of NewAccount
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? icon = null,
+    Object? name = null,
+    Object? restore = null,
+    Object? key = null,
+    Object? height = null,
+  }) {
+    return _then(_value.copyWith(
+      icon: null == icon
+          ? _value.icon
+          : icon // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      restore: null == restore
+          ? _value.restore
+          : restore // ignore: cast_nullable_to_non_nullable
+              as bool,
+      key: null == key
+          ? _value.key
+          : key // ignore: cast_nullable_to_non_nullable
+              as String,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$NewAccountImplCopyWith<$Res>
+    implements $NewAccountCopyWith<$Res> {
+  factory _$$NewAccountImplCopyWith(
+          _$NewAccountImpl value, $Res Function(_$NewAccountImpl) then) =
+      __$$NewAccountImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call(
+      {Uint8List icon, String name, bool restore, String key, int height});
+}
+
+/// @nodoc
+class __$$NewAccountImplCopyWithImpl<$Res>
+    extends _$NewAccountCopyWithImpl<$Res, _$NewAccountImpl>
+    implements _$$NewAccountImplCopyWith<$Res> {
+  __$$NewAccountImplCopyWithImpl(
+      _$NewAccountImpl _value, $Res Function(_$NewAccountImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of NewAccount
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? icon = null,
+    Object? name = null,
+    Object? restore = null,
+    Object? key = null,
+    Object? height = null,
+  }) {
+    return _then(_$NewAccountImpl(
+      icon: null == icon
+          ? _value.icon
+          : icon // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      restore: null == restore
+          ? _value.restore
+          : restore // ignore: cast_nullable_to_non_nullable
+              as bool,
+      key: null == key
+          ? _value.key
+          : key // ignore: cast_nullable_to_non_nullable
+              as String,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$NewAccountImpl implements _NewAccount {
+  const _$NewAccountImpl(
+      {required this.icon,
+      required this.name,
+      required this.restore,
+      required this.key,
+      required this.height});
+
+  @override
+  final Uint8List icon;
+  @override
+  final String name;
+  @override
+  final bool restore;
+  @override
+  final String key;
+  @override
+  final int height;
+
+  @override
+  String toString() {
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, height: $height)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$NewAccountImpl &&
+            const DeepCollectionEquality().equals(other.icon, icon) &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.restore, restore) || other.restore == restore) &&
+            (identical(other.key, key) || other.key == key) &&
+            (identical(other.height, height) || other.height == height));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType,
+      const DeepCollectionEquality().hash(icon), name, restore, key, height);
+
+  /// Create a copy of NewAccount
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$NewAccountImplCopyWith<_$NewAccountImpl> get copyWith =>
+      __$$NewAccountImplCopyWithImpl<_$NewAccountImpl>(this, _$identity);
+}
+
+abstract class _NewAccount implements NewAccount {
+  const factory _NewAccount(
+      {required final Uint8List icon,
+      required final String name,
+      required final bool restore,
+      required final String key,
+      required final int height}) = _$NewAccountImpl;
+
+  @override
+  Uint8List get icon;
+  @override
+  String get name;
+  @override
+  bool get restore;
+  @override
+  String get key;
+  @override
+  int get height;
+
+  /// Create a copy of NewAccount
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$NewAccountImplCopyWith<_$NewAccountImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
