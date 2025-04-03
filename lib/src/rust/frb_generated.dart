@@ -94,7 +94,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<Account>> crateApiAccountListAccounts();
 
-  void crateApiAccountNewAccount({required NewAccount newAccount});
+  void crateApiAccountNewAccount({required NewAccount na});
 
   String crateApiAccountNewSeed({required String phrase});
 
@@ -286,11 +286,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  void crateApiAccountNewAccount({required NewAccount newAccount}) {
+  void crateApiAccountNewAccount({required NewAccount na}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_box_autoadd_new_account(newAccount, serializer);
+        sse_encode_box_autoadd_new_account(na, serializer);
         return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
       },
       codec: SseCodec(
@@ -298,14 +298,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountNewAccountConstMeta,
-      argValues: [newAccount],
+      argValues: [na],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiAccountNewAccountConstMeta => const TaskConstMeta(
         debugName: "new_account",
-        argNames: ["newAccount"],
+        argNames: ["na"],
       );
 
   @override
@@ -736,14 +736,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NewAccount dco_decode_new_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return NewAccount(
-      icon: dco_decode_list_prim_u_8_strict(arr[0]),
+      icon: dco_decode_opt_list_prim_u_8_strict(arr[0]),
       name: dco_decode_String(arr[1]),
       restore: dco_decode_bool(arr[2]),
       key: dco_decode_String(arr[3]),
-      height: dco_decode_u_32(arr[4]),
+      aindex: dco_decode_u_32(arr[4]),
+      birth: dco_decode_opt_box_autoadd_u_32(arr[5]),
     );
   }
 
@@ -909,17 +910,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_icon = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_restore = sse_decode_bool(deserializer);
     var var_key = sse_decode_String(deserializer);
-    var var_height = sse_decode_u_32(deserializer);
+    var var_aindex = sse_decode_u_32(deserializer);
+    var var_birth = sse_decode_opt_box_autoadd_u_32(deserializer);
     return NewAccount(
         icon: var_icon,
         name: var_name,
         restore: var_restore,
         key: var_key,
-        height: var_height);
+        aindex: var_aindex,
+        birth: var_birth);
   }
 
   @protected
@@ -1079,11 +1082,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_list_prim_u_8_strict(self.icon, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_bool(self.restore, serializer);
     sse_encode_String(self.key, serializer);
-    sse_encode_u_32(self.height, serializer);
+    sse_encode_u_32(self.aindex, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.birth, serializer);
   }
 
   @protected

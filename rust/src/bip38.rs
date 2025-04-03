@@ -1,8 +1,8 @@
 use anyhow::Result;
-use bip32::secp256k1::SecretKey;
+use secp256k1::SecretKey;
 
 pub fn export_tsk(sk: &SecretKey) -> String {
-    let mut v = sk.to_bytes().to_vec();
+    let mut v = sk.secret_bytes().to_vec();
     v.push(0x01);
     bs58::encode(v).with_check_version(0x80).into_string()
 }
