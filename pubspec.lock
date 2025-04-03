@@ -22,6 +22,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.11.0"
+  animated_reorderable_list:
+    dependency: "direct main"
+    description:
+      name: animated_reorderable_list
+      sha256: "1e6fc4341a80ade13f09e8c192c2f49b33ffa4a9b0046425b9f6f93f2e7fedd4"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   args:
     dependency: transitive
     description:
@@ -206,14 +214,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.8"
-  data_table_2:
-    dependency: "direct main"
-    description:
-      name: data_table_2
-      sha256: b8dd157e4efe5f2beef092c9952a254b2192cf76a26ad1c6aa8b06c8b9d665da
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.6.0"
   fake_async:
     dependency: transitive
     description:

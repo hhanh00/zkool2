@@ -30,10 +30,10 @@ dependencies:
 
   path_provider: ^2.1.5
 
-  data_table_2: ^2.6.0
   collection: ^1.19.1
   image_picker: ^1.1.2
   awesome_dialog: ^3.2.1
+  animated_reorderable_list: ^1.2.0
 
 dev_dependencies:
   flutter_test:

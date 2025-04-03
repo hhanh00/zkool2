@@ -67,6 +67,13 @@ void updateAccount({required AccountUpdate update}) =>
 void deleteAccount({required Account account}) =>
     RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
 
+Future<void> reorderAccount(
+        {required int coin,
+        required int oldPosition,
+        required int newPosition}) =>
+    RustLib.instance.api.crateApiAccountReorderAccount(
+        coin: coin, oldPosition: oldPosition, newPosition: newPosition);
+
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
         .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);

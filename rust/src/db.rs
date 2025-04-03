@@ -17,7 +17,7 @@ pub fn drop_schema(connection: &Connection) -> Result<()> {
 }
 
 pub fn create_schema(connection: &Connection) -> Result<()> {
-    drop_schema(connection)?;
+    // drop_schema(connection)?;
     connection.execute(
         "CREATE TABLE IF NOT EXISTS accounts(
         id_account INTEGER PRIMARY KEY,
@@ -431,11 +431,47 @@ pub fn delete_account() -> Result<()> {
         "DELETE FROM orchard_accounts WHERE account = ?",
         [c.account],
     )?;
-    tx.execute(
-        "DELETE FROM accounts WHERE id_account = ?",
-        [c.account],
-    )?;
+    tx.execute("DELETE FROM accounts WHERE id_account = ?", [c.account])?;
     tx.commit()?;
 
+    Ok(())
+}
+
+pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
+    let mut c = get_coin!();
+    get_mut_connection!(c, connection);
+
+    let tx = connection.transaction()?;
+    let id = tx.query_row("
+        SELECT id_account FROM accounts WHERE position = ?", [old_position], 
+    |r| r.get::<_, u32>(0))?;
+    if old_position < new_position {
+        // moving down the list
+        // elements between [old, new) lose 1 position
+        tx.execute("
+            UPDATE accounts
+            SET position = position - 1
+            WHERE position > ? AND position <= ?",
+            params![old_position, new_position],
+        )?;
+        // update the old item position
+    }
+    if old_position > new_position {
+        // elements between [new, old) gain 1 position
+        tx.execute("
+            UPDATE accounts
+            SET position = position + 1
+            WHERE position >= ? AND position < ?",
+            params![new_position, old_position],
+        )?;
+    }
+    tx.execute("
+        UPDATE accounts
+        SET position = ?
+        WHERE id_account = ?",
+        params![new_position, id],
+    )?;
+
+    tx.commit()?;
     Ok(())
 }
