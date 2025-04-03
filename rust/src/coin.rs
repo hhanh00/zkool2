@@ -8,7 +8,7 @@ use zcash_protocol::consensus::Network;
 #[macro_export]
 macro_rules! setup {
     ($coin: expr, $account: expr) => {
-        let coins = COINS.lock().unwrap();
+        let coins = crate::coin::COINS.lock().unwrap();
         let mut c = coins[$coin as usize].clone();
         c.account = $account;
         crate::coin::COIN.with(|cc| {
