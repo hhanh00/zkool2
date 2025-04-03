@@ -376,3 +376,202 @@ abstract class _Account implements Account {
   _$$AccountImplCopyWith<_$AccountImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$AccountUpdate {
+  int get coin => throw _privateConstructorUsedError;
+  int get id => throw _privateConstructorUsedError;
+  String? get name => throw _privateConstructorUsedError;
+  Uint8List? get icon => throw _privateConstructorUsedError;
+  int? get birth => throw _privateConstructorUsedError;
+
+  /// Create a copy of AccountUpdate
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $AccountUpdateCopyWith<AccountUpdate> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $AccountUpdateCopyWith<$Res> {
+  factory $AccountUpdateCopyWith(
+          AccountUpdate value, $Res Function(AccountUpdate) then) =
+      _$AccountUpdateCopyWithImpl<$Res, AccountUpdate>;
+  @useResult
+  $Res call({int coin, int id, String? name, Uint8List? icon, int? birth});
+}
+
+/// @nodoc
+class _$AccountUpdateCopyWithImpl<$Res, $Val extends AccountUpdate>
+    implements $AccountUpdateCopyWith<$Res> {
+  _$AccountUpdateCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of AccountUpdate
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? coin = null,
+    Object? id = null,
+    Object? name = freezed,
+    Object? icon = freezed,
+    Object? birth = freezed,
+  }) {
+    return _then(_value.copyWith(
+      coin: null == coin
+          ? _value.coin
+          : coin // ignore: cast_nullable_to_non_nullable
+              as int,
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      name: freezed == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String?,
+      icon: freezed == icon
+          ? _value.icon
+          : icon // ignore: cast_nullable_to_non_nullable
+              as Uint8List?,
+      birth: freezed == birth
+          ? _value.birth
+          : birth // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$AccountUpdateImplCopyWith<$Res>
+    implements $AccountUpdateCopyWith<$Res> {
+  factory _$$AccountUpdateImplCopyWith(
+          _$AccountUpdateImpl value, $Res Function(_$AccountUpdateImpl) then) =
+      __$$AccountUpdateImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({int coin, int id, String? name, Uint8List? icon, int? birth});
+}
+
+/// @nodoc
+class __$$AccountUpdateImplCopyWithImpl<$Res>
+    extends _$AccountUpdateCopyWithImpl<$Res, _$AccountUpdateImpl>
+    implements _$$AccountUpdateImplCopyWith<$Res> {
+  __$$AccountUpdateImplCopyWithImpl(
+      _$AccountUpdateImpl _value, $Res Function(_$AccountUpdateImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of AccountUpdate
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? coin = null,
+    Object? id = null,
+    Object? name = freezed,
+    Object? icon = freezed,
+    Object? birth = freezed,
+  }) {
+    return _then(_$AccountUpdateImpl(
+      coin: null == coin
+          ? _value.coin
+          : coin // ignore: cast_nullable_to_non_nullable
+              as int,
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      name: freezed == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String?,
+      icon: freezed == icon
+          ? _value.icon
+          : icon // ignore: cast_nullable_to_non_nullable
+              as Uint8List?,
+      birth: freezed == birth
+          ? _value.birth
+          : birth // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$AccountUpdateImpl implements _AccountUpdate {
+  const _$AccountUpdateImpl(
+      {required this.coin, required this.id, this.name, this.icon, this.birth});
+
+  @override
+  final int coin;
+  @override
+  final int id;
+  @override
+  final String? name;
+  @override
+  final Uint8List? icon;
+  @override
+  final int? birth;
+
+  @override
+  String toString() {
+    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$AccountUpdateImpl &&
+            (identical(other.coin, coin) || other.coin == coin) &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.name, name) || other.name == name) &&
+            const DeepCollectionEquality().equals(other.icon, icon) &&
+            (identical(other.birth, birth) || other.birth == birth));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, coin, id, name,
+      const DeepCollectionEquality().hash(icon), birth);
+
+  /// Create a copy of AccountUpdate
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$AccountUpdateImplCopyWith<_$AccountUpdateImpl> get copyWith =>
+      __$$AccountUpdateImplCopyWithImpl<_$AccountUpdateImpl>(this, _$identity);
+}
+
+abstract class _AccountUpdate implements AccountUpdate {
+  const factory _AccountUpdate(
+      {required final int coin,
+      required final int id,
+      final String? name,
+      final Uint8List? icon,
+      final int? birth}) = _$AccountUpdateImpl;
+
+  @override
+  int get coin;
+  @override
+  int get id;
+  @override
+  String? get name;
+  @override
+  Uint8List? get icon;
+  @override
+  int? get birth;
+
+  /// Create a copy of AccountUpdate
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$AccountUpdateImplCopyWith<_$AccountUpdateImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
