@@ -309,6 +309,15 @@ pub fn update_account(update: &AccountUpdate,
     Ok(())
 }
 
+#[frb(sync)]
+pub fn delete_account(account: &Account) -> Result<()> {
+    setup!(account.coin, account.id);
+
+    crate::db::delete_account()?;
+
+    Ok(())
+}
+
 #[frb(dart_metadata = ("freezed"))]
 pub struct Account {
     pub coin: u8,
