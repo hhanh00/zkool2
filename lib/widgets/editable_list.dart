@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
@@ -112,7 +113,7 @@ class EditableListState<T> extends State<EditableList<T>> {
     final sv = selectedValue;
     if (sv != null) widget.editBuilder(context, sv);
   }
-  onDelete() => widget.deleteBuilder(context, items);
+  onDelete() => widget.deleteBuilder(context, items.whereIndexed((index, _) => selected[index]).toList());
 }
 
 T identity<T>(T t) => t;

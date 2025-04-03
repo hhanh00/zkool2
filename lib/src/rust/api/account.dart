@@ -64,6 +64,9 @@ Future<List<Account>> listAccounts({required int coin}) =>
 void updateAccount({required AccountUpdate update}) =>
     RustLib.instance.api.crateApiAccountUpdateAccount(update: update);
 
+void deleteAccount({required Account account}) =>
+    RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
+
 void setDbFilepath({required int coin, required String dbFilepath}) =>
     RustLib.instance.api
         .crateApiAccountSetDbFilepath(coin: coin, dbFilepath: dbFilepath);
