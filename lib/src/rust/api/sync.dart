@@ -4,12 +4,9 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-import '../sync.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `get_account_birth_height`, `get_transparent_addresses`
-
-Future<List<Transaction>> getTransparentTransactions(
-        {required List<int> accounts}) =>
-    RustLib.instance.api
-        .crateApiSyncGetTransparentTransactions(accounts: accounts);
+Future<void> getTransparentTransactions(
+        {required List<int> accounts, required int currentHeight}) =>
+    RustLib.instance.api.crateApiSyncGetTransparentTransactions(
+        accounts: accounts, currentHeight: currentHeight);

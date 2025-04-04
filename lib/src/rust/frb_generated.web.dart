@@ -15,7 +15,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
-import 'sync.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustLibApiImplPlatform({
@@ -65,9 +64,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  List<Transaction> dco_decode_list_transaction(dynamic raw);
-
-  @protected
   NewAccount dco_decode_new_account(dynamic raw);
 
   @protected
@@ -83,13 +79,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Receivers dco_decode_receivers(dynamic raw);
 
   @protected
-  Transaction dco_decode_transaction(dynamic raw);
-
-  @protected
   int dco_decode_u_32(dynamic raw);
-
-  @protected
-  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -138,9 +128,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  List<Transaction> sse_decode_list_transaction(SseDeserializer deserializer);
-
-  @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
 
   @protected
@@ -156,13 +143,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Receivers sse_decode_receivers(SseDeserializer deserializer);
 
   @protected
-  Transaction sse_decode_transaction(SseDeserializer deserializer);
-
-  @protected
   int sse_decode_u_32(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -219,10 +200,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       Uint8List self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_transaction(
-      List<Transaction> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);
 
   @protected
@@ -239,13 +216,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_receivers(Receivers self, SseSerializer serializer);
 
   @protected
-  void sse_encode_transaction(Transaction self, SseSerializer serializer);
-
-  @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
