@@ -11,13 +11,20 @@ use zcash_keys::{
 };
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
 use zcash_protocol::consensus::NetworkConstants;
-use zcash_transparent::keys::{
-    AccountPubKey, NonHardenedChildIndex, TransparentKeyScope
+use zcash_transparent::keys::{AccountPubKey, NonHardenedChildIndex, TransparentKeyScope};
+
+use crate::{
+    bip38,
+    db::{
+        init_account_orchard, init_account_sapling, init_account_transparent,
+        store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
+        store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
+        store_account_transparent_sk, store_account_transparent_vk, update_dindex,
+    },
+    get_coin, setup,
 };
 
-use crate::{bip38, db::{init_account_orchard, init_account_sapling, init_account_transparent, store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk, store_account_sapling_vk, store_account_seed, store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk, update_dindex}, get_coin, setup};
-
-pub fn put_account_seed(id: u32, phrase: &str, aindex: u32) -> Result<u32> {
+pub async fn put_account_seed(id: u32, phrase: &str, aindex: u32) -> Result<u32> {
     setup!(id);
 
     let c = get_coin!();
@@ -32,36 +39,39 @@ pub fn put_account_seed(id: u32, phrase: &str, aindex: u32) -> Result<u32> {
     let dindex: u32 = di.try_into()?;
     println!("dindex: {dindex}");
 
-    store_account_seed(&phrase, aindex)?;
-    init_account_transparent()?;
+    store_account_seed(c.get_pool(), c.account, &phrase, aindex).await?;
+    init_account_transparent(c.get_pool(), c.account).await?;
     let tsk = usk.transparent();
-    store_account_transparent_sk(tsk)?;
+    store_account_transparent_sk(c.get_pool(), c.account, tsk).await?;
     let tvk = &tsk.to_account_pubkey();
-    store_account_transparent_vk(tvk)?;
+    store_account_transparent_vk(c.get_pool(), c.account, tvk).await?;
     let taddr = ua.transparent().unwrap();
     store_account_transparent_addr(
+        c.get_pool(),
+        c.account,
         0,
         dindex,
         &tsk.to_bytes(),
         &taddr.encode(&c.network),
-    )?;
-    init_account_sapling()?;
+    )
+    .await?;
+    init_account_sapling(c.get_pool(), c.account).await?;
     let sxsk = usk.sapling();
-    store_account_sapling_sk(sxsk)?;
+    store_account_sapling_sk(c.get_pool(), c.account, sxsk).await?;
     let sxvk = sxsk.to_diversifiable_full_viewing_key();
-    store_account_sapling_vk(&sxvk)?;
-    init_account_orchard()?;
+    store_account_sapling_vk(c.get_pool(), c.account, &sxvk).await?;
+    init_account_orchard(c.get_pool(), c.account).await?;
     let oxsk = usk.orchard();
-    store_account_orchard_sk(oxsk)?;
+    store_account_orchard_sk(c.get_pool(), c.account, oxsk).await?;
     let oxvk = FullViewingKey::from(oxsk);
-    store_account_orchard_vk(&oxvk)?;
+    store_account_orchard_vk(c.get_pool(), c.account, &oxvk).await?;
 
-    update_dindex(dindex, true)?;
+    update_dindex(c.get_pool(), c.account, dindex, true).await?;
 
     Ok(id)
 }
 
-pub fn put_account_sapling_secret(id: u32, esk: &str) -> Result<u32> {
+pub async fn put_account_sapling_secret(id: u32, esk: &str) -> Result<u32> {
     setup!(id);
 
     let c = get_coin!();
@@ -71,15 +81,15 @@ pub fn put_account_sapling_secret(id: u32, esk: &str) -> Result<u32> {
         network.hrp_sapling_extended_spending_key(),
         esk,
     )?;
-    init_account_sapling()?;
-    store_account_sapling_sk(&xsk)?;
+    init_account_sapling(c.get_pool(), c.account).await?;
+    store_account_sapling_sk(c.get_pool(), c.account, &xsk).await?;
     let xvk = xsk.to_diversifiable_full_viewing_key();
-    store_account_sapling_vk(&xvk)?;
+    store_account_sapling_vk(c.get_pool(), c.account, &xvk).await?;
 
     Ok(id)
 }
 
-pub fn put_account_sapling_viewing(id: u32, evk: &str) -> Result<u32> {
+pub async fn put_account_sapling_viewing(id: u32, evk: &str) -> Result<u32> {
     setup!(id);
 
     let c = get_coin!();
@@ -90,25 +100,26 @@ pub fn put_account_sapling_viewing(id: u32, evk: &str) -> Result<u32> {
         evk,
     )?
     .to_diversifiable_full_viewing_key();
-    init_account_sapling()?;
-    store_account_sapling_vk(&xvk)?;
+    init_account_sapling(c.get_pool(), c.account).await?;
+    store_account_sapling_vk(c.get_pool(), c.account, &xvk).await?;
 
     Ok(id)
 }
 
-pub fn put_account_unified_viewing(id: u32, uvk: &str) -> Result<u32> {
+pub async fn put_account_unified_viewing(id: u32, uvk: &str) -> Result<u32> {
     setup!(id);
 
     let c = get_coin!();
     let network = c.network;
 
-    let uvk = UnifiedFullViewingKey::decode(&network, uvk).map_err(|_| anyhow::anyhow!("Invalid Key"))?;
+    let uvk =
+        UnifiedFullViewingKey::decode(&network, uvk).map_err(|_| anyhow::anyhow!("Invalid Key"))?;
     let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
     let dindex: u32 = di.try_into()?;
 
     if let Some(tvk) = uvk.transparent() {
-        init_account_transparent()?;
-        store_account_transparent_vk(tvk)?;
+        init_account_transparent(c.get_pool(), c.account).await?;
+        store_account_transparent_vk(c.get_pool(), c.account, tvk).await?;
         let tpk = tvk
             .derive_address_pubkey(
                 TransparentKeyScope::EXTERNAL,
@@ -116,28 +127,36 @@ pub fn put_account_unified_viewing(id: u32, uvk: &str) -> Result<u32> {
             )
             .unwrap();
         let address = ua.transparent().unwrap();
-        store_account_transparent_addr(0, dindex, &tpk.serialize(), &address.encode(&network))?;
+        store_account_transparent_addr(
+            c.get_pool(),
+            c.account,
+            0,
+            dindex,
+            &tpk.serialize(),
+            &address.encode(&network),
+        )
+        .await?;
     }
     if let Some(svk) = uvk.sapling() {
-        init_account_sapling()?;
-        store_account_sapling_vk(svk)?;
+        init_account_sapling(c.get_pool(), c.account).await?;
+        store_account_sapling_vk(c.get_pool(), c.account, svk).await?;
     }
     if let Some(ovk) = uvk.orchard() {
-        init_account_orchard()?;
-        store_account_orchard_vk(ovk)?;
+        init_account_orchard(c.get_pool(), c.account).await?;
+        store_account_orchard_vk(c.get_pool(), c.account, ovk).await?;
     }
-    update_dindex(dindex, true)?;
+    update_dindex(c.get_pool(), c.account, dindex, true).await?;
 
     Ok(id)
 }
 
-pub fn put_account_transparent_secret(id: u32, sk: &str) -> Result<u32> {
+pub async fn put_account_transparent_secret(id: u32, sk: &str) -> Result<u32> {
     setup!(id);
     let c = get_coin!();
     let network = c.network;
 
     let sk = bip38::import_tsk(sk)?;
-    init_account_transparent()?;
+    init_account_transparent(c.get_pool(), c.account).await?;
 
     let secp = secp256k1::Secp256k1::new();
 
@@ -147,7 +166,7 @@ pub fn put_account_transparent_secret(id: u32, sk: &str) -> Result<u32> {
         *ripemd::Ripemd160::digest(Sha256::digest(&pubkey)).as_ref(),
     );
     let address = ta.encode(&network);
-    store_account_transparent_addr(0, 0, &pubkey, &address)?;
+    store_account_transparent_addr(c.get_pool(), c.account, 0, 0, &pubkey, &address).await?;
 
     Ok(id)
 }
