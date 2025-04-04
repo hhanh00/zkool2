@@ -5,6 +5,7 @@ import 'package:logger/logger.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
+import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -20,6 +21,7 @@ Future<void> main() async {
     logger.i("Database file created: $dbFilepath");
   }
   await openDatabase(dbFilepath: dbFilepath);
+  setLwd(lwd: "https://zec.rocks:443");
 
   // Setup.init();
 
