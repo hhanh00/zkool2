@@ -24,8 +24,7 @@ class AccountViewPageState extends State<AccountViewPage> {
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
-            children: [
-            ],
+            children: [],
           ),
         ));
   }
@@ -84,15 +83,14 @@ class AccountEditPageState extends State<AccountEditPage> {
         ));
   }
 
-  void onEditName(String? name) {
+  void onEditName(String? name) async {
     if (name != null) {
-      setState(() {
-        account = account.copyWith(name: name);
-        updateAccount(
-            update:
-                AccountUpdate(coin: account.coin, id: account.id, name: name));
-        AppStoreBase.loadAccounts();
-      });
+      account = account.copyWith(name: name);
+      await updateAccount(
+          update:
+              AccountUpdate(coin: account.coin, id: account.id, name: name));
+      await AppStoreBase.loadAccounts();
+      setState(() {});
     }
   }
 
@@ -101,25 +99,23 @@ class AccountEditPageState extends State<AccountEditPage> {
     final icon = await picker.pickImage(source: ImageSource.gallery);
     if (icon != null) {
       final bytes = await icon.readAsBytes();
-      setState(() {
-        account = account.copyWith(icon: bytes);
-        updateAccount(
-            update:
-                AccountUpdate(coin: account.coin, id: account.id, icon: bytes));
-        AppStoreBase.loadAccounts();
-      });
+      account = account.copyWith(icon: bytes);
+      await updateAccount(
+          update:
+              AccountUpdate(coin: account.coin, id: account.id, icon: bytes));
+      await AppStoreBase.loadAccounts();
+      setState(() {});
     }
   }
 
-  void onEditBirth(String? birth) {
+  void onEditBirth(String? birth) async {
     if (birth != null) {
-      setState(() {
-        account = account.copyWith(birth: int.parse(birth));
-        updateAccount(
-            update:
-                AccountUpdate(coin: account.coin, id: account.id, birth: int.parse(birth)));
-        AppStoreBase.loadAccounts();
-      });
+      account = account.copyWith(birth: int.parse(birth));
+      await updateAccount(
+          update: AccountUpdate(
+              coin: account.coin, id: account.id, birth: int.parse(birth)));
+      await AppStoreBase.loadAccounts();
+      setState(() {});
     }
   }
 }

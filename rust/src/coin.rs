@@ -1,11 +1,9 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
+use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Pool, Sqlite};
 use tonic::transport::{Certificate, ClientTlsConfig};
 use zcash_protocol::consensus::Network;
-use tokio_rusqlite::Connection as AsyncConnection;
 
 use crate::Client;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
@@ -36,17 +34,22 @@ pub struct Coin {
     pub account: u32,
     pub network: Network,
     pub db_filepath: String,
-    pub pool: Pool<SqliteConnectionManager>,
+    pub pool: Option<Pool<Sqlite>>,
     pub lwd: String,
 }
 
 impl Coin {
-    pub fn new(db_filepath: &str) -> Result<Coin> {
-        let manager = SqliteConnectionManager::file(db_filepath);
-        let pool = Pool::builder().build(manager)?;
-        let connection = pool.get()?;
-        let coin = crate::db::get_prop(&connection, "coin")?
-            .map(|c| c.parse::<u8>().unwrap()).unwrap_or_default();
+    pub async fn new(db_filepath: &str) -> Result<Coin> {
+        // Create a connection pool
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .idle_timeout(std::time::Duration::from_secs(30))
+            .max_lifetime(std::time::Duration::from_secs(60 * 60))
+            .connect(db_filepath).await?;
+
+        let (coin, ): (String, ) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
+        .fetch_one(&pool).await?;
+        let coin = coin.parse::<u8>()?;
 
         let network = match coin {
             0 => Network::MainNetwork,
@@ -59,22 +62,22 @@ impl Coin {
             account: 0,
             network,
             db_filepath: db_filepath.to_string(),
-            pool,
+            pool: Some(pool),
             lwd: String::new(),
         })
     }
 
-    pub fn connect(&self) -> Result<r2d2::PooledConnection<SqliteConnectionManager>> {
-        let connection = self.pool.get()?;
+    pub fn get_pool(&self) -> &Pool<Sqlite> {
+        self.pool.as_ref().unwrap()
+    }
+
+    pub async fn connect(&self) -> Result<PoolConnection<Sqlite>> {
+        let connection = self.pool.as_ref().unwrap().acquire().await?;
         Ok(connection)
     }
 
     pub fn set_lwd(&mut self, lwd: &str) {
         self.lwd = lwd.to_string();
-    }
-
-    pub async fn connect_async(&self) -> Result<AsyncConnection> {
-        Ok(AsyncConnection::open(&self.db_filepath).await?)
     }
 
     pub async fn client(&self) -> Result<Client> {
@@ -86,20 +89,18 @@ impl Coin {
             channel = channel.tls_config(tls)?;
         }
         let client = CompactTxStreamerClient::connect(channel).await?;
-        Ok(client)        
+        Ok(client)
     }
 }
 
 impl Default for Coin {
     fn default() -> Self {
-        let pool = Pool::builder().build(SqliteConnectionManager::memory()).unwrap();
-        
         Coin {
             coin: 0,
             account: 0,
             network: Network::MainNetwork,
             db_filepath: String::new(),
-            pool,
+            pool: None,
             lwd: String::new(),
         }
     }

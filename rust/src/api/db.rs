@@ -1,18 +1,24 @@
+use crate::{
+    coin::Coin,
+    db::{create_schema, put_prop},
+};
 use anyhow::Result;
-use rusqlite::Connection;
-use crate::{coin::Coin, db::{create_schema, put_prop}};
+use sqlx::
+    sqlite::SqlitePoolOptions
+;
 
-pub fn create_database(coin: u8, db_filepath: &str) -> Result<()> {
-    let connection = Connection::open(db_filepath)?;
-    create_schema(&connection)?;
-    put_prop(&connection, "coin", &coin.to_string())?;
+pub async fn create_database(coin: u8, db_filepath: &str) -> Result<()> {
+    let pool = SqlitePoolOptions::new().connect(db_filepath).await?;
+    create_schema(&pool).await?;
+    put_prop(&pool, "coin", &coin.to_string()).await?;
 
     Ok(())
 }
 
-pub fn open_database(db_filepath: &str) -> Result<()> {
+pub async fn open_database(db_filepath: &str) -> Result<()> {
+    let coin = Coin::new(db_filepath).await?;
     let mut c = crate::coin::COIN.lock().unwrap();
-    *c = Coin::new(db_filepath)?;
+    *c = coin;
 
     Ok(())
 }

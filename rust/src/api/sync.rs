@@ -1,19 +1,16 @@
 use anyhow::Result;
-use rusqlite::params;
+use futures::TryStreamExt as _;
+use sqlx::sqlite::SqliteRow;
 use std::collections::HashMap;
-use std::io::Cursor;
+use sqlx::Row;
 
-use tokio_rusqlite::params as async_params;
 use zcash_primitives::transaction::Transaction as ZcashTransaction;
 use zcash_protocol::consensus::BranchId;
 
 use crate::{
     get_coin,
     lwd::{BlockId, BlockRange, TransparentAddressBlockFilter},
-    sync::Transaction,
 };
-
-use super::account;
 
 // #[frb]
 pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u32) -> Result<()> {
@@ -23,21 +20,20 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
 
     let c = get_coin!();
     let network = c.network;
-    let connection = c.connect_async().await?;
 
     // Get account heights
-    let mut account_heights = connection.call(|conn| {
-        let mut heights = HashMap::new();
-        let mut stmt = conn.prepare("SELECT account, transparent FROM sync_heights")?;
-        let mut rows = stmt.query([])?;
+    let mut account_heights = HashMap::new();
+    let mut rows = sqlx::query("SELECT account, transparent FROM sync_heights")
+    .map(|row: SqliteRow| {
+        let account: u32 = row.get(0);
+        let height: u32 = row.get(1);
+        (account, height)
+    })
+    .fetch(c.get_pool());
 
-        while let Some(row) = rows.next()? {
-            let account = row.get::<_, u32>(0)?;
-            let height = row.get::<_, u32>(1)?;
-            heights.insert(account, height);
-        }
-        Ok(heights)
-    }).await?;
+    while let Some((account, height)) = rows.try_next().await? {
+        account_heights.insert(account, height);
+    }
 
     // Create a sorted list of unique heights
     let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
@@ -69,32 +65,30 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
         let mut client = c.client().await?;
 
         // Fetch addresses for all accounts in this batch
-        let accounts_to_sync_clone = accounts_to_sync.clone();
-        let addresses = connection.call(move |conn| {
-            let mut addresses = vec![];
-            for account in accounts_to_sync_clone.iter() {
-                let mut stmt = conn.prepare("
-                    SELECT t1.account, t1.scope, t1.dindex, t1.address
-                    FROM transparent_address_accounts t1
-                    JOIN (
-                        SELECT account, scope, MAX(dindex) as max_dindex
-                        FROM transparent_address_accounts
-                        WHERE account = ?
-                        GROUP BY scope
-                    ) t2 ON t1.account = t2.account AND t1.scope = t2.scope AND t1.dindex = t2.max_dindex
-                    ORDER BY t1.scope")?;
-                let mut rows = stmt.query(rusqlite::params![account])?;
+    // let addresses = connection.call(move |conn| {
+        let mut addresses = vec![];
+        for account in accounts_to_sync.iter() {
+            let mut rows = sqlx::query("
+                SELECT t1.address
+                FROM transparent_address_accounts t1
+                JOIN (
+                    SELECT account, scope, MAX(dindex) as max_dindex
+                    FROM transparent_address_accounts
+                    WHERE account = ?
+                    GROUP BY scope
+                ) t2 ON t1.account = t2.account AND t1.scope = t2.scope AND t1.dindex = t2.max_dindex
+                ORDER BY t1.scope")
+                .bind(account)
+                .map(|row: SqliteRow| row.get::<String, _>(0))
+                .fetch(c.get_pool());
 
-                while let Some(row) = rows.next()? {
-                    let address: String = row.get(0)?;
-                    // Add the address to the client
-                    addresses.push((*account, address));
-                }
+            while let Some(address) = rows.try_next().await? {
+                // Add the address to the client
+                addresses.push((*account, address));
             }
-            Ok(addresses)
-        }).await?;
+        }
 
-        for (account, address) in addresses.iter() {
+        for (_account, address) in addresses.iter() {
             let mut txs = client
                 .get_taddress_txids(TransparentAddressBlockFilter {
                     address: address.clone(),
@@ -156,21 +150,19 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
                     // add a utxo entry
                 }
             }
-
         }
         
         // Update the sync heights for these accounts
         let accounts_to_sync_clone = accounts_to_sync.clone();
         let end_height_clone = end_height;
-        connection.call(move |connection| {
-            for account in &accounts_to_sync_clone {
-                connection.execute(
-                    "UPDATE sync_heights SET transparent = ? WHERE account = ?",
-                    rusqlite::params![end_height_clone, account],
-                )?;
-            }
-            Ok(())
-        }).await?;
+        for account in &accounts_to_sync_clone {
+            sqlx::query(
+                "UPDATE sync_heights SET transparent = ? WHERE account = ?")
+                .bind(end_height_clone)
+                .bind(account)
+                .execute(c.get_pool())
+                .await?;
+        }
         
         // Update our local map as well for the next iteration
         for account in &accounts_to_sync {
@@ -179,5 +171,4 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
     }
 
     Ok(())
-
 }
