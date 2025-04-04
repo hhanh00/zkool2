@@ -21,7 +21,7 @@ Future<void> main() async {
   }
   await openDatabase(dbFilepath: dbFilepath);
 
-  Setup.init();
+  // Setup.init();
 
   runApp(MaterialApp.router(
       routerConfig: router, debugShowCheckedModeBanner: false));
