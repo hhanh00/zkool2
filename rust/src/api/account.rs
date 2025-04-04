@@ -16,9 +16,10 @@ use zcash_keys::{
     encoding::AddressCodec,
     keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
-use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
+use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId, consensus::Parameters as ZkParams};
 use zcash_protocol::consensus::{Network, NetworkConstants, Parameters};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
+use rustls::crypto::CryptoProvider;
 
 use crate::{
     account::derive_transparent_address,
@@ -418,6 +419,7 @@ pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
     let _ = env_logger::builder().try_init();
+    rustls::crypto::ring::default_provider().install_default().unwrap();
 }
 
 pub async fn get_all_accounts() -> Result<Vec<Account>> {
