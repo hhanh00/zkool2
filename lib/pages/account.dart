@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -24,9 +25,16 @@ class AccountViewPageState extends State<AccountViewPage> {
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
-            children: [],
+            children: [
+              IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync))
+            ],
           ),
         ));
+  }
+
+  void onSync() async {
+    final ids = appStore.accounts.map((a) => a.id).toList();
+    await synchronize(accounts: ids, currentHeight: 2878053);
   }
 }
 

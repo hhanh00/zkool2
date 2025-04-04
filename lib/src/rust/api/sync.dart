@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<void> getTransparentTransactions(
+Future<void> synchronize(
         {required List<int> accounts, required int currentHeight}) =>
-    RustLib.instance.api.crateApiSyncGetTransparentTransactions(
+    RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts, currentHeight: currentHeight);
