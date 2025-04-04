@@ -11,36 +11,6 @@ part 'account.freezed.dart';
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
-int putAccountMetadata(
-        {required String name,
-        Uint8List? icon,
-        required int birth,
-        required int height}) =>
-    RustLib.instance.api.crateApiAccountPutAccountMetadata(
-        name: name, icon: icon, birth: birth, height: height);
-
-int putAccountSeed(
-        {required int id, required String phrase, required int aindex}) =>
-    RustLib.instance.api
-        .crateApiAccountPutAccountSeed(id: id, phrase: phrase, aindex: aindex);
-
-int putAccountSaplingSecret({required int id, required String esk}) =>
-    RustLib.instance.api
-        .crateApiAccountPutAccountSaplingSecret(id: id, esk: esk);
-
-int putAccountSaplingViewing({required int id, required String evk}) =>
-    RustLib.instance.api
-        .crateApiAccountPutAccountSaplingViewing(id: id, evk: evk);
-
-int putAccountUnifiedViewing({required int id, required String uvk}) =>
-    RustLib.instance.api
-        .crateApiAccountPutAccountUnifiedViewing(id: id, uvk: uvk);
-
-Future<int> putAccountTransparentSecret(
-        {required int id, required String sk}) =>
-    RustLib.instance.api
-        .crateApiAccountPutAccountTransparentSecret(id: id, sk: sk);
-
 String getAccountUfvk({required int id}) =>
     RustLib.instance.api.crateApiAccountGetAccountUfvk(id: id);
 
