@@ -9,8 +9,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/widgets/editable_list.dart';
 
 class AccountListPage extends StatelessWidget {
-  final int coin;
-  const AccountListPage({required this.coin, super.key});
+  const AccountListPage({super.key});
 
   @override
   Widget build(BuildContext context) {

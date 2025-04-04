@@ -6,6 +6,31 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
+class AccountViewPage extends StatefulWidget {
+  final Account account;
+  const AccountViewPage(this.account, {super.key});
+
+  @override
+  State<AccountViewPage> createState() => AccountViewPageState();
+}
+
+class AccountViewPageState extends State<AccountViewPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.account.name),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+            ],
+          ),
+        ));
+  }
+}
+
 class AccountEditPage extends StatefulWidget {
   final Account account;
   const AccountEditPage(this.account, {super.key});
