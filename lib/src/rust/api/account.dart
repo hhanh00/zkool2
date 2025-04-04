@@ -47,7 +47,6 @@ class Account with _$Account {
     required int aindex,
     Uint8List? icon,
     required int birth,
-    required int height,
     required int position,
     required bool hidden,
     required bool saved,

@@ -186,7 +186,7 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
 
     let birth = na.birth.unwrap_or(min_height);
 
-    let account = store_account_metadata(&na.name, &na.icon, birth, birth)?;
+    let account = store_account_metadata(&na.name, &na.icon, birth)?;
     setup!(account);
 
     let mut key = na.key.clone();
@@ -313,7 +313,6 @@ pub struct Account {
     pub aindex: u32,
     pub icon: Option<Vec<u8>>,
     pub birth: u32,
-    pub height: u32,
     pub position: u8,
     pub hidden: bool,
     pub saved: bool,

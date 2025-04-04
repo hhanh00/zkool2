@@ -35,7 +35,6 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         def_dindex INTEGER NOT NULL,
         icon BLOB,
         birth INTEGER NOT NULL,
-        height INTEGER NOT NULL,
         position INTEGER NOT NULL,
         hidden BOOL NOT NULL,
         saved BOOL NOT NULL,
@@ -79,6 +78,14 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         [],
     )?;
 
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS sync_heights(
+        account INTEGER PRIMARY KEY,
+        transparent INTEGER NOT NULL,
+        shielded INTEGER NOT NULL)",
+        [],
+    )?;
+
     Ok(())
 }
 
@@ -105,7 +112,6 @@ pub fn store_account_metadata(
     name: &str,
     icon: &Option<Vec<u8>>,
     birth: u32,
-    height: u32,
 ) -> Result<u32> {
     let c = get_coin!();
     let connection = c.connect()?;
@@ -117,34 +123,25 @@ pub fn store_account_metadata(
         .unwrap_or_default();
 
     let id = connection.query_row(
-        "INSERT INTO accounts(name, icon, birth, height,
+        "INSERT INTO accounts(name, icon, birth,
         aindex, dindex, def_dindex, position, saved, hidden)
-        VALUES (?, ?, ?, ?, 0, 0, 0, ?, FALSE, FALSE)
+        VALUES (?, ?, ?, 0, 0, 0, ?, FALSE, FALSE)
         ON CONFLICT(id_account) DO UPDATE SET
             name = excluded.name
         RETURNING id_account",
-        params![name, icon, birth, height, last_position + 1],
+        params![name, icon, birth, last_position + 1],
         |r| r.get::<_, u32>(0),
+    )?;
+
+    // also initialize 1-1 tables
+    connection.execute(
+        "INSERT INTO sync_heights(account, transparent, shielded)
+        VALUES (?1, ?2, ?2)",
+        params![id, birth - 1],
     )?;
 
     Ok(id)
 }
-
-// macro_rules! get_connection {
-//     ($c: ident, $connection: ident) => {
-//         let $connection = $c.connection()?;
-//         let $connection = $connection.lock().unwrap();
-//         let $connection = $connection.as_ref().unwrap();
-//     };
-// }
-
-// macro_rules! get_mut_connection {
-//     ($c: ident, $connection: ident) => {
-//         let $connection = $c.connection()?;
-//         let mut $connection = $connection.lock().unwrap();
-//         let $connection = $connection.as_mut().unwrap();
-//     };
-// }
 
 pub fn store_account_seed(phrase: &str, aindex: u32) -> Result<()> {
     let c = get_coin!();
@@ -409,7 +406,7 @@ pub fn list_accounts() -> Result<Vec<Account>> {
 
     let mut stmt = connection.prepare(
         "SELECT id_account, name, seed, aindex,
-        icon, birth, height, position, hidden, saved, enabled
+        icon, birth, position, hidden, saved, enabled
         FROM accounts ORDER by position",
     )?;
     let accounts = stmt
@@ -422,11 +419,10 @@ pub fn list_accounts() -> Result<Vec<Account>> {
                 aindex: r.get(3)?,
                 icon: r.get(4)?,
                 birth: r.get(5)?,
-                height: r.get(6)?,
-                position: r.get(7)?,
-                hidden: r.get(8)?,
-                saved: r.get(9)?,
-                enabled: r.get(10)?,
+                position: r.get(6)?,
+                hidden: r.get(7)?,
+                saved: r.get(8)?,
+                enabled: r.get(9)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -507,5 +503,22 @@ pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
     )?;
 
     tx.commit()?;
+    Ok(())
+}
+
+pub fn update_sync_transparent_height(accounts: &[u32], height: u32) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.connect()?;
+
+    let tx = connection.transaction()?;
+    for account in accounts {
+        tx.execute(
+            "INSERT OR REPLACE INTO sync_heights(account, transparent)
+            VALUES (?, ?)",
+            params![account, height],
+        )?;
+    }
+    tx.commit()?;
+
     Ok(())
 }

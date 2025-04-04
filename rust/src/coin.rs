@@ -3,7 +3,11 @@ use std::sync::Mutex;
 use anyhow::Result;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
+use tonic::transport::{Certificate, ClientTlsConfig};
 use zcash_protocol::consensus::Network;
+
+use crate::Client;
+use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 
 #[macro_export]
 macro_rules! setup {
@@ -32,6 +36,7 @@ pub struct Coin {
     pub network: Network,
     pub db_filepath: String,
     pub pool: Pool<SqliteConnectionManager>,
+    pub lwd: String,
 }
 
 impl Coin {
@@ -54,12 +59,29 @@ impl Coin {
             network,
             db_filepath: db_filepath.to_string(),
             pool,
+            lwd: String::new(),
         })
     }
 
     pub fn connect(&self) -> Result<r2d2::PooledConnection<SqliteConnectionManager>> {
         let connection = self.pool.get()?;
         Ok(connection)
+    }
+
+    pub fn set_lwd(&mut self, lwd: &str) {
+        self.lwd = lwd.to_string();
+    }
+
+    pub async fn client(&self) -> Result<Client> {
+        let mut channel = tonic::transport::Channel::from_shared(self.lwd.clone())?;
+        if self.lwd.starts_with("https") {
+            let pem = include_bytes!("ca.pem");
+            let ca = Certificate::from_pem(pem);
+            let tls = ClientTlsConfig::new().ca_certificate(ca);
+            channel = channel.tls_config(tls)?;
+        }
+        let client = CompactTxStreamerClient::connect(channel).await?;
+        Ok(client)        
     }
 }
 
@@ -73,6 +95,7 @@ impl Default for Coin {
             network: Network::MainNetwork,
             db_filepath: String::new(),
             pool,
+            lwd: String::new(),
         }
     }
 }

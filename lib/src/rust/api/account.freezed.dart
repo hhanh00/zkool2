@@ -23,7 +23,6 @@ mixin _$Account {
   int get aindex => throw _privateConstructorUsedError;
   Uint8List? get icon => throw _privateConstructorUsedError;
   int get birth => throw _privateConstructorUsedError;
-  int get height => throw _privateConstructorUsedError;
   int get position => throw _privateConstructorUsedError;
   bool get hidden => throw _privateConstructorUsedError;
   bool get saved => throw _privateConstructorUsedError;
@@ -48,7 +47,6 @@ abstract class $AccountCopyWith<$Res> {
       int aindex,
       Uint8List? icon,
       int birth,
-      int height,
       int position,
       bool hidden,
       bool saved,
@@ -77,7 +75,6 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? aindex = null,
     Object? icon = freezed,
     Object? birth = null,
-    Object? height = null,
     Object? position = null,
     Object? hidden = null,
     Object? saved = null,
@@ -111,10 +108,6 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
       birth: null == birth
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
-              as int,
-      height: null == height
-          ? _value.height
-          : height // ignore: cast_nullable_to_non_nullable
               as int,
       position: null == position
           ? _value.position
@@ -151,7 +144,6 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int aindex,
       Uint8List? icon,
       int birth,
-      int height,
       int position,
       bool hidden,
       bool saved,
@@ -178,7 +170,6 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? aindex = null,
     Object? icon = freezed,
     Object? birth = null,
-    Object? height = null,
     Object? position = null,
     Object? hidden = null,
     Object? saved = null,
@@ -213,10 +204,6 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int,
-      height: null == height
-          ? _value.height
-          : height // ignore: cast_nullable_to_non_nullable
-              as int,
       position: null == position
           ? _value.position
           : position // ignore: cast_nullable_to_non_nullable
@@ -248,7 +235,6 @@ class _$AccountImpl implements _Account {
       required this.aindex,
       this.icon,
       required this.birth,
-      required this.height,
       required this.position,
       required this.hidden,
       required this.saved,
@@ -269,8 +255,6 @@ class _$AccountImpl implements _Account {
   @override
   final int birth;
   @override
-  final int height;
-  @override
   final int position;
   @override
   final bool hidden;
@@ -281,7 +265,7 @@ class _$AccountImpl implements _Account {
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, height: $height, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled)';
   }
 
   @override
@@ -296,7 +280,6 @@ class _$AccountImpl implements _Account {
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
             (identical(other.birth, birth) || other.birth == birth) &&
-            (identical(other.height, height) || other.height == height) &&
             (identical(other.position, position) ||
                 other.position == position) &&
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
@@ -314,7 +297,6 @@ class _$AccountImpl implements _Account {
       aindex,
       const DeepCollectionEquality().hash(icon),
       birth,
-      height,
       position,
       hidden,
       saved,
@@ -338,7 +320,6 @@ abstract class _Account implements Account {
       required final int aindex,
       final Uint8List? icon,
       required final int birth,
-      required final int height,
       required final int position,
       required final bool hidden,
       required final bool saved,
@@ -358,8 +339,6 @@ abstract class _Account implements Account {
   Uint8List? get icon;
   @override
   int get birth;
-  @override
-  int get height;
   @override
   int get position;
   @override

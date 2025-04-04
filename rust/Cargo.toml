@@ -41,6 +41,11 @@ sapling-crypto = "0.5"
 bs58 = "0.5"
 ripemd = "0.1"
 sha2 = "0.10"
+tonic = { version = "0.13.0", features = ["tls-native-roots", "tls-webpki-roots"] }
+prost = "0.13.5"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+
+[build-dependencies]
+tonic-build = "0.13"
