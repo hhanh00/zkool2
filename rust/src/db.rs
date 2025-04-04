@@ -1,31 +1,43 @@
 use anyhow::{anyhow, Result};
+use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
-use rusqlite::{params, Connection, OptionalExtension};
+use sqlx::Row as _;
+use sqlx::{sqlite::SqliteRow, SqlitePool};
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::{api::account::Account, get_coin};
+use crate::api::account::Account;
 
-pub fn drop_schema(connection: &Connection) -> Result<()> {
-    connection.execute("DROP TABLE IF EXISTS accounts", [])?;
-    connection.execute("DROP TABLE IF EXISTS transparent_accounts", [])?;
-    connection.execute("DROP TABLE IF EXISTS transparent_address_accounts", [])?;
-    connection.execute("DROP TABLE IF EXISTS sapling_accounts", [])?;
-    connection.execute("DROP TABLE IF EXISTS orchard_accounts", [])?;
+pub async fn drop_schema(connection: &SqlitePool) -> Result<()> {
+    sqlx::query("DROP TABLE IF EXISTS accounts")
+        .execute(connection)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS transparent_accounts")
+        .execute(connection)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS transparent_address_accounts")
+        .execute(connection)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS sapling_accounts")
+        .execute(connection)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS orchard_accounts")
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
 
-pub fn create_schema(connection: &Connection) -> Result<()> {
-    // drop_schema(connection)?;
-    connection.execute(
+pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(
         key TEXT PRIMARY KEY,
         VALUE TEXT NOT NULL)",
-        [],
-    )?;
+    )
+    .execute(connection)
+    .await?;
 
-    connection.execute(
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS accounts(
         id_account INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
@@ -35,24 +47,25 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         def_dindex INTEGER NOT NULL,
         icon BLOB,
         birth INTEGER NOT NULL,
-        height INTEGER NOT NULL,
         position INTEGER NOT NULL,
         hidden BOOL NOT NULL,
         saved BOOL NOT NULL,
         enabled BOOL NOT NULL DEFAULT TRUE
         )",
-        [],
-    )?;
+    )
+    .execute(connection)
+    .await?;
 
-    connection.execute(
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS transparent_accounts(
         account INTEGER PRIMARY KEY,
         xsk BLOB,
         xvk BLOB)",
-        [],
-    )?;
+    )
+    .execute(connection)
+    .await?;
 
-    connection.execute(
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS transparent_address_accounts(
         account INTEGER NOT NULL,
         scope INTEGER NOT NULL,
@@ -60,268 +73,302 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         sk BLOB,
         address TEXT,
         PRIMARY KEY (account, scope, dindex))",
-        [],
-    )?;
+    )
+    .execute(connection)
+    .await?;
 
-    connection.execute(
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS sapling_accounts(
         account INTEGER PRIMARY KEY,
         xsk BLOB,
         xvk BLOB NOT NULL)",
-        [],
-    )?;
+    )
+    .execute(connection)
+    .await?;
 
-    connection.execute(
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS orchard_accounts(
         account INTEGER PRIMARY KEY,
         xsk BLOB,
         xvk BLOB NOT NULL)",
-        [],
-    )?;
+    )
+    .execute(connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS sync_heights(
+        account INTEGER PRIMARY KEY,
+        transparent INTEGER NOT NULL,
+        shielded INTEGER NOT NULL)",
+    )
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn put_prop(connection: &Connection, key: &str, value: &str) -> Result<()> {
-    connection.execute(
-        "INSERT OR REPLACE INTO props(key, value) VALUES (?, ?)",
-        params![key, value],
-    )?;
+pub async fn put_prop(connection: &SqlitePool, key: &str, value: &str) -> Result<()> {
+    sqlx::query("INSERT OR REPLACE INTO props(key, value) VALUES (?, ?)")
+        .bind(key)
+        .bind(value)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
 
-pub fn get_prop(connection: &Connection, key: &str) -> Result<Option<String>> {
-    let value = connection
-        .query_row("SELECT value FROM props WHERE key = ?", [key], |r| {
-            r.get::<_, String>(0)
-        })
-        .optional()?;
+pub async fn get_prop(connection: &SqlitePool, key: &str) -> Result<Option<String>> {
+    let value: Option<(String,)> = sqlx::query_as("SELECT value FROM props WHERE key = ?")
+        .bind(key)
+        .fetch_optional(connection)
+        .await?;
 
-    Ok(value)
+    Ok(value.map(|v| v.0))
 }
 
-pub fn store_account_metadata(
+pub async fn store_account_metadata(
+    connection: &SqlitePool,
     name: &str,
     icon: &Option<Vec<u8>>,
     birth: u32,
-    height: u32,
 ) -> Result<u32> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    let last_position = connection
-        .query_row("SELECT MAX(position) FROM accounts", [], |r| {
-            r.get::<_, Option<u32>>(0)
-        })?
+    let (last_position,): (u32,) = sqlx::query_as("SELECT MAX(position) FROM accounts")
+        .fetch_optional(connection)
+        .await?
         .unwrap_or_default();
 
-    let id = connection.query_row(
-        "INSERT INTO accounts(name, icon, birth, height,
+    let (id,): (u32,) = sqlx::query_as(
+        "INSERT INTO accounts(name, icon, birth,
         aindex, dindex, def_dindex, position, saved, hidden)
-        VALUES (?, ?, ?, ?, 0, 0, 0, ?, FALSE, FALSE)
+        VALUES (?, ?, ?, 0, 0, 0, ?, FALSE, FALSE)
         ON CONFLICT(id_account) DO UPDATE SET
             name = excluded.name
         RETURNING id_account",
-        params![name, icon, birth, height, last_position + 1],
-        |r| r.get::<_, u32>(0),
-    )?;
+    )
+    .bind(name)
+    .bind(icon)
+    .bind(birth)
+    .bind(last_position + 1)
+    .fetch_one(connection)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO sync_heights(account, transparent, shielded)
+        VALUES (?1, ?2, ?2)",
+    )
+    .bind(id)
+    .bind(birth - 1)
+    .execute(connection)
+    .await?;
 
     Ok(id)
 }
 
-// macro_rules! get_connection {
-//     ($c: ident, $connection: ident) => {
-//         let $connection = $c.connection()?;
-//         let $connection = $connection.lock().unwrap();
-//         let $connection = $connection.as_ref().unwrap();
-//     };
-// }
-
-// macro_rules! get_mut_connection {
-//     ($c: ident, $connection: ident) => {
-//         let $connection = $c.connection()?;
-//         let mut $connection = $connection.lock().unwrap();
-//         let $connection = $connection.as_mut().unwrap();
-//     };
-// }
-
-pub fn store_account_seed(phrase: &str, aindex: u32) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_seed(
+    connection: &SqlitePool,
+    account: u32,
+    phrase: &str,
+    aindex: u32,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE accounts
          SET seed = ?,
              aindex = ?
          WHERE id_account = ?",
-        params![&phrase, aindex, c.account],
-    )?;
+    )
+    .bind(phrase)
+    .bind(aindex)
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn init_account_transparent() -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
-        "INSERT INTO transparent_accounts(account) VALUES (?)",
-        [c.account],
-    )?;
+pub async fn init_account_transparent(connection: &SqlitePool, account: u32) -> Result<()> {
+    sqlx::query("INSERT INTO transparent_accounts(account) VALUES (?)")
+        .bind(account)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
 
-pub fn store_account_transparent_sk(xsk: &AccountPrivKey) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_transparent_sk(
+    connection: &SqlitePool,
+    account: u32,
+    xsk: &AccountPrivKey,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE transparent_accounts
         SET xsk = ? WHERE account = ?",
-        params![xsk.to_bytes(), c.account],
-    )?;
+    )
+    .bind(xsk.to_bytes())
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn store_account_transparent_vk(xvk: &AccountPubKey) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_transparent_vk(
+    connection: &SqlitePool,
+    account: u32,
+    xvk: &AccountPubKey,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE transparent_accounts
         SET xvk = ? WHERE account = ?",
-        params![xvk.serialize(), c.account],
-    )?;
+    )
+    .bind(xvk.serialize())
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn init_account_sapling() -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
-        "INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')",
-        [c.account],
-    )?;
+pub async fn init_account_sapling(connection: &SqlitePool, account: u32) -> Result<()> {
+    sqlx::query("INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')")
+        .bind(account)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
 
-pub fn store_account_transparent_addr(
+pub async fn store_account_transparent_addr(
+    connection: &SqlitePool,
+    account: u32,
     scope: u32,
     dindex: u32,
     sk: &[u8],
     address: &str,
 ) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+    sqlx::query(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, address)
         VALUES (?, ?, ?, ?, ?)",
-        params![c.account, scope, dindex, sk, address],
-    )?;
+    )
+    .bind(account)
+    .bind(scope)
+    .bind(dindex)
+    .bind(sk)
+    .bind(address)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn store_account_sapling_sk(xsk: &ExtendedSpendingKey) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_sapling_sk(
+    connection: &SqlitePool,
+    account: u32,
+    xsk: &ExtendedSpendingKey,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE sapling_accounts
         SET xsk = ? WHERE account = ?",
-        params![xsk.to_bytes(), c.account],
-    )?;
+    )
+    .bind(xsk.to_bytes().as_slice())
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn store_account_sapling_vk(xvk: &DiversifiableFullViewingKey) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_sapling_vk(
+    connection: &SqlitePool,
+    account: u32,
+    xvk: &DiversifiableFullViewingKey,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE sapling_accounts
         SET xvk = ? WHERE account = ?",
-        params![xvk.to_bytes(), c.account],
-    )?;
+    )
+    .bind(xvk.to_bytes().as_slice())
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn init_account_orchard() -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
-        "INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')",
-        [c.account],
-    )?;
+pub async fn init_account_orchard(connection: &SqlitePool, account: u32) -> Result<()> {
+    sqlx::query("INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')")
+        .bind(account)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
 
-pub fn store_account_orchard_sk(xsk: &orchard::keys::SpendingKey) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_orchard_sk(
+    connection: &SqlitePool,
+    account: u32,
+    xsk: &orchard::keys::SpendingKey,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE orchard_accounts
         SET xsk = ? WHERE account = ?",
-        params![xsk.to_bytes(), c.account],
-    )?;
+    )
+    .bind(xsk.to_bytes().as_slice())
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn store_account_orchard_vk(xvk: &orchard::keys::FullViewingKey) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
+pub async fn store_account_orchard_vk(
+    connection: &SqlitePool,
+    account: u32,
+    xvk: &orchard::keys::FullViewingKey,
+) -> Result<()> {
+    sqlx::query(
         "UPDATE orchard_accounts
         SET xvk = ? WHERE account = ?",
-        params![xvk.to_bytes(), c.account],
-    )?;
+    )
+    .bind(xvk.to_bytes().as_slice())
+    .bind(account)
+    .execute(connection)
+    .await?;
 
     Ok(())
 }
 
-pub fn update_dindex(dindex: u32, update_default: bool) -> Result<()> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    connection.execute(
-        "UPDATE accounts SET dindex = ? WHERE id_account = ?",
-        params![dindex, c.account],
-    )?;
+pub async fn update_dindex(
+    connection: &SqlitePool,
+    account: u32,
+    dindex: u32,
+    update_default: bool,
+) -> Result<()> {
+    sqlx::query("UPDATE accounts SET dindex = ? WHERE id_account = ?")
+        .bind(dindex)
+        .bind(account)
+        .execute(connection)
+        .await?;
     if update_default {
-        connection.execute(
-            "UPDATE accounts SET def_dindex = ? WHERE id_account = ?",
-            params![dindex, c.account],
-        )?;
+        sqlx::query("UPDATE accounts SET def_dindex = ? WHERE id_account = ?")
+            .bind(dindex)
+            .bind(account)
+            .execute(connection)
+            .await?;
     }
 
     Ok(())
 }
 
-pub fn select_account_transparent() -> Result<TransparentKeys> {
-    let c = get_coin!();
-    let connection = c.connect()?;
+pub async fn select_account_transparent(
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<TransparentKeys> {
+    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
+        sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?;
 
-    let r = connection
-        .query_row(
-            "SELECT xsk, xvk FROM transparent_accounts WHERE account = ?",
-            [c.account],
-            |r| Ok((r.get::<_, Option<Vec<u8>>>(0)?, r.get::<_, Vec<u8>>(1)?)),
-        )
-        .optional()?;
     let (xsk, xvk) = match r {
         Some((xsk, xvk)) => (xsk, Some(xvk)),
         None => (None, None),
@@ -335,17 +382,13 @@ pub fn select_account_transparent() -> Result<TransparentKeys> {
     Ok(keys)
 }
 
-pub fn select_account_sapling() -> Result<SaplingKeys> {
-    let c = get_coin!();
-    let connection = c.connect()?;
+pub async fn select_account_sapling(connection: &SqlitePool, account: u32) -> Result<SaplingKeys> {
+    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
+        sqlx::query_as("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?;
 
-    let r = connection
-        .query_row(
-            "SELECT xsk, xvk FROM sapling_accounts WHERE account = ?",
-            [c.account],
-            |r| Ok((r.get::<_, Option<Vec<u8>>>(0)?, r.get::<_, Vec<u8>>(1)?)),
-        )
-        .optional()?;
     let (xsk, xvk) = match r {
         Some((xsk, xvk)) => (xsk, Some(xvk)),
         None => (None, None),
@@ -364,17 +407,13 @@ pub fn select_account_sapling() -> Result<SaplingKeys> {
     Ok(keys)
 }
 
-pub fn select_account_orchard() -> Result<OrchardKeys> {
-    let c = get_coin!();
-    let connection = c.connect()?;
+pub async fn select_account_orchard(connection: &SqlitePool, account: u32) -> Result<OrchardKeys> {
+    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
+        sqlx::query_as("SELECT xsk, xvk FROM orchard_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?;
 
-    let r = connection
-        .query_row(
-            "SELECT xsk, xvk FROM orchard_accounts WHERE account = ?",
-            [c.account],
-            |r| Ok((r.get::<_, Option<Vec<u8>>>(0)?, r.get::<_, Vec<u8>>(1)?)),
-        )
-        .optional()?;
     let (xsk, xvk) = match r {
         Some((xsk, xvk)) => (xsk, Some(xvk)),
         None => (None, None),
@@ -403,109 +442,126 @@ pub struct OrchardKeys {
     pub xvk: Option<FullViewingKey>,
 }
 
-pub fn list_accounts() -> Result<Vec<Account>> {
-    let c = get_coin!();
-    let connection = c.connect()?;
-
-    let mut stmt = connection.prepare(
+pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Account>> {
+    let mut rows = sqlx::query(
         "SELECT id_account, name, seed, aindex,
-        icon, birth, height, position, hidden, saved, enabled
+        icon, birth, position, hidden, saved, enabled
         FROM accounts ORDER by position",
-    )?;
-    let accounts = stmt
-        .query_map([], |r| {
-            Ok(Account {
-                coin: c.coin,
-                id: r.get(0)?,
-                name: r.get(1)?,
-                seed: r.get(2)?,
-                aindex: r.get(3)?,
-                icon: r.get(4)?,
-                birth: r.get(5)?,
-                height: r.get(6)?,
-                position: r.get(7)?,
-                hidden: r.get(8)?,
-                saved: r.get(9)?,
-                enabled: r.get(10)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+    )
+    .map(|row: SqliteRow| Account {
+        coin,
+        id: row.get(0),
+        name: row.get(1),
+        seed: row.get(2),
+        aindex: row.get(3),
+        icon: row.get(4),
+        birth: row.get(5),
+        position: row.get(6),
+        hidden: row.get(7),
+        saved: row.get(8),
+        enabled: row.get(9),
+    })
+    .fetch(connection);
+
+    let mut accounts = vec![];
+    while let Some(row) = rows.try_next().await? {
+        accounts.push(row);
+    }
 
     Ok(accounts)
 }
 
-pub fn delete_account() -> Result<()> {
-    let c = get_coin!();
-    let mut connection = c.connect()?;
+pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()> {
+    let mut tx = connection.begin().await?;
+    sqlx::query("DELETE FROM transparent_address_accounts WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
 
-    let tx = connection.transaction()?;
-    tx.execute(
-        "DELETE FROM transparent_address_accounts WHERE account = ?",
-        [c.account],
-    )?;
-    tx.execute(
-        "DELETE FROM transparent_address_accounts WHERE account = ?",
-        [c.account],
-    )?;
-    tx.execute(
-        "DELETE FROM transparent_accounts WHERE account = ?",
-        [c.account],
-    )?;
-    tx.execute(
-        "DELETE FROM sapling_accounts WHERE account = ?",
-        [c.account],
-    )?;
-    tx.execute(
-        "DELETE FROM orchard_accounts WHERE account = ?",
-        [c.account],
-    )?;
-    tx.execute("DELETE FROM accounts WHERE id_account = ?", [c.account])?;
-    tx.commit()?;
+    sqlx::query("DELETE FROM transparent_accounts WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM sapling_accounts WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM orchard_accounts WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
 
     Ok(())
 }
 
-pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
-    let c = get_coin!();
-    let mut connection = c.connect()?;
-
-    let tx = connection.transaction()?;
-    let id = tx.query_row(
-        "
-        SELECT id_account FROM accounts WHERE position = ?",
-        [old_position],
-        |r| r.get::<_, u32>(0),
-    )?;
+pub async fn reorder_account(
+    connection: &SqlitePool,
+    old_position: u32,
+    new_position: u32,
+) -> Result<()> {
+    let mut tx = connection.begin().await?;
+    let (id, ): (u32, ) = sqlx::query_as("SELECT id_account FROM accounts WHERE position = ?")
+        .bind(old_position)
+        .fetch_one(&mut *tx)
+        .await?;
     if old_position < new_position {
-        // moving down the list
-        // elements between [old, new) lose 1 position
-        tx.execute(
-            "
-            UPDATE accounts
+        sqlx::query(
+            "UPDATE accounts
             SET position = position - 1
             WHERE position > ? AND position <= ?",
-            params![old_position, new_position],
-        )?;
-        // update the old item position
+        )
+        .bind(old_position)
+        .bind(new_position)
+        .execute(&mut *tx)
+        .await?;
     }
     if old_position > new_position {
-        // elements between [new, old) gain 1 position
-        tx.execute(
-            "
-            UPDATE accounts
+        sqlx::query(
+            "UPDATE accounts
             SET position = position + 1
             WHERE position >= ? AND position < ?",
-            params![new_position, old_position],
-        )?;
+        )
+        .bind(new_position)
+        .bind(old_position)
+        .execute(&mut *tx)
+        .await?;
     }
-    tx.execute(
-        "
-        UPDATE accounts
+    sqlx::query(
+        "UPDATE accounts
         SET position = ?
         WHERE id_account = ?",
-        params![new_position, id],
-    )?;
+    )
+    .bind(new_position)
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
 
-    tx.commit()?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn update_sync_transparent_height(
+    connection: &SqlitePool,
+    accounts: &[u32],
+    height: u32,
+) -> Result<()> {
+    let mut tx = connection.begin().await?;
+    for account in accounts {
+        sqlx::query(
+            "INSERT OR REPLACE INTO sync_heights(account, transparent)
+            VALUES (?, ?)",
+        )
+        .bind(account)
+        .bind(height)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+
     Ok(())
 }

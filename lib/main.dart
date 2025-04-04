@@ -50,31 +50,3 @@ class Setup {
       NewAccount(name: "Hanh5", restore: true, aindex: 0, birth: 1, key: tsk));
   }
 }
-
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => MyAppState();
-}
-
-class MyAppState extends State<MyApp> {
-  @override
-  Widget build(BuildContext context) {
-    final ufvk = getAccountUfvk(id: 1);
-    final ua = uaFromUfvk(ufvk: ufvk);
-    final receivers = receiversFromUa(ua: ua);
-
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('ZKOOL 2')),
-        body: Column(children: [
-          ListTile(title: Text("UA"), subtitle: Text(ua)),
-          ListTile(title: Text("T"), subtitle: Text(receivers.taddr ?? "")),
-          ListTile(title: Text("S"), subtitle: Text(receivers.saddr ?? "")),
-          ListTile(title: Text("O"), subtitle: Text(receivers.oaddr ?? "")),
-        ]),
-      ),
-    );
-  }
-}
