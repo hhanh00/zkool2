@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
@@ -59,12 +60,14 @@ class NewAccountPageState extends State<NewAccountPage> {
                 FormBuilderTextField(
                   name: "name",
                   decoration: const InputDecoration(labelText: "Account Name"),
+                  initialValue: name,
                   onChanged: (v) => setState(() => name = v!),
                 ),
                 Gap(16),
                 FormBuilderSwitch(
                     name: "restore",
                     title: const Text("Restore Account?"),
+                    initialValue: restore,
                     onChanged: (v) => setState(() => restore = v ?? false)),
                 Gap(16),
                 if (restore)
@@ -113,7 +116,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
       newAccount(
           na: NewAccount(
-            icon: icon ?? Uint8List(0),
+            icon: icon,
             name: name ?? "",
             restore: restore ?? false,
             key: key ?? "",
@@ -121,6 +124,7 @@ class NewAccountPageState extends State<NewAccountPage> {
             birth: birth != null ? int.parse(birth) : null,
           ));
       AppStoreBase.loadAccounts();
+      GoRouter.of(context).pop();
     }
   }
 
