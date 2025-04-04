@@ -4,6 +4,8 @@ use anyhow::{anyhow, Result};
 use bip32::{ExtendedPrivateKey, ExtendedPublicKey};
 use flutter_rust_bridge::frb;
 use orchard::keys::FullViewingKey;
+use rand::TryRngCore;
+use rand_core::OsRng;
 use ripemd::{Digest as _, Ripemd160};
 use rusqlite::params;
 use sapling_crypto::PaymentAddress;
@@ -18,7 +20,7 @@ use zcash_keys::{
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
 use zcash_protocol::consensus::{Network, NetworkConstants, Parameters};
 use zcash_transparent::keys::{
-    AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
+    AccountPrivKey, AccountPubKey,
 };
 
 use crate::{
@@ -187,10 +189,18 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
     let account = store_account_metadata(&na.name, &na.icon, birth, birth)?;
     setup!(account);
 
-    if is_valid_phrase(&na.key) {
-        store_account_seed(&na.key, na.aindex)?;
+    let mut key = na.key.clone();
+    if key.is_empty() {
+        let mut entropy = [0u8; 32];
+        OsRng.try_fill_bytes(&mut entropy)?;
+        let m = bip39::Mnemonic::from_entropy(&entropy)?;
+        key = m.to_string();
+    }
 
-        let seed_phrase = bip39::Mnemonic::from_str(&na.key)?;
+    if is_valid_phrase(&key) {
+        store_account_seed(&key, na.aindex)?;
+
+        let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let seed = seed_phrase.to_seed("");
             let usk =
             UnifiedSpendingKey::from_seed(&c.network, &seed, AccountId::try_from(na.aindex).unwrap())?;
@@ -225,9 +235,9 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
 
         update_dindex(dindex, true)?;
     }
-    if is_valid_transparent_key(&na.key) {
+    if is_valid_transparent_key(&key) {
         init_account_transparent()?;
-        if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&na.key) {
+        if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
             store_account_transparent_sk(&xsk)?;
             let xvk = xsk.to_account_pubkey();
@@ -235,7 +245,7 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
             let (pkh, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(0, 0, &pkh, &address.encode(&network))?;
         }
-        if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&na.key) {
+        if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
             // No AccountPubKey::from_extended_pubkey, we need to use the bytes
             let mut buf = xvk.attrs().chain_code.to_vec();
             buf.extend_from_slice(&xvk.to_bytes());
@@ -244,7 +254,7 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
             let (pkh, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(0, 0, &pkh, &address.encode(&network))?;
         }
-        if let Ok(sk) = bip38::import_tsk(&na.key) {
+        if let Ok(sk) = bip38::import_tsk(&key) {
             let secp = secp256k1::Secp256k1::new();
             let tpk = sk.public_key(&secp).serialize();
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
@@ -252,11 +262,11 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
             store_account_transparent_addr(0, 0, &tpk, &addr.encode(&network))?;
         }
     }
-    if is_valid_sapling_key(&network, &na.key) {
+    if is_valid_sapling_key(&network, &key) {
         init_account_sapling()?;
         if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
-            &na.key,
+            &key,
         ) {
             store_account_sapling_sk(&xsk)?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
@@ -264,14 +274,14 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
         }
         if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
             network.hrp_sapling_extended_full_viewing_key(),
-            &na.key,
+            &key,
         ) {
             store_account_sapling_vk(&xvk.to_diversifiable_full_viewing_key())?;
         }
     }
-    if is_valid_ufvk(&network, &na.key) {
+    if is_valid_ufvk(&network, &key) {
         let uvk =
-            UnifiedFullViewingKey::decode(&network, &na.key).map_err(|_| anyhow!("Invalid Key"))?;
+            UnifiedFullViewingKey::decode(&network, &key).map_err(|_| anyhow!("Invalid Key"))?;
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
