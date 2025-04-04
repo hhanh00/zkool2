@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => -981323295;
+  int get rustContentHash => -870666948;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -99,27 +99,6 @@ abstract class RustLibApi extends BaseApi {
   String crateApiAccountNewSeed({required String phrase});
 
   Future<void> crateApiDbOpenDatabase({required String dbFilepath});
-
-  int crateApiAccountPutAccountMetadata(
-      {required String name,
-      Uint8List? icon,
-      required int birth,
-      required int height});
-
-  int crateApiAccountPutAccountSaplingSecret(
-      {required int id, required String esk});
-
-  int crateApiAccountPutAccountSaplingViewing(
-      {required int id, required String evk});
-
-  int crateApiAccountPutAccountSeed(
-      {required int id, required String phrase, required int aindex});
-
-  Future<int> crateApiAccountPutAccountTransparentSecret(
-      {required int id, required String sk});
-
-  int crateApiAccountPutAccountUnifiedViewing(
-      {required int id, required String uvk});
 
   Future<Receivers> crateApiAccountReceiversDefault();
 
@@ -356,175 +335,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  int crateApiAccountPutAccountMetadata(
-      {required String name,
-      Uint8List? icon,
-      required int birth,
-      required int height}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(name, serializer);
-        sse_encode_opt_list_prim_u_8_strict(icon, serializer);
-        sse_encode_u_32(birth, serializer);
-        sse_encode_u_32(height, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountPutAccountMetadataConstMeta,
-      argValues: [name, icon, birth, height],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiAccountPutAccountMetadataConstMeta =>
-      const TaskConstMeta(
-        debugName: "put_account_metadata",
-        argNames: ["name", "icon", "birth", "height"],
-      );
-
-  @override
-  int crateApiAccountPutAccountSaplingSecret(
-      {required int id, required String esk}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(id, serializer);
-        sse_encode_String(esk, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountPutAccountSaplingSecretConstMeta,
-      argValues: [id, esk],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiAccountPutAccountSaplingSecretConstMeta =>
-      const TaskConstMeta(
-        debugName: "put_account_sapling_secret",
-        argNames: ["id", "esk"],
-      );
-
-  @override
-  int crateApiAccountPutAccountSaplingViewing(
-      {required int id, required String evk}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(id, serializer);
-        sse_encode_String(evk, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountPutAccountSaplingViewingConstMeta,
-      argValues: [id, evk],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiAccountPutAccountSaplingViewingConstMeta =>
-      const TaskConstMeta(
-        debugName: "put_account_sapling_viewing",
-        argNames: ["id", "evk"],
-      );
-
-  @override
-  int crateApiAccountPutAccountSeed(
-      {required int id, required String phrase, required int aindex}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(id, serializer);
-        sse_encode_String(phrase, serializer);
-        sse_encode_u_32(aindex, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountPutAccountSeedConstMeta,
-      argValues: [id, phrase, aindex],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiAccountPutAccountSeedConstMeta =>
-      const TaskConstMeta(
-        debugName: "put_account_seed",
-        argNames: ["id", "phrase", "aindex"],
-      );
-
-  @override
-  Future<int> crateApiAccountPutAccountTransparentSecret(
-      {required int id, required String sk}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(id, serializer);
-        sse_encode_String(sk, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 14, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountPutAccountTransparentSecretConstMeta,
-      argValues: [id, sk],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiAccountPutAccountTransparentSecretConstMeta =>
-      const TaskConstMeta(
-        debugName: "put_account_transparent_secret",
-        argNames: ["id", "sk"],
-      );
-
-  @override
-  int crateApiAccountPutAccountUnifiedViewing(
-      {required int id, required String uvk}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(id, serializer);
-        sse_encode_String(uvk, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountPutAccountUnifiedViewingConstMeta,
-      argValues: [id, uvk],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiAccountPutAccountUnifiedViewingConstMeta =>
-      const TaskConstMeta(
-        debugName: "put_account_unified_viewing",
-        argNames: ["id", "uvk"],
-      );
-
-  @override
   Future<Receivers> crateApiAccountReceiversDefault() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 16, port: port_);
+            funcId: 10, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_receivers,
@@ -548,7 +364,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(ua, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_receivers,
@@ -575,7 +391,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_32(oldPosition, serializer);
         sse_encode_u_32(newPosition, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 18, port: port_);
+            funcId: 12, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -600,7 +416,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(ufvk, serializer);
         sse_encode_opt_box_autoadd_u_32(di, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -623,7 +439,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_account_update(update, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
