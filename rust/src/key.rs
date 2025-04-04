@@ -8,12 +8,14 @@ use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
 use zcash_keys::{encoding::{decode_extended_full_viewing_key, decode_extended_spending_key}, keys::UnifiedFullViewingKey};
 use zcash_protocol::consensus::{Network, NetworkConstants as _};
 
-use crate::{bip38, db::{select_account_orchard, select_account_sapling, select_account_transparent}};
+use crate::{bip38, db::{select_account_orchard, select_account_sapling, select_account_transparent}, get_coin};
 
-pub fn get_account_ufvk() -> Result<UnifiedFullViewingKey> {
-    let tkeys = select_account_transparent()?;
-    let skeys = select_account_sapling()?;
-    let okeys = select_account_orchard()?;
+pub async fn get_account_ufvk() -> Result<UnifiedFullViewingKey> {
+    let c = get_coin!();
+
+    let tkeys = select_account_transparent(c.get_pool(), c.account).await?;
+    let skeys = select_account_sapling(c.get_pool(), c.account).await?;
+    let okeys = select_account_orchard(c.get_pool(), c.account).await?;
 
     let items = vec![
         tkeys.xvk.map(|vk| Fvk::P2pkh(vk.serialize().try_into().unwrap())),

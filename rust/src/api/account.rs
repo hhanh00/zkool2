@@ -7,7 +7,6 @@ use orchard::keys::FullViewingKey;
 use rand::TryRngCore;
 use rand_core::OsRng;
 use ripemd::{Digest as _, Ripemd160};
-use rusqlite::params;
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::Sha256;
@@ -19,18 +18,21 @@ use zcash_keys::{
 };
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
 use zcash_protocol::consensus::{Network, NetworkConstants, Parameters};
-use zcash_transparent::keys::{
-    AccountPrivKey, AccountPubKey,
-};
+use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::derive_transparent_address, bip38, db::{
+    account::derive_transparent_address,
+    bip38,
+    db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
         update_dindex,
-    }, get_coin, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, setup
+    },
+    get_coin,
+    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    setup,
 };
 
 #[frb(sync)]
@@ -51,13 +53,13 @@ pub fn new_seed(phrase: &str) -> Result<String> {
     Ok(address)
 }
 
-#[frb(sync)]
-pub fn get_account_ufvk(id: u32) -> Result<String> {
+#[frb]
+pub async fn get_account_ufvk(id: u32) -> Result<String> {
     setup!(id);
     let c = get_coin!();
     let network = c.network;
 
-    let ufvk = crate::key::get_account_ufvk()?;
+    let ufvk = crate::key::get_account_ufvk().await?;
     Ok(ufvk.encode(&network))
 }
 
@@ -125,59 +127,88 @@ pub struct Receivers {
 }
 
 #[frb]
-pub fn list_accounts() -> Result<Vec<Account>> {
-    let accounts = crate::db::list_accounts()?;
+pub async fn list_accounts() -> Result<Vec<Account>> {
+    let c = get_coin!();
+    let accounts = crate::db::list_accounts(c.get_pool(), c.coin).await?;
 
     Ok(accounts)
 }
 
-#[frb(sync)]
-pub fn update_account(update: &AccountUpdate) -> Result<()> {
+#[frb]
+pub async fn update_account(update: &AccountUpdate) -> Result<()> {
     let id = update.id;
     setup!(id);
 
     let c = get_coin!();
-    let connection = c.connect()?;
+    let pool = c.get_pool();
 
     if let Some(ref name) = update.name {
-        connection.execute(
-            "UPDATE accounts SET name = ? WHERE id_account = ?",
-            params![name, id],
-        )?;
+        sqlx::query("UPDATE accounts SET name = ? WHERE id_account = ?")
+            .bind(name)
+            .bind(id)
+            .execute(pool)
+            .await?;
     }
     if let Some(ref icon) = update.icon {
-        connection.execute(
-            "UPDATE accounts SET icon = ? WHERE id_account = ?",
-            params![icon, id],
-        )?;
+        sqlx::query("UPDATE accounts SET icon = ? WHERE id_account = ?")
+            .bind(icon)
+            .bind(id)
+            .execute(pool)
+            .await?;
     }
     if let Some(ref birth) = update.birth {
-        connection.execute(
-            "UPDATE accounts SET birth = ? WHERE id_account = ?",
-            params![birth, id],
-        )?;
+        sqlx::query("UPDATE accounts SET birth = ? WHERE id_account = ?")
+            .bind(birth)
+            .bind(id)
+            .execute(pool)
+            .await?;
     }
 
     Ok(())
 }
 
-#[frb(sync)]
-pub fn delete_account(account: &Account) -> Result<()> {
+pub async fn drop_schema() -> Result<()> {
+    let c = get_coin!();
+    let pool = c.get_pool();
+
+    sqlx::query("DROP TABLE IF EXISTS transparent_accounts")
+        .execute(pool)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS transparent_address_accounts")
+        .execute(pool)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS sapling_accounts")
+        .execute(pool)
+        .await?;
+    sqlx::query("DROP TABLE IF EXISTS orchard_accounts")
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn delete_account(account: &Account) -> Result<()> {
     setup!(account.id);
 
-    crate::db::delete_account()?;
+    let c = get_coin!();
+    let pool = c.get_pool();
+
+    crate::db::delete_account(pool, c.account).await?;
 
     Ok(())
 }
 
 #[frb]
-pub fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
-    crate::db::reorder_account(old_position, new_position)
+pub async fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
+    let c = get_coin!();
+    let pool = c.get_pool();
+
+    crate::db::reorder_account(pool, old_position, new_position).await
 }
 
-#[frb(sync)]
-pub fn new_account(na: &NewAccount) -> Result<()> {
+#[frb]
+pub async fn new_account(na: &NewAccount) -> Result<()> {
     let c = get_coin!();
+    let pool = c.get_pool();
     let network = c.network;
     let min_height: u32 = network
         .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
@@ -186,7 +217,7 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
 
     let birth = na.birth.unwrap_or(min_height);
 
-    let account = store_account_metadata(&na.name, &na.icon, birth, birth)?;
+    let account = store_account_metadata(pool, &na.name, &na.icon, birth).await?;
     setup!(account);
 
     let mut key = na.key.clone();
@@ -198,85 +229,88 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
     }
 
     if is_valid_phrase(&key) {
-        store_account_seed(&key, na.aindex)?;
+        store_account_seed(pool, account, &key, na.aindex).await?;
 
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let seed = seed_phrase.to_seed("");
-            let usk =
-            UnifiedSpendingKey::from_seed(&c.network, &seed, AccountId::try_from(na.aindex).unwrap())?;
+        let usk = UnifiedSpendingKey::from_seed(
+            &c.network,
+            &seed,
+            AccountId::try_from(na.aindex).unwrap(),
+        )?;
         let uvk = usk.to_unified_full_viewing_key();
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        init_account_transparent()?;
+        init_account_transparent(pool, account).await?;
         let tsk = usk.transparent();
-        store_account_transparent_sk(tsk)?;
+        store_account_transparent_sk(pool, account, tsk).await?;
         let tvk = &tsk.to_account_pubkey();
-        store_account_transparent_vk(tvk)?;
+        store_account_transparent_vk(pool, account, tvk).await?;
         let (tpk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
-        store_account_transparent_addr(
-            0,
-            dindex,
-            &tpk,
-            &taddr.encode(&c.network),
-        )?;
+        store_account_transparent_addr(pool, account, 0, dindex, &tpk, &taddr.encode(&c.network))
+            .await?;
 
-        init_account_sapling()?;
+        init_account_sapling(pool, account).await?;
         let sxsk = usk.sapling();
-        store_account_sapling_sk(sxsk)?;
+        store_account_sapling_sk(pool, account, sxsk).await?;
         let sxvk = sxsk.to_diversifiable_full_viewing_key();
-        store_account_sapling_vk(&sxvk)?;
+        store_account_sapling_vk(pool, account, &sxvk).await?;
 
-        init_account_orchard()?;
+        init_account_orchard(pool, account).await?;
         let oxsk = usk.orchard();
-        store_account_orchard_sk(oxsk)?;
+        store_account_orchard_sk(pool, account, oxsk).await?;
         let oxvk = FullViewingKey::from(oxsk);
-        store_account_orchard_vk(&oxvk)?;
+        store_account_orchard_vk(pool, account, &oxvk).await?;
 
-        update_dindex(dindex, true)?;
+        update_dindex(pool, account, dindex, true).await?;
     }
     if is_valid_transparent_key(&key) {
-        init_account_transparent()?;
+        init_account_transparent(pool, account).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
-            store_account_transparent_sk(&xsk)?;
+            store_account_transparent_sk(pool, account, &xsk).await?;
             let xvk = xsk.to_account_pubkey();
-            store_account_transparent_vk(&xvk)?;
+            store_account_transparent_vk(pool, account, &xvk).await?;
             let (pkh, address) = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(0, 0, &pkh, &address.encode(&network))?;
+            store_account_transparent_addr(pool, account, 0, 0, &pkh, &address.encode(&network))
+                .await?;
         }
         if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
             // No AccountPubKey::from_extended_pubkey, we need to use the bytes
             let mut buf = xvk.attrs().chain_code.to_vec();
             buf.extend_from_slice(&xvk.to_bytes());
             let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
-            store_account_transparent_vk(&xvk)?;
+            store_account_transparent_vk(pool, account, &xvk).await?;
             let (pkh, address) = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(0, 0, &pkh, &address.encode(&network))?;
+            store_account_transparent_addr(pool, account, 0, 0, &pkh, &address.encode(&network))
+                .await?;
         }
         if let Ok(sk) = bip38::import_tsk(&key) {
             let secp = secp256k1::Secp256k1::new();
             let tpk = sk.public_key(&secp).serialize();
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
             let addr = TransparentAddress::PublicKeyHash(pkh.clone());
-            store_account_transparent_addr(0, 0, &tpk, &addr.encode(&network))?;
+            store_account_transparent_addr(pool, account, 0, 0, &tpk, &addr.encode(&network))
+                .await?;
         }
     }
     if is_valid_sapling_key(&network, &key) {
-        init_account_sapling()?;
+        init_account_sapling(pool, account).await?;
         if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
             &key,
         ) {
-            store_account_sapling_sk(&xsk)?;
+            store_account_sapling_sk(pool, account, &xsk).await?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
-            store_account_sapling_vk(&xvk)?;
+            store_account_sapling_vk(pool, account, &xvk).await?;
         }
         if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
             network.hrp_sapling_extended_full_viewing_key(),
             &key,
         ) {
-            store_account_sapling_vk(&xvk.to_diversifiable_full_viewing_key())?;
+            store_account_sapling_vk(pool, account, &xvk.to_diversifiable_full_viewing_key())
+                .await?;
         }
     }
     if is_valid_ufvk(&network, &key) {
@@ -286,20 +320,28 @@ pub fn new_account(na: &NewAccount) -> Result<()> {
         let dindex: u32 = di.try_into()?;
 
         if let Some(tvk) = uvk.transparent() {
-            init_account_transparent()?;
-            store_account_transparent_vk(tvk)?;
+            init_account_transparent(pool, account).await?;
+            store_account_transparent_vk(pool, account, tvk).await?;
             let (tpk, address) = derive_transparent_address(tvk, 0, dindex)?;
-            store_account_transparent_addr(0, dindex, &tpk, &address.encode(&network))?;
+            store_account_transparent_addr(
+                pool,
+                account,
+                0,
+                dindex,
+                &tpk,
+                &address.encode(&network),
+            )
+            .await?;
         }
         if let Some(svk) = uvk.sapling() {
-            init_account_sapling()?;
-            store_account_sapling_vk(svk)?;
+            init_account_sapling(pool, account).await?;
+            store_account_sapling_vk(pool, account, svk).await?;
         }
         if let Some(ovk) = uvk.orchard() {
-            init_account_orchard()?;
-            store_account_orchard_vk(ovk)?;
+            init_account_orchard(pool, account).await?;
+            store_account_orchard_vk(pool, account, ovk).await?;
         }
-        update_dindex(dindex, true)?;
+        update_dindex(pool, account, dindex, true).await?;
     }
     Ok(())
 }
@@ -313,7 +355,6 @@ pub struct Account {
     pub aindex: u32,
     pub icon: Option<Vec<u8>>,
     pub birth: u32,
-    pub height: u32,
     pub position: u8,
     pub hidden: bool,
     pub saved: bool,
@@ -377,4 +418,22 @@ pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
     let _ = env_logger::builder().try_init();
+}
+
+pub async fn get_all_accounts() -> Result<Vec<Account>> {
+    let c = get_coin!();
+    let accounts = crate::db::list_accounts(c.get_pool(), c.coin).await?;
+    Ok(accounts)
+}
+
+pub async fn remove_account(account_id: u32) -> Result<()> {
+    let c = get_coin!();
+    crate::db::delete_account(c.get_pool(), account_id).await?;
+    Ok(())
+}
+
+pub async fn move_account(old_position: u32, new_position: u32) -> Result<()> {
+    let c = get_coin!();
+    crate::db::reorder_account(c.get_pool(), old_position, new_position).await?;
+    Ok(())
 }

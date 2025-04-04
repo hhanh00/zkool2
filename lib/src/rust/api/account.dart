@@ -11,7 +11,7 @@ part 'account.freezed.dart';
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
-String getAccountUfvk({required int id}) =>
+Future<String> getAccountUfvk({required int id}) =>
     RustLib.instance.api.crateApiAccountGetAccountUfvk(id: id);
 
 String uaFromUfvk({required String ufvk, int? di}) =>
@@ -23,10 +23,12 @@ Receivers receiversFromUa({required String ua}) =>
 Future<List<Account>> listAccounts() =>
     RustLib.instance.api.crateApiAccountListAccounts();
 
-void updateAccount({required AccountUpdate update}) =>
+Future<void> updateAccount({required AccountUpdate update}) =>
     RustLib.instance.api.crateApiAccountUpdateAccount(update: update);
 
-void deleteAccount({required Account account}) =>
+Future<void> dropSchema() => RustLib.instance.api.crateApiAccountDropSchema();
+
+Future<void> deleteAccount({required Account account}) =>
     RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
 
 Future<void> reorderAccount(
@@ -34,8 +36,19 @@ Future<void> reorderAccount(
     RustLib.instance.api.crateApiAccountReorderAccount(
         oldPosition: oldPosition, newPosition: newPosition);
 
-void newAccount({required NewAccount na}) =>
+Future<void> newAccount({required NewAccount na}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na);
+
+Future<List<Account>> getAllAccounts() =>
+    RustLib.instance.api.crateApiAccountGetAllAccounts();
+
+Future<void> removeAccount({required int accountId}) =>
+    RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId);
+
+Future<void> moveAccount(
+        {required int oldPosition, required int newPosition}) =>
+    RustLib.instance.api.crateApiAccountMoveAccount(
+        oldPosition: oldPosition, newPosition: newPosition);
 
 @freezed
 class Account with _$Account {
@@ -47,7 +60,6 @@ class Account with _$Account {
     required int aindex,
     Uint8List? icon,
     required int birth,
-    required int height,
     required int position,
     required bool hidden,
     required bool saved,
