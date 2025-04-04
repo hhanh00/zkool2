@@ -3,6 +3,9 @@ name: Rust CI Mac
 on:
   workflow_dispatch:
   workflow_call:
+  push:
+    tags:
+      - zkool-v*
 
 jobs:
   build-macos:
