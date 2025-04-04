@@ -5,6 +5,7 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use tonic::transport::{Certificate, ClientTlsConfig};
 use zcash_protocol::consensus::Network;
+use tokio_rusqlite::Connection as AsyncConnection;
 
 use crate::Client;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
@@ -70,6 +71,10 @@ impl Coin {
 
     pub fn set_lwd(&mut self, lwd: &str) {
         self.lwd = lwd.to_string();
+    }
+
+    pub async fn connect_async(&self) -> Result<AsyncConnection> {
+        Ok(AsyncConnection::open(&self.db_filepath).await?)
     }
 
     pub async fn client(&self) -> Result<Client> {

@@ -3,6 +3,7 @@ use rusqlite::params;
 use std::collections::HashMap;
 use std::io::Cursor;
 
+use tokio_rusqlite::params as async_params;
 use zcash_primitives::transaction::Transaction as ZcashTransaction;
 use zcash_protocol::consensus::BranchId;
 
@@ -22,22 +23,21 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
 
     let c = get_coin!();
     let network = c.network;
-    let mut connection = c.connect()?;
+    let connection = c.connect_async().await?;
 
-    let mut account_heights = HashMap::new();
-    {
-        // Get all sync heights at once
-        let mut stmt = connection.prepare("SELECT account, transparent FROM sync_heights")?;
-        let rows = stmt.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    // Get account heights
+    let mut account_heights = connection.call(|conn| {
+        let mut heights = HashMap::new();
+        let mut stmt = conn.prepare("SELECT account, transparent FROM sync_heights")?;
+        let mut rows = stmt.query([])?;
 
-        // Filter for the accounts we're interested in
-        for row_result in rows {
-            let (account, height) = row_result?;
-            if accounts.contains(&account) {
-                account_heights.insert(account, height);
-            }
+        while let Some(row) = rows.next()? {
+            let account = row.get::<_, u32>(0)?;
+            let height = row.get::<_, u32>(1)?;
+            heights.insert(account, height);
         }
-    }
+        Ok(heights)
+    }).await?;
 
     // Create a sorted list of unique heights
     let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
@@ -65,31 +65,34 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
             continue;
         }
 
-        let tx = connection.transaction()?;
         // Update the sync heights for these accounts
         let mut client = c.client().await?;
 
-        let mut addresses = vec![];
-        for account in accounts_to_sync.iter() {
-            // Fetch the addresses for this account
-            let mut stmt = tx.prepare("
-                SELECT t1.account, t1.scope, t1.dindex, t1.address
-                FROM transparent_address_accounts t1
-                JOIN (
-                    SELECT account, scope, MAX(dindex) as max_dindex
-                    FROM transparent_address_accounts
-                    WHERE account = ?
-                    GROUP BY scope
-                ) t2 ON t1.account = t2.account AND t1.scope = t2.scope AND t1.dindex = t2.max_dindex
-                ORDER BY t1.scope")?;
-            let mut rows = stmt.query(params![account])?;
+        // Fetch addresses for all accounts in this batch
+        let accounts_to_sync_clone = accounts_to_sync.clone();
+        let addresses = connection.call(move |conn| {
+            let mut addresses = vec![];
+            for account in accounts_to_sync_clone.iter() {
+                let mut stmt = conn.prepare("
+                    SELECT t1.account, t1.scope, t1.dindex, t1.address
+                    FROM transparent_address_accounts t1
+                    JOIN (
+                        SELECT account, scope, MAX(dindex) as max_dindex
+                        FROM transparent_address_accounts
+                        WHERE account = ?
+                        GROUP BY scope
+                    ) t2 ON t1.account = t2.account AND t1.scope = t2.scope AND t1.dindex = t2.max_dindex
+                    ORDER BY t1.scope")?;
+                let mut rows = stmt.query(rusqlite::params![account])?;
 
-            while let Some(row) = rows.next()? {
-                let address: String = row.get(0)?;
-                // Add the address to the client
-                addresses.push((*account, address));
+                while let Some(row) = rows.next()? {
+                    let address: String = row.get(0)?;
+                    // Add the address to the client
+                    addresses.push((*account, address));
+                }
             }
-        }
+            Ok(addresses)
+        }).await?;
 
         for (account, address) in addresses.iter() {
             let mut txs = client
@@ -154,18 +157,25 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
                 }
             }
 
-            // Update the sync heights for these accounts
-            for account in &accounts_to_sync {
-                tx.execute(
-                    "UPDATE sync_heights SET transparent = ? WHERE account = ?",
-                    params![end_height, account],
-                )?;
-
-                // Update our local map as well for the next iteration
-                account_heights.insert(*account, end_height);
-            }
         }
-        tx.commit()?;
+        
+        // Update the sync heights for these accounts
+        let accounts_to_sync_clone = accounts_to_sync.clone();
+        let end_height_clone = end_height;
+        connection.call(move |connection| {
+            for account in &accounts_to_sync_clone {
+                connection.execute(
+                    "UPDATE sync_heights SET transparent = ? WHERE account = ?",
+                    rusqlite::params![end_height_clone, account],
+                )?;
+            }
+            Ok(())
+        }).await?;
+        
+        // Update our local map as well for the next iteration
+        for account in &accounts_to_sync {
+            account_heights.insert(*account, end_height);
+        }
     }
 
     Ok(())
