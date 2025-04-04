@@ -103,7 +103,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         ));
   }
 
-  void onSave() {
+  void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
       // Handle the save logic here
       final formData = formKey.currentState?.value;
@@ -114,7 +114,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       final String? birth = formData?["birth"];
       final icon = iconBytes;
 
-      newAccount(
+      await newAccount(
           na: NewAccount(
             icon: icon,
             name: name ?? "",
@@ -123,7 +123,7 @@ class NewAccountPageState extends State<NewAccountPage> {
             aindex: int.parse(aindex ?? "0"),
             birth: birth != null ? int.parse(birth) : null,
           ));
-      AppStoreBase.loadAccounts();
+      await AppStoreBase.loadAccounts();
       GoRouter.of(context).pop();
     }
   }
