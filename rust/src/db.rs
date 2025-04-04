@@ -57,7 +57,7 @@ pub fn create_schema(connection: &Connection) -> Result<()> {
         account INTEGER NOT NULL,
         scope INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
-        pubkey BLOB,
+        sk BLOB,
         address TEXT,
         PRIMARY KEY (account, scope, dindex))",
         [],
@@ -102,12 +102,14 @@ pub fn get_prop(connection: &Connection, key: &str) -> Result<Option<String>> {
 }
 
 pub fn store_account_metadata(
-    connection: &Connection,
     name: &str,
     icon: &Option<Vec<u8>>,
     birth: u32,
     height: u32,
 ) -> Result<u32> {
+    let c = get_coin!();
+    let connection = c.connect()?;
+
     let last_position = connection
         .query_row("SELECT MAX(position) FROM accounts", [], |r| {
             r.get::<_, Option<u32>>(0)
@@ -212,16 +214,16 @@ pub fn init_account_sapling() -> Result<()> {
 pub fn store_account_transparent_addr(
     scope: u32,
     dindex: u32,
-    pk: &[u8],
+    sk: &[u8],
     address: &str,
 ) -> Result<()> {
     let c = get_coin!();
     let connection = c.connect()?;
 
     connection.execute(
-        "INSERT INTO transparent_address_accounts(account, scope, dindex, pubkey, address)
+        "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, address)
         VALUES (?, ?, ?, ?, ?)",
-        params![c.account, scope, dindex, pk, address],
+        params![c.account, scope, dindex, sk, address],
     )?;
 
     Ok(())

@@ -15,12 +15,13 @@ Future<void> main() async {
   await RustLib.init();
   final dbDir = await getApplicationDocumentsDirectory();
   final dbFilepath = '${dbDir.path}/zkool.db';
-  if (File(dbFilepath).existsSync()) {
+  if (!File(dbFilepath).existsSync()) {
     await createDatabase(coin: 0, dbFilepath: dbFilepath);
+    logger.i("Database file created: $dbFilepath");
   }
   await openDatabase(dbFilepath: dbFilepath);
 
-  // Setup.init();
+  Setup.init();
 
   runApp(MaterialApp.router(
       routerConfig: router, debugShowCheckedModeBanner: false));
@@ -37,20 +38,16 @@ class Setup {
     final unifiedViewing =
         "uview1yhlefqrcqp34ra72vk2uezt9srcedengzyrf2gx4sp3dru97cfx6zju4ytpygks0cvc7fwtvwxvkmcanug75ge0l929mevcjrnckj0p3kaxmfsvh84a8rxtr5zt6gmwljwwhwkxsq3x0ffyyx59sk83cs58frhflwmpqy8h6luzzpkd3pahawnrr8wqhlhh2vngrqh4eg4cwzczmty56sqsfh69zglkzgz5zd94y20hf2rl8zclfqk9dmcy4qk62a9ppqra896gxxg936qg2djphh22tgxczehrlv3dr92ygm82v2kwg4ju3t9fm7l7ugrpx4ua8ee6dez5ht9acxjd993w9ve3xau5j40ydjxfurlr42cc3xuejzjdc2yvx9ec0v6jj5xrtw79xemewv4jy9mt3f5rejwa9gcnqx02f53uzxkpwnj3c0qwm3l9qtz32srz904qq30y6q6vd658x306ghnh6qxhjh57lav2dqnn0rcgnflgq";
     final tsk = "KxmMwLqraoufe6u6sh3siWtPa3po8k89jYw3PRsVzwV24Ggooaei";
-    final account = putAccountMetadata(name: "Hanh", birth: 1, height: 10);
-    putAccountSeed(id: account, phrase: phrase, aindex: 0);
-
-    final account2 = putAccountMetadata(name: "Hanh2", birth: 1, height: 10);
-    putAccountSaplingSecret(id: account2, esk: extendedSecret);
-
-    final account3 = putAccountMetadata(name: "Hanh3", birth: 1, height: 10);
-    putAccountSaplingViewing(id: account3, evk: extendedViewing);
-
-    final account4 = putAccountMetadata(name: "Hanh3", birth: 1, height: 10);
-    putAccountUnifiedViewing(id: account4, uvk: unifiedViewing);
-
-    final account5 = putAccountMetadata(name: "Hanh3", birth: 1, height: 10);
-    putAccountTransparentSecret(id: account5, sk: tsk);
+    newAccount(na: 
+      NewAccount(name: "Hanh1", restore: true, aindex: 0, birth: 1, key: phrase));
+    newAccount(na: 
+      NewAccount(name: "Hanh2", restore: true, aindex: 0, birth: 1, key: extendedSecret));
+    newAccount(na: 
+      NewAccount(name: "Hanh3", restore: true, aindex: 0, birth: 1, key: extendedViewing));
+    newAccount(na: 
+      NewAccount(name: "Hanh4", restore: true, aindex: 0, birth: 1, key: unifiedViewing));
+    newAccount(na: 
+      NewAccount(name: "Hanh5", restore: true, aindex: 0, birth: 1, key: tsk));
   }
 }
 
