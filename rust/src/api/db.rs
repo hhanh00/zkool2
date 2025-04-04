@@ -3,12 +3,16 @@ use crate::{
     db::{create_schema, put_prop},
 };
 use anyhow::Result;
-use sqlx::
-    sqlite::SqlitePoolOptions
+use sqlx::{
+    sqlite::SqliteConnectOptions, SqlitePool}
 ;
 
 pub async fn create_database(coin: u8, db_filepath: &str) -> Result<()> {
-    let pool = SqlitePoolOptions::new().connect(db_filepath).await?;
+    let options = SqliteConnectOptions::new()
+        .filename(db_filepath)
+        .create_if_missing(true);
+
+    let pool = SqlitePool::connect_with(options).await?;
     create_schema(&pool).await?;
     put_prop(&pool, "coin", &coin.to_string()).await?;
 

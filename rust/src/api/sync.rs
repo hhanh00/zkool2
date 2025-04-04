@@ -1,10 +1,11 @@
 use anyhow::Result;
 use futures::TryStreamExt as _;
 use sqlx::sqlite::SqliteRow;
-use std::collections::HashMap;
 use sqlx::Row;
+use zcash_keys::encoding::AddressCodec as _;
+use std::collections::HashMap;
 
-use zcash_primitives::transaction::Transaction as ZcashTransaction;
+use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as ZcashTransaction};
 use zcash_protocol::consensus::BranchId;
 
 use crate::{
@@ -13,23 +14,24 @@ use crate::{
 };
 
 // #[frb]
-pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u32) -> Result<()> {
+pub async fn synchronize(accounts: Vec<u32>, current_height: u32) -> Result<()> {
     if accounts.is_empty() {
         return Ok(());
     }
 
     let c = get_coin!();
     let network = c.network;
+    let pool = c.get_pool();
 
     // Get account heights
     let mut account_heights = HashMap::new();
     let mut rows = sqlx::query("SELECT account, transparent FROM sync_heights")
-    .map(|row: SqliteRow| {
-        let account: u32 = row.get(0);
-        let height: u32 = row.get(1);
-        (account, height)
-    })
-    .fetch(c.get_pool());
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let height: u32 = row.get(1);
+            (account, height)
+        })
+        .fetch(pool);
 
     while let Some((account, height)) = rows.try_next().await? {
         account_heights.insert(account, height);
@@ -65,7 +67,7 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
         let mut client = c.client().await?;
 
         // Fetch addresses for all accounts in this batch
-    // let addresses = connection.call(move |conn| {
+        // let addresses = connection.call(move |conn| {
         let mut addresses = vec![];
         for account in accounts_to_sync.iter() {
             let mut rows = sqlx::query("
@@ -80,7 +82,7 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
                 ORDER BY t1.scope")
                 .bind(account)
                 .map(|row: SqliteRow| row.get::<String, _>(0))
-                .fetch(c.get_pool());
+                .fetch(pool);
 
             while let Some(address) = rows.try_next().await? {
                 // Add the address to the client
@@ -88,7 +90,8 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
             }
         }
 
-        for (_account, address) in addresses.iter() {
+        for (account, address) in addresses.iter() {
+            let my_address = TransparentAddress::decode(&network, address)?;
             let mut txs = client
                 .get_taddress_txids(TransparentAddressBlockFilter {
                     address: address.clone(),
@@ -111,6 +114,7 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
             let mut last_height: Option<u32> = None;
             let mut last_branch_id: Option<BranchId> = None;
 
+            let mut db_tx = pool.begin().await?;
             while let Some(tx) = txs.message().await? {
                 // Determine the consensus branch ID based on the block height
                 let height = tx.height as u32;
@@ -129,6 +133,14 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
                 // Parse the transaction
                 let transaction = ZcashTransaction::read(&*tx.data, consensus_branch_id)?;
 
+                // tx time is available in the block (not here)
+                let (id_tx, ): (u32, ) = sqlx::query_as("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, 0, 0) RETURNING id_tx")
+                    .bind(account)
+                    .bind(&transaction.txid().as_ref()[..])
+                    .bind(height)
+                    .fetch_one(&mut *db_tx)
+                    .await?;
+        
                 // Access the transparent bundle part
                 if let Some(transparent_bundle) = transaction.transparent_bundle() {
                     // Process the transparent bundle
@@ -142,28 +154,64 @@ pub async fn get_transparent_transactions(accounts: Vec<u32>, current_height: u3
                     println!("Transaction: {}", transaction.txid());
                     println!("Transparent inputs: {}", transparent_bundle.vin.len());
 
-                    // TODO: Look up the inputs in the table utxos
-                    // resolve the txin to a outpoint
-                    // add a tspend entry
+                    let vins = &transparent_bundle.vin;
+                    for vin in vins.iter() {
+                        // The "nullifier" of a transparent input is the outpoint
+                        let mut nf = vec![];
+                        vin.prevout.write(&mut nf)?;
+
+                        let row: Option<(u32, i64)> = sqlx::query_as("SELECT id_note, value FROM notes WHERE account = ?1 AND nullifier = ?2")
+                        .bind(account)
+                        .bind(&nf)
+                        .fetch_optional(&mut *db_tx).await?;
+
+                        if let Some((id, amount)) = row {
+                            // note was found
+                            // add a spent entry
+                            sqlx::query("INSERT INTO spends (account, id_note, pool, tx, height, value) VALUES (?, ?, ?, ?, ?, ?)")
+                            .bind(account)
+                            .bind(id)
+                            .bind(0)
+                            .bind(id_tx)
+                            .bind(height)
+                            .bind(-amount)
+                            .execute(&mut *db_tx).await?;
+                        }
+                    }
+
+                    let vouts = &transparent_bundle.vout;
+                    for (i, vout) in vouts.iter().enumerate() {
+                        if let Some(address) = vout.recipient_address() {
+                            if address == my_address {
+                                // It is for me
+                                // add a new note entry
+                                let mut nf = transaction.txid().as_ref().to_vec();
+                                nf.extend_from_slice(&(i as u32).to_le_bytes());
+
+                                sqlx::query("INSERT INTO notes (account, height, pool, tx, nullifier, value) VALUES (?, ?, ?, ?, ?, ?)")
+                                    .bind(account)
+                                    .bind(height)
+                                    .bind(0)
+                                    .bind(id_tx)
+                                    .bind(&nf)
+                                    .bind(vout.value.into_u64() as i64)
+                                    .execute(&mut *db_tx)
+                                    .await?;
+                            }
+                        }
+                    }
 
                     println!("Transparent outputs: {}", transparent_bundle.vout.len());
-                    // add a utxo entry
                 }
             }
+            sqlx::query("UPDATE sync_heights SET transparent = ? WHERE account = ?")
+            .bind(end_height)
+            .bind(account)
+            .execute(&mut *db_tx)
+            .await?;
+            db_tx.commit().await?;
         }
-        
-        // Update the sync heights for these accounts
-        let accounts_to_sync_clone = accounts_to_sync.clone();
-        let end_height_clone = end_height;
-        for account in &accounts_to_sync_clone {
-            sqlx::query(
-                "UPDATE sync_heights SET transparent = ? WHERE account = ?")
-                .bind(end_height_clone)
-                .bind(account)
-                .execute(c.get_pool())
-                .await?;
-        }
-        
+
         // Update our local map as well for the next iteration
         for account in &accounts_to_sync {
             account_heights.insert(*account, end_height);
