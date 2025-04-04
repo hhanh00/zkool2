@@ -9,7 +9,11 @@ final router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => AccountListPage(coin: 0),
+      builder: (context, state) => AccountListPage(),
+    ),
+    GoRoute(
+      path: '/account',
+      builder: (context, state) => AccountViewPage(state.extra as Account),
     ),
     GoRoute(
       path: '/account/edit',
