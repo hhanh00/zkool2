@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.0.0...zkool-v1.1.0) (2025-04-05)
+
+
+### Features
+
+* account view page ([#19](https://github.com/hhanh00/zkool2/issues/19)) ([98ae49c](https://github.com/hhanh00/zkool2/commit/98ae49c4f97657f2ccfee03f702a59d5ea0174f8))
+* calculate pool balances ([#23](https://github.com/hhanh00/zkool2/issues/23)) ([fbeab61](https://github.com/hhanh00/zkool2/commit/fbeab6108259ec98f01996fc0d1cfe3cad8b61d5))
+* transparent sync ([#22](https://github.com/hhanh00/zkool2/issues/22)) ([8aabc4c](https://github.com/hhanh00/zkool2/commit/8aabc4c7dd443a006efe3e0e36ed74e7074a5fa8))
+
+
+### Bug Fixes
+
+* remove account id argument, use set_account ([#24](https://github.com/hhanh00/zkool2/issues/24)) ([02eaced](https://github.com/hhanh00/zkool2/commit/02eaced380d57903bfc2fa5db10c894d1152d774))
+
 ## 1.0.0 (2025-04-04)
 
 
