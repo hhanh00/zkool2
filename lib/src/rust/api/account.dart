@@ -11,8 +11,8 @@ part 'account.freezed.dart';
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
-Future<String> getAccountUfvk({required int id}) =>
-    RustLib.instance.api.crateApiAccountGetAccountUfvk(id: id);
+Future<String> getAccountUfvk() =>
+    RustLib.instance.api.crateApiAccountGetAccountUfvk();
 
 String uaFromUfvk({required String ufvk, int? di}) =>
     RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di);
@@ -35,6 +35,9 @@ Future<void> reorderAccount(
         {required int oldPosition, required int newPosition}) =>
     RustLib.instance.api.crateApiAccountReorderAccount(
         oldPosition: oldPosition, newPosition: newPosition);
+
+Future<void> setAccount({required int id}) =>
+    RustLib.instance.api.crateApiAccountSetAccount(id: id);
 
 Future<void> newAccount({required NewAccount na}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na);
