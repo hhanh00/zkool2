@@ -1,4 +1,5 @@
 use anyhow::Result;
+use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
@@ -9,12 +10,11 @@ use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as Z
 use zcash_protocol::consensus::BranchId;
 
 use crate::{
-    get_coin,
-    lwd::{BlockId, BlockRange, TransparentAddressBlockFilter},
+    frb_generated::StreamSink, get_coin, lwd::{BlockId, BlockRange, TransparentAddressBlockFilter}, setup
 };
 
 // #[frb]
-pub async fn synchronize(accounts: Vec<u32>, current_height: u32) -> Result<()> {
+pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>, current_height: u32) -> Result<()> {
     if accounts.is_empty() {
         return Ok(());
     }
@@ -126,6 +126,10 @@ pub async fn synchronize(accounts: Vec<u32>, current_height: u32) -> Result<()> 
                         let branch_id = BranchId::for_height(&network, height.into());
                         last_height = Some(height);
                         last_branch_id = Some(branch_id);
+                        let _ = progress.add(SyncProgress {
+                            height,
+                            time: 0,
+                        });
                         branch_id
                     }
                 };
@@ -209,6 +213,10 @@ pub async fn synchronize(accounts: Vec<u32>, current_height: u32) -> Result<()> 
             .bind(account)
             .execute(&mut *db_tx)
             .await?;
+            let _ = progress.add(SyncProgress {
+                height: end_height,
+                time: 0,
+            });
             db_tx.commit().await?;
         }
 
@@ -219,4 +227,37 @@ pub async fn synchronize(accounts: Vec<u32>, current_height: u32) -> Result<()> 
     }
 
     Ok(())
+}
+
+#[frb]
+pub async fn balance(id: u32) -> Result<PoolBalance> {
+    setup!(id);
+    let c = get_coin!();
+    let pool = c.get_pool();
+    let account = c.account;
+
+    let mut balance = PoolBalance {
+        balance: vec![0, 0, 0],
+    };
+
+    let mut rows = sqlx::query("
+    WITH N AS (SELECT value, pool FROM notes WHERE account = ?1 UNION ALL SELECT value, pool FROM spends WHERE account = ?1)
+    SELECT pool, SUM(value) FROM N GROUP BY pool")
+        .bind(account)
+        .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<i64, _>(1)))
+        .fetch(pool);
+    while let Some((pool, value)) = rows.try_next().await? {
+        balance.balance[pool as usize] += value as u64;
+    }
+
+    Ok(balance)
+}
+
+pub struct SyncProgress {
+    pub height: u32,
+    pub time: u32,
+}
+
+pub struct PoolBalance {
+    pub balance: Vec<u64>,
 }
