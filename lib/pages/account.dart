@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -16,8 +19,15 @@ class AccountViewPage extends StatefulWidget {
 }
 
 class AccountViewPageState extends State<AccountViewPage> {
+  StreamSubscription<SyncProgress>? progressSubscription;
+  int? height;
+  PoolBalance? poolBalance;
+
   @override
   Widget build(BuildContext context) {
+    final h = height;
+    final b = poolBalance;
+
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.account.name),
@@ -26,6 +36,9 @@ class AccountViewPageState extends State<AccountViewPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
+              if (h != null) Text(h.toString()),
+              if (b != null)
+                Text("${b.balance[0]} ${b.balance[1]} ${b.balance[2]}"),
               IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync))
             ],
           ),
@@ -34,7 +47,19 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     final ids = appStore.accounts.map((a) => a.id).toList();
-    await synchronize(accounts: ids, currentHeight: 2878053);
+    await progressSubscription?.cancel();
+    final currentHeight = await getCurrentHeight();
+    final progress = synchronize(accounts: ids, currentHeight: currentHeight);
+    progressSubscription = progress.listen((event) async {
+      setState(() {
+        height = event.height;
+      });
+    }, onDone: () async {
+      final b = await balance(id: widget.account.id);
+      setState(() {
+        poolBalance = b;
+      });
+    },);
   }
 }
 

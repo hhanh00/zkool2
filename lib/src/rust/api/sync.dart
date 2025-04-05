@@ -6,7 +6,49 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<void> synchronize(
+Stream<SyncProgress> synchronize(
         {required List<int> accounts, required int currentHeight}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts, currentHeight: currentHeight);
+
+Future<PoolBalance> balance({required int id}) =>
+    RustLib.instance.api.crateApiSyncBalance(id: id);
+
+class PoolBalance {
+  final Uint64List balance;
+
+  const PoolBalance({
+    required this.balance,
+  });
+
+  @override
+  int get hashCode => balance.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PoolBalance &&
+          runtimeType == other.runtimeType &&
+          balance == other.balance;
+}
+
+class SyncProgress {
+  final int height;
+  final int time;
+
+  const SyncProgress({
+    required this.height,
+    required this.time,
+  });
+
+  @override
+  int get hashCode => height.hashCode ^ time.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SyncProgress &&
+          runtimeType == other.runtimeType &&
+          height == other.height &&
+          time == other.time;
+}
