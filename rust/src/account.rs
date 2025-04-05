@@ -21,12 +21,10 @@ use crate::{
         store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
-    get_coin, setup,
+    get_coin,
 };
 
-pub async fn put_account_seed(id: u32, phrase: &str, aindex: u32) -> Result<u32> {
-    setup!(id);
-
+pub async fn put_account_seed(phrase: &str, aindex: u32) -> Result<u32> {
     let c = get_coin!();
 
     let seed_phrase = bip39::Mnemonic::from_str(phrase)?;
@@ -68,12 +66,10 @@ pub async fn put_account_seed(id: u32, phrase: &str, aindex: u32) -> Result<u32>
 
     update_dindex(c.get_pool(), c.account, dindex, true).await?;
 
-    Ok(id)
+    Ok(aindex)
 }
 
-pub async fn put_account_sapling_secret(id: u32, esk: &str) -> Result<u32> {
-    setup!(id);
-
+pub async fn put_account_sapling_secret(esk: &str) -> Result<u32> {
     let c = get_coin!();
     let network = c.network;
 
@@ -86,12 +82,10 @@ pub async fn put_account_sapling_secret(id: u32, esk: &str) -> Result<u32> {
     let xvk = xsk.to_diversifiable_full_viewing_key();
     store_account_sapling_vk(c.get_pool(), c.account, &xvk).await?;
 
-    Ok(id)
+    Ok(0)
 }
 
-pub async fn put_account_sapling_viewing(id: u32, evk: &str) -> Result<u32> {
-    setup!(id);
-
+pub async fn put_account_sapling_viewing(evk: &str) -> Result<u32> {
     let c = get_coin!();
     let network = c.network;
 
@@ -103,12 +97,10 @@ pub async fn put_account_sapling_viewing(id: u32, evk: &str) -> Result<u32> {
     init_account_sapling(c.get_pool(), c.account).await?;
     store_account_sapling_vk(c.get_pool(), c.account, &xvk).await?;
 
-    Ok(id)
+    Ok(0)
 }
 
-pub async fn put_account_unified_viewing(id: u32, uvk: &str) -> Result<u32> {
-    setup!(id);
-
+pub async fn put_account_unified_viewing(uvk: &str) -> Result<u32> {
     let c = get_coin!();
     let network = c.network;
 
@@ -147,11 +139,10 @@ pub async fn put_account_unified_viewing(id: u32, uvk: &str) -> Result<u32> {
     }
     update_dindex(c.get_pool(), c.account, dindex, true).await?;
 
-    Ok(id)
+    Ok(0)
 }
 
-pub async fn put_account_transparent_secret(id: u32, sk: &str) -> Result<u32> {
-    setup!(id);
+pub async fn put_account_transparent_secret(sk: &str) -> Result<u32> {
     let c = get_coin!();
     let network = c.network;
 
@@ -168,7 +159,7 @@ pub async fn put_account_transparent_secret(id: u32, sk: &str) -> Result<u32> {
     let address = ta.encode(&network);
     store_account_transparent_addr(c.get_pool(), c.account, 0, 0, &pubkey, &address).await?;
 
-    Ok(id)
+    Ok(0)
 }
 
 pub fn derive_transparent_address(

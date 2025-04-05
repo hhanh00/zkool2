@@ -10,7 +10,7 @@ use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as Z
 use zcash_protocol::consensus::BranchId;
 
 use crate::{
-    frb_generated::StreamSink, get_coin, lwd::{BlockId, BlockRange, TransparentAddressBlockFilter}, setup
+    frb_generated::StreamSink, get_coin, lwd::{BlockId, BlockRange, TransparentAddressBlockFilter}
 };
 
 // #[frb]
@@ -230,8 +230,7 @@ pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>,
 }
 
 #[frb]
-pub async fn balance(id: u32) -> Result<PoolBalance> {
-    setup!(id);
+pub async fn balance() -> Result<PoolBalance> {
     let c = get_coin!();
     let pool = c.get_pool();
     let account = c.account;

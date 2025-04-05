@@ -17,9 +17,8 @@ use zcash_keys::{
     keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId, consensus::Parameters as ZkParams};
-use zcash_protocol::consensus::{Network, NetworkConstants, Parameters};
+use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
-use rustls::crypto::CryptoProvider;
 
 use crate::{
     account::derive_transparent_address,
@@ -55,8 +54,7 @@ pub fn new_seed(phrase: &str) -> Result<String> {
 }
 
 #[frb]
-pub async fn get_account_ufvk(id: u32) -> Result<String> {
-    setup!(id);
+pub async fn get_account_ufvk() -> Result<String> {
     let c = get_coin!();
     let network = c.network;
 
@@ -137,30 +135,27 @@ pub async fn list_accounts() -> Result<Vec<Account>> {
 
 #[frb]
 pub async fn update_account(update: &AccountUpdate) -> Result<()> {
-    let id = update.id;
-    setup!(id);
-
     let c = get_coin!();
     let pool = c.get_pool();
 
     if let Some(ref name) = update.name {
         sqlx::query("UPDATE accounts SET name = ? WHERE id_account = ?")
             .bind(name)
-            .bind(id)
+            .bind(update.id)
             .execute(pool)
             .await?;
     }
     if let Some(ref icon) = update.icon {
         sqlx::query("UPDATE accounts SET icon = ? WHERE id_account = ?")
             .bind(icon)
-            .bind(id)
+            .bind(update.id)
             .execute(pool)
             .await?;
     }
     if let Some(ref birth) = update.birth {
         sqlx::query("UPDATE accounts SET birth = ? WHERE id_account = ?")
             .bind(birth)
-            .bind(id)
+            .bind(update.id)
             .execute(pool)
             .await?;
     }
@@ -188,12 +183,10 @@ pub async fn drop_schema() -> Result<()> {
 }
 
 pub async fn delete_account(account: &Account) -> Result<()> {
-    setup!(account.id);
-
     let c = get_coin!();
     let pool = c.get_pool();
 
-    crate::db::delete_account(pool, c.account).await?;
+    crate::db::delete_account(pool, account.id).await?;
 
     Ok(())
 }
@@ -204,6 +197,12 @@ pub async fn reorder_account(old_position: u32, new_position: u32) -> Result<()>
     let pool = c.get_pool();
 
     crate::db::reorder_account(pool, old_position, new_position).await
+}
+
+#[frb]
+pub fn set_account(id: u32) -> Result<()> {
+    setup!(id);
+    Ok(())
 }
 
 #[frb]
