@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2073771919;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1371597698;
 
 // Section: executor
 
@@ -67,12 +67,11 @@ fn wire__crate__api__sync__balance_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::sync::balance(api_id).await?;
+                        let output_ok = crate::api::sync::balance().await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -212,12 +211,11 @@ fn wire__crate__api__account__get_account_ufvk_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::get_account_ufvk(api_id).await?;
+                        let output_ok = crate::api::account::get_account_ufvk().await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -679,6 +677,41 @@ fn wire__crate__api__account__reorder_account_impl(
         },
     )
 }
+fn wire__crate__api__account__set_account_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_account",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let output_ok = crate::api::account::set_account(api_id)?;
+                        Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__network__set_lwd_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1104,8 +1137,9 @@ fn pde_ffi_dispatcher_primary_impl(
         15 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
         17 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
         18 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1121,8 +1155,8 @@ fn pde_ffi_dispatcher_sync_impl(
         9 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
         13 => wire__crate__api__account__new_seed_impl(ptr, rust_vec_len, data_len),
         16 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
