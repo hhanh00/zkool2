@@ -8,3 +8,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 void setLwd({required String lwd}) =>
     RustLib.instance.api.crateApiNetworkSetLwd(lwd: lwd);
+
+Future<int> getCurrentHeight() =>
+    RustLib.instance.api.crateApiNetworkGetCurrentHeight();
