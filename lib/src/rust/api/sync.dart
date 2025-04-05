@@ -11,8 +11,7 @@ Stream<SyncProgress> synchronize(
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts, currentHeight: currentHeight);
 
-Future<PoolBalance> balance({required int id}) =>
-    RustLib.instance.api.crateApiSyncBalance(id: id);
+Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 
 class PoolBalance {
   final Uint64List balance;

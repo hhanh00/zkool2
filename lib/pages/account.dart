@@ -24,6 +24,12 @@ class AccountViewPageState extends State<AccountViewPage> {
   PoolBalance? poolBalance;
 
   @override
+  void initState() {
+    super.initState();
+    setAccount(id: widget.account.id);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final h = height;
     final b = poolBalance;
@@ -55,7 +61,7 @@ class AccountViewPageState extends State<AccountViewPage> {
         height = event.height;
       });
     }, onDone: () async {
-      final b = await balance(id: widget.account.id);
+      final b = await balance();
       setState(() {
         poolBalance = b;
       });
