@@ -8,7 +8,9 @@ pub mod bip38;
 pub mod key;
 pub mod account;
 pub mod sync;
+pub mod warp;
 pub mod api;
 mod frb_generated;
 
+pub type Hash32 = [u8; 32];
 pub type Client = CompactTxStreamerClient<tonic::transport::Channel>;
