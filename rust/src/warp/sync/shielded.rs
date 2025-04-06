@@ -13,7 +13,7 @@ use zcash_protocol::consensus::Network;
 use crate::lwd::{CompactBlock, CompactTx};
 use crate::sync::{Note, Transaction, WarpSyncMessage, UTXO};
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
-use crate::{account, Hash32};
+use crate::Hash32;
 
 pub mod orchard;
 pub mod sapling;

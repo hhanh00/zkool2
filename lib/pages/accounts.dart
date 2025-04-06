@@ -58,7 +58,7 @@ class AccountListPage extends StatelessWidget {
             }).show() as bool;
         if (confirmed) {
           for (var a in accounts) {
-            deleteAccount(account: a);
+            await deleteAccount(account: a);
           }
           await AppStoreBase.loadAccounts();
         }
