@@ -13,7 +13,7 @@ use zcash_protocol::consensus::Network;
 use crate::lwd::{CompactBlock, CompactTx};
 use crate::sync::{Note, Transaction, WarpSyncMessage, UTXO};
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
-use crate::Hash32;
+use crate::{account, Hash32};
 
 pub mod orchard;
 pub mod sapling;
@@ -50,6 +50,7 @@ pub trait ShieldedProtocol {
 pub struct Synchronizer<P: ShieldedProtocol> {
     pub hasher: P::Hasher,
     pub network: Network,
+    pub pool: u8,
     pub keys: Vec<(u32, P::IVK, P::NK)>,
     pub position: u32,
     pub utxos: HashMap<Vec<u8>, UTXO>,
@@ -88,7 +89,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 FROM notes a
                 LEFT JOIN spends b ON a.id_note = b.id_note
                 WHERE b.id_note IS NULL) 
-            SELECT u.id_note, account, position, nullifier, value, witness FROM unspent u
+            SELECT u.id_note, account, position, nullifier, value, cmx, witness FROM unspent u
             JOIN witnesses w 
                 ON u.id_note = w.note
                 WHERE pool = ? AND account = ? AND w.height = ?",
@@ -102,26 +103,31 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 let position = row.get::<u32, _>(2);
                 let nullifier = row.get::<Vec<u8>, _>(3);
                 let value = row.get::<i64, _>(4) as u64;
-                let witness = row.get::<Vec<u8>, _>(5);
+                let cmx = row.get::<Vec<u8>, _>(5);
+                let witness = row.get::<Vec<u8>, _>(6);
                 let (witness, _) = bincode::decode_from_slice(&witness, legacy()).unwrap();
                 UTXO {
                     id: id_note,
+                    pool,
                     account,
                     nullifier,
                     position,
                     value,
+                    cmx,
                     witness,
+                    ..UTXO::default()
                 }
             })
             .fetch(connection);
-            while let Some(nf) = nfs.try_next().await? {
-                utxos.insert(nf.nullifier.clone(), nf);
+            while let Some(utxo) = nfs.try_next().await? {
+                utxos.insert(utxo.nullifier.clone(), utxo);
             }
         }
 
         Ok(Self {
             hasher: P::Hasher::default(),
             network,
+            pool,
             keys,
             position,
             utxos,
@@ -199,6 +205,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                                 tx_sent = true;
                             }
 
+                            dbn.txid = tx.hash.clone();
                             self.tx_decrypted.send(WarpSyncMessage::Note(dbn.clone())).await?;
                             note = note_iterator.next();
                         }
@@ -216,7 +223,9 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 position: dbn.position,
                 nullifier: dbn.nf.to_vec(),
                 value: dbn.value,
+                cmx: dbn.cmx.clone(),
                 witness: Witness::default(),
+                ..UTXO::default()
             })
             .collect::<Vec<_>>();
 
@@ -320,10 +329,18 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         }
         for utxo in self.utxos.values() {
             self.tx_decrypted.send(WarpSyncMessage::Witness(
+                utxo.account,
+                height,
+                utxo.cmx.clone(),
                 utxo.witness.clone())).await?;
         }
         self.position += count_cmxs as u32;
-        self.tx_decrypted.send(WarpSyncMessage::Checkpoint(height)).await?;
+        let accounts = self
+            .keys
+            .iter()
+            .map(|(account, _, _)| *account)
+            .collect::<Vec<_>>();
+        self.tx_decrypted.send(WarpSyncMessage::Checkpoint(accounts, self.pool, height)).await?;
 
         // detect spends
         for cb in blocks.iter() {
@@ -331,7 +348,8 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 for sp in P::extract_inputs(vtx).iter() {
                     let nf = P::extract_nf(sp);
                     let nf = nf.as_slice();
-                    if let Some(utxo) = self.utxos.remove(nf) {
+                    if let Some(mut utxo) = self.utxos.remove(nf) {
+                        utxo.txid = vtx.hash.clone();
                         self.tx_decrypted.send(WarpSyncMessage::Spend(utxo)).await?;
                         continue;
                     }
