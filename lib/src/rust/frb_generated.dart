@@ -72,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => -1783614882;
+  int get rustContentHash => -1371597698;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -125,9 +125,6 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiAccountSetAccount({required int id});
 
   void crateApiNetworkSetLwd({required String lwd});
-
-  Stream<SyncProgress> crateApiSyncShieldedSync(
-      {required List<int> accounts, required int start, required int end});
 
   Stream<SyncProgress> crateApiSyncSynchronize(
       {required List<int> accounts, required int currentHeight});
@@ -629,36 +626,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Stream<SyncProgress> crateApiSyncShieldedSync(
-      {required List<int> accounts, required int start, required int end}) {
-    final progress = RustStreamSink<SyncProgress>();
-    unawaited(handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_StreamSink_sync_progress_Sse(progress, serializer);
-        sse_encode_list_prim_u_32_loose(accounts, serializer);
-        sse_encode_u_32(start, serializer);
-        sse_encode_u_32(end, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 21, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiSyncShieldedSyncConstMeta,
-      argValues: [progress, accounts, start, end],
-      apiImpl: this,
-    )));
-    return progress.stream;
-  }
-
-  TaskConstMeta get kCrateApiSyncShieldedSyncConstMeta => const TaskConstMeta(
-        debugName: "shielded_sync",
-        argNames: ["progress", "accounts", "start", "end"],
-      );
-
-  @override
   Stream<SyncProgress> crateApiSyncSynchronize(
       {required List<int> accounts, required int currentHeight}) {
     final progress = RustStreamSink<SyncProgress>();
@@ -669,7 +636,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_list_prim_u_32_loose(accounts, serializer);
         sse_encode_u_32(currentHeight, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 22, port: port_);
+            funcId: 21, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -694,7 +661,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(ufvk, serializer);
         sse_encode_opt_box_autoadd_u_32(di, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -718,7 +685,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_account_update(update, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 24, port: port_);
+            funcId: 23, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
