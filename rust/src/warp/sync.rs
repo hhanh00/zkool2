@@ -80,8 +80,6 @@ pub async fn warp_sync(
         // }
         // prev_hash = bh.hash;
 
-        println!("Height {}", height);
-
         for vtx in block.vtx.iter() {
             c += vtx.outputs.len();
             c += vtx.actions.len();
