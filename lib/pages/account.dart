@@ -45,7 +45,7 @@ class AccountViewPageState extends State<AccountViewPage> {
               if (h != null) Text(h.toString()),
               if (b != null)
                 Text("${b.balance[0]} ${b.balance[1]} ${b.balance[2]}"),
-              IconButton.filled(onPressed: onShieldedSync, icon: Icon(Icons.sync))
+              IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync))
             ],
           ),
         ));
@@ -66,14 +66,6 @@ class AccountViewPageState extends State<AccountViewPage> {
         poolBalance = b;
       });
     },);
-  }
-
-  void onShieldedSync() async {
-    final ids = appStore.accounts.map((a) => a.id).toList();
-    await progressSubscription?.cancel();
-    // final currentHeight = await getCurrentHeight();
-    shieldedSync(accounts: ids, 
-      start: 2875432, end: 2875434);
   }
 }
 

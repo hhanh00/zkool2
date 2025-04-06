@@ -207,14 +207,17 @@ pub async fn store_account_metadata(
     .fetch_one(connection)
     .await?;
 
-    sqlx::query(
-        "INSERT INTO sync_heights(account, transparent, shielded)
-        VALUES (?1, ?2, ?2)",
-    )
-    .bind(id)
-    .bind(birth - 1)
-    .execute(connection)
-    .await?;
+    for pool in 0..3 {
+        sqlx::query(
+            "INSERT OR REPLACE INTO sync_heights(account, pool, height)
+            VALUES (?, ?, ?)",
+        )
+        .bind(id)
+        .bind(pool)
+        .bind(birth - 1)
+        .execute(connection)
+        .await?;
+    }
 
     Ok(id)
 }
@@ -597,26 +600,5 @@ pub async fn reorder_account(
     .await?;
 
     tx.commit().await?;
-    Ok(())
-}
-
-pub async fn update_sync_transparent_height(
-    connection: &SqlitePool,
-    accounts: &[u32],
-    height: u32,
-) -> Result<()> {
-    let mut tx = connection.begin().await?;
-    for account in accounts {
-        sqlx::query(
-            "INSERT OR REPLACE INTO sync_heights(account, transparent)
-            VALUES (?, ?)",
-        )
-        .bind(account)
-        .bind(height)
-        .execute(&mut *tx)
-        .await?;
-    }
-    tx.commit().await?;
-
     Ok(())
 }
