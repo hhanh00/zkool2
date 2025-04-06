@@ -1,4 +1,5 @@
 use anyhow::Result;
+use bincode::config;
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::sqlite::SqliteRow;
@@ -145,7 +146,7 @@ pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>,
                     .bind(height)
                     .fetch_one(&mut *db_tx)
                     .await?;
-        
+
                 // Access the transparent bundle part
                 if let Some(transparent_bundle) = transaction.transparent_bundle() {
                     println!("Transaction: {}", transaction.txid());
@@ -229,7 +230,7 @@ pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>,
 #[frb]
 pub async fn shielded_sync(_progress: StreamSink<SyncProgress>, accounts: Vec<u32>, start: u32, end: u32) -> Result<()> {
     let c = get_coin!();
-    let pool = c.get_pool();
+    let pool = c.get_pool().clone();
     let network = c.network;
 
     let mut client = c.client().await?;
@@ -239,11 +240,89 @@ pub async fn shielded_sync(_progress: StreamSink<SyncProgress>, accounts: Vec<u3
     let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
 
     tokio::spawn(async move {
+        let mut db_tx = pool.begin().await?;
         while let Some(msg) = rx_messages.recv().await {
             println!("Received message: {:?}", msg);
+            match msg {
+                WarpSyncMessage::Transaction(tx) => {
+                    sqlx::query
+                        ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)")
+                        .bind(tx.account)
+                        .bind(&tx.txid)
+                        .bind(tx.height)
+                        .bind(tx.time)
+                        .execute(&mut *db_tx).await?;
+                    println!("Processing Transaction: id={}, height={}", tx.id, tx.height);
+                },
+                WarpSyncMessage::Note(note) => {
+                    sqlx::query
+                        ("INSERT INTO notes
+                        (account, height, pool, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
+                        SELECT t.account, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ? FROM transactions t
+                        WHERE t.account = ? AND t.txid = ?")
+                        .bind(note.height)
+                        .bind(note.pool)
+                        .bind(&note.nf)
+                        .bind(note.value as i64)
+                        .bind(&note.cmx)
+                        .bind(note.position)
+                        .bind(&note.diversifier)
+                        .bind(&note.rcm)
+                        .bind(&note.rho)
+                        .bind(note.account)
+                        .bind(&note.txid)
+                        .execute(&mut *db_tx).await?;
+                    println!("Processing Note: id={}, account={}, height={}", note.id, note.account, note.height);
+                },
+                WarpSyncMessage::Witness(account, height, cmx, witness) => {
+                    let w = bincode::encode_to_vec(&witness, config::legacy())?;
+                    sqlx::query
+                        ("INSERT INTO witnesses (note, height, witness)
+                        SELECT n.id_note, ?, ? FROM notes n
+                        WHERE n.account = ? AND n.cmx = ?")
+                        .bind(height)
+                        .bind(&w)
+                        .bind(account)
+                        .bind(&cmx)
+                        .execute(&mut *db_tx).await?;
+                    println!("Processing Witness: account={account}, height={height}");
+                },
+                WarpSyncMessage::Spend(utxo) => {
+                    sqlx::query("INSERT INTO spends (id_note, account, height, pool, tx, value)
+                    SELECT n.id_note, ?1, t.height, ?, t.id_tx, ? FROM notes n, transactions t
+                    WHERE n.account = ?1 AND n.cmx = ?
+                    AND t.txid = ?")
+                        .bind(utxo.account)
+                        .bind(utxo.pool)
+                        .bind(-(utxo.value as i64))
+                        .bind(utxo.cmx)
+                        .bind(utxo.txid)
+                        .execute(&mut *db_tx).await?;
+                    println!("Processing Spend: id={}, account={}, value={}", utxo.id, utxo.account, utxo.value);
+                },
+                WarpSyncMessage::Checkpoint(accounts, pool, height) => {
+                    for a in accounts {
+                        sqlx::query("INSERT INTO sync_heights (pool, account, height)
+                        VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET height = excluded.height")
+                            .bind(pool)
+                            .bind(a)
+                            .bind(height)
+                            .execute(&mut *db_tx).await?;
+                        println!("Checkpoint for account: {}, height: {}", a, height);
+                    }
+                },
+                WarpSyncMessage::Commit => {
+                    db_tx.commit().await?;
+                    db_tx = pool.begin().await?;
+                },
+                _ => (),
+            }
         }
+        db_tx.commit().await?;
+
+        Ok::<_, anyhow::Error>(())
     });
-    warp_sync(&network, pool, start, &accounts, blocks, &s, &o, tx_messages).await?;
+    warp_sync(&network, &c.get_pool(), start, &accounts, blocks, &s, &o, tx_messages).await?;
     Ok(())
 }
 
