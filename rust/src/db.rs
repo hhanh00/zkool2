@@ -97,9 +97,10 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS sync_heights(
-        account INTEGER PRIMARY KEY,
-        transparent INTEGER NOT NULL,
-        shielded INTEGER NOT NULL)",
+        account INTEGER,
+        pool INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        PRIMARY KEY (account, pool))",
     )
     .execute(connection)
     .await?;
@@ -113,6 +114,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         nullifier BLOB NOT NULL,
         tx INTEGER NOT NULL,
         value INTEGER NOT NULL,
+        cmx BLOB NOT NULL,
         position INTEGER,
         diversifier BLOB,
         rcm BLOB,
