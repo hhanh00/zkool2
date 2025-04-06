@@ -33,7 +33,7 @@ pub async fn synchronize(
 
     // Get account heights
     let mut account_heights = HashMap::new();
-    let mut rows = sqlx::query("SELECT account, height FROM sync_heights WHERE pool = 0")
+    let mut rows = sqlx::query("SELECT account, MIN(height) FROM sync_heights GROUP BY account")
         .map(|row: SqliteRow| {
             let account: u32 = row.get(0);
             let height: u32 = row.get(1);
@@ -42,7 +42,7 @@ pub async fn synchronize(
         .fetch(pool);
 
     while let Some((account, height)) = rows.try_next().await? {
-        account_heights.insert(account, height);
+        account_heights.insert(account, height + 1);
     }
 
     // Create a sorted list of unique heights
