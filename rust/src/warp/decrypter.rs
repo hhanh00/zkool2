@@ -73,6 +73,7 @@ pub fn try_sapling_decrypt(
                     vout,
                     diversifier: recipient.diversifier().0.to_vec(),
                     ivtx,
+                    cmx: cmx.to_bytes().to_vec(),
                     // nf cannot be calculated at this point because we don't have the position
                     ..Note::default()
                 };
@@ -143,6 +144,7 @@ pub fn try_orchard_decrypt(
                     vout,
                     diversifier: recipient.diversifier().as_array().to_vec(),
                     ivtx,
+                    cmx: cmx.to_bytes().to_vec(),
                     ..Note::default()
                 };
                 return Ok(Some((note, dbn)));

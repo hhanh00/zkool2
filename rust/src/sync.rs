@@ -7,7 +7,7 @@ use crate::{lwd::{BlockId, BlockRange, CompactBlock, TreeState}, warp::{legacy::
 #[derive(Default, Debug)]
 pub struct Transaction {
     pub id: u32,
-    pub txid: Hash32,
+    pub txid: Vec<u8>,
     pub height: u32,
     pub account: u32,
     pub time: u32,
@@ -22,14 +22,18 @@ pub struct NoteExtended {
     pub memo: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct UTXO {
     pub id: u32,
+    pub pool: u8,
     pub account: u32,
     pub nullifier: Vec<u8>,
     pub value: u64,
     pub position: u32,
+    pub cmx: Vec<u8>,
     pub witness: Witness,
+
+    pub txid: Vec<u8>,
 }
 
 #[derive(Debug)]
@@ -37,8 +41,9 @@ pub enum WarpSyncMessage {
     BlockHeader(BlockHeader),
     Transaction(Transaction),
     Note(Note),
-    Witness(Witness),
-    Checkpoint(u32),
+    Witness(u32, u32, Vec<u8>, Witness),
+    Checkpoint(Vec<u32>, u8, u32),
+    Commit,
     Spend(UTXO),
 }
 
@@ -67,6 +72,8 @@ pub struct Note {
     pub nf: Vec<u8>,
 
     pub ivtx: u32, // not stored in the database
+    pub cmx: Vec<u8>, // unique identifier for the note
+    pub txid: Vec<u8>, // transaction id
 }
 
 pub async fn get_compact_block_range(
