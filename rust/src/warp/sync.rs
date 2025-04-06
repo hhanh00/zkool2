@@ -67,6 +67,7 @@ pub async fn warp_sync(
 
     println!("Start sync");
     while let Some(block) = blocks.message().await? {
+        println!("Syncing block {}", block.height);
         // TODO: Reorg detection
         // bh = BlockHeader {
         //     height: block.height as u32,
@@ -88,6 +89,7 @@ pub async fn warp_sync(
         bs.push(block);
 
         if c >= 1000000 {
+            println!("Processing {} blocks", bs.len());
             sap_dec.add(&bs).await?;
             orch_dec.add(&bs).await?;
             bs.clear();
@@ -95,6 +97,7 @@ pub async fn warp_sync(
         }
         height += 1;
     }
+    println!("Processing {} blocks", bs.len());
     sap_dec.add(&bs).await?;
     orch_dec.add(&bs).await?;
     info!("Sync finished");
