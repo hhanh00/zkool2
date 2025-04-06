@@ -117,7 +117,6 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         diversifier BLOB,
         rcm BLOB,
         rho BLOB,
-        memo BLOB,
         locked BOOL NOT NULL DEFAULT FALSE,
         UNIQUE(account, nullifier))"
     )
@@ -144,6 +143,16 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         account INTEGER NOT NULL,
         time INTEGER,
         value INTEGER NOT NULL)"
+    )
+    .execute(connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS witnesses(
+        id_witness INTEGER PRIMARY KEY,
+        note INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        witness BLOB NOT NULL)"
     )
     .execute(connection)
     .await?;
