@@ -11,6 +11,11 @@ Stream<SyncProgress> synchronize(
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts, currentHeight: currentHeight);
 
+Stream<SyncProgress> shieldedSync(
+        {required List<int> accounts, required int start, required int end}) =>
+    RustLib.instance.api
+        .crateApiSyncShieldedSync(accounts: accounts, start: start, end: end);
+
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 
 class PoolBalance {
