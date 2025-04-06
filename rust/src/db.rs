@@ -114,7 +114,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         nullifier BLOB NOT NULL,
         tx INTEGER NOT NULL,
         value INTEGER NOT NULL,
-        cmx BLOB NOT NULL,
+        cmx BLOB,
         position INTEGER,
         diversifier BLOB,
         rcm BLOB,

@@ -4,7 +4,7 @@ use flutter_rust_bridge::frb;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc::channel;
 use tonic::{Request, Streaming};
-use zcash_protocol::consensus::Network;
+use zcash_protocol::consensus::{Network, Parameters};
 use crate::{lwd::{BlockId, BlockRange, CompactBlock, TreeState}, warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness}, Client, Hash32};
 
 #[frb(dart_metadata = ("freezed"))]
@@ -103,10 +103,17 @@ pub async fn get_compact_block_range(
 }
 
 pub async fn get_tree_state(
+    network: &Network,
     client: &mut Client,
     height: u32,
 ) -> Result<(CommitmentTreeFrontier, CommitmentTreeFrontier)> {
-    let height: u32 = height.into();
+    let min_height: u32 = network.activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
+    .unwrap().into();
+
+    if height < min_height {
+        return Ok((CommitmentTreeFrontier::default(), CommitmentTreeFrontier::default()));
+    }
+
     let tree_state = client
         .get_tree_state(Request::new(BlockId {
             height: height as u64,
@@ -137,7 +144,7 @@ pub async fn get_tree_state(
 }
 
 pub async fn shielded_sync(network: &Network, pool: &Pool<Sqlite>, client: &mut Client, accounts: Vec<u32>, start: u32, end: u32) -> Result<()> {
-    let (s, o) = get_tree_state(client, start - 1).await?;
+    let (s, o) = get_tree_state(network, client, start - 1).await?;
 
     let blocks = get_compact_block_range(client, start, end).await?;
     let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
