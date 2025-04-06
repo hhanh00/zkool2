@@ -3,6 +3,7 @@ use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
+use tokio::sync::mpsc::channel;
 use zcash_keys::encoding::AddressCodec as _;
 use std::collections::HashMap;
 
@@ -10,7 +11,7 @@ use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as Z
 use zcash_protocol::consensus::BranchId;
 
 use crate::{
-    frb_generated::StreamSink, get_coin, lwd::{BlockId, BlockRange, TransparentAddressBlockFilter}
+    frb_generated::StreamSink, get_coin, lwd::{BlockId, BlockRange, TransparentAddressBlockFilter}, sync::{get_compact_block_range, get_tree_state, WarpSyncMessage}, warp::sync::warp_sync
 };
 
 // #[frb]
@@ -147,14 +148,6 @@ pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>,
         
                 // Access the transparent bundle part
                 if let Some(transparent_bundle) = transaction.transparent_bundle() {
-                    // Process the transparent bundle
-                    // For example, you might want to extract:
-                    // - Input transactions (transparent_bundle.vin)
-                    // - Output transactions (transparent_bundle.vout)
-                    // - Transaction values
-                    // - Addresses
-
-                    // For now, just print some information about the transaction
                     println!("Transaction: {}", transaction.txid());
                     println!("Transparent inputs: {}", transparent_bundle.vin.len());
 
@@ -207,6 +200,10 @@ pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>,
 
                     println!("Transparent outputs: {}", transparent_bundle.vout.len());
                 }
+
+                if let Some(_sapling_bundle) = transaction.sapling_bundle() {
+
+                }
             }
             sqlx::query("UPDATE sync_heights SET transparent = ? WHERE account = ?")
             .bind(end_height)
@@ -228,6 +225,30 @@ pub async fn synchronize(progress: StreamSink<SyncProgress>, accounts: Vec<u32>,
 
     Ok(())
 }
+
+#[frb]
+pub async fn shielded_sync(_progress: StreamSink<SyncProgress>, accounts: Vec<u32>, start: u32, end: u32) -> Result<()> {
+    let c = get_coin!();
+    let pool = c.get_pool();
+    let network = c.network;
+
+    let mut client = c.client().await?;
+    let (s, o) = get_tree_state(&mut client, start - 1).await?;
+
+    let blocks = get_compact_block_range(&mut client, start, end).await?;
+    let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
+
+    tokio::spawn(async move {
+        while let Some(msg) = rx_messages.recv().await {
+            println!("Received message: {:?}", msg);
+        }
+    });
+    warp_sync(&network, pool, start, &accounts, blocks, &s, &o, tx_messages).await?;
+    Ok(())
+}
+
+
+
 
 #[frb]
 pub async fn balance() -> Result<PoolBalance> {
