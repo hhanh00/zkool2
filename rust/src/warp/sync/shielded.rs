@@ -89,10 +89,10 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 FROM notes a
                 LEFT JOIN spends b ON a.id_note = b.id_note
                 WHERE b.id_note IS NULL) 
-            SELECT u.id_note, account, position, nullifier, value, cmx, witness FROM unspent u
+            SELECT u.id_note, u.account, position, nullifier, value, cmx, witness FROM unspent u
             JOIN witnesses w 
                 ON u.id_note = w.note
-                WHERE pool = ? AND account = ? AND w.height = ?",
+                WHERE pool = ? AND u.account = ? AND w.height = ?",
             )
             .bind(pool)
             .bind(account)
