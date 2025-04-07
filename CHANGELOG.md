@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.0.0...zkool-v1.1.0) (2025-04-07)
+
+
+### Features
+
+* account view page ([#19](https://github.com/hhanh00/zkool2/issues/19)) ([98ae49c](https://github.com/hhanh00/zkool2/commit/98ae49c4f97657f2ccfee03f702a59d5ea0174f8))
+* calculate pool balances ([#23](https://github.com/hhanh00/zkool2/issues/23)) ([fbeab61](https://github.com/hhanh00/zkool2/commit/fbeab6108259ec98f01996fc0d1cfe3cad8b61d5))
+* report sync progress to UI ([#36](https://github.com/hhanh00/zkool2/issues/36)) ([806f0bf](https://github.com/hhanh00/zkool2/commit/806f0bf5db93c851d667ebb9661a485a2049f99d))
+* rewind to height (snap to earlier checkpoint) ([#33](https://github.com/hhanh00/zkool2/issues/33)) ([2957cc3](https://github.com/hhanh00/zkool2/commit/2957cc33dbc4d4695ab70b42415acce853687c0f))
+* save checkpoint block headers ([#34](https://github.com/hhanh00/zkool2/issues/34)) ([5e2bd28](https://github.com/hhanh00/zkool2/commit/5e2bd2825e712dd50ff085e370ae8f1d365fcb3d))
+* shielded sync ([#25](https://github.com/hhanh00/zkool2/issues/25)) ([a999305](https://github.com/hhanh00/zkool2/commit/a99930583145376f2ef7ed9516a53fbdae6d9b67))
+* store shielded sync state in database ([#26](https://github.com/hhanh00/zkool2/issues/26)) ([3c18f64](https://github.com/hhanh00/zkool2/commit/3c18f64b45efbfc006b6e37693f8005db9de0c87))
+* transparent sync ([#22](https://github.com/hhanh00/zkool2/issues/22)) ([8aabc4c](https://github.com/hhanh00/zkool2/commit/8aabc4c7dd443a006efe3e0e36ed74e7074a5fa8))
+
+
+### Bug Fixes
+
+* issues with synchronization ([#28](https://github.com/hhanh00/zkool2/issues/28)) ([cc75da2](https://github.com/hhanh00/zkool2/commit/cc75da296ebf8ad11c7478c6ea98d77d47683e20))
+* reactivate transparent sync & fix issue with dups ([#31](https://github.com/hhanh00/zkool2/issues/31)) ([9199b4d](https://github.com/hhanh00/zkool2/commit/9199b4d33de0d5ca7fb11dc9f710e514ddb7917a))
+* recover from partial sync ([#32](https://github.com/hhanh00/zkool2/issues/32)) ([5dbba88](https://github.com/hhanh00/zkool2/commit/5dbba88f026f2ab842ea2ba4a81e7386f5044f4b))
+* remove account id argument, use set_account ([#24](https://github.com/hhanh00/zkool2/issues/24)) ([02eaced](https://github.com/hhanh00/zkool2/commit/02eaced380d57903bfc2fa5db10c894d1152d774))
+* resolve transparent tx timestamp during the shielded scan ([#35](https://github.com/hhanh00/zkool2/issues/35)) ([498be85](https://github.com/hhanh00/zkool2/commit/498be85d057328bed0a1fe6ecadf978ea3067692))
+* spend detection ([#29](https://github.com/hhanh00/zkool2/issues/29)) ([2298b5d](https://github.com/hhanh00/zkool2/commit/2298b5d64a0bdc8346a8f946251c15ee21c94c50))
+* spend detection for notes with vout != 0 ([#30](https://github.com/hhanh00/zkool2/issues/30)) ([c44bdeb](https://github.com/hhanh00/zkool2/commit/c44bdebaeff9a4cc4861aaee6b5d6172c177b106))
+* transparent sync ([#27](https://github.com/hhanh00/zkool2/issues/27)) ([f9582d2](https://github.com/hhanh00/zkool2/commit/f9582d27f74346df9ec26adb1a0f9f9c35d023b7))
+
 ## 1.0.0 (2025-04-04)
 
 
