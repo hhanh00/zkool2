@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::{collections::HashMap, mem::swap};
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;
 use rayon::prelude::*;
@@ -169,6 +169,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 .unwrap().map(|(n, dbn)| (n, dbn, nk))
             })
         ).collect::<Vec<_>>();
+        println!("Notes #{}", notes.len());
 
         let mut note_iterator = notes.iter_mut();
         let mut note = note_iterator.next();
@@ -201,12 +202,12 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                                     txid: tx.hash.clone().try_into().unwrap(),
                                     ..Transaction::default()
                                 };
-                                self.tx_decrypted.send(WarpSyncMessage::Transaction(tx)).await?;
+                                self.tx_decrypted.send(WarpSyncMessage::Transaction(tx)).await.context("sending transaction")?;
                                 tx_sent = true;
                             }
 
                             dbn.txid = tx.hash.clone();
-                            self.tx_decrypted.send(WarpSyncMessage::Note(dbn.clone())).await?;
+                            self.tx_decrypted.send(WarpSyncMessage::Note(dbn.clone())).await.context("sending note")?;
                             note = note_iterator.next();
                         }
                         _ => break,
@@ -332,7 +333,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 utxo.account,
                 height,
                 utxo.cmx.clone(),
-                utxo.witness.clone())).await?;
+                utxo.witness.clone())).await.context("sending witness")?;
         }
         self.position += count_cmxs as u32;
         let accounts = self
@@ -340,9 +341,11 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             .iter()
             .map(|(account, _, _)| *account)
             .collect::<Vec<_>>();
-        self.tx_decrypted.send(WarpSyncMessage::Checkpoint(accounts, self.pool, height)).await?;
+        self.tx_decrypted.send(WarpSyncMessage::Checkpoint(accounts, self.pool, height)).await.context("sending checkpoint")?;
 
         // detect spends
+        // bug: the nullifier could affect multiple accounts if they have the same
+        // address
         for cb in blocks.iter() {
             for vtx in cb.vtx.iter() {
                 for sp in P::extract_inputs(vtx).iter() {
@@ -350,8 +353,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                     let nf = nf.as_slice();
                     if let Some(mut utxo) = self.utxos.remove(nf) {
                         utxo.txid = vtx.hash.clone();
-                        self.tx_decrypted.send(WarpSyncMessage::Spend(utxo)).await?;
-                        continue;
+                        self.tx_decrypted.send(WarpSyncMessage::Spend(utxo)).await.context("sending spend")?;
                     }
                 }
             }
