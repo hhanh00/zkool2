@@ -30,7 +30,7 @@ pub struct NoteExtended {
     pub memo: Vec<u8>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct UTXO {
     pub id: u32,
     pub pool: u8,
@@ -42,6 +42,18 @@ pub struct UTXO {
     pub witness: Witness,
 
     pub txid: Vec<u8>,
+}
+
+impl std::fmt::Debug for UTXO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UTXO")
+            .field("id", &self.id)
+            .field("account", &self.account)
+            .field("pool", &self.pool)
+            .field("txid", &hex::encode(&self.txid))
+            .field("cmx", &hex::encode(&self.cmx))
+            .finish()
+    }
 }
 
 #[derive(Debug)]
@@ -297,10 +309,7 @@ async fn handle_message(
             .bind(&utxo.txid)
             .execute(&mut **db_tx)
             .await?;
-            println!(
-                "Processing Spend: id={}, account={}, cmx={}, txid={}",
-                utxo.id, utxo.account, hex::encode(&utxo.cmx), hex::encode(&utxo.txid)
-            );
+            println!("Processing Spend: {:?}", &utxo);
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Checkpoint(accounts, pool, height) => {
