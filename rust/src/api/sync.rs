@@ -3,6 +3,7 @@ use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::{sqlite::SqliteRow, Pool};
 use sqlx::{Row, Sqlite};
+use tokio::sync::mpsc::channel;
 use std::collections::HashMap;
 use zcash_keys::encoding::AddressCodec as _;
 
@@ -53,6 +54,14 @@ pub async fn synchronize(
     unique_heights.sort_unstable();
     unique_heights.dedup();
 
+    let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
+
+    tokio::spawn(async move {
+        while let Some(p) = rx_progress.recv().await {
+            let _ = progress.add(p);
+        }
+    });
+
     // For each unique height, process accounts that need to be synced from that height
     for (i, &start_height) in unique_heights.iter().enumerate() {
         // Determine the end height (next height - 1 or current_height)
@@ -94,6 +103,7 @@ pub async fn synchronize(
             accounts.clone(),
             start_height,
             end_height,
+            tx_progress.clone(),
         )
         .await?;
 
@@ -101,11 +111,6 @@ pub async fn synchronize(
         for account in &accounts_to_sync {
             account_heights.insert(*account, end_height);
         }
-
-        let _ = progress.add(SyncProgress {
-            height: end_height,
-            time: 0,
-        });
     }
 
     Ok(())
