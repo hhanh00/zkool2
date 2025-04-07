@@ -1,14 +1,16 @@
 use crate::{
-    lwd::{BlockId, BlockRange, CompactBlock, TreeState}, warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness}, Client, Hash32
+    lwd::{BlockId, BlockRange, CompactBlock, TreeState},
+    warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness},
+    Client, Hash32,
 };
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
+use sqlx::Row;
 use sqlx::{sqlite::SqliteRow, Pool, Sqlite};
 use tokio::sync::mpsc::channel;
 use tonic::{Request, Streaming};
 use zcash_protocol::consensus::{Network, Parameters};
-use sqlx::Row;
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
@@ -67,11 +69,19 @@ pub enum WarpSyncMessage {
 }
 
 #[frb(dart_metadata = ("freezed"))]
-#[derive(Debug)]
 pub struct BlockHeader {
     pub height: u32,
-    pub hash: Hash32,
+    pub hash: Vec<u8>,
     pub time: u32,
+}
+
+impl std::fmt::Debug for BlockHeader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BlockHeader")
+            .field("height", &self.height)
+            .field("hash", &hex::encode(&self.hash))
+            .finish()
+    }
 }
 
 #[frb(dart_metadata = ("freezed"))]
@@ -242,35 +252,35 @@ async fn handle_message(
     match msg {
         WarpSyncMessage::Transaction(tx) => {
             sqlx::query
-                // ignore duplicate transactions because they could have been created
-                // by a previous type of scan (i.e transparent)
-                ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)
-                ON CONFLICT DO NOTHING")
-                .bind(tx.account)
-                .bind(&tx.txid)
-                .bind(tx.height)
-                .bind(tx.time)
-                .execute(&mut **db_tx).await?;
+                            // ignore duplicate transactions because they could have been created
+                            // by a previous type of scan (i.e transparent)
+                            ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)
+                        ON CONFLICT DO NOTHING")
+                            .bind(tx.account)
+                            .bind(&tx.txid)
+                            .bind(tx.height)
+                            .bind(tx.time)
+                            .execute(&mut **db_tx).await?;
             println!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {
             let r = sqlx::query
-                ("INSERT INTO notes
+                    ("INSERT INTO notes
                         (account, height, pool, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
                         SELECT t.account, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ? FROM transactions t
                         WHERE t.account = ? AND t.txid = ?")
-                .bind(note.height)
-                .bind(note.pool)
-                .bind(&note.nf)
-                .bind(note.value as i64)
-                .bind(&note.cmx)
-                .bind(note.position)
-                .bind(&note.diversifier)
-                .bind(&note.rcm)
-                .bind(&note.rho)
-                .bind(note.account)
-                .bind(&note.txid)
-                .execute(&mut **db_tx).await?;
+                    .bind(note.height)
+                    .bind(note.pool)
+                    .bind(&note.nf)
+                    .bind(note.value as i64)
+                    .bind(&note.cmx)
+                    .bind(note.position)
+                    .bind(&note.diversifier)
+                    .bind(&note.rcm)
+                    .bind(&note.rho)
+                    .bind(note.account)
+                    .bind(&note.txid)
+                    .execute(&mut **db_tx).await?;
             println!(
                 "Processing Note: id={}, account={}, height={}",
                 note.id, note.account, note.height
@@ -328,21 +338,37 @@ async fn handle_message(
                 println!("Checkpoint for account: {}, height: {}", a, height);
             }
         }
-        _ => (),
+        WarpSyncMessage::BlockHeader(block_header) => {
+            let r = sqlx::query(
+                "INSERT INTO headers (height, hash, time)
+                    VALUES (?, ?, ?)",
+            )
+            .bind(block_header.height)
+            .bind(&block_header.hash)
+            .bind(block_header.time)
+            .execute(&mut **db_tx)
+            .await?;
+            println!("Processing BlockHeader: {:?}", block_header);
+            assert_eq!(r.rows_affected(), 1);
+        }
+        WarpSyncMessage::Commit => { 
+            // handled in the caller
+        }
     }
 
     Ok(())
 }
 
 pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>) -> Result<()> {
-    let account_heights = sqlx::query("SELECT account, MIN(height) FROM sync_heights GROUP BY account")
-        .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let height: u32 = row.get(1);
-            (account, height)
-        })
-        .fetch_all(connection)
-        .await?;
+    let account_heights =
+        sqlx::query("SELECT account, MIN(height) FROM sync_heights GROUP BY account")
+            .map(|row: SqliteRow| {
+                let account: u32 = row.get(0);
+                let height: u32 = row.get(1);
+                (account, height)
+            })
+            .fetch_all(connection)
+            .await?;
 
     for (account, height) in account_heights {
         trim_sync_data(connection, account, height).await?;
@@ -388,15 +414,16 @@ pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32
 // for each account, find the latest checkpoint before the given height
 // and trim the synchronization data to that height
 pub async fn rewind_sync(connection: &Pool<Sqlite>, height: u32) -> Result<()> {
-    let account_checkpoints = sqlx::query("SELECT account, MAX(height) FROM witnesses WHERE height < ? GROUP BY account")
-        .bind(height)
-        .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let height: u32 = row.get(1);
-            (account, height)
-        })
-        .fetch_all(connection)
-        .await?;
+    let account_checkpoints =
+        sqlx::query("SELECT account, MAX(height) FROM witnesses WHERE height < ? GROUP BY account")
+            .bind(height)
+            .map(|row: SqliteRow| {
+                let account: u32 = row.get(0);
+                let height: u32 = row.get(1);
+                (account, height)
+            })
+            .fetch_all(connection)
+            .await?;
 
     for (account, height) in account_checkpoints {
         trim_sync_data(connection, account, height).await?;
@@ -406,9 +433,10 @@ pub async fn rewind_sync(connection: &Pool<Sqlite>, height: u32) -> Result<()> {
 }
 
 pub async fn get_db_height(connection: &Pool<Sqlite>, account: u32) -> Result<u32> {
-    let (height,): (u32, ) = sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
-        .bind(account)
-        .fetch_one(connection)
-        .await?;
+    let (height,): (u32,) =
+        sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
+            .bind(account)
+            .fetch_one(connection)
+            .await?;
     Ok(height)
 }
