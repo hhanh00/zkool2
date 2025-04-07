@@ -106,6 +106,15 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     .await?;
 
     sqlx::query(
+        "CREATE TABLE IF NOT EXISTS headers(
+        height INTEGER PRIMARY KEY,
+        hash BLOB NOT NULL,
+        time INTEGER NOT NULL)"
+    )
+    .execute(connection)
+    .await?;
+
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS notes(
         id_note INTEGER PRIMARY KEY,
         height INTEGER NOT NULL,
