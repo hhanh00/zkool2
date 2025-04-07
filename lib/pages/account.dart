@@ -51,7 +51,8 @@ class AccountViewPageState extends State<AccountViewPage> {
               if (h != null) Text(h.toString()),
               if (b != null)
                 Text("${b.balance[0]} ${b.balance[1]} ${b.balance[2]}"),
-              IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync))
+              IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync)),
+              IconButton.filled(onPressed: onRewind, icon: Icon(Icons.fast_rewind))
             ],
           ),
         ));
@@ -72,6 +73,11 @@ class AccountViewPageState extends State<AccountViewPage> {
         poolBalance = b;
       });
     },);
+  }
+
+  void onRewind() async {
+    final dbHeight = await getDbHeight(account: widget.account.id);
+    await rewindSync(height: dbHeight - 60);
   }
 }
 
