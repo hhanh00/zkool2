@@ -8,7 +8,7 @@ use zcash_protocol::consensus::Network;
 
 use crate::{
     lwd::CompactBlock,
-    sync::WarpSyncMessage,
+    sync::{BlockHeader, WarpSyncMessage},
     warp::hasher::{OrchardHasher, SaplingHasher},
 };
 
@@ -70,10 +70,33 @@ pub async fn warp_sync(
     let mut bs = vec![];
     let mut c = 0; // count of outputs & actions
 
+    async fn flush(
+        c: &mut usize,
+        bs: &mut Vec<CompactBlock>,
+        sap_dec: &mut SaplingSync,
+        orch_dec: &mut OrchardSync,
+        tx_decrypted: &Sender<WarpSyncMessage>,
+    ) -> Result<(), SyncError> {
+        println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+        sap_dec.add(&bs).await?;
+        orch_dec.add(&bs).await?;
+        let lcb = bs.last().unwrap();
+        let bh = BlockHeader {
+            height: lcb.height as u32,
+            hash: lcb.hash.clone(),
+            time: lcb.time,
+        };
+        let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
+        let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+        bs.clear();
+        *c = 0;
+
+        Ok(())
+    }
+
     println!("Start sync");
     while let Some(block) = blocks.message().await? {
         // println!("Syncing block {}: {c}", block.height);
-        // TODO: Reorg detection
         // bh = BlockHeader {
         //     height: block.height as u32,
         //     hash: block.hash.clone().try_into().unwrap(),
@@ -94,19 +117,15 @@ pub async fn warp_sync(
         bs.push(block);
 
         if c >= 10000 {
-            println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
-            sap_dec.add(&bs).await?;
-            orch_dec.add(&bs).await?;
-            let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
-            bs.clear();
-            c = 0;
+            if !bs.is_empty() {
+                flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
+            }
         }
         height += 1;
     }
-    println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
-    sap_dec.add(&bs).await?;
-    orch_dec.add(&bs).await?;
-    let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+    if !bs.is_empty() {
+        flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
+    }
     println!("Sync finished");
 
     Ok(())
