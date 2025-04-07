@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
+    api::sync::SyncProgress,
     lwd::{BlockId, BlockRange, CompactBlock, TreeState},
     warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness},
     Client,
@@ -10,7 +11,7 @@ use bincode::config;
 use flutter_rust_bridge::frb;
 use sqlx::Row;
 use sqlx::{sqlite::SqliteRow, Pool, Sqlite};
-use tokio::sync::mpsc::channel;
+use tokio::sync::mpsc::{channel, Sender};
 use tonic::{Request, Streaming};
 use zcash_protocol::consensus::{Network, Parameters};
 
@@ -201,6 +202,7 @@ pub async fn shielded_sync(
     accounts: Vec<u32>,
     start: u32,
     end: u32,
+    tx_progress: Sender<SyncProgress>,
 ) -> Result<()> {
     let (s, o) = get_tree_state(network, client, start - 1).await?;
 
@@ -237,7 +239,7 @@ pub async fn shielded_sync(
                 println!("Committing transaction");
                 db_tx = pool2.begin().await.unwrap();
             } else {
-                match handle_message(&mut db_tx, msg).await {
+                match handle_message(&mut db_tx, msg, &tx_progress).await {
                     Ok(_) => {}
                     Err(e) => {
                         println!("ERROR HANDLING MESSAGE: {:?}", e);
@@ -250,6 +252,7 @@ pub async fn shielded_sync(
 
         Ok::<_, anyhow::Error>(())
     });
+
     warp_sync(
         &network,
         &pool.clone(),
@@ -268,6 +271,7 @@ pub async fn shielded_sync(
 async fn handle_message(
     db_tx: &mut sqlx::Transaction<'_, Sqlite>,
     msg: WarpSyncMessage,
+    tx_progress: &Sender<SyncProgress>,
 ) -> Result<()> {
     match msg {
         WarpSyncMessage::Transaction(tx) => {
@@ -356,6 +360,10 @@ async fn handle_message(
                 .execute(&mut **db_tx)
                 .await?;
                 println!("Checkpoint for account: {}, height: {}", a, height);
+                let _ = tx_progress.send(SyncProgress {
+                    height,
+                    time: 0,
+                }).await;
             }
         }
         WarpSyncMessage::BlockHeader(block_header) => {
