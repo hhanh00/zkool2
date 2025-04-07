@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{Pool, Sqlite};
@@ -34,9 +36,10 @@ pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
 pub async fn warp_sync(
     network: &Network,
     connection: &Pool<Sqlite>,
-    mut height: u32,
+    height: u32,
     accounts: &[u32],
     mut blocks: Streaming<CompactBlock>,
+    mut heights_without_time: HashSet<u32>,
     sapling_state: &CommitmentTreeFrontier,
     orchard_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
@@ -109,6 +112,16 @@ pub async fn warp_sync(
         // }
         // prev_hash = bh.hash;
 
+        let bheight = block.height as u32;
+        if heights_without_time.remove(&bheight) {
+            let bh = BlockHeader {
+                height: bheight,
+                hash: block.hash.clone(),
+                time: block.time,
+            };
+            let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
+        }
+
         for vtx in block.vtx.iter() {
             c += vtx.outputs.len();
             c += vtx.actions.len();
@@ -121,7 +134,6 @@ pub async fn warp_sync(
                 flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
             }
         }
-        height += 1;
     }
     if !bs.is_empty() {
         flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
