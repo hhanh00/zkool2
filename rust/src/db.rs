@@ -153,6 +153,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS witnesses(
         id_witness INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
         note INTEGER NOT NULL,
         height INTEGER NOT NULL,
         witness BLOB NOT NULL,
