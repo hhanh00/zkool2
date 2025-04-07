@@ -144,7 +144,8 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         height INTEGER NOT NULL,
         account INTEGER NOT NULL,
         time INTEGER,
-        value INTEGER NOT NULL)"
+        value INTEGER NOT NULL,
+        UNIQUE (account, txid))"
     )
     .execute(connection)
     .await?;
@@ -154,7 +155,8 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         id_witness INTEGER PRIMARY KEY,
         note INTEGER NOT NULL,
         height INTEGER NOT NULL,
-        witness BLOB NOT NULL)"
+        witness BLOB NOT NULL,
+        UNIQUE (note, height))"
     )
     .execute(connection)
     .await?;

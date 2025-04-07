@@ -242,15 +242,17 @@ async fn handle_message(
 ) -> Result<()> {
     match msg {
         WarpSyncMessage::Transaction(tx) => {
-            let r = sqlx::query
-                ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)")
+            sqlx::query
+                // ignore duplicate transactions because they could have been created
+                // by a previous type of scan (i.e transparent)
+                ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)
+                ON CONFLICT DO NOTHING")
                 .bind(tx.account)
                 .bind(&tx.txid)
                 .bind(tx.height)
                 .bind(tx.time)
                 .execute(&mut **db_tx).await?;
             println!("Processing Transaction: id={}, height={}", tx.id, tx.height);
-            assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Note(note) => {
             let r = sqlx::query
