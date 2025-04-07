@@ -386,39 +386,6 @@ pub struct NewAccount {
     pub birth: Option<u32>,
 }
 
-/*
-A:
-- id
-- name
-- seed*
-- aindex
-- dindex
-- def_dindex
-- icon
-- birth
-- height
-- position
-- hidden
-- saved
-T*:
-- id
-- xsk*
-- xvk*
-TA:
-- id
-- index
-- sk*
-- address
-S:
-- id
-- xsk*
-- xvk
-O:
-- id
-- xsk*
-- xvk
-*/
-
 #[frb(init)]
 pub fn init_app() {
     // Default utilities - feel free to customize

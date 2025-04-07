@@ -188,7 +188,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                     match note {
                         Some((n, dbn, nk)) if dbn.height == cb.height as u32 && dbn.ivtx == ivtx as u32 => {
                             dbn.position = position + dbn.vout;
-                            let nf = P::derive_nf(nk, position, n)?;
+                            let nf = P::derive_nf(nk, dbn.position, n)?;
                             dbn.nf = nf.to_vec();
 
                             // send the tx if it is not already sent
@@ -221,6 +221,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             .map(|(_, dbn, _)| UTXO {
                 id: dbn.id,
                 account: dbn.account,
+                pool: self.pool,
                 position: dbn.position,
                 nullifier: dbn.nf.to_vec(),
                 value: dbn.value,
