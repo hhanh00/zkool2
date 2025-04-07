@@ -1,15 +1,14 @@
 use crate::{
-    lwd::{BlockId, BlockRange, CompactBlock, TreeState},
-    warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness},
-    Client, Hash32,
+    lwd::{BlockId, BlockRange, CompactBlock, TreeState}, warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness}, Client, Hash32
 };
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::{Pool, Sqlite};
+use sqlx::{sqlite::SqliteRow, Pool, Sqlite};
 use tokio::sync::mpsc::channel;
 use tonic::{Request, Streaming};
 use zcash_protocol::consensus::{Network, Parameters};
+use sqlx::Row;
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
@@ -282,10 +281,11 @@ async fn handle_message(
         WarpSyncMessage::Witness(account, height, cmx, witness) => {
             let w = bincode::encode_to_vec(&witness, config::legacy())?;
             let r = sqlx::query(
-                "INSERT INTO witnesses (note, height, witness)
-                        SELECT n.id_note, ?, ? FROM notes n
+                "INSERT INTO witnesses (account, note, height, witness)
+                        SELECT ?, n.id_note, ?, ? FROM notes n
                         WHERE n.account = ? AND n.cmx = ?",
             )
+            .bind(account)
             .bind(height)
             .bind(&w)
             .bind(account)
@@ -331,5 +331,55 @@ async fn handle_message(
         _ => (),
     }
 
+    Ok(())
+}
+
+pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>) -> Result<()> {
+    let account_heights = sqlx::query("SELECT account, MIN(height) FROM sync_heights GROUP BY account")
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let height: u32 = row.get(1);
+            (account, height)
+        })
+        .fetch_all(connection)
+        .await?;
+
+    for (account, height) in account_heights {
+        trim_sync_data(connection, account, height).await?;
+    }
+
+    Ok(())
+}
+
+// remove synchronization data (notes, spends, transactions, witnesses) after the given height
+pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32) -> Result<()> {
+    let mut db_tx = connection.begin().await?;
+    sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
+    sqlx::query("DELETE FROM spends WHERE height > ? AND account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
+    sqlx::query("DELETE FROM transactions WHERE height > ? AND account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
+    sqlx::query("DELETE FROM witnesses WHERE height > ? AND account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
+    sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
+
+    db_tx.commit().await?;
     Ok(())
 }

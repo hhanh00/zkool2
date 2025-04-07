@@ -9,6 +9,7 @@ use zcash_keys::encoding::AddressCodec as _;
 use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as ZcashTransaction};
 use zcash_protocol::consensus::{BranchId, Network};
 
+use crate::sync::recover_from_partial_sync;
 use crate::Client;
 use crate::{
     frb_generated::StreamSink,
@@ -30,6 +31,8 @@ pub async fn synchronize(
     let c = get_coin!();
     let network = c.network;
     let pool = c.get_pool();
+
+    recover_from_partial_sync(&pool).await?;
 
     // Get account heights
     let mut account_heights = HashMap::new();

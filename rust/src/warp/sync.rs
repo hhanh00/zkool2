@@ -1,12 +1,9 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{Pool, Sqlite};
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 use tonic::Streaming;
-use tracing::info;
 use zcash_protocol::consensus::Network;
 
 use crate::{
