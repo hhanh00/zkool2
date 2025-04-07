@@ -27,6 +27,12 @@ class AccountViewPageState extends State<AccountViewPage> {
   void initState() {
     super.initState();
     setAccount(id: widget.account.id);
+    Future(() async {
+      final b = await balance();
+      setState(() {
+        poolBalance = b;
+      });
+    });
   }
 
   @override

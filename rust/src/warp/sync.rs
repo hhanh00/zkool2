@@ -73,47 +73,44 @@ pub async fn warp_sync(
     let mut bs = vec![];
     let mut c = 0; // count of outputs & actions
 
-    for _chunks in 0..500 {
-        println!("Start sync");
-        while let Some(block) = blocks.message().await? {
-            // println!("Syncing block {}: {c}", block.height);
-            // TODO: Reorg detection
-            // bh = BlockHeader {
-            //     height: block.height as u32,
-            //     hash: block.hash.clone().try_into().unwrap(),
-            //     prev_hash: block.prev_hash.clone().try_into().unwrap(),
-            //     timestamp: block.time,
-            // };
-            // if prev_hash != bh.prev_hash {
-            //     rewind_checkpoint(&coin.network, &mut connection, &mut client).await?;
-            //     return Err(SyncError::Reorg(bh.height));
-            // }
-            // prev_hash = bh.hash;
+    println!("Start sync");
+    while let Some(block) = blocks.message().await? {
+        // println!("Syncing block {}: {c}", block.height);
+        // TODO: Reorg detection
+        // bh = BlockHeader {
+        //     height: block.height as u32,
+        //     hash: block.hash.clone().try_into().unwrap(),
+        //     prev_hash: block.prev_hash.clone().try_into().unwrap(),
+        //     timestamp: block.time,
+        // };
+        // if prev_hash != bh.prev_hash {
+        //     rewind_checkpoint(&coin.network, &mut connection, &mut client).await?;
+        //     return Err(SyncError::Reorg(bh.height));
+        // }
+        // prev_hash = bh.hash;
 
-            for vtx in block.vtx.iter() {
-                c += vtx.outputs.len();
-                c += vtx.actions.len();
-            }
-
-            bs.push(block);
-
-            if c >= 10000 {
-                println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
-                sap_dec.add(&bs).await?;
-                orch_dec.add(&bs).await?;
-                let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
-                bs.clear();
-                c = 0;
-                break;
-            }
-            height += 1;
+        for vtx in block.vtx.iter() {
+            c += vtx.outputs.len();
+            c += vtx.actions.len();
         }
-        println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
-        sap_dec.add(&bs).await?;
-        orch_dec.add(&bs).await?;
-        let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
-        println!("Sync finished");
+
+        bs.push(block);
+
+        if c >= 10000 {
+            println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+            sap_dec.add(&bs).await?;
+            orch_dec.add(&bs).await?;
+            let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+            bs.clear();
+            c = 0;
+        }
+        height += 1;
     }
+    println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+    sap_dec.add(&bs).await?;
+    orch_dec.add(&bs).await?;
+    let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+    println!("Sync finished");
 
     Ok(())
 }
