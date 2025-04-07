@@ -50,7 +50,7 @@ jobs:
           name: zkool.dmg
           path: ./*.dmg
       - name: Create Release
-        if: startsWith(github.ref_name, 'v')
+        if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
           files: src-tauri/target/release/bundle/dmg/*.dmg
