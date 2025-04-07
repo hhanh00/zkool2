@@ -21,7 +21,8 @@ Future<void> main() async {
     logger.i("Database file created: $dbFilepath");
   }
   await openDatabase(dbFilepath: dbFilepath);
-  setLwd(lwd: "https://zec.rocks:443");
+  // setLwd(lwd: "http://test.zcash-infra.com:9067");
+  setLwd(lwd: "https://zec.rocks");
 
   // Setup.init();
 

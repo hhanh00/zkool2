@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{Pool, Sqlite};
@@ -7,7 +9,11 @@ use tonic::Streaming;
 use tracing::info;
 use zcash_protocol::consensus::Network;
 
-use crate::{lwd::CompactBlock, sync::WarpSyncMessage, warp::hasher::{OrchardHasher, SaplingHasher}};
+use crate::{
+    lwd::CompactBlock,
+    sync::WarpSyncMessage,
+    warp::hasher::{OrchardHasher, SaplingHasher},
+};
 
 use super::legacy::CommitmentTreeFrontier;
 
@@ -48,7 +54,8 @@ pub async fn warp_sync(
         tx_decrypted.clone(),
         sapling_state.size() as u32,
         sapling_state.to_edge(&sap_hasher),
-    ).await?;
+    )
+    .await?;
 
     let orch_hasher = OrchardHasher::default();
     let mut orch_dec = OrchardSync::new(
@@ -60,48 +67,53 @@ pub async fn warp_sync(
         tx_decrypted.clone(),
         orchard_state.size() as u32,
         orchard_state.to_edge(&orch_hasher),
-    ).await?;
+    )
+    .await?;
 
     let mut bs = vec![];
     let mut c = 0; // count of outputs & actions
 
-    println!("Start sync");
-    while let Some(block) = blocks.message().await? {
-        println!("Syncing block {}", block.height);
-        // TODO: Reorg detection
-        // bh = BlockHeader {
-        //     height: block.height as u32,
-        //     hash: block.hash.clone().try_into().unwrap(),
-        //     prev_hash: block.prev_hash.clone().try_into().unwrap(),
-        //     timestamp: block.time,
-        // };
-        // if prev_hash != bh.prev_hash {
-        //     rewind_checkpoint(&coin.network, &mut connection, &mut client).await?;
-        //     return Err(SyncError::Reorg(bh.height));
-        // }
-        // prev_hash = bh.hash;
+    for _chunks in 0..500 {
+        println!("Start sync");
+        while let Some(block) = blocks.message().await? {
+            // println!("Syncing block {}: {c}", block.height);
+            // TODO: Reorg detection
+            // bh = BlockHeader {
+            //     height: block.height as u32,
+            //     hash: block.hash.clone().try_into().unwrap(),
+            //     prev_hash: block.prev_hash.clone().try_into().unwrap(),
+            //     timestamp: block.time,
+            // };
+            // if prev_hash != bh.prev_hash {
+            //     rewind_checkpoint(&coin.network, &mut connection, &mut client).await?;
+            //     return Err(SyncError::Reorg(bh.height));
+            // }
+            // prev_hash = bh.hash;
 
-        for vtx in block.vtx.iter() {
-            c += vtx.outputs.len();
-            c += vtx.actions.len();
+            for vtx in block.vtx.iter() {
+                c += vtx.outputs.len();
+                c += vtx.actions.len();
+            }
+
+            bs.push(block);
+
+            if c >= 10000 {
+                println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+                sap_dec.add(&bs).await?;
+                orch_dec.add(&bs).await?;
+                let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+                bs.clear();
+                c = 0;
+                break;
+            }
+            height += 1;
         }
-
-        bs.push(block);
-
-        if c >= 1000000 {
-            println!("Processing {} blocks", bs.len());
-            sap_dec.add(&bs).await?;
-            orch_dec.add(&bs).await?;
-            bs.clear();
-            c = 0;
-        }
-        height += 1;
+        println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+        sap_dec.add(&bs).await?;
+        orch_dec.add(&bs).await?;
+        let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+        println!("Sync finished");
     }
-    println!("Processing {} blocks", bs.len());
-    sap_dec.add(&bs).await?;
-    orch_dec.add(&bs).await?;
-    info!("Sync finished");
 
     Ok(())
 }
-
