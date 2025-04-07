@@ -74,15 +74,15 @@ pub async fn synchronize(
         // Update the sync heights for these accounts
         let mut client = c.client().await?;
 
-        transparent_sync(
-            &network,
-            pool,
-            start_height,
-            end_height,
-            &accounts_to_sync,
-            &mut client,
-        )
-        .await?;
+        // transparent_sync(
+        //     &network,
+        //     pool,
+        //     start_height,
+        //     end_height,
+        //     &accounts_to_sync,
+        //     &mut client,
+        // )
+        // .await?;
 
         shielded_sync(
             &network,
