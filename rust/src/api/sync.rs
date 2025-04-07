@@ -74,15 +74,15 @@ pub async fn synchronize(
         // Update the sync heights for these accounts
         let mut client = c.client().await?;
 
-        // transparent_sync(
-        //     &network,
-        //     pool,
-        //     start_height,
-        //     end_height,
-        //     &accounts_to_sync,
-        //     &mut client,
-        // )
-        // .await?;
+        transparent_sync(
+            &network,
+            pool,
+            start_height,
+            end_height,
+            &accounts_to_sync,
+            &mut client,
+        )
+        .await?;
 
         shielded_sync(
             &network,
@@ -230,15 +230,15 @@ async fn transparent_sync(
                             let mut nf = transaction.txid().as_ref().to_vec();
                             nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                            sqlx::query("INSERT INTO notes (account, height, pool, tx, nullifier, value) VALUES (?, ?, ?, ?, ?, ?)")
+                            let r = sqlx::query("INSERT INTO notes (account, height, pool, tx, nullifier, value) VALUES (?, ?, 0, ?, ?, ?)")
                                 .bind(account)
                                 .bind(height)
-                                .bind(0)
                                 .bind(id_tx)
                                 .bind(&nf)
                                 .bind(vout.value.into_u64() as i64)
                                 .execute(&mut *db_tx)
                                 .await?;
+                            assert_eq!(r.rows_affected(), 1);
                         }
                     }
                 }
