@@ -1,7 +1,9 @@
+use std::collections::HashSet;
+
 use crate::{
     lwd::{BlockId, BlockRange, CompactBlock, TreeState},
     warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness},
-    Client, Hash32,
+    Client,
 };
 use anyhow::Result;
 use bincode::config;
@@ -208,6 +210,23 @@ pub async fn shielded_sync(
     let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
     let pool2 = pool.clone();
 
+    // get the list of transaction heights for which the time is 0
+    // because raw transactions do not have timestamp (it comes from the block header)
+    let heights_without_time: HashSet<u32> = sqlx::query(
+        "SELECT DISTINCT height FROM transactions WHERE time = 0
+        AND height >= ? AND height <= ?",
+    )
+    .bind(start)
+    .bind(end)
+    .map(|row: SqliteRow| {
+        let height: u32 = row.get(0);
+        height
+    })
+    .fetch_all(&pool2)
+    .await?
+    .into_iter()
+    .collect();
+
     tokio::spawn(async move {
         println!("[db handler] starting");
         let mut db_tx = pool2.begin().await?;
@@ -237,6 +256,7 @@ pub async fn shielded_sync(
         start,
         &accounts,
         blocks,
+        heights_without_time,
         &s,
         &o,
         tx_messages.clone(),
@@ -251,16 +271,16 @@ async fn handle_message(
 ) -> Result<()> {
     match msg {
         WarpSyncMessage::Transaction(tx) => {
+            // ignore duplicate transactions because they could have been created
+            // by a previous type of scan (i.e transparent)
             sqlx::query
-                            // ignore duplicate transactions because they could have been created
-                            // by a previous type of scan (i.e transparent)
-                            ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)
-                        ON CONFLICT DO NOTHING")
-                            .bind(tx.account)
-                            .bind(&tx.txid)
-                            .bind(tx.height)
-                            .bind(tx.time)
-                            .execute(&mut **db_tx).await?;
+                ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)
+                ON CONFLICT DO NOTHING")
+                .bind(tx.account)
+                .bind(&tx.txid)
+                .bind(tx.height)
+                .bind(tx.time)
+                .execute(&mut **db_tx).await?;
             println!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {
@@ -339,19 +359,26 @@ async fn handle_message(
             }
         }
         WarpSyncMessage::BlockHeader(block_header) => {
-            let r = sqlx::query(
+            println!("Processing BlockHeader: {:?}", block_header);
+            // ignore dups because we could have already inserted the block header
+            // if a transparent transaction needs it
+            // to resolve the time of the transaction
+            sqlx::query(
                 "INSERT INTO headers (height, hash, time)
-                    VALUES (?, ?, ?)",
+                    VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
             )
             .bind(block_header.height)
             .bind(&block_header.hash)
             .bind(block_header.time)
             .execute(&mut **db_tx)
             .await?;
-            println!("Processing BlockHeader: {:?}", block_header);
-            assert_eq!(r.rows_affected(), 1);
+            sqlx::query("UPDATE transactions SET time = ? WHERE height = ?")
+                .bind(block_header.time)
+                .bind(block_header.height)
+                .execute(&mut **db_tx)
+                .await?;
         }
-        WarpSyncMessage::Commit => { 
+        WarpSyncMessage::Commit => {
             // handled in the caller
         }
     }
@@ -377,10 +404,14 @@ pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>) -> Result<()> 
     Ok(())
 }
 
-// remove synchronization data (notes, spends, transactions, witnesses) after the given height
+// remove synchronization data (headers, notes, spends, transactions, witnesses) after the given height
 // keep the data at the given height
 pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32) -> Result<()> {
     let mut db_tx = connection.begin().await?;
+    sqlx::query("DELETE FROM headers WHERE height > ?")
+        .bind(height)
+        .execute(&mut *db_tx)
+        .await?;
     sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
         .bind(height)
         .bind(account)
