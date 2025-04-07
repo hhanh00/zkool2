@@ -6,12 +6,20 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `transparent_sync`
+
 Stream<SyncProgress> synchronize(
         {required List<int> accounts, required int currentHeight}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts, currentHeight: currentHeight);
 
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
+
+Future<void> rewindSync({required int height}) =>
+    RustLib.instance.api.crateApiSyncRewindSync(height: height);
+
+Future<int> getDbHeight({required int account}) =>
+    RustLib.instance.api.crateApiSyncGetDbHeight(account: account);
 
 class PoolBalance {
   final Uint64List balance;
