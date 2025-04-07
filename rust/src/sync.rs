@@ -352,6 +352,7 @@ pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>) -> Result<()> 
 }
 
 // remove synchronization data (notes, spends, transactions, witnesses) after the given height
+// keep the data at the given height
 pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32) -> Result<()> {
     let mut db_tx = connection.begin().await?;
     sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
@@ -382,4 +383,32 @@ pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32
 
     db_tx.commit().await?;
     Ok(())
+}
+
+// for each account, find the latest checkpoint before the given height
+// and trim the synchronization data to that height
+pub async fn rewind_sync(connection: &Pool<Sqlite>, height: u32) -> Result<()> {
+    let account_checkpoints = sqlx::query("SELECT account, MAX(height) FROM witnesses WHERE height < ? GROUP BY account")
+        .bind(height)
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let height: u32 = row.get(1);
+            (account, height)
+        })
+        .fetch_all(connection)
+        .await?;
+
+    for (account, height) in account_checkpoints {
+        trim_sync_data(connection, account, height).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn get_db_height(connection: &Pool<Sqlite>, account: u32) -> Result<u32> {
+    let (height,): (u32, ) = sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+    Ok(height)
 }

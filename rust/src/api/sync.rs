@@ -281,6 +281,20 @@ pub async fn balance() -> Result<PoolBalance> {
     Ok(balance)
 }
 
+#[frb]
+pub async fn rewind_sync(height: u32) -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    crate::sync::rewind_sync(connection, height).await
+}
+
+#[frb]
+pub async fn get_db_height(account: u32) -> Result<u32> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    crate::sync::get_db_height(connection, account).await
+}
+
 pub struct SyncProgress {
     pub height: u32,
     pub time: u32,
