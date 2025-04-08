@@ -6,6 +6,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -52,7 +53,8 @@ class AccountViewPageState extends State<AccountViewPage> {
               if (b != null)
                 Text("${b.balance[0]} ${b.balance[1]} ${b.balance[2]}"),
               IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync)),
-              IconButton.filled(onPressed: onRewind, icon: Icon(Icons.fast_rewind))
+              IconButton.filled(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+              IconButton.filled(onPressed: onPrepare, icon: Icon(Icons.play_arrow))
             ],
           ),
         ));
@@ -78,6 +80,10 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onRewind() async {
     final dbHeight = await getDbHeight(account: widget.account.id);
     await rewindSync(height: dbHeight - 60);
+  }
+
+  void onPrepare() async {
+    await prepare(account: widget.account.id, senderPayFees: true, srcPools: 7);
   }
 }
 

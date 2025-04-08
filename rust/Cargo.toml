@@ -10,7 +10,8 @@ crate-type = ["cdylib", "staticlib"]
 flutter_rust_bridge = "=2.9.0"
 
 anyhow = "1.0.97"
-rand_core = "0.9.3"
+thiserror = "2.0"
+rand_core = "0.6"
 rand = "0.9.0"
 bip39 = "2.1.0"
 hex = "0.4"
@@ -50,8 +51,9 @@ tonic = { version = "0.13.0", features = ["tls-native-roots", "tls-webpki-roots"
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 prost = "0.13.5"
 bincode = { version = "2.0" }
+fpdec = "0.11"
+pczt = { version = "0.2", features = ["zcp-builder", "transparent", "sapling", "orchard"] }
 
-thiserror = "1.0"
 tracing = "0.1"
 
 
