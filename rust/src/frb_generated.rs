@@ -1225,10 +1225,8 @@ impl SseDecode for Option<Vec<u8>> {
 impl SseDecode for crate::api::sync::PoolBalance {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_balance = <Vec<u64>>::sse_decode(deserializer);
-        return crate::api::sync::PoolBalance {
-            balance: var_balance,
-        };
+        let mut var_field0 = <Vec<u64>>::sse_decode(deserializer);
+        return crate::api::sync::PoolBalance(var_field0);
     }
 }
 
@@ -1442,7 +1440,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::NewAccount>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::sync::PoolBalance {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.balance.into_into_dart().into_dart()].into_dart()
+        [self.0.into_into_dart().into_dart()].into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::PoolBalance {}
@@ -1679,7 +1677,7 @@ impl SseEncode for Option<Vec<u8>> {
 impl SseEncode for crate::api::sync::PoolBalance {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <Vec<u64>>::sse_encode(self.balance, serializer);
+        <Vec<u64>>::sse_encode(self.0, serializer);
     }
 }
 

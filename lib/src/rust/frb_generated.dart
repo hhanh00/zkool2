@@ -999,7 +999,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (arr.length != 1)
       throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
     return PoolBalance(
-      balance: dco_decode_list_prim_u_64_strict(arr[0]),
+      field0: dco_decode_list_prim_u_64_strict(arr[0]),
     );
   }
 
@@ -1286,8 +1286,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   PoolBalance sse_decode_pool_balance(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_balance = sse_decode_list_prim_u_64_strict(deserializer);
-    return PoolBalance(balance: var_balance);
+    var var_field0 = sse_decode_list_prim_u_64_strict(deserializer);
+    return PoolBalance(field0: var_field0);
   }
 
   @protected
@@ -1549,7 +1549,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_pool_balance(PoolBalance self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_list_prim_u_64_strict(self.balance, serializer);
+    sse_encode_list_prim_u_64_strict(self.field0, serializer);
   }
 
   @protected
