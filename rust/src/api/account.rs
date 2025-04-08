@@ -392,7 +392,7 @@ pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
     let _ = env_logger::builder().try_init();
-    rustls::crypto::ring::default_provider().install_default().unwrap();
+    let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
 pub async fn get_all_accounts() -> Result<Vec<Account>> {

@@ -15,6 +15,7 @@ import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'pay.dart';
 
 /// Main entrypoint of the Rust API
 class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
@@ -73,7 +74,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => -1635368253;
+  int get rustContentHash => -481387215;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -142,6 +143,11 @@ abstract class RustLibApi extends BaseApi {
   String crateApiAccountUaFromUfvk({required String ufvk, int? di});
 
   Future<void> crateApiAccountUpdateAccount({required AccountUpdate update});
+
+  Future<int> crateApiPayWipPlan(
+      {required int account,
+      required int srcPools,
+      required List<Recipient> recipients});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -790,6 +796,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["update"],
       );
 
+  @override
+  Future<int> crateApiPayWipPlan(
+      {required int account,
+      required int srcPools,
+      required List<Recipient> recipients}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_32(account, serializer);
+        sse_encode_u_8(srcPools, serializer);
+        sse_encode_list_recipient(recipients, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 27, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_8,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiPayWipPlanConstMeta,
+      argValues: [account, srcPools, recipients],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiPayWipPlanConstMeta => const TaskConstMeta(
+        debugName: "wip_plan",
+        argNames: ["account", "srcPools", "recipients"],
+      );
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -876,6 +911,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_box_autoadd_u_8(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   List<Account> dco_decode_list_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_account).toList();
@@ -903,6 +944,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  List<Recipient> dco_decode_list_recipient(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_recipient).toList();
   }
 
   @protected
@@ -934,6 +981,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_8(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_8(raw);
+  }
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
@@ -960,6 +1013,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       taddr: dco_decode_opt_String(arr[0]),
       saddr: dco_decode_opt_String(arr[1]),
       oaddr: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  Recipient dco_decode_recipient(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return Recipient(
+      address: dco_decode_String(arr[0]),
+      amount: dco_decode_u_64(arr[1]),
+      pools: dco_decode_opt_box_autoadd_u_8(arr[2]),
+      userMemo: dco_decode_opt_String(arr[3]),
+      memoBytes: dco_decode_opt_list_prim_u_8_strict(arr[4]),
     );
   }
 
@@ -1096,6 +1164,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_box_autoadd_u_8(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_8(deserializer));
+  }
+
+  @protected
   List<Account> sse_decode_list_account(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1133,6 +1207,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Recipient>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_recipient(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -1176,6 +1262,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_8(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1200,6 +1297,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_saddr = sse_decode_opt_String(deserializer);
     var var_oaddr = sse_decode_opt_String(deserializer);
     return Receivers(taddr: var_taddr, saddr: var_saddr, oaddr: var_oaddr);
+  }
+
+  @protected
+  Recipient sse_decode_recipient(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_address = sse_decode_String(deserializer);
+    var var_amount = sse_decode_u_64(deserializer);
+    var var_pools = sse_decode_opt_box_autoadd_u_8(deserializer);
+    var var_userMemo = sse_decode_opt_String(deserializer);
+    var var_memoBytes = sse_decode_opt_list_prim_u_8_strict(deserializer);
+    return Recipient(
+        address: var_address,
+        amount: var_amount,
+        pools: var_pools,
+        userMemo: var_userMemo,
+        memoBytes: var_memoBytes);
   }
 
   @protected
@@ -1324,6 +1437,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self, serializer);
+  }
+
+  @protected
   void sse_encode_list_account(List<Account> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -1366,6 +1485,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_recipient(
+      List<Recipient> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_recipient(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
@@ -1397,6 +1526,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_8(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_list_prim_u_8_strict(
       Uint8List? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1419,6 +1558,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.taddr, serializer);
     sse_encode_opt_String(self.saddr, serializer);
     sse_encode_opt_String(self.oaddr, serializer);
+  }
+
+  @protected
+  void sse_encode_recipient(Recipient self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.address, serializer);
+    sse_encode_u_64(self.amount, serializer);
+    sse_encode_opt_box_autoadd_u_8(self.pools, serializer);
+    sse_encode_opt_String(self.userMemo, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.memoBytes, serializer);
   }
 
   @protected
