@@ -17,7 +17,6 @@ pub fn derive_transparent_sk(
     Ok(tsk)
 }
 
-
 pub fn derive_transparent_address(
     tvk: &AccountPubKey,
     scope: u32,
