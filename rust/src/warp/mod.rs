@@ -1,6 +1,7 @@
 mod decrypter;
 pub mod hasher;
 pub mod legacy;
+pub mod edge;
 mod orchard;
 mod sapling;
 pub mod sync;

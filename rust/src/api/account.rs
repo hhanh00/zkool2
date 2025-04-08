@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use bip32::{ExtendedPrivateKey, ExtendedPublicKey};
+use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use flutter_rust_bridge::frb;
 use orchard::keys::FullViewingKey;
-use rand::TryRngCore;
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore as _};
 use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
@@ -21,7 +20,7 @@ use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::derive_transparent_address,
+    account::{derive_transparent_address, derive_transparent_sk},
     bip38,
     db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
@@ -253,8 +252,9 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
         store_account_transparent_sk(pool, account, tsk).await?;
         let tvk = &tsk.to_account_pubkey();
         store_account_transparent_vk(pool, account, tvk).await?;
-        let (tpk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
-        store_account_transparent_addr(pool, account, 0, dindex, &tpk, &taddr.encode(&c.network))
+        let sk = derive_transparent_sk(&tsk, dindex)?;
+        let taddr = derive_transparent_address(tvk, 0, dindex)?;
+        store_account_transparent_addr(pool, account, 0, dindex, Some(&sk), &taddr.encode(&c.network))
             .await?;
 
         init_account_sapling(pool, account).await?;
@@ -278,8 +278,9 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
             store_account_transparent_sk(pool, account, &xsk).await?;
             let xvk = xsk.to_account_pubkey();
             store_account_transparent_vk(pool, account, &xvk).await?;
-            let (pkh, address) = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(pool, account, 0, 0, &pkh, &address.encode(&network))
+            let sk = derive_transparent_sk(&xsk, 0)?;
+            let address = derive_transparent_address(&xvk, 0, 0)?;
+            store_account_transparent_addr(pool, account, 0, 0, Some(&sk), &address.encode(&network))
                 .await?;
         }
         if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
@@ -288,8 +289,8 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
             buf.extend_from_slice(&xvk.to_bytes());
             let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
             store_account_transparent_vk(pool, account, &xvk).await?;
-            let (pkh, address) = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(pool, account, 0, 0, &pkh, &address.encode(&network))
+            let address = derive_transparent_address(&xvk, 0, 0)?;
+            store_account_transparent_addr(pool, account, 0, 0, None, &address.encode(&network))
                 .await?;
         }
         if let Ok(sk) = bip38::import_tsk(&key) {
@@ -297,7 +298,7 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
             let tpk = sk.public_key(&secp).serialize();
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
             let addr = TransparentAddress::PublicKeyHash(pkh.clone());
-            store_account_transparent_addr(pool, account, 0, 0, &tpk, &addr.encode(&network))
+            store_account_transparent_addr(pool, account, 0, 0, Some(&sk.to_bytes()), &addr.encode(&network))
                 .await?;
         }
     }
@@ -328,13 +329,13 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
         if let Some(tvk) = uvk.transparent() {
             init_account_transparent(pool, account).await?;
             store_account_transparent_vk(pool, account, tvk).await?;
-            let (tpk, address) = derive_transparent_address(tvk, 0, dindex)?;
+            let address = derive_transparent_address(tvk, 0, dindex)?;
             store_account_transparent_addr(
                 pool,
                 account,
                 0,
                 dindex,
-                &tpk,
+                None,
                 &address.encode(&network),
             )
             .await?;

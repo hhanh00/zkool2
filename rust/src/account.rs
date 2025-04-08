@@ -1,7 +1,7 @@
 use std::str::FromStr as _;
 
 use anyhow::Result;
-use bip32::PublicKey as _;
+use bip32::{PrivateKey, PublicKey as _};
 use orchard::keys::FullViewingKey;
 use ripemd::{Digest as _, Ripemd160};
 use sha2::Sha256;
@@ -11,7 +11,7 @@ use zcash_keys::{
 };
 use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId};
 use zcash_protocol::consensus::NetworkConstants;
-use zcash_transparent::keys::{AccountPubKey, NonHardenedChildIndex, TransparentKeyScope};
+use zcash_transparent::keys::{AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope};
 
 use crate::{
     bip38,
@@ -39,17 +39,18 @@ pub async fn put_account_seed(phrase: &str, aindex: u32) -> Result<u32> {
 
     store_account_seed(c.get_pool(), c.account, &phrase, aindex).await?;
     init_account_transparent(c.get_pool(), c.account).await?;
-    let tsk = usk.transparent();
-    store_account_transparent_sk(c.get_pool(), c.account, tsk).await?;
-    let tvk = &tsk.to_account_pubkey();
+    let txsk = usk.transparent();
+    store_account_transparent_sk(c.get_pool(), c.account, txsk).await?;
+    let tvk = &txsk.to_account_pubkey();
     store_account_transparent_vk(c.get_pool(), c.account, tvk).await?;
+    let tsk = derive_transparent_sk(txsk, dindex)?;
     let taddr = ua.transparent().unwrap();
     store_account_transparent_addr(
         c.get_pool(),
         c.account,
         0,
         dindex,
-        &tsk.to_bytes(),
+        Some(&tsk),
         &taddr.encode(&c.network),
     )
     .await?;
@@ -124,7 +125,7 @@ pub async fn put_account_unified_viewing(uvk: &str) -> Result<u32> {
             c.account,
             0,
             dindex,
-            &tpk.serialize(),
+            None,
             &address.encode(&network),
         )
         .await?;
@@ -157,16 +158,28 @@ pub async fn put_account_transparent_secret(sk: &str) -> Result<u32> {
         *ripemd::Ripemd160::digest(Sha256::digest(&pubkey)).as_ref(),
     );
     let address = ta.encode(&network);
-    store_account_transparent_addr(c.get_pool(), c.account, 0, 0, &pubkey, &address).await?;
+    store_account_transparent_addr(c.get_pool(), c.account, 0, 0, Some(&sk.to_bytes()), &address).await?;
 
     Ok(0)
 }
+
+pub fn derive_transparent_sk(
+    tvk: &AccountPrivKey,
+    dindex: u32,
+) -> Result<[u8; 32]> {
+    let tsk = tvk
+        .derive_external_secret_key(NonHardenedChildIndex::from_index(dindex).unwrap())
+        .unwrap()
+        .to_bytes();
+    Ok(tsk)
+}
+
 
 pub fn derive_transparent_address(
     tvk: &AccountPubKey,
     scope: u32,
     dindex: u32,
-) -> Result<([u8; 33], TransparentAddress)> {
+) -> Result<TransparentAddress> {
     let sindex = TransparentKeyScope::custom(scope).unwrap();
     let tpk = tvk
         .derive_address_pubkey(sindex, NonHardenedChildIndex::from_index(dindex).unwrap())
@@ -174,5 +187,5 @@ pub fn derive_transparent_address(
         .serialize();
     let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
     let addr = TransparentAddress::PublicKeyHash(pkh);
-    Ok((tpk, addr))
+    Ok(addr)
 }

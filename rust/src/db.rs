@@ -71,7 +71,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         scope INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
         sk BLOB,
-        address TEXT,
+        address TEXT NOT NULL,
         PRIMARY KEY (account, scope, dindex))",
     )
     .execute(connection)
@@ -312,7 +312,7 @@ pub async fn store_account_transparent_addr(
     account: u32,
     scope: u32,
     dindex: u32,
-    sk: &[u8],
+    sk: Option<&[u8]>,
     address: &str,
 ) -> Result<()> {
     sqlx::query(
