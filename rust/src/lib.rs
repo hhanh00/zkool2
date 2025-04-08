@@ -9,6 +9,7 @@ pub mod key;
 pub mod account;
 pub mod sync;
 pub mod warp;
+pub mod pay;
 pub mod api;
 mod frb_generated;
 
