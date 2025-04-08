@@ -10,6 +10,7 @@ import 'api/account.dart';
 import 'api/db.dart';
 import 'api/key.dart';
 import 'api/network.dart';
+import 'api/pay.dart';
 import 'api/sync.dart';
 import 'dart:async';
 import 'dart:convert';
