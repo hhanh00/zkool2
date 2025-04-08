@@ -8,6 +8,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -23,6 +24,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   StreamSubscription<SyncProgress>? progressSubscription;
   int? height;
   PoolBalance? poolBalance;
+  int changePool = 0;
 
   @override
   void initState() {
@@ -30,6 +32,13 @@ class AccountViewPageState extends State<AccountViewPage> {
     setAccount(id: widget.account.id);
     Future(() async {
       final b = await balance();
+      final recipients = [
+        Recipient(
+            address: "zs1n55f4yctfdjflu75vx4vys3xgs6qzxd26qmhmvwxj9jdwxg8sswznpvu7elkccmddfdn5hnfseq",
+            amount: BigInt.from(1000000000)),
+      ];
+      changePool = await wipPlan(account: widget.account.id, srcPools: 7,
+        recipients: recipients);
       setState(() {
         poolBalance = b;
       });
@@ -54,7 +63,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                 Text("${b.balance[0]} ${b.balance[1]} ${b.balance[2]}"),
               IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync)),
               IconButton.filled(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
-              IconButton.filled(onPressed: onPrepare, icon: Icon(Icons.play_arrow))
+              IconButton.filled(onPressed: onPrepare, icon: Icon(Icons.play_arrow)),
+              Text("change pool: $changePool"),
             ],
           ),
         ));
