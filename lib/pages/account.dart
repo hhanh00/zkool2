@@ -60,7 +60,7 @@ class AccountViewPageState extends State<AccountViewPage> {
             children: [
               if (h != null) Text(h.toString()),
               if (b != null)
-                Text("${b.balance[0]} ${b.balance[1]} ${b.balance[2]}"),
+                Text("${b.field0[0]} ${b.field0[1]} ${b.field0[2]}"),
               IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync)),
               IconButton.filled(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
               IconButton.filled(onPressed: onPrepare, icon: Icon(Icons.play_arrow)),
