@@ -42,6 +42,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         id_account INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         seed TEXT,
+        seed_fingerprint BLOB,
         aindex INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
         def_dindex INTEGER NOT NULL,
@@ -238,15 +239,18 @@ pub async fn store_account_seed(
     connection: &SqlitePool,
     account: u32,
     phrase: &str,
+    fingerprint: &[u8],
     aindex: u32,
 ) -> Result<()> {
     sqlx::query(
         "UPDATE accounts
          SET seed = ?,
+             seed_fingerprint = ?,
              aindex = ?
          WHERE id_account = ?",
     )
     .bind(phrase)
+    .bind(fingerprint)
     .bind(aindex)
     .bind(account)
     .execute(connection)

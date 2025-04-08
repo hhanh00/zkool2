@@ -15,7 +15,7 @@ use zcash_keys::{
     encoding::AddressCodec,
     keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
-use zcash_primitives::{legacy::TransparentAddress, zip32::AccountId, consensus::Parameters as ZkParams};
+use zcash_primitives::{consensus::Parameters as ZkParams, legacy::TransparentAddress, zip32::{fingerprint::SeedFingerprint, AccountId}};
 use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
@@ -234,10 +234,10 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
     }
 
     if is_valid_phrase(&key) {
-        store_account_seed(pool, account, &key, na.aindex).await?;
-
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let seed = seed_phrase.to_seed("");
+        let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        store_account_seed(pool, account, &key, &seed_fingerprint, na.aindex).await?;
         let usk = UnifiedSpendingKey::from_seed(
             &c.network,
             &seed,
