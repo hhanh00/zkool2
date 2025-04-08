@@ -7,6 +7,7 @@ pub mod plan;
 pub mod pool;
 pub mod prepare;
 
+#[derive(Clone, Debug)]
 pub struct Recipient {
     pub address: String,
     pub amount: u64,
@@ -24,7 +25,10 @@ pub struct RecipientState {
 impl RecipientState {
     pub fn new(recipient: Recipient) -> Result<Self> {
         let amount = recipient.amount;
-        let pool_mask = PoolMask::from_address(&recipient.address)?;
+        let pool_mask = PoolMask::from_address(&recipient.address)?
+            .trim_transparent()?;
+        let pm = pool_mask.0;
+        assert!(pm == 1 || pm == 2 || pm == 4 || pm == 6);
         Ok(Self {
             recipient,
             remaining: amount,

@@ -22,21 +22,21 @@ Future<int> getDbHeight({required int account}) =>
     RustLib.instance.api.crateApiSyncGetDbHeight(account: account);
 
 class PoolBalance {
-  final Uint64List balance;
+  final Uint64List field0;
 
   const PoolBalance({
-    required this.balance,
+    required this.field0,
   });
 
   @override
-  int get hashCode => balance.hashCode;
+  int get hashCode => field0.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PoolBalance &&
           runtimeType == other.runtimeType &&
-          balance == other.balance;
+          field0 == other.field0;
 }
 
 class SyncProgress {

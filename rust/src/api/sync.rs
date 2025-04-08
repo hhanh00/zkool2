@@ -10,6 +10,7 @@ use zcash_keys::encoding::AddressCodec as _;
 use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as ZcashTransaction};
 use zcash_protocol::consensus::{BranchId, Network};
 
+use crate::db::calculate_balance;
 use crate::sync::recover_from_partial_sync;
 use crate::Client;
 use crate::{
@@ -269,21 +270,7 @@ pub async fn balance() -> Result<PoolBalance> {
     let pool = c.get_pool();
     let account = c.account;
 
-    let mut balance = PoolBalance {
-        balance: vec![0, 0, 0],
-    };
-
-    let mut rows = sqlx::query("
-    WITH N AS (SELECT value, pool FROM notes WHERE account = ?1 UNION ALL SELECT value, pool FROM spends WHERE account = ?1)
-    SELECT pool, SUM(value) FROM N GROUP BY pool")
-        .bind(account)
-        .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<i64, _>(1)))
-        .fetch(pool);
-    while let Some((pool, value)) = rows.try_next().await? {
-        balance.balance[pool as usize] += value as u64;
-    }
-
-    Ok(balance)
+    calculate_balance(pool, account).await
 }
 
 #[frb]
@@ -305,6 +292,4 @@ pub struct SyncProgress {
     pub time: u32,
 }
 
-pub struct PoolBalance {
-    pub balance: Vec<u64>,
-}
+pub struct PoolBalance(pub Vec<u64>);
