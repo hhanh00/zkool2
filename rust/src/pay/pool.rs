@@ -1,6 +1,6 @@
 use super::error::{Error, Result};
 use zcash_address::ZcashAddress;
-use zcash_protocol::{consensus::Network, PoolType};
+use zcash_protocol::PoolType;
 
 // A bit field to represent the pools that a transaction can use
 // in a single byte. The bits are as follows:
