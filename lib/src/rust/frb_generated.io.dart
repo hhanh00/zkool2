@@ -14,6 +14,7 @@ import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
+import 'pay.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustLibApiImplPlatform({
@@ -55,6 +56,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_u_32(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_u_8(dynamic raw);
+
+  @protected
   List<Account> dco_decode_list_account(dynamic raw);
 
   @protected
@@ -70,6 +74,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<Recipient> dco_decode_list_recipient(dynamic raw);
+
+  @protected
   NewAccount dco_decode_new_account(dynamic raw);
 
   @protected
@@ -79,6 +86,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_8(dynamic raw);
+
+  @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -86,6 +96,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Receivers dco_decode_receivers(dynamic raw);
+
+  @protected
+  Recipient dco_decode_recipient(dynamic raw);
 
   @protected
   SyncProgress dco_decode_sync_progress(dynamic raw);
@@ -135,6 +148,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
+
+  @protected
   List<Account> sse_decode_list_account(SseDeserializer deserializer);
 
   @protected
@@ -150,6 +166,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer);
+
+  @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
 
   @protected
@@ -159,6 +178,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer);
+
+  @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -166,6 +188,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Receivers sse_decode_receivers(SseDeserializer deserializer);
+
+  @protected
+  Recipient sse_decode_recipient(SseDeserializer deserializer);
 
   @protected
   SyncProgress sse_decode_sync_progress(SseDeserializer deserializer);
@@ -220,6 +245,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_account(List<Account> self, SseSerializer serializer);
 
   @protected
@@ -239,6 +267,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       Uint8List self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_recipient(
+      List<Recipient> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);
 
   @protected
@@ -246,6 +278,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_list_prim_u_8_strict(
@@ -256,6 +291,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_receivers(Receivers self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_recipient(Recipient self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer);
