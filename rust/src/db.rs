@@ -7,6 +7,7 @@ use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::api::account::Account;
+use crate::api::sync::PoolBalance;
 
 pub async fn drop_schema(connection: &SqlitePool) -> Result<()> {
     sqlx::query("DROP TABLE IF EXISTS accounts")
@@ -617,4 +618,20 @@ pub async fn reorder_account(
 
     tx.commit().await?;
     Ok(())
+}
+
+pub async fn calculate_balance(pool: &SqlitePool, account: u32) -> Result<PoolBalance> {
+    let mut balance = PoolBalance(vec![0, 0, 0]);
+
+    let mut rows = sqlx::query("
+    WITH N AS (SELECT value, pool FROM notes WHERE account = ?1 UNION ALL SELECT value, pool FROM spends WHERE account = ?1)
+    SELECT pool, SUM(value) FROM N GROUP BY pool")
+        .bind(account)
+        .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<i64, _>(1)))
+        .fetch(pool);
+    while let Some((pool, value)) = rows.try_next().await? {
+        balance.0[pool as usize] += value as u64;
+    }
+
+    Ok(balance)
 }
