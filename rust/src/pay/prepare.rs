@@ -1,4 +1,4 @@
-use bip32::PrivateKey as _;
+use bip32::{ChildNumber, PrivateKey as _};
 use pczt::roles::{creator::Creator, updater::Updater};
 use rand_core::OsRng;
 use ripemd::Ripemd160;
@@ -11,16 +11,16 @@ use zcash_primitives::{
     transaction::{
         builder::{BuildConfig, Builder},
         fees::zip317::FeeRule,
-    },
+    }, zip32::fingerprint::SeedFingerprint,
 };
 use zcash_protocol::{
     consensus::{BlockHeight, Network},
     value::Zatoshis,
 };
-use zcash_transparent::bundle::{OutPoint, TxOut};
+use zcash_transparent::{bundle::{OutPoint, TxOut}, pczt::Bip32Derivation};
 
 use crate::{
-    sync::{get_db_height, get_tree_state},
+    sync::get_tree_state,
     warp::hasher::{OrchardHasher, SaplingHasher},
     Client,
 };
@@ -38,6 +38,9 @@ pub async fn prepare(
 ) -> Result<()> {
     let hs = SaplingHasher::default();
     let ho = OrchardHasher::default();
+
+    let sf = SeedFingerprint::from_seed(&[0u8; 32]).unwrap();
+
 
     let height = 2200000;
     let (ts, to) = get_tree_state(network, client, height).await?;
@@ -84,7 +87,7 @@ pub async fn prepare(
         )
         .unwrap();
     let pczt_result = builder.build_for_pczt(OsRng, &FeeRule::standard()).unwrap();
-
+    
     let pczt = Creator::build_from_parts(pczt_result.pczt_parts).unwrap();
     let updater = Updater::new(pczt);
     let updater = updater.update_global_with(|mut up| {
@@ -93,6 +96,12 @@ pub async fn prepare(
     });
     let updater = updater
         .update_transparent_with(|mut up| {
+            up.update_input_with(0, |mut inp| {
+                let dp = ChildNumber::new(0, true).unwrap();
+                let derivation = Bip32Derivation::parse(sf.to_bytes(), vec![dp.into()]).unwrap();
+                inp.set_bip32_derivation(pubkey.serialize(), derivation);
+                Ok(())
+            })?;
             up.update_output_with(0, |mut out| {
                 out.set_user_address("t1VMifEXtB5iDstRKrpwkxweRmNdrhDZxGk".to_string());
                 Ok(())
