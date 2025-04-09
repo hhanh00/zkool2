@@ -24,7 +24,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   StreamSubscription<SyncProgress>? progressSubscription;
   int? height;
   PoolBalance? poolBalance;
-  int changePool = 0;
 
   @override
   void initState() {
@@ -34,11 +33,12 @@ class AccountViewPageState extends State<AccountViewPage> {
       final b = await balance();
       final recipients = [
         Recipient(
-            address: "zs1n55f4yctfdjflu75vx4vys3xgs6qzxd26qmhmvwxj9jdwxg8sswznpvu7elkccmddfdn5hnfseq",
+            address:
+                "zs1n55f4yctfdjflu75vx4vys3xgs6qzxd26qmhmvwxj9jdwxg8sswznpvu7elkccmddfdn5hnfseq",
             amount: BigInt.from(1000000000)),
       ];
-      changePool = await wipPlan(account: widget.account.id, srcPools: 7,
-        recipients: recipients);
+      await wipPlan(
+          account: widget.account.id, srcPools: 7, recipients: recipients);
       setState(() {
         poolBalance = b;
       });
@@ -62,9 +62,10 @@ class AccountViewPageState extends State<AccountViewPage> {
               if (b != null)
                 Text("${b.field0[0]} ${b.field0[1]} ${b.field0[2]}"),
               IconButton.filled(onPressed: onSync, icon: Icon(Icons.sync)),
-              IconButton.filled(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
-              IconButton.filled(onPressed: onPrepare, icon: Icon(Icons.play_arrow)),
-              Text("change pool: $changePool"),
+              IconButton.filled(
+                  onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+              IconButton.filled(
+                  onPressed: onPrepare, icon: Icon(Icons.play_arrow)),
             ],
           ),
         ));
@@ -75,16 +76,19 @@ class AccountViewPageState extends State<AccountViewPage> {
     await progressSubscription?.cancel();
     final currentHeight = await getCurrentHeight();
     final progress = synchronize(accounts: ids, currentHeight: currentHeight);
-    progressSubscription = progress.listen((event) async {
-      setState(() {
-        height = event.height;
-      });
-    }, onDone: () async {
-      final b = await balance();
-      setState(() {
-        poolBalance = b;
-      });
-    },);
+    progressSubscription = progress.listen(
+      (event) async {
+        setState(() {
+          height = event.height;
+        });
+      },
+      onDone: () async {
+        final b = await balance();
+        setState(() {
+          poolBalance = b;
+        });
+      },
+    );
   }
 
   void onRewind() async {

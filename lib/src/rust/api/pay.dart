@@ -16,7 +16,7 @@ Future<void> prepare(
     RustLib.instance.api.crateApiPayPrepare(
         account: account, senderPayFees: senderPayFees, srcPools: srcPools);
 
-Future<int> wipPlan(
+Future<void> wipPlan(
         {required int account,
         required int srcPools,
         required List<Recipient> recipients}) =>
