@@ -1,19 +1,14 @@
 use anyhow::Result;
 
 use flutter_rust_bridge::frb;
+use itertools::Itertools;
 
-use crate::{
-    api::sync::balance,
-    db::calculate_balance,
-    pay::{
-        fee::FeeManager,
-        plan::get_change_pool,
-        pool::{PoolMask, ALL_POOLS},
-        Recipient, RecipientState,
-    },
+use crate::pay::{
+    fee::FeeManager,
+    plan::{fetch_unspent_notes_grouped_by_pool, get_change_pool},
+    pool::{PoolMask, ALL_POOLS},
+    InputNote, Recipient, RecipientState,
 };
-
-use super::sync::PoolBalance;
 
 #[frb]
 pub async fn prepare(account: u32, sender_pay_fees: bool, src_pools: u8) -> Result<()> {
@@ -36,7 +31,7 @@ pub async fn prepare(account: u32, sender_pay_fees: bool, src_pools: u8) -> Resu
 }
 
 // #[frb]
-pub async fn wip_plan(account: u32, src_pools: u8, recipients: &[Recipient]) -> Result<u8> {
+pub async fn wip_plan(account: u32, src_pools: u8, recipients: &[Recipient]) -> Result<()> {
     let c = crate::get_coin!();
     let connection = c.get_pool();
     let effective_src_pools =
@@ -59,7 +54,12 @@ pub async fn wip_plan(account: u32, src_pools: u8, recipients: &[Recipient]) -> 
         .iter()
         .map(|r| RecipientState::new(r.clone()).unwrap())
         .collect::<Vec<_>>();
-    let mut balances = calculate_balance(connection, account).await?;
+    let mut input_pools = vec![vec![]; 3];
+    let inputs = fetch_unspent_notes_grouped_by_pool(connection, account).await?;
+
+    for (group, items) in inputs.into_iter().chunk_by(|inp| inp.pool).into_iter() {
+        input_pools[group as usize].extend(items);
+    }
 
     // we can merge notes from the same pool because they are fully fungible
     // but we should keep the funds from different pools separate
@@ -82,11 +82,17 @@ pub async fn wip_plan(account: u32, src_pools: u8, recipients: &[Recipient]) -> 
     // choose what pool to use for the inputs.
     // This is handled by the function fill_single_receivers
     //
-    let (single, mut double) = recipients
+    let (mut single, mut double) = recipients
         .into_iter()
         .partition::<Vec<_>, _>(|r| r.pool_mask != PoolMask(6));
 
-    fill_single_receivers(&mut balances, &single, &mut fee_manager, &mut current_fee).await?;
+    fill_single_receivers(
+        &mut input_pools,
+        &mut single,
+        &mut fee_manager,
+        &mut current_fee,
+    )
+    .await?;
 
     // In the second pass, we will consider the recipients that have
     // multiple receivers. We always favor shielded receivers over
@@ -101,7 +107,12 @@ pub async fn wip_plan(account: u32, src_pools: u8, recipients: &[Recipient]) -> 
     // to minimize the amount that would have to go through the
     // turnstile.
 
-    let largest_shielded_pool = if balances.0[1] > balances.0[2] {
+    let balances = input_pools
+        .iter()
+        .map(|pool| pool.iter().map(|n| n.remaining).sum::<u64>())
+        .collect::<Vec<_>>();
+
+    let largest_shielded_pool = if balances[1] > balances[2] {
         PoolMask(2)
     } else {
         PoolMask(4)
@@ -111,16 +122,22 @@ pub async fn wip_plan(account: u32, src_pools: u8, recipients: &[Recipient]) -> 
         d.pool_mask = largest_shielded_pool;
     }
 
-    fill_single_receivers(&mut balances, &single, &mut fee_manager, &mut current_fee).await?;
+    fill_single_receivers(
+        &mut input_pools,
+        &mut double,
+        &mut fee_manager,
+        &mut current_fee,
+    )
+    .await?;
 
-    Ok(change_pool)
+    Ok(())
 }
 
 async fn fill_single_receivers(
-    balances: &mut PoolBalance,
-    recipients: &[RecipientState],
+    input_pools: &mut Vec<Vec<InputNote>>,
+    recipients: &mut [RecipientState],
     fee_manager: &mut FeeManager,
     current_fee: &mut u64,
 ) -> Result<()> {
-    todo!()
+    Ok(())
 }
