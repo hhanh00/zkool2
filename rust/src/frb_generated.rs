@@ -999,13 +999,18 @@ fn wire__crate__api__pay__wip_plan_impl(
             let api_account = <u32>::sse_decode(&mut deserializer);
             let api_src_pools = <u8>::sse_decode(&mut deserializer);
             let api_recipients = <Vec<crate::pay::Recipient>>::sse_decode(&mut deserializer);
+            let api_recipient_pays_fee = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::pay::wip_plan(api_account, api_src_pools, &api_recipients)
-                                .await?;
+                        let output_ok = crate::api::pay::wip_plan(
+                            api_account,
+                            api_src_pools,
+                            &api_recipients,
+                            api_recipient_pays_fee,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,

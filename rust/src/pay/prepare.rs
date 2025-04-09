@@ -1,4 +1,5 @@
 use bip32::{ChildNumber, PrivateKey as _};
+use fpdec::Decimal;
 use pczt::roles::{creator::Creator, updater::Updater};
 use rand_core::OsRng;
 use ripemd::Ripemd160;
@@ -114,4 +115,10 @@ pub async fn prepare(
     println!("PCZT: {:?}", pczt);
 
     Ok(())
+}
+
+pub fn to_zec(amount: u64) -> String {
+    let zats = fpdec::Decimal::from(amount);
+    let zec: Decimal = zats / 100_000_000;
+    zec.to_string()
 }

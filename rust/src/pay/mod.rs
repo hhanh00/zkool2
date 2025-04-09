@@ -7,7 +7,7 @@ pub mod plan;
 pub mod pool;
 pub mod prepare;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Recipient {
     pub address: String,
     pub amount: u64,
@@ -36,6 +36,17 @@ impl RecipientState {
         })
     }
 
+    pub fn for_fee(pool: u8, amount: u64) -> Self {
+        Self {
+            recipient: Recipient {
+                amount,
+                ..Recipient::default()
+            },
+            remaining: amount,
+            pool_mask: PoolMask::from_pool(pool),
+        }
+    }
+
     pub fn to_inner(self) -> Recipient {
         self.recipient
     }
@@ -47,4 +58,10 @@ pub struct InputNote {
     pub amount: u64,
     pub remaining: u64,
     pub pool: u8,
+}
+
+impl InputNote {
+    pub fn is_used(&self) -> bool {
+        self.remaining != self.amount
+    }
 }
