@@ -46,6 +46,10 @@ impl PoolMask {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
     pub fn intersect(&self, other: &Self) -> Self {
         PoolMask(self.0 & other.0)
     }
