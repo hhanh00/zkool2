@@ -1,5 +1,5 @@
-use super::{error::Result, pool::PoolMask};
-use sqlx::{Pool, Sqlite};
+use super::{error::Result, pool::PoolMask, InputNote};
+use sqlx::{sqlite::SqliteRow, Row, Pool, Sqlite, SqlitePool};
 use zcash_protocol::consensus::Network;
 
 use crate::Client;
@@ -65,7 +65,28 @@ pub async fn get_account_pool_mask(connection: &Pool<Sqlite>, account: u32) -> R
     Ok(account_pool_mask)
 }
 
-pub async fn get_pool_address(network: &Network, address: &str) -> Result<()> {
+pub async fn fetch_unspent_notes_grouped_by_pool(connection: &SqlitePool, account: u32) -> Result<Vec<InputNote>> {
+    let unspent_notes = sqlx::query(
+        "SELECT a.id_note, a.pool, a.value
+        FROM notes a
+        LEFT JOIN spends b ON a.id_note = b.id_note
+        WHERE b.id_note IS NULL AND a.account = ?
+        GROUP BY a.pool",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id_note: u32 = row.get(0);
+        let pool: u8 = row.get(1);
+        let value: i64 = row.get(2);
+        InputNote {
+            id: id_note,
+            amount: value as u64,
+            remaining: value as u64,
+            pool,
+        }
+    })
+    .fetch_all(connection)
+    .await?;
 
-    Ok(())
+    Ok(unspent_notes)
 }
