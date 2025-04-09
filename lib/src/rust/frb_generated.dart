@@ -144,7 +144,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAccountUpdateAccount({required AccountUpdate update});
 
-  Future<int> crateApiPayWipPlan(
+  Future<void> crateApiPayWipPlan(
       {required int account,
       required int srcPools,
       required List<Recipient> recipients});
@@ -797,7 +797,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<int> crateApiPayWipPlan(
+  Future<void> crateApiPayWipPlan(
       {required int account,
       required int srcPools,
       required List<Recipient> recipients}) {
@@ -811,7 +811,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             funcId: 27, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_u_8,
+        decodeSuccessData: sse_decode_unit,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiPayWipPlanConstMeta,
