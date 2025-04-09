@@ -35,7 +35,7 @@ class AccountViewPageState extends State<AccountViewPage> {
         Recipient(
             address:
                 "zs1n55f4yctfdjflu75vx4vys3xgs6qzxd26qmhmvwxj9jdwxg8sswznpvu7elkccmddfdn5hnfseq",
-            amount: BigInt.from(480000)),
+            amount: BigInt.from(1480000)),
         Recipient(
             address:
                 "u1ydx7cvpul4v8z29q4vuqczalmsztn5dlxrmujvavzsxyxjk3evpuerqhgwnhemdw9t3q6mpk3klk8ss7803lsv400zax2wrw8cacmzaz",
