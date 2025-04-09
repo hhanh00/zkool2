@@ -128,7 +128,7 @@ async fn transparent_sync(
     let mut addresses = vec![];
     for account in accounts.iter() {
         let mut rows = sqlx::query("
-                SELECT t1.address
+                SELECT t1.id_taddress, t1.address
                 FROM transparent_address_accounts t1
                 JOIN (
                     SELECT account, scope, MAX(dindex) as max_dindex
@@ -138,19 +138,23 @@ async fn transparent_sync(
                 ) t2 ON t1.account = t2.account AND t1.scope = t2.scope AND t1.dindex = t2.max_dindex
                 ORDER BY t1.scope")
             .bind(account)
-            .map(|row: SqliteRow| row.get::<String, _>(0))
+            .map(|row: SqliteRow| {
+                let id_taddress: u32 = row.get(0);
+                let address: String = row.get(1);
+                (id_taddress, address)
+            })
             .fetch(pool);
 
-        while let Some(address) = rows.try_next().await? {
+        while let Some((id_taddress, address)) = rows.try_next().await? {
             // Add the address to the client
-            addresses.push((*account, address));
+            addresses.push((*account, (id_taddress, address)));
         }
     }
-    Ok(for (account, address) in addresses.iter() {
-        let my_address = TransparentAddress::decode(&network, address)?;
+    Ok(for (account, address_row) in addresses.iter() {
+        let my_address = TransparentAddress::decode(&network, &address_row.1)?;
         let mut txs = client
             .get_taddress_txids(TransparentAddressBlockFilter {
-                address: address.clone(),
+                address: address_row.1.clone(),
                 range: Some(BlockRange {
                     start: Some(BlockId {
                         height: start_height as u64,
@@ -219,10 +223,9 @@ async fn transparent_sync(
                     if let Some((id, amount)) = row {
                         // note was found
                         // add a spent entry
-                        sqlx::query("INSERT INTO spends (account, id_note, pool, tx, height, value) VALUES (?, ?, ?, ?, ?, ?)")
+                        sqlx::query("INSERT INTO spends (account, id_note, pool, tx, height, value) VALUES (?, ?, 0, ?, ?, ?)")
                         .bind(account)
                         .bind(id)
-                        .bind(0)
                         .bind(id_tx)
                         .bind(height)
                         .bind(-amount)
@@ -239,10 +242,11 @@ async fn transparent_sync(
                             let mut nf = transaction.txid().as_ref().to_vec();
                             nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                            let r = sqlx::query("INSERT INTO notes (account, height, pool, tx, nullifier, value) VALUES (?, ?, 0, ?, ?, ?)")
+                            let r = sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value) VALUES (?, ?, 0, ?, ?, ?, ?)")
                                 .bind(account)
                                 .bind(height)
                                 .bind(id_tx)
+                                .bind(address_row.0)
                                 .bind(&nf)
                                 .bind(vout.value.into_u64() as i64)
                                 .execute(&mut *db_tx)
