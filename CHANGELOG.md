@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.1.0...zkool-v1.2.0) (2025-04-09)
+
+
+### Features
+
+* add fees manager ([#42](https://github.com/hhanh00/zkool2/issues/42)) ([f02ddf3](https://github.com/hhanh00/zkool2/commit/f02ddf3c4b5e2dcfbfe1f5d7938c3952a10a3fe1))
+* add seed fingerprint ([#40](https://github.com/hhanh00/zkool2/issues/40)) ([e2d2997](https://github.com/hhanh00/zkool2/commit/e2d29971b820f9dd07574fd27ce220a30d37304b))
+* determine what pool to use for the change ([#41](https://github.com/hhanh00/zkool2/issues/41)) ([af1a6c7](https://github.com/hhanh00/zkool2/commit/af1a6c755f2108c9a1a6e9d9faee133398d7cf62))
+* pczt builder ([#38](https://github.com/hhanh00/zkool2/issues/38)) ([7f18457](https://github.com/hhanh00/zkool2/commit/7f18457a5aa2e51b6f8cb3be2efa5fe7cea361ab))
+* pczt builder ([#48](https://github.com/hhanh00/zkool2/issues/48)) ([5bd03d2](https://github.com/hhanh00/zkool2/commit/5bd03d265b29d833df63e5c6d99ee355826795fa))
+* transaction planner ([#43](https://github.com/hhanh00/zkool2/issues/43)) ([4e6120d](https://github.com/hhanh00/zkool2/commit/4e6120d88f3ee90a746a47cc6621c72e7655728c))
+
+
+### Bug Fixes
+
+* (tx prepare) complete note assignment ([#45](https://github.com/hhanh00/zkool2/issues/45)) ([a1e7582](https://github.com/hhanh00/zkool2/commit/a1e7582056057083e4870e2ffb539a0fea7f48b0))
+* (tx prepare) read unspent notes from db ([#44](https://github.com/hhanh00/zkool2/issues/44)) ([c30af46](https://github.com/hhanh00/zkool2/commit/c30af46ca4ca88a77dd6eb93045ca082f380c9dc))
+* add id_taddress to transparent notes ([#46](https://github.com/hhanh00/zkool2/issues/46)) ([d4b7386](https://github.com/hhanh00/zkool2/commit/d4b7386ecf675e2066372c6dcf1a941738c80502))
+* add t/s/o inputs to tx builder ([#47](https://github.com/hhanh00/zkool2/issues/47)) ([cfac62e](https://github.com/hhanh00/zkool2/commit/cfac62eb7638a8c07eda331760d58bd57ca395d2))
+
 ## [1.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.0.0...zkool-v1.1.0) (2025-04-07)
 
 
