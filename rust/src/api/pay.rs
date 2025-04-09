@@ -1,18 +1,30 @@
-use anyhow::Result;
+use std::convert::Infallible;
 
+use anyhow::{anyhow, Result};
+
+use bip32::PrivateKey;
 use flutter_rust_bridge::frb;
 use itertools::Itertools;
-use zcash_primitives::transaction::builder::{BuildConfig, Builder};
-use zcash_protocol::consensus::BlockHeight;
+use ripemd::Ripemd160;
+use secp256k1::SecretKey;
+use sha2::{Digest as _, Sha256};
+use zcash_primitives::{
+    legacy::TransparentAddress,
+    transaction::builder::{BuildConfig, Builder},
+};
+use zcash_protocol::{consensus::BlockHeight, value::Zatoshis};
+use zcash_transparent::bundle::{OutPoint, TxOut};
 
-use crate::{pay::{
-    error::Error,
-    fee::{FeeManager, COST_PER_ACTION},
-    plan::{fetch_unspent_notes_grouped_by_pool, get_change_pool},
-    pool::{PoolMask, ALL_POOLS},
-    prepare::to_zec,
-    InputNote, Recipient, RecipientState,
-}, warp::hasher::{OrchardHasher, SaplingHasher}};
+use crate::{
+    account::{get_orchard_note, get_orchard_vk, get_sapling_note, get_sapling_vk}, pay::{
+        error::Error,
+        fee::{FeeManager, COST_PER_ACTION},
+        plan::{fetch_unspent_notes_grouped_by_pool, get_change_pool},
+        pool::{PoolMask, ALL_POOLS},
+        prepare::to_zec,
+        InputNote, Recipient, RecipientState,
+    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}
+};
 
 #[frb]
 pub async fn prepare(account: u32, sender_pay_fees: bool, src_pools: u8) -> Result<()> {
@@ -204,10 +216,14 @@ pub async fn wip_plan(
     let height = crate::sync::get_db_height(connection, account).await?;
     let mut client = c.client().await?;
     let (ts, to) = crate::sync::get_tree_state(&c.network, &mut client, height).await?;
-    let sapling_anchor = ts.to_edge(&SaplingHasher::default()).root(&SaplingHasher::default());
-    let orchard_anchor = to.to_edge(&OrchardHasher::default()).root(&OrchardHasher::default());
+    let es = ts.to_edge(&SaplingHasher::default());
+    let eo = to.to_edge(&OrchardHasher::default());
+    let sapling_anchor = es
+        .root(&SaplingHasher::default());
+    let orchard_anchor = eo
+        .root(&OrchardHasher::default());
 
-    let mut _builder = Builder::new(
+    let mut builder = Builder::new(
         &c.network,
         BlockHeight::from_u32(height),
         BuildConfig::Standard {
@@ -216,12 +232,64 @@ pub async fn wip_plan(
         },
     );
 
+    let es = es.to_auth_path(&SaplingHasher::default());
+    let eo = eo.to_auth_path(&OrchardHasher::default());
+
+    let ers = empty_roots(&SaplingHasher::default());
+    let ero = empty_roots(&OrchardHasher::default());
+
+    let svk = get_sapling_vk(connection, account).await?;
+    let ovk = get_orchard_vk(connection, account).await?;
+
     for pool in input_pools.iter() {
         for inp in pool.iter() {
             if inp.is_used() {
                 let InputNote {
                     id, amount, pool, ..
                 } = inp;
+                match pool {
+                    0 => {
+                        let (nf, sk): (Vec<u8>, Vec<u8>) = sqlx::query_as(
+                            "SELECT nullifier, t.sk FROM notes
+                            JOIN transparent_address_accounts t ON notes.taddress = t.id_taddress
+                            WHERE id_note = ?",
+                        )
+                        .bind(*id)
+                        .fetch_one(connection)
+                        .await?;
+
+                        let sk = SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap();
+                        let pubkey = sk.public_key(&secp256k1::Secp256k1::new());
+                        let mut hash = [0u8; 32];
+                        hash.copy_from_slice(&nf[0..32]);
+                        let n = u32::from_le_bytes(nf[32..36].try_into().unwrap());
+                        let utxo = OutPoint::new(hash, n);
+                        let pkh: [u8; 20] =
+                            Ripemd160::digest(&Sha256::digest(&pubkey.serialize())).into();
+                        let addr = TransparentAddress::PublicKeyHash(pkh.clone());
+                        let coin = TxOut {
+                            value: Zatoshis::from_u64(*amount).unwrap(),
+                            script_pubkey: addr.script(),
+                        };
+
+                        builder
+                            .add_transparent_input(pubkey, utxo, coin)
+                            .map_err(|e| anyhow!(e))?;
+                    }
+                    1 => {
+                        let (note, merkle_path) = get_sapling_note(connection, *id, height, &svk, &es, &ers).await?;
+
+                        builder
+                            .add_sapling_spend::<Infallible>(svk.clone(), note, merkle_path)?;
+                    }
+                    2 => {
+                        let (note, merkle_path) = get_orchard_note(connection, *id, height, &ovk, &eo, &ero).await?;
+
+                        builder.add_orchard_spend::<Infallible>(ovk.clone(), note, merkle_path)?;
+                    }
+                    _ => {}
+                }
+
                 let (nf,): (Vec<u8>,) =
                     sqlx::query_as("SELECT nullifier FROM notes WHERE id_note = ?")
                         .bind(id)
