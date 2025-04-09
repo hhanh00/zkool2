@@ -69,12 +69,13 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS transparent_address_accounts(
+        id_taddress INTEGER PRIMARY KEY,
         account INTEGER NOT NULL,
         scope INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
         sk BLOB,
         address TEXT NOT NULL,
-        PRIMARY KEY (account, scope, dindex))",
+        UNIQUE (account, scope, dindex))",
     )
     .execute(connection)
     .await?;
@@ -126,6 +127,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         tx INTEGER NOT NULL,
         value INTEGER NOT NULL,
         cmx BLOB,
+        taddress INTEGER,
         position INTEGER,
         diversifier BLOB,
         rcm BLOB,
