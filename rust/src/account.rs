@@ -3,16 +3,19 @@ use bincode::config::legacy;
 use bip32::PrivateKey;
 use jubjub::Fr;
 use orchard::{
-    keys::Scope,
+    keys::{FullViewingKey, Scope},
     note::{RandomSeed, Rho},
     tree::MerkleHashOrchard,
     value::NoteValue,
     Note,
 };
 use ripemd::{Digest as _, Ripemd160};
+use sapling_crypto::zip32::DiversifiableFullViewingKey;
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
+use zcash_protocol::consensus::Network;
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
@@ -176,4 +179,65 @@ pub async fn get_orchard_note(
     let merkle_path = orchard::tree::MerklePath::from_parts(witness.position as u32, auth_path);
 
     Ok((note, merkle_path))
+}
+
+pub async fn get_account_full_address(network: &Network, connection: &SqlitePool, account: u32) -> Result<String> {
+    let taddress = sqlx::query(
+        "SELECT ta.address FROM transparent_address_accounts ta
+        JOIN accounts a ON ta.account = a.id_account AND ta.dindex = a.dindex
+        AND ta.scope = 0
+        WHERE ta.account = ?",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let taddress: String = row.get(0);
+        let taddress = TransparentAddress::decode(network, &taddress).unwrap();
+        taddress
+    })
+    .fetch_optional(connection)
+    .await?;
+
+    let saddress = sqlx::query(
+        "SELECT a.dindex, sa.xvk FROM sapling_accounts sa
+        JOIN accounts a ON sa.account = a.id_account AND sa.account = ?",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let dindex: u32 = row.get(0);
+        let xvk: Vec<u8> = row.get(1);
+        let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+        let saddress = fvk.address(dindex.into()).unwrap();
+        saddress
+    })
+    .fetch_optional(connection)
+    .await?;
+
+    let oaddress = sqlx::query(
+        "SELECT a.dindex, oa.xvk FROM orchard_accounts oa
+        JOIN accounts a ON oa.account = a.id_account AND oa.account = ?",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let dindex: u32 = row.get(0);
+        let xvk: Vec<u8> = row.get(1);
+        let fvk = FullViewingKey::read(&*xvk).unwrap();
+        let oaddress = fvk.address_at(dindex, Scope::External);
+        oaddress
+    })
+    .fetch_optional(connection)
+    .await?;
+
+    let address = match (taddress, saddress, oaddress) {
+        (Some(taddress), None, None) => taddress.encode(network),
+        _ => {
+            let ua = UnifiedAddress::from_receivers(
+                oaddress,
+                saddress,
+                taddress,
+            ).unwrap();
+            ua.encode(network)
+        }
+    };
+
+    Ok(address)
 }
