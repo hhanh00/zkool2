@@ -1,4 +1,4 @@
-const COST_PER_ACTION: u64 = 5000;
+pub const COST_PER_ACTION: u64 = 5000;
 
 #[derive(Clone, Default, Debug)]
 pub struct FeeManager {
@@ -7,18 +7,14 @@ pub struct FeeManager {
 }
 
 impl FeeManager {
-    // Add an input and return the increase in fees
-    pub fn add_input(&mut self, pool: u8) -> u64 {
-        let fee = self.fee();
+    // Add an input
+    pub fn add_input(&mut self, pool: u8) {
         self.num_inputs[pool as usize] += 1;
-        self.fee() - fee
     }
 
-    // Add an output and return the increase in fees
-    pub fn add_output(&mut self, pool: u8) -> u64 {
-        let fee = self.fee();
+    // Add an output
+    pub fn add_output(&mut self, pool: u8) {
         self.num_outputs[pool as usize] += 1;
-        self.fee() - fee
     }
 
     // Return the current amount of fees
