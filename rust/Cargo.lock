@@ -2581,6 +2581,7 @@ dependencies = [
  "halo2_gadgets",
  "halo2_proofs",
  "hex",
+ "itertools",
  "jubjub",
  "lazy_static",
  "log",
