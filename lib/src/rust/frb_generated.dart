@@ -147,7 +147,8 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiPayWipPlan(
       {required int account,
       required int srcPools,
-      required List<Recipient> recipients});
+      required List<Recipient> recipients,
+      required bool recipientPaysFee});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -800,13 +801,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Future<void> crateApiPayWipPlan(
       {required int account,
       required int srcPools,
-      required List<Recipient> recipients}) {
+      required List<Recipient> recipients,
+      required bool recipientPaysFee}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_u_32(account, serializer);
         sse_encode_u_8(srcPools, serializer);
         sse_encode_list_recipient(recipients, serializer);
+        sse_encode_bool(recipientPaysFee, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 27, port: port_);
       },
@@ -815,14 +818,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiPayWipPlanConstMeta,
-      argValues: [account, srcPools, recipients],
+      argValues: [account, srcPools, recipients, recipientPaysFee],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiPayWipPlanConstMeta => const TaskConstMeta(
         debugName: "wip_plan",
-        argNames: ["account", "srcPools", "recipients"],
+        argNames: ["account", "srcPools", "recipients", "recipientPaysFee"],
       );
 
   @protected
