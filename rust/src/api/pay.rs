@@ -1,29 +1,40 @@
-use std::convert::Infallible;
+use std::{convert::Infallible, str::FromStr as _};
 
 use anyhow::{anyhow, Result};
 
 use bip32::PrivateKey;
 use flutter_rust_bridge::frb;
 use itertools::Itertools;
+use orchard::{keys::Scope, Address};
+use pczt::roles::creator::Creator;
+use rand_core::OsRng;
 use ripemd::Ripemd160;
+use sapling_crypto::PaymentAddress;
 use secp256k1::SecretKey;
 use sha2::{Digest as _, Sha256};
+use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::{
     legacy::TransparentAddress,
-    transaction::builder::{BuildConfig, Builder},
+    transaction::{builder::{BuildConfig, Builder}, fees::zip317::FeeRule},
 };
-use zcash_protocol::{consensus::BlockHeight, value::Zatoshis};
+use zcash_protocol::{
+    consensus::{BlockHeight, Network},
+    memo::{Memo, MemoBytes},
+    value::Zatoshis,
+};
 use zcash_transparent::bundle::{OutPoint, TxOut};
 
 use crate::{
-    account::{get_orchard_note, get_orchard_vk, get_sapling_note, get_sapling_vk}, pay::{
+    account::{get_account_full_address, get_orchard_note, get_orchard_vk, get_sapling_note, get_sapling_vk},
+    pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         plan::{fetch_unspent_notes_grouped_by_pool, get_change_pool},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState,
-    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}
+    },
+    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
 };
 
 #[frb]
@@ -54,6 +65,7 @@ pub async fn wip_plan(
     recipient_pays_fee: bool,
 ) -> Result<()> {
     let c = crate::get_coin!();
+    let network = &c.network;
     let connection = c.get_pool();
     let effective_src_pools =
         crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
@@ -192,13 +204,13 @@ pub async fn wip_plan(
 
     let change = total_input - total_output - fee;
 
-    for o in single.into_iter() {
+    for o in single.iter().chain(double.iter()) {
         let RecipientState {
             recipient,
             remaining,
             pool_mask,
         } = o;
-        assert_eq!(remaining, 0);
+        assert_eq!(*remaining, 0);
         println!(
             "address: {}, pool: {}, amount: {}",
             recipient.address,
@@ -218,10 +230,8 @@ pub async fn wip_plan(
     let (ts, to) = crate::sync::get_tree_state(&c.network, &mut client, height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
-    let sapling_anchor = es
-        .root(&SaplingHasher::default());
-    let orchard_anchor = eo
-        .root(&OrchardHasher::default());
+    let sapling_anchor = es.root(&SaplingHasher::default());
+    let orchard_anchor = eo.root(&OrchardHasher::default());
 
     let mut builder = Builder::new(
         &c.network,
@@ -277,13 +287,14 @@ pub async fn wip_plan(
                             .map_err(|e| anyhow!(e))?;
                     }
                     1 => {
-                        let (note, merkle_path) = get_sapling_note(connection, *id, height, &svk, &es, &ers).await?;
+                        let (note, merkle_path) =
+                            get_sapling_note(connection, *id, height, &svk, &es, &ers).await?;
 
-                        builder
-                            .add_sapling_spend::<Infallible>(svk.clone(), note, merkle_path)?;
+                        builder.add_sapling_spend::<Infallible>(svk.clone(), note, merkle_path)?;
                     }
                     2 => {
-                        let (note, merkle_path) = get_orchard_note(connection, *id, height, &ovk, &eo, &ero).await?;
+                        let (note, merkle_path) =
+                            get_orchard_note(connection, *id, height, &ovk, &eo, &ero).await?;
 
                         builder.add_orchard_spend::<Infallible>(ovk.clone(), note, merkle_path)?;
                     }
@@ -304,7 +315,107 @@ pub async fn wip_plan(
         }
     }
 
+    let change_address = get_account_full_address(
+        network,
+        connection,
+        account,
+    ).await?;
+
+    let change_recipient = RecipientState {
+        recipient: Recipient {
+            address: change_address,
+            amount: change,
+            ..Recipient::default()
+        },
+        remaining: 0,
+        pool_mask: PoolMask::from_pool(change_pool),
+    };
+
+    for r in single.iter().chain(double.iter()).chain(std::iter::once(&change_recipient)) {
+        let RecipientState {
+            recipient,
+            remaining,
+            pool_mask,
+        } = r;
+        assert_eq!(*remaining, 0);
+        assert!(pool_mask.single_pool());
+
+        let pool = pool_mask.to_best_pool().unwrap();
+        let value = Zatoshis::from_u64(recipient.amount)?;
+        let text_memo = recipient
+            .user_memo
+            .as_ref()
+            .map(|s| Memo::from_str(&s))
+            .transpose()?
+            .map(MemoBytes::from);
+        let byte_memo = recipient
+            .memo_bytes
+            .as_ref()
+            .map(|mb| MemoBytes::from_bytes(&mb))
+            .transpose()?;
+        let memo = text_memo.or(byte_memo).unwrap_or(MemoBytes::empty());
+
+        match pool {
+            0 => {
+                let to = get_transparent_address(network, &recipient.address)?;
+                builder
+                    .add_transparent_output(&to, value)
+                    .map_err(|e| anyhow!(e))?;
+            }
+            1 => {
+                let to = get_sapling_address(network, &recipient.address)?;
+                builder.add_sapling_output::<Infallible>(Some(svk.ovk.clone()), to, value, memo)?;
+            }
+            2 => {
+                let to = get_orchard_address(network, &recipient.address)?;
+                builder.add_orchard_output::<Infallible>(
+                    Some(ovk.to_ovk(Scope::External)),
+                    to,
+                    value.into_u64(),
+                    memo,
+                )?;
+            }
+            _ => {}
+        }
+    }
+
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
+    let _pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
+
     Ok(())
+}
+
+fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
+    if let Ok(addr) = TransparentAddress::decode(network, address) {
+        return Ok(addr);
+    }
+    if let Ok(addr) = UnifiedAddress::decode(network, address) {
+        let addr = addr.transparent().unwrap().clone();
+        return Ok(addr);
+    } else {
+        anyhow::bail!("Invalid transparent address: {address}");
+    }
+}
+
+fn get_sapling_address(network: &Network, address: &str) -> Result<PaymentAddress> {
+    if let Ok(addr) = PaymentAddress::decode(network, address) {
+        return Ok(addr);
+    }
+    if let Ok(addr) = UnifiedAddress::decode(network, address) {
+        let addr = addr.sapling().unwrap().clone();
+        return Ok(addr);
+    } else {
+        anyhow::bail!("Invalid sapling address: {address}");
+    }
+}
+
+fn get_orchard_address(network: &Network, address: &str) -> Result<Address> {
+    if let Ok(addr) = UnifiedAddress::decode(network, address) {
+        let addr = addr.orchard().unwrap().clone();
+        return Ok(addr);
+    } else {
+        anyhow::bail!("Invalid orchard address: {address}");
+    }
 }
 
 fn fill_single_receivers(
