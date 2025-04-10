@@ -5,11 +5,11 @@ use anyhow::{anyhow, Result};
 use bip32::PrivateKey;
 use flutter_rust_bridge::frb;
 use itertools::Itertools;
-use orchard::{keys::Scope, Address};
-use pczt::roles::creator::Creator;
+use orchard::{circuit::ProvingKey, keys::{Scope, SpendAuthorizingKey}, Address};
+use pczt::roles::{creator::Creator, io_finalizer::IoFinalizer, prover::Prover, signer::Signer, spend_finalizer::SpendFinalizer, tx_extractor::{self, TransactionExtractor}, updater::{self, Updater}};
 use rand_core::OsRng;
 use ripemd::Ripemd160;
-use sapling_crypto::PaymentAddress;
+use sapling_crypto::{Note, PaymentAddress};
 use secp256k1::SecretKey;
 use sha2::{Digest as _, Sha256};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
@@ -17,6 +17,7 @@ use zcash_primitives::{
     legacy::TransparentAddress,
     transaction::{builder::{BuildConfig, Builder}, fees::zip317::FeeRule},
 };
+use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
     consensus::{BlockHeight, Network},
     memo::{Memo, MemoBytes},
@@ -25,7 +26,7 @@ use zcash_protocol::{
 use zcash_transparent::bundle::{OutPoint, TxOut};
 
 use crate::{
-    account::{get_account_full_address, get_orchard_note, get_orchard_vk, get_sapling_note, get_sapling_vk},
+    account::{get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk},
     pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
@@ -233,6 +234,24 @@ pub async fn wip_plan(
     let sapling_anchor = es.root(&SaplingHasher::default());
     let orchard_anchor = eo.root(&OrchardHasher::default());
 
+    let change_address = get_account_full_address(
+        network,
+        connection,
+        account,
+    ).await?;
+
+    let change_recipient = RecipientState {
+        recipient: Recipient {
+            address: change_address,
+            amount: change,
+            ..Recipient::default()
+        },
+        remaining: 0,
+        pool_mask: PoolMask::from_pool(change_pool),
+    };
+
+    let outputs = single.iter().chain(double.iter()).chain(std::iter::once(&change_recipient));
+
     let mut builder = Builder::new(
         &c.network,
         BlockHeight::from_u32(height),
@@ -251,12 +270,16 @@ pub async fn wip_plan(
     let svk = get_sapling_vk(connection, account).await?;
     let ovk = get_orchard_vk(connection, account).await?;
 
+    let mut tsk = vec![];
+
+    let mut n_spends: [usize; 3] = [0, 0, 0];
     for pool in input_pools.iter() {
         for inp in pool.iter() {
             if inp.is_used() {
                 let InputNote {
                     id, amount, pool, ..
                 } = inp;
+                n_spends[*pool as usize] += 1;
                 match pool {
                     0 => {
                         let (nf, sk): (Vec<u8>, Vec<u8>) = sqlx::query_as(
@@ -285,6 +308,7 @@ pub async fn wip_plan(
                         builder
                             .add_transparent_input(pubkey, utxo, coin)
                             .map_err(|e| anyhow!(e))?;
+                        tsk.push(sk);
                     }
                     1 => {
                         let (note, merkle_path) =
@@ -315,23 +339,7 @@ pub async fn wip_plan(
         }
     }
 
-    let change_address = get_account_full_address(
-        network,
-        connection,
-        account,
-    ).await?;
-
-    let change_recipient = RecipientState {
-        recipient: Recipient {
-            address: change_address,
-            amount: change,
-            ..Recipient::default()
-        },
-        remaining: 0,
-        pool_mask: PoolMask::from_pool(change_pool),
-    };
-
-    for r in single.iter().chain(double.iter()).chain(std::iter::once(&change_recipient)) {
+    for r in outputs {
         let RecipientState {
             recipient,
             remaining,
@@ -361,6 +369,7 @@ pub async fn wip_plan(
                 builder
                     .add_transparent_output(&to, value)
                     .map_err(|e| anyhow!(e))?;
+
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;
@@ -379,8 +388,78 @@ pub async fn wip_plan(
         }
     }
 
+    println!("Building");
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
-    let _pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
+    let sapling_meta = &r.sapling_meta;
+    let orchard_meta = &r.orchard_meta;
+
+    println!("Prepared");
+
+    let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+
+    let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
+    println!("Created");
+
+    let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
+    println!("IO Finalized");
+
+    let ssk = get_sapling_sk(connection, account).await?;
+    let osk = get_orchard_sk(connection, account).await?;
+    let osak = SpendAuthorizingKey::from(&osk);
+
+    let updater = Updater::new(pczt);
+    let pgk = ssk.expsk.proof_generation_key();
+    let updater = updater.update_sapling_with(|mut u| {
+        for i in 0..n_spends[1] {
+            let bundle_index = sapling_meta.spend_index(i).unwrap();
+            u.update_spend_with(bundle_index, |mut u| {
+                u.set_proof_generation_key(pgk.clone()).unwrap();
+                Ok(())
+            }).unwrap();
+        }
+        Ok(())
+    }).unwrap();
+    let pczt = updater.finish();
+    println!("Updated");
+
+    let pczt = Prover::new(pczt)
+        .create_sapling_proofs(sapling_prover, sapling_prover)
+        .unwrap()
+        .create_orchard_proof(&ORCHARD_PK)
+        .unwrap()
+        .finish();
+    println!("Proved");
+
+    let mut signer = Signer::new(pczt).unwrap();
+    for index in 0..n_spends[0] {
+        println!("signing transparent {index}");
+        signer.sign_transparent(index, &tsk[index]).unwrap();
+    }
+    for index in 0..n_spends[1] {
+        println!("signing sapling {index}");
+        let bundle_index = sapling_meta.spend_index(index).unwrap();
+        signer.sign_sapling(bundle_index, &ssk.expsk.ask).unwrap();
+    }
+    for index in 0..n_spends[2] {
+        println!("signing orchard {index}");
+        let bundle_index = orchard_meta.spend_action_index(index).unwrap();
+        signer.sign_orchard(bundle_index, &osak).unwrap();
+    }
+    let pczt = signer.finish();
+    println!("Signed");
+
+    let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
+    println!("Spend Finalized");
+
+    let (svk, ovk) = sapling_prover.verifying_keys();
+    let tx_extractor = TransactionExtractor::new(pczt)
+        .with_sapling(&svk, &ovk);
+    let tx = tx_extractor.extract().unwrap();
+    let mut tx_bytes = vec![];
+    tx.write(&mut tx_bytes).unwrap();
+    println!("Tx Extracted");
+
+    println!("{}", hex::encode(&tx_bytes));
 
     Ok(())
 }
@@ -481,4 +560,9 @@ fn fill_single_receivers(
     }
 
     Ok(())
+}
+
+lazy_static::lazy_static! {
+    static ref SAPLING_PROVER: LocalTxProver = LocalTxProver::bundled();
+    static ref ORCHARD_PK: ProvingKey = ProvingKey::build();
 }
