@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.2.0...zkool-v1.3.0) (2025-04-10)
+
+
+### Features
+
+* build and send transaction ([#53](https://github.com/hhanh00/zkool2/issues/53)) ([51b31ae](https://github.com/hhanh00/zkool2/commit/51b31ae7686a56a5493be874dc112a5dd8fdeb1a))
+* show tx plan ([#52](https://github.com/hhanh00/zkool2/issues/52)) ([f180159](https://github.com/hhanh00/zkool2/commit/f1801595fc5e7387f9ef8d45004285e2f7c2a7be))
+
+
+### Bug Fixes
+
+* github workflow ([#49](https://github.com/hhanh00/zkool2/issues/49)) ([057a021](https://github.com/hhanh00/zkool2/commit/057a021dbec6a455be8fded396cfff9a7eaba47c))
+* pczt tx building order ([#51](https://github.com/hhanh00/zkool2/issues/51)) ([989bc3a](https://github.com/hhanh00/zkool2/commit/989bc3a61531f9fbefe3f20a09e396ad09c8fe1b))
+* upload release permission ([057a021](https://github.com/hhanh00/zkool2/commit/057a021dbec6a455be8fded396cfff9a7eaba47c))
+
 ## [1.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.1.0...zkool-v1.2.0) (2025-04-09)
 
 
