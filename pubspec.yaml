@@ -35,6 +35,8 @@ dependencies:
   awesome_dialog: ^3.2.1
   animated_reorderable_list: ^1.2.0
 
+  fixed: ^5.3.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
