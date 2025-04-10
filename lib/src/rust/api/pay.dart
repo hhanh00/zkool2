@@ -8,12 +8,13 @@ import '../pay.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 Future<TxPlan> prepare(
-        {required int account,
-        required int srcPools,
+        {required int srcPools,
         required List<Recipient> recipients,
         required bool recipientPaysFee}) =>
     RustLib.instance.api.crateApiPayPrepare(
-        account: account,
         srcPools: srcPools,
         recipients: recipients,
         recipientPaysFee: recipientPaysFee);
+
+Future<String> send({required int height, required List<int> data}) =>
+    RustLib.instance.api.crateApiPaySend(height: height, data: data);

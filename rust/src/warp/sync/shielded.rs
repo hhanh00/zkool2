@@ -83,6 +83,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         for (account, _, _) in keys.iter() {
             // Use an anti join to get the unspent notes
             // and a join to filter based on the account and pool
+            println!("fetch UTXOs - account: {}, pool: {}, height: {}", account, pool, height);
             let mut nfs = sqlx::query(
                 r"
             WITH unspent AS (SELECT a.*
@@ -96,7 +97,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             )
             .bind(pool)
             .bind(account)
-            .bind(height)
+            .bind(height - 1)
             .map(|row| {
                 let id_note = row.get::<u32, _>(0);
                 let account = row.get::<u32, _>(1);
@@ -120,6 +121,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             })
             .fetch(connection);
             while let Some(utxo) = nfs.try_next().await? {
+                println!("UTXO: {:?}", utxo);
                 utxos.insert(utxo.nullifier.clone(), utxo);
             }
         }

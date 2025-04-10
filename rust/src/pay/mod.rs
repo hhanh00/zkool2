@@ -1,5 +1,8 @@
-use self::error::Result;
+use crate::{lwd::RawTransaction, Client};
+
+use anyhow::Result;
 use pool::PoolMask;
+use tonic::Request;
 
 pub mod error;
 pub mod fee;
@@ -67,11 +70,13 @@ impl InputNote {
 }
 
 pub struct TxPlan {
+    pub height: u32,
     pub inputs: Vec<TxPlanIn>,
     pub outputs: Vec<TxPlanOut>,
     pub fee: u64,
     pub change: u64,
     pub change_pool: u8,
+    pub data: Vec<u8>,
 }
 
 pub struct TxPlanIn {
@@ -83,4 +88,17 @@ pub struct TxPlanOut {
     pub pool: u8,
     pub amount: u64,
     pub address: String,
+}
+
+pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<String> {
+    let rep = client.
+        send_transaction(
+            Request::new(RawTransaction {
+                height: height as u64,
+                data: data.to_vec(),
+            })).await?.into_inner();
+    if rep.error_code != 0 {
+        return Err(anyhow::anyhow!(rep.error_message));
+    }
+    Ok(rep.error_message)
 }
