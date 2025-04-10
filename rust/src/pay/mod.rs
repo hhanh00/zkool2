@@ -65,3 +65,22 @@ impl InputNote {
         self.remaining != self.amount
     }
 }
+
+pub struct TxPlan {
+    pub inputs: Vec<TxPlanIn>,
+    pub outputs: Vec<TxPlanOut>,
+    pub fee: u64,
+    pub change: u64,
+    pub change_pool: u8,
+}
+
+pub struct TxPlanIn {
+    pub pool: u8,
+    pub amount: u64,
+}
+
+pub struct TxPlanOut {
+    pub pool: u8,
+    pub amount: u64,
+    pub address: String,
+}

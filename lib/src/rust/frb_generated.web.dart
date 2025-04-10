@@ -79,6 +79,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> dco_decode_list_recipient(dynamic raw);
 
   @protected
+  List<TxPlanIn> dco_decode_list_tx_plan_in(dynamic raw);
+
+  @protected
+  List<TxPlanOut> dco_decode_list_tx_plan_out(dynamic raw);
+
+  @protected
   NewAccount dco_decode_new_account(dynamic raw);
 
   @protected
@@ -104,6 +110,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SyncProgress dco_decode_sync_progress(dynamic raw);
+
+  @protected
+  TxPlan dco_decode_tx_plan(dynamic raw);
+
+  @protected
+  TxPlanIn dco_decode_tx_plan_in(dynamic raw);
+
+  @protected
+  TxPlanOut dco_decode_tx_plan_out(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -171,6 +186,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer);
 
   @protected
+  List<TxPlanIn> sse_decode_list_tx_plan_in(SseDeserializer deserializer);
+
+  @protected
+  List<TxPlanOut> sse_decode_list_tx_plan_out(SseDeserializer deserializer);
+
+  @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
 
   @protected
@@ -196,6 +217,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SyncProgress sse_decode_sync_progress(SseDeserializer deserializer);
+
+  @protected
+  TxPlan sse_decode_tx_plan(SseDeserializer deserializer);
+
+  @protected
+  TxPlanIn sse_decode_tx_plan_in(SseDeserializer deserializer);
+
+  @protected
+  TxPlanOut sse_decode_tx_plan_out(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -273,6 +303,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Recipient> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_tx_plan_in(
+      List<TxPlanIn> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_tx_plan_out(
+      List<TxPlanOut> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);
 
   @protected
@@ -299,6 +337,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_plan(TxPlan self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_plan_in(TxPlanIn self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_plan_out(TxPlanOut self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

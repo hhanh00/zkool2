@@ -74,7 +74,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => -481387215;
+  int get rustContentHash => -1635368253;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -117,10 +117,11 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiDbOpenDatabase({required String dbFilepath});
 
-  Future<void> crateApiPayPrepare(
+  Future<TxPlan> crateApiPayPrepare(
       {required int account,
-      required bool senderPayFees,
-      required int srcPools});
+      required int srcPools,
+      required List<Recipient> recipients,
+      required bool recipientPaysFee});
 
   Future<Receivers> crateApiAccountReceiversDefault();
 
@@ -143,12 +144,6 @@ abstract class RustLibApi extends BaseApi {
   String crateApiAccountUaFromUfvk({required String ufvk, int? di});
 
   Future<void> crateApiAccountUpdateAccount({required AccountUpdate update});
-
-  Future<void> crateApiPayWipPlan(
-      {required int account,
-      required int srcPools,
-      required List<Recipient> recipients,
-      required bool recipientPaysFee});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -520,32 +515,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiPayPrepare(
+  Future<TxPlan> crateApiPayPrepare(
       {required int account,
-      required bool senderPayFees,
-      required int srcPools}) {
+      required int srcPools,
+      required List<Recipient> recipients,
+      required bool recipientPaysFee}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_u_32(account, serializer);
-        sse_encode_bool(senderPayFees, serializer);
         sse_encode_u_8(srcPools, serializer);
+        sse_encode_list_recipient(recipients, serializer);
+        sse_encode_bool(recipientPaysFee, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 16, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
+        decodeSuccessData: sse_decode_tx_plan,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiPayPrepareConstMeta,
-      argValues: [account, senderPayFees, srcPools],
+      argValues: [account, srcPools, recipients, recipientPaysFee],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiPayPrepareConstMeta => const TaskConstMeta(
         debugName: "prepare",
-        argNames: ["account", "senderPayFees", "srcPools"],
+        argNames: ["account", "srcPools", "recipients", "recipientPaysFee"],
       );
 
   @override
@@ -797,37 +794,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["update"],
       );
 
-  @override
-  Future<void> crateApiPayWipPlan(
-      {required int account,
-      required int srcPools,
-      required List<Recipient> recipients,
-      required bool recipientPaysFee}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(account, serializer);
-        sse_encode_u_8(srcPools, serializer);
-        sse_encode_list_recipient(recipients, serializer);
-        sse_encode_bool(recipientPaysFee, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 27, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiPayWipPlanConstMeta,
-      argValues: [account, srcPools, recipients, recipientPaysFee],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiPayWipPlanConstMeta => const TaskConstMeta(
-        debugName: "wip_plan",
-        argNames: ["account", "srcPools", "recipients", "recipientPaysFee"],
-      );
-
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -956,6 +922,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TxPlanIn> dco_decode_list_tx_plan_in(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_tx_plan_in).toList();
+  }
+
+  @protected
+  List<TxPlanOut> dco_decode_list_tx_plan_out(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_tx_plan_out).toList();
+  }
+
+  @protected
   NewAccount dco_decode_new_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1043,6 +1021,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return SyncProgress(
       height: dco_decode_u_32(arr[0]),
       time: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  TxPlan dco_decode_tx_plan(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return TxPlan(
+      inputs: dco_decode_list_tx_plan_in(arr[0]),
+      outputs: dco_decode_list_tx_plan_out(arr[1]),
+      fee: dco_decode_u_64(arr[2]),
+      change: dco_decode_u_64(arr[3]),
+      changePool: dco_decode_u_8(arr[4]),
+    );
+  }
+
+  @protected
+  TxPlanIn dco_decode_tx_plan_in(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TxPlanIn(
+      pool: dco_decode_u_8(arr[0]),
+      amount: dco_decode_u_64(arr[1]),
+    );
+  }
+
+  @protected
+  TxPlanOut dco_decode_tx_plan_out(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return TxPlanOut(
+      pool: dco_decode_u_8(arr[0]),
+      amount: dco_decode_u_64(arr[1]),
+      address: dco_decode_String(arr[2]),
     );
   }
 
@@ -1225,6 +1243,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TxPlanIn> sse_decode_list_tx_plan_in(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TxPlanIn>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_tx_plan_in(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TxPlanOut> sse_decode_list_tx_plan_out(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TxPlanOut>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_tx_plan_out(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
@@ -1324,6 +1366,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_height = sse_decode_u_32(deserializer);
     var var_time = sse_decode_u_32(deserializer);
     return SyncProgress(height: var_height, time: var_time);
+  }
+
+  @protected
+  TxPlan sse_decode_tx_plan(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_inputs = sse_decode_list_tx_plan_in(deserializer);
+    var var_outputs = sse_decode_list_tx_plan_out(deserializer);
+    var var_fee = sse_decode_u_64(deserializer);
+    var var_change = sse_decode_u_64(deserializer);
+    var var_changePool = sse_decode_u_8(deserializer);
+    return TxPlan(
+        inputs: var_inputs,
+        outputs: var_outputs,
+        fee: var_fee,
+        change: var_change,
+        changePool: var_changePool);
+  }
+
+  @protected
+  TxPlanIn sse_decode_tx_plan_in(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pool = sse_decode_u_8(deserializer);
+    var var_amount = sse_decode_u_64(deserializer);
+    return TxPlanIn(pool: var_pool, amount: var_amount);
+  }
+
+  @protected
+  TxPlanOut sse_decode_tx_plan_out(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pool = sse_decode_u_8(deserializer);
+    var var_amount = sse_decode_u_64(deserializer);
+    var var_address = sse_decode_String(deserializer);
+    return TxPlanOut(pool: var_pool, amount: var_amount, address: var_address);
   }
 
   @protected
@@ -1498,6 +1573,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_tx_plan_in(
+      List<TxPlanIn> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_tx_plan_in(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_tx_plan_out(
+      List<TxPlanOut> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_tx_plan_out(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
@@ -1578,6 +1673,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_32(self.time, serializer);
+  }
+
+  @protected
+  void sse_encode_tx_plan(TxPlan self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_tx_plan_in(self.inputs, serializer);
+    sse_encode_list_tx_plan_out(self.outputs, serializer);
+    sse_encode_u_64(self.fee, serializer);
+    sse_encode_u_64(self.change, serializer);
+    sse_encode_u_8(self.changePool, serializer);
+  }
+
+  @protected
+  void sse_encode_tx_plan_in(TxPlanIn self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.pool, serializer);
+    sse_encode_u_64(self.amount, serializer);
+  }
+
+  @protected
+  void sse_encode_tx_plan_out(TxPlanOut self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.pool, serializer);
+    sse_encode_u_64(self.amount, serializer);
+    sse_encode_String(self.address, serializer);
   }
 
   @protected
