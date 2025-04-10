@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
-import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -25,7 +24,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   StreamSubscription<SyncProgress>? progressSubscription;
   int? height;
   PoolBalance? poolBalance;
-  TxPlan? txPlan;
 
   @override
   void initState() {
@@ -33,21 +31,6 @@ class AccountViewPageState extends State<AccountViewPage> {
     setAccount(id: widget.account.id);
     Future(() async {
       final b = await balance();
-      final recipients = [
-        Recipient(
-            address:
-                "zs1n55f4yctfdjflu75vx4vys3xgs6qzxd26qmhmvwxj9jdwxg8sswznpvu7elkccmddfdn5hnfseq",
-            amount: BigInt.from(1480000)),
-        Recipient(
-            address:
-                "u1ydx7cvpul4v8z29q4vuqczalmsztn5dlxrmujvavzsxyxjk3evpuerqhgwnhemdw9t3q6mpk3klk8ss7803lsv400zax2wrw8cacmzaz",
-            amount: BigInt.from(280000)),
-      ];
-      txPlan = await prepare(
-          account: widget.account.id,
-          srcPools: 7,
-          recipients: recipients,
-          recipientPaysFee: false);
       setState(() {
         poolBalance = b;
       });
@@ -66,6 +49,7 @@ class AccountViewPageState extends State<AccountViewPage> {
           actions: [
             IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
             IconButton(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+            IconButton(onPressed: onSend, icon: Icon(Icons.send)),
           ],
         ),
         body: Padding(
@@ -81,7 +65,6 @@ class AccountViewPageState extends State<AccountViewPage> {
                   const Gap(8),
                   Text("O: ${zatToString(b.field0[2])}"),
                 ]),
-              if (txPlan != null) ...showTxPlan(context, txPlan!),
             ],
           ),
         ));
@@ -111,41 +94,10 @@ class AccountViewPageState extends State<AccountViewPage> {
     final dbHeight = await getDbHeight(account: widget.account.id);
     await rewindSync(height: dbHeight - 60);
   }
-}
 
-List<Widget> showTxPlan(BuildContext context, TxPlan txPlan) {
-  final t = Theme.of(context).textTheme;
-
-  final inouts = ListView.builder(
-      shrinkWrap: true,
-      itemCount: txPlan.inputs.length + txPlan.outputs.length,
-      itemBuilder: (context, index) {
-        if (index < txPlan.inputs.length) {
-          final input = txPlan.inputs[index];
-          return ListTile(
-            leading: Text("Input ${index + 1}"),
-            trailing: Text("Value: ${zatToString(input.amount)}"),
-            subtitle: Text("Pool: ${input.pool}"),
-          );
-        } else {
-          final index2 = index - txPlan.inputs.length;
-          final output = txPlan.outputs[index2];
-          return ListTile(
-            leading: Text("Output ${index2 + 1}"),
-            title: Text("Address: ${output.address}"),
-            trailing: Text("Value: ${zatToString(output.amount)}"),
-            subtitle: Text("Pool: ${output.pool}"),
-          );
-        }
-      });
-
-  return [
-    Text("Tx Plan", style: t.titleSmall),
-    Text("Fee: ${zatToString(txPlan.fee)}"),
-    Text("Change: ${zatToString(txPlan.change)}"),
-    Text("Change Pool: ${txPlan.changePool}"),
-    Expanded(child: inouts)
-  ];
+  void onSend() async {
+    await GoRouter.of(context).push("/send");
+  }
 }
 
 class AccountEditPage extends StatefulWidget {
