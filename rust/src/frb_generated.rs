@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -481387215;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1635368253;
 
 // Section: executor
 
@@ -595,16 +595,18 @@ fn wire__crate__api__pay__prepare_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_sender_pay_fees = <bool>::sse_decode(&mut deserializer);
             let api_src_pools = <u8>::sse_decode(&mut deserializer);
+            let api_recipients = <Vec<crate::pay::Recipient>>::sse_decode(&mut deserializer);
+            let api_recipient_pays_fee = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok = crate::api::pay::prepare(
                             api_account,
-                            api_sender_pay_fees,
                             api_src_pools,
+                            &api_recipients,
+                            api_recipient_pays_fee,
                         )
                         .await?;
                         Ok(output_ok)
@@ -974,51 +976,6 @@ fn wire__crate__api__account__update_account_impl(
         },
     )
 }
-fn wire__crate__api__pay__wip_plan_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "wip_plan",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_src_pools = <u8>::sse_decode(&mut deserializer);
-            let api_recipients = <Vec<crate::pay::Recipient>>::sse_decode(&mut deserializer);
-            let api_recipient_pays_fee = <bool>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let output_ok = crate::api::pay::wip_plan(
-                            api_account,
-                            api_src_pools,
-                            &api_recipients,
-                            api_recipient_pays_fee,
-                        )
-                        .await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
 
 // Section: dart2rust
 
@@ -1163,6 +1120,30 @@ impl SseDecode for Vec<crate::pay::Recipient> {
     }
 }
 
+impl SseDecode for Vec<crate::pay::TxPlanIn> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::pay::TxPlanIn>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::pay::TxPlanOut> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::pay::TxPlanOut>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for crate::api::account::NewAccount {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1279,6 +1260,50 @@ impl SseDecode for crate::api::sync::SyncProgress {
     }
 }
 
+impl SseDecode for crate::pay::TxPlan {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_inputs = <Vec<crate::pay::TxPlanIn>>::sse_decode(deserializer);
+        let mut var_outputs = <Vec<crate::pay::TxPlanOut>>::sse_decode(deserializer);
+        let mut var_fee = <u64>::sse_decode(deserializer);
+        let mut var_change = <u64>::sse_decode(deserializer);
+        let mut var_changePool = <u8>::sse_decode(deserializer);
+        return crate::pay::TxPlan {
+            inputs: var_inputs,
+            outputs: var_outputs,
+            fee: var_fee,
+            change: var_change,
+            change_pool: var_changePool,
+        };
+    }
+}
+
+impl SseDecode for crate::pay::TxPlanIn {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_amount = <u64>::sse_decode(deserializer);
+        return crate::pay::TxPlanIn {
+            pool: var_pool,
+            amount: var_amount,
+        };
+    }
+}
+
+impl SseDecode for crate::pay::TxPlanOut {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_amount = <u64>::sse_decode(deserializer);
+        let mut var_address = <String>::sse_decode(deserializer);
+        return crate::pay::TxPlanOut {
+            pool: var_pool,
+            amount: var_amount,
+            address: var_address,
+        };
+    }
+}
+
 impl SseDecode for u32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1342,7 +1367,6 @@ fn pde_ffi_dispatcher_primary_impl(
         22 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
         24 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
         26 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__pay__wip_plan_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1518,6 +1542,58 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncProgress>
         self
     }
 }
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::pay::TxPlan {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.inputs.into_into_dart().into_dart(),
+            self.outputs.into_into_dart().into_dart(),
+            self.fee.into_into_dart().into_dart(),
+            self.change.into_into_dart().into_dart(),
+            self.change_pool.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::pay::TxPlan {}
+impl flutter_rust_bridge::IntoIntoDart<crate::pay::TxPlan> for crate::pay::TxPlan {
+    fn into_into_dart(self) -> crate::pay::TxPlan {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::pay::TxPlanIn {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.pool.into_into_dart().into_dart(),
+            self.amount.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::pay::TxPlanIn {}
+impl flutter_rust_bridge::IntoIntoDart<crate::pay::TxPlanIn> for crate::pay::TxPlanIn {
+    fn into_into_dart(self) -> crate::pay::TxPlanIn {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::pay::TxPlanOut {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.pool.into_into_dart().into_dart(),
+            self.amount.into_into_dart().into_dart(),
+            self.address.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::pay::TxPlanOut {}
+impl flutter_rust_bridge::IntoIntoDart<crate::pay::TxPlanOut> for crate::pay::TxPlanOut {
+    fn into_into_dart(self) -> crate::pay::TxPlanOut {
+        self
+    }
+}
 
 impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1627,6 +1703,26 @@ impl SseEncode for Vec<crate::pay::Recipient> {
     }
 }
 
+impl SseEncode for Vec<crate::pay::TxPlanIn> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::pay::TxPlanIn>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::pay::TxPlanOut> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::pay::TxPlanOut>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::account::NewAccount {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1711,6 +1807,34 @@ impl SseEncode for crate::api::sync::SyncProgress {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.height, serializer);
         <u32>::sse_encode(self.time, serializer);
+    }
+}
+
+impl SseEncode for crate::pay::TxPlan {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::pay::TxPlanIn>>::sse_encode(self.inputs, serializer);
+        <Vec<crate::pay::TxPlanOut>>::sse_encode(self.outputs, serializer);
+        <u64>::sse_encode(self.fee, serializer);
+        <u64>::sse_encode(self.change, serializer);
+        <u8>::sse_encode(self.change_pool, serializer);
+    }
+}
+
+impl SseEncode for crate::pay::TxPlanIn {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.pool, serializer);
+        <u64>::sse_encode(self.amount, serializer);
+    }
+}
+
+impl SseEncode for crate::pay::TxPlanOut {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.pool, serializer);
+        <u64>::sse_encode(self.amount, serializer);
+        <String>::sse_encode(self.address, serializer);
     }
 }
 
