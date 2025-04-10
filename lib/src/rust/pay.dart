@@ -40,3 +40,83 @@ class Recipient {
           userMemo == other.userMemo &&
           memoBytes == other.memoBytes;
 }
+
+class TxPlan {
+  final List<TxPlanIn> inputs;
+  final List<TxPlanOut> outputs;
+  final BigInt fee;
+  final BigInt change;
+  final int changePool;
+
+  const TxPlan({
+    required this.inputs,
+    required this.outputs,
+    required this.fee,
+    required this.change,
+    required this.changePool,
+  });
+
+  @override
+  int get hashCode =>
+      inputs.hashCode ^
+      outputs.hashCode ^
+      fee.hashCode ^
+      change.hashCode ^
+      changePool.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxPlan &&
+          runtimeType == other.runtimeType &&
+          inputs == other.inputs &&
+          outputs == other.outputs &&
+          fee == other.fee &&
+          change == other.change &&
+          changePool == other.changePool;
+}
+
+class TxPlanIn {
+  final int pool;
+  final BigInt amount;
+
+  const TxPlanIn({
+    required this.pool,
+    required this.amount,
+  });
+
+  @override
+  int get hashCode => pool.hashCode ^ amount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxPlanIn &&
+          runtimeType == other.runtimeType &&
+          pool == other.pool &&
+          amount == other.amount;
+}
+
+class TxPlanOut {
+  final int pool;
+  final BigInt amount;
+  final String address;
+
+  const TxPlanOut({
+    required this.pool,
+    required this.amount,
+    required this.address,
+  });
+
+  @override
+  int get hashCode => pool.hashCode ^ amount.hashCode ^ address.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxPlanOut &&
+          runtimeType == other.runtimeType &&
+          pool == other.pool &&
+          amount == other.amount &&
+          address == other.address;
+}

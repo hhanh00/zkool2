@@ -7,21 +7,12 @@ import '../frb_generated.dart';
 import '../pay.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `fill_single_receivers`
-
-Future<void> prepare(
-        {required int account,
-        required bool senderPayFees,
-        required int srcPools}) =>
-    RustLib.instance.api.crateApiPayPrepare(
-        account: account, senderPayFees: senderPayFees, srcPools: srcPools);
-
-Future<void> wipPlan(
+Future<TxPlan> prepare(
         {required int account,
         required int srcPools,
         required List<Recipient> recipients,
         required bool recipientPaysFee}) =>
-    RustLib.instance.api.crateApiPayWipPlan(
+    RustLib.instance.api.crateApiPayPrepare(
         account: account,
         srcPools: srcPools,
         recipients: recipients,
