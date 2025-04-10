@@ -8,3 +8,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 bool isValidKey({required String key}) =>
     RustLib.instance.api.crateApiKeyIsValidKey(key: key);
+
+bool isValidAddress({required String address}) =>
+    RustLib.instance.api.crateApiKeyIsValidAddress(address: address);
