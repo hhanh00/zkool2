@@ -42,38 +42,46 @@ class Recipient {
 }
 
 class TxPlan {
+  final int height;
   final List<TxPlanIn> inputs;
   final List<TxPlanOut> outputs;
   final BigInt fee;
   final BigInt change;
   final int changePool;
+  final Uint8List data;
 
   const TxPlan({
+    required this.height,
     required this.inputs,
     required this.outputs,
     required this.fee,
     required this.change,
     required this.changePool,
+    required this.data,
   });
 
   @override
   int get hashCode =>
+      height.hashCode ^
       inputs.hashCode ^
       outputs.hashCode ^
       fee.hashCode ^
       change.hashCode ^
-      changePool.hashCode;
+      changePool.hashCode ^
+      data.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TxPlan &&
           runtimeType == other.runtimeType &&
+          height == other.height &&
           inputs == other.inputs &&
           outputs == other.outputs &&
           fee == other.fee &&
           change == other.change &&
-          changePool == other.changePool;
+          changePool == other.changePool &&
+          data == other.data;
 }
 
 class TxPlanIn {

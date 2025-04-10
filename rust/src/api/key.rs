@@ -25,3 +25,9 @@ pub fn is_valid_key(key: &str) -> bool {
 
     false
 }
+
+#[frb(sync)]
+pub fn is_valid_address(address: &str) -> bool {
+    let r = zcash_address::ZcashAddress::try_from_encoded(address);
+    r.is_ok()
+}

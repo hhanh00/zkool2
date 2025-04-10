@@ -5,9 +5,9 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/validators.dart';
 
 class NewAccountPage extends StatefulWidget {
   const NewAccountPage({super.key});
@@ -76,7 +76,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                     decoration: const InputDecoration(
                         labelText:
                             "Key (Seed Phrase, Private Key, or Viewing Key)"),
-                    validator: validKey,
+                    validator: (s) => validKey(s, restore: restore),
                   ),
                 Gap(16),
                 if (restore)
@@ -135,15 +135,5 @@ class NewAccountPageState extends State<NewAccountPage> {
       final bytes = await icon.readAsBytes();
       setState(() => iconBytes = bytes);
     }
-  }
-
-  String? validKey(String? key) {
-    if ((key == null || key.isEmpty)) {
-      return restore ? "Key is required" : null;
-    }
-    if (!isValidKey(key: key)) {
-      return "Invalid Key";
-    }
-    return null;
   }
 }

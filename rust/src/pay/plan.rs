@@ -45,7 +45,7 @@ use crate::{
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
-        InputNote, Recipient, RecipientState, TxPlanIn, TxPlan, TxPlanOut,
+        InputNote, Recipient, RecipientState, TxPlan, TxPlanIn, TxPlanOut,
     },
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
     Client,
@@ -87,7 +87,12 @@ pub async fn plan_transaction(
 
     println!("Unspent notes:");
     for inp in inputs.iter() {
-        println!("id: {}, pool: {}, amount: {}", inp.id, inp.pool, to_zec(inp.amount));
+        println!(
+            "id: {}, pool: {}, amount: {}",
+            inp.id,
+            inp.pool,
+            to_zec(inp.amount)
+        );
     }
 
     // group the inputs by pool
@@ -136,18 +141,21 @@ pub async fn plan_transaction(
     // Then, the only time we can have a multiple receiver recipient
     // is when we have a sapling and an orchard receiver, ie.
     // when we have to choose between shielded pools
-    //
-    // In the second pass, we constrain the receiver to be the pool
-    // that we have the most balance in. This is because we hope
-    // to minimize the amount that would have to go through the
-    // turnstile.
 
     let balances = input_pools
         .iter()
         .map(|pool| pool.iter().map(|n| n.remaining).sum::<u64>())
         .collect::<Vec<_>>();
 
-    let largest_shielded_pool = if balances[1] > balances[2] {
+    // In the second pass, we constrain the receiver to be the change pool
+    // or the pool that we have the most balance in if the change pool is transparent
+    // This is because we hope to minimize the amount that would have to go through the
+    // turnstile.
+
+    let largest_shielded_pool = 
+    if change_pool != 0 {
+        PoolMask::from_pool(change_pool)
+    } else if balances[1] > balances[2] {
         PoolMask(2)
     } else {
         PoolMask(4)
@@ -471,11 +479,13 @@ pub async fn plan_transaction(
     println!("{}", hex::encode(&tx_bytes));
 
     let tx_plan = TxPlan {
+        height,
         inputs,
         outputs: outs,
         fee,
         change,
         change_pool,
+        data: tx_bytes,
     };
 
     Ok(tx_plan)
@@ -539,7 +549,7 @@ fn fill_single_receivers(
                 if inp.remaining == 0 || inp.amount < COST_PER_ACTION {
                     continue;
                 }
-                
+
                 // skip if the recipient is not interested in this pool
                 if r.pool_mask.intersect(&PoolMask::from_pool(dst)).is_empty() {
                     continue;
@@ -585,8 +595,18 @@ fn fill_single_receivers(
                 r.remaining -= amount;
                 inp.remaining -= amount;
 
-                println!("Input id: {}, amount: {}, remaining: {}", inp.id, to_zec(inp.amount), to_zec(inp.remaining));
-                println!("Recipient id: {}, amount: {}, remaining: {}", r.recipient.address, to_zec(r.recipient.amount), to_zec(r.remaining));
+                println!(
+                    "Input id: {}, amount: {}, remaining: {}",
+                    inp.id,
+                    to_zec(inp.amount),
+                    to_zec(inp.remaining)
+                );
+                println!(
+                    "Recipient id: {}, amount: {}, remaining: {}",
+                    r.recipient.address,
+                    to_zec(r.recipient.amount),
+                    to_zec(r.remaining)
+                );
             }
         }
     }
