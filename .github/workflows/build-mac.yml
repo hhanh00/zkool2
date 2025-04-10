@@ -7,6 +7,9 @@ on:
     tags:
       - zkool-v*
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
     runs-on: macos-latest
@@ -53,6 +56,6 @@ jobs:
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/bundle/dmg/*.dmg
+          files: ./*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
