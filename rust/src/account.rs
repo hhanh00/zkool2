@@ -10,7 +10,7 @@ use orchard::{
     Note,
 };
 use ripemd::{Digest as _, Ripemd160};
-use sapling_crypto::zip32::DiversifiableFullViewingKey;
+use sapling_crypto::zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
@@ -43,6 +43,19 @@ pub fn derive_transparent_address(
     let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
     let addr = TransparentAddress::PublicKeyHash(pkh);
     Ok(addr)
+}
+
+pub async fn get_sapling_sk(
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<ExtendedSpendingKey> {
+    let (fvk,): (Vec<u8>,) = sqlx::query_as("SELECT xsk FROM sapling_accounts WHERE account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+    let sk = ExtendedSpendingKey::read(&*fvk).unwrap();
+
+    Ok(sk)
 }
 
 pub async fn get_sapling_vk(
@@ -108,6 +121,19 @@ pub async fn get_sapling_note(
     .await?;
 
     Ok(r)
+}
+
+pub async fn get_orchard_sk(
+    connection: &sqlx::Pool<sqlx::Sqlite>,
+    account: u32,
+) -> Result<orchard::keys::SpendingKey> {
+    let (sk,): (Vec<u8>,) = sqlx::query_as("SELECT xsk FROM orchard_accounts WHERE account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+    let sk = orchard::keys::SpendingKey::from_bytes(sk.try_into().unwrap()).unwrap();
+
+    Ok(sk)
 }
 
 pub async fn get_orchard_vk(
