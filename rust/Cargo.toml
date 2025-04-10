@@ -27,7 +27,7 @@ futures = "0.3"
 zcash_keys = { version = "0.8", features = ["sapling", "orchard", "transparent-inputs"] }
 zcash_protocol = "0.5"
 zcash_primitives = { version = "0.22", features = [ "transparent-inputs" ] }
-zcash_proofs = { version = "0.22", features = ["download-params"] }
+zcash_proofs = { version = "0.22", features = ["bundled-prover"] }
 zcash_address = "0.7"
 zcash_encoding = "0.3"
 zcash_transparent = { version = "0.2", features = ["transparent-inputs"] }
@@ -52,7 +52,7 @@ rustls = { version = "0.23", default-features = false, features = ["ring"] }
 prost = "0.13.5"
 bincode = { version = "2.0" }
 fpdec = "0.11"
-pczt = { version = "0.2", features = ["zcp-builder", "transparent", "sapling", "orchard"] }
+pczt = { version = "0.2", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
 
 tracing = "0.1"
 itertools = "0.14"
