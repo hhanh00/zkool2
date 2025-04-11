@@ -360,10 +360,7 @@ async fn handle_message(
                 .execute(&mut **db_tx)
                 .await?;
                 println!("Checkpoint for account: {}, height: {}", a, height);
-                let _ = tx_progress.send(SyncProgress {
-                    height,
-                    time: 0,
-                }).await;
+                let _ = tx_progress.send(SyncProgress { height, time: 0 }).await;
             }
         }
         WarpSyncMessage::BlockHeader(block_header) => {
@@ -394,19 +391,24 @@ async fn handle_message(
     Ok(())
 }
 
-pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>) -> Result<()> {
-    let account_heights =
-        sqlx::query("SELECT account, MIN(height) FROM sync_heights GROUP BY account")
-            .map(|row: SqliteRow| {
-                let account: u32 = row.get(0);
-                let height: u32 = row.get(1);
-                (account, height)
-            })
-            .fetch_all(connection)
-            .await?;
+pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>, accounts: &[u32]) -> Result<()> {
+    for account in accounts {
+        let account_heights = sqlx::query(
+            "SELECT account, MIN(height) FROM sync_heights
+            WHERE account = ?",
+        )
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let height: u32 = row.get(1);
+            (account, height)
+        })
+        .fetch_all(connection)
+        .await?;
 
-    for (account, height) in account_heights {
-        trim_sync_data(connection, account, height).await?;
+        for (account, height) in account_heights {
+            trim_sync_data(connection, account, height).await?;
+        }
     }
 
     Ok(())

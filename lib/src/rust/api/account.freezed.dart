@@ -27,6 +27,7 @@ mixin _$Account {
   bool get hidden => throw _privateConstructorUsedError;
   bool get saved => throw _privateConstructorUsedError;
   bool get enabled => throw _privateConstructorUsedError;
+  int get height => throw _privateConstructorUsedError;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -50,7 +51,8 @@ abstract class $AccountCopyWith<$Res> {
       int position,
       bool hidden,
       bool saved,
-      bool enabled});
+      bool enabled,
+      int height});
 }
 
 /// @nodoc
@@ -79,6 +81,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? hidden = null,
     Object? saved = null,
     Object? enabled = null,
+    Object? height = null,
   }) {
     return _then(_value.copyWith(
       coin: null == coin
@@ -125,6 +128,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
               as bool,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -147,7 +154,8 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int position,
       bool hidden,
       bool saved,
-      bool enabled});
+      bool enabled,
+      int height});
 }
 
 /// @nodoc
@@ -174,6 +182,7 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? hidden = null,
     Object? saved = null,
     Object? enabled = null,
+    Object? height = null,
   }) {
     return _then(_$AccountImpl(
       coin: null == coin
@@ -220,6 +229,10 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
               as bool,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -238,7 +251,8 @@ class _$AccountImpl implements _Account {
       required this.position,
       required this.hidden,
       required this.saved,
-      required this.enabled});
+      required this.enabled,
+      required this.height});
 
   @override
   final int coin;
@@ -262,10 +276,12 @@ class _$AccountImpl implements _Account {
   final bool saved;
   @override
   final bool enabled;
+  @override
+  final int height;
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, height: $height)';
   }
 
   @override
@@ -284,7 +300,8 @@ class _$AccountImpl implements _Account {
                 other.position == position) &&
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
             (identical(other.saved, saved) || other.saved == saved) &&
-            (identical(other.enabled, enabled) || other.enabled == enabled));
+            (identical(other.enabled, enabled) || other.enabled == enabled) &&
+            (identical(other.height, height) || other.height == height));
   }
 
   @override
@@ -300,7 +317,8 @@ class _$AccountImpl implements _Account {
       position,
       hidden,
       saved,
-      enabled);
+      enabled,
+      height);
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -323,7 +341,8 @@ abstract class _Account implements Account {
       required final int position,
       required final bool hidden,
       required final bool saved,
-      required final bool enabled}) = _$AccountImpl;
+      required final bool enabled,
+      required final int height}) = _$AccountImpl;
 
   @override
   int get coin;
@@ -347,6 +366,8 @@ abstract class _Account implements Account {
   bool get saved;
   @override
   bool get enabled;
+  @override
+  int get height;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -363,6 +384,8 @@ mixin _$AccountUpdate {
   String? get name => throw _privateConstructorUsedError;
   Uint8List? get icon => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
+  bool? get hidden => throw _privateConstructorUsedError;
+  bool? get enabled => throw _privateConstructorUsedError;
 
   /// Create a copy of AccountUpdate
   /// with the given fields replaced by the non-null parameter values.
@@ -377,7 +400,14 @@ abstract class $AccountUpdateCopyWith<$Res> {
           AccountUpdate value, $Res Function(AccountUpdate) then) =
       _$AccountUpdateCopyWithImpl<$Res, AccountUpdate>;
   @useResult
-  $Res call({int coin, int id, String? name, Uint8List? icon, int? birth});
+  $Res call(
+      {int coin,
+      int id,
+      String? name,
+      Uint8List? icon,
+      int? birth,
+      bool? hidden,
+      bool? enabled});
 }
 
 /// @nodoc
@@ -400,6 +430,8 @@ class _$AccountUpdateCopyWithImpl<$Res, $Val extends AccountUpdate>
     Object? name = freezed,
     Object? icon = freezed,
     Object? birth = freezed,
+    Object? hidden = freezed,
+    Object? enabled = freezed,
   }) {
     return _then(_value.copyWith(
       coin: null == coin
@@ -422,6 +454,14 @@ class _$AccountUpdateCopyWithImpl<$Res, $Val extends AccountUpdate>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      hidden: freezed == hidden
+          ? _value.hidden
+          : hidden // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      enabled: freezed == enabled
+          ? _value.enabled
+          : enabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ) as $Val);
   }
 }
@@ -434,7 +474,14 @@ abstract class _$$AccountUpdateImplCopyWith<$Res>
       __$$AccountUpdateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int coin, int id, String? name, Uint8List? icon, int? birth});
+  $Res call(
+      {int coin,
+      int id,
+      String? name,
+      Uint8List? icon,
+      int? birth,
+      bool? hidden,
+      bool? enabled});
 }
 
 /// @nodoc
@@ -455,6 +502,8 @@ class __$$AccountUpdateImplCopyWithImpl<$Res>
     Object? name = freezed,
     Object? icon = freezed,
     Object? birth = freezed,
+    Object? hidden = freezed,
+    Object? enabled = freezed,
   }) {
     return _then(_$AccountUpdateImpl(
       coin: null == coin
@@ -477,6 +526,14 @@ class __$$AccountUpdateImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      hidden: freezed == hidden
+          ? _value.hidden
+          : hidden // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      enabled: freezed == enabled
+          ? _value.enabled
+          : enabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ));
   }
 }
@@ -485,7 +542,13 @@ class __$$AccountUpdateImplCopyWithImpl<$Res>
 
 class _$AccountUpdateImpl implements _AccountUpdate {
   const _$AccountUpdateImpl(
-      {required this.coin, required this.id, this.name, this.icon, this.birth});
+      {required this.coin,
+      required this.id,
+      this.name,
+      this.icon,
+      this.birth,
+      this.hidden,
+      this.enabled});
 
   @override
   final int coin;
@@ -497,10 +560,14 @@ class _$AccountUpdateImpl implements _AccountUpdate {
   final Uint8List? icon;
   @override
   final int? birth;
+  @override
+  final bool? hidden;
+  @override
+  final bool? enabled;
 
   @override
   String toString() {
-    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth)';
+    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, hidden: $hidden, enabled: $enabled)';
   }
 
   @override
@@ -512,12 +579,14 @@ class _$AccountUpdateImpl implements _AccountUpdate {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
-            (identical(other.birth, birth) || other.birth == birth));
+            (identical(other.birth, birth) || other.birth == birth) &&
+            (identical(other.hidden, hidden) || other.hidden == hidden) &&
+            (identical(other.enabled, enabled) || other.enabled == enabled));
   }
 
   @override
   int get hashCode => Object.hash(runtimeType, coin, id, name,
-      const DeepCollectionEquality().hash(icon), birth);
+      const DeepCollectionEquality().hash(icon), birth, hidden, enabled);
 
   /// Create a copy of AccountUpdate
   /// with the given fields replaced by the non-null parameter values.
@@ -534,7 +603,9 @@ abstract class _AccountUpdate implements AccountUpdate {
       required final int id,
       final String? name,
       final Uint8List? icon,
-      final int? birth}) = _$AccountUpdateImpl;
+      final int? birth,
+      final bool? hidden,
+      final bool? enabled}) = _$AccountUpdateImpl;
 
   @override
   int get coin;
@@ -546,6 +617,10 @@ abstract class _AccountUpdate implements AccountUpdate {
   Uint8List? get icon;
   @override
   int? get birth;
+  @override
+  bool? get hidden;
+  @override
+  bool? get enabled;
 
   /// Create a copy of AccountUpdate
   /// with the given fields replaced by the non-null parameter values.
