@@ -21,6 +21,8 @@ Future<void> rewindSync({required int height}) =>
 Future<int> getDbHeight({required int account}) =>
     RustLib.instance.api.crateApiSyncGetDbHeight(account: account);
 
+Future<void> getTxDetails() => RustLib.instance.api.crateApiSyncGetTxDetails();
+
 class PoolBalance {
   final Uint64List field0;
 
