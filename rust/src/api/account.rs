@@ -444,3 +444,23 @@ pub async fn list_tx_history() -> Result<Vec<Tx>> {
     let txs = crate::db::fetch_txs(c.get_pool(), c.account).await?;
     Ok(txs)
 }
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct Memo {
+    pub id: u32,
+    pub id_tx: u32,
+    pub id_note: Option<u32>,
+    pub pool: u8,
+    pub height: u32,
+    pub vout: u32,
+    pub time: u32,
+    pub memo_bytes: Vec<u8>,
+    pub memo: Option<String>,
+}
+
+#[frb]
+pub async fn list_memos() -> Result<Vec<Memo>> {
+    let c = get_coin!();
+    let memos = crate::db::fetch_memos(c.get_pool(), c.account).await?;
+    Ok(memos)
+}

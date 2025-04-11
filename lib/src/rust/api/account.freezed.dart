@@ -631,6 +631,295 @@ abstract class _AccountUpdate implements AccountUpdate {
 }
 
 /// @nodoc
+mixin _$Memo {
+  int get id => throw _privateConstructorUsedError;
+  int get idTx => throw _privateConstructorUsedError;
+  int? get idNote => throw _privateConstructorUsedError;
+  int get pool => throw _privateConstructorUsedError;
+  int get height => throw _privateConstructorUsedError;
+  int get vout => throw _privateConstructorUsedError;
+  int get time => throw _privateConstructorUsedError;
+  Uint8List get memoBytes => throw _privateConstructorUsedError;
+  String? get memo => throw _privateConstructorUsedError;
+
+  /// Create a copy of Memo
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $MemoCopyWith<Memo> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $MemoCopyWith<$Res> {
+  factory $MemoCopyWith(Memo value, $Res Function(Memo) then) =
+      _$MemoCopyWithImpl<$Res, Memo>;
+  @useResult
+  $Res call(
+      {int id,
+      int idTx,
+      int? idNote,
+      int pool,
+      int height,
+      int vout,
+      int time,
+      Uint8List memoBytes,
+      String? memo});
+}
+
+/// @nodoc
+class _$MemoCopyWithImpl<$Res, $Val extends Memo>
+    implements $MemoCopyWith<$Res> {
+  _$MemoCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of Memo
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? idTx = null,
+    Object? idNote = freezed,
+    Object? pool = null,
+    Object? height = null,
+    Object? vout = null,
+    Object? time = null,
+    Object? memoBytes = null,
+    Object? memo = freezed,
+  }) {
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      idTx: null == idTx
+          ? _value.idTx
+          : idTx // ignore: cast_nullable_to_non_nullable
+              as int,
+      idNote: freezed == idNote
+          ? _value.idNote
+          : idNote // ignore: cast_nullable_to_non_nullable
+              as int?,
+      pool: null == pool
+          ? _value.pool
+          : pool // ignore: cast_nullable_to_non_nullable
+              as int,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
+      vout: null == vout
+          ? _value.vout
+          : vout // ignore: cast_nullable_to_non_nullable
+              as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
+      memoBytes: null == memoBytes
+          ? _value.memoBytes
+          : memoBytes // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      memo: freezed == memo
+          ? _value.memo
+          : memo // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$MemoImplCopyWith<$Res> implements $MemoCopyWith<$Res> {
+  factory _$$MemoImplCopyWith(
+          _$MemoImpl value, $Res Function(_$MemoImpl) then) =
+      __$$MemoImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call(
+      {int id,
+      int idTx,
+      int? idNote,
+      int pool,
+      int height,
+      int vout,
+      int time,
+      Uint8List memoBytes,
+      String? memo});
+}
+
+/// @nodoc
+class __$$MemoImplCopyWithImpl<$Res>
+    extends _$MemoCopyWithImpl<$Res, _$MemoImpl>
+    implements _$$MemoImplCopyWith<$Res> {
+  __$$MemoImplCopyWithImpl(_$MemoImpl _value, $Res Function(_$MemoImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of Memo
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? idTx = null,
+    Object? idNote = freezed,
+    Object? pool = null,
+    Object? height = null,
+    Object? vout = null,
+    Object? time = null,
+    Object? memoBytes = null,
+    Object? memo = freezed,
+  }) {
+    return _then(_$MemoImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      idTx: null == idTx
+          ? _value.idTx
+          : idTx // ignore: cast_nullable_to_non_nullable
+              as int,
+      idNote: freezed == idNote
+          ? _value.idNote
+          : idNote // ignore: cast_nullable_to_non_nullable
+              as int?,
+      pool: null == pool
+          ? _value.pool
+          : pool // ignore: cast_nullable_to_non_nullable
+              as int,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
+      vout: null == vout
+          ? _value.vout
+          : vout // ignore: cast_nullable_to_non_nullable
+              as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
+      memoBytes: null == memoBytes
+          ? _value.memoBytes
+          : memoBytes // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      memo: freezed == memo
+          ? _value.memo
+          : memo // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$MemoImpl implements _Memo {
+  const _$MemoImpl(
+      {required this.id,
+      required this.idTx,
+      this.idNote,
+      required this.pool,
+      required this.height,
+      required this.vout,
+      required this.time,
+      required this.memoBytes,
+      this.memo});
+
+  @override
+  final int id;
+  @override
+  final int idTx;
+  @override
+  final int? idNote;
+  @override
+  final int pool;
+  @override
+  final int height;
+  @override
+  final int vout;
+  @override
+  final int time;
+  @override
+  final Uint8List memoBytes;
+  @override
+  final String? memo;
+
+  @override
+  String toString() {
+    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$MemoImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.idTx, idTx) || other.idTx == idTx) &&
+            (identical(other.idNote, idNote) || other.idNote == idNote) &&
+            (identical(other.pool, pool) || other.pool == pool) &&
+            (identical(other.height, height) || other.height == height) &&
+            (identical(other.vout, vout) || other.vout == vout) &&
+            (identical(other.time, time) || other.time == time) &&
+            const DeepCollectionEquality().equals(other.memoBytes, memoBytes) &&
+            (identical(other.memo, memo) || other.memo == memo));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id, idTx, idNote, pool, height,
+      vout, time, const DeepCollectionEquality().hash(memoBytes), memo);
+
+  /// Create a copy of Memo
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$MemoImplCopyWith<_$MemoImpl> get copyWith =>
+      __$$MemoImplCopyWithImpl<_$MemoImpl>(this, _$identity);
+}
+
+abstract class _Memo implements Memo {
+  const factory _Memo(
+      {required final int id,
+      required final int idTx,
+      final int? idNote,
+      required final int pool,
+      required final int height,
+      required final int vout,
+      required final int time,
+      required final Uint8List memoBytes,
+      final String? memo}) = _$MemoImpl;
+
+  @override
+  int get id;
+  @override
+  int get idTx;
+  @override
+  int? get idNote;
+  @override
+  int get pool;
+  @override
+  int get height;
+  @override
+  int get vout;
+  @override
+  int get time;
+  @override
+  Uint8List get memoBytes;
+  @override
+  String? get memo;
+
+  /// Create a copy of Memo
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$MemoImplCopyWith<_$MemoImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$NewAccount {
   Uint8List? get icon => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
