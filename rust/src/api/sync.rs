@@ -20,7 +20,6 @@ use crate::{
     sync::shielded_sync,
 };
 
-// #[frb]
 pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
     accounts: Vec<u32>,
@@ -34,19 +33,18 @@ pub async fn synchronize(
     let network = c.network;
     let pool = c.get_pool();
 
-    recover_from_partial_sync(&pool).await?;
+    recover_from_partial_sync(&pool, &accounts).await?;
 
     // Get account heights
     let mut account_heights = HashMap::new();
-    let mut rows = sqlx::query("SELECT account, MIN(height) FROM sync_heights GROUP BY account")
-        .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let height: u32 = row.get(1);
-            (account, height)
-        })
-        .fetch(pool);
+    for account in accounts.iter() {
+    let (account, height): (u32, u32) = sqlx::query_as(
+        "SELECT account, MIN(height) FROM sync_heights
+        JOIN accounts ON account = id_account
+        WHERE account = ?")
+        .bind(account)
+        .fetch_one(pool).await?;
 
-    while let Some((account, height)) = rows.try_next().await? {
         account_heights.insert(account, height + 1);
     }
 
