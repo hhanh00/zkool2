@@ -278,7 +278,7 @@ async fn handle_message(
             // ignore duplicate transactions because they could have been created
             // by a previous type of scan (i.e transparent)
             sqlx::query
-                ("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, ?, 0)
+                ("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, ?)
                 ON CONFLICT DO NOTHING")
                 .bind(tx.account)
                 .bind(&tx.txid)

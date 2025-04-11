@@ -25,6 +25,7 @@ A wallet for zcash
     - [x] transparent
     - [x] shielded
     - [x] rewind
+    - [ ] memo
     - [ ] reorg detection
     - [ ] continuous
     - [ ] retry
@@ -39,8 +40,8 @@ A wallet for zcash
     - [x] pczt
     - [x] broadcast
 - [ ] History
-    - [ ] tx list
-    - [ ] table
+    - [x] tx list
+    - [ ] memo
 - [ ] Import/Export
     - [ ] accounts
     - [ ] tx history
