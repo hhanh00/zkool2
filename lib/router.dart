@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/pages/new_account.dart';
+import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -25,6 +26,10 @@ final router = GoRouter(
     GoRoute(
       path: '/account/new',
       builder: (context, state) => NewAccountPage(),
+    ),
+    GoRoute(
+      path: '/receive',
+      builder: (context, state) => ReceivePage(),
     ),
     GoRoute(
       path: '/send',
