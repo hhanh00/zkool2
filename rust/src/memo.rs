@@ -205,7 +205,7 @@ async fn process_memo(
                 sqlx::query(
                     "INSERT INTO memos
                 (account, height, tx, pool, vout, note, memo_text, memo_bytes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
                 )
                 .bind(account)
                 .bind(height)
