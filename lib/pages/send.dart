@@ -73,7 +73,7 @@ class SendPageState extends State<SendPage> {
     if (form.saveAndValidate()) {
       final address = form.fields['address']?.value as String;
       final amount = form.fields['amount']?.value as String;
-      final memo = form.fields['memo']?.value as String;
+      final memo = form.fields['memo']?.value as String?;
       logger.i("Send $amount to $address");
 
       final recipient =

@@ -15,7 +15,11 @@ use zcash_keys::{
     encoding::AddressCodec,
     keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
-use zcash_primitives::{consensus::Parameters as ZkParams, legacy::TransparentAddress, zip32::{fingerprint::SeedFingerprint, AccountId}};
+use zcash_primitives::{
+    consensus::Parameters as ZkParams,
+    legacy::TransparentAddress,
+    zip32::{fingerprint::SeedFingerprint, AccountId},
+};
 use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
@@ -266,10 +270,17 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
         store_account_transparent_sk(pool, account, tsk).await?;
         let tvk = &tsk.to_account_pubkey();
         store_account_transparent_vk(pool, account, tvk).await?;
-        let sk = derive_transparent_sk(&tsk, dindex)?;
+        let sk = derive_transparent_sk(&tsk, 0, dindex)?;
         let taddr = derive_transparent_address(tvk, 0, dindex)?;
-        store_account_transparent_addr(pool, account, 0, dindex, Some(&sk), &taddr.encode(&c.network))
-            .await?;
+        store_account_transparent_addr(
+            pool,
+            account,
+            0,
+            dindex,
+            Some(sk),
+            &taddr.encode(&c.network),
+        )
+        .await?;
 
         init_account_sapling(pool, account).await?;
         let sxsk = usk.sapling();
@@ -292,10 +303,17 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
             store_account_transparent_sk(pool, account, &xsk).await?;
             let xvk = xsk.to_account_pubkey();
             store_account_transparent_vk(pool, account, &xvk).await?;
-            let sk = derive_transparent_sk(&xsk, 0)?;
+            let sk = derive_transparent_sk(&xsk, 0, 0)?;
             let address = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(pool, account, 0, 0, Some(&sk), &address.encode(&network))
-                .await?;
+            store_account_transparent_addr(
+                pool,
+                account,
+                0,
+                0,
+                Some(sk),
+                &address.encode(&network),
+            )
+            .await?;
         }
         if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
             // No AccountPubKey::from_extended_pubkey, we need to use the bytes
@@ -312,8 +330,15 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
             let tpk = sk.public_key(&secp).serialize();
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
             let addr = TransparentAddress::PublicKeyHash(pkh.clone());
-            store_account_transparent_addr(pool, account, 0, 0, Some(&sk.to_bytes()), &addr.encode(&network))
-                .await?;
+            store_account_transparent_addr(
+                pool,
+                account,
+                0,
+                0,
+                Some(sk.to_bytes().to_vec()),
+                &addr.encode(&network),
+            )
+            .await?;
         }
     }
     if is_valid_sapling_key(&network, &key) {
@@ -365,6 +390,22 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
         update_dindex(pool, account, dindex, true).await?;
     }
     Ok(())
+}
+
+#[frb]
+pub async fn generate_next_dindex() -> Result<u32> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    crate::account::generate_next_dindex(&c.network, connection, c.account).await
+}
+
+#[frb]
+pub async fn generate_next_change_address() -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    crate::account::generate_next_change_address(&c.network, connection, c.account).await
 }
 
 #[frb(dart_metadata = ("freezed"))]

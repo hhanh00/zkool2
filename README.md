@@ -29,22 +29,25 @@ A wallet for zcash
     - [ ] reorg detection
     - [ ] continuous
     - [ ] retry
-    - [ ] sweep transparent addresses
+    - [ ] scan past transparent addresses
 - [ ] Receive
     - [x] default address generation
     - [ ] diversified address generation
-    - [ ] additional transparent addresses
+    - [x] additional transparent addresses
 - [ ] Send
     - [x] multiple payment editor
         - [x] address, amount
-        - [ ] memo
+        - [x] memo
     - [x] builder
     - [x] pczt
     - [x] broadcast
-    - [ ] generate change transparent addresses
+    - [x] generate change transparent addresses
 - [ ] History
     - [x] tx list
     - [x] memo
+- [ ] QR
+    - [ ] scanner
+    - [ ] show
 - [ ] Import/Export
     - [ ] accounts
     - [ ] tx history
@@ -59,7 +62,7 @@ In order of priority,
 
 ### Memos
 - [x] Sync Tx Details
-- [ ] Send
+- [x] Send
 - [x] Display
 - [ ] Search
 

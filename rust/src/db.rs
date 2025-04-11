@@ -335,7 +335,7 @@ pub async fn store_account_transparent_addr(
     account: u32,
     scope: u32,
     dindex: u32,
-    sk: Option<&[u8]>,
+    sk: Option<Vec<u8>>,
     address: &str,
 ) -> Result<()> {
     sqlx::query(
