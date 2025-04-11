@@ -70,6 +70,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Account> dco_decode_list_account(dynamic raw);
 
   @protected
+  List<Memo> dco_decode_list_memo(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_32_loose(dynamic raw);
 
   @protected
@@ -95,6 +98,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TxPlanOut> dco_decode_list_tx_plan_out(dynamic raw);
+
+  @protected
+  Memo dco_decode_memo(dynamic raw);
 
   @protected
   NewAccount dco_decode_new_account(dynamic raw);
@@ -195,6 +201,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Account> sse_decode_list_account(SseDeserializer deserializer);
 
   @protected
+  List<Memo> sse_decode_list_memo(SseDeserializer deserializer);
+
+  @protected
   List<int> sse_decode_list_prim_u_32_loose(SseDeserializer deserializer);
 
   @protected
@@ -220,6 +229,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TxPlanOut> sse_decode_list_tx_plan_out(SseDeserializer deserializer);
+
+  @protected
+  Memo sse_decode_memo(SseDeserializer deserializer);
 
   @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
@@ -325,6 +337,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_account(List<Account> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_memo(List<Memo> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_32_loose(
       List<int> self, SseSerializer serializer);
 
@@ -357,6 +372,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_tx_plan_out(
       List<TxPlanOut> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_memo(Memo self, SseSerializer serializer);
 
   @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);

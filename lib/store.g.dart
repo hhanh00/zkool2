@@ -41,11 +41,27 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$memosAtom = Atom(name: 'AppStoreBase.memos', context: context);
+
+  @override
+  List<Memo> get memos {
+    _$memosAtom.reportRead();
+    return super.memos;
+  }
+
+  @override
+  set memos(List<Memo> value) {
+    _$memosAtom.reportWrite(value, super.memos, () {
+      super.memos = value;
+    });
+  }
+
   @override
   String toString() {
     return '''
 accounts: ${accounts},
-transactions: ${transactions}
+transactions: ${transactions},
+memos: ${memos}
     ''';
   }
 }

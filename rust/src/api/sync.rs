@@ -192,7 +192,7 @@ async fn transparent_sync(
             let transaction = ZcashTransaction::read(&*tx.data, consensus_branch_id)?;
 
             // tx time is available in the block (not here)
-            let (id_tx, ): (u32, ) = sqlx::query_as("INSERT INTO transactions (account, txid, height, time, value) VALUES (?, ?, ?, 0, 0) RETURNING id_tx")
+            let (id_tx, ): (u32, ) = sqlx::query_as("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) RETURNING id_tx")
                 .bind(account)
                 .bind(&transaction.txid().as_ref()[..])
                 .bind(height)
@@ -287,6 +287,15 @@ pub async fn get_db_height(account: u32) -> Result<u32> {
     let c = get_coin!();
     let connection = c.get_pool();
     crate::sync::get_db_height(connection, account).await
+}
+
+#[frb]
+pub async fn get_tx_details() -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let mut client = c.client().await?;
+    crate::memo::fetch_tx_details(&c.network, connection, &mut client, c.account).await?;
+    Ok(())
 }
 
 pub struct SyncProgress {
