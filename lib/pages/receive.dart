@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zkool/src/rust/api/account.dart';
 
 class ReceivePage extends StatefulWidget {
   const ReceivePage({super.key});
@@ -8,50 +9,78 @@ class ReceivePage extends StatefulWidget {
 }
 
 class ReceivePageState extends State<ReceivePage> {
+  Addresses? addresses;
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future(() async {
+      addresses = await getAddresses();
+      setState(() {});
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final addresses = this.addresses;
+
     return Scaffold(
         appBar: AppBar(
           title: Text("Receive Funds"),
         ),
-        body: SingleChildScrollView(
-            child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Column(children: [
-                  ListTile(
-                    title: Text("Unified Address"),
-                    subtitle: Text("t1a2b3c4d5e6f7g8h9i0j"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.qr_code),
-                      onPressed: () {},
-                    ),
-                  ),
-                  ListTile(
-                    title: Text("Orchard only Address"),
-                    subtitle: Text("t1a2b3c4d5e6f7g8h9i0j"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.qr_code),
-                      onPressed: () {},
-                    ),
-                  ),
-                  ListTile(
-                    title: Text("Sapling Address"),
-                    subtitle: Text("t1a2b3c4d5e6f7g8h9i0j"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.qr_code),
-                      onPressed: () {},
-                    ),
-                  ),
-                  ListTile(
-                    title: Text("Transparent Address"),
-                    subtitle: Text("t1a2b3c4d5e6f7g8h9i0j"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.qr_code),
-                      onPressed: () {},
-                    ),
-                  ),
-                  ElevatedButton(
-                      onPressed: () {}, child: Text("Generate New Addresses"))
-                ]))));
+        body: addresses == null
+            ? SizedBox.shrink()
+            : SingleChildScrollView(
+                child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(children: [
+                      if (addresses.ua != null)
+                        ListTile(
+                          title: Text("Unified Address"),
+                          subtitle: Text(addresses.ua!),
+                          trailing: IconButton(
+                            icon: Icon(Icons.qr_code),
+                            onPressed: () {},
+                          ),
+                        ),
+                      if (addresses.oaddr != null)
+                        ListTile(
+                          title: Text("Orchard only Address"),
+                          subtitle: Text(addresses.oaddr!),
+                          trailing: IconButton(
+                            icon: Icon(Icons.qr_code),
+                            onPressed: () {},
+                          ),
+                        ),
+                      if (addresses.saddr != null)
+                        ListTile(
+                          title: Text("Sapling Address"),
+                          subtitle: Text(addresses.saddr!),
+                          trailing: IconButton(
+                            icon: Icon(Icons.qr_code),
+                            onPressed: () {},
+                          ),
+                        ),
+                      if (addresses.taddr != null)
+                        ListTile(
+                          title: Text("Transparent Address"),
+                          subtitle: Text(addresses.taddr!),
+                          trailing: IconButton(
+                            icon: Icon(Icons.qr_code),
+                            onPressed: () {},
+                          ),
+                        ),
+                      ElevatedButton(
+                          onPressed: onGenerateAddress,
+                          child: Text("Generate New Addresses"))
+                    ]))));
+  }
+
+  void onGenerateAddress() async {
+    await generateNextDindex();
+    addresses = await getAddresses();
+
+    setState(() {});
   }
 }

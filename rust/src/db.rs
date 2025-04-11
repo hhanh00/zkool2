@@ -723,3 +723,11 @@ pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
 
     Ok(memos)
 }
+
+pub async fn get_account_dindex(connection: &SqlitePool, account: u32) -> Result<u32> {
+    let (dindex, ): (u32, ) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+    Ok(dindex)
+}
