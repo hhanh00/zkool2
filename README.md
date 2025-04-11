@@ -25,7 +25,7 @@ A wallet for zcash
     - [x] transparent
     - [x] shielded
     - [x] rewind
-    - [ ] memo
+    - [x] memo
     - [ ] reorg detection
     - [ ] continuous
     - [ ] retry
@@ -44,7 +44,7 @@ A wallet for zcash
     - [ ] generate change transparent addresses
 - [ ] History
     - [x] tx list
-    - [ ] memo
+    - [x] memo
 - [ ] Import/Export
     - [ ] accounts
     - [ ] tx history
@@ -58,10 +58,9 @@ A wallet for zcash
 In order of priority,
 
 ### Memos
-- [ ] Sync Tx Details
+- [x] Sync Tx Details
 - [ ] Send
-- [ ] Display with Tx
-- [ ] Display
+- [x] Display
 - [ ] Search
 
 ### Rotate Transparent Addresses
