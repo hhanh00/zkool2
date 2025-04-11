@@ -32,7 +32,7 @@ A wallet for zcash
     - [x] scan past transparent addresses
 - [ ] Receive
     - [x] default address generation
-    - [ ] diversified address generation
+    - [x] diversified address generation
     - [x] additional transparent addresses
 - [ ] Send
     - [x] multiple payment editor
