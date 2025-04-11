@@ -21,6 +21,7 @@ class EditableList<T extends Object> extends StatefulWidget {
   }) builder;
   final bool Function(T a, T b) isEqual;
   final void Function(int a, int b) onReorder;
+  final List<Widget>? buttons;
 
   const EditableList({
     super.key,
@@ -33,6 +34,7 @@ class EditableList<T extends Object> extends StatefulWidget {
     required this.deleteBuilder,
     required this.isEqual,
     required this.onReorder,
+    this.buttons
   });
 
   @override
@@ -82,6 +84,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
               IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
             if (anySelected)
               IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
+            ...?widget.buttons,
           ],
         ),
         body: AnimatedReorderableListView<T>(

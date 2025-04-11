@@ -67,6 +67,7 @@ class Account with _$Account {
     required bool hidden,
     required bool saved,
     required bool enabled,
+    required int height,
   }) = _Account;
 }
 
@@ -78,6 +79,8 @@ class AccountUpdate with _$AccountUpdate {
     String? name,
     Uint8List? icon,
     int? birth,
+    bool? hidden,
+    bool? enabled,
   }) = _AccountUpdate;
 }
 

@@ -1085,6 +1085,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_hidden = <bool>::sse_decode(deserializer);
         let mut var_saved = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
         return crate::api::account::Account {
             coin: var_coin,
             id: var_id,
@@ -1097,6 +1098,7 @@ impl SseDecode for crate::api::account::Account {
             hidden: var_hidden,
             saved: var_saved,
             enabled: var_enabled,
+            height: var_height,
         };
     }
 }
@@ -1109,12 +1111,16 @@ impl SseDecode for crate::api::account::AccountUpdate {
         let mut var_name = <Option<String>>::sse_decode(deserializer);
         let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_birth = <Option<u32>>::sse_decode(deserializer);
+        let mut var_hidden = <Option<bool>>::sse_decode(deserializer);
+        let mut var_enabled = <Option<bool>>::sse_decode(deserializer);
         return crate::api::account::AccountUpdate {
             coin: var_coin,
             id: var_id,
             name: var_name,
             icon: var_icon,
             birth: var_birth,
+            hidden: var_hidden,
+            enabled: var_enabled,
         };
     }
 }
@@ -1235,6 +1241,17 @@ impl SseDecode for Option<String> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<bool>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -1477,6 +1494,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.hidden.into_into_dart().into_dart(),
             self.saved.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1498,6 +1516,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::AccountUpdate {
             self.name.into_into_dart().into_dart(),
             self.icon.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
+            self.hidden.into_into_dart().into_dart(),
+            self.enabled.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1706,6 +1726,7 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.hidden, serializer);
         <bool>::sse_encode(self.saved, serializer);
         <bool>::sse_encode(self.enabled, serializer);
+        <u32>::sse_encode(self.height, serializer);
     }
 }
 
@@ -1717,6 +1738,8 @@ impl SseEncode for crate::api::account::AccountUpdate {
         <Option<String>>::sse_encode(self.name, serializer);
         <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
         <Option<u32>>::sse_encode(self.birth, serializer);
+        <Option<bool>>::sse_encode(self.hidden, serializer);
+        <Option<bool>>::sse_encode(self.enabled, serializer);
     }
 }
 
@@ -1815,6 +1838,16 @@ impl SseEncode for Option<String> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <bool>::sse_encode(value, serializer);
         }
     }
 }

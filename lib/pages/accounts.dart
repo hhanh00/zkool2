@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -5,12 +7,19 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/widgets/editable_list.dart';
 
-class AccountListPage extends StatelessWidget {
+class AccountListPage extends StatefulWidget {
   const AccountListPage({super.key});
 
+  @override
+  State<AccountListPage> createState() => AccountListPageState();
+}
+
+class AccountListPageState extends State<AccountListPage> {
   @override
   Widget build(BuildContext context) {
     return EditableList<Account>(
@@ -24,8 +33,8 @@ class AccountListPage extends StatelessWidget {
           const Gap(8),
           account.avatar,
           const Gap(8),
-          Expanded(child: Text(account.name)),
-          Text("0.000"),
+          Expanded(child: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null)),
+          Text(account.height.toString()),
           const Gap(8),
         ])),
         onTap: () => onOpen(context, account),
@@ -65,7 +74,20 @@ class AccountListPage extends StatelessWidget {
       },
       isEqual:(a, b) => a.id == b.id,
       onReorder: onReorder,
+      buttons: [
+        IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+      ]
     );
+  }
+
+  onSync() async {
+    final accountIds = appStore.accounts.where((a) => a.enabled).map((a) => a.id).toList();
+    final syncProgress = await startSync(accountIds: accountIds);
+    syncProgress.listen(null, onDone: () {
+      if (mounted) {
+        AppStoreBase.loadAccounts();
+      }
+    });
   }
 
   onOpen(BuildContext context, Account account) {
@@ -81,3 +103,9 @@ class AccountListPage extends StatelessWidget {
     await AppStoreBase.loadAccounts();
   }
 }
+
+Future<Stream<SyncProgress>> startSync({required List<int> accountIds}) async {
+  final currentHeight = await getCurrentHeight();
+  return synchronize(accounts: accountIds, currentHeight: currentHeight);
+}
+

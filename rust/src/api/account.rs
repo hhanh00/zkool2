@@ -164,6 +164,20 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
             .execute(pool)
             .await?;
     }
+    if let Some(ref enabled) = update.enabled {
+        sqlx::query("UPDATE accounts SET enabled = ? WHERE id_account = ?")
+            .bind(enabled)
+            .bind(update.id)
+            .execute(pool)
+            .await?;
+    }
+    if let Some(ref hidden) = update.hidden {
+        sqlx::query("UPDATE accounts SET enabled = ? WHERE id_account = ?")
+            .bind(hidden)
+            .bind(update.id)
+            .execute(pool)
+            .await?;
+    }
 
     Ok(())
 }
@@ -366,6 +380,7 @@ pub struct Account {
     pub hidden: bool,
     pub saved: bool,
     pub enabled: bool,
+    pub height: u32,
 }
 
 #[frb(dart_metadata = ("freezed"))]
@@ -375,6 +390,8 @@ pub struct AccountUpdate {
     pub name: Option<String>,
     pub icon: Option<Vec<u8>>,
     pub birth: Option<u32>,
+    pub hidden: Option<bool>,
+    pub enabled: Option<bool>,
 }
 
 #[frb(dart_metadata = ("freezed"))]
