@@ -868,3 +868,199 @@ abstract class _NewAccount implements NewAccount {
   _$$NewAccountImplCopyWith<_$NewAccountImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$Tx {
+  int get id => throw _privateConstructorUsedError;
+  Uint8List get txid => throw _privateConstructorUsedError;
+  int get height => throw _privateConstructorUsedError;
+  int get time => throw _privateConstructorUsedError;
+  int get value => throw _privateConstructorUsedError;
+
+  /// Create a copy of Tx
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $TxCopyWith<Tx> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $TxCopyWith<$Res> {
+  factory $TxCopyWith(Tx value, $Res Function(Tx) then) =
+      _$TxCopyWithImpl<$Res, Tx>;
+  @useResult
+  $Res call({int id, Uint8List txid, int height, int time, int value});
+}
+
+/// @nodoc
+class _$TxCopyWithImpl<$Res, $Val extends Tx> implements $TxCopyWith<$Res> {
+  _$TxCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of Tx
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? txid = null,
+    Object? height = null,
+    Object? time = null,
+    Object? value = null,
+  }) {
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      txid: null == txid
+          ? _value.txid
+          : txid // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as int,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$TxImplCopyWith<$Res> implements $TxCopyWith<$Res> {
+  factory _$$TxImplCopyWith(_$TxImpl value, $Res Function(_$TxImpl) then) =
+      __$$TxImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({int id, Uint8List txid, int height, int time, int value});
+}
+
+/// @nodoc
+class __$$TxImplCopyWithImpl<$Res> extends _$TxCopyWithImpl<$Res, _$TxImpl>
+    implements _$$TxImplCopyWith<$Res> {
+  __$$TxImplCopyWithImpl(_$TxImpl _value, $Res Function(_$TxImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of Tx
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? txid = null,
+    Object? height = null,
+    Object? time = null,
+    Object? value = null,
+  }) {
+    return _then(_$TxImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      txid: null == txid
+          ? _value.txid
+          : txid // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      height: null == height
+          ? _value.height
+          : height // ignore: cast_nullable_to_non_nullable
+              as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$TxImpl implements _Tx {
+  const _$TxImpl(
+      {required this.id,
+      required this.txid,
+      required this.height,
+      required this.time,
+      required this.value});
+
+  @override
+  final int id;
+  @override
+  final Uint8List txid;
+  @override
+  final int height;
+  @override
+  final int time;
+  @override
+  final int value;
+
+  @override
+  String toString() {
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$TxImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            const DeepCollectionEquality().equals(other.txid, txid) &&
+            (identical(other.height, height) || other.height == height) &&
+            (identical(other.time, time) || other.time == time) &&
+            (identical(other.value, value) || other.value == value));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id,
+      const DeepCollectionEquality().hash(txid), height, time, value);
+
+  /// Create a copy of Tx
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$TxImplCopyWith<_$TxImpl> get copyWith =>
+      __$$TxImplCopyWithImpl<_$TxImpl>(this, _$identity);
+}
+
+abstract class _Tx implements Tx {
+  const factory _Tx(
+      {required final int id,
+      required final Uint8List txid,
+      required final int height,
+      required final int time,
+      required final int value}) = _$TxImpl;
+
+  @override
+  int get id;
+  @override
+  Uint8List get txid;
+  @override
+  int get height;
+  @override
+  int get time;
+  @override
+  int get value;
+
+  /// Create a copy of Tx
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$TxImplCopyWith<_$TxImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}

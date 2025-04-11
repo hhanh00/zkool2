@@ -53,6 +53,9 @@ Future<void> moveAccount(
     RustLib.instance.api.crateApiAccountMoveAccount(
         oldPosition: oldPosition, newPosition: newPosition);
 
+Future<List<Tx>> listTxHistory() =>
+    RustLib.instance.api.crateApiAccountListTxHistory();
+
 @freezed
 class Account with _$Account {
   const factory Account({
@@ -121,4 +124,15 @@ class Receivers {
           taddr == other.taddr &&
           saddr == other.saddr &&
           oaddr == other.oaddr;
+}
+
+@freezed
+class Tx with _$Tx {
+  const factory Tx({
+    required int id,
+    required Uint8List txid,
+    required int height,
+    required int time,
+    required PlatformInt64 value,
+  }) = _Tx;
 }

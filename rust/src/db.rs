@@ -6,7 +6,7 @@ use sqlx::{sqlite::SqliteRow, SqlitePool};
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::api::account::Account;
+use crate::api::account::{Account, Tx};
 use crate::api::sync::PoolBalance;
 
 pub async fn drop_schema(connection: &SqlitePool) -> Result<()> {
@@ -157,7 +157,6 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         height INTEGER NOT NULL,
         account INTEGER NOT NULL,
         time INTEGER,
-        value INTEGER NOT NULL,
         UNIQUE (account, txid))"
     )
     .execute(connection)
@@ -642,4 +641,35 @@ pub async fn calculate_balance(pool: &SqlitePool, account: u32) -> Result<PoolBa
     }
 
     Ok(balance)
+}
+
+pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>> {
+    // union notes and spends, then sum value by tx into v to get tx value
+    // join transactions with v by id_tx and filter by account
+    // order by height desc to get latest transactions first
+    let transactions = sqlx::query(
+        "WITH v AS (WITH n AS (SELECT value, tx FROM notes UNION SELECT value, tx FROM spends)
+            SELECT tx, SUM(value) AS value FROM n
+            GROUP BY tx)
+            SELECT id_tx, txid, height, time, v.value FROM transactions t
+            JOIN v ON t.id_tx = v.tx
+            WHERE account = ?
+            ORDER BY height DESC")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let id: u32 = row.get(0);
+            let txid: Vec<u8> = row.get(1);
+            let height: u32 = row.get(2);
+            let time: u32 = row.get(3);
+            let value: i64 = row.get(4);
+            Tx {
+                id,
+                txid,
+                height,
+                time,
+                value,
+            }
+        })
+        .fetch_all(connection).await?;
+    Ok(transactions)
 }
