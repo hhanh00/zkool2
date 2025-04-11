@@ -8,6 +8,7 @@ pub mod bip38;
 pub mod key;
 pub mod account;
 pub mod sync;
+pub mod memo;
 pub mod warp;
 pub mod pay;
 pub mod api;

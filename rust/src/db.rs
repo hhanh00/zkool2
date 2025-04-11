@@ -6,7 +6,7 @@ use sqlx::{sqlite::SqliteRow, SqlitePool};
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::api::account::{Account, Tx};
+use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 
 pub async fn drop_schema(connection: &SqlitePool) -> Result<()> {
@@ -157,6 +157,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         height INTEGER NOT NULL,
         account INTEGER NOT NULL,
         time INTEGER,
+        details BOOL NOT NULL DEFAULT FALSE,
         UNIQUE (account, txid))"
     )
     .execute(connection)
@@ -170,6 +171,22 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         height INTEGER NOT NULL,
         witness BLOB NOT NULL,
         UNIQUE (note, height))"
+    )
+    .execute(connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS memos(
+        id_memo INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        tx INTEGER NOT NULL,
+        pool INTEGER NOT NULL,
+        vout INTEGER NOT NULL,
+        note INTEGER,
+        memo_text TEXT,
+        memo_bytes BLOB NOT NULL,
+        UNIQUE (tx, pool, vout))"
     )
     .execute(connection)
     .await?;
@@ -672,4 +689,37 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
         })
         .fetch_all(connection).await?;
     Ok(transactions)
+}
+
+pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
+    let memos = sqlx::query(
+        "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes 
+        FROM memos m JOIN transactions t ON m.tx = t.id_tx
+        WHERE m.account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let id: u32 = row.get(0);
+            let height: u32 = row.get(1);
+            let tx: u32 = row.get(2);
+            let pool: u8 = row.get(3);
+            let vout: u32 = row.get(4);
+            let note: Option<u32> = row.get(5);
+            let time: u32 = row.get(6);
+            let memo_text: Option<String> = row.get(7);
+            let memo_bytes: Vec<u8> = row.get(8);
+            Memo {
+                id,
+                id_tx: tx,
+                id_note: note,
+                height,
+                pool,
+                vout,
+                time,
+                memo: memo_text,
+                memo_bytes,
+            }
+        })
+        .fetch_all(pool).await?;
+
+    Ok(memos)
 }

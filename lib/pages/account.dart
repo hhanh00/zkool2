@@ -32,8 +32,11 @@ class AccountViewPageState extends State<AccountViewPage> {
     super.initState();
     setAccount(id: widget.account.id);
     Future(() async {
+      await getTxDetails();
+
       final b = await balance();
       await AppStoreBase.loadTxHistory();
+      await AppStoreBase.loadMemos();
       setState(() {
         poolBalance = b;
       });
@@ -72,7 +75,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                     const Gap(8),
                     Text("O: ${zatToString(b.field0[2])}"),
                   ]),
-                ...showTxHistory(appStore.transactions)
+                ...showTxHistory(appStore.transactions),
+                ...showMemos(appStore.memos),
               ],
             );
           }),
@@ -241,22 +245,42 @@ List<Widget> showTxHistory(List<Tx> transactions) {
   return [
     const Text("Transaction History"),
     const Gap(8),
-    Expanded(
-      child: ListView.builder(
-        itemCount: transactions.length,
-        itemBuilder: (context, index) {
-          final tx = transactions[index];
-          // encode tx.txid to hex string
-          String txId = txIdToString(tx.txid);
+    ListView.builder(
+      shrinkWrap: true,
+      itemCount: transactions.length,
+      itemBuilder: (context, index) {
+        final tx = transactions[index];
+        // encode tx.txid to hex string
+        String txId = txIdToString(tx.txid);
 
-          return ListTile(
-            leading: Text("${tx.height}"),
-            title: SelectableText(txId),
-            subtitle: Text(timeToString(tx.time)),
-            trailing: Text(zatToString(BigInt.from(tx.value))),
-          );
-        },
-      ),
+        return ListTile(
+          leading: Text("${tx.height}"),
+          title: SelectableText(txId),
+          subtitle: Text(timeToString(tx.time)),
+          trailing: Text(zatToString(BigInt.from(tx.value))),
+        );
+      },
+    ),
+  ];
+}
+
+List<Widget> showMemos(List<Memo> memos) {
+  return [
+    const Text("Memos"),
+    const Gap(8),
+    ListView.builder(
+      shrinkWrap: true,
+      itemCount: memos.length,
+      itemBuilder: (context, index) {
+        final memo = memos[index];
+
+        return ListTile(
+          leading: Text("${memo.height}"),
+          title: SelectableText(memo.memo ?? hex.encode(memo.memoBytes)),
+          subtitle: Text(timeToString(memo.time)),
+          trailing: Text(memo.idNote != null ? "In" : "Out"),
+        );
+      },
     ),
   ];
 }

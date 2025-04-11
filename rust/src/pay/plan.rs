@@ -321,15 +321,15 @@ pub async fn plan_transaction(
                     }
                     1 => {
                         let (note, merkle_path) =
-                            get_sapling_note(connection, *id, height, &svk, &es, &ers).await?;
+                            get_sapling_note(connection, *id, height, svk.as_ref().unwrap(), &es, &ers).await?;
 
-                        builder.add_sapling_spend::<Infallible>(svk.clone(), note, merkle_path)?;
+                        builder.add_sapling_spend::<Infallible>(svk.clone().unwrap(), note, merkle_path)?;
                     }
                     2 => {
                         let (note, merkle_path) =
-                            get_orchard_note(connection, *id, height, &ovk, &eo, &ero).await?;
+                            get_orchard_note(connection, *id, height, ovk.as_ref().unwrap(), &eo, &ero).await?;
 
-                        builder.add_orchard_spend::<Infallible>(ovk.clone(), note, merkle_path)?;
+                        builder.add_orchard_spend::<Infallible>(ovk.clone().unwrap(), note, merkle_path)?;
                     }
                     _ => {}
                 }
@@ -388,12 +388,12 @@ pub async fn plan_transaction(
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;
-                builder.add_sapling_output::<Infallible>(Some(svk.ovk.clone()), to, value, memo)?;
+                builder.add_sapling_output::<Infallible>(svk.as_ref().map(|svk| svk.ovk.clone()), to, value, memo)?;
             }
             2 => {
                 let to = get_orchard_address(network, &recipient.address)?;
                 builder.add_orchard_output::<Infallible>(
-                    Some(ovk.to_ovk(Scope::External)),
+                    ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
                     value.into_u64(),
                     memo,
@@ -420,16 +420,16 @@ pub async fn plan_transaction(
 
     let ssk = get_sapling_sk(connection, account).await?;
     let osk = get_orchard_sk(connection, account).await?;
-    let osak = SpendAuthorizingKey::from(&osk);
+    let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
 
     let updater = Updater::new(pczt);
-    let pgk = ssk.expsk.proof_generation_key();
+    let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
     let updater = updater
         .update_sapling_with(|mut u| {
             for i in 0..n_spends[1] {
                 let bundle_index = sapling_meta.spend_index(i).unwrap();
                 u.update_spend_with(bundle_index, |mut u| {
-                    u.set_proof_generation_key(pgk.clone()).unwrap();
+                    u.set_proof_generation_key(pgk.clone().unwrap()).unwrap();
                     Ok(())
                 })
                 .unwrap();
@@ -456,12 +456,12 @@ pub async fn plan_transaction(
     for index in 0..n_spends[1] {
         println!("signing sapling {index}");
         let bundle_index = sapling_meta.spend_index(index).unwrap();
-        signer.sign_sapling(bundle_index, &ssk.expsk.ask).unwrap();
+        signer.sign_sapling(bundle_index, &ssk.as_ref().unwrap().expsk.ask).unwrap();
     }
     for index in 0..n_spends[2] {
         println!("signing orchard {index}");
         let bundle_index = orchard_meta.spend_action_index(index).unwrap();
-        signer.sign_orchard(bundle_index, &osak).unwrap();
+        signer.sign_orchard(bundle_index, osak.as_ref().unwrap()).unwrap();
     }
     let pczt = signer.finish();
     println!("Signed");

@@ -56,6 +56,9 @@ Future<void> moveAccount(
 Future<List<Tx>> listTxHistory() =>
     RustLib.instance.api.crateApiAccountListTxHistory();
 
+Future<List<Memo>> listMemos() =>
+    RustLib.instance.api.crateApiAccountListMemos();
+
 @freezed
 class Account with _$Account {
   const factory Account({
@@ -85,6 +88,21 @@ class AccountUpdate with _$AccountUpdate {
     bool? hidden,
     bool? enabled,
   }) = _AccountUpdate;
+}
+
+@freezed
+class Memo with _$Memo {
+  const factory Memo({
+    required int id,
+    required int idTx,
+    int? idNote,
+    required int pool,
+    required int height,
+    required int vout,
+    required int time,
+    required Uint8List memoBytes,
+    String? memo,
+  }) = _Memo;
 }
 
 @freezed
