@@ -48,12 +48,15 @@ pub fn derive_transparent_address(
 pub async fn get_sapling_sk(
     connection: &SqlitePool,
     account: u32,
-) -> Result<ExtendedSpendingKey> {
-    let (fvk,): (Vec<u8>,) = sqlx::query_as("SELECT xsk FROM sapling_accounts WHERE account = ?")
+) -> Result<Option<ExtendedSpendingKey>> {
+    let sk = sqlx::query("SELECT xsk FROM sapling_accounts WHERE account = ?")
         .bind(account)
-        .fetch_one(connection)
+        .map(|row: SqliteRow| {
+            let sk: Vec<u8> = row.get(0);
+            ExtendedSpendingKey::read(&*sk).unwrap()
+        })
+        .fetch_optional(connection)
         .await?;
-    let sk = ExtendedSpendingKey::read(&*fvk).unwrap();
 
     Ok(sk)
 }
@@ -61,14 +64,17 @@ pub async fn get_sapling_sk(
 pub async fn get_sapling_vk(
     connection: &SqlitePool,
     account: u32,
-) -> Result<sapling_crypto::keys::FullViewingKey> {
-    let (fvk,): (Vec<u8>,) = sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
+) -> Result<Option<sapling_crypto::keys::FullViewingKey>> {
+    let vk = sqlx::query("SELECT xvk FROM sapling_accounts WHERE account = ?")
         .bind(account)
-        .fetch_one(connection)
+        .map(|row: SqliteRow| {
+            let vk: Vec<u8> = row.get(0);
+            sapling_crypto::keys::FullViewingKey::read(&*vk).unwrap()
+        })
+        .fetch_optional(connection)
         .await?;
-    let fvk = sapling_crypto::keys::FullViewingKey::read(&*fvk).unwrap();
 
-    Ok(fvk)
+    Ok(vk)
 }
 
 pub async fn get_sapling_note(
@@ -126,12 +132,15 @@ pub async fn get_sapling_note(
 pub async fn get_orchard_sk(
     connection: &sqlx::Pool<sqlx::Sqlite>,
     account: u32,
-) -> Result<orchard::keys::SpendingKey> {
-    let (sk,): (Vec<u8>,) = sqlx::query_as("SELECT xsk FROM orchard_accounts WHERE account = ?")
+) -> Result<Option<orchard::keys::SpendingKey>> {
+    let sk = sqlx::query("SELECT xsk FROM orchard_accounts WHERE account = ?")
         .bind(account)
-        .fetch_one(connection)
+        .map(|row: SqliteRow| {
+            let sk: Vec<u8> = row.get(0);
+            orchard::keys::SpendingKey::from_bytes(sk.try_into().unwrap()).unwrap()
+        })
+        .fetch_optional(connection)
         .await?;
-    let sk = orchard::keys::SpendingKey::from_bytes(sk.try_into().unwrap()).unwrap();
 
     Ok(sk)
 }
@@ -139,14 +148,17 @@ pub async fn get_orchard_sk(
 pub async fn get_orchard_vk(
     connection: &sqlx::Pool<sqlx::Sqlite>,
     account: u32,
-) -> Result<orchard::keys::FullViewingKey> {
-    let (fvk,): (Vec<u8>,) = sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
+) -> Result<Option<orchard::keys::FullViewingKey>> {
+    let vk = sqlx::query("SELECT xvk FROM orchard_accounts WHERE account = ?")
         .bind(account)
-        .fetch_one(connection)
+        .map(|row: SqliteRow| {
+            let fvk: Vec<u8> = row.get(0);
+            orchard::keys::FullViewingKey::read(&*fvk).unwrap()
+        })
+        .fetch_optional(connection)
         .await?;
-    let fvk = orchard::keys::FullViewingKey::read(&*fvk).unwrap();
 
-    Ok(fvk)
+    Ok(vk)
 }
 
 pub async fn get_orchard_note(

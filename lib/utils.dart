@@ -26,3 +26,8 @@ String txIdToString(Uint8List txid) {
   final txId = hex.encode(reversed);
   return txId;
 }
+
+Uint8List stringToTxId(String txid) {
+  var bytes = hex.decode(txid);
+  return Uint8List.fromList(bytes.reversed.toList());
+}
