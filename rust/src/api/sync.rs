@@ -3,8 +3,8 @@ use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::{sqlite::SqliteRow, Pool};
 use sqlx::{Row, Sqlite};
-use tokio::sync::mpsc::channel;
 use std::collections::HashMap;
+use tokio::sync::mpsc::channel;
 use zcash_keys::encoding::AddressCodec as _;
 
 use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as ZcashTransaction};
@@ -38,12 +38,14 @@ pub async fn synchronize(
     // Get account heights
     let mut account_heights = HashMap::new();
     for account in accounts.iter() {
-    let (account, height): (u32, u32) = sqlx::query_as(
-        "SELECT account, MIN(height) FROM sync_heights
+        let (account, height): (u32, u32) = sqlx::query_as(
+            "SELECT account, MIN(height) FROM sync_heights
         JOIN accounts ON account = id_account
-        WHERE account = ?")
+        WHERE account = ?",
+        )
         .bind(account)
-        .fetch_one(pool).await?;
+        .fetch_one(pool)
+        .await?;
 
         account_heights.insert(account, height + 1);
     }
@@ -125,16 +127,13 @@ async fn transparent_sync(
 ) -> Result<()> {
     let mut addresses = vec![];
     for account in accounts.iter() {
+        // scan latest 5 receive and change addresses
         let mut rows = sqlx::query("
-                SELECT t1.id_taddress, t1.address
-                FROM transparent_address_accounts t1
-                JOIN (
-                    SELECT account, scope, MAX(dindex) as max_dindex
-                    FROM transparent_address_accounts
-                    WHERE account = ?
-                    GROUP BY scope
-                ) t2 ON t1.account = t2.account AND t1.scope = t2.scope AND t1.dindex = t2.max_dindex
-                ORDER BY t1.scope")
+                WITH receive AS
+                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 0 ORDER BY dindex DESC LIMIT 5),
+                change AS
+                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 1 ORDER BY dindex DESC LIMIT 5)
+                SELECT id_taddress, address FROM receive UNION SELECT id_taddress, address FROM change")
             .bind(account)
             .map(|row: SqliteRow| {
                 let id_taddress: u32 = row.get(0);
