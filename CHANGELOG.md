@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.4.0...zkool-v1.5.0) (2025-04-11)
+
+
+### Features
+
+* generate additional transparent addresses ([#61](https://github.com/hhanh00/zkool2/issues/61)) ([93a85b2](https://github.com/hhanh00/zkool2/commit/93a85b2278e8c5f246cad802a3edfa4911ca5164))
+* scan last 5 receive and change transparent addresses ([#62](https://github.com/hhanh00/zkool2/issues/62)) ([22403b8](https://github.com/hhanh00/zkool2/commit/22403b804be93affb56249eeb3e0177f3c9c8279))
+* send memo ([#59](https://github.com/hhanh00/zkool2/issues/59)) ([3d75a82](https://github.com/hhanh00/zkool2/commit/3d75a8272ed236ea9b39d865b15f81b454ba9863))
+
 ## [1.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.3.0...zkool-v1.4.0) (2025-04-11)
 
 
