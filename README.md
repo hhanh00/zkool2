@@ -29,7 +29,7 @@ A wallet for zcash
     - [ ] reorg detection
     - [ ] continuous
     - [ ] retry
-    - [ ] scan past transparent addresses
+    - [x] scan past transparent addresses
 - [ ] Receive
     - [x] default address generation
     - [ ] diversified address generation
