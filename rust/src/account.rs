@@ -20,14 +20,22 @@ use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
 
-use crate::warp::{AuthPath, Witness, MERKLE_DEPTH};
+use crate::{
+    db::store_account_transparent_addr,
+    warp::{AuthPath, Witness, MERKLE_DEPTH},
+};
 
-pub fn derive_transparent_sk(tvk: &AccountPrivKey, dindex: u32) -> Result<[u8; 32]> {
-    let tsk = tvk
-        .derive_external_secret_key(NonHardenedChildIndex::from_index(dindex).unwrap())
+pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
+    let scope = match scope {
+        0 => TransparentKeyScope::EXTERNAL,
+        1 => TransparentKeyScope::INTERNAL,
+        _ => unreachable!(),
+    };
+    let tsk = tsk
+        .derive_secret_key(scope, NonHardenedChildIndex::from_index(dindex).unwrap())
         .unwrap()
         .to_bytes();
-    Ok(tsk)
+    Ok(tsk.to_vec())
 }
 
 pub fn derive_transparent_address(
@@ -64,12 +72,12 @@ pub async fn get_sapling_sk(
 pub async fn get_sapling_vk(
     connection: &SqlitePool,
     account: u32,
-) -> Result<Option<sapling_crypto::keys::FullViewingKey>> {
+) -> Result<Option<DiversifiableFullViewingKey>> {
     let vk = sqlx::query("SELECT xvk FROM sapling_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let vk: Vec<u8> = row.get(0);
-            sapling_crypto::keys::FullViewingKey::read(&*vk).unwrap()
+            DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap()
         })
         .fetch_optional(connection)
         .await?;
@@ -220,7 +228,11 @@ pub async fn get_orchard_note(
     Ok((note, merkle_path))
 }
 
-pub async fn get_account_full_address(network: &Network, connection: &SqlitePool, account: u32) -> Result<String> {
+pub async fn get_account_full_address(
+    network: &Network,
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<String> {
     let taddress = sqlx::query(
         "SELECT ta.address FROM transparent_address_accounts ta
         JOIN accounts a ON ta.account = a.id_account AND ta.dindex = a.dindex
@@ -269,14 +281,102 @@ pub async fn get_account_full_address(network: &Network, connection: &SqlitePool
     let address = match (taddress, saddress, oaddress) {
         (Some(taddress), None, None) => taddress.encode(network),
         _ => {
-            let ua = UnifiedAddress::from_receivers(
-                oaddress,
-                saddress,
-                taddress,
-            ).unwrap();
+            let ua = UnifiedAddress::from_receivers(oaddress, saddress, taddress).unwrap();
             ua.encode(network)
         }
     };
 
     Ok(address)
+}
+
+pub async fn generate_next_dindex(network: &Network, connection: &SqlitePool, account: u32) -> Result<u32> {
+    let (mut dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+    let svk = get_sapling_vk(connection, account).await?;
+    if let Some(svk) = svk.as_ref() {
+        dindex += 1;
+        let (di, _) = svk.find_address(dindex.into()).unwrap();
+        dindex = di.try_into()?;
+    } else {
+        // without sapling, any dindex is ok, just increment
+        dindex += 1;
+    }
+
+    sqlx::query("UPDATE accounts SET dindex = ? WHERE id_account = ?")
+        .bind(dindex)
+        .bind(account)
+        .execute(connection)
+        .await?;
+
+    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
+    let sk = xsk.as_ref().map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
+    let taddress = derive_transparent_address(xvk.as_ref().unwrap(), 0, dindex)?;
+    store_account_transparent_addr(connection, account, 0, dindex, sk, &taddress.encode(network)).await?;
+
+    Ok(dindex)
+}
+
+pub async fn generate_next_change_address(
+    network: &Network,
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<()> {
+    let dindex = sqlx::query(
+        "SELECT MAX(dindex) FROM transparent_address_accounts WHERE account = ? AND scope = 1",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| row.get::<Option<u32>, _>(0))
+    .fetch_one(connection)
+    .await?;
+
+    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
+
+    if let Some(tvk) = xvk.as_ref() {
+        let dindex = match dindex {
+            Some(dindex) => dindex + 1, // increment
+            None => 0,                  // first change address
+        };
+
+        let sk = xsk
+            .as_ref()
+            .map(|tsk| derive_transparent_sk(tsk, 1, dindex).unwrap());
+        let change_address = derive_transparent_address(tvk, 1, dindex)?;
+        let change_address = change_address.encode(network);
+
+        store_account_transparent_addr(
+            connection,
+            account,
+            1,
+            dindex,
+            sk,
+            &change_address,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+async fn get_transparent_keys(
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<(Option<AccountPrivKey>, Option<AccountPubKey>)> {
+    let tkeys = sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let xsk: Option<Vec<u8>> = row.get(0);
+            let xvk: Vec<u8> = row.get(1);
+            let xsk = xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap());
+            let xvk = AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap();
+            (xsk, xvk)
+        })
+        .fetch_optional(connection)
+        .await?;
+    let (xsk, xvk) = match tkeys {
+        Some((xsk, xvk)) => (xsk, Some(xvk)),
+        None => (None, None),
+    };
+    Ok((xsk, xvk))
 }
