@@ -22,7 +22,7 @@ class AccountViewPage extends StatefulWidget {
 
 class AccountViewPageState extends State<AccountViewPage> {
   StreamSubscription<SyncProgress>? progressSubscription;
-  int? height;
+  late int height = widget.account.height;
   PoolBalance? poolBalance;
 
   @override
@@ -71,10 +71,9 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void onSync() async {
-    final ids = appStore.accounts.map((a) => a.id).toList();
     await progressSubscription?.cancel();
     final currentHeight = await getCurrentHeight();
-    final progress = synchronize(accounts: ids, currentHeight: currentHeight);
+    final progress = synchronize(accounts: [widget.account.id], currentHeight: currentHeight);
     progressSubscription = progress.listen(
       (event) async {
         setState(() {
@@ -83,6 +82,7 @@ class AccountViewPageState extends State<AccountViewPage> {
       },
       onDone: () async {
         final b = await balance();
+        await AppStoreBase.loadAccounts();
         setState(() {
           poolBalance = b;
         });
@@ -148,6 +148,18 @@ class AccountEditPageState extends State<AccountEditPage> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: onEditBirth,
               ),
+              FormBuilderSwitch(
+                name: "enabled",
+                title: Text("Enabled"),
+                initialValue: account.enabled,
+                onChanged: onEditEnabled,
+              ),
+              FormBuilderSwitch(
+                name: "hidden",
+                title: Text("Hidden"),
+                initialValue: account.hidden,
+                onChanged: onEditHidden,
+              )
             ],
           )),
         ));
@@ -187,6 +199,22 @@ class AccountEditPageState extends State<AccountEditPage> {
       await AppStoreBase.loadAccounts();
       setState(() {});
     }
+  }
+
+  void onEditEnabled(v) async {
+    account = account.copyWith(enabled: v);
+    await updateAccount(
+        update: AccountUpdate(coin: account.coin, id: account.id, enabled: v));
+    await AppStoreBase.loadAccounts();
+    setState(() {});
+  }
+
+  void onEditHidden(v) async {
+    account = account.copyWith(hidden: v);
+    await updateAccount(
+        update: AccountUpdate(coin: account.coin, id: account.id, hidden: v));
+    await AppStoreBase.loadAccounts();
+    setState(() {});
   }
 }
 
