@@ -521,9 +521,14 @@ pub struct OrchardKeys {
 
 pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Account>> {
     let mut rows = sqlx::query(
-        "SELECT id_account, name, seed, aindex,
-        icon, birth, position, hidden, saved, enabled
-        FROM accounts ORDER by position",
+        "WITH sh AS (SELECT account, MIN(height) AS height FROM sync_heights GROUP BY account ) 
+        SELECT id_account, name, seed, aindex,
+        icon, birth, position, hidden, saved, enabled,
+        sh.height
+        FROM accounts
+        JOIN sh
+        ON accounts.id_account = account
+        ORDER by position",
     )
     .map(|row: SqliteRow| Account {
         coin,
@@ -537,6 +542,7 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
         hidden: row.get(7),
         saved: row.get(8),
         enabled: row.get(9),
+        height: row.get(10),
     })
     .fetch(connection);
 

@@ -1,16 +1,47 @@
 # zkool
 
-A new Flutter project.
+A wallet for zcash
 
-## Getting Started
+## Roadmap
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- [x] Account create/restore
+    - [x] by seed & index
+    - [x] by sapling secret key/viewing key
+    - [x] by unified viewing key
+    - [x] by xpub/xpriv key
+    - [x] by bip38 extended priv/pub key
+    - [x] and of course random
+- [x] Account properties editor
+    - [x] name
+    - [x] birth height
+    - [x] icon
+    - [x] enabled
+    - [x] hidden
+- [x] Account Manager
+    - [x] CRUD
+    - [x] reorder
+    - [ ] hide accounts
+- [x] Synchronization
+    - [x] transparent
+    - [x] shielded
+    - [x] rewind
+    - [ ] reorg detection
+    - [ ] continuous
+    - [ ] retry
+- Receive
+    - [x] default address generation
+    - [ ] diversified address generation
+- Send
+    - [x] multiple payment editor
+        - [x] address, amount
+        - [ ] memo
+    - [x] builder
+    - [x] pczt
+    - [x] broadcast
+- [ ] History
+    - [ ] tx list
+    - [ ] table
+- [ ] Import/Export
+    - [ ] accounts
+    - [ ] tx history
+    - [ ] encryption
