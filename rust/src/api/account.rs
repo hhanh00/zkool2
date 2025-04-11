@@ -404,6 +404,15 @@ pub struct NewAccount {
     pub birth: Option<u32>,
 }
 
+#[frb(dart_metadata = ("freezed"))]
+pub struct Tx {
+    pub id: u32,
+    pub txid: Vec<u8>,
+    pub height: u32,
+    pub time: u32,
+    pub value: i64,
+}
+
 #[frb(init)]
 pub fn init_app() {
     // Default utilities - feel free to customize
@@ -428,4 +437,10 @@ pub async fn move_account(old_position: u32, new_position: u32) -> Result<()> {
     let c = get_coin!();
     crate::db::reorder_account(c.get_pool(), old_position, new_position).await?;
     Ok(())
+}
+
+pub async fn list_tx_history() -> Result<Vec<Tx>> {
+    let c = get_coin!();
+    let txs = crate::db::fetch_txs(c.get_pool(), c.account).await?;
+    Ok(txs)
 }
