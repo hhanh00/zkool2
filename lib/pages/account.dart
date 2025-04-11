@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +33,7 @@ class AccountViewPageState extends State<AccountViewPage> {
     setAccount(id: widget.account.id);
     Future(() async {
       final b = await balance();
+      await AppStoreBase.loadTxHistory();
       setState(() {
         poolBalance = b;
       });
@@ -54,26 +57,33 @@ class AccountViewPageState extends State<AccountViewPage> {
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              if (h != null) Text(h.toString(), style: t.bodyLarge),
-              if (b != null)
-                Row(children: [
-                  Text("T: ${zatToString(b.field0[0])}"),
-                  const Gap(8),
-                  Text("S: ${zatToString(b.field0[1])}"),
-                  const Gap(8),
-                  Text("O: ${zatToString(b.field0[2])}"),
-                ]),
-            ],
-          ),
+          child: Observer(builder: (context) {
+            // make sure there is a dependency on transactions
+            appStore.transactions.length;
+
+            return Column(
+              children: [
+                Text(h.toString(), style: t.bodyLarge),
+                if (b != null)
+                  Row(children: [
+                    Text("T: ${zatToString(b.field0[0])}"),
+                    const Gap(8),
+                    Text("S: ${zatToString(b.field0[1])}"),
+                    const Gap(8),
+                    Text("O: ${zatToString(b.field0[2])}"),
+                  ]),
+                ...showTxHistory(appStore.transactions)
+              ],
+            );
+          }),
         ));
   }
 
   void onSync() async {
     await progressSubscription?.cancel();
     final currentHeight = await getCurrentHeight();
-    final progress = synchronize(accounts: [widget.account.id], currentHeight: currentHeight);
+    final progress = synchronize(
+        accounts: [widget.account.id], currentHeight: currentHeight);
     progressSubscription = progress.listen(
       (event) async {
         setState(() {
@@ -225,4 +235,28 @@ extension AccountExtension on Account {
       child: icon != null ? Image.memory(icon!) : Text(i),
     );
   }
+}
+
+List<Widget> showTxHistory(List<Tx> transactions) {
+  return [
+    const Text("Transaction History"),
+    const Gap(8),
+    Expanded(
+      child: ListView.builder(
+        itemCount: transactions.length,
+        itemBuilder: (context, index) {
+          final tx = transactions[index];
+          // encode tx.txid to hex string
+          String txId = txIdToString(tx.txid);
+
+          return ListTile(
+            leading: Text("${tx.height}"),
+            title: SelectableText(txId),
+            subtitle: Text(timeToString(tx.time)),
+            trailing: Text(zatToString(BigInt.from(tx.value))),
+          );
+        },
+      ),
+    ),
+  ];
 }

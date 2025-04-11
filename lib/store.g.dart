@@ -25,10 +25,27 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$transactionsAtom =
+      Atom(name: 'AppStoreBase.transactions', context: context);
+
+  @override
+  List<Tx> get transactions {
+    _$transactionsAtom.reportRead();
+    return super.transactions;
+  }
+
+  @override
+  set transactions(List<Tx> value) {
+    _$transactionsAtom.reportWrite(value, super.transactions, () {
+      super.transactions = value;
+    });
+  }
+
   @override
   String toString() {
     return '''
-accounts: ${accounts}
+accounts: ${accounts},
+transactions: ${transactions}
     ''';
   }
 }

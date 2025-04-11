@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
 
+  convert: ^3.1.1
   cupertino_icons: ^1.0.8
   rust_lib_zkool:
     path: rust_builder
@@ -36,6 +37,7 @@ dependencies:
   animated_reorderable_list: ^1.2.0
 
   fixed: ^5.3.3
+  timeago: ^3.7.0
 
 dev_dependencies:
   flutter_test:
