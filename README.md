@@ -17,7 +17,7 @@ A wallet for zcash
     - [x] icon
     - [x] enabled
     - [x] hidden
-- [x] Account Manager
+- [ ] Account Manager
     - [x] CRUD
     - [x] reorder
     - [ ] hide accounts
@@ -29,16 +29,19 @@ A wallet for zcash
     - [ ] reorg detection
     - [ ] continuous
     - [ ] retry
-- Receive
+    - [ ] sweep transparent addresses
+- [ ] Receive
     - [x] default address generation
     - [ ] diversified address generation
-- Send
+    - [ ] additional transparent addresses
+- [ ] Send
     - [x] multiple payment editor
         - [x] address, amount
         - [ ] memo
     - [x] builder
     - [x] pczt
     - [x] broadcast
+    - [ ] generate change transparent addresses
 - [ ] History
     - [x] tx list
     - [ ] memo
@@ -46,3 +49,29 @@ A wallet for zcash
     - [ ] accounts
     - [ ] tx history
     - [ ] encryption
+- [ ] Database
+    - [ ] switch to new database
+    - [ ] encrypt database with AES
+
+## User Stories
+
+In order of priority,
+
+### Memos
+- [ ] Sync Tx Details
+- [ ] Send
+- [ ] Display with Tx
+- [ ] Display
+- [ ] Search
+
+### Rotate Transparent Addresses
+- [ ] Auto New change address
+- [ ] Manual New receive address
+- [ ] Sweep past addresses
+
+### Account Import/Export
+- [ ] Single/Multi account export
+- [ ] Add/Import to current database
+
+### Contacts
+TBD
