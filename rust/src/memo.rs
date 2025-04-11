@@ -81,8 +81,8 @@ pub async fn decrypt_memo(
 
     if let Some(bundle) = tx_data.sapling_bundle() {
         if let Some(svk) = svk.as_ref() {
-            let pivk = PreparedIncomingViewingKey::new(&svk.vk.ivk());
-            let ovk = &svk.ovk;
+            let pivk = PreparedIncomingViewingKey::new(&svk.fvk().vk.ivk());
+            let ovk = &svk.fvk().ovk;
             for (vout, sout) in bundle.shielded_outputs().iter().enumerate() {
                 if let Some((note, _address, memo_bytes)) =
                     try_note_decryption(&domain, &pivk, sout)

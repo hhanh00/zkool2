@@ -53,8 +53,11 @@ class AccountViewPageState extends State<AccountViewPage> {
         appBar: AppBar(
           title: Text(widget.account.name),
           actions: [
+            IconButton(onPressed: onNextDiversifier, icon: Icon(Icons.next_plan)),
+            IconButton(onPressed: onNewChange, icon: Icon(Icons.add)),
             IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
             IconButton(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+            IconButton(onPressed: onReceive, icon: Icon(Icons.download)),
             IconButton(onPressed: onSend, icon: Icon(Icons.send)),
           ],
         ),
@@ -83,6 +86,14 @@ class AccountViewPageState extends State<AccountViewPage> {
         ));
   }
 
+  void onNextDiversifier() async {
+    await generateNextDindex();
+  }
+
+  void onNewChange() async {
+    await generateNextChangeAddress();
+  }
+
   void onSync() async {
     await progressSubscription?.cancel();
     final currentHeight = await getCurrentHeight();
@@ -107,6 +118,10 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onRewind() async {
     final dbHeight = await getDbHeight(account: widget.account.id);
     await rewindSync(height: dbHeight - 60);
+  }
+
+  void onReceive() async {
+    await GoRouter.of(context).push("/receive");
   }
 
   void onSend() async {
