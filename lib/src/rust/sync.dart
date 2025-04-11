@@ -11,8 +11,12 @@ part 'sync.freezed.dart';
 @freezed
 class Transaction with _$Transaction {
   const factory Transaction({
-    required String txid,
-    required BigInt height,
-    required String address,
+    required int id,
+    required Uint8List txid,
+    required int height,
+    required int account,
+    required int time,
+    required PlatformInt64 value,
+    required int position,
   }) = _Transaction;
 }

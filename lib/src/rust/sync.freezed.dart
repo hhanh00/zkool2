@@ -16,9 +16,13 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$Transaction {
-  String get txid => throw _privateConstructorUsedError;
-  BigInt get height => throw _privateConstructorUsedError;
-  String get address => throw _privateConstructorUsedError;
+  int get id => throw _privateConstructorUsedError;
+  Uint8List get txid => throw _privateConstructorUsedError;
+  int get height => throw _privateConstructorUsedError;
+  int get account => throw _privateConstructorUsedError;
+  int get time => throw _privateConstructorUsedError;
+  int get value => throw _privateConstructorUsedError;
+  int get position => throw _privateConstructorUsedError;
 
   /// Create a copy of Transaction
   /// with the given fields replaced by the non-null parameter values.
@@ -33,7 +37,14 @@ abstract class $TransactionCopyWith<$Res> {
           Transaction value, $Res Function(Transaction) then) =
       _$TransactionCopyWithImpl<$Res, Transaction>;
   @useResult
-  $Res call({String txid, BigInt height, String address});
+  $Res call(
+      {int id,
+      Uint8List txid,
+      int height,
+      int account,
+      int time,
+      int value,
+      int position});
 }
 
 /// @nodoc
@@ -51,23 +62,43 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? id = null,
     Object? txid = null,
     Object? height = null,
-    Object? address = null,
+    Object? account = null,
+    Object? time = null,
+    Object? value = null,
+    Object? position = null,
   }) {
     return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
       txid: null == txid
           ? _value.txid
           : txid // ignore: cast_nullable_to_non_nullable
-              as String,
+              as Uint8List,
       height: null == height
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
-              as BigInt,
-      address: null == address
-          ? _value.address
-          : address // ignore: cast_nullable_to_non_nullable
-              as String,
+              as int,
+      account: null == account
+          ? _value.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as int,
+      position: null == position
+          ? _value.position
+          : position // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -80,7 +111,14 @@ abstract class _$$TransactionImplCopyWith<$Res>
       __$$TransactionImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String txid, BigInt height, String address});
+  $Res call(
+      {int id,
+      Uint8List txid,
+      int height,
+      int account,
+      int time,
+      int value,
+      int position});
 }
 
 /// @nodoc
@@ -96,23 +134,43 @@ class __$$TransactionImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? id = null,
     Object? txid = null,
     Object? height = null,
-    Object? address = null,
+    Object? account = null,
+    Object? time = null,
+    Object? value = null,
+    Object? position = null,
   }) {
     return _then(_$TransactionImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
       txid: null == txid
           ? _value.txid
           : txid // ignore: cast_nullable_to_non_nullable
-              as String,
+              as Uint8List,
       height: null == height
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
-              as BigInt,
-      address: null == address
-          ? _value.address
-          : address // ignore: cast_nullable_to_non_nullable
-              as String,
+              as int,
+      account: null == account
+          ? _value.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as int,
+      position: null == position
+          ? _value.position
+          : position // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -121,18 +179,32 @@ class __$$TransactionImplCopyWithImpl<$Res>
 
 class _$TransactionImpl implements _Transaction {
   const _$TransactionImpl(
-      {required this.txid, required this.height, required this.address});
+      {required this.id,
+      required this.txid,
+      required this.height,
+      required this.account,
+      required this.time,
+      required this.value,
+      required this.position});
 
   @override
-  final String txid;
+  final int id;
   @override
-  final BigInt height;
+  final Uint8List txid;
   @override
-  final String address;
+  final int height;
+  @override
+  final int account;
+  @override
+  final int time;
+  @override
+  final int value;
+  @override
+  final int position;
 
   @override
   String toString() {
-    return 'Transaction(txid: $txid, height: $height, address: $address)';
+    return 'Transaction(id: $id, txid: $txid, height: $height, account: $account, time: $time, value: $value, position: $position)';
   }
 
   @override
@@ -140,13 +212,26 @@ class _$TransactionImpl implements _Transaction {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$TransactionImpl &&
-            (identical(other.txid, txid) || other.txid == txid) &&
+            (identical(other.id, id) || other.id == id) &&
+            const DeepCollectionEquality().equals(other.txid, txid) &&
             (identical(other.height, height) || other.height == height) &&
-            (identical(other.address, address) || other.address == address));
+            (identical(other.account, account) || other.account == account) &&
+            (identical(other.time, time) || other.time == time) &&
+            (identical(other.value, value) || other.value == value) &&
+            (identical(other.position, position) ||
+                other.position == position));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, txid, height, address);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      const DeepCollectionEquality().hash(txid),
+      height,
+      account,
+      time,
+      value,
+      position);
 
   /// Create a copy of Transaction
   /// with the given fields replaced by the non-null parameter values.
@@ -159,16 +244,28 @@ class _$TransactionImpl implements _Transaction {
 
 abstract class _Transaction implements Transaction {
   const factory _Transaction(
-      {required final String txid,
-      required final BigInt height,
-      required final String address}) = _$TransactionImpl;
+      {required final int id,
+      required final Uint8List txid,
+      required final int height,
+      required final int account,
+      required final int time,
+      required final int value,
+      required final int position}) = _$TransactionImpl;
 
   @override
-  String get txid;
+  int get id;
   @override
-  BigInt get height;
+  Uint8List get txid;
   @override
-  String get address;
+  int get height;
+  @override
+  int get account;
+  @override
+  int get time;
+  @override
+  int get value;
+  @override
+  int get position;
 
   /// Create a copy of Transaction
   /// with the given fields replaced by the non-null parameter values.
