@@ -11,3 +11,6 @@ bool isValidKey({required String key}) =>
 
 bool isValidAddress({required String address}) =>
     RustLib.instance.api.crateApiKeyIsValidAddress(address: address);
+
+bool isValidTransparentAddress({required String address}) =>
+    RustLib.instance.api.crateApiKeyIsValidTransparentAddress(address: address);
