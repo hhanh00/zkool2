@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
 
+env:
+  RELEASE_VERSION: ${{ github.ref_name }}
+
 jobs:
   build-macos:
     runs-on: macos-latest
@@ -46,11 +49,10 @@ jobs:
         run: |
           python3 -m pip install packaging
           npm install -g appdmg
-          (cd misc; appdmg app.json ../app.dmg)
+          (cd misc; appdmg app.json ../${RELEASE_VERSION}.dmg)
       - name: Upload dmg artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zkool.dmg
           path: ./*.dmg
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
