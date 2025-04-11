@@ -272,6 +272,7 @@ pub async fn plan_transaction(
     let ero = empty_roots(&OrchardHasher::default());
 
     let svk = get_sapling_vk(connection, account).await?;
+    let svk = svk.as_ref().map(|svk| svk.fvk());
     let ovk = get_orchard_vk(connection, account).await?;
 
     let mut tsk = vec![];
@@ -323,7 +324,7 @@ pub async fn plan_transaction(
                         let (note, merkle_path) =
                             get_sapling_note(connection, *id, height, svk.as_ref().unwrap(), &es, &ers).await?;
 
-                        builder.add_sapling_spend::<Infallible>(svk.clone().unwrap(), note, merkle_path)?;
+                        builder.add_sapling_spend::<Infallible>(svk.unwrap().clone(), note, merkle_path)?;
                     }
                     2 => {
                         let (note, merkle_path) =
