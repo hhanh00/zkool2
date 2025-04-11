@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.3.0...zkool-v1.4.0) (2025-04-11)
+
+
+### Features
+
+* fetch memos ([#58](https://github.com/hhanh00/zkool2/issues/58)) ([8e56bae](https://github.com/hhanh00/zkool2/commit/8e56bae9091d2a1c009a2ca2796477dd875ae777))
+* independent account synchronization ([#54](https://github.com/hhanh00/zkool2/issues/54)) ([8e61b14](https://github.com/hhanh00/zkool2/commit/8e61b14d790874534c44e3cffa786edd38860465))
+* show transaction history ([#56](https://github.com/hhanh00/zkool2/issues/56)) ([6ac7957](https://github.com/hhanh00/zkool2/commit/6ac79576406c911a0939a58b07cc4abe76f1dbcc))
+
 ## [1.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.2.0...zkool-v1.3.0) (2025-04-10)
 
 
