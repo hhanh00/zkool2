@@ -54,7 +54,9 @@ A wallet for zcash
     - [x] integrate tracing framework
     - [x] make log viewer page
     - [x] add logging messages
+- [ ] Market price
 - [ ] MultiSend
+    - [ ] payment URI generation
 - [ ] Import/Export
     - [ ] accounts
     - [ ] tx history
@@ -62,6 +64,12 @@ A wallet for zcash
 - [ ] Database
     - [ ] switch to new database
     - [ ] encrypt database with AES
+- [ ] Settings
+    - [ ] lwd url
+    - [ ] fiat currency
+    - [ ] min confs
+    - [ ] get tx details
+    - [ ] protect open/send
 
 ## User Stories
 
