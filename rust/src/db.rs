@@ -535,7 +535,7 @@ pub struct OrchardKeys {
     pub xvk: Option<FullViewingKey>,
 }
 
-pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Account>> {
+pub async fn list_accounts(connection: &SqlitePool, coin: u8, include_hidden: bool) -> Result<Vec<Account>> {
     let mut rows = sqlx::query(
         "WITH sh AS (SELECT account, MIN(height) AS height FROM sync_heights GROUP BY account ) 
         SELECT id_account, name, seed, aindex,
@@ -564,6 +564,10 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
 
     let mut accounts = vec![];
     while let Some(row) = rows.try_next().await? {
+        // skip hidden accounts if include_hidden is false
+        if !include_hidden && row.hidden {
+            continue;
+        }
         accounts.push(row);
     }
 

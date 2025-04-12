@@ -35,8 +35,8 @@ class AccountViewPageState extends State<AccountViewPage> {
       await getTxDetails();
 
       final b = await balance();
-      await AppStoreBase.loadTxHistory();
-      await AppStoreBase.loadMemos();
+      await AppStoreBase.instance.loadTxHistory();
+      await AppStoreBase.instance.loadMemos();
       setState(() {
         poolBalance = b;
       });
@@ -77,7 +77,7 @@ class AccountViewPageState extends State<AccountViewPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Observer(builder: (context) {
                 // make sure there is a dependency on transactions
-                appStore.transactions.length;
+                AppStoreBase.instance.transactions.length;
 
                 return TabBarView(children: [
                   SingleChildScrollView(child: Column(children: [
@@ -98,11 +98,11 @@ class AccountViewPageState extends State<AccountViewPage> {
                         Text("\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
                       ]),
                     Gap(16),
-                    ...showTxHistory(appStore.transactions),
+                    ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
                   SingleChildScrollView(child: Column(
                     children: [
-                      ...showMemos(appStore.memos),
+                      ...showMemos(AppStoreBase.instance.memos),
                     ],
                   ))
                 ]);
@@ -131,7 +131,7 @@ class AccountViewPageState extends State<AccountViewPage> {
       },
       onDone: () async {
         final b = await balance();
-        await AppStoreBase.loadAccounts();
+        await AppStoreBase.instance.loadAccounts();
         setState(() {
           poolBalance = b;
         });
@@ -224,7 +224,7 @@ class AccountEditPageState extends State<AccountEditPage> {
       await updateAccount(
           update:
               AccountUpdate(coin: account.coin, id: account.id, name: name));
-      await AppStoreBase.loadAccounts();
+      await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
   }
@@ -238,7 +238,7 @@ class AccountEditPageState extends State<AccountEditPage> {
       await updateAccount(
           update:
               AccountUpdate(coin: account.coin, id: account.id, icon: bytes));
-      await AppStoreBase.loadAccounts();
+      await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
   }
@@ -249,7 +249,7 @@ class AccountEditPageState extends State<AccountEditPage> {
       await updateAccount(
           update: AccountUpdate(
               coin: account.coin, id: account.id, birth: int.parse(birth)));
-      await AppStoreBase.loadAccounts();
+      await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
   }
@@ -258,7 +258,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     account = account.copyWith(enabled: v);
     await updateAccount(
         update: AccountUpdate(coin: account.coin, id: account.id, enabled: v));
-    await AppStoreBase.loadAccounts();
+    await AppStoreBase.instance.loadAccounts();
     setState(() {});
   }
 
@@ -266,7 +266,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     account = account.copyWith(hidden: v);
     await updateAccount(
         update: AccountUpdate(coin: account.coin, id: account.id, hidden: v));
-    await AppStoreBase.loadAccounts();
+    await AppStoreBase.instance.loadAccounts();
     setState(() {});
   }
 }
