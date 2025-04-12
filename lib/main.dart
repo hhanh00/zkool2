@@ -8,12 +8,14 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:zkool/store.dart';
 
 var logger = Logger();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
+  appStore.init();
   final dbDir = await getApplicationDocumentsDirectory();
   final dbFilepath = '${dbDir.path}/zkool.db';
   if (!File(dbFilepath).existsSync()) {

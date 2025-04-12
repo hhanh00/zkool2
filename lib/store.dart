@@ -1,4 +1,5 @@
 import 'package:mobx/mobx.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 
 part 'store.g.dart';
@@ -11,6 +12,16 @@ abstract class AppStoreBase with Store {
   @observable List<Account> accounts = [];
   @observable List<Tx> transactions = [];
   @observable List<Memo> memos = [];
+
+  ObservableList<String> log = ObservableList.of([]);
+
+  void init() {
+    final stream = setLogStream();
+    stream.listen((m) {
+      logger.i(m);
+      log.add(m.message);
+    });
+  }
 
   static Future<List<Account>> loadAccounts() async {
     final as = await listAccounts();
