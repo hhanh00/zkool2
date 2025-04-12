@@ -35,8 +35,8 @@ class SendPageState extends State<SendPage> {
                 tooltip: "Open Log",
                 onPressed: () => onOpenLog(context),
                 icon: Icon(Icons.description)),
-            IconButton(onPressed: onAdd, icon: Icon(Icons.add)),
-            IconButton(onPressed: onSend, icon: Icon(Icons.send)),
+            IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add)),
+            IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send)),
           ],
         ),
         body: SingleChildScrollView(
@@ -87,8 +87,6 @@ class SendPageState extends State<SendPage> {
           address: address, amount: stringToZat(amount), userMemo: memo);
       if (mounted)
         await GoRouter.of(context).push("/send2", extra: [recipient]);
-    } else {
-      print("Invalid form");
     }
   }
 }
@@ -113,7 +111,12 @@ class Send2PageState extends State<Send2Page> {
       appBar: AppBar(
         title: Text("Extra Options"),
         actions: [
-          IconButton(onPressed: onSend, icon: Icon(Icons.send)),
+          IconButton(
+              tooltip: "Open Log",
+              onPressed: () => onOpenLog(context),
+              icon: Icon(Icons.description)),
+          IconButton(tooltip: "Send (Compute Tx)",
+            onPressed: onSend, icon: Icon(Icons.send)),
         ],
       ),
       body: SingleChildScrollView(
@@ -146,7 +149,6 @@ class Send2PageState extends State<Send2Page> {
   void onSend() async {
     final form = formKey.currentState!;
     if (!form.saveAndValidate()) {
-      print("Invalid form");
       return;
     }
 

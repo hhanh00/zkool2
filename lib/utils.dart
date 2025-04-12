@@ -1,10 +1,13 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:fixed/fixed.dart';
+import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-String initials(String name) => name.substring(0, min(2, name.length)).toUpperCase();
+String initials(String name) =>
+    name.substring(0, min(2, name.length)).toUpperCase();
 
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
@@ -30,4 +33,16 @@ String txIdToString(Uint8List txid) {
 Uint8List stringToTxId(String txid) {
   var bytes = hex.decode(txid);
   return Uint8List.fromList(bytes.reversed.toList());
+}
+
+Future<void> showException(BuildContext context, String message) async {
+  await AwesomeDialog(
+    context: context,
+    dialogType: DialogType.error,
+    animType: AnimType.rightSlide,
+    title: 'ERROR',
+    desc: message,
+    btnOkOnPress: () {},
+    autoDismiss: true,
+  ).show();
 }

@@ -1,6 +1,7 @@
 import 'package:mobx/mobx.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/init.dart';
 
 part 'store.g.dart';
 

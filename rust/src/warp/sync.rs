@@ -2,10 +2,11 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use shielded::Synchronizer;
-use sqlx::{Pool, Sqlite};
+use sqlx::SqlitePool;
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 use tonic::Streaming;
+use tracing::info;
 use zcash_protocol::consensus::Network;
 
 use crate::{
@@ -35,7 +36,7 @@ pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
 
 pub async fn warp_sync(
     network: &Network,
-    connection: &Pool<Sqlite>,
+    connection: &SqlitePool,
     height: u32,
     accounts: &[u32],
     mut blocks: Streaming<CompactBlock>,
@@ -80,7 +81,7 @@ pub async fn warp_sync(
         orch_dec: &mut OrchardSync,
         tx_decrypted: &Sender<WarpSyncMessage>,
     ) -> Result<(), SyncError> {
-        println!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+        info!("Processing {} blocks, {} outputs/actions", bs.len(), c);
         sap_dec.add(&bs).await?;
         orch_dec.add(&bs).await?;
         let lcb = bs.last().unwrap();
@@ -97,9 +98,9 @@ pub async fn warp_sync(
         Ok(())
     }
 
-    println!("Start sync");
+    info!("Start sync");
     while let Some(block) = blocks.message().await? {
-        // println!("Syncing block {}: {c}", block.height);
+        // info!("Syncing block {}: {c}", block.height);
         // bh = BlockHeader {
         //     height: block.height as u32,
         //     hash: block.hash.clone().try_into().unwrap(),
@@ -138,7 +139,7 @@ pub async fn warp_sync(
     if !bs.is_empty() {
         flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
     }
-    println!("Sync finished");
+    info!("Sync finished");
 
     Ok(())
 }

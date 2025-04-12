@@ -57,7 +57,7 @@ class AccountViewPageState extends State<AccountViewPage> {
               actions: [
                 IconButton(tooltip: "Open Log",
                   onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
-                IconButton(tooltip: "Sync all accounts",
+                IconButton(tooltip: "Sync this account",
                   onPressed: onSync, icon: Icon(Icons.sync)),
                 IconButton(tooltip: "Rewind to previous checkpoint",
                   onPressed: onRewind, icon: Icon(Icons.fast_rewind)),

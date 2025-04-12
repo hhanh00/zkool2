@@ -177,7 +177,6 @@ pub async fn get_orchard_note(
     eo: &AuthPath,
     ero: &AuthPath,
 ) -> Result<(orchard::Note, orchard::tree::MerklePath)> {
-    println!("get_orchard_note - id: {}, height: {}", id, height);
     let (position, diversifier, value, rcm, rho, witness) = sqlx::query(
         "SELECT position, diversifier, value, rcm, rho, witness FROM notes 
         JOIN witnesses w ON notes.id_note = w.note
