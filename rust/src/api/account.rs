@@ -130,9 +130,10 @@ pub struct Receivers {
 }
 
 #[frb]
-pub async fn list_accounts() -> Result<Vec<Account>> {
+pub async fn list_accounts(include_hidden: bool) -> Result<Vec<Account>> {
     let c = get_coin!();
-    let accounts = crate::db::list_accounts(c.get_pool(), c.coin).await?;
+    info!("list_accounts: {include_hidden}");
+    let accounts = crate::db::list_accounts(c.get_pool(), c.coin, include_hidden).await?;
 
     Ok(accounts)
 }
@@ -177,7 +178,7 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
             .await?;
     }
     if let Some(ref hidden) = update.hidden {
-        sqlx::query("UPDATE accounts SET enabled = ? WHERE id_account = ?")
+        sqlx::query("UPDATE accounts SET hidden = ? WHERE id_account = ?")
             .bind(hidden)
             .bind(update.id)
             .execute(pool)
