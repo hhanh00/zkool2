@@ -401,7 +401,7 @@ pub async fn generate_next_dindex() -> Result<u32> {
 }
 
 #[frb]
-pub async fn generate_next_change_address() -> Result<()> {
+pub async fn generate_next_change_address() -> Result<Option<String>> {
     let c = get_coin!();
     let connection = c.get_pool();
 
