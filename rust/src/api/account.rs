@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use flutter_rust_bridge::frb;
-use orchard::keys::FullViewingKey;
+use orchard::keys::{FullViewingKey, Scope};
 use rand_core::{OsRng, RngCore as _};
 use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::PaymentAddress;
@@ -504,4 +504,43 @@ pub async fn list_memos() -> Result<Vec<Memo>> {
     let c = get_coin!();
     let memos = crate::db::fetch_memos(c.get_pool(), c.account).await?;
     Ok(memos)
+}
+
+#[frb]
+pub async fn get_addresses() -> Result<Addresses> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    let tkeys = crate::db::select_account_transparent(connection, c.account).await?;
+    let skeys = crate::db::select_account_sapling(connection, c.account).await?;
+    let okeys = crate::db::select_account_orchard(connection, c.account).await?;
+
+    let dindex = crate::db::get_account_dindex(connection, c.account).await?;
+
+    let taddr = tkeys.xvk.as_ref().map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap());
+    let dindex = dindex as u64;
+    let saddr = skeys.xvk.as_ref().map(|xvk| xvk.address(dindex.into()).unwrap());
+    let oaddr = okeys.xvk.as_ref().map(|xvk| xvk.address_at(dindex, Scope::External));
+
+    let ua_orchard = UnifiedAddress::from_receivers(
+        oaddr, None, None);
+
+    let ua = UnifiedAddress::from_receivers(
+        oaddr, saddr, taddr);
+    
+    let addresses = Addresses {
+        taddr: taddr.map(|x| x.encode(&c.network)),
+        saddr: saddr.map(|x| x.encode(&c.network)),
+        oaddr: ua_orchard.map(|x| x.encode(&c.network)),
+        ua: ua.map(|x| x.encode(&c.network)),
+    };
+
+    Ok(addresses)
+}
+
+pub struct Addresses {
+    pub taddr: Option<String>,
+    pub saddr: Option<String>,
+    pub oaddr: Option<String>,
+    pub ua: Option<String>,
 }
