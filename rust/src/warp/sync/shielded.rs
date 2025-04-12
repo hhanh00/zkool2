@@ -5,9 +5,9 @@ use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;
 use rayon::prelude::*;
-use sqlx::Row;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Row, SqlitePool};
 use tokio::sync::mpsc::Sender;
+use tracing::info;
 use zcash_protocol::consensus::Network;
 
 use crate::lwd::{CompactBlock, CompactTx};
@@ -26,7 +26,7 @@ pub trait ShieldedProtocol {
     type Spend;
     type Output: Sync;
 
-    fn extract_ivk(pool: &Pool<Sqlite>, account: u32) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
+    fn extract_ivk(pool: &SqlitePool, account: u32) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
     fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend>;
     fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output>;
 
@@ -62,7 +62,7 @@ pub struct Synchronizer<P: ShieldedProtocol> {
 impl<P: ShieldedProtocol> Synchronizer<P> {
     pub async fn new(
         network: Network,
-        connection: &Pool<Sqlite>,
+        connection: &SqlitePool,
         pool: u8,
         height: u32,
         accounts: &[u32],
@@ -83,7 +83,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         for (account, _, _) in keys.iter() {
             // Use an anti join to get the unspent notes
             // and a join to filter based on the account and pool
-            println!("fetch UTXOs - account: {}, pool: {}, height: {}", account, pool, height);
+            info!("fetch UTXOs - account: {}, pool: {}, height: {}", account, pool, height);
             let mut nfs = sqlx::query(
                 r"
             WITH unspent AS (SELECT a.*
@@ -121,7 +121,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             })
             .fetch(connection);
             while let Some(utxo) = nfs.try_next().await? {
-                println!("UTXO: {:?}", utxo);
+                info!("UTXO: {:?}", utxo);
                 utxos.insert(utxo.nullifier.clone(), utxo);
             }
         }
@@ -171,7 +171,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 .unwrap().map(|(n, dbn)| (n, dbn, nk))
             })
         ).collect::<Vec<_>>();
-        println!("Notes #{}", notes.len());
+        info!("Notes #{}", notes.len());
 
         let mut note_iterator = notes.iter_mut();
         let mut note = note_iterator.next();

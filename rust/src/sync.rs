@@ -9,10 +9,11 @@ use crate::{
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::Row;
-use sqlx::{sqlite::SqliteRow, Pool, Sqlite};
+use sqlx::{Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Sqlite};
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::{Request, Streaming};
+use tracing::info;
 use zcash_protocol::consensus::{Network, Parameters};
 
 #[frb(dart_metadata = ("freezed"))]
@@ -197,7 +198,7 @@ pub async fn get_tree_state(
 
 pub async fn shielded_sync(
     network: &Network,
-    pool: &Pool<Sqlite>,
+    pool: &SqlitePool,
     client: &mut Client,
     accounts: Vec<u32>,
     start: u32,
@@ -206,9 +207,9 @@ pub async fn shielded_sync(
 ) -> Result<()> {
     let (s, o) = get_tree_state(network, client, start - 1).await?;
 
-    println!("get compact block range");
+    info!("get compact block range");
     let blocks = get_compact_block_range(client, start, end).await?;
-    println!("got streaming blocks");
+    info!("got streaming blocks");
     let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
     let pool2 = pool.clone();
 
@@ -230,25 +231,25 @@ pub async fn shielded_sync(
     .collect();
 
     tokio::spawn(async move {
-        println!("[db handler] starting");
+        info!("[db handler] starting");
         let mut db_tx = pool2.begin().await?;
         while let Some(msg) = rx_messages.recv().await {
-            //println!("Received message: {:?}", msg);
+            //info!("Received message: {:?}", msg);
             if let WarpSyncMessage::Commit = msg {
                 db_tx.commit().await.unwrap();
-                println!("Committing transaction");
+                info!("Committing transaction");
                 db_tx = pool2.begin().await.unwrap();
             } else {
                 match handle_message(&mut db_tx, msg, &tx_progress).await {
                     Ok(_) => {}
                     Err(e) => {
-                        println!("ERROR HANDLING MESSAGE: {:?}", e);
+                        info!("ERROR HANDLING MESSAGE: {:?}", e);
                     }
                 }
             }
         }
         db_tx.commit().await?;
-        println!("[db handler] stopped");
+        info!("[db handler] stopped");
 
         Ok::<_, anyhow::Error>(())
     });
@@ -285,7 +286,7 @@ async fn handle_message(
                 .bind(tx.height)
                 .bind(tx.time)
                 .execute(&mut **db_tx).await?;
-            println!("Processing Transaction: id={}, height={}", tx.id, tx.height);
+            info!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {
             let r = sqlx::query
@@ -305,11 +306,11 @@ async fn handle_message(
                     .bind(note.account)
                     .bind(&note.txid)
                     .execute(&mut **db_tx).await?;
-            println!(
+            info!(
                 "Processing Note: id={}, account={}, height={}",
                 note.id, note.account, note.height
             );
-            println!("{:?}", note);
+            info!("{:?}", note);
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Witness(account, height, cmx, witness) => {
@@ -326,7 +327,7 @@ async fn handle_message(
             .bind(&cmx)
             .execute(&mut **db_tx)
             .await?;
-            println!("Processing Witness: account={account}, height={height}");
+            info!("Processing Witness: account={account}, height={height}");
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Spend(utxo) => {
@@ -345,7 +346,7 @@ async fn handle_message(
             .bind(&utxo.txid)
             .execute(&mut **db_tx)
             .await?;
-            println!("Processing Spend: {:?}", &utxo);
+            info!("Processing Spend: {:?}", &utxo);
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Checkpoint(accounts, pool, height) => {
@@ -359,12 +360,12 @@ async fn handle_message(
                 .bind(height)
                 .execute(&mut **db_tx)
                 .await?;
-                println!("Checkpoint for account: {}, height: {}", a, height);
+                info!("Checkpoint for account: {}, height: {}", a, height);
                 let _ = tx_progress.send(SyncProgress { height, time: 0 }).await;
             }
         }
         WarpSyncMessage::BlockHeader(block_header) => {
-            println!("Processing BlockHeader: {:?}", block_header);
+            info!("Processing BlockHeader: {:?}", block_header);
             // ignore dups because we could have already inserted the block header
             // if a transparent transaction needs it
             // to resolve the time of the transaction
@@ -391,7 +392,7 @@ async fn handle_message(
     Ok(())
 }
 
-pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>, accounts: &[u32]) -> Result<()> {
+pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]) -> Result<()> {
     for account in accounts {
         let account_heights = sqlx::query(
             "SELECT account, MIN(height) FROM sync_heights
@@ -416,7 +417,7 @@ pub async fn recover_from_partial_sync(connection: &Pool<Sqlite>, accounts: &[u3
 
 // remove synchronization data (headers, notes, spends, transactions, witnesses) after the given height
 // keep the data at the given height
-pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32) -> Result<()> {
+pub async fn trim_sync_data(connection: &SqlitePool, account: u32, height: u32) -> Result<()> {
     let mut db_tx = connection.begin().await?;
     sqlx::query("DELETE FROM headers WHERE height > ?")
         .bind(height)
@@ -459,7 +460,7 @@ pub async fn trim_sync_data(connection: &Pool<Sqlite>, account: u32, height: u32
 
 // for each account, find the latest checkpoint before the given height
 // and trim the synchronization data to that height
-pub async fn rewind_sync(connection: &Pool<Sqlite>, height: u32) -> Result<()> {
+pub async fn rewind_sync(connection: &SqlitePool, height: u32) -> Result<()> {
     let account_checkpoints =
         sqlx::query("SELECT account, MAX(height) FROM witnesses WHERE height < ? GROUP BY account")
             .bind(height)
@@ -478,7 +479,7 @@ pub async fn rewind_sync(connection: &Pool<Sqlite>, height: u32) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_db_height(connection: &Pool<Sqlite>, account: u32) -> Result<u32> {
+pub async fn get_db_height(connection: &SqlitePool, account: u32) -> Result<u32> {
     let (height,): (u32,) =
         sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
             .bind(account)

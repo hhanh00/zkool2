@@ -2,7 +2,7 @@ use anyhow::Result;
 use sapling_crypto::{
     zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::SqlitePool;
 use zcash_protocol::consensus::Network;
 use zcash_primitives::zip32::Scope;
 
@@ -39,7 +39,7 @@ impl ShieldedProtocol for SaplingProtocol {
     }
 
     async fn extract_ivk(
-        connection: &Pool<Sqlite>,
+        connection: &SqlitePool,
         account: u32,
     ) -> Result<Option<(Self::IVK, Self::NK)>> {
         let vk: Option<(Vec<u8>, )> = sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
