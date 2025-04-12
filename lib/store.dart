@@ -5,8 +5,6 @@ import 'package:zkool/src/rust/api/init.dart';
 
 part 'store.g.dart';
 
-var appStore = AppStore();
-
 class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
@@ -14,6 +12,7 @@ abstract class AppStoreBase with Store {
   @observable List<Tx> transactions = [];
   @observable List<Memo> memos = [];
 
+  bool includeHidden = false;
   ObservableList<String> log = ObservableList.of([]);
 
   void init() {
@@ -24,19 +23,21 @@ abstract class AppStoreBase with Store {
     });
   }
 
-  static Future<List<Account>> loadAccounts() async {
-    final as = await listAccounts();
-    appStore.accounts = as;
+  Future<List<Account>> loadAccounts() async {
+    final as = await listAccounts(includeHidden: includeHidden);
+    accounts = as;
     return as;
   }
 
-  static Future<void> loadTxHistory() async {
+  Future<void> loadTxHistory() async {
     final txs = await listTxHistory();
-    appStore.transactions = txs;
+    transactions = txs;
   }
 
-  static Future<void> loadMemos() async {
-    final memos = await listMemos();
-    appStore.memos = memos;
+  Future<void> loadMemos() async {
+    final mems = await listMemos();
+    memos = mems;
   }
+
+  static AppStore instance = AppStore();
 }

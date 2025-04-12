@@ -123,8 +123,9 @@ class NewAccountPageState extends State<NewAccountPage> {
             aindex: int.parse(aindex ?? "0"),
             birth: birth != null ? int.parse(birth) : null,
           ));
-      await AppStoreBase.loadAccounts();
-      GoRouter.of(context).pop();
+      await AppStoreBase.instance.loadAccounts();
+      if (mounted)
+        GoRouter.of(context).pop();
     }
   }
 
