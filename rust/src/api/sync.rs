@@ -1,8 +1,8 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
-use sqlx::{sqlite::SqliteRow, Pool};
-use sqlx::{Row, Sqlite};
+use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use tracing::info;
 use std::collections::HashMap;
 use tokio::sync::mpsc::channel;
 use zcash_keys::encoding::AddressCodec as _;
@@ -119,7 +119,7 @@ pub async fn synchronize(
 
 async fn transparent_sync(
     network: &Network,
-    pool: &Pool<Sqlite>,
+    pool: &SqlitePool,
     start_height: u32,
     end_height: u32,
     accounts: &Vec<u32>,
@@ -200,8 +200,8 @@ async fn transparent_sync(
 
             // Access the transparent bundle part
             if let Some(transparent_bundle) = transaction.transparent_bundle() {
-                println!("Transaction: {}", transaction.txid());
-                println!("Transparent inputs: {}", transparent_bundle.vin.len());
+                info!("Transaction: {}", transaction.txid());
+                info!("Transparent inputs: {}", transparent_bundle.vin.len());
 
                 let vins = &transparent_bundle.vin;
                 for vin in vins.iter() {
@@ -253,7 +253,7 @@ async fn transparent_sync(
                     }
                 }
 
-                println!("Transparent outputs: {}", transparent_bundle.vout.len());
+                info!("Transparent outputs: {}", transparent_bundle.vout.len());
             }
         }
         sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND pool = 0")

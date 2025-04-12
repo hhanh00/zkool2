@@ -42,7 +42,7 @@ fn accumulate_generator(acc: &Fr, idx_generator: u32) -> ExtendedPoint {
 }
 
 pub fn hash_combine(depth: u8, left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
-    // println!("+ {} {} {}", depth, hex::encode(left), hex::encode(right));
+    // info!("+ {} {} {}", depth, hex::encode(left), hex::encode(right));
     let p = hash_combine_inner(depth, left, right);
     p.to_affine().get_u().to_repr()
 }

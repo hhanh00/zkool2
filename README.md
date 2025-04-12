@@ -53,7 +53,8 @@ A wallet for zcash
 - [ ] Log viewer
     - [x] integrate tracing framework
     - [x] make log viewer page
-    - [ ] add logging messages
+    - [x] add logging messages
+- [ ] MultiSend
 - [ ] Import/Export
     - [ ] accounts
     - [ ] tx history
