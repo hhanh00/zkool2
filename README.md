@@ -46,6 +46,7 @@ A wallet for zcash
 - [ ] History
     - [x] tx list
     - [x] memo
+    - [x] split views
 - [ ] QR
     - [ ] scanner
     - [ ] show

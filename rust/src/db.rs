@@ -695,7 +695,7 @@ pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
         "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes 
         FROM memos m JOIN transactions t ON m.tx = t.id_tx
-        WHERE m.account = ?")
+        WHERE m.account = ? ORDER BY m.height DESC")
         .bind(account)
         .map(|row: SqliteRow| {
             let id: u32 = row.get(0);
