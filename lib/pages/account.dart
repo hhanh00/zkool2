@@ -49,41 +49,63 @@ class AccountViewPageState extends State<AccountViewPage> {
     final h = height;
     final b = poolBalance;
 
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.account.name),
-          actions: [
-            IconButton(onPressed: onNextDiversifier, icon: Icon(Icons.next_plan)),
-            IconButton(onPressed: onNewChange, icon: Icon(Icons.add)),
-            IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
-            IconButton(onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
-            IconButton(onPressed: onReceive, icon: Icon(Icons.download)),
-            IconButton(onPressed: onSend, icon: Icon(Icons.send)),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Observer(builder: (context) {
-            // make sure there is a dependency on transactions
-            appStore.transactions.length;
-
-            return Column(
-              children: [
-                Text(h.toString(), style: t.bodyLarge),
-                if (b != null)
-                  Row(children: [
-                    Text("T: ${zatToString(b.field0[0])}"),
-                    const Gap(8),
-                    Text("S: ${zatToString(b.field0[1])}"),
-                    const Gap(8),
-                    Text("O: ${zatToString(b.field0[2])}"),
-                  ]),
-                ...showTxHistory(appStore.transactions),
-                ...showMemos(appStore.memos),
+    return DefaultTabController(
+        length: 2,
+        child: Scaffold(
+            appBar: AppBar(
+              title: Text(widget.account.name),
+              actions: [
+                IconButton(tooltip: "Sync all accounts",
+                  onPressed: onSync, icon: Icon(Icons.sync)),
+                IconButton(tooltip: "Rewind to previous checkpoint",
+                  onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+                IconButton(tooltip: "Receive Funds",
+                  onPressed: onReceive, icon: Icon(Icons.download)),
+                IconButton(tooltip: "Send Funds",
+                  onPressed: onSend, icon: Icon(Icons.send)),
               ],
-            );
-          }),
-        ));
+              bottom: TabBar(
+                tabs: [
+                  Tab(text: 'Transactions'),
+                  Tab(text: 'Memos'),
+                ],
+              ),
+            ),
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Observer(builder: (context) {
+                // make sure there is a dependency on transactions
+                appStore.transactions.length;
+
+                return TabBarView(children: [
+                  SingleChildScrollView(child: Column(children: [
+                    Text("Height"),
+                    Gap(8),
+                    Text(h.toString(), style: t.bodyLarge),
+                    Gap(16),
+                    Text("Balance"),
+                    Gap(8),
+                    if (b != null)
+                      Row(children: [
+                        Text("T: ${zatToString(b.field0[0])}"),
+                        const Gap(8),
+                        Text("S: ${zatToString(b.field0[1])}"),
+                        const Gap(8),
+                        Text("O: ${zatToString(b.field0[2])}"),
+                        const Gap(16),
+                        Text("\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
+                      ]),
+                    Gap(16),
+                    ...showTxHistory(appStore.transactions),
+                  ])),
+                  SingleChildScrollView(child: Column(
+                    children: [
+                      ...showMemos(appStore.memos),
+                    ],
+                  ))
+                ]);
+              }),
+            )));
   }
 
   void onNextDiversifier() async {
@@ -262,6 +284,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
     const Gap(8),
     ListView.builder(
       shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: transactions.length,
       itemBuilder: (context, index) {
         final tx = transactions[index];
@@ -281,10 +304,9 @@ List<Widget> showTxHistory(List<Tx> transactions) {
 
 List<Widget> showMemos(List<Memo> memos) {
   return [
-    const Text("Memos"),
-    const Gap(8),
     ListView.builder(
       shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: memos.length,
       itemBuilder: (context, index) {
         final memo = memos[index];
