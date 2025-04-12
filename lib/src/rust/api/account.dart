@@ -8,6 +8,10 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'account.freezed.dart';
 
+// These functions are ignored because they are not marked as `pub`: `default_layer`, `env_layer`, `frb_layer`, `new`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbMakeWriter`, `FrbWriter`, `LOG_SINK`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `deref`, `flush`, `initialize`, `make_writer`, `write`
+
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
@@ -48,9 +52,6 @@ Future<int> generateNextDindex() =>
 Future<String?> generateNextChangeAddress() =>
     RustLib.instance.api.crateApiAccountGenerateNextChangeAddress();
 
-Future<List<Account>> getAllAccounts() =>
-    RustLib.instance.api.crateApiAccountGetAllAccounts();
-
 Future<void> removeAccount({required int accountId}) =>
     RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId);
 
@@ -67,6 +68,9 @@ Future<List<Memo>> listMemos() =>
 
 Future<Addresses> getAddresses() =>
     RustLib.instance.api.crateApiAccountGetAddresses();
+
+Stream<LogMessage> setLogStream() =>
+    RustLib.instance.api.crateApiAccountSetLogStream();
 
 @freezed
 class Account with _$Account {
@@ -125,6 +129,14 @@ class Addresses {
           saddr == other.saddr &&
           oaddr == other.oaddr &&
           ua == other.ua;
+}
+
+@freezed
+class LogMessage with _$LogMessage {
+  const factory LogMessage({
+    required int level,
+    required String message,
+  }) = _LogMessage;
 }
 
 @freezed
