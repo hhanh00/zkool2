@@ -1,7 +1,8 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
-use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::SqlitePool;
+use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Sqlite};
 use tonic::transport::{Certificate, ClientTlsConfig};
 use zcash_protocol::consensus::Network;
 
@@ -34,7 +35,7 @@ pub struct Coin {
     pub account: u32,
     pub network: Network,
     pub db_filepath: String,
-    pub pool: Option<Pool<Sqlite>>,
+    pub pool: Option<SqlitePool>,
     pub lwd: String,
 }
 
@@ -67,7 +68,7 @@ impl Coin {
         })
     }
 
-    pub fn get_pool(&self) -> &Pool<Sqlite> {
+    pub fn get_pool(&self) -> &SqlitePool {
         self.pool.as_ref().unwrap()
     }
 

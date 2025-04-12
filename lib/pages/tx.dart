@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/utils.dart';
@@ -36,12 +37,17 @@ class TxPageState extends State<TxPage> {
   }
 
   void onSend() async {
-    final _txId = await send(
-      height: widget.txPlan.height,
-      data: widget.txPlan.data,
-    );
-    print("Transaction sent: $_txId");
-    setState(() => txId = _txId);
+    try {
+      final txId2 = await send(
+        height: widget.txPlan.height,
+        data: widget.txPlan.data,
+      );
+      setState(() => txId = txId2);
+    }
+    on AnyhowException catch (e) {
+      if (mounted)
+        await showException(context, e.message);
+    }
   }
 }
 
@@ -79,4 +85,3 @@ List<Widget> showTxPlan(BuildContext context, TxPlan txPlan) {
     inouts
   ];
 }
-
