@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
@@ -76,13 +77,86 @@ class SendPageState extends State<SendPage> {
       final memo = form.fields['memo']?.value as String?;
       logger.i("Send $amount to $address");
 
-      final recipient =
-          Recipient(address: address, amount: stringToZat(amount), userMemo: memo);
-      final tx = await prepare(
-          srcPools: 7, recipients: [recipient], recipientPaysFee: false);
-      if (mounted) await GoRouter.of(context).push("/tx", extra: tx);
+      final recipient = Recipient(
+          address: address, amount: stringToZat(amount), userMemo: memo);
+      if (mounted)
+        await GoRouter.of(context).push("/send2", extra: [recipient]);
     } else {
       print("Invalid form");
     }
+  }
+}
+
+class Send2Page extends StatefulWidget {
+  final List<Recipient> recipients;
+  const Send2Page(this.recipients, {super.key});
+
+  @override
+  State<Send2Page> createState() => Send2PageState();
+}
+
+class Send2PageState extends State<Send2Page> {
+  String? txId;
+  var recipientPaysFee = false;
+  var srcPools = "7";
+  final formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Extra Options"),
+        actions: [
+          IconButton(onPressed: onSend, icon: Icon(Icons.send)),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: FormBuilder(
+              key: formKey,
+              child: Column(children: [
+                FormBuilderTextField(
+                  name: "source pools",
+                  decoration: const InputDecoration(labelText: "Source Pools"),
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(),
+                    FormBuilderValidators.integer(),
+                    FormBuilderValidators.min(1),
+                    FormBuilderValidators.max(7),
+                  ]),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  initialValue: srcPools,
+                  onChanged: (v) => setState(() => srcPools = v!),
+                ),
+                FormBuilderSwitch(
+                  name: "recipientPaysFee",
+                  title: Text("Recipient Pays Fee"),
+                  initialValue: false,
+                  onChanged: (v) => setState(() => recipientPaysFee = v!),
+                ),
+              ])),
+        ),
+      ),
+    );
+  }
+
+  void onSend() async {
+    final form = formKey.currentState!;
+    if (!form.saveAndValidate()) {
+      print("Invalid form");
+      return;
+    }
+    
+    final srcPools2 = int.parse(srcPools);
+
+    final tx = await prepare(
+        srcPools: srcPools2,
+        recipients: widget.recipients,
+        recipientPaysFee: recipientPaysFee);
+
+    if (mounted)
+      await GoRouter.of(context).push("/tx", extra: tx);
   }
 }

@@ -46,16 +46,6 @@ impl FeeManager {
             0
         };
         let f = t + s + o;
-        tracing::debug!(
-            "fee: {}:{} {}:{} {}:{}",
-            self.num_inputs[0],
-            self.num_outputs[0],
-            self.num_inputs[1],
-            self.num_outputs[1],
-            self.num_inputs[2],
-            self.num_outputs[2],
-        );
-        tracing::debug!("fee: {t} {s} {o} -> {f}");
         f as u64 * COST_PER_ACTION
     }
 
@@ -66,5 +56,19 @@ impl FeeManager {
         } else {
             a.max(2)
         }
+    }
+}
+
+impl std::fmt::Display for FeeManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,
+            "fee: {}:{} {}:{} {}:{}",
+            self.num_inputs[0],
+            self.num_outputs[0],
+            self.num_inputs[1],
+            self.num_outputs[1],
+            self.num_inputs[2],
+            self.num_outputs[2],
+        )
     }
 }

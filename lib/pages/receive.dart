@@ -38,7 +38,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.ua != null)
                         ListTile(
                           title: Text("Unified Address"),
-                          subtitle: Text(addresses.ua!),
+                          subtitle: SelectableText(addresses.ua!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () {},
@@ -47,7 +47,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.oaddr != null)
                         ListTile(
                           title: Text("Orchard only Address"),
-                          subtitle: Text(addresses.oaddr!),
+                          subtitle: SelectableText(addresses.oaddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () {},
@@ -56,7 +56,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.saddr != null)
                         ListTile(
                           title: Text("Sapling Address"),
-                          subtitle: Text(addresses.saddr!),
+                          subtitle: SelectableText(addresses.saddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () {},
@@ -65,7 +65,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.taddr != null)
                         ListTile(
                           title: Text("Transparent Address"),
-                          subtitle: Text(addresses.taddr!),
+                          subtitle: SelectableText(addresses.taddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () {},
