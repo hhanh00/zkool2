@@ -55,6 +55,7 @@ fpdec = "0.11"
 pczt = { version = "0.2", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
 
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 itertools = "0.14"
 
 [lints.rust]
