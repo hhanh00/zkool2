@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.4.0...zkool-v1.5.0) (2025-04-12)
+
+
+### Features
+
+* auto renew transparent change address ([#65](https://github.com/hhanh00/zkool2/issues/65)) ([1d42e75](https://github.com/hhanh00/zkool2/commit/1d42e7514ab54609d5ec83109c01a8532feaba79))
+* expose src pools and recipient pays fees to UI ([#64](https://github.com/hhanh00/zkool2/issues/64)) ([150e063](https://github.com/hhanh00/zkool2/commit/150e0634bff3ae608654bdc86b5e700c3212eeac))
+* generate additional transparent addresses ([#61](https://github.com/hhanh00/zkool2/issues/61)) ([93a85b2](https://github.com/hhanh00/zkool2/commit/93a85b2278e8c5f246cad802a3edfa4911ca5164))
+* logging framework ([#67](https://github.com/hhanh00/zkool2/issues/67)) ([aa83e32](https://github.com/hhanh00/zkool2/commit/aa83e3249d355778edaf3f4b3488514f3f937f1c))
+* scan last 5 receive and change transparent addresses ([#62](https://github.com/hhanh00/zkool2/issues/62)) ([22403b8](https://github.com/hhanh00/zkool2/commit/22403b804be93affb56249eeb3e0177f3c9c8279))
+* send memo ([#59](https://github.com/hhanh00/zkool2/issues/59)) ([3d75a82](https://github.com/hhanh00/zkool2/commit/3d75a8272ed236ea9b39d865b15f81b454ba9863))
+* show diversified addresses ([#63](https://github.com/hhanh00/zkool2/issues/63)) ([ed8383f](https://github.com/hhanh00/zkool2/commit/ed8383f12f08efbe81013c41b76d23784e19339b))
+* show/hide accounts ([#69](https://github.com/hhanh00/zkool2/issues/69)) ([647d521](https://github.com/hhanh00/zkool2/commit/647d52159096f67d847b9810108be01bfd61e45f))
+* split tab views for transactions and memos ([#66](https://github.com/hhanh00/zkool2/issues/66)) ([ecf7395](https://github.com/hhanh00/zkool2/commit/ecf7395ebecb30595b8ee4aef579eba6e0c01bfb))
+
+
+### Bug Fixes
+
+* add more logging messages ([#68](https://github.com/hhanh00/zkool2/issues/68)) ([c94eed5](https://github.com/hhanh00/zkool2/commit/c94eed5d0b33d932449bfa0007da4b2100e31727))
+* tx building when recipient pays fees ([150e063](https://github.com/hhanh00/zkool2/commit/150e0634bff3ae608654bdc86b5e700c3212eeac))
+
 ## [1.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.3.0...zkool-v1.4.0) (2025-04-11)
 
 
