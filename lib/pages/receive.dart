@@ -28,6 +28,10 @@ class ReceivePageState extends State<ReceivePage> {
     return Scaffold(
         appBar: AppBar(
           title: Text("Receive Funds"),
+          actions: [
+            IconButton(tooltip: "Next Set of Addresses",
+                onPressed: onGenerateAddress, icon: Icon(Icons.skip_next)),
+          ],
         ),
         body: addresses == null
             ? SizedBox.shrink()
@@ -71,9 +75,6 @@ class ReceivePageState extends State<ReceivePage> {
                             onPressed: () {},
                           ),
                         ),
-                      ElevatedButton(
-                          onPressed: onGenerateAddress,
-                          child: Text("Generate New Addresses"))
                     ]))));
   }
 

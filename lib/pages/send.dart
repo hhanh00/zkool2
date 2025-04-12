@@ -9,6 +9,7 @@ import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/widgets/pool_select.dart';
 
 class SendPage extends StatefulWidget {
   const SendPage({super.key});
@@ -116,20 +117,14 @@ class Send2PageState extends State<Send2Page> {
           child: FormBuilder(
               key: formKey,
               child: Column(children: [
-                FormBuilderTextField(
-                  name: "source pools",
-                  decoration: const InputDecoration(labelText: "Source Pools"),
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.integer(),
-                    FormBuilderValidators.min(1),
-                    FormBuilderValidators.max(7),
-                  ]),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  initialValue: srcPools,
-                  onChanged: (v) => setState(() => srcPools = v!),
-                ),
+                InputDecorator(
+                  decoration: InputDecoration(labelText: "Source Pools"),
+                  child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FormBuilderField<int>(
+                    name: "source pools",
+                    builder: (field) => PoolSelect(onChanged: (v) => field.didChange(v)),
+                ))),
                 FormBuilderSwitch(
                   name: "recipientPaysFee",
                   title: Text("Recipient Pays Fee"),
