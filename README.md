@@ -20,7 +20,7 @@ A wallet for zcash
 - [ ] Account Manager
     - [x] CRUD
     - [x] reorder
-    - [ ] hide accounts
+    - [x] hide accounts
 - [ ] Synchronization
     - [x] transparent
     - [x] shielded

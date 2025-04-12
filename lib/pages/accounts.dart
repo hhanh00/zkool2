@@ -20,10 +20,12 @@ class AccountListPage extends StatefulWidget {
 }
 
 class AccountListPageState extends State<AccountListPage> {
+  var hiding = true;
+
   @override
   Widget build(BuildContext context) {
     return EditableList<Account>(
-      observable: () => appStore.accounts,
+      observable: () => AppStoreBase.instance.accounts,
       builder: (context, index, account, {selected, onSelectChanged}) =>
       Material(key: ValueKey(account.id), child: GestureDetector(child:
         SizedBox(height: 60, child: Row(children: [
@@ -40,7 +42,7 @@ class AccountListPageState extends State<AccountListPage> {
         onTap: () => onOpen(context, account),
       )),
       title: "Account List",
-      onCreate: () => AppStoreBase.loadAccounts(),
+      onCreate: () => AppStoreBase.instance.loadAccounts(),
       createBuilder: (context) => GoRouter.of(context).push("/account/new"),
       editBuilder: (context, a) =>
           GoRouter.of(context).push("/account/edit", extra: a),
@@ -69,23 +71,32 @@ class AccountListPageState extends State<AccountListPage> {
           for (var a in accounts) {
             await deleteAccount(account: a);
           }
-          await AppStoreBase.loadAccounts();
+          await AppStoreBase.instance.loadAccounts();
         }
       },
       isEqual:(a, b) => a.id == b.id,
       onReorder: onReorder,
       buttons: [
         IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+        IconButton(onPressed: onHide, icon: Icon(hiding ? Icons.visibility : Icons.visibility_off)),
       ]
     );
   }
 
+  onHide() async {
+    setState(() {
+      hiding = !hiding;
+      AppStoreBase.instance.includeHidden = !hiding;
+      AppStoreBase.instance.loadAccounts();
+    });
+  }
+
   onSync() async {
-    final accountIds = appStore.accounts.where((a) => a.enabled).map((a) => a.id).toList();
+    final accountIds = AppStoreBase.instance.accounts.where((a) => a.enabled).map((a) => a.id).toList();
     final syncProgress = await startSync(accountIds: accountIds);
     syncProgress.listen(null, onDone: () {
       if (mounted) {
-        AppStoreBase.loadAccounts();
+        AppStoreBase.instance.loadAccounts();
       }
     });
   }
@@ -98,9 +109,9 @@ class AccountListPageState extends State<AccountListPage> {
     logger.i("Reorder $oldIndex to $newIndex");
     
     await reorderAccount(
-      oldPosition: appStore.accounts[oldIndex].position, 
-      newPosition: appStore.accounts[newIndex].position);
-    await AppStoreBase.loadAccounts();
+      oldPosition: AppStoreBase.instance.accounts[oldIndex].position, 
+      newPosition: AppStoreBase.instance.accounts[newIndex].position);
+    await AppStoreBase.instance.loadAccounts();
   }
 }
 

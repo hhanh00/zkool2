@@ -15,7 +15,7 @@ var logger = Logger();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
-  appStore.init();
+  AppStoreBase.instance.init();
   final dbDir = await getApplicationDocumentsDirectory();
   final dbFilepath = '${dbDir.path}/zkool.db';
   if (!File(dbFilepath).existsSync()) {

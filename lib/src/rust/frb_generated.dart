@@ -115,7 +115,8 @@ abstract class RustLibApi extends BaseApi {
 
   bool crateApiKeyIsValidTransparentAddress({required String address});
 
-  Future<List<Account>> crateApiAccountListAccounts();
+  Future<List<Account>> crateApiAccountListAccounts(
+      {required bool includeHidden});
 
   Future<List<Memo>> crateApiAccountListMemos();
 
@@ -506,10 +507,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<Account>> crateApiAccountListAccounts() {
+  Future<List<Account>> crateApiAccountListAccounts(
+      {required bool includeHidden}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_bool(includeHidden, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 15, port: port_);
       },
@@ -518,7 +521,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountListAccountsConstMeta,
-      argValues: [],
+      argValues: [includeHidden],
       apiImpl: this,
     ));
   }
@@ -526,7 +529,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountListAccountsConstMeta =>
       const TaskConstMeta(
         debugName: "list_accounts",
-        argNames: [],
+        argNames: ["includeHidden"],
       );
 
   @override
