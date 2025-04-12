@@ -36,6 +36,10 @@ final router = GoRouter(
       builder: (context, state) => SendPage(),
     ),
     GoRoute(
+      path: '/send2',
+      builder: (context, state) => Send2Page(state.extra as List<Recipient>),
+    ),
+    GoRoute(
         path: '/tx',
         builder: (context, state) => TxPage(state.extra as TxPlan)),
   ],
