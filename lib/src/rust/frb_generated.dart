@@ -94,7 +94,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAccountDropSchema();
 
-  Future<void> crateApiAccountGenerateNextChangeAddress();
+  Future<String?> crateApiAccountGenerateNextChangeAddress();
 
   Future<int> crateApiAccountGenerateNextDindex();
 
@@ -270,7 +270,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAccountGenerateNextChangeAddress() {
+  Future<String?> crateApiAccountGenerateNextChangeAddress() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
@@ -278,7 +278,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             funcId: 5, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
+        decodeSuccessData: sse_decode_opt_String,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountGenerateNextChangeAddressConstMeta,

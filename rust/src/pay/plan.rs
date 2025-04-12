@@ -37,8 +37,7 @@ use zcash_transparent::bundle::{OutPoint, TxOut};
 
 use crate::{
     account::{
-        get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk,
-        get_sapling_note, get_sapling_sk, get_sapling_vk,
+        generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
     },
     pay::{
         error::Error,
@@ -50,6 +49,8 @@ use crate::{
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
     Client,
 };
+
+use super::pool::ALL_SHIELDED_POOLS;
 
 pub async fn plan_transaction(
     network: &Network,
@@ -249,7 +250,13 @@ pub async fn plan_transaction(
     let sapling_anchor = es.root(&SaplingHasher::default());
     let orchard_anchor = eo.root(&OrchardHasher::default());
 
-    let change_address = get_account_full_address(network, connection, account).await?;
+    // generate a new change address if we need a transparent address
+    let change_address = if change_pool == 0 {
+        generate_next_change_address(network, connection, account).await?.unwrap()
+    }
+    else {
+        get_account_full_address(network, connection, account).await?
+    };
 
     let change_recipient = RecipientState {
         recipient: Recipient {
@@ -641,6 +648,7 @@ pub async fn get_effective_src_pools(
 }
 
 pub fn get_change_pool(src_pool_mask: PoolMask, dest_pool_mask: PoolMask) -> u8 {
+    let dest_pool_mask = dest_pool_mask.intersect(&PoolMask(ALL_SHIELDED_POOLS));
     // Determine which pool to use for the change
     // If the source pools and the destinations pools intersect, pick
     // the best pool from the intersection

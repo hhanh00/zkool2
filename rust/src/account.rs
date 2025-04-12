@@ -322,7 +322,7 @@ pub async fn generate_next_change_address(
     network: &Network,
     connection: &SqlitePool,
     account: u32,
-) -> Result<()> {
+) -> Result<Option<String>> {
     let dindex = sqlx::query(
         "SELECT MAX(dindex) FROM transparent_address_accounts WHERE account = ? AND scope = 1",
     )
@@ -354,9 +354,11 @@ pub async fn generate_next_change_address(
             &change_address,
         )
         .await?;
+
+        return Ok(Some(change_address));
     }
 
-    Ok(())
+    Ok(None)
 }
 
 async fn get_transparent_keys(
