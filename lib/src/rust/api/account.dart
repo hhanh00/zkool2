@@ -65,6 +65,9 @@ Future<List<Tx>> listTxHistory() =>
 Future<List<Memo>> listMemos() =>
     RustLib.instance.api.crateApiAccountListMemos();
 
+Future<Addresses> getAddresses() =>
+    RustLib.instance.api.crateApiAccountGetAddresses();
+
 @freezed
 class Account with _$Account {
   const factory Account({
@@ -94,6 +97,34 @@ class AccountUpdate with _$AccountUpdate {
     bool? hidden,
     bool? enabled,
   }) = _AccountUpdate;
+}
+
+class Addresses {
+  final String? taddr;
+  final String? saddr;
+  final String? oaddr;
+  final String? ua;
+
+  const Addresses({
+    this.taddr,
+    this.saddr,
+    this.oaddr,
+    this.ua,
+  });
+
+  @override
+  int get hashCode =>
+      taddr.hashCode ^ saddr.hashCode ^ oaddr.hashCode ^ ua.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Addresses &&
+          runtimeType == other.runtimeType &&
+          taddr == other.taddr &&
+          saddr == other.saddr &&
+          oaddr == other.oaddr &&
+          ua == other.ua;
 }
 
 @freezed
