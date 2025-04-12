@@ -11,6 +11,7 @@ use zcash_protocol::PoolType;
 pub struct PoolMask(pub u8);
 
 pub const ALL_POOLS: u8 = 0b111;
+pub const ALL_SHIELDED_POOLS: u8 = 0b110;
 
 impl PoolMask {
     pub fn empty() -> Self {

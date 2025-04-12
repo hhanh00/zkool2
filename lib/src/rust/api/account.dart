@@ -45,7 +45,7 @@ Future<void> newAccount({required NewAccount na}) =>
 Future<int> generateNextDindex() =>
     RustLib.instance.api.crateApiAccountGenerateNextDindex();
 
-Future<void> generateNextChangeAddress() =>
+Future<String?> generateNextChangeAddress() =>
     RustLib.instance.api.crateApiAccountGenerateNextChangeAddress();
 
 Future<List<Account>> getAllAccounts() =>
