@@ -3,7 +3,7 @@ use orchard::{
     keys::{FullViewingKey, IncomingViewingKey, Scope},
     Note,
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::SqlitePool;
 use zcash_protocol::consensus::Network;
 
 use crate::{
@@ -23,7 +23,7 @@ impl ShieldedProtocol for OrchardProtocol {
     type Output = CompactOrchardAction;
     type Note = Note;
     
-    async fn extract_ivk(connection: &Pool<Sqlite>, account: u32) -> Result<Option<(Self::IVK, Self::NK)>> {
+    async fn extract_ivk(connection: &SqlitePool, account: u32) -> Result<Option<(Self::IVK, Self::NK)>> {
         let vk: Option<(Vec<u8>, )> = sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(connection)

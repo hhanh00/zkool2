@@ -8,6 +8,7 @@
 
 import 'api/account.dart';
 import 'api/db.dart';
+import 'api/init.dart';
 import 'api/key.dart';
 import 'api/network.dart';
 import 'api/pay.dart';

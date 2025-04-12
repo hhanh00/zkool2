@@ -63,16 +63,12 @@ pub async fn decrypt_memo(
     let tx = Transaction::read(data, branch_id)?;
     let tx_data = tx.into_data();
 
-    println!("Transaction parsed successfully");
-
     let (id_tx, ): (u32,) =
         sqlx::query_as("SELECT id_tx FROM transactions WHERE account = ? AND txid = ?")
             .bind(account)
             .bind(&txid)
             .fetch_one(connection)
             .await?;
-
-    println!("Transaction ID: {}", id_tx);
 
     let svk = get_sapling_vk(connection, account).await?;
 
