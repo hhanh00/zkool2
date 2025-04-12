@@ -63,7 +63,7 @@ pub async fn plan_transaction(
     let effective_src_pools =
         crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
 
-    let mut recipients = recipients.to_vec();
+    let recipients = recipients.to_vec();
     let mut recipient_pools = PoolMask(0);
     for recipient in recipients.iter() {
         let pool = PoolMask::from_address(&recipient.address)?
@@ -79,8 +79,8 @@ pub async fn plan_transaction(
     fee_manager.add_output(change_pool);
 
     let recipient_states = recipients
-        .iter()
-        .map(|r| RecipientState::new(r.clone()).unwrap())
+        .into_iter()
+        .map(|r| RecipientState::new(r).unwrap())
         .collect::<Vec<_>>();
     let mut input_pools = vec![vec![]; 3];
     let inputs = fetch_unspent_notes_grouped_by_pool(connection, account).await?;
@@ -97,6 +97,10 @@ pub async fn plan_transaction(
 
     // group the inputs by pool
     for (group, items) in inputs.into_iter().chunk_by(|inp| inp.pool).into_iter() {
+        // skip if the pool is not in the source pools
+        if src_pools & (1 << group) == 0 {
+            continue;
+        }
         input_pools[group as usize].extend(items);
     }
 
@@ -121,6 +125,7 @@ pub async fn plan_transaction(
     // choose what pool to use for the inputs.
     // This is handled by the function fill_single_receivers
     //
+    let n_recipients = recipient_states.len();
     let (mut single, mut double) = recipient_states
         .into_iter()
         .partition::<Vec<_>, _>(|r| r.pool_mask != PoolMask(6));
@@ -152,7 +157,7 @@ pub async fn plan_transaction(
     // This is because we hope to minimize the amount that would have to go through the
     // turnstile.
 
-    let largest_shielded_pool = 
+    let largest_shielded_pool =
     if change_pool != 0 {
         PoolMask::from_pool(change_pool)
     } else if balances[1] > balances[2] {
@@ -173,32 +178,37 @@ pub async fn plan_transaction(
         &mut fee_paid,
     )?;
 
+    // Now we have pick the inputs and paid the fee if the sender
+    // should be paying it
+
+    println!("Fee {}", &fee_manager);
     let fee = fee_manager.fee();
 
     if recipient_pays_fee {
-        if recipients.len() > 1 {
-            // if there are multiple recipients, we error because we
-            // do not know which recipient should pay the fee
+        if n_recipients > 1 {
             return Err(Error::TooManyRecipients.into());
-        } else {
-            let recipient = recipients.first_mut().unwrap();
-            if recipient.amount < fee {
-                // if the recipient does not have enough balance to pay
-                // the fee, we need to pay it from the input pools
-                return Err(Error::RecipientNotEnoughAmount.into());
-            }
-            recipient.amount -= fee;
-            fee_paid += fee;
         }
+        fee_paid += fee;
     }
 
-    if single.iter().any(|r| r.remaining > 0)
-        || double.iter().any(|r| r.remaining > 0)
-        || fee > fee_paid
+    if fee > fee_paid
     {
         return Err(Error::NotEnoughFunds.into());
     }
 
+    let recipients = single.iter_mut().chain(double.iter_mut());
+    for (i, r) in recipients.enumerate() {
+        if r.remaining > 0 {
+            return Err(Error::NotEnoughFunds.into());
+        }
+        if i == 0 && recipient_pays_fee {
+            // if the recipient pays the fee, we need to pay it
+            // from the first recipient
+            r.recipient.amount -= fee;
+        }
+    }
+
+    let recipients = single.iter().chain(double.iter());
     let total_input = input_pools
         .iter()
         .map(|pool| {
@@ -207,11 +217,11 @@ pub async fn plan_transaction(
                 .sum::<u64>()
         })
         .sum::<u64>();
-    let total_output = recipients.iter().map(|r| r.amount).sum::<u64>();
+    let total_output = recipients.map(|r| r.recipient.amount).sum::<u64>();
 
     let change = total_input - total_output - fee;
 
-    for o in single.iter().chain(double.iter()) {
+    for o in single.iter_mut().chain(double.iter_mut()) {
         let RecipientState {
             recipient,
             remaining,
@@ -532,6 +542,10 @@ fn fill_single_receivers(
     recipient_pays_fee: bool,
     fee_paid: &mut u64,
 ) -> Result<()> {
+    for r in recipients.iter() {
+        fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
+    }
+
     let fill_order: [(u8, u8); 9] = [
         (2, 2),
         (1, 1), // O->O, S->S
