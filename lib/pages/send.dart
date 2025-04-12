@@ -4,6 +4,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -30,6 +31,10 @@ class SendPageState extends State<SendPage> {
         appBar: AppBar(
           title: Text("Recipient"),
           actions: [
+            IconButton(
+                tooltip: "Open Log",
+                onPressed: () => onOpenLog(context),
+                icon: Icon(Icons.description)),
             IconButton(onPressed: onAdd, icon: Icon(Icons.add)),
             IconButton(onPressed: onSend, icon: Icon(Icons.send)),
           ],
@@ -118,13 +123,14 @@ class Send2PageState extends State<Send2Page> {
               key: formKey,
               child: Column(children: [
                 InputDecorator(
-                  decoration: InputDecoration(labelText: "Source Pools"),
-                  child: Align(
-                      alignment: Alignment.centerRight,
-                      child: FormBuilderField<int>(
-                    name: "source pools",
-                    builder: (field) => PoolSelect(onChanged: (v) => field.didChange(v)),
-                ))),
+                    decoration: InputDecoration(labelText: "Source Pools"),
+                    child: Align(
+                        alignment: Alignment.centerRight,
+                        child: FormBuilderField<int>(
+                          name: "source pools",
+                          builder: (field) =>
+                              PoolSelect(onChanged: (v) => field.didChange(v)),
+                        ))),
                 FormBuilderSwitch(
                   name: "recipientPaysFee",
                   title: Text("Recipient Pays Fee"),
@@ -143,7 +149,7 @@ class Send2PageState extends State<Send2Page> {
       print("Invalid form");
       return;
     }
-    
+
     final srcPools2 = int.parse(srcPools);
 
     final tx = await prepare(
@@ -151,7 +157,6 @@ class Send2PageState extends State<Send2Page> {
         recipients: widget.recipients,
         recipientPaysFee: recipientPaysFee);
 
-    if (mounted)
-      await GoRouter.of(context).push("/tx", extra: tx);
+    if (mounted) await GoRouter.of(context).push("/tx", extra: tx);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
+import 'package:zkool/pages/log.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
@@ -42,5 +43,8 @@ final router = GoRouter(
     GoRoute(
         path: '/tx',
         builder: (context, state) => TxPage(state.extra as TxPlan)),
+    GoRoute(
+        path: '/log',
+        builder: (context, state) => LogviewPage()),
   ],
 );

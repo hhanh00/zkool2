@@ -55,6 +55,8 @@ class AccountViewPageState extends State<AccountViewPage> {
             appBar: AppBar(
               title: Text(widget.account.name),
               actions: [
+                IconButton(tooltip: "Open Log",
+                  onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
                 IconButton(tooltip: "Sync all accounts",
                   onPressed: onSync, icon: Icon(Icons.sync)),
                 IconButton(tooltip: "Rewind to previous checkpoint",
@@ -320,4 +322,8 @@ List<Widget> showMemos(List<Memo> memos) {
       },
     ),
   ];
+}
+
+void onOpenLog(BuildContext context) async {
+  await GoRouter.of(context).push("/log");
 }

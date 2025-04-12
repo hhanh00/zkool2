@@ -21,7 +21,7 @@ A wallet for zcash
     - [x] CRUD
     - [x] reorder
     - [ ] hide accounts
-- [x] Synchronization
+- [ ] Synchronization
     - [x] transparent
     - [x] shielded
     - [x] rewind
@@ -30,11 +30,11 @@ A wallet for zcash
     - [ ] continuous
     - [ ] retry
     - [x] scan past transparent addresses
-- [ ] Receive
+- [x] Receive
     - [x] default address generation
     - [x] diversified address generation
     - [x] additional transparent addresses
-- [ ] Send
+- [x] Send
     - [x] multiple payment editor
         - [x] address, amount
         - [x] memo
@@ -43,13 +43,17 @@ A wallet for zcash
     - [x] broadcast
     - [x] generate change transparent addresses
     - [x] expose src pools and receipient pays fee
-- [ ] History
+- [x] History
     - [x] tx list
     - [x] memo
     - [x] split views
 - [ ] QR
     - [ ] scanner
     - [ ] show
+- [ ] Log viewer
+    - [x] integrate tracing framework
+    - [x] make log viewer page
+    - [ ] add logging messages
 - [ ] Import/Export
     - [ ] accounts
     - [ ] tx history

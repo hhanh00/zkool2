@@ -28,6 +28,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  RustStreamSink<LogMessage> dco_decode_StreamSink_log_message_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<SyncProgress> dco_decode_StreamSink_sync_progress_Sse(
       dynamic raw);
 
@@ -101,6 +104,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxPlanOut> dco_decode_list_tx_plan_out(dynamic raw);
 
   @protected
+  LogMessage dco_decode_log_message(dynamic raw);
+
+  @protected
   Memo dco_decode_memo(dynamic raw);
 
   @protected
@@ -159,6 +165,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<LogMessage> sse_decode_StreamSink_log_message_Sse(
+      SseDeserializer deserializer);
 
   @protected
   RustStreamSink<SyncProgress> sse_decode_StreamSink_sync_progress_Sse(
@@ -235,6 +245,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxPlanOut> sse_decode_list_tx_plan_out(SseDeserializer deserializer);
 
   @protected
+  LogMessage sse_decode_log_message(SseDeserializer deserializer);
+
+  @protected
   Memo sse_decode_memo(SseDeserializer deserializer);
 
   @protected
@@ -297,6 +310,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_log_message_Sse(
+      RustStreamSink<LogMessage> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_sync_progress_Sse(
@@ -379,6 +396,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_tx_plan_out(
       List<TxPlanOut> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_message(LogMessage self, SseSerializer serializer);
 
   @protected
   void sse_encode_memo(Memo self, SseSerializer serializer);
