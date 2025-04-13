@@ -27,12 +27,7 @@ class AccountListPageState extends State<AccountListPage> {
   @override
   void initState() {
     super.initState();
-    heightPollingTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      Future(() async {
-        final height = await getCurrentHeight();
-        setState(() => this.height = height);
-      });
-    });
+    Future(refreshHeight);
   }
 
   @override
@@ -41,12 +36,19 @@ class AccountListPageState extends State<AccountListPage> {
     super.dispose();
   }
 
+  void refreshHeight() async {
+    final height = await getCurrentHeight();
+    if (mounted)
+      setState(() => this.height = height);
+  }
+
   @override
   Widget build(BuildContext context) {
     return EditableList<Account>(
         observable: () => AppStoreBase.instance.accounts,
         headerBuilder: (context) => [
-              Text("Height: $height"),
+              ElevatedButton(onPressed: () => Future(refreshHeight),
+              child: Text("Height: $height")),
               const Gap(8),
             ],
         builder: (context, index, account, {selected, onSelectChanged}) =>
