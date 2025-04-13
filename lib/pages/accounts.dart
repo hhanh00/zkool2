@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
@@ -10,6 +11,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
 
 class AccountListPage extends StatefulWidget {
@@ -37,9 +39,12 @@ class AccountListPageState extends State<AccountListPage> {
   }
 
   void refreshHeight() async {
-    final height = await getCurrentHeight();
-    if (mounted)
-      setState(() => this.height = height);
+    try {
+      final height = await getCurrentHeight();
+      if (mounted) setState(() => this.height = height);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   @override
@@ -47,8 +52,9 @@ class AccountListPageState extends State<AccountListPage> {
     return EditableList<Account>(
         observable: () => AppStoreBase.instance.accounts,
         headerBuilder: (context) => [
-              ElevatedButton(onPressed: () => Future(refreshHeight),
-              child: Text("Height: $height")),
+              ElevatedButton(
+                  onPressed: () => Future(refreshHeight),
+                  child: Text("Height: $height")),
               const Gap(8),
             ],
         builder: (context, index, account, {selected, onSelectChanged}) =>
@@ -131,16 +137,20 @@ class AccountListPageState extends State<AccountListPage> {
   }
 
   onSync() async {
-    final accountIds = AppStoreBase.instance.accounts
-        .where((a) => a.enabled)
-        .map((a) => a.id)
-        .toList();
-    final syncProgress = await startSync(accountIds: accountIds);
-    syncProgress.listen(null, onDone: () {
-      if (mounted) {
-        AppStoreBase.instance.loadAccounts();
-      }
-    });
+    try {
+      final accountIds = AppStoreBase.instance.accounts
+          .where((a) => a.enabled)
+          .map((a) => a.id)
+          .toList();
+      final syncProgress = await startSync(accountIds: accountIds);
+      syncProgress.listen(null, onDone: () {
+        if (mounted) {
+          AppStoreBase.instance.loadAccounts();
+        }
+      });
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   onOpen(BuildContext context, Account account) {
