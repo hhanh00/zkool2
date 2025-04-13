@@ -93,7 +93,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAccountDeleteAccount({required int account});
 
-  Future<Uint8List> crateApiAccountExportAccount();
+  Future<Uint8List> crateApiAccountExportAccount({required String passphrase});
 
   Future<String?> crateApiAccountGenerateNextChangeAddress();
 
@@ -109,7 +109,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiSyncGetTxDetails();
 
-  Future<void> crateApiAccountImportAccount({required List<int> data});
+  Future<void> crateApiAccountImportAccount(
+      {required String passphrase, required List<int> data});
 
   Future<void> crateApiInitInitApp();
 
@@ -251,10 +252,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<Uint8List> crateApiAccountExportAccount() {
+  Future<Uint8List> crateApiAccountExportAccount({required String passphrase}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(passphrase, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 4, port: port_);
       },
@@ -263,7 +265,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountExportAccountConstMeta,
-      argValues: [],
+      argValues: [passphrase],
       apiImpl: this,
     ));
   }
@@ -271,7 +273,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountExportAccountConstMeta =>
       const TaskConstMeta(
         debugName: "export_account",
-        argNames: [],
+        argNames: ["passphrase"],
       );
 
   @override
@@ -441,10 +443,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAccountImportAccount({required List<int> data}) {
+  Future<void> crateApiAccountImportAccount(
+      {required String passphrase, required List<int> data}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(passphrase, serializer);
         sse_encode_list_prim_u_8_loose(data, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 12, port: port_);
@@ -454,7 +458,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountImportAccountConstMeta,
-      argValues: [data],
+      argValues: [passphrase, data],
       apiImpl: this,
     ));
   }
@@ -462,7 +466,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountImportAccountConstMeta =>
       const TaskConstMeta(
         debugName: "import_account",
-        argNames: ["data"],
+        argNames: ["passphrase", "data"],
       );
 
   @override
