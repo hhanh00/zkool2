@@ -83,7 +83,6 @@ impl Coin {
     pub async fn client(&self) -> Result<Client> {
         let mut channel = tonic::transport::Channel::from_shared(self.lwd.clone())?;
         if self.lwd.starts_with("https") {
-            info!("Using TLS");
             let tls = ClientTlsConfig::new()
                 .with_enabled_roots();
             channel = channel.tls_config(tls)?;
