@@ -47,7 +47,7 @@ jubjub = "0.10"
 bs58 = "0.5"
 ripemd = "0.1"
 sha2 = "0.10"
-tonic = { version = "0.13.0", features = ["tls-native-roots", "tls-webpki-roots"] }
+tonic = { version = "0.13.0", features = ["tls-webpki-roots"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 prost = "0.13.5"
 bincode = { version = "2.0" }

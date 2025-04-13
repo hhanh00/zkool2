@@ -262,6 +262,7 @@ async fn transparent_sync(
             .execute(&mut *db_tx)
             .await?;
         db_tx.commit().await?;
+        crate::memo::fetch_tx_details(&network, pool, client, *account).await?;
     })
 }
 
@@ -270,6 +271,8 @@ pub async fn balance() -> Result<PoolBalance> {
     let c = get_coin!();
     let pool = c.get_pool();
     let account = c.account;
+
+    info!("Calculating balance for account {}", account);
 
     calculate_balance(pool, account).await
 }
@@ -282,10 +285,10 @@ pub async fn rewind_sync(height: u32) -> Result<()> {
 }
 
 #[frb]
-pub async fn get_db_height(account: u32) -> Result<u32> {
+pub async fn get_db_height() -> Result<u32> {
     let c = get_coin!();
     let connection = c.get_pool();
-    crate::sync::get_db_height(connection, account).await
+    crate::sync::get_db_height(connection, c.account).await
 }
 
 #[frb]

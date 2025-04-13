@@ -18,8 +18,7 @@ Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 Future<void> rewindSync({required int height}) =>
     RustLib.instance.api.crateApiSyncRewindSync(height: height);
 
-Future<int> getDbHeight({required int account}) =>
-    RustLib.instance.api.crateApiSyncGetDbHeight(account: account);
+Future<int> getDbHeight() => RustLib.instance.api.crateApiSyncGetDbHeight();
 
 Future<void> getTxDetails() => RustLib.instance.api.crateApiSyncGetTxDetails();
 
