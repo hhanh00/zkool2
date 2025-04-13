@@ -111,6 +111,7 @@ pub async fn synchronize(
         // Update our local map as well for the next iteration
         for account in &accounts_to_sync {
             account_heights.insert(*account, end_height);
+            crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
         }
     }
 
@@ -262,7 +263,6 @@ async fn transparent_sync(
             .execute(&mut *db_tx)
             .await?;
         db_tx.commit().await?;
-        crate::memo::fetch_tx_details(&network, pool, client, *account).await?;
     })
 }
 

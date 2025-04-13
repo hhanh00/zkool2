@@ -8,6 +8,7 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -46,6 +47,8 @@ class AccountViewPageState extends State<AccountViewPage> {
     final t = Theme.of(context).textTheme;
     final h = height;
     final b = poolBalance;
+
+    logger.i("Memos #${AppStoreBase.instance.memos.length}");
 
     return DefaultTabController(
         length: 2,
