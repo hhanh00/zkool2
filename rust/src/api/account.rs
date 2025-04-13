@@ -188,11 +188,12 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
     Ok(())
 }
 
-pub async fn delete_account(account: &Account) -> Result<()> {
+#[frb]
+pub async fn delete_account(account: u32) -> Result<()> {
     let c = get_coin!();
     let pool = c.get_pool();
 
-    crate::db::delete_account(pool, account.id).await?;
+    crate::db::delete_account(pool, account).await?;
 
     Ok(())
 }
@@ -522,10 +523,19 @@ pub struct Addresses {
 }
 
 #[frb]
-pub async fn export_account() -> Result<()> {
+pub async fn export_account() -> Result<Vec<u8>> {
     let c = get_coin!();
     let connection = c.get_pool();
 
-    crate::io::export_account(connection, c.account).await?;
+    let data = crate::io::export_account(connection, c.account).await?;
+    Ok(data)
+}
+
+#[frb]
+pub async fn import_account(data: &[u8]) -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    crate::io::import_account(connection, data).await?;
     Ok(())
 }
