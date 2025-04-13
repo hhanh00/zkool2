@@ -8,6 +8,7 @@ part 'store.g.dart';
 class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
+  @observable String accountName = "";
   @observable List<Account> accounts = [];
   @observable List<Tx> transactions = [];
   @observable List<Memo> memos = [];

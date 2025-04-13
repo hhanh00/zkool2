@@ -8,6 +8,7 @@ import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/pay.dart';
+import 'package:zkool/widgets/scanner.dart';
 
 final router = GoRouter(
   initialLocation: "/",
@@ -43,8 +44,16 @@ final router = GoRouter(
     GoRoute(
         path: '/tx',
         builder: (context, state) => TxPage(state.extra as TxPlan)),
+    GoRoute(path: '/log', builder: (context, state) => LogviewPage()),
     GoRoute(
-        path: '/log',
-        builder: (context, state) => LogviewPage()),
+        path: '/scanner',
+        builder: (context, state) =>
+            ScannerPage(validator: state.extra as String? Function(String?))),
+    GoRoute(
+        path: '/qr',
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>;
+          return QRPage(text: args["text"], title: args["title"]);
+        }),
   ],
 );
