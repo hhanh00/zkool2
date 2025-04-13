@@ -190,7 +190,6 @@ async fn process_memo(
     memo_bytes: &[u8],
 ) -> Result<()> {
     if let Ok(memo) = Memo::from_bytes(&memo_bytes) {
-        info!("Memo: tx {id_tx} pool {pool} vout {vout}");
         let (id_note,): (u32,) =
             sqlx::query_as("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
                 .bind(account)
