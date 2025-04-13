@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use shielded::Synchronizer;
-use sqlx::SqlitePool;
+use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 use tonic::Streaming;
@@ -37,7 +37,7 @@ pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
 pub async fn warp_sync(
     network: &Network,
     connection: &SqlitePool,
-    height: u32,
+    start_height: u32,
     accounts: &[u32],
     mut blocks: Streaming<CompactBlock>,
     mut heights_without_time: HashSet<u32>,
@@ -50,7 +50,7 @@ pub async fn warp_sync(
         network.clone(),
         connection,
         1,
-        height,
+        start_height,
         accounts,
         tx_decrypted.clone(),
         sapling_state.size() as u32,
@@ -63,7 +63,7 @@ pub async fn warp_sync(
         network.clone(),
         connection,
         2,
-        height,
+        start_height,
         accounts,
         tx_decrypted.clone(),
         orchard_state.size() as u32,
@@ -98,20 +98,25 @@ pub async fn warp_sync(
         Ok(())
     }
 
+    let mut prev_hash = sqlx::query("SELECT hash FROM headers WHERE height = ?")
+        .bind(start_height - 1)
+        .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
+        .fetch_optional(connection)
+        .await.unwrap();
+
     info!("Start sync");
     while let Some(block) = blocks.message().await? {
         // info!("Syncing block {}: {c}", block.height);
-        // bh = BlockHeader {
-        //     height: block.height as u32,
-        //     hash: block.hash.clone().try_into().unwrap(),
-        //     prev_hash: block.prev_hash.clone().try_into().unwrap(),
-        //     timestamp: block.time,
-        // };
-        // if prev_hash != bh.prev_hash {
-        //     rewind_checkpoint(&coin.network, &mut connection, &mut client).await?;
-        //     return Err(SyncError::Reorg(bh.height));
-        // }
-        // prev_hash = bh.hash;
+        let block_prev_hash = block.prev_hash.clone();
+        if let Some(prev_hash) = prev_hash {
+            if prev_hash != block_prev_hash {
+                // we need to rewind the database to the previous checkpoint
+                // and start syncing from there next time we get synchronize
+                crate::sync::rewind_sync(connection, start_height - 1).await?;
+                return Err(SyncError::Reorg(block.height as u32));
+            }
+        } 
+        prev_hash = Some(block.hash.clone());
 
         let bheight = block.height as u32;
         if heights_without_time.remove(&bheight) {
