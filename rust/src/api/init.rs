@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 
 use flutter_rust_bridge::frb;
+use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::{
     fmt::{
         self,
@@ -25,6 +26,7 @@ pub fn init_app() {
         .with(frb_layer())
         .try_init();
     let _ = rustls::crypto::ring::default_provider().install_default();
+    info!("Rust logging initialized");
 }
 
 type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
@@ -44,7 +46,10 @@ fn env_layer<S>() -> BoxedLayer<S>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
-    EnvFilter::from_default_env().boxed()
+    EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy()
+        .boxed()
 }
 
 struct FrbWriter {}
@@ -105,6 +110,7 @@ pub struct LogMessage {
 
 #[frb(sync)]
 pub fn set_log_stream(s: StreamSink<LogMessage>) {
+    println!("Setting log stream");
     let mut sink = LOG_SINK.lock().unwrap();
     *sink = Some(s);
 }
