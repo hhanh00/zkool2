@@ -576,12 +576,35 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8, include_hidden: bo
 
 pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()> {
     let mut tx = connection.begin().await?;
-    sqlx::query("DELETE FROM transparent_address_accounts WHERE account = ?")
+    sqlx::query("DELETE FROM memos WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
         .await?;
-
+    sqlx::query("DELETE FROM witnesses WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM notes WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM spends WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM transactions WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM sync_heights WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM transparent_accounts WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM transparent_address_accounts WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
         .await?;

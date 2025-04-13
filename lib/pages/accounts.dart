@@ -113,7 +113,7 @@ class AccountListPageState extends State<AccountListPage> {
               }).show() as bool;
           if (confirmed) {
             for (var a in accounts) {
-              await deleteAccount(account: a);
+              await deleteAccount(account: a.id);
             }
             await AppStoreBase.instance.loadAccounts();
           }
