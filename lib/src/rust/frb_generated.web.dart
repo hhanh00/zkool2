@@ -53,9 +53,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
-  Account dco_decode_box_autoadd_account(dynamic raw);
-
-  @protected
   AccountUpdate dco_decode_box_autoadd_account_update(dynamic raw);
 
   @protected
@@ -191,9 +188,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
-
-  @protected
-  Account sse_decode_box_autoadd_account(SseDeserializer deserializer);
 
   @protected
   AccountUpdate sse_decode_box_autoadd_account_update(
@@ -336,9 +330,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_account(Account self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_account_update(

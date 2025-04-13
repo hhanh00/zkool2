@@ -27,7 +27,7 @@ Future<List<Account>> listAccounts({required bool includeHidden}) =>
 Future<void> updateAccount({required AccountUpdate update}) =>
     RustLib.instance.api.crateApiAccountUpdateAccount(update: update);
 
-Future<void> deleteAccount({required Account account}) =>
+Future<void> deleteAccount({required int account}) =>
     RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
 
 Future<void> reorderAccount(
@@ -64,8 +64,11 @@ Future<List<Memo>> listMemos() =>
 Future<Addresses> getAddresses() =>
     RustLib.instance.api.crateApiAccountGetAddresses();
 
-Future<void> exportAccount() =>
+Future<Uint8List> exportAccount() =>
     RustLib.instance.api.crateApiAccountExportAccount();
+
+Future<void> importAccount({required List<int> data}) =>
+    RustLib.instance.api.crateApiAccountImportAccount(data: data);
 
 @freezed
 class Account with _$Account {
