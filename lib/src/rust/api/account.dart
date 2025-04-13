@@ -64,6 +64,9 @@ Future<List<Memo>> listMemos() =>
 Future<Addresses> getAddresses() =>
     RustLib.instance.api.crateApiAccountGetAddresses();
 
+Future<void> exportAccount() =>
+    RustLib.instance.api.crateApiAccountExportAccount();
+
 @freezed
 class Account with _$Account {
   const factory Account({

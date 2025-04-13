@@ -520,3 +520,12 @@ pub struct Addresses {
     pub oaddr: Option<String>,
     pub ua: Option<String>,
 }
+
+#[frb]
+pub async fn export_account() -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    crate::io::export_account(connection, c.account).await?;
+    Ok(())
+}
