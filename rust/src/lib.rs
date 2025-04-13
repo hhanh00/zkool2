@@ -11,6 +11,7 @@ pub mod sync;
 pub mod memo;
 pub mod warp;
 pub mod pay;
+pub mod io;
 pub mod api;
 mod frb_generated;
 

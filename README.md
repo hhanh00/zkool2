@@ -17,7 +17,7 @@ A wallet for zcash
     - [x] icon
     - [x] enabled
     - [x] hidden
-- [ ] Account Manager
+- [x] Account Manager
     - [x] CRUD
     - [x] reorder
     - [x] hide accounts
@@ -30,6 +30,7 @@ A wallet for zcash
     - [ ] continuous
     - [ ] retry
     - [x] scan past transparent addresses
+    - [ ] reset
 - [x] Receive
     - [x] default address generation
     - [x] diversified address generation
@@ -47,6 +48,7 @@ A wallet for zcash
     - [x] tx list
     - [x] memo
     - [x] split views
+- [ ] Tx details page
 - [ ] QR
     - [ ] scanner
     - [ ] show
@@ -57,7 +59,11 @@ A wallet for zcash
 - [ ] Market price
 - [ ] MultiSend
     - [ ] payment URI generation
-- [ ] Import/Export
+- [ ] Export
+    - [x] accounts
+    - [x] tx history
+    - [ ] encryption
+- [ ] Import
     - [ ] accounts
     - [ ] tx history
     - [ ] encryption
@@ -71,7 +77,7 @@ A wallet for zcash
     - [ ] get tx details
     - [ ] protect open/send
 - [ ] Bugs
-    - [ ] No native certs
+    - [x] No native certs
 
 ## User Stories
 
