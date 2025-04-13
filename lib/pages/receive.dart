@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 
 class ReceivePage extends StatefulWidget {
@@ -29,8 +30,10 @@ class ReceivePageState extends State<ReceivePage> {
         appBar: AppBar(
           title: Text("Receive Funds"),
           actions: [
-            IconButton(tooltip: "Next Set of Addresses",
-                onPressed: onGenerateAddress, icon: Icon(Icons.skip_next)),
+            IconButton(
+                tooltip: "Next Set of Addresses",
+                onPressed: onGenerateAddress,
+                icon: Icon(Icons.skip_next)),
           ],
         ),
         body: addresses == null
@@ -45,7 +48,7 @@ class ReceivePageState extends State<ReceivePage> {
                           subtitle: SelectableText(addresses.ua!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
-                            onPressed: () {},
+                            onPressed: () => onShowQR("Unified Address", addresses.ua!),
                           ),
                         ),
                       if (addresses.oaddr != null)
@@ -54,7 +57,7 @@ class ReceivePageState extends State<ReceivePage> {
                           subtitle: SelectableText(addresses.oaddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
-                            onPressed: () {},
+                            onPressed: () => onShowQR("Orchard", addresses.oaddr!),
                           ),
                         ),
                       if (addresses.saddr != null)
@@ -63,7 +66,7 @@ class ReceivePageState extends State<ReceivePage> {
                           subtitle: SelectableText(addresses.saddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
-                            onPressed: () {},
+                            onPressed: () => onShowQR("Sapling", addresses.saddr!),
                           ),
                         ),
                       if (addresses.taddr != null)
@@ -72,7 +75,7 @@ class ReceivePageState extends State<ReceivePage> {
                           subtitle: SelectableText(addresses.taddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
-                            onPressed: () {},
+                            onPressed: () => onShowQR("Transparent", addresses.taddr!),
                           ),
                         ),
                     ]))));
@@ -83,5 +86,9 @@ class ReceivePageState extends State<ReceivePage> {
     addresses = await getAddresses();
 
     setState(() {});
+  }
+
+  void onShowQR(String title, String text) {
+    GoRouter.of(context).push("/qr", extra: {"title": title, "text": text});
   }
 }
