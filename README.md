@@ -49,9 +49,9 @@ A wallet for zcash
     - [x] memo
     - [x] split views
 - [ ] Tx details page
-- [ ] QR
-    - [ ] scanner
-    - [ ] show
+- [x] QR
+    - [x] scanner
+    - [x] show
 - [x] Log viewer
     - [x] integrate tracing framework
     - [x] make log viewer page
