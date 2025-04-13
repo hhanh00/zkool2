@@ -64,11 +64,13 @@ Future<List<Memo>> listMemos() =>
 Future<Addresses> getAddresses() =>
     RustLib.instance.api.crateApiAccountGetAddresses();
 
-Future<Uint8List> exportAccount() =>
-    RustLib.instance.api.crateApiAccountExportAccount();
+Future<Uint8List> exportAccount({required String passphrase}) =>
+    RustLib.instance.api.crateApiAccountExportAccount(passphrase: passphrase);
 
-Future<void> importAccount({required List<int> data}) =>
-    RustLib.instance.api.crateApiAccountImportAccount(data: data);
+Future<void> importAccount(
+        {required String passphrase, required List<int> data}) =>
+    RustLib.instance.api
+        .crateApiAccountImportAccount(passphrase: passphrase, data: data);
 
 @freezed
 class Account with _$Account {
