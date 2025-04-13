@@ -11,6 +11,7 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
+import 'package:zkool/widgets/scanner.dart';
 
 class SendPage extends StatefulWidget {
   const SendPage({super.key});
@@ -35,8 +36,14 @@ class SendPageState extends State<SendPage> {
                 tooltip: "Open Log",
                 onPressed: () => onOpenLog(context),
                 icon: Icon(Icons.description)),
-            IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add)),
-            IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send)),
+            IconButton(
+                tooltip: "Add to Multi Tx",
+                onPressed: onAdd,
+                icon: Icon(Icons.add)),
+            IconButton(
+                tooltip: "Send (Next Step)",
+                onPressed: onSend,
+                icon: Icon(Icons.send)),
           ],
         ),
         body: SingleChildScrollView(
@@ -45,14 +52,22 @@ class SendPageState extends State<SendPage> {
                 child: FormBuilder(
                     key: formKey,
                     child: Column(children: [
-                      FormBuilderTextField(
-                        name: "address",
-                        decoration: const InputDecoration(labelText: "Address"),
-                        validator: FormBuilderValidators.compose(
-                            [FormBuilderValidators.required(), validAddress]),
-                        initialValue: address,
-                        onChanged: (v) => setState(() => address = v!),
-                      ),
+                      Row(children: [
+                        Expanded(
+                            child: FormBuilderTextField(
+                          name: "address",
+                          decoration:
+                              const InputDecoration(labelText: "Address"),
+                          validator: FormBuilderValidators.compose(
+                              [FormBuilderValidators.required(), validAddress]),
+                          initialValue: address,
+                          onChanged: (v) => setState(() => address = v!),
+                        )),
+                        IconButton(
+                            tooltip: "Scan",
+                            onPressed: onScan,
+                            icon: Icon(Icons.qr_code_scanner)),
+                      ]),
                       FormBuilderTextField(
                         name: "amount",
                         decoration: const InputDecoration(labelText: "Amount"),
@@ -89,6 +104,17 @@ class SendPageState extends State<SendPage> {
         await GoRouter.of(context).push("/send2", extra: [recipient]);
     }
   }
+
+  void onScan() async {
+    final address2 = await showScanner(context, validator: validAddress);
+    logger.i(address2);
+    if (address2 != null) {
+      setState(() {
+        address = address2;
+        formKey.currentState!.fields['address']!.didChange(address2);
+      });
+    }
+  }
 }
 
 class Send2Page extends StatefulWidget {
@@ -115,8 +141,10 @@ class Send2PageState extends State<Send2Page> {
               tooltip: "Open Log",
               onPressed: () => onOpenLog(context),
               icon: Icon(Icons.description)),
-          IconButton(tooltip: "Send (Compute Tx)",
-            onPressed: onSend, icon: Icon(Icons.send)),
+          IconButton(
+              tooltip: "Send (Compute Tx)",
+              onPressed: onSend,
+              icon: Icon(Icons.send)),
         ],
       ),
       body: SingleChildScrollView(
