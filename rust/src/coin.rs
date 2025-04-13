@@ -3,30 +3,27 @@ use std::sync::Mutex;
 use anyhow::Result;
 use sqlx::SqlitePool;
 use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Sqlite};
-use tonic::transport::{Certificate, ClientTlsConfig};
+use tonic::transport::ClientTlsConfig;
+use tracing::info;
 use zcash_protocol::consensus::Network;
 
-use crate::Client;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
+use crate::Client;
 
 #[macro_export]
 macro_rules! setup {
-    ($account: expr) => {
-        {
+    ($account: expr) => {{
         let mut coin = crate::coin::COIN.lock().unwrap();
         coin.account = $account;
-        }
-    };
+    }};
 }
 
 #[macro_export]
 macro_rules! get_coin {
-    () => {
-        {
-            let c = crate::coin::COIN.lock().unwrap();
-            c.clone()
-        }
-    };
+    () => {{
+        let c = crate::coin::COIN.lock().unwrap();
+        c.clone()
+    }};
 }
 
 #[derive(Clone)]
@@ -46,10 +43,12 @@ impl Coin {
             .max_connections(5)
             .idle_timeout(std::time::Duration::from_secs(30))
             .max_lifetime(std::time::Duration::from_secs(60 * 60))
-            .connect(db_filepath).await?;
+            .connect(db_filepath)
+            .await?;
 
-        let (coin, ): (String, ) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
-        .fetch_one(&pool).await?;
+        let (coin,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
+            .fetch_one(&pool)
+            .await?;
         let coin = coin.parse::<u8>()?;
 
         let network = match coin {
@@ -84,9 +83,9 @@ impl Coin {
     pub async fn client(&self) -> Result<Client> {
         let mut channel = tonic::transport::Channel::from_shared(self.lwd.clone())?;
         if self.lwd.starts_with("https") {
-            let pem = include_bytes!("ca.pem");
-            let ca = Certificate::from_pem(pem);
-            let tls = ClientTlsConfig::new().ca_certificate(ca);
+            info!("Using TLS");
+            let tls = ClientTlsConfig::new()
+                .with_enabled_roots();
             channel = channel.tls_config(tls)?;
         }
         let client = CompactTxStreamerClient::connect(channel).await?;

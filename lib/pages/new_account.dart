@@ -38,7 +38,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: FormBuilder(
+          child: SingleChildScrollView(child: FormBuilder(
             key: formKey,
             child: Column(
               children: [
@@ -100,7 +100,7 @@ class NewAccountPageState extends State<NewAccountPage> {
               ],
             ),
           ),
-        ));
+        )));
   }
 
   void onSave() async {
