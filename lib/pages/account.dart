@@ -34,8 +34,6 @@ class AccountViewPageState extends State<AccountViewPage> {
     super.initState();
     setAccount(id: widget.account.id);
     Future(() async {
-      await exportAccount();
-
       final b = await balance();
       await AppStoreBase.instance.loadTxHistory();
       await AppStoreBase.instance.loadMemos();
