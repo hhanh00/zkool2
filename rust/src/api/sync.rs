@@ -272,8 +272,6 @@ pub async fn balance() -> Result<PoolBalance> {
     let pool = c.get_pool();
     let account = c.account;
 
-    info!("Calculating balance for account {}", account);
-
     calculate_balance(pool, account).await
 }
 
