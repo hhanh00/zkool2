@@ -9,8 +9,8 @@ use crate::{
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::{Row, SqlitePool};
 use sqlx::{sqlite::SqliteRow, Sqlite};
+use sqlx::{Row, SqlitePool};
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::{Request, Streaming};
 use tracing::info;
@@ -205,67 +205,76 @@ pub async fn shielded_sync(
     end: u32,
     tx_progress: Sender<SyncProgress>,
 ) -> Result<()> {
-    let (s, o) = get_tree_state(network, client, start - 1).await?;
+    let db_writer_task = {
+        let (s, o) = get_tree_state(network, client, start - 1).await?;
 
-    info!("get compact block range");
-    let blocks = get_compact_block_range(client, start, end).await?;
-    info!("got streaming blocks");
-    let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
-    let pool2 = pool.clone();
+        info!("get compact block range");
+        let blocks = get_compact_block_range(client, start, end).await?;
+        info!("got streaming blocks");
+        let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
+        let pool2 = pool.clone();
 
-    // get the list of transaction heights for which the time is 0
-    // because raw transactions do not have timestamp (it comes from the block header)
-    let heights_without_time: HashSet<u32> = sqlx::query(
-        "SELECT DISTINCT height FROM transactions WHERE time = 0
+        // get the list of transaction heights for which the time is 0
+        // because raw transactions do not have timestamp (it comes from the block header)
+        let heights_without_time: HashSet<u32> = sqlx::query(
+            "SELECT DISTINCT height FROM transactions WHERE time = 0
         AND height >= ? AND height <= ?",
-    )
-    .bind(start)
-    .bind(end)
-    .map(|row: SqliteRow| {
-        let height: u32 = row.get(0);
-        height
-    })
-    .fetch_all(&pool2)
-    .await?
-    .into_iter()
-    .collect();
+        )
+        .bind(start)
+        .bind(end)
+        .map(|row: SqliteRow| {
+            let height: u32 = row.get(0);
+            height
+        })
+        .fetch_all(&pool2)
+        .await?
+        .into_iter()
+        .collect();
 
-    tokio::spawn(async move {
-        info!("[db handler] starting");
-        let mut db_tx = pool2.begin().await?;
-        while let Some(msg) = rx_messages.recv().await {
-            //info!("Received message: {:?}", msg);
-            if let WarpSyncMessage::Commit = msg {
-                db_tx.commit().await.unwrap();
-                info!("Committing transaction");
-                db_tx = pool2.begin().await.unwrap();
-            } else {
-                match handle_message(&mut db_tx, msg, &tx_progress).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        info!("ERROR HANDLING MESSAGE: {:?}", e);
+        let db_writer_task = tokio::spawn(async move {
+            info!("[db handler] starting");
+            let mut db_tx = pool2.begin().await?;
+            while let Some(msg) = rx_messages.recv().await {
+                //info!("Received message: {:?}", msg);
+                if let WarpSyncMessage::Commit = msg {
+                    db_tx.commit().await.unwrap();
+                    info!("Committing transaction");
+                    db_tx = pool2.begin().await.unwrap();
+                } else {
+                    match handle_message(&mut db_tx, msg, &tx_progress).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            info!("ERROR HANDLING MESSAGE: {:?}", e);
+                        }
                     }
                 }
             }
-        }
-        db_tx.commit().await?;
-        info!("[db handler] stopped");
+            db_tx.commit().await?;
+            info!("[db handler] stopped");
 
-        Ok::<_, anyhow::Error>(())
-    });
+            Ok::<_, anyhow::Error>(())
+        });
 
-    warp_sync(
-        &network,
-        &pool.clone(),
-        start,
-        &accounts,
-        blocks,
-        heights_without_time,
-        &s,
-        &o,
-        tx_messages.clone(),
-    )
-    .await?;
+        let network = network.clone();
+        let pool = pool.clone();
+        tokio::spawn(async move {
+            warp_sync(
+                &network,
+                &pool,
+                start,
+                &accounts,
+                blocks,
+                heights_without_time,
+                &s,
+                &o,
+                tx_messages.clone(),
+            ).await
+        });
+
+        db_writer_task
+    };
+
+    db_writer_task.await??;
     Ok(())
 }
 
@@ -278,14 +287,16 @@ async fn handle_message(
         WarpSyncMessage::Transaction(tx) => {
             // ignore duplicate transactions because they could have been created
             // by a previous type of scan (i.e transparent)
-            sqlx::query
-                ("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, ?)
-                ON CONFLICT DO NOTHING")
-                .bind(tx.account)
-                .bind(&tx.txid)
-                .bind(tx.height)
-                .bind(tx.time)
-                .execute(&mut **db_tx).await?;
+            sqlx::query(
+                "INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, ?)
+                ON CONFLICT DO NOTHING",
+            )
+            .bind(tx.account)
+            .bind(&tx.txid)
+            .bind(tx.height)
+            .bind(tx.time)
+            .execute(&mut **db_tx)
+            .await?;
             info!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {

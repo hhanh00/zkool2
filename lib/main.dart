@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:zkool/router.dart';
-import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
@@ -22,7 +21,7 @@ Future<void> main() async {
     logger.i("Database file created: $dbFilepath");
   }
   await openDatabase(dbFilepath: dbFilepath);
-  // setLwd(lwd: "https://lwd1.zcash-infra.com:9067");
+  // setLwd(lwd: "https://lwd4.zcash-infra.com:9067");
   setLwd(lwd: "https://zec.rocks");
   AppStoreBase.instance.init();
 

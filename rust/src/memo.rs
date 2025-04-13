@@ -3,6 +3,7 @@ use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::Orcha
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
+use tracing::info;
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 use zcash_primitives::transaction::{components::sapling::zip212_enforcement, Transaction};
 use zcash_protocol::{
@@ -22,6 +23,7 @@ pub async fn fetch_tx_details(
     client: &mut Client,
     account: u32,
 ) -> Result<()> {
+    info!("fetch_tx_details");
     let txids = sqlx::query("SELECT txid FROM transactions WHERE account = ? AND details = FALSE")
         .bind(account)
         .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
@@ -47,6 +49,7 @@ pub async fn decrypt_memo(
     account: u32,
     txid: &[u8],
 ) -> Result<()> {
+    info!("decrypt_memo {account} {}", hex::encode(txid));
     let txid = txid.to_vec();
     let raw_tx = client
         .get_transaction(Request::new(TxFilter {
@@ -97,7 +100,7 @@ pub async fn decrypt_memo(
                     .await?;
                 }
 
-                if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
+                else if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
                     &domain,
                     ovk,
                     sout,
@@ -148,7 +151,7 @@ pub async fn decrypt_memo(
                     .await?;
                 }
 
-                if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
+                else if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
                     &domain,
                     &ovk,
                     action,
@@ -187,6 +190,7 @@ async fn process_memo(
     memo_bytes: &[u8],
 ) -> Result<()> {
     if let Ok(memo) = Memo::from_bytes(&memo_bytes) {
+        info!("Memo: tx {id_tx} pool {pool} vout {vout}");
         let (id_note,): (u32,) =
             sqlx::query_as("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
                 .bind(account)
@@ -218,7 +222,7 @@ async fn process_memo(
                 sqlx::query(
                     "INSERT INTO memos
                 (account, height, tx, pool, vout, note, memo_bytes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)",
+                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
                 )
                 .bind(account)
                 .bind(height)
