@@ -52,21 +52,21 @@ A wallet for zcash
 - [ ] QR
     - [ ] scanner
     - [ ] show
-- [ ] Log viewer
+- [x] Log viewer
     - [x] integrate tracing framework
     - [x] make log viewer page
     - [x] add logging messages
 - [ ] Market price
 - [ ] MultiSend
     - [ ] payment URI generation
-- [ ] Export
+- [x] Export
     - [x] accounts
     - [x] tx history
-    - [ ] encryption
-- [ ] Import
-    - [ ] accounts
-    - [ ] tx history
-    - [ ] encryption
+    - [x] encryption
+- [x] Import
+    - [x] accounts
+    - [x] tx history
+    - [x] encryption
 - [ ] Database
     - [ ] switch to new database
     - [ ] encrypt database with AES

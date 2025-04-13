@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -121,11 +124,60 @@ class AccountListPageState extends State<AccountListPage> {
         isEqual: (a, b) => a.id == b.id,
         onReorder: onReorder,
         buttons: [
+          IconButton(onPressed: onImport, icon: Icon(Icons.file_download)),
           IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
           IconButton(
               onPressed: onHide,
               icon: Icon(hiding ? Icons.visibility : Icons.visibility_off)),
         ]);
+  }
+
+  onImport() async {
+    try {
+      final files = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Please select an encrypted account file for import',
+      );
+      if (files == null) return;
+      if (!mounted) return;
+      final file = files.files.first;
+      final password = TextEditingController();
+      bool confirmed = await AwesomeDialog(
+            context: context,
+            dialogType: DialogType.question,
+            animType: AnimType.rightSlide,
+            body: FormBuilder(
+                child: FormBuilderTextField(
+              name: 'password',
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+              controller: password,
+            )),
+            btnCancelOnPress: () {},
+            btnOkOnPress: () {},
+            onDismissCallback: (type) {
+              final res = (() {
+                switch (type) {
+                  case DismissType.btnOk:
+                    return true;
+                  default:
+                    return false;
+                }
+              })();
+              GoRouter.of(context).pop(res);
+            },
+            autoDismiss: false,
+          ).show() ??
+          false;
+      if (confirmed) {
+        final p = password.text;
+        final encryptedFile = File(file.path!);
+        final encrypted = encryptedFile.readAsBytesSync();
+        await importAccount(passphrase: p, data: encrypted);
+        await AppStoreBase.instance.loadAccounts();
+      }
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   onHide() async {

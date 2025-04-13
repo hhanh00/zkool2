@@ -25,18 +25,13 @@ use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk},
-    bip38,
-    db::{
+    account::{derive_transparent_address, derive_transparent_sk}, bip38, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
         update_dindex,
-    },
-    get_coin,
-    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    setup,
+    }, get_coin, io::{decrypt, encrypt}, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, setup
 };
 
 #[frb(sync)]
@@ -523,19 +518,21 @@ pub struct Addresses {
 }
 
 #[frb]
-pub async fn export_account() -> Result<Vec<u8>> {
+pub async fn export_account(passphrase: &str) -> Result<Vec<u8>> {
     let c = get_coin!();
     let connection = c.get_pool();
 
     let data = crate::io::export_account(connection, c.account).await?;
-    Ok(data)
+    let encrypted = encrypt(passphrase, &data)?;
+    Ok(encrypted)
 }
 
 #[frb]
-pub async fn import_account(data: &[u8]) -> Result<()> {
+pub async fn import_account(passphrase: &str, data: &[u8]) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
 
-    crate::io::import_account(connection, data).await?;
+    let decrypted = decrypt(passphrase, data)?;
+    crate::io::import_account(connection, &decrypted).await?;
     Ok(())
 }

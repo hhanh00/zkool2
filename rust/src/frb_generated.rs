@@ -176,11 +176,13 @@ fn wire__crate__api__account__export_account_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_passphrase = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::export_account().await?;
+                        let output_ok =
+                            crate::api::account::export_account(&api_passphrase).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -456,12 +458,14 @@ fn wire__crate__api__account__import_account_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_passphrase = <String>::sse_decode(&mut deserializer);
             let api_data = <Vec<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::import_account(&api_data).await?;
+                        let output_ok =
+                            crate::api::account::import_account(&api_passphrase, &api_data).await?;
                         Ok(output_ok)
                     })()
                     .await,
