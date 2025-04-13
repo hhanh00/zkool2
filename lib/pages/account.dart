@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,16 +57,26 @@ class AccountViewPageState extends State<AccountViewPage> {
             appBar: AppBar(
               title: Text(widget.account.name),
               actions: [
-                IconButton(tooltip: "Open Log",
-                  onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
-                IconButton(tooltip: "Sync this account",
-                  onPressed: onSync, icon: Icon(Icons.sync)),
-                IconButton(tooltip: "Rewind to previous checkpoint",
-                  onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
-                IconButton(tooltip: "Receive Funds",
-                  onPressed: onReceive, icon: Icon(Icons.download)),
-                IconButton(tooltip: "Send Funds",
-                  onPressed: onSend, icon: Icon(Icons.send)),
+                IconButton(
+                    tooltip: "Open Log",
+                    onPressed: () => onOpenLog(context),
+                    icon: Icon(Icons.description)),
+                IconButton(
+                    tooltip: "Sync this account",
+                    onPressed: onSync,
+                    icon: Icon(Icons.sync)),
+                IconButton(
+                    tooltip: "Rewind to previous checkpoint",
+                    onPressed: onRewind,
+                    icon: Icon(Icons.fast_rewind)),
+                IconButton(
+                    tooltip: "Receive Funds",
+                    onPressed: onReceive,
+                    icon: Icon(Icons.download)),
+                IconButton(
+                    tooltip: "Send Funds",
+                    onPressed: onSend,
+                    icon: Icon(Icons.send)),
               ],
               bottom: TabBar(
                 tabs: [
@@ -81,7 +92,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                 AppStoreBase.instance.transactions.length;
 
                 return TabBarView(children: [
-                  SingleChildScrollView(child: Column(children: [
+                  SingleChildScrollView(
+                      child: Column(children: [
                     Text("Height"),
                     Gap(8),
                     Text(h.toString(), style: t.bodyLarge),
@@ -97,11 +109,14 @@ class AccountViewPageState extends State<AccountViewPage> {
                         Text("O: ${zatToString(b.field0[2])}"),
                       ]),
                     Gap(8),
-                    if (b != null) Text("\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
+                    if (b != null)
+                      Text(
+                          "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
-                  SingleChildScrollView(child: Column(
+                  SingleChildScrollView(
+                      child: Column(
                     children: [
                       ...showMemos(AppStoreBase.instance.memos),
                     ],
@@ -111,40 +126,39 @@ class AccountViewPageState extends State<AccountViewPage> {
             )));
   }
 
-  void onNextDiversifier() async {
-    await generateNextDindex();
-  }
-
-  void onNewChange() async {
-    await generateNextChangeAddress();
-  }
-
   void onSync() async {
-    await progressSubscription?.cancel();
-    final currentHeight = await getCurrentHeight();
-    final progress = synchronize(
-        accounts: [widget.account.id], currentHeight: currentHeight);
-    progressSubscription = progress.listen(
-      (event) async {
-        setState(() {
-          height = event.height;
-        });
-      },
-      onDone: () async {
-        final b = await balance();
-        final h = await getDbHeight();
-        await AppStoreBase.instance.loadAccounts();
-        setState(() {
-          poolBalance = b;
-          height = h;
-        });
-      },
-    );
+    try {
+      await progressSubscription?.cancel();
+      final currentHeight = await getCurrentHeight();
+      final progress = synchronize(
+          accounts: [widget.account.id], currentHeight: currentHeight);
+      progressSubscription = progress.listen(
+        (event) async {
+          setState(() {
+            height = event.height;
+          });
+        },
+        onDone: () async {
+          final b = await balance();
+          final h = await getDbHeight();
+          await AppStoreBase.instance.loadAccounts();
+          setState(() {
+            poolBalance = b;
+            height = h;
+          });
+        },
+      );
+    } on AnyhowException catch (e) {
+      if (mounted)
+        await showException(context, e.message);
+    }
   }
 
   void onRewind() async {
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
+    final h = await getDbHeight();
+    setState(() => height = h);
   }
 
   void onReceive() async {
