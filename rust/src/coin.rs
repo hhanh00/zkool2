@@ -4,7 +4,6 @@ use anyhow::Result;
 use sqlx::SqlitePool;
 use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Sqlite};
 use tonic::transport::ClientTlsConfig;
-use tracing::info;
 use zcash_protocol::consensus::Network;
 
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
