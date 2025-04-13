@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
+use age::secrecy::SecretString;
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tracing::info;
 
 pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec<u8>> {
+    info!("Exporting account {}", account);
     let mut io_account = sqlx::query(
         "SELECT id_account, name, seed, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, hidden, saved, enabled
         FROM accounts WHERE id_account = ?")
@@ -46,6 +48,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         .fetch_one(connection)
         .await?;
 
+    info!("Exporting transparent account");
     if let Some(t_account) =
         sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
             .bind(account)
@@ -61,6 +64,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         io_account.tkeys = Some(t_account);
     }
 
+    info!("Exporting sapling account");
     if let Some(s_account) = sqlx::query("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
@@ -75,6 +79,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         io_account.skeys = Some(s_account);
     }
 
+    info!("Exporting orchard account");
     if let Some(o_account) = sqlx::query("SELECT xsk, xvk FROM orchard_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
@@ -89,6 +94,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         io_account.okeys = Some(o_account);
     }
 
+    info!("Exporting transparent addresses");
     let t_addresses = sqlx::query("SELECT id_taddress, scope, dindex, sk, address FROM transparent_address_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
@@ -105,6 +111,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         .await?;
     io_account.taddrs = t_addresses;
 
+    info!("Exporting synch heights");
     // Get the sync heights
     let sync_heights = sqlx::query("SELECT pool, height FROM sync_heights WHERE account = ?")
         .bind(account)
@@ -117,6 +124,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         .await?;
     io_account.sync_heights = sync_heights;
 
+    info!("Exporting checkpoints");
     // Get checkpoint heights
     let checkpoints =
         sqlx::query("SELECT DISTINCT height FROM witnesses WHERE account = ? ORDER BY height")
@@ -165,6 +173,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     }
     io_account.blocks = blocks;
 
+    info!("Exporting transactions");
     // Get the transactions for the given account
     let mut transactions = sqlx::query(
         "SELECT id_tx, txid, height, time, details FROM transactions WHERE account = ?",
@@ -541,4 +550,23 @@ pub struct IOSpend {
     pub account: u32,
     pub pool: u8,
     pub value: u64,
+}
+
+pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
+    let passphrase = SecretString::from(passphrase.to_owned());
+    let recipient = age::scrypt::Recipient::new(passphrase.clone());
+
+    let encrypted = age::encrypt(&recipient, data)?;
+
+    Ok(encrypted)  
+}
+
+pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
+    let passphrase = SecretString::from(passphrase.to_owned());
+    let identity = age::scrypt::Identity::new(passphrase);  
+
+    let decrypted = age::decrypt(&identity, data)
+        .map_err(|_| anyhow::anyhow!("Decryption Error"))?;
+
+    Ok(decrypted)  
 }

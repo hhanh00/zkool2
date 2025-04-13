@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AccountViewPage extends StatefulWidget {
   final Account account;
@@ -149,8 +151,7 @@ class AccountViewPageState extends State<AccountViewPage> {
         },
       );
     } on AnyhowException catch (e) {
-      if (mounted)
-        await showException(context, e.message);
+      if (mounted) await showException(context, e.message);
     }
   }
 
@@ -190,9 +191,12 @@ class AccountEditPageState extends State<AccountEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text('Account Edit'),
-        ),
+        appBar: AppBar(title: Text('Account Edit'), actions: [
+          IconButton(
+              tooltip: "Export Account",
+              onPressed: onExport,
+              icon: Icon(Icons.file_upload))
+        ]),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FormBuilder(
@@ -285,6 +289,46 @@ class AccountEditPageState extends State<AccountEditPage> {
         update: AccountUpdate(coin: account.coin, id: account.id, hidden: v));
     await AppStoreBase.instance.loadAccounts();
     setState(() {});
+  }
+
+  void onExport() async {
+    final password = TextEditingController();
+    bool confirmed = await AwesomeDialog(
+          context: context,
+          dialogType: DialogType.question,
+          animType: AnimType.rightSlide,
+          body: FormBuilder(
+              child: FormBuilderTextField(
+            name: 'password',
+            decoration: InputDecoration(labelText: 'Password'),
+            obscureText: true,
+            controller: password,
+          )),
+          btnCancelOnPress: () {},
+          btnOkOnPress: () {},
+          onDismissCallback: (type) {
+            final res = (() {
+              switch (type) {
+                case DismissType.btnOk:
+                  return true;
+                default:
+                  return false;
+              }
+            })();
+            GoRouter.of(context).pop(res);
+          },
+          autoDismiss: false,
+        ).show() ??
+        false;
+    if (confirmed) {
+      final p = password.text;
+      final res = await exportAccount(passphrase: p);
+      await FilePicker.platform.saveFile(
+        dialogTitle: 'Please select an output file for the encrypted account:',
+        fileName: '${account.name}.bin',
+        bytes: res,
+      );
+    }
   }
 }
 
