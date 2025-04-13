@@ -70,6 +70,8 @@ A wallet for zcash
     - [ ] min confs
     - [ ] get tx details
     - [ ] protect open/send
+- [ ] Bugs
+    - [ ] No native certs
 
 ## User Stories
 

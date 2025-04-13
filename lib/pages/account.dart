@@ -32,8 +32,6 @@ class AccountViewPageState extends State<AccountViewPage> {
     super.initState();
     setAccount(id: widget.account.id);
     Future(() async {
-      await getTxDetails();
-
       final b = await balance();
       await AppStoreBase.instance.loadTxHistory();
       await AppStoreBase.instance.loadMemos();
@@ -94,9 +92,9 @@ class AccountViewPageState extends State<AccountViewPage> {
                         Text("S: ${zatToString(b.field0[1])}"),
                         const Gap(8),
                         Text("O: ${zatToString(b.field0[2])}"),
-                        const Gap(16),
-                        Text("\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
                       ]),
+                    Gap(8),
+                    if (b != null) Text("\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
@@ -131,16 +129,18 @@ class AccountViewPageState extends State<AccountViewPage> {
       },
       onDone: () async {
         final b = await balance();
+        final h = await getDbHeight();
         await AppStoreBase.instance.loadAccounts();
         setState(() {
           poolBalance = b;
+          height = h;
         });
       },
     );
   }
 
   void onRewind() async {
-    final dbHeight = await getDbHeight(account: widget.account.id);
+    final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
   }
 
@@ -244,7 +244,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onEditBirth(String? birth) async {
-    if (birth != null) {
+    if (birth != null && birth.isNotEmpty) {
       account = account.copyWith(birth: int.parse(birth));
       await updateAccount(
           update: AccountUpdate(

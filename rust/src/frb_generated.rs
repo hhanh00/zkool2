@@ -351,12 +351,11 @@ fn wire__crate__api__sync__get_db_height_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_account = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::sync::get_db_height(api_account).await?;
+                        let output_ok = crate::api::sync::get_db_height().await?;
                         Ok(output_ok)
                     })()
                     .await,

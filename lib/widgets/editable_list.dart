@@ -8,6 +8,7 @@ import 'package:mobx/mobx.dart';
 class EditableList<T extends Object> extends StatefulWidget {
   final String title;
   final List<T> Function() observable;
+  final List<Widget> Function(BuildContext) headerBuilder;
   final FutureOr<void> Function()? onCreate;
   final FutureOr<void> Function(BuildContext) createBuilder;
   final FutureOr<void> Function(BuildContext, T) editBuilder;
@@ -29,6 +30,7 @@ class EditableList<T extends Object> extends StatefulWidget {
     required this.builder,
     required this.title,
     this.onCreate,
+    required this.headerBuilder,
     required this.createBuilder,
     required this.editBuilder,
     required this.deleteBuilder,
@@ -75,7 +77,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
 
     return Scaffold(
         appBar: AppBar(
-          centerTitle: true,
+          centerTitle: false,
           title: Text(widget.title),
           actions: [
             if (!anySelected)
@@ -87,7 +89,9 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
             ...?widget.buttons,
           ],
         ),
-        body: AnimatedReorderableListView<T>(
+        body: Column(children: [
+          ...widget.headerBuilder(context),
+          Expanded(child: AnimatedReorderableListView<T>(
           buildDefaultDragHandles: false,
           items: items,
           itemBuilder: (context, index) =>
@@ -105,7 +109,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
               items.insert(newIndex, v);
             });
           },
-        ));
+        ))]));
   }
 
   onNew() => widget.createBuilder(context);
