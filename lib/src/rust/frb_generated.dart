@@ -103,7 +103,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<int> crateApiNetworkGetCurrentHeight();
 
-  Future<int> crateApiSyncGetDbHeight({required int account});
+  Future<int> crateApiSyncGetDbHeight();
 
   Future<void> crateApiSyncGetTxDetails();
 
@@ -367,11 +367,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<int> crateApiSyncGetDbHeight({required int account}) {
+  Future<int> crateApiSyncGetDbHeight() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(account, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 9, port: port_);
       },
@@ -380,14 +379,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiSyncGetDbHeightConstMeta,
-      argValues: [account],
+      argValues: [],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiSyncGetDbHeightConstMeta => const TaskConstMeta(
         debugName: "get_db_height",
-        argNames: ["account"],
+        argNames: [],
       );
 
   @override
