@@ -26,7 +26,7 @@ A wallet for zcash
     - [x] shielded
     - [x] rewind
     - [x] memo
-    - [ ] reorg detection
+    - [x] reorg detection
     - [ ] continuous
     - [ ] retry
     - [x] scan past transparent addresses

@@ -127,7 +127,6 @@ pub struct Receivers {
 #[frb]
 pub async fn list_accounts(include_hidden: bool) -> Result<Vec<Account>> {
     let c = get_coin!();
-    info!("list_accounts: {include_hidden}");
     let accounts = crate::db::list_accounts(c.get_pool(), c.coin, include_hidden).await?;
 
     Ok(accounts)
