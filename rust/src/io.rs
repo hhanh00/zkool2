@@ -280,10 +280,15 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
 pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> {
     let (io_account, _) = bincode::decode_from_slice::<IOAccount, _>(data, legacy())?;
 
+    // Move all accounts down by one position
+    sqlx::query("UPDATE accounts SET position = position + 1")
+        .execute(connection)
+        .await?;
+
     // Insert the account into the database
     let r = sqlx::query("INSERT INTO accounts
         (name, seed, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, hidden, saved, enabled)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)")
         .bind(&io_account.name)
         .bind(&io_account.seed)
         .bind(&io_account.seed_fingerprint)
@@ -292,7 +297,6 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .bind(io_account.def_dindex)
         .bind(&io_account.icon)
         .bind(io_account.birth)
-        .bind(io_account.position)
         .bind(io_account.hidden)
         .bind(io_account.saved)
         .bind(io_account.enabled)
