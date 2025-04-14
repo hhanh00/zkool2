@@ -10,6 +10,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:zkool/main.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
@@ -24,7 +26,7 @@ class AccountViewPage extends StatefulWidget {
   State<AccountViewPage> createState() => AccountViewPageState();
 }
 
-class AccountViewPageState extends State<AccountViewPage> {
+class AccountViewPageState extends State<AccountViewPage> with RouteAware {
   StreamSubscription<SyncProgress>? progressSubscription;
   late int height = widget.account.height;
   PoolBalance? poolBalance;
@@ -34,14 +36,46 @@ class AccountViewPageState extends State<AccountViewPage> {
     super.initState();
     setAccount(id: widget.account.id);
     AppStoreBase.instance.accountName = widget.account.name;
-    Future(() async {
-      final b = await balance();
-      await AppStoreBase.instance.loadTxHistory();
-      await AppStoreBase.instance.loadMemos();
-      setState(() {
-        poolBalance = b;
-      });
-    });
+    Future(refresh);
+  }
+
+  @override
+  void didPushNext() {
+    unsubscribeFromSync();
+    super.didPushNext();
+  }
+
+  @override
+  void didPopNext() {
+    subscribeToSync();
+    super.didPopNext();
+  }
+
+  @override
+  void didPush() {
+    subscribeToSync();
+    super.didPush();
+  }
+
+  @override
+  void didPop() {
+    unsubscribeFromSync();
+    super.didPop();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   @override
@@ -127,25 +161,12 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      final progress = await AppStoreBase.instance.startSynchronize([widget.account.id]);
+      final progress =
+          await AppStoreBase.instance.startSynchronize([widget.account.id]);
       if (progress == null) return;
       await progressSubscription?.cancel();
-      progressSubscription = progress.listen(
-        (event) async {
-          setState(() {
-            height = event.height;
-          });
-        },
-        onDone: () async {
-          final b = await balance();
-          final h = await getDbHeight();
-          await AppStoreBase.instance.loadAccounts();
-          setState(() {
-            poolBalance = b;
-            height = h;
-          });
-        },
-      );
+      progressSubscription = null;
+      subscribeToSync();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -164,6 +185,34 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSend() async {
     await GoRouter.of(context).push("/send");
+  }
+
+  void subscribeToSync() {
+    progressSubscription =
+        AppStoreBase.instance.syncs[widget.account.id]?.listen(
+      (event) {
+        setState(() {
+          height = event.height;
+        });
+      },
+      onDone: refresh,
+    );
+  }
+
+  void unsubscribeFromSync() {
+    progressSubscription?.cancel();
+    progressSubscription = null;
+  }
+
+  void refresh() async {
+    final b = await balance();
+    final h = await getDbHeight();
+    await AppStoreBase.instance.loadAccounts();
+    if (!mounted) return;
+    setState(() {
+      poolBalance = b;
+      height = h;
+    });
   }
 }
 
