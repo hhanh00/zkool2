@@ -12,7 +12,6 @@ import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
-import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
@@ -194,7 +193,8 @@ class AccountListPageState extends State<AccountListPage> {
           .where((a) => a.enabled)
           .map((a) => a.id)
           .toList();
-      final syncProgress = await startSync(accountIds: accountIds);
+      final syncProgress = await AppStoreBase.instance.startSynchronize(accountIds);
+      if (syncProgress == null) return;
       syncProgress.listen(null, onDone: () {
         if (mounted) {
           AppStoreBase.instance.loadAccounts();
@@ -217,9 +217,4 @@ class AccountListPageState extends State<AccountListPage> {
         newPosition: AppStoreBase.instance.accounts[newIndex].position);
     await AppStoreBase.instance.loadAccounts();
   }
-}
-
-Future<Stream<SyncProgress>> startSync({required List<int> accountIds}) async {
-  final currentHeight = await getCurrentHeight();
-  return synchronize(accounts: accountIds, currentHeight: currentHeight);
 }

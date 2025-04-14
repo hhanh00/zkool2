@@ -386,6 +386,14 @@ pub async fn generate_next_change_address() -> Result<Option<String>> {
     crate::account::generate_next_change_address(&c.network, connection, c.account).await
 }
 
+#[frb]
+pub async fn reset_sync(id: u32) -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    crate::account::reset_sync(connection, id).await
+}
+
 #[frb(dart_metadata = ("freezed"))]
 pub struct Account {
     pub coin: u8,

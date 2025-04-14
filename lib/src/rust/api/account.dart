@@ -47,6 +47,9 @@ Future<int> generateNextDindex() =>
 Future<String?> generateNextChangeAddress() =>
     RustLib.instance.api.crateApiAccountGenerateNextChangeAddress();
 
+Future<void> resetSync({required int id}) =>
+    RustLib.instance.api.crateApiAccountResetSync(id: id);
+
 Future<void> removeAccount({required int accountId}) =>
     RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId);
 
