@@ -26,7 +26,10 @@ pub trait ShieldedProtocol {
     type Spend;
     type Output: Sync;
 
-    fn extract_ivk(pool: &SqlitePool, account: u32) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
+    fn extract_ivk(
+        pool: &SqlitePool,
+        account: u32,
+    ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
     fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend>;
     fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output>;
 
@@ -77,13 +80,16 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
         }
 
-        // map from nullifier to NoteRef
+        // map from (accout, nullifier) to NoteRef
         let mut utxos: HashMap<Vec<u8>, UTXO> = HashMap::new();
 
         for (account, _, _) in keys.iter() {
             // Use an anti join to get the unspent notes
             // and a join to filter based on the account and pool
-            info!("fetch UTXOs - account: {}, pool: {}, height: {}", account, pool, height);
+            info!(
+                "fetch UTXOs - account: {}, pool: {}, height: {}",
+                account, pool, height
+            );
             let mut nfs = sqlx::query(
                 r"
             WITH unspent AS (SELECT a.*
@@ -122,7 +128,9 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             .fetch(connection);
             while let Some(utxo) = nfs.try_next().await? {
                 info!("UTXO: {:?}", utxo);
-                utxos.insert(utxo.nullifier.clone(), utxo);
+                let mut key = account.to_be_bytes().to_vec();
+                key.extend_from_slice(&utxo.nullifier);
+                utxos.insert(key, utxo);
             }
         }
 
@@ -155,22 +163,23 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         });
 
         // new notes
-        let mut notes = outputs.flat_map_iter(
-            |(height, ivtx, vout, o)| 
-                self.keys.iter().flat_map(move |(account, ivk, nk)|
-            {
-                P::try_decrypt(
-                    &network,
-                    *account,
-                    ivk,
-                    height as u32,
-                    ivtx as u32,
-                    vout as u32,
-                    o,
-                )
-                .unwrap().map(|(n, dbn)| (n, dbn, nk))
+        let mut notes = outputs
+            .flat_map_iter(|(height, ivtx, vout, o)| {
+                self.keys.iter().flat_map(move |(account, ivk, nk)| {
+                    P::try_decrypt(
+                        &network,
+                        *account,
+                        ivk,
+                        height as u32,
+                        ivtx as u32,
+                        vout as u32,
+                        o,
+                    )
+                    .unwrap()
+                    .map(|(n, dbn)| (n, dbn, nk))
+                })
             })
-        ).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
         info!("Notes #{}", notes.len());
 
         let mut note_iterator = notes.iter_mut();
@@ -182,34 +191,37 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         for cb in blocks.iter() {
             height = cb.height as u32;
             for (ivtx, tx) in cb.vtx.iter().enumerate() {
-                let mut tx_sent = false;
                 // skip over the txs until we find the next note
                 loop {
                     // there could be more than one note in the same tx
                     // so we need to check all of them
                     match note {
-                        Some((n, dbn, nk)) if dbn.height == cb.height as u32 && dbn.ivtx == ivtx as u32 => {
+                        Some((n, dbn, nk))
+                            if dbn.height == cb.height as u32 && dbn.ivtx == ivtx as u32 =>
+                        {
                             dbn.position = position + dbn.vout;
                             let nf = P::derive_nf(nk, dbn.position, n)?;
                             dbn.nf = nf.to_vec();
 
                             // send the tx if it is not already sent
                             // and before the notes it contains
-                            if !tx_sent {
-                                let tx = Transaction {
-                                    account: dbn.account,
-                                    height: cb.height as u32,
-                                    position: self.position,
-                                    time: cb.time,
-                                    txid: tx.hash.clone().try_into().unwrap(),
-                                    ..Transaction::default()
-                                };
-                                self.tx_decrypted.send(WarpSyncMessage::Transaction(tx)).await.context("sending transaction")?;
-                                tx_sent = true;
-                            }
+                            let transaction = Transaction {
+                                account: dbn.account,
+                                height: cb.height as u32,
+                                time: cb.time,
+                                txid: tx.hash.clone().try_into().unwrap(),
+                                ..Transaction::default()
+                            };
+                            self.tx_decrypted
+                                .send(WarpSyncMessage::Transaction(transaction))
+                                .await
+                                .context("sending transaction")?;
 
                             dbn.txid = tx.hash.clone();
-                            self.tx_decrypted.send(WarpSyncMessage::Note(dbn.clone())).await.context("sending note")?;
+                            self.tx_decrypted
+                                .send(WarpSyncMessage::Note(dbn.clone()))
+                                .await
+                                .context("sending note")?;
                             note = note_iterator.next();
                         }
                         _ => break,
@@ -219,7 +231,8 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
         }
 
-        let mut new_utxos = notes.into_iter()
+        let mut new_utxos = notes
+            .into_iter()
             .map(|(_, dbn, _)| UTXO {
                 id: dbn.id,
                 account: dbn.account,
@@ -329,14 +342,20 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         tracing::info!("Old notes #{}", self.utxos.len());
         tracing::info!("New notes #{}", new_utxos.len());
         for utxo in new_utxos.into_iter() {
-            self.utxos.insert(utxo.nullifier.clone(), utxo);
+            let mut key = utxo.account.to_be_bytes().to_vec();
+            key.extend_from_slice(&utxo.nullifier);
+            self.utxos.insert(key, utxo);
         }
         for utxo in self.utxos.values() {
-            self.tx_decrypted.send(WarpSyncMessage::Witness(
-                utxo.account,
-                height,
-                utxo.cmx.clone(),
-                utxo.witness.clone())).await.context("sending witness")?;
+            self.tx_decrypted
+                .send(WarpSyncMessage::Witness(
+                    utxo.account,
+                    height,
+                    utxo.cmx.clone(),
+                    utxo.witness.clone(),
+                ))
+                .await
+                .context("sending witness")?;
         }
         self.position += count_cmxs as u32;
         let accounts = self
@@ -344,23 +363,43 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             .iter()
             .map(|(account, _, _)| *account)
             .collect::<Vec<_>>();
-        self.tx_decrypted.send(WarpSyncMessage::Checkpoint(accounts, self.pool, height)).await.context("sending checkpoint")?;
 
         // detect spends
-        // bug: the nullifier could affect multiple accounts if they have the same
-        // address
         for cb in blocks.iter() {
             for vtx in cb.vtx.iter() {
                 for sp in P::extract_inputs(vtx).iter() {
                     let nf = P::extract_nf(sp);
                     let nf = nf.as_slice();
-                    if let Some(mut utxo) = self.utxos.remove(nf) {
-                        utxo.txid = vtx.hash.clone();
-                        self.tx_decrypted.send(WarpSyncMessage::Spend(utxo)).await.context("sending spend")?;
+                    for account in accounts.iter() {
+                        let mut key = account.to_be_bytes().to_vec();
+                        key.extend_from_slice(nf);
+
+                        if let Some(mut utxo) = self.utxos.remove(&key) {
+                            utxo.txid = vtx.hash.clone();
+                            let tx = Transaction {
+                                account: utxo.account,
+                                height: cb.height as u32,
+                                time: cb.time,
+                                txid: vtx.hash.clone().try_into().unwrap(),
+                                ..Transaction::default()
+                            };
+                            self.tx_decrypted
+                                .send(WarpSyncMessage::Transaction(tx))
+                                .await
+                                .context("sending transaction")?;
+                            self.tx_decrypted
+                                .send(WarpSyncMessage::Spend(utxo))
+                                .await
+                                .context("sending spend")?;
+                        }
                     }
                 }
             }
         }
+        self.tx_decrypted
+            .send(WarpSyncMessage::Checkpoint(accounts, self.pool, height))
+            .await
+            .context("sending checkpoint")?;
 
         Ok(())
     }
