@@ -66,6 +66,9 @@ abstract class AppStoreBase with Store {
       final progress =
           synchronize(accounts: accounts, currentHeight: currentHeight)
               .asBroadcastStream();
+      for (var id in accounts) {
+        syncs[id] = progress;
+      }
       progress.listen((_) => retryCount = 0, onError: (_) {
         syncInProgress = false;
         retryCount++;
@@ -79,6 +82,7 @@ abstract class AppStoreBase with Store {
         });
       }, onDone: () {
         syncInProgress = false;
+        syncs.clear();
       });
       return progress;
     } catch (e) {
@@ -87,6 +91,8 @@ abstract class AppStoreBase with Store {
       rethrow;
     }
   }
+
+  Map<int, Stream<SyncProgress>> syncs = {};
 
   static AppStore instance = AppStore();
 }
