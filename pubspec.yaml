@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
 
+  shared_preferences: ^2.5.3
   convert: ^3.1.1
   cupertino_icons: ^1.0.8
   rust_lib_zkool:
@@ -24,7 +25,6 @@ dependencies:
   flutter_mobx: ^2.0.2
   mobx: ^2.2.1
   gap: ^3.0.1
-  shared_preferences: ^2.0.7
   flutter_form_builder: ^10.0.1
   form_builder_validators: ^11.1.2
   freezed_annotation: any

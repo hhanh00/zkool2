@@ -130,7 +130,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiAccountMoveAccount(
       {required int oldPosition, required int newPosition});
 
-  Future<void> crateApiAccountNewAccount({required NewAccount na});
+  Future<String> crateApiAccountNewAccount({required NewAccount na});
 
   String crateApiAccountNewSeed({required String phrase});
 
@@ -664,7 +664,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAccountNewAccount({required NewAccount na}) {
+  Future<String> crateApiAccountNewAccount({required NewAccount na}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
@@ -673,7 +673,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             funcId: 21, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
+        decodeSuccessData: sse_decode_String,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountNewAccountConstMeta,

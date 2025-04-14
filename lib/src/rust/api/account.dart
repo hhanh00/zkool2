@@ -38,7 +38,7 @@ Future<void> reorderAccount(
 Future<void> setAccount({required int id}) =>
     RustLib.instance.api.crateApiAccountSetAccount(id: id);
 
-Future<void> newAccount({required NewAccount na}) =>
+Future<String> newAccount({required NewAccount na}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na);
 
 Future<int> generateNextDindex() =>

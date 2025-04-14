@@ -7,6 +7,7 @@ import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/tx.dart';
+import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -61,5 +62,6 @@ final router = GoRouter(
           final args = state.extra as Map<String, dynamic>;
           return QRPage(text: args["text"], title: args["title"]);
         }),
+    GoRoute(path: '/settings', builder: (context, state) => SettingsPage()),
   ],
 );
