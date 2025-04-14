@@ -99,7 +99,7 @@ abstract class AppStoreBase with Store {
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
     final delay = Random().nextInt(maxDelay); // randomize delay
-    final message = "Sync error, retrying in $delay seconds";
+    final message = "Sync error, $retryCount retries, retrying in $delay seconds";
     logger.e(message);
     ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
       SnackBar(

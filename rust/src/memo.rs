@@ -190,11 +190,12 @@ async fn process_memo(
     memo_bytes: &[u8],
 ) -> Result<()> {
     if let Ok(memo) = Memo::from_bytes(&memo_bytes) {
-        let (id_note,): (u32,) =
-            sqlx::query_as("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
+        let id_note =
+            sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
                 .bind(account)
                 .bind(cmx)
-                .fetch_one(connection)
+                .map(|row: SqliteRow| row.get::<u32, _>(0))
+                .fetch_optional(connection)
                 .await?;
 
         match memo {
