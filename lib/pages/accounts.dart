@@ -24,6 +24,7 @@ class AccountListPageState extends State<AccountListPage> {
   var hiding = true;
   var height = 0;
   Timer? heightPollingTimer;
+  final listKey = GlobalKey<EditableListState<Account>>();
 
   @override
   void initState() {
@@ -49,6 +50,7 @@ class AccountListPageState extends State<AccountListPage> {
   @override
   Widget build(BuildContext context) {
     return EditableList<Account>(
+        key: listKey,
         observable: () => AppStoreBase.instance.accounts,
         headerBuilder: (context) => [
               ElevatedButton(
@@ -138,10 +140,16 @@ class AccountListPageState extends State<AccountListPage> {
 
   onSync() async {
     try {
-      final accountIds = AppStoreBase.instance.accounts
-          .where((a) => a.enabled)
-          .map((a) => a.id)
-          .toList();
+      final listState = listKey.currentState!;
+      final accounts = AppStoreBase.instance.accounts;
+      List<int> accountIds = [];
+      final hasSelection = listState.selected.any((s) => s);
+      for (var i = 0; i < accounts.length; i++) {
+        // if any selection, use the selection, otherwise use the enabled flag
+        if ((hasSelection && listState.selected[i]) ||
+          (!hasSelection && accounts[i].enabled))
+            accountIds.add(accounts[i].id);
+      }
       final syncProgress = await AppStoreBase.instance.startSynchronize(accountIds);
       if (syncProgress == null) return;
       syncProgress.listen(null, onDone: () {
