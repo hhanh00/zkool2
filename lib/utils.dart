@@ -46,3 +46,15 @@ Future<void> showException(BuildContext context, String message) async {
     autoDismiss: true,
   ).show();
 }
+
+Future<void> showSeed(BuildContext context, String message) async {
+  await AwesomeDialog(
+    context: context,
+    dialogType: DialogType.warning,
+    animType: AnimType.rightSlide,
+    title: 'SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS',
+    desc: message,
+    btnOkOnPress: () {},
+    autoDismiss: true,
+  ).show();
+}

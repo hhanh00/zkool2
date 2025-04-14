@@ -25,6 +25,8 @@ abstract class AppStoreBase with Store {
   @observable
   List<Memo> memos = [];
 
+  String dbName = "zkool";
+
   bool includeHidden = false;
   ObservableList<String> log = ObservableList.of([]);
 
@@ -63,35 +65,36 @@ abstract class AppStoreBase with Store {
     }
 
     try {
-    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-      SnackBar(
-        content: Text("Starting Synchronization"),
-      ),
-    );
-    syncInProgress = true;
-    retrySyncTimer?.cancel();
-    retrySyncTimer = null;
-    final currentHeight = await getCurrentHeight();
-    final progress =
-        synchronize(accounts: accounts, currentHeight: currentHeight)
-            .asBroadcastStream();
-    for (var id in accounts) {
-      syncs[id] = progress;
-    }
-    await syncProgressSubscription?.cancel();
-    syncProgressSubscription =
-        progress.listen((_) => retryCount = 0, onError: (_) {
-          retry(accounts);
-        }, onDone: () {
-      syncInProgress = false;
-      syncs.clear();
-      syncProgressSubscription?.cancel();
-      syncProgressSubscription = null;
-    });
-    return progress;
+      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+        SnackBar(
+          content: Text("Starting Synchronization"),
+        ),
+      );
+      syncInProgress = true;
+      retrySyncTimer?.cancel();
+      retrySyncTimer = null;
+      final currentHeight = await getCurrentHeight();
+      final progress =
+          synchronize(accounts: accounts, currentHeight: currentHeight)
+              .asBroadcastStream();
+      for (var id in accounts) {
+        syncs[id] = progress;
+      }
+      await syncProgressSubscription?.cancel();
+      syncProgressSubscription =
+          progress.listen((_) => retryCount = 0, onError: (_) {
+        retry(accounts);
+      }, onDone: () {
+        syncInProgress = false;
+        syncs.clear();
+        syncProgressSubscription?.cancel();
+        syncProgressSubscription = null;
+      });
+      return progress;
     } on AnyhowException {
       retry(accounts);
     }
+    return null;
   }
 
   void retry(List<int> accounts) {
@@ -99,7 +102,8 @@ abstract class AppStoreBase with Store {
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
     final delay = Random().nextInt(maxDelay); // randomize delay
-    final message = "Sync error, $retryCount retries, retrying in $delay seconds";
+    final message =
+        "Sync error, $retryCount retries, retrying in $delay seconds";
     logger.e(message);
     ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
       SnackBar(
