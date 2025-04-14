@@ -207,7 +207,7 @@ pub fn set_account(id: u32) -> Result<()> {
 }
 
 #[frb]
-pub async fn new_account(na: &NewAccount) -> Result<()> {
+pub async fn new_account(na: &NewAccount) -> Result<String> {
     let c = get_coin!();
     let pool = c.get_pool();
     let network = c.network;
@@ -367,7 +367,7 @@ pub async fn new_account(na: &NewAccount) -> Result<()> {
         }
         update_dindex(pool, account, dindex, true).await?;
     }
-    Ok(())
+    Ok(key)
 }
 
 #[frb]
