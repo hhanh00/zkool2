@@ -11,11 +11,13 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/widgets/scanner.dart';
 
+final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 final router = GoRouter(
   initialLocation: "/",
   observers: [routeObserver],
+  navigatorKey: navigatorKey,
   routes: [
     GoRoute(
       path: '/',
