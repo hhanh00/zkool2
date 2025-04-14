@@ -11,7 +11,6 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -128,8 +127,9 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      await progressSubscription?.cancel();
       final progress = await AppStoreBase.instance.startSynchronize([widget.account.id]);
+      if (progress == null) return;
+      await progressSubscription?.cancel();
       progressSubscription = progress.listen(
         (event) async {
           setState(() {
@@ -191,7 +191,11 @@ class AccountEditPageState extends State<AccountEditPage> {
           IconButton(
               tooltip: "Export Account",
               onPressed: onExport,
-              icon: Icon(Icons.file_upload))
+              icon: Icon(Icons.reset_tv)),
+          IconButton(
+              tooltip: "Clear Sync Data",
+              onPressed: onReset,
+              icon: Icon(Icons.delete_sweep))
         ]),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -325,6 +329,11 @@ class AccountEditPageState extends State<AccountEditPage> {
         bytes: res,
       );
     }
+  }
+
+  void onReset() async {
+    await resetSync(id: account.id);
+    await AppStoreBase.instance.loadAccounts();
   }
 }
 

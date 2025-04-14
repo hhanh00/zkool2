@@ -21,7 +21,7 @@ A wallet for zcash
     - [x] CRUD
     - [x] reorder
     - [x] hide accounts
-- [ ] Synchronization
+- [x] Synchronization
     - [x] transparent
     - [x] shielded
     - [x] rewind
@@ -30,7 +30,7 @@ A wallet for zcash
     - [x] continuous
     - [x] retry
     - [x] scan past transparent addresses
-    - [ ] reset
+    - [x] reset
 - [x] Receive
     - [x] default address generation
     - [x] diversified address generation
@@ -48,7 +48,6 @@ A wallet for zcash
     - [x] tx list
     - [x] memo
     - [x] split views
-- [ ] Tx details page
 - [x] QR
     - [x] scanner
     - [x] show
@@ -76,6 +75,8 @@ A wallet for zcash
     - [ ] min confs
     - [ ] get tx details
     - [ ] protect open/send
+- [ ] Tx details page
+- [ ] App Icons
 - [ ] Bugs
     - [x] No native certs
 
