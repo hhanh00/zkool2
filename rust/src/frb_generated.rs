@@ -1276,14 +1276,16 @@ fn wire__crate__api__sync__synchronize_impl(
             let api_current_height = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                transform_result_sse::<_, ()>(
                     (move || async move {
-                        let output_ok = crate::api::sync::synchronize(
-                            api_progress,
-                            api_accounts,
-                            api_current_height,
-                        )
-                        .await?;
+                        let output_ok = Result::<_, ()>::Ok({
+                            crate::api::sync::synchronize(
+                                api_progress,
+                                api_accounts,
+                                api_current_height,
+                            )
+                            .await;
+                        })?;
                         Ok(output_ok)
                     })()
                     .await,

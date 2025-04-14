@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:mobx/mobx.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -51,6 +54,7 @@ abstract class AppStoreBase with Store {
 
   bool syncInProgress = false;
   int retryCount = 0;
+  StreamSubscription<SyncProgress>? syncProgressSubscription;
   Timer? retrySyncTimer;
 
   Future<Stream<SyncProgress>?> startSynchronize(List<int> accounts) async {
@@ -59,37 +63,53 @@ abstract class AppStoreBase with Store {
     }
 
     try {
-      syncInProgress = true;
-      retrySyncTimer?.cancel();
-      retrySyncTimer = null;
-      final currentHeight = await getCurrentHeight();
-      final progress =
-          synchronize(accounts: accounts, currentHeight: currentHeight)
-              .asBroadcastStream();
-      for (var id in accounts) {
-        syncs[id] = progress;
-      }
-      progress.listen((_) => retryCount = 0, onError: (_) {
-        syncInProgress = false;
-        retryCount++;
-        final maxDelay =
-            pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
-        final delay = Random().nextInt(maxDelay); // randomize delay
-        logger.i("Sync error, retrying in $delay seconds");
-        retrySyncTimer?.cancel();
-        retrySyncTimer = Timer(Duration(seconds: delay), () {
-          startSynchronize(accounts);
-        });
-      }, onDone: () {
-        syncInProgress = false;
-        syncs.clear();
-      });
-      return progress;
-    } catch (e) {
-      syncInProgress = false;
-      logger.e("Sync error: $e");
-      rethrow;
+    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+      SnackBar(
+        content: Text("Starting Synchronization"),
+      ),
+    );
+    syncInProgress = true;
+    retrySyncTimer?.cancel();
+    retrySyncTimer = null;
+    final currentHeight = await getCurrentHeight();
+    final progress =
+        synchronize(accounts: accounts, currentHeight: currentHeight)
+            .asBroadcastStream();
+    for (var id in accounts) {
+      syncs[id] = progress;
     }
+    await syncProgressSubscription?.cancel();
+    syncProgressSubscription =
+        progress.listen((_) => retryCount = 0, onError: (_) {
+          retry(accounts);
+        }, onDone: () {
+      syncInProgress = false;
+      syncs.clear();
+      syncProgressSubscription?.cancel();
+      syncProgressSubscription = null;
+    });
+    return progress;
+    } on AnyhowException {
+      retry(accounts);
+    }
+  }
+
+  void retry(List<int> accounts) {
+    syncInProgress = false;
+    retryCount++;
+    final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
+    final delay = Random().nextInt(maxDelay); // randomize delay
+    final message = "Sync error, retrying in $delay seconds";
+    logger.e(message);
+    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
+    retrySyncTimer?.cancel();
+    retrySyncTimer = Timer(Duration(seconds: delay), () {
+      startSynchronize(accounts);
+    });
   }
 
   Map<int, Stream<SyncProgress>> syncs = {};

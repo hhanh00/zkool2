@@ -2,9 +2,9 @@ use anyhow::Result;
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use tracing::info;
 use std::collections::HashMap;
 use tokio::sync::mpsc::channel;
+use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
 use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as ZcashTransaction};
@@ -24,98 +24,109 @@ pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
     accounts: Vec<u32>,
     current_height: u32,
-) -> Result<()> {
+) {
     if accounts.is_empty() {
-        return Ok(());
+        return;
     }
 
     let c = get_coin!();
     let network = c.network;
     let pool = c.get_pool();
+    let progress2 = progress.clone();
 
-    recover_from_partial_sync(&pool, &accounts).await?;
+    let res = async {
+        recover_from_partial_sync(&pool, &accounts).await?;
 
-    // Get account heights
-    let mut account_heights = HashMap::new();
-    for account in accounts.iter() {
-        let (account, height): (u32, u32) = sqlx::query_as(
-            "SELECT account, MIN(height) FROM sync_heights
+        // Get account heights
+        let mut account_heights = HashMap::new();
+        for account in accounts.iter() {
+            let (account, height): (u32, u32) = sqlx::query_as(
+                "SELECT account, MIN(height) FROM sync_heights
         JOIN accounts ON account = id_account
         WHERE account = ?",
-        )
-        .bind(account)
-        .fetch_one(pool)
-        .await?;
+            )
+            .bind(account)
+            .fetch_one(pool)
+            .await?;
 
-        account_heights.insert(account, height + 1);
+            account_heights.insert(account, height + 1);
+        }
+
+        // Create a sorted list of unique heights
+        let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
+        unique_heights.sort_unstable();
+        unique_heights.dedup();
+
+        let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
+
+        tokio::spawn(async move {
+            while let Some(p) = rx_progress.recv().await {
+                let _ = progress.add(p);
+            }
+        });
+
+        // For each unique height, process accounts that need to be synced from that height
+        for (i, &start_height) in unique_heights.iter().enumerate() {
+            // Determine the end height (next height - 1 or current_height)
+            let end_height = if i + 1 < unique_heights.len() {
+                unique_heights[i + 1] - 1
+            } else {
+                current_height
+            };
+
+            // Find accounts that have a transparent height <= this start_height
+            let accounts_to_sync: Vec<u32> = account_heights
+                .iter()
+                .filter(|&(_, &height)| height <= start_height)
+                .map(|(&account, _)| account)
+                .collect();
+
+            // Skip if no accounts to sync
+            if accounts_to_sync.is_empty() {
+                continue;
+            }
+
+            // Update the sync heights for these accounts
+            let mut client = c.client().await?;
+
+            transparent_sync(
+                &network,
+                pool,
+                start_height,
+                end_height,
+                &accounts_to_sync,
+                &mut client,
+            )
+            .await?;
+
+            shielded_sync(
+                &network,
+                pool,
+                &mut client,
+                accounts.clone(),
+                start_height,
+                end_height,
+                tx_progress.clone(),
+            )
+            .await?;
+
+            // Update our local map as well for the next iteration
+            for account in &accounts_to_sync {
+                account_heights.insert(*account, end_height);
+                crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
+            }
+        }
+
+        Ok::<_, anyhow::Error>(())
+    };
+
+    match res.await {
+        Ok(_) => {}
+        Err(e) => {
+            info!("Error during sync: {:?}", e);
+            let _ = progress2.add_error(e);
+        }
     }
-
-    // Create a sorted list of unique heights
-    let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
-    unique_heights.sort_unstable();
-    unique_heights.dedup();
-
-    let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
-
-    tokio::spawn(async move {
-        while let Some(p) = rx_progress.recv().await {
-            let _ = progress.add(p);
-        }
-    });
-
-    // For each unique height, process accounts that need to be synced from that height
-    for (i, &start_height) in unique_heights.iter().enumerate() {
-        // Determine the end height (next height - 1 or current_height)
-        let end_height = if i + 1 < unique_heights.len() {
-            unique_heights[i + 1] - 1
-        } else {
-            current_height
-        };
-
-        // Find accounts that have a transparent height <= this start_height
-        let accounts_to_sync: Vec<u32> = account_heights
-            .iter()
-            .filter(|&(_, &height)| height <= start_height)
-            .map(|(&account, _)| account)
-            .collect();
-
-        // Skip if no accounts to sync
-        if accounts_to_sync.is_empty() {
-            continue;
-        }
-
-        // Update the sync heights for these accounts
-        let mut client = c.client().await?;
-
-        transparent_sync(
-            &network,
-            pool,
-            start_height,
-            end_height,
-            &accounts_to_sync,
-            &mut client,
-        )
-        .await?;
-
-        shielded_sync(
-            &network,
-            pool,
-            &mut client,
-            accounts.clone(),
-            start_height,
-            end_height,
-            tx_progress.clone(),
-        )
-        .await?;
-
-        // Update our local map as well for the next iteration
-        for account in &accounts_to_sync {
-            account_heights.insert(*account, end_height);
-            crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
-        }
-    }
-
-    Ok(())
 }
 
 async fn transparent_sync(
@@ -298,6 +309,7 @@ pub async fn get_tx_details() -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Debug)]
 pub struct SyncProgress {
     pub height: u32,
     pub time: u32,
