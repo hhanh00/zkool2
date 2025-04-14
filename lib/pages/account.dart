@@ -129,9 +129,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onSync() async {
     try {
       await progressSubscription?.cancel();
-      final currentHeight = await getCurrentHeight();
-      final progress = synchronize(
-          accounts: [widget.account.id], currentHeight: currentHeight);
+      final progress = await AppStoreBase.instance.startSynchronize([widget.account.id]);
       progressSubscription = progress.listen(
         (event) async {
           setState(() {

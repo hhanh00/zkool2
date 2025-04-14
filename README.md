@@ -27,8 +27,8 @@ A wallet for zcash
     - [x] rewind
     - [x] memo
     - [x] reorg detection
-    - [ ] continuous
-    - [ ] retry
+    - [x] continuous
+    - [x] retry
     - [x] scan past transparent addresses
     - [ ] reset
 - [x] Receive
