@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
@@ -25,9 +26,24 @@ class SendPageState extends State<SendPage> {
   var address = "";
   var amount = "";
   String? memo;
+  List<Recipient> recipients = [];
 
   @override
   Widget build(BuildContext context) {
+    final recipientTiles = recipients
+        .map((r) => ListTile(
+              title: Text(r.address),
+              subtitle: Text(zatToString(r.amount)),
+              trailing: IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () {
+                    setState(() {
+                      recipients.remove(r);
+                    });
+                  }),
+            ))
+        .toList();
+
     return Scaffold(
         appBar: AppBar(
           title: Text("Recipient"),
@@ -52,6 +68,7 @@ class SendPageState extends State<SendPage> {
                 child: FormBuilder(
                     key: formKey,
                     child: Column(children: [
+                      ...recipientTiles,
                       Row(children: [
                         Expanded(
                             child: FormBuilderTextField(
@@ -83,26 +100,25 @@ class SendPageState extends State<SendPage> {
                           name: "memo",
                           decoration: const InputDecoration(labelText: "Memo"),
                           initialValue: memo,
-                          onChanged: (v) => setState(() => memo = v!),
+                          onChanged: (v) => setState(() => memo = v),
                           maxLines: 8,
                         ),
                     ])))));
   }
 
-  void onAdd() {}
-  void onSend() async {
-    final form = formKey.currentState!;
-    if (form.saveAndValidate()) {
-      final address = form.fields['address']?.value as String;
-      final amount = form.fields['amount']?.value as String;
-      final memo = form.fields['memo']?.value as String?;
-      logger.i("Send $amount to $address");
-
-      final recipient = Recipient(
-          address: address, amount: stringToZat(amount), userMemo: memo);
-      if (mounted)
-        await GoRouter.of(context).push("/send2", extra: [recipient]);
+  void onAdd() async {
+    final recipient = await validateAndGetRecipient();
+    if (recipient != null) {
+      setState(() {
+        recipients.add(recipient);
+      });
     }
+  }
+
+  void onSend() async {
+    final recipient = await validateAndGetRecipient();
+    if (recipient != null && mounted)
+      await GoRouter.of(context).push("/send2", extra: [recipient]);
   }
 
   void onScan() async {
@@ -114,6 +130,21 @@ class SendPageState extends State<SendPage> {
         formKey.currentState!.fields['address']!.didChange(address2);
       });
     }
+  }
+
+  Future<Recipient?> validateAndGetRecipient() async {
+    final form = formKey.currentState!;
+    if (form.saveAndValidate()) {
+      final address = form.fields['address']?.value as String;
+      final amount = form.fields['amount']?.value as String;
+      final memo = form.fields['memo']?.value as String?;
+      logger.i("Send $amount to $address");
+
+      final recipient = Recipient(
+          address: address, amount: stringToZat(amount), userMemo: memo);
+      return recipient;
+    }
+    return null;
   }
 }
 
@@ -182,11 +213,15 @@ class Send2PageState extends State<Send2Page> {
 
     final srcPools2 = int.parse(srcPools);
 
-    final tx = await prepare(
-        srcPools: srcPools2,
-        recipients: widget.recipients,
-        recipientPaysFee: recipientPaysFee);
+    try {
+      final tx = await prepare(
+          srcPools: srcPools2,
+          recipients: widget.recipients,
+          recipientPaysFee: recipientPaysFee);
 
-    if (mounted) await GoRouter.of(context).push("/tx", extra: tx);
+      if (mounted) await GoRouter.of(context).push("/tx", extra: tx);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 }
