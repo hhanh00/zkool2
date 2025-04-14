@@ -31,6 +31,7 @@ A wallet for zcash
     - [x] retry
     - [x] scan past transparent addresses
     - [x] reset
+    - [x] height progress observers per account
 - [x] Receive
     - [x] default address generation
     - [x] diversified address generation
