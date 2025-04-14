@@ -1,6 +1,11 @@
+import 'dart:io';
+
+import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -30,6 +35,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         appBar: AppBar(
           title: const Text("New Account"),
           actions: [
+            IconButton(onPressed: onImport, icon: Icon(Icons.file_download)),
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: onSave,
@@ -37,70 +43,77 @@ class NewAccountPageState extends State<NewAccountPage> {
           ],
         ),
         body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: SingleChildScrollView(child: FormBuilder(
-            key: formKey,
-            child: Column(
-              children: [
-                Stack(children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundImage: ib != null ? Image.memory(ib).image : null,
-                    child: ib == null ? Text(initials(name)) : null,
-                  ),
-                  Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: IconButton.filled(
-                        onPressed: onEdit,
-                        icon: Icon(Icons.edit),
-                      ))
-                ]),
-                Gap(16),
-                FormBuilderTextField(
-                  name: "name",
-                  decoration: const InputDecoration(labelText: "Account Name"),
-                  initialValue: name,
-                  onChanged: (v) => setState(() => name = v!),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: SingleChildScrollView(
+              child: FormBuilder(
+                key: formKey,
+                child: Column(
+                  children: [
+                    Stack(children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundImage:
+                            ib != null ? Image.memory(ib).image : null,
+                        child: ib == null ? Text(initials(name)) : null,
+                      ),
+                      Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: IconButton.filled(
+                            onPressed: onEdit,
+                            icon: Icon(Icons.edit),
+                          ))
+                    ]),
+                    Gap(16),
+                    FormBuilderTextField(
+                      name: "name",
+                      decoration:
+                          const InputDecoration(labelText: "Account Name"),
+                      initialValue: name,
+                      onChanged: (v) => setState(() => name = v!),
+                    ),
+                    Gap(16),
+                    FormBuilderSwitch(
+                        name: "restore",
+                        title: const Text("Restore Account?"),
+                        initialValue: restore,
+                        onChanged: (v) => setState(() => restore = v ?? false)),
+                    Gap(16),
+                    if (restore)
+                      FormBuilderTextField(
+                        name: "key",
+                        decoration: const InputDecoration(
+                            labelText:
+                                "Key (Seed Phrase, Private Key, or Viewing Key)"),
+                        validator: (s) => validKey(s, restore: restore),
+                      ),
+                    Gap(16),
+                    if (restore)
+                      FormBuilderTextField(
+                        name: "aindex",
+                        decoration: const InputDecoration(
+                            labelText:
+                                "Account Index (when using a seed phrase)"),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                      ),
+                    Gap(16),
+                    if (restore)
+                      FormBuilderTextField(
+                        name: "birth",
+                        decoration:
+                            const InputDecoration(labelText: "Birth Height"),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                      ),
+                  ],
                 ),
-                Gap(16),
-                FormBuilderSwitch(
-                    name: "restore",
-                    title: const Text("Restore Account?"),
-                    initialValue: restore,
-                    onChanged: (v) => setState(() => restore = v ?? false)),
-                Gap(16),
-                if (restore)
-                  FormBuilderTextField(
-                    name: "key",
-                    decoration: const InputDecoration(
-                        labelText:
-                            "Key (Seed Phrase, Private Key, or Viewing Key)"),
-                    validator: (s) => validKey(s, restore: restore),
-                  ),
-                Gap(16),
-                if (restore)
-                  FormBuilderTextField(
-                    name: "aindex",
-                    decoration: const InputDecoration(
-                        labelText:
-                            "Account Index (when using a seed phrase)"),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
-                Gap(16),
-                if (restore)
-                  FormBuilderTextField(
-                    name: "birth",
-                    decoration:
-                        const InputDecoration(labelText: "Birth Height"),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
-              ],
-            ),
-          ),
-        )));
+              ),
+            )));
   }
 
   void onSave() async {
@@ -114,18 +127,20 @@ class NewAccountPageState extends State<NewAccountPage> {
       final String? birth = formData?["birth"];
       final icon = iconBytes;
 
-      await newAccount(
+      final key2 = await newAccount(
           na: NewAccount(
-            icon: icon,
-            name: name ?? "",
-            restore: restore ?? false,
-            key: key ?? "",
-            aindex: int.parse(aindex ?? "0"),
-            birth: birth != null ? int.parse(birth) : null,
-          ));
+        icon: icon,
+        name: name ?? "",
+        restore: restore ?? false,
+        key: key ?? "",
+        aindex: int.parse(aindex ?? "0"),
+        birth: birth != null ? int.parse(birth) : null,
+      ));
+      if (mounted && (key == null || key.isEmpty)) {
+        await showSeed(context, key2);
+      }
       await AppStoreBase.instance.loadAccounts();
-      if (mounted)
-        GoRouter.of(context).pop();
+      if (mounted) GoRouter.of(context).pop();
     }
   }
 
@@ -135,6 +150,54 @@ class NewAccountPageState extends State<NewAccountPage> {
     if (icon != null) {
       final bytes = await icon.readAsBytes();
       setState(() => iconBytes = bytes);
+    }
+  }
+
+  onImport() async {
+    try {
+      final files = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Please select an encrypted account file for import',
+      );
+      if (files == null) return;
+      if (!mounted) return;
+      final file = files.files.first;
+      final password = TextEditingController();
+      bool confirmed = await AwesomeDialog(
+            context: context,
+            dialogType: DialogType.question,
+            animType: AnimType.rightSlide,
+            body: FormBuilder(
+                child: FormBuilderTextField(
+              name: 'password',
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+              controller: password,
+            )),
+            btnCancelOnPress: () {},
+            btnOkOnPress: () {},
+            onDismissCallback: (type) {
+              final res = (() {
+                switch (type) {
+                  case DismissType.btnOk:
+                    return true;
+                  default:
+                    return false;
+                }
+              })();
+              GoRouter.of(context).pop(res);
+            },
+            autoDismiss: false,
+          ).show() ??
+          false;
+      if (confirmed) {
+        final p = password.text;
+        final encryptedFile = File(file.path!);
+        final encrypted = encryptedFile.readAsBytesSync();
+        await importAccount(passphrase: p, data: encrypted);
+        await AppStoreBase.instance.loadAccounts();
+      }
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
     }
   }
 }
