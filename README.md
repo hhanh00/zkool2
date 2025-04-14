@@ -80,6 +80,9 @@ A wallet for zcash
 - [ ] App Icons
 - [ ] Bugs
     - [x] No native certs
+    - [x] duplicate accounts sync - identical nullifiers: only one account is
+    detected
+    - [ ] heights should update in account list after sync
 
 ## User Stories
 
