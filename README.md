@@ -57,8 +57,8 @@ A wallet for zcash
     - [x] make log viewer page
     - [x] add logging messages
 - [ ] Market price
-- [ ] MultiSend
-    - [ ] payment URI generation
+- [x] MultiSend
+- [ ] payment URI generation
 - [x] Export
     - [x] accounts
     - [x] tx history
@@ -68,9 +68,10 @@ A wallet for zcash
     - [x] tx history
     - [x] encryption
 - [ ] Database
-    - [ ] switch to new database
+    - [x] switch to new database
     - [ ] encrypt database with AES
 - [ ] Settings
+    - [x] database name
     - [ ] lwd url
     - [ ] fiat currency
     - [ ] min confs
