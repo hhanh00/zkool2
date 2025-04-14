@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
@@ -10,8 +11,11 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/widgets/scanner.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+
 final router = GoRouter(
   initialLocation: "/",
+  observers: [routeObserver],
   routes: [
     GoRoute(
       path: '/',
