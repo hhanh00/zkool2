@@ -25,7 +25,6 @@ pub struct Transaction {
     pub account: u32,
     pub time: u32,
     pub value: i64,
-    pub position: u32,
 }
 
 #[frb(dart_metadata = ("freezed"))]
