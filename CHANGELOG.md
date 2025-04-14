@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.5.0...zkool-v1.6.0) (2025-04-14)
+
+
+### Features
+
+* android version ([#71](https://github.com/hhanh00/zkool2/issues/71)) ([b9935b8](https://github.com/hhanh00/zkool2/commit/b9935b8b30f35774de39045aa995bdae0af84072))
+* export account data ([#75](https://github.com/hhanh00/zkool2/issues/75)) ([4927d47](https://github.com/hhanh00/zkool2/commit/4927d478952501fab7bfbe2a3e81fa14e133e9c5))
+* import account from binary data ([#76](https://github.com/hhanh00/zkool2/issues/76)) ([8e52095](https://github.com/hhanh00/zkool2/commit/8e520951f89533b43d4546ad45d45cbf138a5b82))
+* import accounts & encryption ([#77](https://github.com/hhanh00/zkool2/issues/77)) ([8eef09a](https://github.com/hhanh00/zkool2/commit/8eef09ab66b4804cfdd0e9dec2b19b76b6e9290e))
+* multisend ([#88](https://github.com/hhanh00/zkool2/issues/88)) ([b47766e](https://github.com/hhanh00/zkool2/commit/b47766ebdf2995988c4e73aae9b6d53536ee7b14))
+* QR code scanner and display ([#78](https://github.com/hhanh00/zkool2/issues/78)) ([2474b4e](https://github.com/hhanh00/zkool2/commit/2474b4e373346d21cc8e792ec53f5d8e911392b7))
+* reorg detection and rewind ([#79](https://github.com/hhanh00/zkool2/issues/79)) ([93def21](https://github.com/hhanh00/zkool2/commit/93def21c22afe9f6ea53c3bf999ff5fd24c68fa5))
+* reset account ([#81](https://github.com/hhanh00/zkool2/issues/81)) ([61feaaf](https://github.com/hhanh00/zkool2/commit/61feaaf0cb9047742cd090e3afe84056ce15ecbb))
+* settings page ([#86](https://github.com/hhanh00/zkool2/issues/86)) ([73e237c](https://github.com/hhanh00/zkool2/commit/73e237c84c5f4643ce77036ad142a1038b1f87d0))
+* synchronization retry with exponential backoff ([#80](https://github.com/hhanh00/zkool2/issues/80)) ([dd774e9](https://github.com/hhanh00/zkool2/commit/dd774e9caa935645b93621aa2b82cfea2859dddb))
+* synchronize checked accounts on account list ([#89](https://github.com/hhanh00/zkool2/issues/89)) ([25289a1](https://github.com/hhanh00/zkool2/commit/25289a18c6c74b5775a38a198e72d4bac522585f))
+
+
+### Bug Fixes
+
+* error handling try/catch around network calls ([#74](https://github.com/hhanh00/zkool2/issues/74)) ([187e5be](https://github.com/hhanh00/zkool2/commit/187e5bedcdc6d253febc04b03e34b0a9be62bdc1))
+* import accounts in first position ([#87](https://github.com/hhanh00/zkool2/issues/87)) ([d055d21](https://github.com/hhanh00/zkool2/commit/d055d210e47ab9b12165767e784fbc4e5155a401))
+* load of transaction history and memos ([#83](https://github.com/hhanh00/zkool2/issues/83)) ([16b32a8](https://github.com/hhanh00/zkool2/commit/16b32a898f03ee3eefa5049ad347fd53c9842f86))
+* retry sync ([#84](https://github.com/hhanh00/zkool2/issues/84)) ([80037af](https://github.com/hhanh00/zkool2/commit/80037af8cf2c47f13396a6597782dc94fea0bb22))
+* sync of outgoing notes ([#85](https://github.com/hhanh00/zkool2/issues/85)) ([a7ebcc0](https://github.com/hhanh00/zkool2/commit/a7ebcc0a7e1faf2fe543fde57d2388b56590c625))
+* tx memo parsing ([#73](https://github.com/hhanh00/zkool2/issues/73)) ([1af9c80](https://github.com/hhanh00/zkool2/commit/1af9c80c729d969b143205d8ec95dd7c1b09279c))
+* updates to sync height were not going through after navigating away from account page ([#82](https://github.com/hhanh00/zkool2/issues/82)) ([3e610f7](https://github.com/hhanh00/zkool2/commit/3e610f74dda37265509a926a451f98d7704c9172))
+
 ## [1.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.4.0...zkool-v1.5.0) (2025-04-12)
 
 
