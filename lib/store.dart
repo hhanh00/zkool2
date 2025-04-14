@@ -53,32 +53,39 @@ abstract class AppStoreBase with Store {
   int retryCount = 0;
   Timer? retrySyncTimer;
 
-  Future<Stream<SyncProgress>> startSynchronize(List<int> accounts) async {
+  Future<Stream<SyncProgress>?> startSynchronize(List<int> accounts) async {
     if (syncInProgress) {
-      return Stream.empty();
+      return null;
     }
 
-    syncInProgress = true;
-    retrySyncTimer?.cancel();
-    retrySyncTimer = null;
-    final currentHeight = await getCurrentHeight();
-    final progress =
-        synchronize(accounts: accounts, currentHeight: currentHeight)
-            .asBroadcastStream();
-    progress.listen((_) => retryCount = 0, onError: (_) {
-      syncInProgress = false;
-      retryCount++;
-      final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
-      final delay = Random().nextInt(maxDelay); // randomize delay
-      logger.i("Sync error, retrying in $delay seconds");
+    try {
+      syncInProgress = true;
       retrySyncTimer?.cancel();
-      retrySyncTimer = Timer(Duration(seconds: delay), () {
-        startSynchronize(accounts);
+      retrySyncTimer = null;
+      final currentHeight = await getCurrentHeight();
+      final progress =
+          synchronize(accounts: accounts, currentHeight: currentHeight)
+              .asBroadcastStream();
+      progress.listen((_) => retryCount = 0, onError: (_) {
+        syncInProgress = false;
+        retryCount++;
+        final maxDelay =
+            pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
+        final delay = Random().nextInt(maxDelay); // randomize delay
+        logger.i("Sync error, retrying in $delay seconds");
+        retrySyncTimer?.cancel();
+        retrySyncTimer = Timer(Duration(seconds: delay), () {
+          startSynchronize(accounts);
+        });
+      }, onDone: () {
+        syncInProgress = false;
       });
-    }, onDone: () {
+      return progress;
+    } catch (e) {
       syncInProgress = false;
-    });
-    return progress;
+      logger.e("Sync error: $e");
+      rethrow;
+    }
   }
 
   static AppStore instance = AppStore();

@@ -21,8 +21,7 @@ use zcash_transparent::keys::{
 };
 
 use crate::{
-    db::store_account_transparent_addr,
-    warp::{AuthPath, Witness, MERKLE_DEPTH},
+    db::store_account_transparent_addr, sync::trim_sync_data, warp::{AuthPath, Witness, MERKLE_DEPTH}
 };
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
@@ -380,4 +379,13 @@ async fn get_transparent_keys(
         None => (None, None),
     };
     Ok((xsk, xvk))
+}
+
+pub async fn reset_sync(connection: &SqlitePool, account: u32) -> Result<()> {
+    let birth_height = sqlx::query("SELECT birth FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| row.get::<u32, _>(0))
+        .fetch_one(connection)
+        .await?;
+    trim_sync_data(connection, account, birth_height - 1).await
 }
