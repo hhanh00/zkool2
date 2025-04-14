@@ -208,6 +208,8 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
     final b = await balance();
     final h = await getDbHeight();
     await AppStoreBase.instance.loadAccounts();
+    await AppStoreBase.instance.loadTxHistory();
+    await AppStoreBase.instance.loadMemos();
     if (!mounted) return;
     setState(() {
       poolBalance = b;
