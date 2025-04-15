@@ -56,9 +56,7 @@ A wallet for zcash
     - [x] integrate tracing framework
     - [x] make log viewer page
     - [x] add logging messages
-- [ ] Market price
 - [x] MultiSend
-- [ ] payment URI generation
 - [x] Export
     - [x] accounts
     - [x] tx history
@@ -67,9 +65,9 @@ A wallet for zcash
     - [x] accounts
     - [x] tx history
     - [x] encryption
-- [ ] Database
+- [x] Database
     - [x] switch to new database
-    - [ ] encrypt database with AES
+    - [x] encrypt database with AES
 - [ ] Settings
     - [x] database name
     - [ ] lwd url
@@ -77,14 +75,15 @@ A wallet for zcash
     - [ ] min confs
     - [ ] get tx details
     - [ ] protect open/send
+- [ ] Market price
 - [ ] Tx details page
+- [ ] Payment URI generation
 - [ ] App Icons
 - [ ] Bugs
     - [x] No native certs
     - [x] duplicate accounts sync - identical nullifiers: only one account is
     detected
-    - [ ] heights should update in account list after sync
-    - [ ] key scope column
+    - [x] heights should update in account list after sync
 
 ## User Stories
 
@@ -97,13 +96,13 @@ In order of priority,
 - [ ] Search
 
 ### Rotate Transparent Addresses
-- [ ] Auto New change address
-- [ ] Manual New receive address
-- [ ] Sweep past addresses
+- [x] Auto New change address
+- [x] Manual New receive address
+- [x] Sweep past addresses
 
 ### Account Import/Export
-- [ ] Single/Multi account export
-- [ ] Add/Import to current database
+- [x] Single/Multi account export
+- [x] Add/Import to current database
 
 ### Contacts
 TBD

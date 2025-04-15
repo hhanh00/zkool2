@@ -104,12 +104,17 @@ fn wire__crate__api__db__create_database_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_coin = <u8>::sse_decode(&mut deserializer);
             let api_db_filepath = <String>::sse_decode(&mut deserializer);
+            let api_password = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::db::create_database(api_coin, &api_db_filepath).await?;
+                        let output_ok = crate::api::db::create_database(
+                            api_coin,
+                            &api_db_filepath,
+                            api_password,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -838,11 +843,13 @@ fn wire__crate__api__db__open_database_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_db_filepath = <String>::sse_decode(&mut deserializer);
+            let api_password = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::db::open_database(&api_db_filepath).await?;
+                        let output_ok =
+                            crate::api::db::open_database(&api_db_filepath, api_password).await?;
                         Ok(output_ok)
                     })()
                     .await,

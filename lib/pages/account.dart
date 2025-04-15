@@ -342,37 +342,9 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onExport() async {
-    final password = TextEditingController();
-    bool confirmed = await AwesomeDialog(
-          context: context,
-          dialogType: DialogType.question,
-          animType: AnimType.rightSlide,
-          body: FormBuilder(
-              child: FormBuilderTextField(
-            name: 'password',
-            decoration: InputDecoration(labelText: 'Password'),
-            obscureText: true,
-            controller: password,
-          )),
-          btnCancelOnPress: () {},
-          btnOkOnPress: () {},
-          onDismissCallback: (type) {
-            final res = (() {
-              switch (type) {
-                case DismissType.btnOk:
-                  return true;
-                default:
-                  return false;
-              }
-            })();
-            GoRouter.of(context).pop(res);
-          },
-          autoDismiss: false,
-        ).show() ??
-        false;
-    if (confirmed) {
-      final p = password.text;
-      final res = await exportAccount(passphrase: p);
+    final password = await inputPassword(context, title: "Export Account", message: "File Password");
+    if (password != null) {
+      final res = await exportAccount(passphrase: password);
       await FilePicker.platform.saveFile(
         dialogTitle: 'Please select an output file for the encrypted account:',
         fileName: '${account.name}.bin',
