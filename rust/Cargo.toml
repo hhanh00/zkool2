@@ -66,12 +66,6 @@ libsqlite3-sys = { version = "0.28", features = ["bundled-sqlcipher"] }
 [target.'cfg(target_os = "android")'.dependencies]
 libsqlite3-sys = { version = "0.28" }
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
-libsqlite3-sys = { version = "0.28", features = ["bundled-sqlcipher"] }
-
-[target.'cfg(target_os = "android")'.dependencies]
-libsqlite3-sys = { version = "0.28" }
-
 [lints.rust]
 unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 
