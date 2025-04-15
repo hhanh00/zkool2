@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -13,18 +14,45 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
 
-class AccountListPage extends StatefulWidget {
+class AccountListPage extends StatelessWidget {
   const AccountListPage({super.key});
 
+  Future<List<Account>> loadAccounts() async {
+    final accounts = await AppStoreBase.instance.loadAccounts();
+    return accounts;
+  }
+
   @override
-  State<AccountListPage> createState() => AccountListPageState();
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Account>>(
+        future: loadAccounts(),
+        initialData: [],
+        builder: (context, snapshot) => AccountListPage2(snapshot.data!));
+  }
 }
 
-class AccountListPageState extends State<AccountListPage> {
+class AccountListPage2 extends StatefulWidget {
+  final List<Account> accounts;
+  const AccountListPage2(this.accounts, {super.key});
+
+  @override
+  State<AccountListPage2> createState() => AccountListPage2State();
+}
+
+class AccountListPage2State extends State<AccountListPage2> {
   var hiding = true;
   var height = 0;
   Timer? heightPollingTimer;
   final listKey = GlobalKey<EditableListState<Account>>();
+
+  @override
+  void didUpdateWidget(covariant AccountListPage2 oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    for (var account in widget.accounts) {
+      logger.i("Height for ${account.id}: ${account.height}");
+      AppStoreBase.instance.heights[account.id] = account.height;
+    }
+  }
 
   @override
   void initState() {
@@ -58,36 +86,37 @@ class AccountListPageState extends State<AccountListPage> {
                   child: Text("Height: $height")),
               const Gap(8),
             ],
-        builder: (context, index, account, {selected, onSelectChanged}) =>
-            Material(
-                key: ValueKey(account.id),
-                child: GestureDetector(
-                  child: SizedBox(
-                      height: 60,
-                      child: Row(children: [
-                        Checkbox(value: selected, onChanged: onSelectChanged),
-                        const Gap(8),
-                        SizedBox(
-                            width: 24,
-                            child: Text(
-                              account.position.toString(),
-                              textAlign: TextAlign.end,
-                            )),
-                        const Gap(8),
-                        account.avatar,
-                        const Gap(8),
-                        Expanded(
-                            child: Text(account.name,
-                                style: !account.enabled
-                                    ? TextStyle(color: Colors.grey)
-                                    : null)),
-                        Text(account.height.toString()),
-                        const Gap(8),
-                      ])),
-                  onTap: () => onOpen(context, account),
-                )),
+        builder: (context, index, account, {selected, onSelectChanged}) {
+          return Material(
+              key: ValueKey(account.id),
+              child: GestureDetector(
+                child: SizedBox(
+                    height: 60,
+                    child: Row(children: [
+                      Checkbox(value: selected, onChanged: onSelectChanged),
+                      const Gap(8),
+                      SizedBox(
+                          width: 24,
+                          child: Text(
+                            account.position.toString(),
+                            textAlign: TextAlign.end,
+                          )),
+                      const Gap(8),
+                      account.avatar,
+                      const Gap(8),
+                      Expanded(
+                          child: Text(account.name,
+                              style: !account.enabled
+                                  ? TextStyle(color: Colors.grey)
+                                  : null)),
+                      Observer(builder: (context) => Text(AppStoreBase.instance.heights[account.id].toString())),
+                      const Gap(8),
+                    ])),
+                onTap: () => onOpen(context, account),
+              ));
+        },
         title: "Account List",
-        onCreate: () => AppStoreBase.instance.loadAccounts(),
+        onCreate: () => widget.accounts,
         createBuilder: (context) => GoRouter.of(context).push("/account/new"),
         editBuilder: (context, a) =>
             GoRouter.of(context).push("/account/edit", extra: a),
@@ -147,12 +176,17 @@ class AccountListPageState extends State<AccountListPage> {
       for (var i = 0; i < accounts.length; i++) {
         // if any selection, use the selection, otherwise use the enabled flag
         if ((hasSelection && listState.selected[i]) ||
-          (!hasSelection && accounts[i].enabled))
-            accountIds.add(accounts[i].id);
+            (!hasSelection && accounts[i].enabled))
+          accountIds.add(accounts[i].id);
       }
-      final syncProgress = await AppStoreBase.instance.startSynchronize(accountIds);
+      final syncProgress =
+          await AppStoreBase.instance.startSynchronize(accountIds);
       if (syncProgress == null) return;
-      syncProgress.listen(null, onDone: () {
+      syncProgress.listen((progress) {
+        for (var id in accountIds) {
+          AppStoreBase.instance.heights[id] = progress.height;
+        }
+      }, onDone: () {
         if (mounted) {
           AppStoreBase.instance.loadAccounts();
         }
