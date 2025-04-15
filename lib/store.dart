@@ -24,6 +24,7 @@ abstract class AppStoreBase with Store {
   List<Tx> transactions = [];
   @observable
   List<Memo> memos = [];
+  ObservableMap<int, int> heights = ObservableMap.of({});
 
   String dbName = "zkool";
 
