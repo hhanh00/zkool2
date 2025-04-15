@@ -89,7 +89,7 @@ abstract class RustLibApi extends BaseApi {
   Future<PoolBalance> crateApiSyncBalance();
 
   Future<void> crateApiDbCreateDatabase(
-      {required int coin, required String dbFilepath});
+      {required int coin, required String dbFilepath, String? password});
 
   Future<void> crateApiAccountDeleteAccount({required int account});
 
@@ -134,7 +134,8 @@ abstract class RustLibApi extends BaseApi {
 
   String crateApiAccountNewSeed({required String phrase});
 
-  Future<void> crateApiDbOpenDatabase({required String dbFilepath});
+  Future<void> crateApiDbOpenDatabase(
+      {required String dbFilepath, String? password});
 
   Future<TxPlan> crateApiPayPrepare(
       {required int srcPools,
@@ -204,12 +205,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<void> crateApiDbCreateDatabase(
-      {required int coin, required String dbFilepath}) {
+      {required int coin, required String dbFilepath, String? password}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_u_8(coin, serializer);
         sse_encode_String(dbFilepath, serializer);
+        sse_encode_opt_String(password, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 2, port: port_);
       },
@@ -218,14 +220,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiDbCreateDatabaseConstMeta,
-      argValues: [coin, dbFilepath],
+      argValues: [coin, dbFilepath, password],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiDbCreateDatabaseConstMeta => const TaskConstMeta(
         debugName: "create_database",
-        argNames: ["coin", "dbFilepath"],
+        argNames: ["coin", "dbFilepath", "password"],
       );
 
   @override
@@ -711,11 +713,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiDbOpenDatabase({required String dbFilepath}) {
+  Future<void> crateApiDbOpenDatabase(
+      {required String dbFilepath, String? password}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbFilepath, serializer);
+        sse_encode_opt_String(password, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 23, port: port_);
       },
@@ -724,14 +728,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiDbOpenDatabaseConstMeta,
-      argValues: [dbFilepath],
+      argValues: [dbFilepath, password],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiDbOpenDatabaseConstMeta => const TaskConstMeta(
         debugName: "open_database",
-        argNames: ["dbFilepath"],
+        argNames: ["dbFilepath", "password"],
       );
 
   @override

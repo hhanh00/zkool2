@@ -9,6 +9,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 
 var logger = Logger();
 
@@ -18,14 +19,7 @@ Future<void> main() async {
   final dbName = prefs.getString("database") ?? "zkool";
   await RustLib.init();
   AppStoreBase.instance.dbName = dbName;
-  final dbDir = await getApplicationDocumentsDirectory();
-  final dbFilepath = '${dbDir.path}/$dbName.db';
-  print('dbFilepath: $dbFilepath');
-  if (!File(dbFilepath).existsSync()) {
-    await createDatabase(coin: 0, dbFilepath: dbFilepath);
-    logger.i("Database file created: $dbFilepath");
-  }
-  await openDatabase(dbFilepath: dbFilepath);
+
   // setLwd(lwd: "https://lwd4.zcash-infra.com:9067");
   setLwd(lwd: "https://zec.rocks");
   AppStoreBase.instance.init();
