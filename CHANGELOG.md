@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.6.0...zkool-v1.7.0) (2025-04-15)
+
+
+### Features
+
+* database encryption ([#93](https://github.com/hhanh00/zkool2/issues/93)) ([2ddafec](https://github.com/hhanh00/zkool2/commit/2ddafec470f430165f1c8f5fbdb9d9bdac0d656a))
+* synchronize checked accounts on account list ([#90](https://github.com/hhanh00/zkool2/issues/90)) ([8da267b](https://github.com/hhanh00/zkool2/commit/8da267b0fbbffc27f17d934403cd85ecd35509dc))
+
+
+### Bug Fixes
+
+* android build ([8da267b](https://github.com/hhanh00/zkool2/commit/8da267b0fbbffc27f17d934403cd85ecd35509dc))
+* sync account list heights with sync state ([#92](https://github.com/hhanh00/zkool2/issues/92)) ([ec4da8b](https://github.com/hhanh00/zkool2/commit/ec4da8b2ba8e00f3e91701434ed8a0eaa61609a1))
+
 ## [1.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.5.0...zkool-v1.6.0) (2025-04-14)
 
 
