@@ -12,7 +12,6 @@ permissions:
 
 env:
   RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.head_ref || github.ref_name }}
-  JKS_PASSWORD: ${{ secrets.JKS_PASSWD }}
 
 jobs:
   build:
@@ -26,9 +25,16 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Install codesign
+        run: |
+          echo ${{ secrets.ANDROID_JKS }} | base64 --decode > android/app/zkool-keystore.jks
+          echo storePassword=${{ secrets.JKS_PASSWORD }} > android/key.properties
+          echo keyPassword=${{ secrets.JKS_PASSWORD }} >> android/key.properties
+          echo keyAlias=zkool >> android/key.properties
+          echo storeFile=zkool-keystore.jks >> android/key.properties
       - name: Build
         run: flutter build apk
-      - name: Upload dmg artifact
+      - name: Upload apk artifact
         uses: actions/upload-artifact@v4
         with:
           path: ./**/*.apk
