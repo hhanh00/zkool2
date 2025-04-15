@@ -26,6 +26,13 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Install codesign
+        run: |
+          echo ${{ secrets.ANDROID_JKS }} | base64 --decode > android/app/zkool-keystore.jks
+          echo storePassword=${{ secrets.ANDROID_JKS_PWD }} > android/keystore.properties
+          echo keypassword=${{ secrets.ANDROID_JKS_PWD }} >> android/keystore.properties
+          echo keyAlias=zkool >> android/keystore.properties
+          echo storeFile=zkool-keystore.jks >> android/keystore.properties
       - name: Build
         run: flutter build apk
       - name: Upload dmg artifact
