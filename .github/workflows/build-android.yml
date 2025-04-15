@@ -28,8 +28,8 @@ jobs:
       - name: Install codesign
         run: |
           echo ${{ secrets.ANDROID_JKS }} | base64 --decode > android/app/zkool-keystore.jks
-          echo storePassword=${{ secrets.ANDROID_JKS_PWD }} > android/key.properties
-          echo keyPassword=${{ secrets.ANDROID_JKS_PWD }} >> android/key.properties
+          echo storePassword=${{ secrets.JKS_PASSWORD }} > android/key.properties
+          echo keyPassword=${{ secrets.JKS_PASSWORD }} >> android/key.properties
           echo keyAlias=zkool >> android/key.properties
           echo storeFile=zkool-keystore.jks >> android/key.properties
       - name: Build
