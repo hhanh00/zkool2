@@ -16,7 +16,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 final router = GoRouter(
-  initialLocation: "/",
+  initialLocation: '/',
   observers: [routeObserver],
   navigatorKey: navigatorKey,
   routes: [

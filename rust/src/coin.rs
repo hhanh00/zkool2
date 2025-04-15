@@ -2,10 +2,11 @@ use std::sync::Mutex;
 
 use anyhow::Result;
 use sqlx::SqlitePool;
-use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Sqlite};
+use sqlx::sqlite::SqlitePoolOptions;
 use tonic::transport::ClientTlsConfig;
 use zcash_protocol::consensus::Network;
 
+use crate::api::db::get_connect_options;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::Client;
 
@@ -36,13 +37,14 @@ pub struct Coin {
 }
 
 impl Coin {
-    pub async fn new(db_filepath: &str) -> Result<Coin> {
+    pub async fn new(db_filepath: &str, password: Option<String>) -> Result<Coin> {
         // Create a connection pool
+        let options = get_connect_options(db_filepath, password);
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
             .idle_timeout(std::time::Duration::from_secs(30))
             .max_lifetime(std::time::Duration::from_secs(60 * 60))
-            .connect(db_filepath)
+            .connect_with(options)
             .await?;
 
         let (coin,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
@@ -68,11 +70,6 @@ impl Coin {
 
     pub fn get_pool(&self) -> &SqlitePool {
         self.pool.as_ref().unwrap()
-    }
-
-    pub async fn connect(&self) -> Result<PoolConnection<Sqlite>> {
-        let connection = self.pool.as_ref().unwrap().acquire().await?;
-        Ok(connection)
     }
 
     pub fn set_lwd(&mut self, lwd: &str) {
