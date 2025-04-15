@@ -1,7 +1,7 @@
 [package]
+edition = "2021"
 name = "rust_lib_zkool"
 version = "0.1.0"
-edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
@@ -10,58 +10,64 @@ crate-type = ["cdylib", "staticlib"]
 flutter_rust_bridge = "=2.9.0"
 
 anyhow = "1.0.97"
-thiserror = "2.0"
-rand_core = "0.6"
-rand = "0.9.0"
 bip39 = "2.1.0"
+env_logger = "0.10"
 hex = "0.4"
 log = "0.4"
-env_logger = "0.10"
+rand = "0.9.0"
+rand_core = "0.6"
+thiserror = "2.0"
 
 lazy_static = "1.5"
 
-sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 futures = "0.3"
+sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
+tokio = {version = "1", features = ["rt", "rt-multi-thread", "macros"]}
 
-zcash_keys = { version = "0.8", features = ["sapling", "orchard", "transparent-inputs"] }
-zcash_protocol = "0.5"
-zcash_primitives = { version = "0.22", features = [ "transparent-inputs" ] }
-zcash_proofs = { version = "0.22", features = ["bundled-prover"] }
-zcash_address = "0.7"
-zcash_encoding = "0.3"
-zcash_transparent = { version = "0.2", features = ["transparent-inputs"] }
-zip321 = "0.3"
-zcash_note_encryption = "0.4"
 orchard = "0.11"
 rayon = "1.10"
+zcash_address = "0.7"
+zcash_encoding = "0.3"
+zcash_keys = {version = "0.8", features = ["sapling", "orchard", "transparent-inputs"]}
+zcash_note_encryption = "0.4"
+zcash_primitives = {version = "0.22", features = ["transparent-inputs"]}
+zcash_proofs = {version = "0.22", features = ["bundled-prover"]}
+zcash_protocol = "0.5"
+zcash_transparent = {version = "0.2", features = ["transparent-inputs"]}
+zip321 = "0.3"
 
-bip32 = { version = "0.6.0-pre.1", default-features = false }
-secp256k1 = "0.29"
-sapling-crypto = "0.5"
+bincode = {version = "2.0"}
+bip32 = {version = "0.6.0-pre.1", default-features = false}
 blake2b_simd = "1.0"
+bs58 = "0.5"
 chacha20 = "0.9"
+fpdec = "0.11"
 halo2_gadgets = "0.3"
 halo2_proofs = "0.3"
 jubjub = "0.10"
-bs58 = "0.5"
-ripemd = "0.1"
-sha2 = "0.10"
-tonic = { version = "0.13.0", features = ["tls-webpki-roots"] }
-rustls = { version = "0.23", default-features = false, features = ["ring"] }
+pczt = {version = "0.2", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"]}
 prost = "0.13.5"
-bincode = { version = "2.0" }
-fpdec = "0.11"
-pczt = { version = "0.2", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
+ripemd = "0.1"
+rustls = {version = "0.23", default-features = false, features = ["ring"]}
+sapling-crypto = "0.5"
+secp256k1 = "0.29"
+sha2 = "0.10"
+tonic = {version = "0.13.0", features = ["tls-webpki-roots"]}
 
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 itertools = "0.14"
+tracing = "0.1"
+tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt"]}
 
 age = "0.11"
 
+[target.'cfg(not(target_os = "android"))'.dependencies]
+libsqlite3-sys = { version = "0.28", features = ["bundled-sqlcipher"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+libsqlite3-sys = { version = "0.28" }
+
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 
 [build-dependencies]
 tonic-build = "0.13"

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +7,12 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -18,6 +22,35 @@ class AccountListPage extends StatelessWidget {
   const AccountListPage({super.key});
 
   Future<List<Account>> loadAccounts() async {
+    if (!AppStoreBase.instance.loaded) {
+      logger.i("Loading accounts");
+      final dbName = AppStoreBase.instance.dbName;
+      final dbDir = await getApplicationDocumentsDirectory();
+      final dbFilepath = '${dbDir.path}/$dbName.db';
+      logger.i('dbFilepath: $dbFilepath');
+
+      String? password;
+      if (!File(dbFilepath).existsSync()) {
+        password = await inputPassword(navigatorKey.currentContext!,
+            title: "Enter New Database Password",
+            message: "Password CANNOT be changed later");
+        await createDatabase(
+            dbFilepath: dbFilepath, password: password, coin: 0);
+        logger.i("Database file created: $dbFilepath");
+      }
+
+      while (true) {
+        try {
+          await openDatabase(dbFilepath: dbFilepath, password: password);
+          break;
+        } catch (_) {
+          password = await inputPassword(navigatorKey.currentContext!,
+              title: "Enter Database Password for $dbName",);
+        }
+      }
+    }
+
+    AppStoreBase.instance.loaded = true;
     final accounts = await AppStoreBase.instance.loadAccounts();
     return accounts;
   }
@@ -27,7 +60,11 @@ class AccountListPage extends StatelessWidget {
     return FutureBuilder<List<Account>>(
         future: loadAccounts(),
         initialData: [],
-        builder: (context, snapshot) => AccountListPage2(snapshot.data!));
+        builder: (context, snapshot) {
+          final data = snapshot.data;
+          if (data != null) return AccountListPage2(snapshot.data!);
+          return SizedBox.shrink();
+        });
   }
 }
 
@@ -109,7 +146,10 @@ class AccountListPage2State extends State<AccountListPage2> {
                               style: !account.enabled
                                   ? TextStyle(color: Colors.grey)
                                   : null)),
-                      Observer(builder: (context) => Text(AppStoreBase.instance.heights[account.id].toString())),
+                      Observer(
+                          builder: (context) => Text(AppStoreBase
+                              .instance.heights[account.id]
+                              .toString())),
                       const Gap(8),
                     ])),
                 onTap: () => onOpen(context, account),

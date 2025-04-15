@@ -16,6 +16,7 @@ part 'store.g.dart';
 class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
+  bool loaded = false;
   @observable
   String accountName = "";
   @observable
