@@ -10,9 +10,13 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 Stream<SyncProgress> synchronize(
-        {required List<int> accounts, required int currentHeight}) =>
+        {required List<int> accounts,
+        required int currentHeight,
+        required int transparentLimit}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
-        accounts: accounts, currentHeight: currentHeight);
+        accounts: accounts,
+        currentHeight: currentHeight,
+        transparentLimit: transparentLimit);
 
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 

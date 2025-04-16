@@ -24,6 +24,7 @@ pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
     accounts: Vec<u32>,
     current_height: u32,
+    transparent_limit: u32,
 ) {
     if accounts.is_empty() {
         return;
@@ -92,10 +93,11 @@ pub async fn synchronize(
             transparent_sync(
                 &network,
                 pool,
+                &mut client,
+                &accounts_to_sync,
                 start_height,
                 end_height,
-                &accounts_to_sync,
-                &mut client,
+                transparent_limit,
             )
             .await?;
 
@@ -129,24 +131,26 @@ pub async fn synchronize(
     }
 }
 
-async fn transparent_sync(
+pub(crate) async fn transparent_sync(
     network: &Network,
     pool: &SqlitePool,
+    client: &mut Client,
+    accounts: &[u32],
     start_height: u32,
     end_height: u32,
-    accounts: &Vec<u32>,
-    client: &mut Client,
+    limit: u32,
 ) -> Result<()> {
     let mut addresses = vec![];
     for account in accounts.iter() {
         // scan latest 5 receive and change addresses
         let mut rows = sqlx::query("
                 WITH receive AS
-                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 0 ORDER BY dindex DESC LIMIT 5),
+                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 0 ORDER BY dindex DESC LIMIT ?2),
                 change AS
-                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 1 ORDER BY dindex DESC LIMIT 5)
+                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 1 ORDER BY dindex DESC LIMIT ?2)
                 SELECT id_taddress, address FROM receive UNION SELECT id_taddress, address FROM change")
             .bind(account)
+            .bind(limit)
             .map(|row: SqliteRow| {
                 let id_taddress: u32 = row.get(0);
                 let address: String = row.get(1);
@@ -202,12 +206,13 @@ async fn transparent_sync(
             // Parse the transaction
             let transaction = ZcashTransaction::read(&*tx.data, consensus_branch_id)?;
 
+            let txid = transaction.txid().as_ref().to_vec();
             // tx time is available in the block (not here)
-            let (id_tx, ): (u32, ) = sqlx::query_as("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) RETURNING id_tx")
+            sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")
                 .bind(account)
-                .bind(&transaction.txid().as_ref()[..])
+                .bind(&txid)
                 .bind(height)
-                .fetch_one(&mut *db_tx)
+                .execute(&mut *db_tx)
                 .await?;
 
             // Access the transparent bundle part
@@ -232,12 +237,14 @@ async fn transparent_sync(
                     if let Some((id, amount)) = row {
                         // note was found
                         // add a spent entry
-                        sqlx::query("INSERT INTO spends (account, id_note, pool, tx, height, value) VALUES (?, ?, 0, ?, ?, ?)")
+                        sqlx::query("INSERT INTO spends (account, id_note, pool, tx, height, value) 
+                        SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
+                        ON CONFLICT DO NOTHING")
                         .bind(account)
                         .bind(id)
-                        .bind(id_tx)
                         .bind(height)
                         .bind(-amount)
+                        .bind(&txid)
                         .execute(&mut *db_tx).await?;
                     }
                 }
@@ -251,13 +258,15 @@ async fn transparent_sync(
                             let mut nf = transaction.txid().as_ref().to_vec();
                             nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                            let r = sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value) VALUES (?, ?, 0, ?, ?, ?, ?)")
+                            let r = sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
+                            SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
+                            ON CONFLICT DO NOTHING")
                                 .bind(account)
                                 .bind(height)
-                                .bind(id_tx)
                                 .bind(address_row.0)
                                 .bind(&nf)
                                 .bind(vout.value.into_u64() as i64)
+                                .bind(&txid)
                                 .execute(&mut *db_tx)
                                 .await?;
                             assert_eq!(r.rows_affected(), 1);

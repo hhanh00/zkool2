@@ -1,8 +1,10 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, u32};
 
 use crate::{
-    api::sync::SyncProgress,
-    lwd::{BlockId, BlockRange, CompactBlock, TreeState},
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
+    api::sync::{transparent_sync, SyncProgress},
+    db::{select_account_transparent, store_account_transparent_addr},
+    lwd::{BlockId, BlockRange, CompactBlock, TransparentAddressBlockFilter, TreeState},
     warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness},
     Client,
 };
@@ -14,6 +16,7 @@ use sqlx::{Row, SqlitePool};
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::{Request, Streaming};
 use tracing::info;
+use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{Network, Parameters};
 
 #[frb(dart_metadata = ("freezed"))]
@@ -267,7 +270,8 @@ pub async fn shielded_sync(
                 &s,
                 &o,
                 tx_messages.clone(),
-            ).await
+            )
+            .await
         });
 
         db_writer_task
@@ -496,4 +500,73 @@ pub async fn get_db_height(connection: &SqlitePool, account: u32) -> Result<u32>
             .fetch_one(connection)
             .await?;
     Ok(height)
+}
+
+pub async fn transparent_sweep(
+    network: &Network,
+    connection: &SqlitePool,
+    client: &mut Client,
+    account: u32,
+    end_height: u32,
+    gap_limit: u32,
+) -> Result<()> {
+    let tk = select_account_transparent(connection, account).await?;
+    let xvk = tk.xvk;
+    if let Some(xvk) = xvk.as_ref() {
+        let start_height = get_birth_height(connection, account).await?;
+        for scope in 0..2 {
+            let mut dindex = 0;
+            let mut gap = 0;
+            loop {
+                let taddr = derive_transparent_address(xvk, scope, dindex)?;
+                let taddr = taddr.encode(network);
+                let mut txids = client
+                    .get_taddress_txids(Request::new(TransparentAddressBlockFilter {
+                        address: taddr.clone(),
+                        range: Some(BlockRange {
+                            start: Some(BlockId {
+                                height: start_height as u64,
+                                hash: vec![],
+                            }),
+                            end: Some(BlockId {
+                                height: end_height as u64,
+                                hash: vec![],
+                            }),
+                            spam_filter_threshold: 0,
+                        }),
+                    }))
+                    .await?
+                    .into_inner();
+                if txids.message().await?.is_some() {
+                    let sk = if let Some(tsk) = tk.xsk.as_ref() {
+                        let sk = derive_transparent_sk(tsk, scope, dindex)?;
+                        Some(sk)
+                    } else {
+                        None
+                    };
+                    store_account_transparent_addr(connection, account, scope, dindex, sk, &taddr)
+                        .await?;
+                }
+                else {
+                    gap += 1;
+                }
+                dindex += 1;
+                if gap > gap_limit {
+                    break;
+                }
+            }
+        }
+
+        transparent_sync(
+            network,
+            connection,
+            client,
+            std::slice::from_ref(&account),
+            start_height,
+            end_height,
+            u32::MAX,
+        )
+        .await?;
+    }
+    Ok(())
 }

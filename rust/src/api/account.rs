@@ -525,6 +525,20 @@ pub struct Addresses {
 }
 
 #[frb]
+pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<()> {
+    let c = get_coin!();
+    crate::sync::transparent_sweep(
+        &c.network,
+        c.get_pool(),
+        &mut c.client().await?,
+        c.account,
+        end_height,
+        gap_limit,
+    ).await?;
+    Ok(())
+}
+
+#[frb]
 pub async fn export_account(passphrase: &str) -> Result<Vec<u8>> {
     let c = get_coin!();
     let connection = c.get_pool();
