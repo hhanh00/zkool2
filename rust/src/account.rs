@@ -226,6 +226,15 @@ pub async fn get_orchard_note(
     Ok((note, merkle_path))
 }
 
+pub async fn get_birth_height(connection: &SqlitePool, account: u32) -> Result<u32> {
+    let (birth, ): (u32, ) = sqlx::query_as("SELECT birth FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+
+    Ok(birth)
+}
+
 pub async fn get_account_full_address(
     network: &Network,
     connection: &SqlitePool,
