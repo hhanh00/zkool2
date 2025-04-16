@@ -258,7 +258,7 @@ pub(crate) async fn transparent_sync(
                             let mut nf = transaction.txid().as_ref().to_vec();
                             nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                            let r = sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
+                            sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
                             SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
                             ON CONFLICT DO NOTHING")
                                 .bind(account)
@@ -269,7 +269,6 @@ pub(crate) async fn transparent_sync(
                                 .bind(&txid)
                                 .execute(&mut *db_tx)
                                 .await?;
-                            assert_eq!(r.rows_affected(), 1);
                         }
                     }
                 }

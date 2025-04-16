@@ -117,6 +117,8 @@ class AccountListPage2State extends State<AccountListPage2> {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (context) {
+      final tt = Theme.of(context).textTheme;
+      final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
       final accounts = AppStoreBase.instance.accounts
           .where((a) => includeHidden || !a.hidden)
           .toList();
@@ -154,10 +156,16 @@ class AccountListPage2State extends State<AccountListPage2> {
                                 style: !account.enabled
                                     ? TextStyle(color: Colors.grey)
                                     : null)),
+                        const Gap(8),
+                        Text(zatToString(account.balance), style: t.copyWith(fontWeight: FontWeight.w700)),
+                        const Gap(16),
                         Observer(
-                            builder: (context) => Text(AppStoreBase
+                            builder: (context) => SizedBox(
+                              width: 100,
+                              child: Text(AppStoreBase
                                 .instance.heights[account.id]
-                                .toString())),
+                                .toString(), textAlign: TextAlign.end,
+                                ))),
                         const Gap(8),
                       ])),
                   onTap: () => onOpen(context, account),
