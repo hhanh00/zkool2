@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/utils.dart';
@@ -23,6 +24,7 @@ class TxPageState extends State<TxPage> {
       appBar: AppBar(
         title: Text("Transaction"),
         actions: [
+          IconButton(onPressed: onCancel, icon: Icon(Icons.cancel)),
           IconButton(onPressed: onSend, icon: Icon(Icons.send)),
         ],
       ),
@@ -51,6 +53,10 @@ class TxPageState extends State<TxPage> {
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
+  }
+
+  void onCancel() {
+    GoRouter.of(context).go("/");
   }
 }
 

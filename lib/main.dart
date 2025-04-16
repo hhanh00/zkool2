@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
@@ -19,6 +20,6 @@ Future<void> main() async {
   setLwd(lwd: "https://zec.rocks");
   AppStoreBase.instance.init();
 
-  runApp(MaterialApp.router(
-      routerConfig: router, debugShowCheckedModeBanner: false));
+  runApp(ToastificationWrapper(child: MaterialApp.router(
+      routerConfig: router, debugShowCheckedModeBanner: false)));
 }
