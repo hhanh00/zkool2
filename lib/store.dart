@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:mobx/mobx.dart';
@@ -36,6 +37,15 @@ abstract class AppStoreBase with Store {
     stream.listen((m) {
       logger.i(m);
       log.add(m.message);
+      if (m.span == "transaction_plan") {
+        toastification.show(
+          description: Text(m.message),
+          margin: EdgeInsets.all(8),
+          borderRadius: BorderRadius.circular(8),
+          animationDuration: Durations.long1,
+          autoCloseDuration: Duration(seconds: 3)
+        );
+      }
     });
   }
 
@@ -91,6 +101,11 @@ abstract class AppStoreBase with Store {
         syncs.clear();
         syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
+      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+        SnackBar(
+          content: Text("Synchronization Completed"),
+        ),
+      );
       });
       return progress;
     } on AnyhowException {
