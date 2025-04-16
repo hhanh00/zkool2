@@ -1,16 +1,12 @@
 use std::sync::Mutex;
 
 use flutter_rust_bridge::frb;
-use tracing::{info, level_filters::LevelFilter};
+use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
 use tracing_subscriber::{
-    fmt::{
+    field::MakeVisitor, fmt::{
         self,
-        format::{self, FmtSpan, Format},
-        MakeWriter,
-    },
-    layer::SubscriberExt as _,
-    util::SubscriberInitExt as _,
-    EnvFilter, Layer, Registry,
+        format::{FmtSpan, Writer},
+    }, layer::{Context, SubscriberExt as _}, registry::LookupSpan, util::SubscriberInitExt as _, EnvFilter, Layer, Registry
 };
 
 use crate::frb_generated::StreamSink;
@@ -26,7 +22,7 @@ pub fn init_app() {
         .with(frb_layer())
         .try_init();
     let _ = rustls::crypto::ring::default_provider().install_default();
-    info!("Rust logging initialized");
+    tracing::info!("Rust logging initialized");
 }
 
 type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
@@ -52,60 +48,60 @@ where
         .boxed()
 }
 
-struct FrbWriter {}
-
-impl FrbWriter {
-    fn new() -> Self {
-        FrbWriter {}
-    }
-}
-
-impl std::io::Write for FrbWriter {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let message = String::from_utf8_lossy(buf);
-        let sink = LOG_SINK.lock().unwrap();
-        if let Some(sink) = sink.as_ref() {
-            let message = message.to_string();
-            let log_message = LogMessage { level: 0, message };
-            let _ = sink.add(log_message);
-        }
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
-
-struct FrbMakeWriter {}
-
-impl<'a> MakeWriter<'a> for FrbMakeWriter {
-    type Writer = FrbWriter;
-
-    fn make_writer(&'a self) -> Self::Writer {
-        FrbWriter::new()
-    }
-}
-
-fn frb_layer<S>(
-) -> fmt::Layer<S, format::DefaultFields, format::Format<format::Full, ()>, FrbMakeWriter>
+fn frb_layer<S>() -> BoxedLayer<S>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
-    fmt::Layer::new()
-        .event_format(
-            Format::default()
-                .with_level(false)
-                .with_ansi(false)
-                .without_time(),
-        )
-        .with_writer(FrbMakeWriter {})
+    FrbLogger {}.boxed()
+}
+
+struct FrbLogger;
+
+impl <S> Layer<S> for FrbLogger
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
+    fn on_event(&self, event: &Event, ctx: Context<S>) {
+        let mut message = String::new();
+        let writer = Writer::new(&mut message);
+        let mut visitor = tracing_subscriber::fmt::format::DefaultFields::default()
+        .make_visitor(writer);
+        event.record(&mut visitor);
+        let level: u8 = match event.metadata().level() {
+            &Level::ERROR => {
+                4
+            }
+            &Level::WARN => {
+                3
+            }
+            &Level::INFO => {
+                2
+            }
+            &Level::DEBUG => {
+                1
+            }
+            &Level::TRACE => {
+                0
+            }
+        };
+        let span = ctx.lookup_current().map(|s| s.name().to_string());
+        let log = LogMessage {
+            level,
+            message,
+            span,
+        };
+        let sink = LOG_SINK.lock().unwrap();
+        if let Some(sink) = sink.as_ref() {
+            let _ = sink.add(log);
+        }
+    }
 }
 
 #[frb(dart_metadata = ("freezed"))]
 pub struct LogMessage {
     pub level: u8,
     pub message: String,
+    pub span: Option<String>,
 }
 
 #[frb(sync)]

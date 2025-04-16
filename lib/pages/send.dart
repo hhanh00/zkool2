@@ -6,6 +6,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -219,7 +220,7 @@ class Send2PageState extends State<Send2Page> {
           recipients: widget.recipients,
           recipientPaysFee: recipientPaysFee);
 
-      if (mounted) await GoRouter.of(context).push("/tx", extra: tx);
+      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: tx);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
