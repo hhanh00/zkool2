@@ -76,7 +76,8 @@ abstract class AppStoreBase with Store {
       retrySyncTimer = null;
       final currentHeight = await getCurrentHeight();
       final progress =
-          synchronize(accounts: accounts, currentHeight: currentHeight)
+          synchronize(accounts: accounts, currentHeight: currentHeight,
+          transparentLimit: 10) // TODO: Make this configurable
               .asBroadcastStream();
       for (var id in accounts) {
         syncs[id] = progress;
