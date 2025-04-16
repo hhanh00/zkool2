@@ -4,7 +4,6 @@ import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
-import 'package:zkool/main.dart';
 
 class EditableList<T extends Object> extends StatefulWidget {
   final String title;
@@ -90,7 +89,9 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
             ...?widget.buttons,
           ],
         ),
-        body: Column(children: [
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(children: [
           ...widget.headerBuilder(context),
           Expanded(child: AnimatedReorderableListView<T>(
           buildDefaultDragHandles: false,
@@ -110,7 +111,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
               items.insert(newIndex, v);
             });
           },
-        ))]));
+        ))])));
   }
 
   onNew() => widget.createBuilder(context);

@@ -28,6 +28,7 @@ mixin _$Account {
   bool get saved => throw _privateConstructorUsedError;
   bool get enabled => throw _privateConstructorUsedError;
   int get height => throw _privateConstructorUsedError;
+  BigInt get balance => throw _privateConstructorUsedError;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -52,7 +53,8 @@ abstract class $AccountCopyWith<$Res> {
       bool hidden,
       bool saved,
       bool enabled,
-      int height});
+      int height,
+      BigInt balance});
 }
 
 /// @nodoc
@@ -82,6 +84,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? saved = null,
     Object? enabled = null,
     Object? height = null,
+    Object? balance = null,
   }) {
     return _then(_value.copyWith(
       coin: null == coin
@@ -132,6 +135,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
               as int,
+      balance: null == balance
+          ? _value.balance
+          : balance // ignore: cast_nullable_to_non_nullable
+              as BigInt,
     ) as $Val);
   }
 }
@@ -155,7 +162,8 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       bool hidden,
       bool saved,
       bool enabled,
-      int height});
+      int height,
+      BigInt balance});
 }
 
 /// @nodoc
@@ -183,6 +191,7 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? saved = null,
     Object? enabled = null,
     Object? height = null,
+    Object? balance = null,
   }) {
     return _then(_$AccountImpl(
       coin: null == coin
@@ -233,6 +242,10 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
               as int,
+      balance: null == balance
+          ? _value.balance
+          : balance // ignore: cast_nullable_to_non_nullable
+              as BigInt,
     ));
   }
 }
@@ -252,7 +265,8 @@ class _$AccountImpl implements _Account {
       required this.hidden,
       required this.saved,
       required this.enabled,
-      required this.height});
+      required this.height,
+      required this.balance});
 
   @override
   final int coin;
@@ -278,10 +292,12 @@ class _$AccountImpl implements _Account {
   final bool enabled;
   @override
   final int height;
+  @override
+  final BigInt balance;
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, height: $height)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, height: $height, balance: $balance)';
   }
 
   @override
@@ -301,7 +317,8 @@ class _$AccountImpl implements _Account {
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
             (identical(other.saved, saved) || other.saved == saved) &&
             (identical(other.enabled, enabled) || other.enabled == enabled) &&
-            (identical(other.height, height) || other.height == height));
+            (identical(other.height, height) || other.height == height) &&
+            (identical(other.balance, balance) || other.balance == balance));
   }
 
   @override
@@ -318,7 +335,8 @@ class _$AccountImpl implements _Account {
       hidden,
       saved,
       enabled,
-      height);
+      height,
+      balance);
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -342,7 +360,8 @@ abstract class _Account implements Account {
       required final bool hidden,
       required final bool saved,
       required final bool enabled,
-      required final int height}) = _$AccountImpl;
+      required final int height,
+      required final BigInt balance}) = _$AccountImpl;
 
   @override
   int get coin;
@@ -368,6 +387,8 @@ abstract class _Account implements Account {
   bool get enabled;
   @override
   int get height;
+  @override
+  BigInt get balance;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.

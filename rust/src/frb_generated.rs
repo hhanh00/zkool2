@@ -1463,6 +1463,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_saved = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_balance = <u64>::sse_decode(deserializer);
         return crate::api::account::Account {
             coin: var_coin,
             id: var_id,
@@ -1476,6 +1477,7 @@ impl SseDecode for crate::api::account::Account {
             saved: var_saved,
             enabled: var_enabled,
             height: var_height,
+            balance: var_balance,
         };
     }
 }
@@ -1992,6 +1994,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.saved.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
+            self.balance.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2316,6 +2319,7 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.saved, serializer);
         <bool>::sse_encode(self.enabled, serializer);
         <u32>::sse_encode(self.height, serializer);
+        <u64>::sse_encode(self.balance, serializer);
     }
 }
 
