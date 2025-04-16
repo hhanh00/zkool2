@@ -8,9 +8,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'init.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `default_layer`, `env_layer`, `frb_layer`, `new`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbMakeWriter`, `FrbWriter`, `LOG_SINK`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `deref`, `flush`, `initialize`, `make_writer`, `write`
+// These functions are ignored because they are not marked as `pub`: `default_layer`, `env_layer`, `frb_layer`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbLogger`, `LOG_SINK`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `deref`, `initialize`, `on_event`
 
 Stream<LogMessage> setLogStream() =>
     RustLib.instance.api.crateApiInitSetLogStream();
@@ -20,5 +20,6 @@ class LogMessage with _$LogMessage {
   const factory LogMessage({
     required int level,
     required String message,
+    String? span,
   }) = _LogMessage;
 }

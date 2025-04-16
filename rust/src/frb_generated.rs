@@ -1647,9 +1647,11 @@ impl SseDecode for crate::api::init::LogMessage {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_level = <u8>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
+        let mut var_span = <Option<String>>::sse_decode(deserializer);
         return crate::api::init::LogMessage {
             level: var_level,
             message: var_message,
+            span: var_span,
         };
     }
 }
@@ -2062,6 +2064,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::init::LogMessage {
         [
             self.level.into_into_dart().into_dart(),
             self.message.into_into_dart().into_dart(),
+            self.span.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2455,6 +2458,7 @@ impl SseEncode for crate::api::init::LogMessage {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u8>::sse_encode(self.level, serializer);
         <String>::sse_encode(self.message, serializer);
+        <Option<String>>::sse_encode(self.span, serializer);
     }
 }
 

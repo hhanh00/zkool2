@@ -18,6 +18,7 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$LogMessage {
   int get level => throw _privateConstructorUsedError;
   String get message => throw _privateConstructorUsedError;
+  String? get span => throw _privateConstructorUsedError;
 
   /// Create a copy of LogMessage
   /// with the given fields replaced by the non-null parameter values.
@@ -32,7 +33,7 @@ abstract class $LogMessageCopyWith<$Res> {
           LogMessage value, $Res Function(LogMessage) then) =
       _$LogMessageCopyWithImpl<$Res, LogMessage>;
   @useResult
-  $Res call({int level, String message});
+  $Res call({int level, String message, String? span});
 }
 
 /// @nodoc
@@ -52,6 +53,7 @@ class _$LogMessageCopyWithImpl<$Res, $Val extends LogMessage>
   $Res call({
     Object? level = null,
     Object? message = null,
+    Object? span = freezed,
   }) {
     return _then(_value.copyWith(
       level: null == level
@@ -62,6 +64,10 @@ class _$LogMessageCopyWithImpl<$Res, $Val extends LogMessage>
           ? _value.message
           : message // ignore: cast_nullable_to_non_nullable
               as String,
+      span: freezed == span
+          ? _value.span
+          : span // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -74,7 +80,7 @@ abstract class _$$LogMessageImplCopyWith<$Res>
       __$$LogMessageImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int level, String message});
+  $Res call({int level, String message, String? span});
 }
 
 /// @nodoc
@@ -92,6 +98,7 @@ class __$$LogMessageImplCopyWithImpl<$Res>
   $Res call({
     Object? level = null,
     Object? message = null,
+    Object? span = freezed,
   }) {
     return _then(_$LogMessageImpl(
       level: null == level
@@ -102,6 +109,10 @@ class __$$LogMessageImplCopyWithImpl<$Res>
           ? _value.message
           : message // ignore: cast_nullable_to_non_nullable
               as String,
+      span: freezed == span
+          ? _value.span
+          : span // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -109,16 +120,19 @@ class __$$LogMessageImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$LogMessageImpl implements _LogMessage {
-  const _$LogMessageImpl({required this.level, required this.message});
+  const _$LogMessageImpl(
+      {required this.level, required this.message, this.span});
 
   @override
   final int level;
   @override
   final String message;
+  @override
+  final String? span;
 
   @override
   String toString() {
-    return 'LogMessage(level: $level, message: $message)';
+    return 'LogMessage(level: $level, message: $message, span: $span)';
   }
 
   @override
@@ -127,11 +141,12 @@ class _$LogMessageImpl implements _LogMessage {
         (other.runtimeType == runtimeType &&
             other is _$LogMessageImpl &&
             (identical(other.level, level) || other.level == level) &&
-            (identical(other.message, message) || other.message == message));
+            (identical(other.message, message) || other.message == message) &&
+            (identical(other.span, span) || other.span == span));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, level, message);
+  int get hashCode => Object.hash(runtimeType, level, message, span);
 
   /// Create a copy of LogMessage
   /// with the given fields replaced by the non-null parameter values.
@@ -145,12 +160,15 @@ class _$LogMessageImpl implements _LogMessage {
 abstract class _LogMessage implements LogMessage {
   const factory _LogMessage(
       {required final int level,
-      required final String message}) = _$LogMessageImpl;
+      required final String message,
+      final String? span}) = _$LogMessageImpl;
 
   @override
   int get level;
   @override
   String get message;
+  @override
+  String? get span;
 
   /// Create a copy of LogMessage
   /// with the given fields replaced by the non-null parameter values.
