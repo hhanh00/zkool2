@@ -260,7 +260,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                     initialValue: account.name,
                     onChanged: onEditName,
                   )),
-                  GestureDetector(onTap: onEditIcon, child: account.avatar)
+                  account.avatar(onTap: (_) => onEditIcon())
                 ],
               ),
               FormBuilderTextField(
@@ -341,7 +341,8 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onExport() async {
-    final password = await inputPassword(context, title: "Export Account", message: "File Password");
+    final password = await inputPassword(context,
+        title: "Export Account", message: "File Password");
     if (password != null) {
       final res = await exportAccount(passphrase: password);
       await FilePicker.platform.saveFile(
@@ -359,11 +360,19 @@ class AccountEditPageState extends State<AccountEditPage> {
 }
 
 extension AccountExtension on Account {
-  CircleAvatar get avatar {
+  Widget avatar({bool? selected, void Function(bool?)? onTap}) {
     final i = initials(name);
-    return CircleAvatar(
-      child: icon != null ? Image.memory(icon!) : Text(i),
-    );
+    final s = selected ?? false;
+    return GestureDetector(
+        onTap: () => onTap?.call(!s),
+        child: CircleAvatar(
+          backgroundColor: s ? Colors.blue.shade700 : Colors.grey.shade300,
+          child: s
+              ? Icon(Icons.check, color: Colors.white)
+              : icon != null
+                  ? ClipOval(child: Image.memory(icon!))
+                  : Text(i),
+        ));
   }
 }
 

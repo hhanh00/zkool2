@@ -137,37 +137,21 @@ class AccountListPage2State extends State<AccountListPage2> {
             return Material(
                 key: ValueKey(account.id),
                 child: GestureDetector(
-                  child: SizedBox(
-                      height: 60,
-                      child: Row(children: [
-                        Checkbox(value: selected, onChanged: onSelectChanged),
-                        const Gap(8),
-                        SizedBox(
-                            width: 24,
-                            child: Text(
-                              account.position.toString(),
+                  child: ListTile(
+                    leading: account.avatar(selected: selected ?? false, onTap: onSelectChanged),
+                    title: Text(account.name,
+                              style: !account.enabled
+                                  ? TextStyle(color: Colors.grey)
+                                  : null),
+                    subtitle: Text(zatToString(account.balance),
+                        style: t.copyWith(fontWeight: FontWeight.w700)),
+                    trailing: Observer(
+                        builder: (context) => Text(
+                              AppStoreBase.instance.heights[account.id]
+                                  .toString(),
                               textAlign: TextAlign.end,
                             )),
-                        const Gap(8),
-                        account.avatar,
-                        const Gap(8),
-                        Expanded(
-                            child: Text(account.name,
-                                style: !account.enabled
-                                    ? TextStyle(color: Colors.grey)
-                                    : null)),
-                        const Gap(8),
-                        Text(zatToString(account.balance), style: t.copyWith(fontWeight: FontWeight.w700)),
-                        const Gap(16),
-                        Observer(
-                            builder: (context) => SizedBox(
-                              width: 100,
-                              child: Text(AppStoreBase
-                                .instance.heights[account.id]
-                                .toString(), textAlign: TextAlign.end,
-                                ))),
-                        const Gap(8),
-                      ])),
+                  ),
                   onTap: () => onOpen(context, account),
                 ));
           },
