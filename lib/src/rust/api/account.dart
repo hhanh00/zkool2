@@ -94,6 +94,7 @@ class Account with _$Account {
     required bool saved,
     required bool enabled,
     required int height,
+    required BigInt balance,
   }) = _Account;
 }
 

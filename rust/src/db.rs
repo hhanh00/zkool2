@@ -340,7 +340,7 @@ pub async fn store_account_transparent_addr(
 ) -> Result<()> {
     sqlx::query(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, address)
-        VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+        VALUES (?, ?, ?, ?, ?)",
     )
     .bind(account)
     .bind(scope)
@@ -537,14 +537,19 @@ pub struct OrchardKeys {
 
 pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Account>> {
     let mut rows = sqlx::query(
-        "WITH sh AS (SELECT account, MIN(height) AS height FROM sync_heights GROUP BY account ) 
+        "WITH sh AS (SELECT account, MIN(height) AS height FROM sync_heights GROUP BY account),
+        unspent AS (SELECT a.*
+                FROM notes a
+                LEFT JOIN spends b ON a.id_note = b.id_note
+                WHERE b.id_note IS NULL)
         SELECT id_account, name, seed, aindex,
-        icon, birth, position, hidden, saved, enabled,
-        sh.height
-        FROM accounts
-        JOIN sh
-        ON accounts.id_account = account
-        ORDER by position",
+        icon, birth, a.position, hidden, saved, enabled,
+        sh.height, SUM(unspent.value) AS balance
+        FROM accounts a
+        JOIN sh ON a.id_account = sh.account
+        JOIN unspent ON a.id_account = unspent.account
+        GROUP BY id_account
+        ORDER by a.position",
     )
     .map(|row: SqliteRow| Account {
         coin,
@@ -559,6 +564,7 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
         saved: row.get(8),
         enabled: row.get(9),
         height: row.get(10),
+        balance: row.get::<i64, _>(11) as u64,
     })
     .fetch(connection);
 
@@ -716,7 +722,7 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
 
 pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
-        "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes 
+        "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
         FROM memos m JOIN transactions t ON m.tx = t.id_tx
         WHERE m.account = ? ORDER BY m.height DESC")
         .bind(account)

@@ -17,6 +17,8 @@ class TxPageState extends State<TxPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Transaction"),
@@ -24,15 +26,18 @@ class TxPageState extends State<TxPage> {
           IconButton(onPressed: onSend, icon: Icon(Icons.send)),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
+      body: CustomScrollView(slivers: [
+        SliverToBoxAdapter(
           child: Column(children: [
+            Text("Tx Plan", style: t.titleSmall),
+            Text("Fee: ${zatToString(widget.txPlan.fee)}"),
+            Text("Change: ${zatToString(widget.txPlan.change)}"),
+            Text("Change Pool: ${widget.txPlan.changePool}"),
             if (txId != null) SelectableText("Transaction ID: ${txId!}"),
-            ...showTxPlan(context, widget.txPlan),
           ]),
         ),
-      ),
+        showTxPlan(context, widget.txPlan),
+      ]),
     );
   }
 
@@ -43,19 +48,14 @@ class TxPageState extends State<TxPage> {
         data: widget.txPlan.data,
       );
       setState(() => txId = txId2);
-    }
-    on AnyhowException catch (e) {
-      if (mounted)
-        await showException(context, e.message);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
     }
   }
 }
 
-List<Widget> showTxPlan(BuildContext context, TxPlan txPlan) {
-  final t = Theme.of(context).textTheme;
-
-  final inouts = ListView.builder(
-      shrinkWrap: true,
+SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
+  return SliverList.builder(
       itemCount: txPlan.inputs.length + txPlan.outputs.length,
       itemBuilder: (context, index) {
         if (index < txPlan.inputs.length) {
@@ -76,12 +76,4 @@ List<Widget> showTxPlan(BuildContext context, TxPlan txPlan) {
           );
         }
       });
-
-  return [
-    Text("Tx Plan", style: t.titleSmall),
-    Text("Fee: ${zatToString(txPlan.fee)}"),
-    Text("Change: ${zatToString(txPlan.change)}"),
-    Text("Change Pool: ${txPlan.changePool}"),
-    inouts
-  ];
 }
