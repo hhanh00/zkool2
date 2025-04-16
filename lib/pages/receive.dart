@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/network.dart';
 
 class ReceivePage extends StatefulWidget {
   const ReceivePage({super.key});
@@ -30,6 +31,10 @@ class ReceivePageState extends State<ReceivePage> {
         appBar: AppBar(
           title: Text("Receive Funds"),
           actions: [
+            IconButton(
+                tooltip: "Sweep",
+                onPressed: onSweep,
+                icon: Icon(Icons.search)),
             IconButton(
                 tooltip: "Next Set of Addresses",
                 onPressed: onGenerateAddress,
@@ -90,5 +95,10 @@ class ReceivePageState extends State<ReceivePage> {
 
   void onShowQR(String title, String text) {
     GoRouter.of(context).push("/qr", extra: {"title": title, "text": text});
+  }
+
+  void onSweep() async {
+    final endHeight = await getCurrentHeight();
+    await transparentSweep(endHeight: endHeight, gapLimit: 40);
   }
 }

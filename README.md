@@ -68,6 +68,7 @@ A wallet for zcash
 - [x] Database
     - [x] switch to new database
     - [x] encrypt database with AES
+- [x] Transparent sweep
 - [ ] Settings
     - [x] database name
     - [ ] lwd url
