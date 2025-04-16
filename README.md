@@ -21,6 +21,7 @@ A wallet for zcash
     - [x] CRUD
     - [x] reorder
     - [x] hide accounts
+    - [x] show balance
 - [x] Synchronization
     - [x] transparent
     - [x] shielded

@@ -408,6 +408,7 @@ pub struct Account {
     pub saved: bool,
     pub enabled: bool,
     pub height: u32,
+    pub balance: u64,
 }
 
 #[frb(dart_metadata = ("freezed"))]
