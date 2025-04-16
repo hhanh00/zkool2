@@ -29,7 +29,6 @@ abstract class AppStoreBase with Store {
 
   String dbName = "zkool";
 
-  bool includeHidden = false;
   ObservableList<String> log = ObservableList.of([]);
 
   void init() {
@@ -41,7 +40,7 @@ abstract class AppStoreBase with Store {
   }
 
   Future<List<Account>> loadAccounts() async {
-    final as = await listAccounts(includeHidden: includeHidden);
+    final as = await listAccounts();
     accounts = as;
     return as;
   }

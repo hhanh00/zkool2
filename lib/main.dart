@@ -1,15 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/router.dart';
-import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:zkool/store.dart';
-import 'package:zkool/utils.dart';
 
 var logger = Logger();
 

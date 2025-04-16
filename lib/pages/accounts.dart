@@ -44,8 +44,10 @@ class AccountListPage extends StatelessWidget {
           await openDatabase(dbFilepath: dbFilepath, password: password);
           break;
         } catch (_) {
-          password = await inputPassword(navigatorKey.currentContext!,
-              title: "Enter Database Password for $dbName",);
+          password = await inputPassword(
+            navigatorKey.currentContext!,
+            title: "Enter Database Password for $dbName",
+          );
         }
       }
     }
@@ -77,7 +79,7 @@ class AccountListPage2 extends StatefulWidget {
 }
 
 class AccountListPage2State extends State<AccountListPage2> {
-  var hiding = true;
+  var includeHidden = false;
   var height = 0;
   Timer? heightPollingTimer;
   final listKey = GlobalKey<EditableListState<Account>>();
@@ -114,96 +116,102 @@ class AccountListPage2State extends State<AccountListPage2> {
 
   @override
   Widget build(BuildContext context) {
-    return EditableList<Account>(
-        key: listKey,
-        observable: () => AppStoreBase.instance.accounts,
-        headerBuilder: (context) => [
-              ElevatedButton(
-                  onPressed: () => Future(refreshHeight),
-                  child: Text("Height: $height")),
-              const Gap(8),
-            ],
-        builder: (context, index, account, {selected, onSelectChanged}) {
-          return Material(
-              key: ValueKey(account.id),
-              child: GestureDetector(
-                child: SizedBox(
-                    height: 60,
-                    child: Row(children: [
-                      Checkbox(value: selected, onChanged: onSelectChanged),
-                      const Gap(8),
-                      SizedBox(
-                          width: 24,
-                          child: Text(
-                            account.position.toString(),
-                            textAlign: TextAlign.end,
-                          )),
-                      const Gap(8),
-                      account.avatar,
-                      const Gap(8),
-                      Expanded(
-                          child: Text(account.name,
-                              style: !account.enabled
-                                  ? TextStyle(color: Colors.grey)
-                                  : null)),
-                      Observer(
-                          builder: (context) => Text(AppStoreBase
-                              .instance.heights[account.id]
-                              .toString())),
-                      const Gap(8),
-                    ])),
-                onTap: () => onOpen(context, account),
-              ));
-        },
-        title: "Account List",
-        onCreate: () => widget.accounts,
-        createBuilder: (context) => GoRouter.of(context).push("/account/new"),
-        editBuilder: (context, a) =>
-            GoRouter.of(context).push("/account/edit", extra: a),
-        deleteBuilder: (context, accounts) async {
-          final confirmed = await AwesomeDialog(
-              context: context,
-              dialogType: DialogType.warning,
-              animType: AnimType.rightSlide,
-              title: 'Delete Account(s)',
-              desc: 'Are you sure you want to delete these accounts?',
-              btnCancelOnPress: () {},
-              btnOkOnPress: () {},
-              autoDismiss: false,
-              onDismissCallback: (d) {
-                final res = (() {
-                  switch (d) {
-                    case DismissType.btnOk:
-                      return true;
-                    default:
-                      return false;
-                  }
-                })();
-                GoRouter.of(context).pop(res);
-              }).show() as bool;
-          if (confirmed) {
-            for (var a in accounts) {
-              await deleteAccount(account: a.id);
+    return Observer(builder: (context) {
+      final accounts = AppStoreBase.instance.accounts
+          .where((a) => includeHidden || !a.hidden)
+          .toList();
+      logger.i("Accounts: ${accounts.length}");
+
+      return EditableList<Account>(
+          key: listKey,
+          items: accounts,
+          headerBuilder: (context) => [
+                ElevatedButton(
+                    onPressed: () => Future(refreshHeight),
+                    child: Text("Height: $height")),
+                const Gap(8),
+              ],
+          builder: (context, index, account, {selected, onSelectChanged}) {
+            return Material(
+                key: ValueKey(account.id),
+                child: GestureDetector(
+                  child: SizedBox(
+                      height: 60,
+                      child: Row(children: [
+                        Checkbox(value: selected, onChanged: onSelectChanged),
+                        const Gap(8),
+                        SizedBox(
+                            width: 24,
+                            child: Text(
+                              account.position.toString(),
+                              textAlign: TextAlign.end,
+                            )),
+                        const Gap(8),
+                        account.avatar,
+                        const Gap(8),
+                        Expanded(
+                            child: Text(account.name,
+                                style: !account.enabled
+                                    ? TextStyle(color: Colors.grey)
+                                    : null)),
+                        Observer(
+                            builder: (context) => Text(AppStoreBase
+                                .instance.heights[account.id]
+                                .toString())),
+                        const Gap(8),
+                      ])),
+                  onTap: () => onOpen(context, account),
+                ));
+          },
+          title: "Account List",
+          onCreate: () => widget.accounts,
+          createBuilder: (context) => GoRouter.of(context).push("/account/new"),
+          editBuilder: (context, a) =>
+              GoRouter.of(context).push("/account/edit", extra: a),
+          deleteBuilder: (context, accounts) async {
+            final confirmed = await AwesomeDialog(
+                context: context,
+                dialogType: DialogType.warning,
+                animType: AnimType.rightSlide,
+                title: 'Delete Account(s)',
+                desc: 'Are you sure you want to delete these accounts?',
+                btnCancelOnPress: () {},
+                btnOkOnPress: () {},
+                autoDismiss: false,
+                onDismissCallback: (d) {
+                  final res = (() {
+                    switch (d) {
+                      case DismissType.btnOk:
+                        return true;
+                      default:
+                        return false;
+                    }
+                  })();
+                  GoRouter.of(context).pop(res);
+                }).show() as bool;
+            if (confirmed) {
+              for (var a in accounts) {
+                await deleteAccount(account: a.id);
+              }
+              await AppStoreBase.instance.loadAccounts();
             }
-            await AppStoreBase.instance.loadAccounts();
-          }
-        },
-        isEqual: (a, b) => a.id == b.id,
-        onReorder: onReorder,
-        buttons: [
-          IconButton(onPressed: onSettings, icon: Icon(Icons.settings)),
-          IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
-          IconButton(
-              onPressed: onHide,
-              icon: Icon(hiding ? Icons.visibility : Icons.visibility_off)),
-        ]);
+          },
+          isEqual: (a, b) => a.id == b.id,
+          onReorder: onReorder,
+          buttons: [
+            IconButton(onPressed: onSettings, icon: Icon(Icons.settings)),
+            IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+            IconButton(
+                onPressed: onHide,
+                icon: Icon(
+                    includeHidden ? Icons.visibility : Icons.visibility_off)),
+          ]);
+    });
   }
 
   onHide() async {
     setState(() {
-      hiding = !hiding;
-      AppStoreBase.instance.includeHidden = !hiding;
-      AppStoreBase.instance.loadAccounts();
+      includeHidden = !includeHidden;
     });
   }
 
