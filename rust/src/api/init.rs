@@ -88,16 +88,18 @@ impl<'a> MakeWriter<'a> for FrbMakeWriter {
 }
 
 fn frb_layer<S>(
-) -> fmt::Layer<S, format::DefaultFields, format::Format<format::Full, ()>, FrbMakeWriter>
+) -> fmt::Layer<S, format::DefaultFields, format::Format<format::Json, ()>, FrbMakeWriter>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
     fmt::Layer::new()
         .event_format(
             Format::default()
+                .json()
                 .with_level(false)
                 .with_ansi(false)
-                .without_time(),
+                .without_time()
+                .with_current_span(true)
         )
         .with_writer(FrbMakeWriter {})
 }

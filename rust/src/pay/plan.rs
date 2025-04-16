@@ -19,7 +19,8 @@ use sapling_crypto::PaymentAddress;
 use secp256k1::SecretKey;
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use tracing::info;
+use tonic::Request;
+use tracing::{event, info, span, Level};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::{
     legacy::TransparentAddress,
@@ -39,16 +40,13 @@ use zcash_transparent::bundle::{OutPoint, TxOut};
 use crate::{
     account::{
         generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
-    },
-    pay::{
+    }, lwd::ChainSpec, pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlan, TxPlanIn, TxPlanOut,
-    },
-    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
-    Client,
+    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
 };
 
 use super::pool::ALL_SHIELDED_POOLS;
@@ -62,6 +60,10 @@ pub async fn plan_transaction(
     recipients: &[Recipient],
     recipient_pays_fee: bool,
 ) -> Result<TxPlan> {
+    let span = span!(Level::INFO, "transaction_plan");
+    let _guard = span.enter();
+
+    event!(Level::INFO, "Computing plan");
     let effective_src_pools =
         crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
 
@@ -274,9 +276,18 @@ pub async fn plan_transaction(
         .chain(double.iter())
         .chain(std::iter::once(&change_recipient));
 
+    event!(Level::INFO, "Initilizing Builder");
+
+    let current_height =
+        client.get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner()
+            .height as u32;
+    let target_height = current_height + 100;
+
     let mut builder = Builder::new(
         network,
-        BlockHeight::from_u32(height),
+        BlockHeight::from_u32(target_height),
         BuildConfig::Standard {
             sapling_anchor: sapling_crypto::Anchor::from_bytes(sapling_anchor).into_option(),
             orchard_anchor: orchard::Anchor::from_bytes(orchard_anchor).into_option(),
@@ -294,6 +305,8 @@ pub async fn plan_transaction(
     let ovk = get_orchard_vk(connection, account).await?;
 
     let mut tsk = vec![];
+
+    event!(Level::INFO, "Adding Inputs");
 
     let mut n_spends: [usize; 3] = [0, 0, 0];
     let mut inputs = vec![];
@@ -367,6 +380,7 @@ pub async fn plan_transaction(
         }
     }
 
+    event!(Level::INFO, "Adding Outputs");
     let mut outs = vec![];
     for r in outputs {
         let RecipientState {
@@ -423,6 +437,8 @@ pub async fn plan_transaction(
     }
 
     info!("Building");
+    event!(Level::INFO, "Preparing PCZT");
+
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
@@ -459,6 +475,7 @@ pub async fn plan_transaction(
     let pczt = updater.finish();
     info!("Updated");
 
+    event!(Level::INFO, "Adding Proofs to PCZT");
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
@@ -467,6 +484,7 @@ pub async fn plan_transaction(
         .finish();
     info!("Proved");
 
+    event!(Level::INFO, "Signing PCZT");
     let mut signer = Signer::new(pczt).unwrap();
     for index in 0..n_spends[0] {
         info!("signing transparent {index}");
@@ -488,6 +506,7 @@ pub async fn plan_transaction(
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
     info!("Spend Finalized");
 
+    event!(Level::INFO, "Extracting Tx");
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
     let tx = tx_extractor.extract().unwrap();
@@ -495,6 +514,7 @@ pub async fn plan_transaction(
     tx.write(&mut tx_bytes).unwrap();
     info!("Tx Extracted");
 
+    event!(Level::INFO, "Tx Ready - {} bytes", tx_bytes.len());
     info!("{}", hex::encode(&tx_bytes));
 
     let tx_plan = TxPlan {
