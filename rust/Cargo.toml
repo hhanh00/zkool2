@@ -56,7 +56,7 @@ tonic = {version = "0.13.0", features = ["tls-webpki-roots"]}
 
 itertools = "0.14"
 tracing = "0.1"
-tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt"]}
+tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt", "json"]}
 
 age = "0.11"
 

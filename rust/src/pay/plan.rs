@@ -19,7 +19,8 @@ use sapling_crypto::PaymentAddress;
 use secp256k1::SecretKey;
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use tracing::info;
+use tonic::Request;
+use tracing::{event, debug, span, Level};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::{
     legacy::TransparentAddress,
@@ -39,16 +40,13 @@ use zcash_transparent::bundle::{OutPoint, TxOut};
 use crate::{
     account::{
         generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
-    },
-    pay::{
+    }, lwd::ChainSpec, pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlan, TxPlanIn, TxPlanOut,
-    },
-    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
-    Client,
+    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
 };
 
 use super::pool::ALL_SHIELDED_POOLS;
@@ -62,6 +60,10 @@ pub async fn plan_transaction(
     recipients: &[Recipient],
     recipient_pays_fee: bool,
 ) -> Result<TxPlan> {
+    let span = span!(Level::INFO, "transaction_plan");
+    let _guard = span.enter();
+
+    event!(Level::INFO, "Computing plan");
     let effective_src_pools =
         crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
 
@@ -72,10 +74,10 @@ pub async fn plan_transaction(
             .intersect(&PoolMask(recipient.pools.unwrap_or(ALL_POOLS)));
         recipient_pools = recipient_pools.union(&pool);
     }
-    info!("effective_src_pools: {:#b}", effective_src_pools.0);
-    info!("recipient_pools: {:#b}", recipient_pools.0);
+    debug!("effective_src_pools: {:#b}", effective_src_pools.0);
+    debug!("recipient_pools: {:#b}", recipient_pools.0);
     let change_pool = get_change_pool(effective_src_pools, recipient_pools);
-    info!("change_pool: {:#b}", change_pool);
+    debug!("change_pool: {:#b}", change_pool);
 
     let mut fee_manager = FeeManager::default();
     fee_manager.add_output(change_pool);
@@ -87,9 +89,9 @@ pub async fn plan_transaction(
     let mut input_pools = vec![vec![]; 3];
     let inputs = fetch_unspent_notes_grouped_by_pool(connection, account).await?;
 
-    info!("Unspent notes:");
+    debug!("Unspent notes:");
     for inp in inputs.iter() {
-        info!(
+        debug!(
             "id: {}, pool: {}, amount: {}",
             inp.id,
             inp.pool,
@@ -183,7 +185,7 @@ pub async fn plan_transaction(
     // Now we have pick the inputs and paid the fee if the sender
     // should be paying it
 
-    info!("Fee {}", &fee_manager);
+    debug!("Fee {}", &fee_manager);
     let fee = fee_manager.fee();
 
     if recipient_pays_fee {
@@ -230,7 +232,7 @@ pub async fn plan_transaction(
             pool_mask,
         } = o;
         assert_eq!(*remaining, 0);
-        info!(
+        debug!(
             "address: {}, pool: {}, amount: {}",
             recipient.address,
             pool_mask.to_best_pool().unwrap(),
@@ -238,7 +240,7 @@ pub async fn plan_transaction(
         );
     }
 
-    info!(
+    debug!(
         "change: {}, pool: {change_pool}, fee: {}",
         to_zec(change),
         to_zec(fee)
@@ -274,9 +276,18 @@ pub async fn plan_transaction(
         .chain(double.iter())
         .chain(std::iter::once(&change_recipient));
 
+    event!(Level::INFO, "Initializing Builder");
+
+    let current_height =
+        client.get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner()
+            .height as u32;
+    let target_height = current_height + 100;
+
     let mut builder = Builder::new(
         network,
-        BlockHeight::from_u32(height),
+        BlockHeight::from_u32(target_height),
         BuildConfig::Standard {
             sapling_anchor: sapling_crypto::Anchor::from_bytes(sapling_anchor).into_option(),
             orchard_anchor: orchard::Anchor::from_bytes(orchard_anchor).into_option(),
@@ -294,6 +305,8 @@ pub async fn plan_transaction(
     let ovk = get_orchard_vk(connection, account).await?;
 
     let mut tsk = vec![];
+
+    event!(Level::INFO, "Adding Inputs");
 
     let mut n_spends: [usize; 3] = [0, 0, 0];
     let mut inputs = vec![];
@@ -358,7 +371,7 @@ pub async fn plan_transaction(
                         .bind(id)
                         .fetch_one(connection)
                         .await?;
-                info!(
+                debug!(
                     "id: {id}, pool: {pool}, nullifier: {}, amount: {}",
                     hex::encode(nf),
                     to_zec(*amount)
@@ -367,6 +380,7 @@ pub async fn plan_transaction(
         }
     }
 
+    event!(Level::INFO, "Adding Outputs");
     let mut outs = vec![];
     for r in outputs {
         let RecipientState {
@@ -422,20 +436,22 @@ pub async fn plan_transaction(
         }
     }
 
-    info!("Building");
+    debug!("Building");
+    event!(Level::INFO, "Preparing PCZT");
+
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
 
-    info!("Prepared");
+    debug!("Prepared");
 
     let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
 
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
-    info!("Created");
+    debug!("Created");
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
-    info!("IO Finalized");
+    debug!("IO Finalized");
 
     let ssk = get_sapling_sk(connection, account).await?;
     let osk = get_orchard_sk(connection, account).await?;
@@ -457,45 +473,49 @@ pub async fn plan_transaction(
         })
         .unwrap();
     let pczt = updater.finish();
-    info!("Updated");
+    debug!("Updated");
 
+    event!(Level::INFO, "Adding Proofs to PCZT");
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
         .create_orchard_proof(&ORCHARD_PK)
         .unwrap()
         .finish();
-    info!("Proved");
+    debug!("Proved");
 
+    event!(Level::INFO, "Signing PCZT");
     let mut signer = Signer::new(pczt).unwrap();
     for index in 0..n_spends[0] {
-        info!("signing transparent {index}");
+        debug!("signing transparent {index}");
         signer.sign_transparent(index, &tsk[index]).unwrap();
     }
     for index in 0..n_spends[1] {
-        info!("signing sapling {index}");
+        debug!("signing sapling {index}");
         let bundle_index = sapling_meta.spend_index(index).unwrap();
         signer.sign_sapling(bundle_index, &ssk.as_ref().unwrap().expsk.ask).unwrap();
     }
     for index in 0..n_spends[2] {
-        info!("signing orchard {index}");
+        debug!("signing orchard {index}");
         let bundle_index = orchard_meta.spend_action_index(index).unwrap();
         signer.sign_orchard(bundle_index, osak.as_ref().unwrap()).unwrap();
     }
     let pczt = signer.finish();
-    info!("Signed");
+    debug!("Signed");
 
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
-    info!("Spend Finalized");
+    debug!("Spend Finalized");
 
+    event!(Level::INFO, "Extracting Tx");
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
     let tx = tx_extractor.extract().unwrap();
     let mut tx_bytes = vec![];
     tx.write(&mut tx_bytes).unwrap();
-    info!("Tx Extracted");
+    debug!("Tx Extracted");
 
-    info!("{}", hex::encode(&tx_bytes));
+    event!(Level::INFO, "Tx Ready - {} bytes", tx_bytes.len());
+    debug!("{}", hex::encode(&tx_bytes));
 
     let tx_plan = TxPlan {
         height,
@@ -618,13 +638,13 @@ fn fill_single_receivers(
                 r.remaining -= amount;
                 inp.remaining -= amount;
 
-                info!(
+                debug!(
                     "Input id: {}, amount: {}, remaining: {}",
                     inp.id,
                     to_zec(inp.amount),
                     to_zec(inp.remaining)
                 );
-                info!(
+                debug!(
                     "Recipient id: {}, amount: {}, remaining: {}",
                     r.recipient.address,
                     to_zec(r.recipient.amount),
