@@ -340,7 +340,7 @@ pub async fn store_account_transparent_addr(
 ) -> Result<()> {
     sqlx::query(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, address)
-        VALUES (?, ?, ?, ?, ?)",
+        VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
     )
     .bind(account)
     .bind(scope)

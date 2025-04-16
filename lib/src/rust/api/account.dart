@@ -66,6 +66,11 @@ Future<List<Memo>> listMemos() =>
 Future<Addresses> getAddresses() =>
     RustLib.instance.api.crateApiAccountGetAddresses();
 
+Future<void> transparentSweep(
+        {required int endHeight, required int gapLimit}) =>
+    RustLib.instance.api.crateApiAccountTransparentSweep(
+        endHeight: endHeight, gapLimit: gapLimit);
+
 Future<Uint8List> exportAccount({required String passphrase}) =>
     RustLib.instance.api.crateApiAccountExportAccount(passphrase: passphrase);
 
