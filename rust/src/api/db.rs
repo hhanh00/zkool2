@@ -1,7 +1,6 @@
 use crate::{
     coin::Coin,
     db::{create_schema, put_prop},
-    get_coin,
 };
 use anyhow::Result;
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
@@ -27,7 +26,11 @@ pub async fn create_database(coin: u8, db_filepath: &str, password: Option<Strin
 }
 
 pub async fn open_database(db_filepath: &str, password: Option<String>) -> Result<()> {
-    let coin = Coin::new(db_filepath, password).await?;
+    let lwd = {
+        let c = crate::coin::COIN.lock().unwrap();
+        c.lwd.clone()
+    };
+    let coin = Coin::new(&lwd, db_filepath, password).await?;
     let mut c = crate::coin::COIN.lock().unwrap();
     *c = coin;
 

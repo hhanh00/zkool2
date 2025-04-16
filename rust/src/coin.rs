@@ -37,7 +37,7 @@ pub struct Coin {
 }
 
 impl Coin {
-    pub async fn new(db_filepath: &str, password: Option<String>) -> Result<Coin> {
+    pub async fn new(lwd: &str, db_filepath: &str, password: Option<String>) -> Result<Coin> {
         // Create a connection pool
         let options = get_connect_options(db_filepath, password);
         let pool = SqlitePoolOptions::new()
@@ -64,7 +64,7 @@ impl Coin {
             network,
             db_filepath: db_filepath.to_string(),
             pool: Some(pool),
-            lwd: String::new(),
+            lwd: lwd.to_string(),
         })
     }
 

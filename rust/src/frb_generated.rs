@@ -628,13 +628,11 @@ fn wire__crate__api__account__list_accounts_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_include_hidden = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::list_accounts(api_include_hidden).await?;
+                        let output_ok = crate::api::account::list_accounts().await?;
                         Ok(output_ok)
                     })()
                     .await,

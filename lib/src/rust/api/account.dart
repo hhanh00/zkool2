@@ -20,9 +20,8 @@ String uaFromUfvk({required String ufvk, int? di}) =>
 Receivers receiversFromUa({required String ua}) =>
     RustLib.instance.api.crateApiAccountReceiversFromUa(ua: ua);
 
-Future<List<Account>> listAccounts({required bool includeHidden}) =>
-    RustLib.instance.api
-        .crateApiAccountListAccounts(includeHidden: includeHidden);
+Future<List<Account>> listAccounts() =>
+    RustLib.instance.api.crateApiAccountListAccounts();
 
 Future<void> updateAccount({required AccountUpdate update}) =>
     RustLib.instance.api.crateApiAccountUpdateAccount(update: update);

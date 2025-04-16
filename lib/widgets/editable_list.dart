@@ -4,10 +4,11 @@ import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
+import 'package:zkool/main.dart';
 
 class EditableList<T extends Object> extends StatefulWidget {
   final String title;
-  final List<T> Function() observable;
+  final List<T> items;
   final List<Widget> Function(BuildContext) headerBuilder;
   final FutureOr<void> Function()? onCreate;
   final FutureOr<void> Function(BuildContext) createBuilder;
@@ -26,7 +27,7 @@ class EditableList<T extends Object> extends StatefulWidget {
 
   const EditableList({
     super.key,
-    required this.observable,
+    required this.items,
     required this.builder,
     required this.title,
     this.onCreate,
@@ -45,22 +46,13 @@ class EditableList<T extends Object> extends StatefulWidget {
 
 class EditableListState<T extends Object> extends State<EditableList<T>> {
   List<bool> selected = [];
-  List<T> items = [];
+  late List<T> items = [];
   T? selectedValue;
   ReactionDisposer? reaction;
 
   @override
   void initState() {
     super.initState();
-
-    reaction = autorun((_) {
-      final updatedItems = widget.observable();
-      setState(() {
-        items = updatedItems;
-        selected = List.generate(items.length, (index) => false);
-      });
-    });
-
     widget.onCreate?.call();
   }
 
@@ -68,6 +60,15 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
   void dispose() {
     reaction?.call();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant EditableList<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.items != widget.items) {
+      items = widget.items;
+      selected = List.generate(items.length, (_) => false);
+    }
   }
 
   @override
