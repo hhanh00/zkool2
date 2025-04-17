@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zkool/src/rust/api/db.dart';
+import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -13,6 +15,7 @@ class SettingsPage extends StatefulWidget {
 class SettingsPageState extends State<SettingsPage> {
   final formKey = GlobalKey<FormBuilderState>();
   String databaseName = AppStoreBase.instance.dbName;
+  String lwd = AppStoreBase.instance.lwd;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +36,12 @@ class SettingsPageState extends State<SettingsPage> {
                   initialValue: databaseName,
                   onChanged: onChangedDatabaseName,
                 ),
+                FormBuilderTextField(
+                  name: "lwd",
+                  decoration: const InputDecoration(labelText: "Lightwalletd Server"),
+                  initialValue: lwd,
+                  onChanged: onChangedLWD,
+                ),
               ],
             ),
           ),
@@ -42,11 +51,22 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   void onChangedDatabaseName(String? value) async {
+    if (value == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("database", value!);
+    await prefs.setString("database", value);
+    AppStoreBase.instance.dbName = value;
     setState(() {
       databaseName = value;
-      AppStoreBase.instance.dbName = value;
+    });
+  }
+
+  void onChangedLWD(String? value) async {
+    if (value == null) return;
+    await putProp(key: "lwd", value: value);
+    AppStoreBase.instance.lwd = value;
+    setLwd(lwd: value);
+    setState(() {
+      lwd = value;
     });
   }
 }

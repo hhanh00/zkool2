@@ -1,8 +1,9 @@
 use crate::{
     coin::Coin,
-    db::{create_schema, put_prop},
+    db::create_schema, get_coin,
 };
 use anyhow::Result;
+use flutter_rust_bridge::frb;
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 
 pub(crate) fn get_connect_options(db_filepath: &str, password: Option<String>) -> SqliteConnectOptions {
@@ -20,7 +21,7 @@ pub async fn create_database(coin: u8, db_filepath: &str, password: Option<Strin
     let options = get_connect_options(db_filepath, password);
     let pool = SqlitePool::connect_with(options).await?;
     create_schema(&pool).await?;
-    put_prop(&pool, "coin", &coin.to_string()).await?;
+    crate::db::put_prop(&pool, "coin", &coin.to_string()).await?;
 
     Ok(())
 }
@@ -35,4 +36,16 @@ pub async fn open_database(db_filepath: &str, password: Option<String>) -> Resul
     *c = coin;
 
     Ok(())
+}
+
+#[frb]
+pub async fn get_prop(key: &str) -> Result<Option<String>> {
+    let coin = get_coin!();
+    crate::db::get_prop(coin.get_pool(), key).await
+}
+
+#[frb]
+pub async fn put_prop(key: &str, value: &str) -> Result<()> {
+    let coin = get_coin!();
+    crate::db::put_prop(coin.get_pool(), key, value).await
 }
