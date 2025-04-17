@@ -16,8 +16,6 @@ Future<void> main() async {
   await RustLib.init();
   AppStoreBase.instance.dbName = dbName;
 
-  // setLwd(lwd: "https://lwd4.zcash-infra.com:9067");
-  setLwd(lwd: "https://zec.rocks");
   AppStoreBase.instance.init();
 
   runApp(ToastificationWrapper(child: MaterialApp.router(
