@@ -23,11 +23,11 @@ class AccountListPage extends StatelessWidget {
 
   Future<List<Account>> loadAccounts() async {
     if (!AppStoreBase.instance.loaded) {
-      logger.i("Loading accounts");
       final dbName = AppStoreBase.instance.dbName;
       final dbDir = await getApplicationDocumentsDirectory();
       final dbFilepath = '${dbDir.path}/$dbName.db';
       logger.i('dbFilepath: $dbFilepath');
+      AppStoreBase.instance.dbFilepath = dbFilepath;
 
       String? password;
       if (!File(dbFilepath).existsSync()) {
@@ -83,7 +83,6 @@ class AccountListPage2 extends StatefulWidget {
 class AccountListPage2State extends State<AccountListPage2> {
   var includeHidden = false;
   var height = 0;
-  Timer? heightPollingTimer;
   final listKey = GlobalKey<EditableListState<Account>>();
 
   @override
@@ -92,18 +91,6 @@ class AccountListPage2State extends State<AccountListPage2> {
     for (var account in widget.accounts) {
       AppStoreBase.instance.heights[account.id] = account.height;
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    Future(refreshHeight);
-  }
-
-  @override
-  void dispose() {
-    heightPollingTimer?.cancel();
-    super.dispose();
   }
 
   void refreshHeight() async {
@@ -123,7 +110,6 @@ class AccountListPage2State extends State<AccountListPage2> {
       final accounts = AppStoreBase.instance.accounts
           .where((a) => includeHidden || !a.hidden)
           .toList();
-      logger.i("Accounts: ${accounts.length}");
 
       return EditableList<Account>(
           key: listKey,
