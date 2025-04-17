@@ -456,20 +456,31 @@ pub async fn select_account_transparent(
     connection: &SqlitePool,
     account: u32,
 ) -> Result<TransparentKeys> {
-    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
+    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
         sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(connection)
             .await?;
 
-    let (xsk, xvk) = match r {
-        Some((xsk, xvk)) => (xsk, Some(xvk)),
-        None => (None, None),
+    let (xsk, xvk, taddress) = match r {
+        Some((None, None)) => {
+            // no xprv, no xpub => get the address imported as bip38
+            let taddress = sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?")
+                .bind(account)
+                .map(|row: SqliteRow| row.get::<String, _>(0))
+                .fetch_one(connection)
+                .await?;
+            (None, None, Some(taddress))
+        }
+        Some((xsk, xvk)) => (xsk, xvk, None),
+        None => (None, None, None),
     };
+
 
     let keys = TransparentKeys {
         xsk: xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap()),
         xvk: xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap()),
+        address: taddress,
     };
 
     Ok(keys)
@@ -523,6 +534,7 @@ pub async fn select_account_orchard(connection: &SqlitePool, account: u32) -> Re
 pub struct TransparentKeys {
     pub xsk: Option<AccountPrivKey>,
     pub xvk: Option<AccountPubKey>,
+    pub address: Option<String>,
 }
 
 pub struct SaplingKeys {

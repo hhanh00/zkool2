@@ -51,11 +51,17 @@ Future<void> showException(BuildContext context, String message) async {
 }
 
 Future<void> showSeed(BuildContext context, String message) async {
+  final t = Theme.of(context).textTheme;
   await AwesomeDialog(
     context: context,
     dialogType: DialogType.warning,
     animType: AnimType.rightSlide,
-    title: 'SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS',
+    body: Column(children: [
+      Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS",
+          style: t.headlineSmall),
+      Gap(16),
+      SelectableText(message, textAlign: TextAlign.center,),
+    ]),
     desc: message,
     btnOkOnPress: () {},
     autoDismiss: true,
