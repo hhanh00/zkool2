@@ -544,10 +544,10 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
                 WHERE b.id_note IS NULL)
         SELECT id_account, name, seed, aindex,
         icon, birth, a.position, hidden, saved, enabled,
-        sh.height, SUM(unspent.value) AS balance
+        sh.height, COALESCE(SUM(unspent.value), 0) AS balance
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
-        JOIN unspent ON a.id_account = unspent.account
+        LEFT JOIN unspent ON a.id_account = unspent.account
         GROUP BY id_account
         ORDER by a.position",
     )

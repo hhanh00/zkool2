@@ -30,6 +30,7 @@ abstract class AppStoreBase with Store {
   ObservableMap<int, int> heights = ObservableMap.of({});
 
   String dbName = "zkool";
+  String dbFilepath = "";
   String lwd = "https://zec.rocks";
 
   ObservableList<String> log = ObservableList.of([]);
