@@ -30,7 +30,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/account/edit',
-      builder: (context, state) => AccountEditPage(state.extra as Account),
+      builder: (context, state) => AccountEditPage(state.extra as List<Account>),
     ),
     GoRoute(
       path: '/account/new',
