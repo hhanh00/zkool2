@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -19,6 +20,8 @@ class SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Settings"),
@@ -42,6 +45,8 @@ class SettingsPageState extends State<SettingsPage> {
                   initialValue: lwd,
                   onChanged: onChangedLWD,
                 ),
+                Gap(16),
+                Text(AppStoreBase.instance.dbFilepath, style: t.bodySmall),
               ],
             ),
           ),
