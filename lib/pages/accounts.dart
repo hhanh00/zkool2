@@ -50,6 +50,8 @@ class AccountListPage extends StatelessWidget {
           );
         }
       }
+      await AppStoreBase.instance.loadSettings();
+      setLwd(lwd: AppStoreBase.instance.lwd);
     }
 
     AppStoreBase.instance.loaded = true;
@@ -88,7 +90,6 @@ class AccountListPage2State extends State<AccountListPage2> {
   void didUpdateWidget(covariant AccountListPage2 oldWidget) {
     super.didUpdateWidget(oldWidget);
     for (var account in widget.accounts) {
-      logger.i("Height for ${account.id}: ${account.height}");
       AppStoreBase.instance.heights[account.id] = account.height;
     }
   }
