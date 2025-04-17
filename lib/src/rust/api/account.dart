@@ -71,13 +71,18 @@ Future<void> transparentSweep(
     RustLib.instance.api.crateApiAccountTransparentSweep(
         endHeight: endHeight, gapLimit: gapLimit);
 
-Future<Uint8List> exportAccount({required String passphrase}) =>
-    RustLib.instance.api.crateApiAccountExportAccount(passphrase: passphrase);
+Future<Uint8List> exportAccount(
+        {required int id, required String passphrase}) =>
+    RustLib.instance.api
+        .crateApiAccountExportAccount(id: id, passphrase: passphrase);
 
 Future<void> importAccount(
         {required String passphrase, required List<int> data}) =>
     RustLib.instance.api
         .crateApiAccountImportAccount(passphrase: passphrase, data: data);
+
+Future<void> printKeys({required int id}) =>
+    RustLib.instance.api.crateApiAccountPrintKeys(id: id);
 
 @freezed
 class Account with _$Account {

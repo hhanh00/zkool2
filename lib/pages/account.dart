@@ -361,7 +361,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     final password = await inputPassword(context,
         title: "Export Account", message: "File Password");
     if (password != null) {
-      final res = await exportAccount(passphrase: password);
+      final res = await exportAccount(id: account.id, passphrase: password);
       await FilePicker.platform.saveFile(
         dialogTitle: 'Please select an output file for the encrypted account:',
         fileName: '${account.name}.bin',

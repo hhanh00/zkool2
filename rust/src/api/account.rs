@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
+use bip32::{ExtendedPrivateKey, ExtendedPublicKey, Prefix, PrivateKey};
 use flutter_rust_bridge::frb;
 use orchard::keys::{FullViewingKey, Scope};
 use rand_core::{OsRng, RngCore as _};
@@ -9,6 +9,7 @@ use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::Sha256;
+use sqlx::{sqlite::SqliteRow, Row};
 use tracing::info;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
@@ -25,13 +26,19 @@ use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk}, bip38, db::{
+    account::{derive_transparent_address, derive_transparent_sk},
+    bip38,
+    db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
         update_dindex,
-    }, get_coin, io::{decrypt, encrypt}, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, setup
+    },
+    get_coin,
+    io::{decrypt, encrypt},
+    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    setup,
 };
 
 #[frb(sync)]
@@ -277,11 +284,15 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
     if is_valid_transparent_key(&key) {
         init_account_transparent(pool, account).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
+            println!("1");
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
             store_account_transparent_sk(pool, account, &xsk).await?;
+            println!("1");
             let xvk = xsk.to_account_pubkey();
             store_account_transparent_vk(pool, account, &xvk).await?;
+            println!("1");
             let sk = derive_transparent_sk(&xsk, 0, 0)?;
+            println!("1");
             let address = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(
                 pool,
@@ -292,8 +303,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
                 &address.encode(&network),
             )
             .await?;
-        }
-        if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
+        } else if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
             // No AccountPubKey::from_extended_pubkey, we need to use the bytes
             let mut buf = xvk.attrs().chain_code.to_vec();
             buf.extend_from_slice(&xvk.to_bytes());
@@ -302,8 +312,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
             let address = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(pool, account, 0, 0, None, &address.encode(&network))
                 .await?;
-        }
-        if let Ok(sk) = bip38::import_tsk(&key) {
+        } else if let Ok(sk) = bip38::import_tsk(&key) {
             let secp = secp256k1::Secp256k1::new();
             let tpk = sk.public_key(&secp).serialize();
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
@@ -328,8 +337,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
             store_account_sapling_sk(pool, account, &xsk).await?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
             store_account_sapling_vk(pool, account, &xvk).await?;
-        }
-        if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
+        } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
             network.hrp_sapling_extended_full_viewing_key(),
             &key,
         ) {
@@ -356,12 +364,10 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
                 &address.encode(&network),
             )
             .await?;
-        }
-        if let Some(svk) = uvk.sapling() {
+        } else if let Some(svk) = uvk.sapling() {
             init_account_sapling(pool, account).await?;
             store_account_sapling_vk(pool, account, svk).await?;
-        }
-        if let Some(ovk) = uvk.orchard() {
+        } else if let Some(ovk) = uvk.orchard() {
             init_account_orchard(pool, account).await?;
             store_account_orchard_vk(pool, account, ovk).await?;
         }
@@ -494,6 +500,7 @@ pub async fn get_addresses() -> Result<Addresses> {
         .xvk
         .as_ref()
         .map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap());
+
     let dindex = dindex as u64;
     let saddr = skeys
         .xvk
@@ -508,8 +515,12 @@ pub async fn get_addresses() -> Result<Addresses> {
 
     let ua = UnifiedAddress::from_receivers(oaddr, saddr, taddr);
 
+    // final fallback if we have a transparent address from a BIP 38 secret key
+    let taddr = taddr.map(|x| x.encode(&c.network))
+        .or(tkeys.address);
+
     let addresses = Addresses {
-        taddr: taddr.map(|x| x.encode(&c.network)),
+        taddr,
         saddr: saddr.map(|x| x.encode(&c.network)),
         oaddr: ua_orchard.map(|x| x.encode(&c.network)),
         ua: ua.map(|x| x.encode(&c.network)),
@@ -535,16 +546,17 @@ pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<()> {
         c.account,
         end_height,
         gap_limit,
-    ).await?;
+    )
+    .await?;
     Ok(())
 }
 
 #[frb]
-pub async fn export_account(passphrase: &str) -> Result<Vec<u8>> {
+pub async fn export_account(id: u32, passphrase: &str) -> Result<Vec<u8>> {
     let c = get_coin!();
     let connection = c.get_pool();
 
-    let data = crate::io::export_account(connection, c.account).await?;
+    let data = crate::io::export_account(connection, id).await?;
     let encrypted = encrypt(passphrase, &data)?;
     Ok(encrypted)
 }
@@ -556,5 +568,60 @@ pub async fn import_account(passphrase: &str, data: &[u8]) -> Result<()> {
 
     let decrypted = decrypt(passphrase, data)?;
     crate::io::import_account(connection, &decrypted).await?;
+    Ok(())
+}
+
+#[frb]
+pub async fn print_keys(id: u32) -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    sqlx::query(
+        "SELECT name, seed, seed_fingerprint, aindex, dindex,
+        def_dindex, birth FROM accounts WHERE id_account = ?",
+    )
+    .bind(id)
+    .map(|row: SqliteRow| {
+        let name: String = row.get(0);
+        let seed: Option<String> = row.get(1);
+        let seed_fingerprint: Vec<u8> = row.get(2);
+        let aindex: u32 = row.get(3);
+        let dindex: u32 = row.get(4);
+        let def_dindex: u32 = row.get(5);
+        let birth: u32 = row.get(6);
+
+        info!(
+            "Account {}: {} - {:?} - {} - {} - {} - {} - {}",
+            id,
+            name,
+            seed,
+            hex::encode(seed_fingerprint),
+            aindex,
+            dindex,
+            def_dindex,
+            birth
+        );
+    })
+    .fetch_one(connection)
+    .await?;
+
+    sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+        .bind(id)
+        .map(|row: SqliteRow| {
+            let xsk: Option<Vec<u8>> = row.get(0);
+            let xvk: Vec<u8> = row.get(1);
+            let xsk = xsk.as_ref().map(|xsk| {
+                let mut bytes = Prefix::XPRV.to_bytes().to_vec();
+                bytes.extend_from_slice(xsk);
+                bs58::encode(bytes).with_check().into_string()
+            });
+
+            let xvk = hex::encode(&xvk);
+
+            info!("Transparent Account {}: {:?} - {}", id, &xsk, &xvk,);
+        })
+        .fetch_all(connection)
+        .await?;
+
     Ok(())
 }
