@@ -8,6 +8,7 @@ import 'package:mobx/mobx.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -29,10 +30,11 @@ abstract class AppStoreBase with Store {
   ObservableMap<int, int> heights = ObservableMap.of({});
 
   String dbName = "zkool";
+  String lwd = "https://zec.rocks";
 
   ObservableList<String> log = ObservableList.of([]);
 
-  void init() {
+  void init()  {
     final stream = setLogStream();
     stream.listen((m) {
       logger.i(m);
@@ -47,6 +49,10 @@ abstract class AppStoreBase with Store {
         );
       }
     });
+  }
+
+  Future<void> loadSettings() async {
+    lwd = await getProp(key: "lwd") ?? lwd;
   }
 
   Future<List<Account>> loadAccounts() async {

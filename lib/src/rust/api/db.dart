@@ -16,3 +16,9 @@ Future<void> createDatabase(
 Future<void> openDatabase({required String dbFilepath, String? password}) =>
     RustLib.instance.api
         .crateApiDbOpenDatabase(dbFilepath: dbFilepath, password: password);
+
+Future<String?> getProp({required String key}) =>
+    RustLib.instance.api.crateApiDbGetProp(key: key);
+
+Future<void> putProp({required String key, required String value}) =>
+    RustLib.instance.api.crateApiDbPutProp(key: key, value: value);
