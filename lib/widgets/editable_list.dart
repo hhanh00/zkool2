@@ -11,7 +11,7 @@ class EditableList<T extends Object> extends StatefulWidget {
   final List<Widget> Function(BuildContext) headerBuilder;
   final FutureOr<void> Function()? onCreate;
   final FutureOr<void> Function(BuildContext) createBuilder;
-  final FutureOr<void> Function(BuildContext, T) editBuilder;
+  final FutureOr<void> Function(BuildContext, List<T>) editBuilder;
   final FutureOr<void> Function(BuildContext, List<T>) deleteBuilder;
   final Widget Function(
     BuildContext,
@@ -46,7 +46,6 @@ class EditableList<T extends Object> extends StatefulWidget {
 class EditableListState<T extends Object> extends State<EditableList<T>> {
   List<bool> selected = [];
   late List<T> items = [];
-  T? selectedValue;
   ReactionDisposer? reaction;
 
   @override
@@ -72,7 +71,6 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final editEnabled = selected.where(identity).length == 1;
     final anySelected = selected.any(identity);
 
     return Scaffold(
@@ -82,7 +80,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
           actions: [
             if (!anySelected)
               IconButton(onPressed: onNew, icon: Icon(Icons.add)),
-            if (editEnabled)
+            if (anySelected)
               IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
             if (anySelected)
               IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
@@ -101,7 +99,6 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
                   selected: selected[index],
                   onSelectChanged: (value) => setState(() {
                         selected[index] = value ?? false;
-                        selectedValue = items[index];
                       })),
           isSameItem: (T a, T b) => widget.isEqual(a, b),
           onReorder: (int oldIndex, int newIndex) {
@@ -115,13 +112,11 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
   }
 
   onNew() => widget.createBuilder(context);
-  onEdit() {
-    final sv = selectedValue;
-    if (sv != null) widget.editBuilder(context, sv);
-  }
+  onEdit() => widget.editBuilder(context, selectedItems);
 
-  onDelete() => widget.deleteBuilder(
-      context, items.whereIndexed((index, _) => selected[index]).toList());
+  onDelete() => widget.deleteBuilder(context, selectedItems);
+
+  List<T> get selectedItems => items.whereIndexed((index, _) => selected[index]).toList();
 }
 
 T identity<T>(T t) => t;
