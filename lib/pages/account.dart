@@ -217,27 +217,30 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
 }
 
 class AccountEditPage extends StatefulWidget {
-  final Account account;
-  const AccountEditPage(this.account, {super.key});
+  final List<Account> accounts;
+  const AccountEditPage(this.accounts, {super.key});
 
   @override
   State<AccountEditPage> createState() => AccountEditPageState();
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
-  late Account account = widget.account;
+  late List<Account> accounts = widget.accounts;
+  final formKey = GlobalKey<FormBuilderState>();
 
   @override
   void didUpdateWidget(covariant AccountEditPage oldWidget) {
-    account = widget.account;
+    accounts = widget.accounts;
     super.didUpdateWidget(oldWidget);
   }
 
   @override
   Widget build(BuildContext context) {
+    final account = accounts.length == 1 ? accounts.first : null;
+
     return Scaffold(
         appBar: AppBar(title: Text('Account Edit'), actions: [
-          IconButton(
+          if (account != null) IconButton(
               tooltip: "Export Account",
               onPressed: onExport,
               icon: Icon(Icons.reset_tv)),
@@ -249,6 +252,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FormBuilder(
+            key: formKey,
               child: Column(
             children: [
               Row(
@@ -257,30 +261,36 @@ class AccountEditPageState extends State<AccountEditPage> {
                       child: FormBuilderTextField(
                     name: 'name',
                     decoration: InputDecoration(labelText: 'Name'),
-                    initialValue: account.name,
-                    onChanged: onEditName,
+                    initialValue: account?.name ?? "(Multiple)",
+                    readOnly: account == null,
+                    onChanged: (account != null) ? onEditName : null,
                   )),
-                  account.avatar(onTap: (_) => onEditIcon())
+                  if (account != null) account.avatar(onTap: (_) => onEditIcon())
                 ],
               ),
               FormBuilderTextField(
                 name: 'birth',
                 decoration: InputDecoration(labelText: 'Birth Height'),
-                initialValue: account.birth.toString(),
+                initialValue: account?.birth.toString() ?? "",
                 keyboardType: TextInputType.number,
+                readOnly: account == null,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: onEditBirth,
+                onChanged: (account != null) ? onEditBirth : null,
               ),
-              FormBuilderSwitch(
+              FormBuilderCheckbox(
                 name: "enabled",
                 title: Text("Enabled"),
-                initialValue: account.enabled,
+                initialValue:
+                  accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
+                tristate: account == null,
                 onChanged: onEditEnabled,
               ),
-              FormBuilderSwitch(
+              FormBuilderCheckbox(
                 name: "hidden",
                 title: Text("Hidden"),
-                initialValue: account.hidden,
+                initialValue:
+                  accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
+                tristate: account == null,
                 onChanged: onEditHidden,
               )
             ],
@@ -290,10 +300,10 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   void onEditName(String? name) async {
     if (name != null) {
-      account = account.copyWith(name: name);
+      accounts[0] = accounts[0].copyWith(name: name);
       await updateAccount(
           update:
-              AccountUpdate(coin: account.coin, id: account.id, name: name));
+              AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, name: name));
       await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
@@ -304,10 +314,10 @@ class AccountEditPageState extends State<AccountEditPage> {
     final icon = await picker.pickImage(source: ImageSource.gallery);
     if (icon != null) {
       final bytes = await icon.readAsBytes();
-      account = account.copyWith(icon: bytes);
+      accounts[0] = accounts[0].copyWith(icon: bytes);
       await updateAccount(
           update:
-              AccountUpdate(coin: account.coin, id: account.id, icon: bytes));
+              AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
       await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
@@ -315,32 +325,39 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   void onEditBirth(String? birth) async {
     if (birth != null && birth.isNotEmpty) {
-      account = account.copyWith(birth: int.parse(birth));
+      accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
       await updateAccount(
           update: AccountUpdate(
-              coin: account.coin, id: account.id, birth: int.parse(birth)));
+              coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth)));
       await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
   }
 
-  void onEditEnabled(v) async {
-    account = account.copyWith(enabled: v);
-    await updateAccount(
-        update: AccountUpdate(coin: account.coin, id: account.id, enabled: v));
+  void onEditEnabled(bool? v) async {
+    if (v == null) return;
+    for (var i = 0; i < accounts.length; i++) {
+      accounts[i] = accounts[i].copyWith(enabled: v);
+      await updateAccount(
+          update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v));
+    }
     await AppStoreBase.instance.loadAccounts();
     setState(() {});
   }
 
-  void onEditHidden(v) async {
-    account = account.copyWith(hidden: v);
-    await updateAccount(
-        update: AccountUpdate(coin: account.coin, id: account.id, hidden: v));
+  void onEditHidden(bool? v) async {
+    if (v == null) return;
+    for (var i = 0; i < accounts.length; i++) {
+      accounts[i] = accounts[i].copyWith(hidden: v);
+      await updateAccount(
+          update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v));
+    }
     await AppStoreBase.instance.loadAccounts();
     setState(() {});
   }
 
   void onExport() async {
+    final account = accounts.first;
     final password = await inputPassword(context,
         title: "Export Account", message: "File Password");
     if (password != null) {
@@ -354,7 +371,8 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onReset() async {
-    await resetSync(id: account.id);
+    for (var account in accounts)
+      await resetSync(id: account .id);
     await AppStoreBase.instance.loadAccounts();
   }
 }
