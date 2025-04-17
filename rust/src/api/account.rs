@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use bip32::{ExtendedPrivateKey, ExtendedPublicKey, Prefix, PrivateKey};
+use bip39::Mnemonic;
 use flutter_rust_bridge::frb;
 use orchard::keys::{FullViewingKey, Scope};
 use rand_core::{OsRng, RngCore as _};
@@ -364,10 +365,12 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
                 &address.encode(&network),
             )
             .await?;
-        } else if let Some(svk) = uvk.sapling() {
+        }
+        if let Some(svk) = uvk.sapling() {
             init_account_sapling(pool, account).await?;
             store_account_sapling_vk(pool, account, svk).await?;
-        } else if let Some(ovk) = uvk.orchard() {
+        }
+        if let Some(ovk) = uvk.orchard() {
             init_account_orchard(pool, account).await?;
             store_account_orchard_vk(pool, account, ovk).await?;
         }
@@ -516,8 +519,7 @@ pub async fn get_addresses() -> Result<Addresses> {
     let ua = UnifiedAddress::from_receivers(oaddr, saddr, taddr);
 
     // final fallback if we have a transparent address from a BIP 38 secret key
-    let taddr = taddr.map(|x| x.encode(&c.network))
-        .or(tkeys.address);
+    let taddr = taddr.map(|x| x.encode(&c.network)).or(tkeys.address);
 
     let addresses = Addresses {
         taddr,
@@ -576,7 +578,7 @@ pub async fn print_keys(id: u32) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
 
-    sqlx::query(
+    let (seed, aindex) = sqlx::query(
         "SELECT name, seed, seed_fingerprint, aindex, dindex,
         def_dindex, birth FROM accounts WHERE id_account = ?",
     )
@@ -601,6 +603,7 @@ pub async fn print_keys(id: u32) -> Result<()> {
             def_dindex,
             birth
         );
+        (seed, aindex)
     })
     .fetch_one(connection)
     .await?;
@@ -622,6 +625,22 @@ pub async fn print_keys(id: u32) -> Result<()> {
         })
         .fetch_all(connection)
         .await?;
+
+    let seed = seed.unwrap();
+    let memo = Mnemonic::from_str(&seed).unwrap();
+    let seed = memo.to_seed("");
+
+    let usk =
+        UnifiedSpendingKey::from_seed(&c.network, &seed, AccountId::try_from(aindex).unwrap())?;
+    let uvk = usk.to_unified_full_viewing_key();
+    if uvk.sapling().is_some() {
+        println!("Has Sapling");
+    }
+    if uvk.orchard().is_some() {
+        println!("Has Orchard");
+    }
+    let uvk = uvk.encode(&c.network);
+    println!("Unified Full Viewing Key: {}", uvk);
 
     Ok(())
 }
