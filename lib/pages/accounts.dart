@@ -102,14 +102,15 @@ class AccountListPage2State extends State<AccountListPage2> {
     }
   }
 
+  List<Account> get accounts => AppStoreBase.instance.accounts
+      .where((a) => includeHidden || !a.hidden)
+      .toList();
+
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (context) {
       final tt = Theme.of(context).textTheme;
       final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
-      final accounts = AppStoreBase.instance.accounts
-          .where((a) => includeHidden || !a.hidden)
-          .toList();
 
       return EditableList<Account>(
           key: listKey,
@@ -125,11 +126,12 @@ class AccountListPage2State extends State<AccountListPage2> {
                 key: ValueKey(account.id),
                 child: GestureDetector(
                   child: ListTile(
-                    leading: account.avatar(selected: selected ?? false, onTap: onSelectChanged),
+                    leading: account.avatar(
+                        selected: selected ?? false, onTap: onSelectChanged),
                     title: Text(account.name,
-                              style: !account.enabled
-                                  ? TextStyle(color: Colors.grey)
-                                  : null),
+                        style: !account.enabled
+                            ? TextStyle(color: Colors.grey)
+                            : null),
                     subtitle: Text(zatToString(account.balance),
                         style: t.copyWith(fontWeight: FontWeight.w700)),
                     trailing: Observer(
@@ -231,8 +233,8 @@ class AccountListPage2State extends State<AccountListPage2> {
     logger.i("Reorder $oldIndex to $newIndex");
 
     await reorderAccount(
-        oldPosition: AppStoreBase.instance.accounts[oldIndex].position,
-        newPosition: AppStoreBase.instance.accounts[newIndex].position);
+        oldPosition: accounts[oldIndex].position,
+        newPosition: accounts[newIndex].position);
     await AppStoreBase.instance.loadAccounts();
   }
 
