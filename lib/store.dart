@@ -29,7 +29,7 @@ abstract class AppStoreBase with Store {
   List<Memo> memos = [];
   ObservableMap<int, int> heights = ObservableMap.of({});
 
-  String dbName = "zkool";
+  String dbName = appName;
   String dbFilepath = "";
   String lwd = "https://zec.rocks";
 
