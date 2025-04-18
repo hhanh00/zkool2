@@ -8,10 +8,12 @@ import 'package:zkool/store.dart';
 
 var logger = Logger();
 
+const String appName = "zkool";
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final dbName = prefs.getString("database") ?? "zkool";
+  final dbName = prefs.getString("database") ?? appName;
   await RustLib.init();
   AppStoreBase.instance.dbName = dbName;
 

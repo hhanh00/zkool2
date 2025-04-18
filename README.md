@@ -87,6 +87,7 @@ A wallet for zcash
     - [x] duplicate accounts sync - identical nullifiers: only one account is
     detected
     - [x] heights should update in account list after sync
+    - [x] fallback to default db on incorrect passwd
 
 ## User Stories
 
