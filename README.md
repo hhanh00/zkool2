@@ -17,6 +17,7 @@ A wallet for zcash
     - [x] icon
     - [x] enabled
     - [x] hidden
+    - [x] multi edit for enabled & hidden
 - [x] Account Manager
     - [x] CRUD
     - [x] reorder
@@ -28,7 +29,7 @@ A wallet for zcash
     - [x] rewind
     - [x] memo
     - [x] reorg detection
-    - [x] continuous
+    - [x] continuous - tbd
     - [x] retry
     - [x] scan past transparent addresses
     - [x] reset
