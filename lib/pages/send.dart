@@ -160,7 +160,6 @@ class Send2Page extends StatefulWidget {
 class Send2PageState extends State<Send2Page> {
   String? txId;
   var recipientPaysFee = false;
-  var srcPools = "7";
   final formKey = GlobalKey<FormBuilderState>();
 
   @override
@@ -212,11 +211,11 @@ class Send2PageState extends State<Send2Page> {
       return;
     }
 
-    final srcPools2 = int.parse(srcPools);
+    final srcPools = form.fields['source pools']?.value;
 
     try {
       final tx = await prepare(
-          srcPools: srcPools2,
+          srcPools: srcPools,
           recipients: widget.recipients,
           recipientPaysFee: recipientPaysFee);
 

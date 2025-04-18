@@ -3,6 +3,7 @@ use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
 use sqlx::Row as _;
 use sqlx::{sqlite::SqliteRow, SqlitePool};
+use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
@@ -340,7 +341,7 @@ pub async fn store_account_transparent_addr(
 ) -> Result<()> {
     sqlx::query(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, address)
-        VALUES (?, ?, ?, ?, ?)",
+        VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
     )
     .bind(account)
     .bind(scope)
@@ -644,6 +645,7 @@ pub async fn reorder_account(
     old_position: u32,
     new_position: u32,
 ) -> Result<()> {
+    info!("Reordering account from {} to {}", old_position, new_position);
     let mut tx = connection.begin().await?;
     let (id, ): (u32, ) = sqlx::query_as("SELECT id_account FROM accounts WHERE position = ?")
         .bind(old_position)
