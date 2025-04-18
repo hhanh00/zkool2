@@ -53,6 +53,8 @@ dev_dependencies:
   mobx_codegen: ^2.7.0
   freezed: ^2.5.7
 
+  flutter_launcher_icons: ^0.14.3
+
 flutter:
   uses-material-design: true
 
