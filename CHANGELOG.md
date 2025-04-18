@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.7.0...zkool-v1.8.0) (2025-04-18)
+
+
+### Features
+
+* fallback to default db on cancel password ([#109](https://github.com/hhanh00/zkool2/issues/109)) ([45f2fa0](https://github.com/hhanh00/zkool2/commit/45f2fa07a554def6e8a4ff0c668ceaa46a12363d))
+* lwd url configuration setting ([#101](https://github.com/hhanh00/zkool2/issues/101)) ([7eadd90](https://github.com/hhanh00/zkool2/commit/7eadd906b4220298fbbc271755a690c498a94ea9))
+* multi account edit ([#100](https://github.com/hhanh00/zkool2/issues/100)) ([d62ce95](https://github.com/hhanh00/zkool2/commit/d62ce95469068e60a2667e846bd58a793185e73f))
+* show balance of all accounts ([#97](https://github.com/hhanh00/zkool2/issues/97)) ([a10d4a5](https://github.com/hhanh00/zkool2/commit/a10d4a57bb0139d881bc7bbad8374bf2e6883682))
+* toasts and snackbars for log messages ([#98](https://github.com/hhanh00/zkool2/issues/98)) ([d82301e](https://github.com/hhanh00/zkool2/commit/d82301e6ce7863280a0fd205387fa477049e40be))
+* transparent sweep ([#96](https://github.com/hhanh00/zkool2/issues/96)) ([3ace737](https://github.com/hhanh00/zkool2/commit/3ace737ad5f0467b28db8f410716b00c736df3e7))
+
+
+### Bug Fixes
+
+* account list style ([#99](https://github.com/hhanh00/zkool2/issues/99)) ([7d7cf3f](https://github.com/hhanh00/zkool2/commit/7d7cf3ff704620b1855146725f086e3478f0814c))
+* account reorder, src pool selection ([#105](https://github.com/hhanh00/zkool2/issues/105)) ([3eb1b41](https://github.com/hhanh00/zkool2/commit/3eb1b4167ef5aa1ab577e2c953290ce4d191e1f0))
+* change app icon ([#108](https://github.com/hhanh00/zkool2/issues/108)) ([1d6c95b](https://github.com/hhanh00/zkool2/commit/1d6c95be6f2feec0bb7ee378829121e206b79673))
+* new account by xprv/xpub/bip38 ([#103](https://github.com/hhanh00/zkool2/issues/103)) ([d75953d](https://github.com/hhanh00/zkool2/commit/d75953d1885e75ef2913934e8797fe60a72506c0))
+* new accounts don't show up ([#102](https://github.com/hhanh00/zkool2/issues/102)) ([6a07fb0](https://github.com/hhanh00/zkool2/commit/6a07fb0357c3110b39c5ad34dd2dc9f327f47c5e))
+* sync and init ([#94](https://github.com/hhanh00/zkool2/issues/94)) ([e8ea72e](https://github.com/hhanh00/zkool2/commit/e8ea72e2c1fbeaf39455e6145e0f7dc1dd689c11))
+* ufvk import ([#104](https://github.com/hhanh00/zkool2/issues/104)) ([6c93836](https://github.com/hhanh00/zkool2/commit/6c93836d95e969d538f182384a189a4832175b6a))
+* use bundled sqlcipher ([#106](https://github.com/hhanh00/zkool2/issues/106)) ([685e776](https://github.com/hhanh00/zkool2/commit/685e7764c4f50a3f5faa1801f5bd552d1307e3f1))
+
 ## [1.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.6.0...zkool-v1.7.0) (2025-04-15)
 
 
