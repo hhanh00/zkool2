@@ -20,7 +20,7 @@ use secp256k1::SecretKey;
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
-use tracing::{event, debug, span, Level};
+use tracing::{debug, event, info, span, Level};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::{
     legacy::TransparentAddress,
@@ -74,8 +74,8 @@ pub async fn plan_transaction(
             .intersect(&PoolMask(recipient.pools.unwrap_or(ALL_POOLS)));
         recipient_pools = recipient_pools.union(&pool);
     }
-    debug!("effective_src_pools: {:#b}", effective_src_pools.0);
-    debug!("recipient_pools: {:#b}", recipient_pools.0);
+    info!("effective_src_pools: {src_pools} {:#b}", effective_src_pools.0);
+    info!("recipient_pools: {:#b}", recipient_pools.0);
     let change_pool = get_change_pool(effective_src_pools, recipient_pools);
     debug!("change_pool: {:#b}", change_pool);
 
