@@ -948,6 +948,7 @@ mixin _$NewAccount {
   String get key => throw _privateConstructorUsedError;
   int get aindex => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
+  bool get useInternal => throw _privateConstructorUsedError;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -968,7 +969,8 @@ abstract class $NewAccountCopyWith<$Res> {
       bool restore,
       String key,
       int aindex,
-      int? birth});
+      int? birth,
+      bool useInternal});
 }
 
 /// @nodoc
@@ -992,6 +994,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? key = null,
     Object? aindex = null,
     Object? birth = freezed,
+    Object? useInternal = null,
   }) {
     return _then(_value.copyWith(
       icon: freezed == icon
@@ -1018,6 +1021,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      useInternal: null == useInternal
+          ? _value.useInternal
+          : useInternal // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -1036,7 +1043,8 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       bool restore,
       String key,
       int aindex,
-      int? birth});
+      int? birth,
+      bool useInternal});
 }
 
 /// @nodoc
@@ -1058,6 +1066,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? key = null,
     Object? aindex = null,
     Object? birth = freezed,
+    Object? useInternal = null,
   }) {
     return _then(_$NewAccountImpl(
       icon: freezed == icon
@@ -1084,6 +1093,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      useInternal: null == useInternal
+          ? _value.useInternal
+          : useInternal // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -1097,7 +1110,8 @@ class _$NewAccountImpl implements _NewAccount {
       required this.restore,
       required this.key,
       required this.aindex,
-      this.birth});
+      this.birth,
+      required this.useInternal});
 
   @override
   final Uint8List? icon;
@@ -1111,10 +1125,12 @@ class _$NewAccountImpl implements _NewAccount {
   final int aindex;
   @override
   final int? birth;
+  @override
+  final bool useInternal;
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, aindex: $aindex, birth: $birth)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, aindex: $aindex, birth: $birth, useInternal: $useInternal)';
   }
 
   @override
@@ -1127,7 +1143,9 @@ class _$NewAccountImpl implements _NewAccount {
             (identical(other.restore, restore) || other.restore == restore) &&
             (identical(other.key, key) || other.key == key) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
-            (identical(other.birth, birth) || other.birth == birth));
+            (identical(other.birth, birth) || other.birth == birth) &&
+            (identical(other.useInternal, useInternal) ||
+                other.useInternal == useInternal));
   }
 
   @override
@@ -1138,7 +1156,8 @@ class _$NewAccountImpl implements _NewAccount {
       restore,
       key,
       aindex,
-      birth);
+      birth,
+      useInternal);
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -1156,7 +1175,8 @@ abstract class _NewAccount implements NewAccount {
       required final bool restore,
       required final String key,
       required final int aindex,
-      final int? birth}) = _$NewAccountImpl;
+      final int? birth,
+      required final bool useInternal}) = _$NewAccountImpl;
 
   @override
   Uint8List? get icon;
@@ -1170,6 +1190,8 @@ abstract class _NewAccount implements NewAccount {
   int get aindex;
   @override
   int? get birth;
+  @override
+  bool get useInternal;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.

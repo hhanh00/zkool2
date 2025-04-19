@@ -29,6 +29,7 @@ use zcash_protocol::consensus::Network;
 pub fn try_sapling_decrypt(
     network: &Network,
     account: u32,
+    scope: u8,
     ivk: &SaplingIvk,
     height: u32,
     ivtx: u32,
@@ -67,6 +68,7 @@ pub fn try_sapling_decrypt(
                 let dbn = Note {
                     pool: 1,
                     account,
+                    scope,
                     height,
                     value,
                     rcm: note.rcm().to_bytes().to_vec(),
@@ -89,6 +91,7 @@ const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
 pub fn try_orchard_decrypt(
     network: &Network,
     account: u32,
+    scope: u8,
     ivk: &IncomingViewingKey,
     height: u32,
     ivtx: u32,
@@ -137,6 +140,7 @@ pub fn try_orchard_decrypt(
                 let dbn = Note {
                     pool: 2,
                     account,
+                    scope,
                     height,
                     value,
                     rcm: note.rseed().as_bytes().to_vec(),

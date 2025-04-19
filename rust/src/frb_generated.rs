@@ -1801,6 +1801,7 @@ impl SseDecode for crate::api::account::NewAccount {
         let mut var_key = <String>::sse_decode(deserializer);
         let mut var_aindex = <u32>::sse_decode(deserializer);
         let mut var_birth = <Option<u32>>::sse_decode(deserializer);
+        let mut var_useInternal = <bool>::sse_decode(deserializer);
         return crate::api::account::NewAccount {
             icon: var_icon,
             name: var_name,
@@ -1808,6 +1809,7 @@ impl SseDecode for crate::api::account::NewAccount {
             key: var_key,
             aindex: var_aindex,
             birth: var_birth,
+            use_internal: var_useInternal,
         };
     }
 }
@@ -2223,6 +2225,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::NewAccount {
             self.key.into_into_dart().into_dart(),
             self.aindex.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
+            self.use_internal.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2599,6 +2602,7 @@ impl SseEncode for crate::api::account::NewAccount {
         <String>::sse_encode(self.key, serializer);
         <u32>::sse_encode(self.aindex, serializer);
         <Option<u32>>::sse_encode(self.birth, serializer);
+        <bool>::sse_encode(self.use_internal, serializer);
     }
 }
 
