@@ -24,7 +24,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         id_account INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         seed TEXT,
-        passphrase TEXT NOT NULL DEFAULT
+        passphrase TEXT NOT NULL DEFAULT '',
         seed_fingerprint BLOB,
         aindex INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
