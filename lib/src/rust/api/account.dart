@@ -166,6 +166,7 @@ class NewAccount with _$NewAccount {
     required String name,
     required bool restore,
     required String key,
+    String? passphrase,
     required int aindex,
     int? birth,
     required bool useInternal,
