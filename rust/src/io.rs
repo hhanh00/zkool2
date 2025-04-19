@@ -203,7 +203,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     for tx in transactions.iter_mut() {
         // Get the notes and memos for the given transaction
         let notes = sqlx::query(
-            "SELECT id_note, n.height, n.account, n.pool, nullifier, value, cmx,
+            "SELECT id_note, n.height, n.account, n.pool, n.scope, nullifier, value, cmx,
         taddress, position, diversifier, rcm, rho, locked, vout, memo_text, memo_bytes
         FROM notes n LEFT JOIN memos m ON n.id_note = m.note WHERE n.tx = ?",
         )
@@ -213,24 +213,26 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
             let height: u32 = row.get(1);
             let account: u32 = row.get(2);
             let pool: u8 = row.get(3);
-            let nullifier: Vec<u8> = row.get(4);
-            let value: u64 = row.get::<i64, _>(5) as u64;
-            let cmx: Option<Vec<u8>> = row.get(6);
-            let taddress: Option<u32> = row.get(7);
-            let position: Option<u32> = row.get(8);
-            let diversifier: Option<Vec<u8>> = row.get(9);
-            let rcm: Option<Vec<u8>> = row.get(10);
-            let rho: Option<Vec<u8>> = row.get(11);
-            let locked: bool = row.get(12);
-            let vout: Option<u32> = row.get(13);
-            let memo_text: Option<String> = row.get(14);
-            let memo_bytes: Option<Vec<u8>> = row.get(15);
+            let scope: Option<u8> = row.get(4);
+            let nullifier: Vec<u8> = row.get(5);
+            let value: u64 = row.get::<i64, _>(6) as u64;
+            let cmx: Option<Vec<u8>> = row.get(7);
+            let taddress: Option<u32> = row.get(8);
+            let position: Option<u32> = row.get(9);
+            let diversifier: Option<Vec<u8>> = row.get(10);
+            let rcm: Option<Vec<u8>> = row.get(11);
+            let rho: Option<Vec<u8>> = row.get(12);
+            let locked: bool = row.get(13);
+            let vout: Option<u32> = row.get(14);
+            let memo_text: Option<String> = row.get(15);
+            let memo_bytes: Option<Vec<u8>> = row.get(16);
 
             IONote {
                 id_note,
                 height,
                 account,
                 pool,
+                scope,
                 nullifier,
                 value,
                 cmx,
@@ -378,13 +380,14 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         for note in transaction.notes.iter() {
             let new_taddress = note.taddress.and_then(|id_taddress| new_taddresses.get(&id_taddress));
             let r = sqlx::query("INSERT INTO notes
-                (tx, height, account, pool, nullifier, value, cmx, taddress, position, diversifier,
+                (tx, height, account, pool, scope, nullifier, value, cmx, taddress, position, diversifier,
                 rcm, rho, locked)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .bind(new_id_tx)
                 .bind(note.height)
                 .bind(new_id_account)
                 .bind(note.pool)
+                .bind(note.scope)
                 .bind(&note.nullifier)
                 .bind(note.value as i64)
                 .bind(&note.cmx)
@@ -537,6 +540,7 @@ pub struct IONote {
     pub height: u32,
     pub account: u32,
     pub pool: u8,
+    pub scope: Option<u8>,
     pub nullifier: Vec<u8>,
     pub value: u64,
     pub cmx: Option<Vec<u8>>,

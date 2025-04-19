@@ -117,7 +117,7 @@ abstract class AppStoreBase with Store {
     syncInProgress = false;
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
-    final delay = Random().nextInt(maxDelay); // randomize delay
+    final delay = 30 + Random().nextInt(maxDelay); // randomize delay
     final message =
         "Sync error $e, $retryCount retries, retrying in $delay seconds";
     logger.e(message);
