@@ -35,6 +35,7 @@ pub async fn synchronize(
     let pool = c.get_pool();
     let progress2 = progress.clone();
 
+    let mut account_use_internal = HashMap::<u32, bool>::new();
     let res = async {
         recover_from_partial_sync(&pool, &accounts).await?;
 
@@ -51,6 +52,13 @@ pub async fn synchronize(
             .await?;
 
             account_heights.insert(account, height + 1);
+
+            let (use_internal,): (bool,) =
+                sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+                    .bind(account)
+                    .fetch_one(pool)
+                    .await?;
+            account_use_internal.insert(account, use_internal);
         }
 
         // Create a sorted list of unique heights
@@ -75,12 +83,15 @@ pub async fn synchronize(
                 current_height
             };
 
-            // Find accounts that have a transparent height <= this start_height
-            let accounts_to_sync: Vec<u32> = account_heights
+            // Find accounts that have a height <= this start_height
+            let accounts_to_sync = account_heights
                 .iter()
                 .filter(|&(_, &height)| height <= start_height)
-                .map(|(&account, _)| account)
-                .collect();
+                .map(|(&account, _)| {
+                    let use_internal = account_use_internal[&account];
+                    (account, use_internal)
+                })
+                .collect::<Vec<_>>();
 
             // Skip if no accounts to sync
             if accounts_to_sync.is_empty() {
@@ -90,11 +101,12 @@ pub async fn synchronize(
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
+            let account_ids = accounts_to_sync.iter().map(|(account, _)| *account).collect::<Vec<_>>();
             transparent_sync(
                 &network,
                 pool,
                 &mut client,
-                &accounts_to_sync,
+                &account_ids,
                 start_height,
                 end_height,
                 transparent_limit,
@@ -105,7 +117,7 @@ pub async fn synchronize(
                 &network,
                 pool,
                 &mut client,
-                accounts.clone(),
+                &accounts_to_sync,
                 start_height,
                 end_height,
                 tx_progress.clone(),
@@ -113,7 +125,7 @@ pub async fn synchronize(
             .await?;
 
             // Update our local map as well for the next iteration
-            for account in &accounts_to_sync {
+            for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
                 crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
             }
@@ -141,7 +153,7 @@ pub(crate) async fn transparent_sync(
     limit: u32,
 ) -> Result<()> {
     let mut addresses = vec![];
-    for account in accounts.iter() {
+    for account in accounts {
         // scan latest 5 receive and change addresses
         let mut rows = sqlx::query("
                 WITH receive AS
@@ -237,15 +249,18 @@ pub(crate) async fn transparent_sync(
                     if let Some((id, amount)) = row {
                         // note was found
                         // add a spent entry
-                        sqlx::query("INSERT INTO spends (account, id_note, pool, tx, height, value) 
+                        sqlx::query(
+                            "INSERT INTO spends (account, id_note, pool, tx, height, value)
                         SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
-                        ON CONFLICT DO NOTHING")
+                        ON CONFLICT DO NOTHING",
+                        )
                         .bind(account)
                         .bind(id)
                         .bind(height)
                         .bind(-amount)
                         .bind(&txid)
-                        .execute(&mut *db_tx).await?;
+                        .execute(&mut *db_tx)
+                        .await?;
                     }
                 }
 

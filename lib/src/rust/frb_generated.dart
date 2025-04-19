@@ -1429,8 +1429,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NewAccount dco_decode_new_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return NewAccount(
       icon: dco_decode_opt_list_prim_u_8_strict(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -1438,6 +1438,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       key: dco_decode_String(arr[3]),
       aindex: dco_decode_u_32(arr[4]),
       birth: dco_decode_opt_box_autoadd_u_32(arr[5]),
+      useInternal: dco_decode_bool(arr[6]),
     );
   }
 
@@ -1886,13 +1887,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_key = sse_decode_String(deserializer);
     var var_aindex = sse_decode_u_32(deserializer);
     var var_birth = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_useInternal = sse_decode_bool(deserializer);
     return NewAccount(
         icon: var_icon,
         name: var_name,
         restore: var_restore,
         key: var_key,
         aindex: var_aindex,
-        birth: var_birth);
+        birth: var_birth,
+        useInternal: var_useInternal);
   }
 
   @protected
@@ -2324,6 +2327,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.key, serializer);
     sse_encode_u_32(self.aindex, serializer);
     sse_encode_opt_box_autoadd_u_32(self.birth, serializer);
+    sse_encode_bool(self.useInternal, serializer);
   }
 
   @protected

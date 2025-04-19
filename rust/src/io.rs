@@ -9,7 +9,7 @@ use tracing::info;
 pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
     let mut io_account = sqlx::query(
-        "SELECT id_account, name, seed, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, hidden, saved, enabled
+        "SELECT id_account, name, seed, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled
         FROM accounts WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
@@ -23,9 +23,10 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
             let icon: Option<Vec<u8>> = row.get(7);
             let birth: u32 = row.get(8);
             let position: u32 = row.get(9);
-            let hidden: bool = row.get(10);
-            let saved: bool = row.get(11);
-            let enabled: bool = row.get(12);
+            let use_internal: bool = row.get(10);
+            let hidden: bool = row.get(11);
+            let saved: bool = row.get(12);
+            let enabled: bool = row.get(13);
 
             IOAccount {
                 id_account,
@@ -38,6 +39,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
                 icon,
                 birth,
                 position,
+                use_internal,
                 hidden,
                 saved,
                 enabled,
@@ -287,8 +289,8 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
 
     // Insert the account into the database
     let r = sqlx::query("INSERT INTO accounts
-        (name, seed, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, hidden, saved, enabled)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)")
+        (name, seed, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)")
         .bind(&io_account.name)
         .bind(&io_account.seed)
         .bind(&io_account.seed_fingerprint)
@@ -297,6 +299,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .bind(io_account.def_dindex)
         .bind(&io_account.icon)
         .bind(io_account.birth)
+        .bind(io_account.use_internal)
         .bind(io_account.hidden)
         .bind(io_account.saved)
         .bind(io_account.enabled)
@@ -468,6 +471,7 @@ pub struct IOAccount {
     pub icon: Option<Vec<u8>>,
     pub birth: u32,
     pub position: u32,
+    pub use_internal: bool,
     pub hidden: bool,
     pub saved: bool,
     pub enabled: bool,
@@ -562,15 +566,15 @@ pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
 
     let encrypted = age::encrypt(&recipient, data)?;
 
-    Ok(encrypted)  
+    Ok(encrypted)
 }
 
 pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
     let passphrase = SecretString::from(passphrase.to_owned());
-    let identity = age::scrypt::Identity::new(passphrase);  
+    let identity = age::scrypt::Identity::new(passphrase);
 
     let decrypted = age::decrypt(&identity, data)
         .map_err(|_| anyhow::anyhow!("Decryption Error"))?;
 
-    Ok(decrypted)  
+    Ok(decrypted)
 }

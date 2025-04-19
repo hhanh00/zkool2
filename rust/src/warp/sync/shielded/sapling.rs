@@ -41,6 +41,7 @@ impl ShieldedProtocol for SaplingProtocol {
     async fn extract_ivk(
         connection: &SqlitePool,
         account: u32,
+        scope: u8,
     ) -> Result<Option<(Self::IVK, Self::NK)>> {
         let vk: Option<(Vec<u8>, )> = sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
             .bind(account)
@@ -48,8 +49,16 @@ impl ShieldedProtocol for SaplingProtocol {
             .await?;
         let keys = vk.map(|(vk, )| {
             let vk = DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
-            let ivk = vk.fvk().vk.ivk();
-            let nk = vk.to_nk(Scope::External);
+            let (ivk, nk) = if scope == 1 {
+                let ivk = vk.to_internal_fvk().vk.ivk();
+                let nk = vk.to_nk(Scope::Internal);
+                (ivk, nk)
+            }
+            else {
+                let ivk = vk.fvk().vk.ivk();
+                let nk = vk.to_nk(Scope::External);
+                (ivk, nk)
+            };
             (ivk, nk)
         });
         Ok(keys)
@@ -58,15 +67,16 @@ impl ShieldedProtocol for SaplingProtocol {
     fn try_decrypt(
         network: &Network,
         account: u32,
+        scope: u8,
         ivk: &Self::IVK,
         height: u32,
         ivtx: u32,
         vout: u32,
         output: &Self::Output,
     ) -> Result<Option<(sapling_crypto::Note, crate::sync::Note)>> {
-        try_sapling_decrypt(network, account, ivk, height, ivtx, vout, output)
+        try_sapling_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
     }
-    
+
     fn derive_nf(nk: &Self::NK, position: u32, note: &mut Self::Note) -> Result<Hash32> {
         let nf = note.nf(nk, position as u64);
         Ok(nf.0)

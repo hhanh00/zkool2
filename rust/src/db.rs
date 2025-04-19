@@ -10,26 +10,6 @@ use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 
-pub async fn drop_schema(connection: &SqlitePool) -> Result<()> {
-    sqlx::query("DROP TABLE IF EXISTS accounts")
-        .execute(connection)
-        .await?;
-    sqlx::query("DROP TABLE IF EXISTS transparent_accounts")
-        .execute(connection)
-        .await?;
-    sqlx::query("DROP TABLE IF EXISTS transparent_address_accounts")
-        .execute(connection)
-        .await?;
-    sqlx::query("DROP TABLE IF EXISTS sapling_accounts")
-        .execute(connection)
-        .await?;
-    sqlx::query("DROP TABLE IF EXISTS orchard_accounts")
-        .execute(connection)
-        .await?;
-
-    Ok(())
-}
-
 pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(
@@ -51,6 +31,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         icon BLOB,
         birth INTEGER NOT NULL,
         position INTEGER NOT NULL,
+        use_internal BOOL NOT NULL,
         hidden BOOL NOT NULL,
         saved BOOL NOT NULL,
         enabled BOOL NOT NULL DEFAULT TRUE
@@ -219,6 +200,7 @@ pub async fn store_account_metadata(
     name: &str,
     icon: &Option<Vec<u8>>,
     birth: u32,
+    use_internal: bool,
 ) -> Result<u32> {
     let (last_position,): (u32,) = sqlx::query_as("SELECT MAX(position) FROM accounts")
         .fetch_optional(connection)
@@ -227,8 +209,8 @@ pub async fn store_account_metadata(
 
     let (id,): (u32,) = sqlx::query_as(
         "INSERT INTO accounts(name, icon, birth,
-        aindex, dindex, def_dindex, position, saved, hidden)
-        VALUES (?, ?, ?, 0, 0, 0, ?, FALSE, FALSE)
+        aindex, dindex, def_dindex, position, use_internal, saved, hidden)
+        VALUES (?, ?, ?, 0, 0, 0, ?, ?, FALSE, FALSE)
         ON CONFLICT(id_account) DO UPDATE SET
             name = excluded.name
         RETURNING id_account",
@@ -237,6 +219,7 @@ pub async fn store_account_metadata(
     .bind(icon)
     .bind(birth)
     .bind(last_position + 1)
+    .bind(use_internal)
     .fetch_one(connection)
     .await?;
 
