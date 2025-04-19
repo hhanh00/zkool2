@@ -2,14 +2,19 @@ use flutter_rust_bridge::frb;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_primitives::legacy::TransparentAddress;
 
-use crate::{get_coin, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}};
+use crate::{get_coin, key::{is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}};
+
+#[frb(sync)]
+pub fn is_valid_phrase(phrase: &str) -> bool {
+    crate::key::is_valid_phrase(phrase)
+}
 
 #[frb(sync)]
 pub fn is_valid_key(key: &str) -> bool {
     let c = get_coin!();
     let network = &c.network;
 
-    if is_valid_phrase(key) {
+    if crate::key::is_valid_phrase(key) {
         return true;
     }
 
