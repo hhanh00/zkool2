@@ -307,7 +307,7 @@ async fn handle_message(
         WarpSyncMessage::Note(note) => {
             let r = sqlx::query
                     ("INSERT INTO notes
-                        (account, height, pool, taddress, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
+                        (account, height, pool, scope, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
                         SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ? FROM transactions t
                         WHERE t.account = ? AND t.txid = ?")
                     .bind(note.height)
