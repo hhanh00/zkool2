@@ -24,6 +24,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         id_account INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         seed TEXT,
+        passphrase TEXT NOT NULL DEFAULT
         seed_fingerprint BLOB,
         aindex INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
@@ -94,7 +95,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         "CREATE TABLE IF NOT EXISTS headers(
         height INTEGER PRIMARY KEY,
         hash BLOB NOT NULL,
-        time INTEGER NOT NULL)"
+        time INTEGER NOT NULL)",
     )
     .execute(connection)
     .await?;
@@ -116,7 +117,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         rcm BLOB,
         rho BLOB,
         locked BOOL NOT NULL DEFAULT FALSE,
-        UNIQUE(account, nullifier))"
+        UNIQUE(account, nullifier))",
     )
     .execute(connection)
     .await?;
@@ -128,7 +129,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         account INTEGER NOT NULL,
         pool INTEGER NOT NULL,
         tx INTEGER NOT NULL,
-        value INTEGER NOT NULL)"
+        value INTEGER NOT NULL)",
     )
     .execute(connection)
     .await?;
@@ -141,7 +142,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         account INTEGER NOT NULL,
         time INTEGER,
         details BOOL NOT NULL DEFAULT FALSE,
-        UNIQUE (account, txid))"
+        UNIQUE (account, txid))",
     )
     .execute(connection)
     .await?;
@@ -153,7 +154,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         note INTEGER NOT NULL,
         height INTEGER NOT NULL,
         witness BLOB NOT NULL,
-        UNIQUE (note, height))"
+        UNIQUE (note, height))",
     )
     .execute(connection)
     .await?;
@@ -169,7 +170,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         note INTEGER,
         memo_text TEXT,
         memo_bytes BLOB NOT NULL,
-        UNIQUE (tx, pool, vout))"
+        UNIQUE (tx, pool, vout))",
     )
     .execute(connection)
     .await?;
@@ -243,17 +244,20 @@ pub async fn store_account_seed(
     connection: &SqlitePool,
     account: u32,
     phrase: &str,
+    passphrase: &str,
     fingerprint: &[u8],
     aindex: u32,
 ) -> Result<()> {
     sqlx::query(
         "UPDATE accounts
          SET seed = ?,
+             passphrase = ?,
              seed_fingerprint = ?,
              aindex = ?
          WHERE id_account = ?",
     )
     .bind(phrase)
+    .bind(passphrase)
     .bind(fingerprint)
     .bind(aindex)
     .bind(account)
@@ -450,17 +454,17 @@ pub async fn select_account_transparent(
     let (xsk, xvk, taddress) = match r {
         Some((None, None)) => {
             // no xprv, no xpub => get the address imported as bip38
-            let taddress = sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?")
-                .bind(account)
-                .map(|row: SqliteRow| row.get::<String, _>(0))
-                .fetch_one(connection)
-                .await?;
+            let taddress =
+                sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?")
+                    .bind(account)
+                    .map(|row: SqliteRow| row.get::<String, _>(0))
+                    .fetch_one(connection)
+                    .await?;
             (None, None, Some(taddress))
         }
         Some((xsk, xvk)) => (xsk, xvk, None),
         None => (None, None, None),
     };
-
 
     let keys = TransparentKeys {
         xsk: xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap()),
@@ -629,9 +633,12 @@ pub async fn reorder_account(
     old_position: u32,
     new_position: u32,
 ) -> Result<()> {
-    info!("Reordering account from {} to {}", old_position, new_position);
+    info!(
+        "Reordering account from {} to {}",
+        old_position, new_position
+    );
     let mut tx = connection.begin().await?;
-    let (id, ): (u32, ) = sqlx::query_as("SELECT id_account FROM accounts WHERE position = ?")
+    let (id,): (u32,) = sqlx::query_as("SELECT id_account FROM accounts WHERE position = ?")
         .bind(old_position)
         .fetch_one(&mut *tx)
         .await?;
@@ -698,23 +705,25 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
             SELECT id_tx, txid, height, time, v.value FROM transactions t
             JOIN v ON t.id_tx = v.tx
             WHERE account = ?
-            ORDER BY height DESC")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let id: u32 = row.get(0);
-            let txid: Vec<u8> = row.get(1);
-            let height: u32 = row.get(2);
-            let time: u32 = row.get(3);
-            let value: i64 = row.get(4);
-            Tx {
-                id,
-                txid,
-                height,
-                time,
-                value,
-            }
-        })
-        .fetch_all(connection).await?;
+            ORDER BY height DESC",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id: u32 = row.get(0);
+        let txid: Vec<u8> = row.get(1);
+        let height: u32 = row.get(2);
+        let time: u32 = row.get(3);
+        let value: i64 = row.get(4);
+        Tx {
+            id,
+            txid,
+            height,
+            time,
+            value,
+        }
+    })
+    .fetch_all(connection)
+    .await?;
     Ok(transactions)
 }
 
@@ -722,37 +731,39 @@ pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
         "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
         FROM memos m JOIN transactions t ON m.tx = t.id_tx
-        WHERE m.account = ? ORDER BY m.height DESC")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let id: u32 = row.get(0);
-            let height: u32 = row.get(1);
-            let tx: u32 = row.get(2);
-            let pool: u8 = row.get(3);
-            let vout: u32 = row.get(4);
-            let note: Option<u32> = row.get(5);
-            let time: u32 = row.get(6);
-            let memo_text: Option<String> = row.get(7);
-            let memo_bytes: Vec<u8> = row.get(8);
-            Memo {
-                id,
-                id_tx: tx,
-                id_note: note,
-                height,
-                pool,
-                vout,
-                time,
-                memo: memo_text,
-                memo_bytes,
-            }
-        })
-        .fetch_all(pool).await?;
+        WHERE m.account = ? ORDER BY m.height DESC",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id: u32 = row.get(0);
+        let height: u32 = row.get(1);
+        let tx: u32 = row.get(2);
+        let pool: u8 = row.get(3);
+        let vout: u32 = row.get(4);
+        let note: Option<u32> = row.get(5);
+        let time: u32 = row.get(6);
+        let memo_text: Option<String> = row.get(7);
+        let memo_bytes: Vec<u8> = row.get(8);
+        Memo {
+            id,
+            id_tx: tx,
+            id_note: note,
+            height,
+            pool,
+            vout,
+            time,
+            memo: memo_text,
+            memo_bytes,
+        }
+    })
+    .fetch_all(pool)
+    .await?;
 
     Ok(memos)
 }
 
 pub async fn get_account_dindex(connection: &SqlitePool, account: u32) -> Result<u32> {
-    let (dindex, ): (u32, ) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
+    let (dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
         .bind(account)
         .fetch_one(connection)
         .await?;
