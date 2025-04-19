@@ -477,20 +477,20 @@ pub async fn trim_sync_data(connection: &SqlitePool, account: u32, height: u32) 
 
 // for each account, find the latest checkpoint before the given height
 // and trim the synchronization data to that height
-pub async fn rewind_sync(connection: &SqlitePool, height: u32) -> Result<()> {
-    let account_checkpoints =
-        sqlx::query("SELECT account, MAX(height) FROM witnesses WHERE height < ? GROUP BY account")
+pub async fn rewind_sync(connection: &SqlitePool, account: u32, height: u32) -> Result<()> {
+    let prev_height =
+        sqlx::query("SELECT MAX(height) FROM witnesses WHERE height < ? AND account = ?")
             .bind(height)
+            .bind(account)
             .map(|row: SqliteRow| {
-                let account: u32 = row.get(0);
-                let height: u32 = row.get(1);
-                (account, height)
+                let height: Option<u32> = row.get(0);
+                height
             })
-            .fetch_all(connection)
+            .fetch_one(connection)
             .await?;
 
-    for (account, height) in account_checkpoints {
-        trim_sync_data(connection, account, height).await?;
+    if let Some(prev_height) = prev_height {
+        trim_sync_data(connection, account, prev_height).await?;
     }
 
     Ok(())

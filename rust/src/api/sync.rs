@@ -313,7 +313,7 @@ pub async fn balance() -> Result<PoolBalance> {
 pub async fn rewind_sync(height: u32) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    crate::sync::rewind_sync(connection, height).await
+    crate::sync::rewind_sync(connection, c.account, height).await
 }
 
 #[frb]

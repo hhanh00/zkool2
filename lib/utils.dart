@@ -8,6 +8,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:zkool/router.dart';
 
 String initials(String name) =>
     name.substring(0, min(2, name.length)).toUpperCase();
@@ -60,13 +61,23 @@ Future<void> showSeed(BuildContext context, String message) async {
       Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS",
           style: t.headlineSmall),
       Gap(16),
-      SelectableText(message, textAlign: TextAlign.center,),
+      SelectableText(
+        message,
+        textAlign: TextAlign.center,
+      ),
     ]),
     desc: message,
     btnOkOnPress: () {},
     autoDismiss: true,
   ).show();
 }
+
+void showSnackbar(String message) =>
+    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
 
 Future<String?> inputPassword(BuildContext context,
     {required String title, String? message}) async {
