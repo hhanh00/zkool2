@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:mobx/mobx.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/utils.dart';
 
 part 'store.g.dart';
 
@@ -83,11 +83,7 @@ abstract class AppStoreBase with Store {
     }
 
     try {
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        SnackBar(
-          content: Text("Starting Synchronization"),
-        ),
-      );
+      showSnackbar("Starting Synchronization");
       syncInProgress = true;
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
@@ -108,11 +104,7 @@ abstract class AppStoreBase with Store {
         syncs.clear();
         syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        SnackBar(
-          content: Text("Synchronization Completed"),
-        ),
-      );
+      showSnackbar("Synchronization Completed");
       });
       return progress;
     } on AnyhowException catch (e) {
@@ -129,11 +121,7 @@ abstract class AppStoreBase with Store {
     final message =
         "Sync error $e, $retryCount retries, retrying in $delay seconds";
     logger.e(message);
-    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+    showSnackbar(message);
     retrySyncTimer?.cancel();
     retrySyncTimer = Timer(Duration(seconds: delay), () {
       startSynchronize(accounts);

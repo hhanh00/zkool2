@@ -112,7 +112,9 @@ pub async fn warp_sync(
             if prev_hash != block_prev_hash {
                 // we need to rewind the database to the previous checkpoint
                 // and start syncing from there next time we get synchronize
-                crate::sync::rewind_sync(connection, start_height - 1).await?;
+                for (account, _) in accounts.iter() {
+                    crate::sync::rewind_sync(connection, *account, start_height - 1).await?;
+                }
                 return Err(SyncError::Reorg(block.height as u32));
             }
         }
