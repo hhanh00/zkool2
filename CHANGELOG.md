@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.8.0...zkool-v1.9.0) (2025-04-19)
+
+
+### Features
+
+* internal change account option ([#110](https://github.com/hhanh00/zkool2/issues/110)) ([9142c09](https://github.com/hhanh00/zkool2/commit/9142c0915412d4ab72de6885fb4fbc93dac49410))
+
+
+### Bug Fixes
+
+* rewind checkpoint ([#112](https://github.com/hhanh00/zkool2/issues/112)) ([b4c239e](https://github.com/hhanh00/zkool2/commit/b4c239e410297504e26155be7e02033f5df54e37))
+
 ## [1.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.7.0...zkool-v1.8.0) (2025-04-18)
 
 
