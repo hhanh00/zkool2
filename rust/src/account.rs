@@ -3,7 +3,7 @@ use bincode::config::legacy;
 use bip32::PrivateKey;
 use jubjub::Fr;
 use orchard::{
-    keys::{FullViewingKey, Scope},
+    keys::FullViewingKey,
     note::{RandomSeed, Rho},
     tree::MerkleHashOrchard,
     value::NoteValue,
