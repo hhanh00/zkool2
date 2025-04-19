@@ -101,8 +101,8 @@ abstract class AppStoreBase with Store {
       }
       await syncProgressSubscription?.cancel();
       syncProgressSubscription =
-          progress.listen((_) => retryCount = 0, onError: (_) {
-        retry(accounts);
+          progress.listen((_) => retryCount = 0, onError: (e) {
+        retry(accounts, e);
       }, onDone: () {
         syncInProgress = false;
         syncs.clear();
@@ -115,19 +115,19 @@ abstract class AppStoreBase with Store {
       );
       });
       return progress;
-    } on AnyhowException {
-      retry(accounts);
+    } on AnyhowException catch (e) {
+      retry(accounts, e);
     }
     return null;
   }
 
-  void retry(List<int> accounts) {
+  void retry(List<int> accounts, AnyhowException e) {
     syncInProgress = false;
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
     final delay = Random().nextInt(maxDelay); // randomize delay
     final message =
-        "Sync error, $retryCount retries, retrying in $delay seconds";
+        "Sync error $e, $retryCount retries, retrying in $delay seconds";
     logger.e(message);
     ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
       SnackBar(

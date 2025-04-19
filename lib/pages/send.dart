@@ -211,7 +211,7 @@ class Send2PageState extends State<Send2Page> {
       return;
     }
 
-    final srcPools = form.fields['source pools']?.value;
+    final srcPools = form.fields['source pools']?.value ?? 7;
 
     try {
       final tx = await prepare(

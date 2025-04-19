@@ -64,6 +64,13 @@ pub async fn plan_transaction(
     let _guard = span.enter();
 
     event!(Level::INFO, "Computing plan");
+
+    let (use_internal, ): (bool, ) =
+    sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .fetch_one(connection)
+        .await?;
+
     let effective_src_pools =
         crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
 
@@ -258,7 +265,12 @@ pub async fn plan_transaction(
         generate_next_change_address(network, connection, account).await?.unwrap()
     }
     else {
-        get_account_full_address(network, connection, account).await?
+        let change_scope = if use_internal {
+            1
+        } else {
+            0
+        };
+        get_account_full_address(network, connection, account, change_scope).await?
     };
 
     let change_recipient = RecipientState {

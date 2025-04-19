@@ -38,7 +38,7 @@ pub async fn warp_sync(
     network: &Network,
     connection: &SqlitePool,
     start_height: u32,
-    accounts: &[u32],
+    accounts: &[(u32, bool)],
     mut blocks: Streaming<CompactBlock>,
     mut heights_without_time: HashSet<u32>,
     sapling_state: &CommitmentTreeFrontier,
@@ -115,7 +115,7 @@ pub async fn warp_sync(
                 crate::sync::rewind_sync(connection, start_height - 1).await?;
                 return Err(SyncError::Reorg(block.height as u32));
             }
-        } 
+        }
         prev_hash = Some(block.hash.clone());
 
         let bheight = block.height as u32;
