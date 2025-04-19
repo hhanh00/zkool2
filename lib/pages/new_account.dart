@@ -73,6 +73,10 @@ class NewAccountPageState extends State<NewAccountPage> {
                     ),
                     Gap(16),
                     FormBuilderSwitch(
+                        name: "useInternal",
+                        title: const Text("Use Internal Change")),
+                    Gap(16),
+                    FormBuilderSwitch(
                         name: "restore",
                         title: const Text("Restore Account?"),
                         initialValue: restore,
@@ -124,6 +128,8 @@ class NewAccountPageState extends State<NewAccountPage> {
       final String? key = formData?["key"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
+      final bool? useInternal = formData?["useInternal"];
+
       final icon = iconBytes;
 
       final key2 = await newAccount(
@@ -134,6 +140,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         key: key ?? "",
         aindex: int.parse(aindex ?? "0"),
         birth: birth != null ? int.parse(birth) : null,
+        useInternal: useInternal ?? false,
       ));
       if (mounted && (key == null || key.isEmpty)) {
         await showSeed(context, key2);

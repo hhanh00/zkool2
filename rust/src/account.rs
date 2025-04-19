@@ -93,7 +93,7 @@ pub async fn get_sapling_note(
     empty_roots: &AuthPath,
 ) -> Result<(sapling_crypto::Note, sapling_crypto::MerklePath)> {
     let r = sqlx::query(
-        "SELECT position, diversifier, value, rcm, witness FROM notes 
+        "SELECT position, diversifier, value, rcm, witness FROM notes
         JOIN witnesses w ON notes.id_note = w.note
         WHERE id_note = ? AND w.height = ?",
     )
@@ -176,37 +176,37 @@ pub async fn get_orchard_note(
     eo: &AuthPath,
     ero: &AuthPath,
 ) -> Result<(orchard::Note, orchard::tree::MerklePath)> {
-    let (position, diversifier, value, rcm, rho, witness) = sqlx::query(
-        "SELECT position, diversifier, value, rcm, rho, witness FROM notes 
+    let (scope, position, diversifier, value, rcm, rho, witness) = sqlx::query(
+        "SELECT taddress, position, diversifier, value, rcm, rho, witness FROM notes
         JOIN witnesses w ON notes.id_note = w.note
         WHERE id_note = ? AND w.height = ?",
     )
     .bind(id)
     .bind(height)
     .map(|row: SqliteRow| {
-        let position: u32 = row.get(0);
-        let diversifier: Vec<u8> = row.get(1);
-        let value: u64 = row.get::<i64, _>(2) as u64;
-        let rcm: Vec<u8> = row.get(3);
-        let rho: Vec<u8> = row.get(4);
-        let witness: Vec<u8> = row.get(5);
-        (position, diversifier, value, rcm, rho, witness)
+        let scope: Option<u8> = row.get(0);
+        let position: u32 = row.get(1);
+        let diversifier: Vec<u8> = row.get(2);
+        let value: u64 = row.get::<i64, _>(3) as u64;
+        let rcm: Vec<u8> = row.get(4);
+        let rho: Vec<u8> = row.get(5);
+        let witness: Vec<u8> = row.get(6);
+        (scope, position, diversifier, value, rcm, rho, witness)
     })
     .fetch_one(connection)
     .await?;
 
-    // let diversifier = vec![];
-    // let value: u64 = 0;
-    // let rho = vec![];
-    // let rcm = vec![];
-    // let witness = Witness::default();
-    // let position = 0;
-
+    let scope = scope.unwrap_or(0);
+    let scope = match scope {
+        1 => orchard::keys::Scope::Internal,
+        0 => orchard::keys::Scope::External,
+        _ => unreachable!(),
+    };
     let (witness, _) = bincode::decode_from_slice::<Witness, _>(&witness, legacy()).unwrap();
     let rho = Rho::from_bytes(&rho.try_into().unwrap()).unwrap();
 
     let diversifer = orchard::keys::Diversifier::from_bytes(diversifier.try_into().unwrap());
-    let recipient = ovk.address(diversifer, Scope::External);
+    let recipient = ovk.address(diversifer, scope);
     let value = NoteValue::from_raw(value);
     let rseed = RandomSeed::from_bytes(rcm.try_into().unwrap(), &rho).unwrap();
     let note = Note::from_parts(recipient, value, rho, rseed)
@@ -239,6 +239,7 @@ pub async fn get_account_full_address(
     network: &Network,
     connection: &SqlitePool,
     account: u32,
+    scope: u8,
 ) -> Result<String> {
     let taddress = sqlx::query(
         "SELECT ta.address FROM transparent_address_accounts ta
@@ -264,7 +265,14 @@ pub async fn get_account_full_address(
         let dindex: u32 = row.get(0);
         let xvk: Vec<u8> = row.get(1);
         let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
-        let saddress = fvk.address(dindex.into()).unwrap();
+        let saddress =
+            if scope == 1 {
+                // we do not need to derive a diversified change address
+                // since they are not exposed to the user
+                let (_, pa) = fvk.change_address();
+                pa
+            }
+            else { fvk.address(dindex.into()).unwrap() };
         saddress
     })
     .fetch_optional(connection)
@@ -279,7 +287,12 @@ pub async fn get_account_full_address(
         let dindex: u32 = row.get(0);
         let xvk: Vec<u8> = row.get(1);
         let fvk = FullViewingKey::read(&*xvk).unwrap();
-        let oaddress = fvk.address_at(dindex, Scope::External);
+        let scope = if scope == 1 {
+            orchard::keys::Scope::Internal
+        } else {
+            orchard::keys::Scope::External
+        };
+        let oaddress = fvk.address_at(dindex, scope);
         oaddress
     })
     .fetch_optional(connection)

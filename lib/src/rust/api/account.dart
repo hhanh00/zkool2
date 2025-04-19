@@ -168,6 +168,7 @@ class NewAccount with _$NewAccount {
     required String key,
     required int aindex,
     int? birth,
+    required bool useInternal,
   }) = _NewAccount;
 }
 

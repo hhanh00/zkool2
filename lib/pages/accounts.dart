@@ -30,11 +30,15 @@ class AccountListPage extends StatelessWidget {
       AppStoreBase.instance.dbFilepath = dbFilepath;
 
       String? password;
-      // do not encrypt default database
-      if (!File(dbFilepath).existsSync() && dbName != appName) {
-        password = await inputPassword(navigatorKey.currentContext!,
-            title: "Enter New Database Password",
-            message: "Password CANNOT be changed later");
+      if (!File(dbFilepath).existsSync()) {
+        if (dbName != appName) {
+        // do not encrypt default database
+          password = await inputPassword(navigatorKey.currentContext!,
+              title: "Enter New Database Password",
+              message: "Password CANNOT be changed later");
+        }
+        if (password != null && password.isEmpty) password = null;
+        logger.i("Creating database file: $dbFilepath with password: $password");
         await createDatabase(
             dbFilepath: dbFilepath, password: password, coin: 0);
         logger.i("Database file created: $dbFilepath");
@@ -51,7 +55,8 @@ class AccountListPage extends StatelessWidget {
           );
           if (password == null) {
             // switch to default database
-            await showException(navigatorKey.currentContext!, "No password given. Switching to defaut database.");
+            await showException(navigatorKey.currentContext!,
+                "No password given. Switching to defaut database.");
             AppStoreBase.instance.dbName = appName;
             return await loadAccounts();
           }
