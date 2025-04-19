@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
@@ -23,12 +24,14 @@ class NewAccountPage extends StatefulWidget {
 class NewAccountPageState extends State<NewAccountPage> {
   var name = "";
   var restore = false;
+  var key = "";
   Uint8List? iconBytes;
   final formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
     final ib = iconBytes;
+    final isSeed = isValidPhrase(phrase: key);
 
     return Scaffold(
         appBar: AppBar(
@@ -89,14 +92,24 @@ class NewAccountPageState extends State<NewAccountPage> {
                             labelText:
                                 "Key (Seed Phrase, Private Key, or Viewing Key)"),
                         validator: (s) => validKey(s, restore: restore),
+                        initialValue: key,
+                        onChanged: (v) => setState(() => key = v!),
                       ),
                     Gap(16),
-                    if (restore)
+                    if (restore && isSeed)
+                      FormBuilderTextField(
+                        name: "passphrase",
+                        decoration: const InputDecoration(
+                            labelText:
+                                "Extra Passphrase (optional)"),
+                      ),
+                    Gap(16),
+                    if (restore && isSeed)
                       FormBuilderTextField(
                         name: "aindex",
                         decoration: const InputDecoration(
                             labelText:
-                                "Account Index (when using a seed phrase)"),
+                                "Account Index"),
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
@@ -125,7 +138,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       final formData = formKey.currentState?.value;
       final String? name = formData?["name"];
       final bool? restore = formData?["restore"];
-      final String? key = formData?["key"];
+      final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
       final bool? useInternal = formData?["useInternal"];
@@ -137,7 +150,8 @@ class NewAccountPageState extends State<NewAccountPage> {
         icon: icon,
         name: name ?? "",
         restore: restore ?? false,
-        key: key ?? "",
+        key: key,
+        passphrase: passphrase,
         aindex: int.parse(aindex ?? "0"),
         birth: birth != null ? int.parse(birth) : null,
         useInternal: useInternal ?? false,
