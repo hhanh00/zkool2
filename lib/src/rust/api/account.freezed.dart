@@ -946,6 +946,7 @@ mixin _$NewAccount {
   String get name => throw _privateConstructorUsedError;
   bool get restore => throw _privateConstructorUsedError;
   String get key => throw _privateConstructorUsedError;
+  String? get passphrase => throw _privateConstructorUsedError;
   int get aindex => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
   bool get useInternal => throw _privateConstructorUsedError;
@@ -968,6 +969,7 @@ abstract class $NewAccountCopyWith<$Res> {
       String name,
       bool restore,
       String key,
+      String? passphrase,
       int aindex,
       int? birth,
       bool useInternal});
@@ -992,6 +994,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? name = null,
     Object? restore = null,
     Object? key = null,
+    Object? passphrase = freezed,
     Object? aindex = null,
     Object? birth = freezed,
     Object? useInternal = null,
@@ -1013,6 +1016,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.key
           : key // ignore: cast_nullable_to_non_nullable
               as String,
+      passphrase: freezed == passphrase
+          ? _value.passphrase
+          : passphrase // ignore: cast_nullable_to_non_nullable
+              as String?,
       aindex: null == aindex
           ? _value.aindex
           : aindex // ignore: cast_nullable_to_non_nullable
@@ -1042,6 +1049,7 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       String name,
       bool restore,
       String key,
+      String? passphrase,
       int aindex,
       int? birth,
       bool useInternal});
@@ -1064,6 +1072,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? name = null,
     Object? restore = null,
     Object? key = null,
+    Object? passphrase = freezed,
     Object? aindex = null,
     Object? birth = freezed,
     Object? useInternal = null,
@@ -1085,6 +1094,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.key
           : key // ignore: cast_nullable_to_non_nullable
               as String,
+      passphrase: freezed == passphrase
+          ? _value.passphrase
+          : passphrase // ignore: cast_nullable_to_non_nullable
+              as String?,
       aindex: null == aindex
           ? _value.aindex
           : aindex // ignore: cast_nullable_to_non_nullable
@@ -1109,6 +1122,7 @@ class _$NewAccountImpl implements _NewAccount {
       required this.name,
       required this.restore,
       required this.key,
+      this.passphrase,
       required this.aindex,
       this.birth,
       required this.useInternal});
@@ -1122,6 +1136,8 @@ class _$NewAccountImpl implements _NewAccount {
   @override
   final String key;
   @override
+  final String? passphrase;
+  @override
   final int aindex;
   @override
   final int? birth;
@@ -1130,7 +1146,7 @@ class _$NewAccountImpl implements _NewAccount {
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, aindex: $aindex, birth: $birth, useInternal: $useInternal)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, aindex: $aindex, birth: $birth, useInternal: $useInternal)';
   }
 
   @override
@@ -1142,6 +1158,8 @@ class _$NewAccountImpl implements _NewAccount {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.restore, restore) || other.restore == restore) &&
             (identical(other.key, key) || other.key == key) &&
+            (identical(other.passphrase, passphrase) ||
+                other.passphrase == passphrase) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.useInternal, useInternal) ||
@@ -1155,6 +1173,7 @@ class _$NewAccountImpl implements _NewAccount {
       name,
       restore,
       key,
+      passphrase,
       aindex,
       birth,
       useInternal);
@@ -1174,6 +1193,7 @@ abstract class _NewAccount implements NewAccount {
       required final String name,
       required final bool restore,
       required final String key,
+      final String? passphrase,
       required final int aindex,
       final int? birth,
       required final bool useInternal}) = _$NewAccountImpl;
@@ -1186,6 +1206,8 @@ abstract class _NewAccount implements NewAccount {
   bool get restore;
   @override
   String get key;
+  @override
+  String? get passphrase;
   @override
   int get aindex;
   @override

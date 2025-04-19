@@ -239,9 +239,10 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
 
     if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
-        let seed = seed_phrase.to_seed("");
+        let passphrase = na.passphrase.clone().unwrap_or(String::new());
+        let seed = seed_phrase.to_seed(&passphrase);
         let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
-        store_account_seed(pool, account, &key, &seed_fingerprint, na.aindex).await?;
+        store_account_seed(pool, account, &key, &passphrase, &seed_fingerprint, na.aindex).await?;
         let usk = UnifiedSpendingKey::from_seed(
             &c.network,
             &seed,
@@ -437,6 +438,7 @@ pub struct NewAccount {
     pub name: String,
     pub restore: bool,
     pub key: String,
+    pub passphrase: Option<String>,
     pub aindex: u32,
     pub birth: Option<u32>,
     pub use_internal: bool,
