@@ -29,6 +29,7 @@ pub trait ShieldedProtocol {
     fn extract_ivk(
         pool: &SqlitePool,
         account: u32,
+        scope: u8,
     ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
     fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend>;
     fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output>;
@@ -39,6 +40,7 @@ pub trait ShieldedProtocol {
     fn try_decrypt(
         network: &Network,
         account: u32,
+        scope: u8,
         ivk: &Self::IVK,
         height: u32,
         ivtx: u32,
@@ -54,7 +56,7 @@ pub struct Synchronizer<P: ShieldedProtocol> {
     pub hasher: P::Hasher,
     pub network: Network,
     pub pool: u8,
-    pub keys: Vec<(u32, P::IVK, P::NK)>,
+    pub keys: Vec<(u32, u8, P::IVK, P::NK)>,
     pub position: u32,
     pub utxos: HashMap<Vec<u8>, UTXO>,
     pub tree_state: Edge,
@@ -68,22 +70,27 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         connection: &SqlitePool,
         pool: u8,
         height: u32,
-        accounts: &[u32],
+        accounts: &[(u32, bool)],
         tx_decrypted: Sender<WarpSyncMessage>,
         position: u32,
         tree_state: Edge,
     ) -> Result<Self> {
         let mut keys = vec![];
-        for id in accounts.iter() {
-            if let Some((ivk, nk)) = P::extract_ivk(connection, *id).await? {
-                keys.push((*id, ivk, nk));
+        for (id, use_internal) in accounts.iter() {
+            if let Some((ivk, nk)) = P::extract_ivk(connection, *id, 0).await? {
+                keys.push((*id, 0u8, ivk, nk));
+            }
+            if *use_internal {
+                if let Some((ivk, nk)) = P::extract_ivk(connection, *id, 1).await? {
+                    keys.push((*id, 1u8, ivk, nk));
+                }
             }
         }
 
         // map from (accout, nullifier) to NoteRef
         let mut utxos: HashMap<Vec<u8>, UTXO> = HashMap::new();
 
-        for (account, _, _) in keys.iter() {
+        for (account, _, _, _) in keys.iter() {
             // Use an anti join to get the unspent notes
             // and a join to filter based on the account and pool
             info!(
@@ -95,9 +102,9 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             WITH unspent AS (SELECT a.*
                 FROM notes a
                 LEFT JOIN spends b ON a.id_note = b.id_note
-                WHERE b.id_note IS NULL) 
+                WHERE b.id_note IS NULL)
             SELECT u.id_note, u.account, position, nullifier, value, cmx, witness FROM unspent u
-            JOIN witnesses w 
+            JOIN witnesses w
                 ON u.id_note = w.note
                 WHERE pool = ? AND u.account = ? AND w.height = ?",
             )
@@ -165,10 +172,11 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         // new notes
         let mut notes = outputs
             .flat_map_iter(|(height, ivtx, vout, o)| {
-                self.keys.iter().flat_map(move |(account, ivk, nk)| {
+                self.keys.iter().flat_map(move |(account, scope, ivk, nk)| {
                     P::try_decrypt(
                         &network,
                         *account,
+                        *scope,
                         ivk,
                         height as u32,
                         ivtx as u32,
@@ -361,7 +369,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let accounts = self
             .keys
             .iter()
-            .map(|(account, _, _)| *account)
+            .map(|(account, _, _, _)| *account)
             .collect::<Vec<_>>();
 
         // detect spends

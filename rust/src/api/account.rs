@@ -226,7 +226,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
 
     let birth = na.birth.unwrap_or(min_height);
 
-    let account = store_account_metadata(pool, &na.name, &na.icon, birth).await?;
+    let account = store_account_metadata(pool, &na.name, &na.icon, birth, na.use_internal).await?;
     setup!(account);
 
     let mut key = na.key.clone();
@@ -439,6 +439,7 @@ pub struct NewAccount {
     pub key: String,
     pub aindex: u32,
     pub birth: Option<u32>,
+    pub use_internal: bool,
 }
 
 #[frb(dart_metadata = ("freezed"))]

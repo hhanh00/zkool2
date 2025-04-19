@@ -95,6 +95,7 @@ impl std::fmt::Debug for BlockHeader {
 pub struct Note {
     pub id: u32,
     pub account: u32,
+    pub scope: u8,
     pub height: u32,
     pub position: u32,
     pub pool: u8,
@@ -202,11 +203,12 @@ pub async fn shielded_sync(
     network: &Network,
     pool: &SqlitePool,
     client: &mut Client,
-    accounts: Vec<u32>,
+    accounts: &[(u32, bool)],
     start: u32,
     end: u32,
     tx_progress: Sender<SyncProgress>,
 ) -> Result<()> {
+    let accounts = accounts.to_vec();
     let db_writer_task = {
         let (s, o) = get_tree_state(network, client, start - 1).await?;
 
@@ -305,11 +307,12 @@ async fn handle_message(
         WarpSyncMessage::Note(note) => {
             let r = sqlx::query
                     ("INSERT INTO notes
-                        (account, height, pool, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
-                        SELECT t.account, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ? FROM transactions t
+                        (account, height, pool, taddress, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
+                        SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ? FROM transactions t
                         WHERE t.account = ? AND t.txid = ?")
                     .bind(note.height)
                     .bind(note.pool)
+                    .bind(note.scope)
                     .bind(&note.nf)
                     .bind(note.value as i64)
                     .bind(&note.cmx)
