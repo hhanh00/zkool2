@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/utils.dart';
 
 class ReceivePage extends StatefulWidget {
   const ReceivePage({super.key});
@@ -98,7 +99,9 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void onSweep() async {
+    showSnackbar("Starting sweep");
     final endHeight = await getCurrentHeight();
     await transparentSweep(endHeight: endHeight, gapLimit: 40);
+    showSnackbar("Sweep complete");
   }
 }
