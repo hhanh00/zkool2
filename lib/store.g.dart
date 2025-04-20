@@ -72,13 +72,30 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$currentHeightAtom =
+      Atom(name: 'AppStoreBase.currentHeight', context: context);
+
+  @override
+  int get currentHeight {
+    _$currentHeightAtom.reportRead();
+    return super.currentHeight;
+  }
+
+  @override
+  set currentHeight(int value) {
+    _$currentHeightAtom.reportWrite(value, super.currentHeight, () {
+      super.currentHeight = value;
+    });
+  }
+
   @override
   String toString() {
     return '''
 accountName: ${accountName},
 accounts: ${accounts},
 transactions: ${transactions},
-memos: ${memos}
+memos: ${memos},
+currentHeight: ${currentHeight}
     ''';
   }
 }

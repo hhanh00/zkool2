@@ -94,7 +94,6 @@ class AccountListPage2 extends StatefulWidget {
 
 class AccountListPage2State extends State<AccountListPage2> {
   var includeHidden = false;
-  var height = 0;
   final listKey = GlobalKey<EditableListState<Account>>();
 
   @override
@@ -108,7 +107,7 @@ class AccountListPage2State extends State<AccountListPage2> {
   void refreshHeight() async {
     try {
       final height = await getCurrentHeight();
-      if (mounted) setState(() => this.height = height);
+      AppStoreBase.instance.currentHeight = height;
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -128,9 +127,9 @@ class AccountListPage2State extends State<AccountListPage2> {
           key: listKey,
           items: accounts,
           headerBuilder: (context) => [
-                ElevatedButton(
+                Observer(builder: (context) => ElevatedButton(
                     onPressed: () => Future(refreshHeight),
-                    child: Text("Height: $height")),
+                    child: Text("Height: ${AppStoreBase.instance.currentHeight}"))),
                 const Gap(8),
               ],
           builder: (context, index, account, {selected, onSelectChanged}) {
@@ -220,18 +219,7 @@ class AccountListPage2State extends State<AccountListPage2> {
             (!hasSelection && accounts[i].enabled))
           accountIds.add(accounts[i].id);
       }
-      final syncProgress =
-          await AppStoreBase.instance.startSynchronize(accountIds);
-      if (syncProgress == null) return;
-      syncProgress.listen((progress) {
-        for (var id in accountIds) {
-          AppStoreBase.instance.heights[id] = progress.height;
-        }
-      }, onDone: () {
-        if (mounted) {
-          AppStoreBase.instance.loadAccounts();
-        }
-      });
+      await AppStoreBase.instance.startSynchronize(accountIds);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
