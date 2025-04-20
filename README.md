@@ -1,108 +1,63 @@
-# zkool
+## What is this?
 
-A wallet for zcash
+Zkool is a multi-account wallet for Zcash.
 
-## Roadmap
+## What can you do with it?
 
-- [x] Account create/restore
-    - [x] by seed & index
-    - [x] by sapling secret key/viewing key
-    - [x] by unified viewing key
-    - [x] by xpub/xpriv key
-    - [x] by bip38 extended priv/pub key
-    - [x] and of course random
-- [x] Account properties editor
-    - [x] name
-    - [x] birth height
-    - [x] icon
-    - [x] enabled
-    - [x] hidden
-    - [x] multi edit for enabled & hidden
-- [x] Account Manager
-    - [x] CRUD
-    - [x] reorder
-    - [x] hide accounts
-    - [x] show balance
-- [x] Synchronization
-    - [x] transparent
-    - [x] shielded
-    - [x] rewind
-    - [x] memo
-    - [x] reorg detection
-    - [x] continuous
-    - [x] retry
-    - [x] scan past transparent addresses
-    - [x] reset
-    - [x] height progress observers per account
-- [x] Receive
-    - [x] default address generation
-    - [x] diversified address generation
-    - [x] additional transparent addresses
-- [x] Send
-    - [x] multiple payment editor
-        - [x] address, amount
-        - [x] memo
-    - [x] builder
-    - [x] pczt
-    - [x] broadcast
-    - [x] generate change transparent addresses
-    - [x] expose src pools and receipient pays fee
-- [x] History
-    - [x] tx list
-    - [x] memo
-    - [x] split views
-- [x] QR
-    - [x] scanner
-    - [x] show
-- [x] Log viewer
-    - [x] integrate tracing framework
-    - [x] make log viewer page
-    - [x] add logging messages
-- [x] MultiSend
-- [x] Export
-    - [x] accounts
-    - [x] tx history
-    - [x] encryption
-- [x] Import
-    - [x] accounts
-    - [x] tx history
-    - [x] encryption
-- [x] Database
-    - [x] switch to new database
-    - [x] encrypt database with AES
-- [x] Transparent sweep
-- [ ] Settings
-    - [x] database name
-    - [x] lwd url
-    - [ ] fiat currency
-    - [ ] min confs
-    - [ ] get tx details
-    - [ ] protect open/send
-- [ ] Market price
-- [ ] Tx details page
-- [ ] Payment URI generation
-- [ ] App Icons
-- [ ] Bugs
-    - [ ] heights do not update when the sync finishes
+- **It supports nearly every type of account**
+    - From 12, 18, 21, 24 words seed phrase with an optional password
+    - With internal address derivation for change (Zashi, ZIP 315)
+    - From Unified Viewing Key (with complete or partial list of receivers)
+    - From legacy shielded extended keys (secret and viewing) of zcashd
+    - From transparent xpub/xprv keys (Electrum and BIP 32 compliant wallets)
+    - From seed phrase and BIP 44 (Exodus, Ledger, and other transparent wallets)
+    - From transparent secret key (any key export from a transparent wallet)
+    - and of course Ywallet
+- **It handles accounts individually**
+    - Each account has its own synchronization state and be included or
+    excluded from the global sync. This allows you to "park" accounts
+    by disabling them. They do not slow down sync of your active accounts.
+    If you need them later, you reenable them and bring them up to date.
+    - An account can be exported and then imported in a different wallet file.
+    The entire data (notes, spends, witnesses, etc) gets saved into an
+    *encrypted* file.
+    - Wallet files can be also encrypted.
+    - Zkool is the only wallet app that supports more than one account and
+    does not lock you to the list of accounts[^1]
+- Its shielded features are as good as Ywallet. In particular, it will
+    - minimize cross pool usage
+    - allow you to select your pools
+    - can create multi recipient payments
+- and its transparent privacy as good as transparent wallets
+    - shielded wallets tend to handle the lack of privacy of
+    transparent addresses by mandating the shielding of transparent
+    funds before they can be spent (Zashi, Zingo, ...). Instead,
+    Zkool supports address rotation for the users[^2]
 
-## User Stories
+## What it does *not* do well
 
-In order of priority,
+- UI is basic. There are only a few screens and nothing flashy.
+On the flipside, the UI is relatively simple to understand.
+- Some nice to have features are missing
+    - No *address book*. Mainly because Zcash has diversified addresses
+    that make address books useless if used[^3]
+- No Payment URI
+- No keytool
+- No Market Data charts
+- No customization of reference currency (always USD)
+- No themes
+- No coin select[^4]
+- No pool transfer tool
+- No third party swap integration
+- No spending tracking
+- No cold wallet[^5]
+- No Keytool
 
-### Memos
-- [x] Sync Tx Details
-- [x] Send
-- [x] Display
-- [ ] Search
-
-### Rotate Transparent Addresses
-- [x] Auto New change address
-- [x] Manual New receive address
-- [x] Sweep past addresses
-
-### Account Import/Export
-- [x] Single/Multi account export
-- [x] Add/Import to current database
-
-### Contacts
-TBD
+[^1]: Ywallet can only save and restore *all* the accounts.
+[^2]: Obviously, not as good as shielding but offers *some* level
+of privacy.
+[^3]: The diversified address cannot be matched against the *one* address
+recorded in the address book.
+[^4]: Could be added later
+[^5]: Though the transaction format uses PCZT internally. It could
+be made to work with the Keystone HW
