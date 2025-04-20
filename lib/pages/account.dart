@@ -9,7 +9,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
@@ -119,7 +118,10 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      await AppStoreBase.instance.startSynchronize([widget.account.id]);
+      await AppStoreBase.instance.startSynchronize([widget.account.id],
+      onComplete: () {
+        Future(refresh);
+      });
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -142,7 +144,6 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void refresh() async {
     final b = await balance();
-    final h = await getDbHeight();
     await AppStoreBase.instance.loadAccounts();
     await AppStoreBase.instance.loadTxHistory();
     await AppStoreBase.instance.loadMemos();
