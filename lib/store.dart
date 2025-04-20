@@ -28,37 +28,44 @@ abstract class AppStoreBase with Store {
   @observable
   List<Memo> memos = [];
   ObservableMap<int, int> heights = ObservableMap.of({});
+  @observable
+  int currentHeight = 0;
 
   String dbName = appName;
   String dbFilepath = "";
   String lwd = "https://zec.rocks";
+  String syncInterval = "30"; // in blocks
 
   ObservableList<String> log = ObservableList.of([]);
 
-  void init()  {
+  void init() {
     final stream = setLogStream();
     stream.listen((m) {
       logger.i(m);
       log.add(m.message);
       if (m.span == "transaction_plan") {
         toastification.show(
-          description: Text(m.message),
-          margin: EdgeInsets.all(8),
-          borderRadius: BorderRadius.circular(8),
-          animationDuration: Durations.long1,
-          autoCloseDuration: Duration(seconds: 3)
-        );
+            description: Text(m.message),
+            margin: EdgeInsets.all(8),
+            borderRadius: BorderRadius.circular(8),
+            animationDuration: Durations.long1,
+            autoCloseDuration: Duration(seconds: 3));
       }
     });
   }
 
   Future<void> loadSettings() async {
     lwd = await getProp(key: "lwd") ?? lwd;
+    syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
+    setSyncTimer();
   }
 
   Future<List<Account>> loadAccounts() async {
     final as = await listAccounts();
     accounts = as;
+    for (var a in as) {
+      heights[a.id] = a.height;
+    }
     return as;
   }
 
@@ -77,9 +84,9 @@ abstract class AppStoreBase with Store {
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   Timer? retrySyncTimer;
 
-  Future<Stream<SyncProgress>?> startSynchronize(List<int> accounts) async {
+  Future<void> startSynchronize(List<int> accounts) async {
     if (syncInProgress) {
-      return null;
+      return;
     }
 
     try {
@@ -88,29 +95,35 @@ abstract class AppStoreBase with Store {
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
       final currentHeight = await getCurrentHeight();
-      final progress =
-          synchronize(accounts: accounts, currentHeight: currentHeight,
-          transparentLimit: 10) // TODO: Make this configurable
-              .asBroadcastStream();
-      for (var id in accounts) {
-        syncs[id] = progress;
-      }
+      logger.i(accounts);
+      final progress = synchronize(
+          accounts: accounts,
+          currentHeight: currentHeight,
+          transparentLimit: 10);
       await syncProgressSubscription?.cancel();
-      syncProgressSubscription =
-          progress.listen((_) => retryCount = 0, onError: (e) {
+      syncProgressSubscription = progress.listen((p) {
+        retryCount = 0;
+        runInAction(() {
+          for (var a in accounts) {
+            heights[a] = p.height; // propagate progress to all account streams
+          }
+        });
+      }, onError: (e) {
         retry(accounts, e);
       }, onDone: () {
+        runInAction(() {
+          for (var a in accounts) {
+            heights[a] = currentHeight;
+          }
+        });
         syncInProgress = false;
-        syncs.clear();
         syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
-      showSnackbar("Synchronization Completed");
+        showSnackbar("Synchronization Completed");
       });
-      return progress;
     } on AnyhowException catch (e) {
       retry(accounts, e);
     }
-    return null;
   }
 
   void retry(List<int> accounts, AnyhowException e) {
@@ -128,7 +141,43 @@ abstract class AppStoreBase with Store {
     });
   }
 
-  Map<int, Stream<SyncProgress>> syncs = {};
+  Timer? syncTimer;
+
+  void setSyncTimer() {
+    logger.i("Setting sync timer");
+    syncTimer?.cancel();
+    syncTimer = null;
+    final interval = int.tryParse(syncInterval) ?? 0;
+    if (interval == 0) {
+      return;
+    }
+
+    syncTimer = Timer.periodic(Duration(seconds: 15), (timer) async {
+      try {
+      final height = await getCurrentHeight();
+      if (height > currentHeight) {
+        runInAction(() => currentHeight = height);
+        await checkSyncNeeded();
+      }
+      } on AnyhowException {
+        // ignore
+      }
+    });
+  }
+
+  Future<void> checkSyncNeeded() async {
+    List<int> accountsToSync = [];
+    for (var account in accounts) {
+      if (account.enabled) {
+        final height = heights[account.id] ?? 0;
+        if (currentHeight - height > int.parse(syncInterval)) {
+          logger.i("Sync needed for ${account.name}");
+          accountsToSync.add(account.id);
+        }
+      }
+    }
+    await startSynchronize(accountsToSync);
+  }
 
   static AppStore instance = AppStore();
 }

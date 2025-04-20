@@ -24,9 +24,8 @@ class AccountViewPage extends StatefulWidget {
   State<AccountViewPage> createState() => AccountViewPageState();
 }
 
-class AccountViewPageState extends State<AccountViewPage> with RouteAware {
+class AccountViewPageState extends State<AccountViewPage> {
   StreamSubscription<SyncProgress>? progressSubscription;
-  late int height = widget.account.height;
   PoolBalance? poolBalance;
 
   @override
@@ -38,48 +37,8 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
   }
 
   @override
-  void didPushNext() {
-    unsubscribeFromSync();
-    super.didPushNext();
-  }
-
-  @override
-  void didPopNext() {
-    subscribeToSync();
-    super.didPopNext();
-  }
-
-  @override
-  void didPush() {
-    subscribeToSync();
-    super.didPush();
-  }
-
-  @override
-  void didPop() {
-    unsubscribeFromSync();
-    super.didPop();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      routeObserver.subscribe(this, route);
-    }
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final h = height;
     final b = poolBalance;
 
     return DefaultTabController(
@@ -127,7 +86,8 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
                       child: Column(children: [
                     Text("Height"),
                     Gap(8),
-                    Text(h.toString(), style: t.bodyLarge),
+                    Observer(builder: (context) => Text(
+                      AppStoreBase.instance.heights[widget.account.id].toString(), style: t.bodyLarge)),
                     Gap(16),
                     Text("Balance"),
                     Gap(8),
@@ -159,12 +119,7 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
 
   void onSync() async {
     try {
-      final progress =
-          await AppStoreBase.instance.startSynchronize([widget.account.id]);
-      if (progress == null) return;
-      await progressSubscription?.cancel();
-      progressSubscription = null;
-      subscribeToSync();
+      await AppStoreBase.instance.startSynchronize([widget.account.id]);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -174,7 +129,7 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
     final h = await getDbHeight();
-    setState(() => height = h);
+    AppStoreBase.instance.heights[widget.account.id] = h;
   }
 
   void onReceive() async {
@@ -183,23 +138,6 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
 
   void onSend() async {
     await GoRouter.of(context).push("/send");
-  }
-
-  void subscribeToSync() {
-    progressSubscription =
-        AppStoreBase.instance.syncs[widget.account.id]?.listen(
-      (event) {
-        setState(() {
-          height = event.height;
-        });
-      },
-      onDone: refresh,
-    );
-  }
-
-  void unsubscribeFromSync() {
-    progressSubscription?.cancel();
-    progressSubscription = null;
   }
 
   void refresh() async {
@@ -211,7 +149,6 @@ class AccountViewPageState extends State<AccountViewPage> with RouteAware {
     if (!mounted) return;
     setState(() {
       poolBalance = b;
-      height = h;
     });
   }
 }
