@@ -57,7 +57,6 @@ abstract class AppStoreBase with Store {
   Future<void> loadSettings() async {
     lwd = await getProp(key: "lwd") ?? lwd;
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
-    setSyncTimer();
   }
 
   Future<List<Account>> loadAccounts() async {
@@ -141,28 +140,28 @@ abstract class AppStoreBase with Store {
     });
   }
 
-  Timer? syncTimer;
+  Timer? autosyncTimer;
 
-  void setSyncTimer() {
-    logger.i("Setting sync timer");
-    syncTimer?.cancel();
-    syncTimer = null;
+  void autoSync() async {
     final interval = int.tryParse(syncInterval) ?? 0;
-    if (interval == 0) {
+
+    if (interval <= 0) {
       return;
     }
-
-    syncTimer = Timer.periodic(Duration(seconds: 15), (timer) async {
-      try {
+    try {
       final height = await getCurrentHeight();
       if (height > currentHeight) {
         runInAction(() => currentHeight = height);
         await checkSyncNeeded();
       }
-      } on AnyhowException {
-        // ignore
-      }
-    });
+    } on AnyhowException catch (e) {
+      logger.i(e);
+      // ignore
+    }
+    finally {
+      if (interval > 0)
+        Timer(Duration(seconds: 15), autoSync);
+    }
   }
 
   Future<void> checkSyncNeeded() async {
@@ -176,7 +175,9 @@ abstract class AppStoreBase with Store {
         }
       }
     }
-    await startSynchronize(accountsToSync);
+    if (accountsToSync.isNotEmpty) {
+      await startSynchronize(accountsToSync);
+    }
   }
 
   static AppStore instance = AppStore();

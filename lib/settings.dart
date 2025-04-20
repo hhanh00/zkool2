@@ -34,7 +34,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   @override
   void didPop() {
     super.didPop();
-    AppStoreBase.instance.setSyncTimer();
+    AppStoreBase.instance.autoSync();
   }
 
   @override
