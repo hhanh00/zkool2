@@ -52,7 +52,7 @@ SPEC CHECKSUMS:
   mobile_scanner: 07710d6b9b2c220ae899de2d7ecf5d77ffa56333
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
   rive_common: 9580b9f1f08a8c85006083078e80479edf3db26a
-  rust_lib_zkool: 8c4d4899a595b64d4ae5212b53e20935c305225d
+  rust_lib_zkool: 7dc3124b76a4b7916a9732466c1917cad2e6d6fd
   shared_preferences_foundation: fcdcbc04712aee1108ac7fda236f363274528f78
 
 PODFILE CHECKSUM: 236401fc2c932af29a9fcf0e97baeeb2d750d367
