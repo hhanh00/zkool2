@@ -64,6 +64,7 @@ class AccountListPage extends StatelessWidget {
       }
       await AppStoreBase.instance.loadSettings();
       setLwd(lwd: AppStoreBase.instance.lwd);
+      AppStoreBase.instance.autoSync();
     }
 
     AppStoreBase.instance.loaded = true;
