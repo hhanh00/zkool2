@@ -118,6 +118,7 @@ abstract class AppStoreBase with Store {
         syncInProgress = false;
         syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
+        Future(loadAccounts);
         showSnackbar("Synchronization Completed");
         onComplete?.call();
       });

@@ -123,6 +123,7 @@ class AccountListPage2State extends State<AccountListPage2> {
     return Observer(builder: (context) {
       final tt = Theme.of(context).textTheme;
       final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
+      AppStoreBase.instance.accounts;
 
       return EditableList<Account>(
           key: listKey,
