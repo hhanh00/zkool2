@@ -153,10 +153,10 @@ class NewAccountPageState extends State<NewAccountPage> {
         key: key,
         passphrase: passphrase,
         aindex: int.parse(aindex ?? "0"),
-        birth: birth != null ? int.parse(birth) : null,
+        birth: birth != null ? int.parse(birth) : AppStoreBase.instance.currentHeight,
         useInternal: useInternal ?? false,
       ));
-      if (mounted && (key == null || key.isEmpty)) {
+      if (mounted && key.isEmpty) {
         await showSeed(context, key2);
       }
       await AppStoreBase.instance.loadAccounts();
