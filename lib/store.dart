@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -83,7 +82,8 @@ abstract class AppStoreBase with Store {
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   Timer? retrySyncTimer;
 
-  Future<void> startSynchronize(List<int> accounts) async {
+  Future<void> startSynchronize(List<int> accounts,
+      {void Function()? onComplete}) async {
     if (syncInProgress) {
       return;
     }
@@ -119,6 +119,7 @@ abstract class AppStoreBase with Store {
         syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
         showSnackbar("Synchronization Completed");
+        onComplete?.call();
       });
     } on AnyhowException catch (e) {
       retry(accounts, e);
@@ -157,10 +158,8 @@ abstract class AppStoreBase with Store {
     } on AnyhowException catch (e) {
       logger.i(e);
       // ignore
-    }
-    finally {
-      if (interval > 0)
-        Timer(Duration(seconds: 15), autoSync);
+    } finally {
+      if (interval > 0) Timer(Duration(seconds: 15), autoSync);
     }
   }
 
