@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.9.0...zkool-v1.10.0) (2025-04-20)
+
+
+### Features
+
+* passphrase to seed ([#115](https://github.com/hhanh00/zkool2/issues/115)) ([6013cd6](https://github.com/hhanh00/zkool2/commit/6013cd67d3ce2c3022715b4da383461cea396a34))
+
+
+### Bug Fixes
+
+* sync height update ([#116](https://github.com/hhanh00/zkool2/issues/116)) ([f3673f5](https://github.com/hhanh00/zkool2/commit/f3673f5fa602060b5e8025d3067e7af39fc1c97f))
+* use separate column for orchard address scope ([#113](https://github.com/hhanh00/zkool2/issues/113)) ([bbaf898](https://github.com/hhanh00/zkool2/commit/bbaf898053bd0b70ece794b99f902d5f3fa5f622))
+
 ## [1.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.8.0...zkool-v1.9.0) (2025-04-19)
 
 
