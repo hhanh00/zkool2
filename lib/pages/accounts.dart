@@ -96,6 +96,7 @@ class AccountListPage2 extends StatefulWidget {
 class AccountListPage2State extends State<AccountListPage2> {
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
+  double? price;
 
   @override
   void didUpdateWidget(covariant AccountListPage2 oldWidget) {
@@ -109,6 +110,8 @@ class AccountListPage2State extends State<AccountListPage2> {
     try {
       final height = await getCurrentHeight();
       AppStoreBase.instance.currentHeight = height;
+      final p = await getCoingeckoPrice();
+      setState(() => price = p);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -132,6 +135,8 @@ class AccountListPage2State extends State<AccountListPage2> {
                 Observer(builder: (context) => ElevatedButton(
                     onPressed: () => Future(refreshHeight),
                     child: Text("Height: ${AppStoreBase.instance.currentHeight}"))),
+                const Gap(8),
+                if (price != null) Text("Price: $price USD"),
                 const Gap(8),
               ],
           builder: (context, index, account, {selected, onSelectChanged}) {
