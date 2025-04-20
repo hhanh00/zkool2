@@ -23,6 +23,8 @@ lazy_static = "1.5"
 futures = "0.3"
 sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
 tokio = {version = "1", features = ["rt", "rt-multi-thread", "macros"]}
+reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
+serde = "1.0"
 
 orchard = "0.11"
 rayon = "1.10"
