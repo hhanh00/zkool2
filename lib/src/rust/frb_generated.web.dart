@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'account.dart';
 import 'api/account.dart';
 import 'api/db.dart';
 import 'api/init.dart';
@@ -101,10 +102,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Tx> dco_decode_list_tx(dynamic raw);
 
   @protected
+  List<TxMemo> dco_decode_list_tx_memo(dynamic raw);
+
+  @protected
+  List<TxNote> dco_decode_list_tx_note(dynamic raw);
+
+  @protected
   List<TxPlanIn> dco_decode_list_tx_plan_in(dynamic raw);
 
   @protected
   List<TxPlanOut> dco_decode_list_tx_plan_out(dynamic raw);
+
+  @protected
+  List<TxSpend> dco_decode_list_tx_spend(dynamic raw);
 
   @protected
   LogMessage dco_decode_log_message(dynamic raw);
@@ -146,6 +156,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Tx dco_decode_tx(dynamic raw);
 
   @protected
+  TxAccount dco_decode_tx_account(dynamic raw);
+
+  @protected
+  TxMemo dco_decode_tx_memo(dynamic raw);
+
+  @protected
+  TxNote dco_decode_tx_note(dynamic raw);
+
+  @protected
   TxPlan dco_decode_tx_plan(dynamic raw);
 
   @protected
@@ -153,6 +172,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TxPlanOut dco_decode_tx_plan_out(dynamic raw);
+
+  @protected
+  TxSpend dco_decode_tx_spend(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -242,10 +264,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Tx> sse_decode_list_tx(SseDeserializer deserializer);
 
   @protected
+  List<TxMemo> sse_decode_list_tx_memo(SseDeserializer deserializer);
+
+  @protected
+  List<TxNote> sse_decode_list_tx_note(SseDeserializer deserializer);
+
+  @protected
   List<TxPlanIn> sse_decode_list_tx_plan_in(SseDeserializer deserializer);
 
   @protected
   List<TxPlanOut> sse_decode_list_tx_plan_out(SseDeserializer deserializer);
+
+  @protected
+  List<TxSpend> sse_decode_list_tx_spend(SseDeserializer deserializer);
 
   @protected
   LogMessage sse_decode_log_message(SseDeserializer deserializer);
@@ -287,6 +318,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Tx sse_decode_tx(SseDeserializer deserializer);
 
   @protected
+  TxAccount sse_decode_tx_account(SseDeserializer deserializer);
+
+  @protected
+  TxMemo sse_decode_tx_memo(SseDeserializer deserializer);
+
+  @protected
+  TxNote sse_decode_tx_note(SseDeserializer deserializer);
+
+  @protected
   TxPlan sse_decode_tx_plan(SseDeserializer deserializer);
 
   @protected
@@ -294,6 +334,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TxPlanOut sse_decode_tx_plan_out(SseDeserializer deserializer);
+
+  @protected
+  TxSpend sse_decode_tx_spend(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -393,12 +436,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_tx(List<Tx> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_tx_memo(List<TxMemo> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_tx_note(List<TxNote> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_tx_plan_in(
       List<TxPlanIn> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_tx_plan_out(
       List<TxPlanOut> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_tx_spend(List<TxSpend> self, SseSerializer serializer);
 
   @protected
   void sse_encode_log_message(LogMessage self, SseSerializer serializer);
@@ -441,6 +493,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_tx(Tx self, SseSerializer serializer);
 
   @protected
+  void sse_encode_tx_account(TxAccount self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_memo(TxMemo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_note(TxNote self, SseSerializer serializer);
+
+  @protected
   void sse_encode_tx_plan(TxPlan self, SseSerializer serializer);
 
   @protected
@@ -448,6 +509,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_tx_plan_out(TxPlanOut self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tx_spend(TxSpend self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
