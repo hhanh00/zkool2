@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
@@ -14,6 +14,14 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/scanner.dart';
+
+final addressID = GlobalKey();
+final scanID = GlobalKey();
+final amountID = GlobalKey();
+final logID2 = GlobalKey();
+final addTxID = GlobalKey();
+final sendID2 = GlobalKey();
+final memoID = GlobalKey();
 
 class SendPage extends StatefulWidget {
   const SendPage({super.key});
@@ -28,9 +36,18 @@ class SendPageState extends State<SendPage> {
   var amount = "";
   String? memo;
   List<Recipient> recipients = [];
+  bool supportsMemo = false;
+
+  void tutorial() async {
+    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, logID2, addTxID, sendID2]);
+    if (supportsMemo)
+      tutorialHelper(context, "tutSend1", [memoID]);
+  }
 
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
+
     final recipientTiles = recipients
         .map((r) => ListTile(
               title: Text(r.address),
@@ -45,22 +62,27 @@ class SendPageState extends State<SendPage> {
             ))
         .toList();
 
+    supportsMemo = validAddress(address) == null &&
+                          !isValidTransparentAddress(address: address);
     return Scaffold(
         appBar: AppBar(
           title: Text("Recipient"),
           actions: [
+            Showcase(key: logID2, description: "Show App Log", child:
             IconButton(
                 tooltip: "Open Log",
                 onPressed: () => onOpenLog(context),
-                icon: Icon(Icons.description)),
+                icon: Icon(Icons.description))),
+            Showcase(key: addTxID, description: "Queue this recipient to create a multi send", child:
             IconButton(
                 tooltip: "Add to Multi Tx",
                 onPressed: onAdd,
-                icon: Icon(Icons.add)),
+                icon: Icon(Icons.add))),
+            Showcase(key: sendID2, description: "Send transaction (including queued recipients)", child:
             IconButton(
                 tooltip: "Send (Next Step)",
                 onPressed: onSend,
-                icon: Icon(Icons.send)),
+                icon: Icon(Icons.send))),
           ],
         ),
         body: SingleChildScrollView(
@@ -72,7 +94,8 @@ class SendPageState extends State<SendPage> {
                       ...recipientTiles,
                       Row(children: [
                         Expanded(
-                            child: FormBuilderTextField(
+                          child: Showcase(key: addressID, description: "Receiver Address (Transparent, Sapling or UA)", child:
+                            FormBuilderTextField(
                           name: "address",
                           decoration:
                               const InputDecoration(labelText: "Address"),
@@ -80,12 +103,14 @@ class SendPageState extends State<SendPage> {
                               [FormBuilderValidators.required(), validAddress]),
                           initialValue: address,
                           onChanged: (v) => setState(() => address = v!),
-                        )),
+                        ))),
+                        Showcase(key: scanID, description: "Open the QR Scanner", child:
                         IconButton(
                             tooltip: "Scan",
                             onPressed: onScan,
-                            icon: Icon(Icons.qr_code_scanner)),
+                            icon: Icon(Icons.qr_code_scanner))),
                       ]),
+                      Showcase(key: amountID, description: "Amount to send", child:
                       FormBuilderTextField(
                         name: "amount",
                         decoration: const InputDecoration(labelText: "Amount"),
@@ -94,16 +119,16 @@ class SendPageState extends State<SendPage> {
                         keyboardType: TextInputType.number,
                         initialValue: amount,
                         onChanged: (v) => setState(() => amount = v!),
-                      ),
-                      if (validAddress(address) == null &&
-                          !isValidTransparentAddress(address: address))
+                      )),
+                      if (supportsMemo)
+                        Showcase(key: memoID, description: "Optional memo", child:
                         FormBuilderTextField(
                           name: "memo",
                           decoration: const InputDecoration(labelText: "Memo"),
                           initialValue: memo,
                           onChanged: (v) => setState(() => memo = v),
                           maxLines: 8,
-                        ),
+                        )),
                     ])))));
   }
 
@@ -149,6 +174,10 @@ class SendPageState extends State<SendPage> {
   }
 }
 
+final sourceID = GlobalKey();
+final feeSourceID = GlobalKey();
+final sendID3 = GlobalKey();
+
 class Send2Page extends StatefulWidget {
   final List<Recipient> recipients;
   const Send2Page(this.recipients, {super.key});
@@ -162,8 +191,14 @@ class Send2PageState extends State<Send2Page> {
   var recipientPaysFee = false;
   final formKey = GlobalKey<FormBuilderState>();
 
+  void tutorial() async {
+    tutorialHelper(context, "tutSend2", [sourceID, feeSourceID, sendID3]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Extra Options"),
@@ -172,10 +207,11 @@ class Send2PageState extends State<Send2Page> {
               tooltip: "Open Log",
               onPressed: () => onOpenLog(context),
               icon: Icon(Icons.description)),
+          Showcase(key: sendID3, description: "Send (Summary and Confirmation)", child:
           IconButton(
               tooltip: "Send (Compute Tx)",
               onPressed: onSend,
-              icon: Icon(Icons.send)),
+              icon: Icon(Icons.send))),
         ],
       ),
       body: SingleChildScrollView(
@@ -184,6 +220,7 @@ class Send2PageState extends State<Send2Page> {
           child: FormBuilder(
               key: formKey,
               child: Column(children: [
+                Showcase(key: sourceID, description: "Pools to take funds from. Uncheck any pool you do not want to use", child:
                 InputDecorator(
                     decoration: InputDecoration(labelText: "Source Pools"),
                     child: Align(
@@ -192,13 +229,14 @@ class Send2PageState extends State<Send2Page> {
                           name: "source pools",
                           builder: (field) =>
                               PoolSelect(onChanged: (v) => field.didChange(v)),
-                        ))),
+                        )))),
+                Showcase(key: feeSourceID, description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the receipient instead", child:
                 FormBuilderSwitch(
                   name: "recipientPaysFee",
                   title: Text("Recipient Pays Fee"),
                   initialValue: false,
                   onChanged: (v) => setState(() => recipientPaysFee = v!),
-                ),
+                )),
               ])),
         ),
       ),

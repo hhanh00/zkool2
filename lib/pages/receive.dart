@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/utils.dart';
+
+final sweepID = GlobalKey();
+final deriveID = GlobalKey();
+final qrID = GlobalKey();
 
 class ReceivePage extends StatefulWidget {
   const ReceivePage({super.key});
@@ -24,22 +29,29 @@ class ReceivePageState extends State<ReceivePage> {
     });
   }
 
+  void tutorial() async {
+    tutorialHelper(context, "tutReceive0", [sweepID, deriveID, qrID]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
     final addresses = this.addresses;
 
     return Scaffold(
         appBar: AppBar(
           title: Text("Receive Funds"),
           actions: [
+            Showcase(key: sweepID, description: "Find other transparent addresses. Use if you restore from a wallet that has address rotation (such as Ledger, Exodus, etc). Then Reset and Sync", child:
             IconButton(
                 tooltip: "Sweep",
                 onPressed: onSweep,
-                icon: Icon(Icons.search)),
+                icon: Icon(Icons.search))),
+            Showcase(key: deriveID, description: "Generate a new set of addresses (transparent/sapling and orchard)", child:
             IconButton(
                 tooltip: "Next Set of Addresses",
                 onPressed: onGenerateAddress,
-                icon: Icon(Icons.skip_next)),
+                icon: Icon(Icons.skip_next))),
           ],
         ),
         body: addresses == null
@@ -52,10 +64,11 @@ class ReceivePageState extends State<ReceivePage> {
                         ListTile(
                           title: Text("Unified Address"),
                           subtitle: SelectableText(addresses.ua!),
-                          trailing: IconButton(
+                          trailing: Showcase(key: qrID, description: "Show address as a QR Code", child:
+                          IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () => onShowQR("Unified Address", addresses.ua!),
-                          ),
+                          )),
                         ),
                       if (addresses.oaddr != null)
                         ListTile(

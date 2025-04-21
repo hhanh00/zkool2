@@ -9,11 +9,22 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:file_picker/file_picker.dart';
+
+final logID = GlobalKey();
+final sync1ID = GlobalKey();
+final rewindID = GlobalKey();
+final receiveID = GlobalKey();
+final sendID = GlobalKey();
+final tBalID = GlobalKey();
+final sBalID = GlobalKey();
+final oBalID = GlobalKey();
+final balID = GlobalKey();
 
 class AccountViewPage extends StatefulWidget {
   final Account account;
@@ -35,10 +46,19 @@ class AccountViewPageState extends State<AccountViewPage> {
     Future(refresh);
   }
 
+  void tutorial() async {
+    tutorialHelper(context, "tutAccount0", [
+      tBalID, sBalID, oBalID, balID, logID, sync1ID, rewindID,
+      receiveID, sendID
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final b = poolBalance;
+
+    Future(tutorial);
 
     return DefaultTabController(
         length: 2,
@@ -46,26 +66,31 @@ class AccountViewPageState extends State<AccountViewPage> {
             appBar: AppBar(
               title: Text(widget.account.name),
               actions: [
+                Showcase(key: logID, description: "Open the App Log", child:
                 IconButton(
-                    tooltip: "Open Log",
+                    tooltip: "View Log",
                     onPressed: () => onOpenLog(context),
-                    icon: Icon(Icons.description)),
+                    icon: Icon(Icons.description))),
+                Showcase(key: sync1ID, description: "Synchronize only this account", child:
                 IconButton(
                     tooltip: "Sync this account",
                     onPressed: onSync,
-                    icon: Icon(Icons.sync)),
+                    icon: Icon(Icons.sync))),
+                Showcase(key: rewindID, description: "Rewind back 60 blocks (at least)", child:
                 IconButton(
                     tooltip: "Rewind to previous checkpoint",
                     onPressed: onRewind,
-                    icon: Icon(Icons.fast_rewind)),
+                    icon: Icon(Icons.fast_rewind))),
+                Showcase(key: receiveID, description: "Show the account receiving addresses", child:
                 IconButton(
                     tooltip: "Receive Funds",
                     onPressed: onReceive,
-                    icon: Icon(Icons.download)),
+                    icon: Icon(Icons.download))),
+                Showcase(key: sendID, description: "Send funds to one or many addresses", child:
                 IconButton(
                     tooltip: "Send Funds",
                     onPressed: onSend,
-                    icon: Icon(Icons.send)),
+                    icon: Icon(Icons.send))),
               ],
               bottom: TabBar(
                 tabs: [
@@ -92,16 +117,20 @@ class AccountViewPageState extends State<AccountViewPage> {
                     Gap(8),
                     if (b != null)
                       Row(children: [
-                        Text("T: ${zatToString(b.field0[0])}"),
+                        Showcase(key: tBalID, description: "Balance in the Transparent Pool", child:
+                        Text("T: ${zatToString(b.field0[0])}")),
                         const Gap(8),
-                        Text("S: ${zatToString(b.field0[1])}"),
+                        Showcase(key: sBalID, description: "Balance in the Sapling Pool", child:
+                        Text("S: ${zatToString(b.field0[1])}")),
                         const Gap(8),
-                        Text("O: ${zatToString(b.field0[2])}"),
+                        Showcase(key: oBalID, description: "Balance in the Orchard Pool", child:
+                        Text("O: ${zatToString(b.field0[2])}")),
                       ]),
                     Gap(8),
                     if (b != null)
+                      Showcase(key: balID, description: "Balance across all pools", child:
                       Text(
-                          "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}"),
+                          "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}")),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
@@ -154,6 +183,14 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 }
 
+final nameID2 = GlobalKey();
+final iconID2 = GlobalKey();
+final birthID2 = GlobalKey();
+final enableID = GlobalKey();
+final hideID2 = GlobalKey();
+final exportID = GlobalKey();
+final resetID = GlobalKey();
+
 class AccountEditPage extends StatefulWidget {
   final List<Account> accounts;
   const AccountEditPage(this.accounts, {super.key});
@@ -172,20 +209,28 @@ class AccountEditPageState extends State<AccountEditPage> {
     super.didUpdateWidget(oldWidget);
   }
 
+  void tutorial() async {
+    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2,
+      enableID, hideID2, exportID, resetID]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
+
     final account = accounts.length == 1 ? accounts.first : null;
 
     return Scaffold(
         appBar: AppBar(title: Text('Account Edit'), actions: [
-          if (account != null) IconButton(
+          if (account != null) Showcase(key: exportID, description: "Export an encrypted file of this account", child: IconButton(
               tooltip: "Export Account",
               onPressed: onExport,
-              icon: Icon(Icons.reset_tv)),
+              icon: Icon(Icons.reset_tv))),
+          Showcase(key: resetID, description: "Clear and reset account to birth height", child:
           IconButton(
               tooltip: "Clear Sync Data",
               onPressed: onReset,
-              icon: Icon(Icons.delete_sweep))
+              icon: Icon(Icons.delete_sweep)))
         ]),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -196,16 +241,19 @@ class AccountEditPageState extends State<AccountEditPage> {
               Row(
                 children: [
                   Expanded(
-                      child: FormBuilderTextField(
+                    child: Showcase(key: nameID2, description: "Edit Name of the account", child:
+                    FormBuilderTextField(
                     name: 'name',
                     decoration: InputDecoration(labelText: 'Name'),
                     initialValue: account?.name ?? "(Multiple)",
                     readOnly: account == null,
                     onChanged: (account != null) ? onEditName : null,
-                  )),
-                  if (account != null) account.avatar(onTap: (_) => onEditIcon())
+                  ))),
+                  if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child:
+                     account.avatar(onTap: (_) => onEditIcon()))
                 ],
               ),
+              Showcase(key: birthID2, description: "Edit Height at the creation of the account", child:
               FormBuilderTextField(
                 name: 'birth',
                 decoration: InputDecoration(labelText: 'Birth Height'),
@@ -214,7 +262,8 @@ class AccountEditPageState extends State<AccountEditPage> {
                 readOnly: account == null,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: (account != null) ? onEditBirth : null,
-              ),
+              )),
+              Showcase(key: enableID, description: "Enable or disable. Only enabled accounts participate in the global sync", child:
               FormBuilderCheckbox(
                 name: "enabled",
                 title: Text("Enabled"),
@@ -222,7 +271,8 @@ class AccountEditPageState extends State<AccountEditPage> {
                   accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
                 tristate: account == null,
                 onChanged: onEditEnabled,
-              ),
+              )),
+              Showcase(key: hideID2, description: "Hide this account from the account list", child:
               FormBuilderCheckbox(
                 name: "hidden",
                 title: Text("Hidden"),
@@ -230,7 +280,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                   accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
                 tristate: account == null,
                 onChanged: onEditHidden,
-              )
+              ))
             ],
           )),
         ));

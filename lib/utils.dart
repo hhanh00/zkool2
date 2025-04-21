@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:zkool/router.dart';
 
@@ -120,4 +122,33 @@ Future<String?> inputPassword(BuildContext context,
     return p;
   }
   return null;
+}
+
+Future<void> resetTutorial() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove("tutMain0");
+  await prefs.remove("tutMain1");
+  await prefs.remove("tutNew0");
+  await prefs.remove("tutNew1");
+  await prefs.remove("tutNew2");
+  await prefs.remove("tutEdit0");
+  await prefs.remove("tutAccount0");
+  await prefs.remove("tutReceive0");
+  await prefs.remove("tutSend0");
+  await prefs.remove("tutSend1");
+  await prefs.remove("tutSend2");
+  await prefs.remove("tutSend3");
+  await prefs.remove("tutSettings0");
+}
+
+void tutorialHelper(BuildContext context, String id,
+    List<GlobalKey<State<StatefulWidget>>> ids) async {
+  final prefs = await SharedPreferences.getInstance();
+  final tutNew = prefs.getBool(id) ?? true;
+  if (tutNew) {
+    if (!context.mounted) return;
+    final scw = ShowCaseWidget.of(context);
+    scw.startShowCase(ids);
+    await prefs.setBool(id, false);
+  }
 }
