@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
@@ -7,6 +9,7 @@ import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/tx.dart';
+import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -51,6 +54,9 @@ final router = GoRouter(
     GoRoute(
         path: '/tx',
         builder: (context, state) => TxPage(state.extra as TxPlan)),
+    GoRoute(
+        path: '/tx_view',
+        builder: (context, state) => TxView(state.extra as int)),
     GoRoute(path: '/log', builder: (context, state) => LogviewPage()),
     GoRoute(
         path: '/scanner',

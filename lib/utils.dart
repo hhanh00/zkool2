@@ -30,6 +30,11 @@ String timeToString(int time) {
   return timeago.format(date);
 }
 
+String exactTimeToString(int time) {
+  final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
+  return date.toString();
+}
+
 String txIdToString(Uint8List txid) {
   var reversed = txid.reversed.toList();
   final txId = hex.encode(reversed);
@@ -160,6 +165,7 @@ Future<void> resetTutorial() async {
   await prefs.remove("tutNew2");
   await prefs.remove("tutEdit0");
   await prefs.remove("tutAccount0");
+  await prefs.remove("tutAccount1");
   await prefs.remove("tutReceive0");
   await prefs.remove("tutSend0");
   await prefs.remove("tutSend1");
