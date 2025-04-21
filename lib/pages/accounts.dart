@@ -8,6 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
@@ -17,6 +18,14 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
+
+final heightID = GlobalKey();
+final settingsID = GlobalKey();
+final syncID = GlobalKey();
+final hideID = GlobalKey();
+
+final accountListID = GlobalKey();
+final avatarID = GlobalKey();
 
 class AccountListPage extends StatelessWidget {
   const AccountListPage({super.key});
@@ -121,20 +130,30 @@ class AccountListPage2State extends State<AccountListPage2> {
       .where((a) => includeHidden || !a.hidden)
       .toList();
 
+  void tutorial() async {
+    tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, hideID, heightID]);
+    if (accounts.isNotEmpty)
+      tutorialHelper(context, "tutNew1", [accountListID, avatarID]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
+
     return Observer(builder: (context) {
       final tt = Theme.of(context).textTheme;
       final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
       AppStoreBase.instance.accounts;
 
-      return EditableList<Account>(
+      return Showcase(key: accountListID, description: "List of Accounts. Tap on the row to select. Long tap then drag and drop to reorder", child:
+        EditableList<Account>(
           key: listKey,
           items: accounts,
           headerBuilder: (context) => [
+            Showcase(key: heightID, description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually", child:
                 Observer(builder: (context) => ElevatedButton(
                     onPressed: () => Future(refreshHeight),
-                    child: Text("Height: ${AppStoreBase.instance.currentHeight}"))),
+                    child: Text("Height: ${AppStoreBase.instance.currentHeight}")))),
                 const Gap(8),
                 if (price != null) Text("Price: $price USD"),
                 const Gap(8),
@@ -144,8 +163,9 @@ class AccountListPage2State extends State<AccountListPage2> {
                 key: ValueKey(account.id),
                 child: GestureDetector(
                   child: ListTile(
-                    leading: account.avatar(
-                        selected: selected ?? false, onTap: onSelectChanged),
+                    leading: Showcase(key: avatarID, description: "Tap to select for edit/delete", child:
+                      account.avatar(
+                        selected: selected ?? false, onTap: onSelectChanged)),
                     title: Text(account.name,
                         style: !account.enabled
                             ? TextStyle(color: Colors.grey)
@@ -198,13 +218,16 @@ class AccountListPage2State extends State<AccountListPage2> {
           isEqual: (a, b) => a.id == b.id,
           onReorder: onReorder,
           buttons: [
-            IconButton(onPressed: onSettings, icon: Icon(Icons.settings)),
-            IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+            Showcase(key: settingsID, description: "Open Settings", child:
+              IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
+            Showcase(key: syncID, description: "Synchronize all enabled accounts or the accounts currently selected", child:
+              IconButton(onPressed: onSync, icon: Icon(Icons.sync))),
+            Showcase(key: hideID, description: "Show/Hide hidden accounts", child:
             IconButton(
                 onPressed: onHide,
                 icon: Icon(
-                    includeHidden ? Icons.visibility : Icons.visibility_off)),
-          ]);
+                    includeHidden ? Icons.visibility : Icons.visibility_off))),
+          ]));
     });
   }
 
