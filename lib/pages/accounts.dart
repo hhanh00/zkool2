@@ -204,26 +204,8 @@ class AccountListPage2State extends State<AccountListPage2> {
               editBuilder: (context, a) =>
                   GoRouter.of(context).push("/account/edit", extra: a),
               deleteBuilder: (context, accounts) async {
-                final confirmed = await AwesomeDialog(
-                    context: context,
-                    dialogType: DialogType.warning,
-                    animType: AnimType.rightSlide,
-                    title: 'Delete Account(s)',
-                    desc: 'Are you sure you want to delete these accounts?',
-                    btnCancelOnPress: () {},
-                    btnOkOnPress: () {},
-                    autoDismiss: false,
-                    onDismissCallback: (d) {
-                      final res = (() {
-                        switch (d) {
-                          case DismissType.btnOk:
-                            return true;
-                          default:
-                            return false;
-                        }
-                      })();
-                      GoRouter.of(context).pop(res);
-                    }).show() as bool;
+                final confirmed = await confirmDialog(context, title: "Delete Account(s)",
+                  message: "Are you sure you want to delete these accounts?");
                 if (confirmed) {
                   for (var a in accounts) {
                     await deleteAccount(account: a.id);
