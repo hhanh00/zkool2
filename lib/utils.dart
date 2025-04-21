@@ -165,6 +165,7 @@ Future<void> resetTutorial() async {
   await prefs.remove("tutSend1");
   await prefs.remove("tutSend2");
   await prefs.remove("tutSend3");
+  await prefs.remove("tutSend4");
   await prefs.remove("tutSettings0");
 }
 
