@@ -61,6 +61,12 @@ class TxPageState extends State<TxPage> {
 
   void onSend() async {
     try {
+      final confirmed = await confirmDialog(
+        context,
+        title: "Confirm Transaction",
+        message: "Are you sure you want to send this transaction?",
+      );
+      if (!confirmed) return;
       final txId2 = await send(
         height: widget.txPlan.height,
         data: widget.txPlan.data,
