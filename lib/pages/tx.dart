@@ -10,6 +10,7 @@ final changeID = GlobalKey();
 final changePoolID = GlobalKey();
 final cancelID = GlobalKey();
 final sendID4 = GlobalKey();
+final txID = GlobalKey();
 
 class TxPage extends StatefulWidget {
   final TxPlan txPlan;
@@ -24,6 +25,9 @@ class TxPageState extends State<TxPage> {
 
   void tutorial() async {
     tutorialHelper(context, "tutSend3", [changeID, changePoolID, cancelID, sendID4]);
+    if (txId != null) {
+      tutorialHelper(context, "tutSend4", [txID]);
+    }
   }
 
   @override
@@ -49,9 +53,11 @@ class TxPageState extends State<TxPage> {
             Text("Fee: ${zatToString(widget.txPlan.fee)}"),
             Showcase(key: changeID, description: "Amount of change returned to your wallet", child:
             Text("Change: ${zatToString(widget.txPlan.change)}")),
-            Showcase(key: changePoolID, description: "Pool to which the change goes to (0 for Transparent, etc.)", child:
-            Text("Change Pool: ${widget.txPlan.changePool}")),
-            if (txId != null) SelectableText("Transaction ID: ${txId!}"),
+            Showcase(key: changePoolID, description: "Pool to which the change goes to", child:
+            Text("Change Pool: ${poolToString(widget.txPlan.changePool)}")),
+            if (txId != null)
+            Showcase(key: txID, description: "Transaction ID", child:
+              SelectableText("Transaction ID: ${txId!}")),
           ]),
         ),
         showTxPlan(context, widget.txPlan),
@@ -82,6 +88,19 @@ class TxPageState extends State<TxPage> {
   }
 }
 
+String poolToString(int pool) {
+  switch (pool) {
+    case 0:
+      return "Transparent";
+    case 1:
+      return "Sapling";
+    case 2:
+      return "Orchard";
+    default:
+      return "Unknown";
+  }
+}
+
 SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
   return SliverList.builder(
       itemCount: txPlan.inputs.length + txPlan.outputs.length,
@@ -91,7 +110,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           return ListTile(
             leading: Text("Input ${index + 1}"),
             trailing: Text("Value: ${zatToString(input.amount)}"),
-            subtitle: Text("Pool: ${input.pool}"),
+            subtitle: Text("Pool: ${poolToString(input.pool)}"),
           );
         } else {
           final index2 = index - txPlan.inputs.length;
@@ -100,7 +119,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
             leading: Text("Output ${index2 + 1}"),
             title: Text("Address: ${output.address}"),
             trailing: Text("Value: ${zatToString(output.amount)}"),
-            subtitle: Text("Pool: ${output.pool}"),
+            subtitle: Text("Pool: ${poolToString(output.pool)}"),
           );
         }
       });
