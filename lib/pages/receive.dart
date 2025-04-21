@@ -42,12 +42,12 @@ class ReceivePageState extends State<ReceivePage> {
         appBar: AppBar(
           title: Text("Receive Funds"),
           actions: [
-            Showcase(key: sweepID, description: "Find other transparent addresses. Use if you restore from a wallet that has address rotation (such as Ledger, Exodus, etc). Then Reset and Sync", child:
+            Showcase(key: sweepID, description: "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync", child:
             IconButton(
                 tooltip: "Sweep",
                 onPressed: onSweep,
                 icon: Icon(Icons.search))),
-            Showcase(key: deriveID, description: "Generate a new set of addresses (transparent/sapling and orchard)", child:
+            Showcase(key: deriveID, description: "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds", child:
             IconButton(
                 tooltip: "Next Set of Addresses",
                 onPressed: onGenerateAddress,
