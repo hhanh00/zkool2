@@ -81,6 +81,33 @@ void showSnackbar(String message) =>
       ),
     );
 
+Future<bool> confirmDialog(BuildContext context,
+    {required String title, required String message}) async {
+  final confirmed = await AwesomeDialog(
+        context: context,
+        dialogType: DialogType.question,
+        animType: AnimType.rightSlide,
+        title: title,
+        body: Text(message),
+        btnCancelOnPress: () {},
+        btnOkOnPress: () {},
+        onDismissCallback: (type) {
+          final res = (() {
+            switch (type) {
+              case DismissType.btnOk:
+                return true;
+              default:
+                return false;
+            }
+          })();
+          GoRouter.of(context).pop(res);
+        },
+        autoDismiss: false,
+      ).show() ??
+      false;
+  return confirmed;
+}
+
 Future<String?> inputPassword(BuildContext context,
     {required String title, String? message}) async {
   final password = TextEditingController();

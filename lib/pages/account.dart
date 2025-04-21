@@ -157,6 +157,12 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void onRewind() async {
+    final confirmed = await confirmDialog(
+      context,
+      title: "Rewind",
+      message: "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
+    );
+    if (!confirmed) return;
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
     final h = await getDbHeight();
