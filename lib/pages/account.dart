@@ -76,7 +76,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                     tooltip: "Sync this account",
                     onPressed: onSync,
                     icon: Icon(Icons.sync))),
-                Showcase(key: rewindID, description: "Rewind back 60 blocks (at least)", child:
+                Showcase(key: rewindID, description: "Rewind back a few blocks", child:
                 IconButton(
                     tooltip: "Rewind to previous checkpoint",
                     onPressed: onRewind,
