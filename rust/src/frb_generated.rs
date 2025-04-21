@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 930600048;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2139874238;
 
 // Section: executor
 
@@ -470,6 +470,42 @@ fn wire__crate__api__db__get_prop_impl(
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok = crate::api::db::get_prop(&api_key).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__account__get_tx_details_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_tx_details",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id_tx = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::account::get_tx_details(api_id_tx).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1800,6 +1836,30 @@ impl SseDecode for Vec<crate::api::account::Tx> {
     }
 }
 
+impl SseDecode for Vec<crate::account::TxMemo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::account::TxMemo>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::account::TxNote> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::account::TxNote>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::pay::TxPlanIn> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1819,6 +1879,18 @@ impl SseDecode for Vec<crate::pay::TxPlanOut> {
         let mut ans_ = vec![];
         for idx_ in 0..len_ {
             ans_.push(<crate::pay::TxPlanOut>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::account::TxSpend> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::account::TxSpend>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -2013,6 +2085,60 @@ impl SseDecode for crate::api::account::Tx {
     }
 }
 
+impl SseDecode for crate::account::TxAccount {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_account = <u32>::sse_decode(deserializer);
+        let mut var_txid = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_time = <u32>::sse_decode(deserializer);
+        let mut var_notes = <Vec<crate::account::TxNote>>::sse_decode(deserializer);
+        let mut var_spends = <Vec<crate::account::TxSpend>>::sse_decode(deserializer);
+        let mut var_memos = <Vec<crate::account::TxMemo>>::sse_decode(deserializer);
+        return crate::account::TxAccount {
+            id: var_id,
+            account: var_account,
+            txid: var_txid,
+            height: var_height,
+            time: var_time,
+            notes: var_notes,
+            spends: var_spends,
+            memos: var_memos,
+        };
+    }
+}
+
+impl SseDecode for crate::account::TxMemo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_memo = <Option<String>>::sse_decode(deserializer);
+        return crate::account::TxMemo {
+            id: var_id,
+            pool: var_pool,
+            memo: var_memo,
+        };
+    }
+}
+
+impl SseDecode for crate::account::TxNote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_value = <u64>::sse_decode(deserializer);
+        return crate::account::TxNote {
+            id: var_id,
+            pool: var_pool,
+            height: var_height,
+            value: var_value,
+        };
+    }
+}
+
 impl SseDecode for crate::pay::TxPlan {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2057,6 +2183,22 @@ impl SseDecode for crate::pay::TxPlanOut {
             pool: var_pool,
             amount: var_amount,
             address: var_address,
+        };
+    }
+}
+
+impl SseDecode for crate::account::TxSpend {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_value = <u64>::sse_decode(deserializer);
+        return crate::account::TxSpend {
+            id: var_id,
+            pool: var_pool,
+            height: var_height,
+            value: var_value,
         };
     }
 }
@@ -2122,28 +2264,29 @@ fn pde_ffi_dispatcher_primary_impl(
         10 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
         11 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
         12 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__sync__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__account__import_account_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__init__init_app_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__account__list_accounts_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__account__list_memos_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__account__list_tx_history_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__account__move_account_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__db__open_database_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__sync__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__account__import_account_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__init__init_app_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__account__list_accounts_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__account__list_memos_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__account__list_tx_history_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__account__move_account_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__db__open_database_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2156,15 +2299,15 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        16 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__account__new_seed_impl(ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__account__new_seed_impl(ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2414,6 +2557,63 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Tx> for crate::api::
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::account::TxAccount {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.account.into_into_dart().into_dart(),
+            self.txid.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.time.into_into_dart().into_dart(),
+            self.notes.into_into_dart().into_dart(),
+            self.spends.into_into_dart().into_dart(),
+            self.memos.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::account::TxAccount {}
+impl flutter_rust_bridge::IntoIntoDart<crate::account::TxAccount> for crate::account::TxAccount {
+    fn into_into_dart(self) -> crate::account::TxAccount {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::account::TxMemo {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.pool.into_into_dart().into_dart(),
+            self.memo.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::account::TxMemo {}
+impl flutter_rust_bridge::IntoIntoDart<crate::account::TxMemo> for crate::account::TxMemo {
+    fn into_into_dart(self) -> crate::account::TxMemo {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::account::TxNote {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.pool.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.value.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::account::TxNote {}
+impl flutter_rust_bridge::IntoIntoDart<crate::account::TxNote> for crate::account::TxNote {
+    fn into_into_dart(self) -> crate::account::TxNote {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::pay::TxPlan {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2464,6 +2664,24 @@ impl flutter_rust_bridge::IntoDart for crate::pay::TxPlanOut {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::pay::TxPlanOut {}
 impl flutter_rust_bridge::IntoIntoDart<crate::pay::TxPlanOut> for crate::pay::TxPlanOut {
     fn into_into_dart(self) -> crate::pay::TxPlanOut {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::account::TxSpend {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.pool.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.value.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::account::TxSpend {}
+impl flutter_rust_bridge::IntoIntoDart<crate::account::TxSpend> for crate::account::TxSpend {
+    fn into_into_dart(self) -> crate::account::TxSpend {
         self
     }
 }
@@ -2633,6 +2851,26 @@ impl SseEncode for Vec<crate::api::account::Tx> {
     }
 }
 
+impl SseEncode for Vec<crate::account::TxMemo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::account::TxMemo>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::account::TxNote> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::account::TxNote>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::pay::TxPlanIn> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2649,6 +2887,16 @@ impl SseEncode for Vec<crate::pay::TxPlanOut> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::pay::TxPlanOut>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::account::TxSpend> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::account::TxSpend>::sse_encode(item, serializer);
         }
     }
 }
@@ -2787,6 +3035,39 @@ impl SseEncode for crate::api::account::Tx {
     }
 }
 
+impl SseEncode for crate::account::TxAccount {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.id, serializer);
+        <u32>::sse_encode(self.account, serializer);
+        <Vec<u8>>::sse_encode(self.txid, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <u32>::sse_encode(self.time, serializer);
+        <Vec<crate::account::TxNote>>::sse_encode(self.notes, serializer);
+        <Vec<crate::account::TxSpend>>::sse_encode(self.spends, serializer);
+        <Vec<crate::account::TxMemo>>::sse_encode(self.memos, serializer);
+    }
+}
+
+impl SseEncode for crate::account::TxMemo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.id, serializer);
+        <u8>::sse_encode(self.pool, serializer);
+        <Option<String>>::sse_encode(self.memo, serializer);
+    }
+}
+
+impl SseEncode for crate::account::TxNote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.id, serializer);
+        <u8>::sse_encode(self.pool, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <u64>::sse_encode(self.value, serializer);
+    }
+}
+
 impl SseEncode for crate::pay::TxPlan {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2814,6 +3095,16 @@ impl SseEncode for crate::pay::TxPlanOut {
         <u8>::sse_encode(self.pool, serializer);
         <u64>::sse_encode(self.amount, serializer);
         <String>::sse_encode(self.address, serializer);
+    }
+}
+
+impl SseEncode for crate::account::TxSpend {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.id, serializer);
+        <u8>::sse_encode(self.pool, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <u64>::sse_encode(self.value, serializer);
     }
 }
 

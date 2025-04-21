@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
 use jubjub::Fr;
@@ -410,4 +410,109 @@ pub async fn reset_sync(connection: &SqlitePool, account: u32) -> Result<()> {
         .fetch_one(connection)
         .await?;
     trim_sync_data(connection, account, birth_height - 1).await
+}
+
+pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -> Result<TxAccount> {
+    let mut tx = sqlx::query(
+        "SELECT txid, height, time FROM transactions
+        WHERE account = ? AND id_tx = ?",
+    )
+    .bind(account)
+    .bind(id_tx)
+    .map(|row: SqliteRow| {
+        let txid: Vec<u8> = row.get(0);
+        let height: u32 = row.get(1);
+        let time: u32 = row.get(2);
+        TxAccount { id: id_tx, account, txid, height, time, ..Default::default() }
+    })
+    .fetch_one(connection)
+    .await?;
+
+    let notes = sqlx::query(
+        "SELECT id_note, pool, height, value FROM notes
+        WHERE account = ? AND tx = ?",
+    )
+    .bind(account)
+    .bind(tx.id)
+    .map(|row: SqliteRow| {
+        let id_note: u32 = row.get(0);
+        let pool: u8 = row.get(1);
+        let height: u32 = row.get(2);
+        let value: u64 = row.get(3);
+        TxNote { id: id_note, pool, height, value }
+    })
+    .fetch_all(connection)
+    .await?;
+
+    let spends = sqlx::query(
+        "SELECT id_note, pool, height, value FROM spends
+        WHERE account = ? AND tx = ?",
+    )
+    .bind(account)
+    .bind(tx.id)
+    .map(|row: SqliteRow| {
+        let id: u32 = row.get(0);
+        let pool: u8 = row.get(1);
+        let height: u32 = row.get(2);
+        let value: i64 = row.get(3);
+        TxSpend { id, pool, height, value: -value as u64}
+    })
+    .fetch_all(connection)
+    .await?;
+
+    let memos = sqlx::query(
+        "SELECT note, pool, memo_text FROM memos
+        WHERE account = ? AND tx = ?",
+    )
+    .bind(account)
+    .bind(tx.id)
+    .map(|row: SqliteRow| {
+        let id: u32 = row.get(0);
+        let pool: u8 = row.get(1);
+        let memo: Option<String> = row.get(2);
+        TxMemo { id, pool, memo }
+    })
+    .fetch_all(connection)
+    .await?;
+
+    tx.notes = notes;
+    tx.spends = spends;
+    tx.memos = memos;
+
+    Ok(tx)
+}
+
+#[derive(Default, Debug)]
+pub struct TxAccount {
+    pub id: u32,
+    pub account: u32,
+    pub txid: Vec<u8>,
+    pub height: u32,
+    pub time: u32,
+    pub notes: Vec<TxNote>,
+    pub spends: Vec<TxSpend>,
+    pub memos: Vec<TxMemo>,
+}
+
+#[derive(Default, Debug)]
+pub struct TxNote {
+    pub id: u32,
+    pub pool: u8,
+    pub height: u32,
+    pub value: u64,
+}
+
+#[derive(Default, Debug)]
+pub struct TxSpend {
+    pub id: u32,
+    pub pool: u8,
+    pub height: u32,
+    pub value: u64,
+}
+
+#[derive(Default, Debug)]
+pub struct TxMemo {
+    pub id: u32,
+    pub pool: u8,
+    pub memo: Option<String>,
 }
