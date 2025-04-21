@@ -101,6 +101,8 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void onGenerateAddress() async {
+    final confirmed = await confirmDialog(context, title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
+    if (!confirmed) return;
     await generateNextDindex();
     addresses = await getAddresses();
 
