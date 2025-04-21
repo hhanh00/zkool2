@@ -14,7 +14,6 @@ const String appName = "zkool";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await resetTutorial();
 
   final prefs = SharedPreferencesAsync();
   final dbName = await prefs.getString("database") ?? appName;
