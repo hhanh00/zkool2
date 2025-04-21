@@ -61,6 +61,7 @@ tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt", "json"]}
 
 age = "0.11"
+flate2 = "1.1"
 
 libsqlite3-sys = { version = "0.28", features = ["bundled-sqlcipher-vendored-openssl"] }
 
