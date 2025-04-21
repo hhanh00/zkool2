@@ -3,8 +3,10 @@ use std::collections::HashMap;
 use age::secrecy::SecretString;
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
+use flate2::{bufread::GzDecoder, write::GzEncoder, Compression};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tracing::info;
+use std::io::prelude::*;
 
 pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
@@ -279,12 +281,19 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     io_account.transactions = transactions;
 
     let io_account = bincode::encode_to_vec(&io_account, legacy())?;
-    info!("Exported account size: {}", io_account.len());
-    Ok(io_account)
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&io_account)?;
+    let data = encoder.finish()?;
+
+    info!("Exported account size: {}", data.len());
+    Ok(data)
 }
 
 pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> {
-    let (io_account, _) = bincode::decode_from_slice::<IOAccount, _>(data, legacy())?;
+    let mut decoder = GzDecoder::new(data);
+    let mut data = vec![];
+    decoder.read_to_end(&mut data)?;
+    let (io_account, _) = bincode::decode_from_slice::<IOAccount, _>(&data, legacy())?;
 
     // Move all accounts down by one position
     sqlx::query("UPDATE accounts SET position = position + 1")
