@@ -38,6 +38,8 @@ dependencies:
   animated_reorderable_list: ^1.2.0
   toastification: ^3.0.2
 
+  showcaseview: ^4.0.1
+
   fixed: ^5.3.3
   timeago: ^3.7.0
 
