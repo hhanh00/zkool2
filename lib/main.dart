@@ -6,7 +6,6 @@ import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
-import 'package:zkool/utils.dart';
 
 var logger = Logger();
 
