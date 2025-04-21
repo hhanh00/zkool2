@@ -25,6 +25,7 @@ final tBalID = GlobalKey();
 final sBalID = GlobalKey();
 final oBalID = GlobalKey();
 final balID = GlobalKey();
+final txdID = GlobalKey();
 
 class AccountViewPage extends StatefulWidget {
   final Account account;
@@ -51,6 +52,10 @@ class AccountViewPageState extends State<AccountViewPage> {
       tBalID, sBalID, oBalID, balID, logID, sync1ID, rewindID,
       receiveID, sendID
     ]);
+    if (AppStoreBase.instance.transactions.isNotEmpty)
+      tutorialHelper(context, "tutAccount1", [
+        txdID,
+      ]);
   }
 
   @override
@@ -401,15 +406,26 @@ List<Widget> showTxHistory(List<Tx> transactions) {
         // encode tx.txid to hex string
         String txId = txIdToString(tx.txid);
 
-        return ListTile(
+        final tile = ListTile(
+          onTap: () => gotoTransaction(context, tx.id),
           leading: Text("${tx.height}"),
           title: SelectableText(txId),
           subtitle: Text(timeToString(tx.time)),
           trailing: Text(zatToString(BigInt.from(tx.value))),
         );
+
+        return (index == 0) ? Showcase(
+          key: txdID,
+          description: "Tap on a transaction or memo to view details",
+          child: tile,
+        ) : tile;
       },
     ),
   ];
+}
+
+void gotoTransaction(BuildContext context, int idTx) async {
+  await GoRouter.of(context).push("/tx_view", extra: idTx);
 }
 
 List<Widget> showMemos(List<Memo> memos) {
@@ -422,6 +438,7 @@ List<Widget> showMemos(List<Memo> memos) {
         final memo = memos[index];
 
         return ListTile(
+          onTap: () => gotoTransaction(context, memo.idTx),
           leading: Text("${memo.height}"),
           title: SelectableText(memo.memo ?? hex.encode(memo.memoBytes)),
           subtitle: Text(timeToString(memo.time)),

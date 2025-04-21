@@ -27,7 +27,7 @@ use zcash_protocol::consensus::{Network, NetworkConstants};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk},
+    account::{derive_transparent_address, derive_transparent_sk, TxAccount},
     bip38,
     db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
@@ -539,6 +539,13 @@ pub struct Addresses {
     pub saddr: Option<String>,
     pub oaddr: Option<String>,
     pub ua: Option<String>,
+}
+
+#[frb]
+pub async fn get_tx_details(id_tx: u32) -> Result<TxAccount> {
+    let c = get_coin!();
+    let tx = crate::account::get_tx_details(&c.get_pool(), c.account, id_tx).await?;
+    Ok(tx)
 }
 
 #[frb]
