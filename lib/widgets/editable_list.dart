@@ -4,6 +4,9 @@ import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
+import 'package:showcaseview/showcaseview.dart';
+
+final newAccountId = GlobalKey();
 
 class EditableList<T extends Object> extends StatefulWidget {
   final String title;
@@ -79,7 +82,8 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
           title: Text(widget.title),
           actions: [
             if (!anySelected)
-              IconButton(onPressed: onNew, icon: Icon(Icons.add)),
+              Showcase(key: newAccountId, description: "Create new account",
+                child: IconButton(onPressed: onNew, icon: Icon(Icons.add))),
             if (anySelected)
               IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
             if (anySelected)

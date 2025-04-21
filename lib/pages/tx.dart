@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:go_router/go_router.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/utils.dart';
+
+final changeID = GlobalKey();
+final changePoolID = GlobalKey();
+final cancelID = GlobalKey();
+final sendID4 = GlobalKey();
 
 class TxPage extends StatefulWidget {
   final TxPlan txPlan;
@@ -16,16 +22,24 @@ class TxPage extends StatefulWidget {
 class TxPageState extends State<TxPage> {
   String? txId;
 
+  void tutorial() async {
+    tutorialHelper(context, "tutSend3", [changeID, changePoolID, cancelID, sendID4]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+
+    Future(tutorial);
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Transaction"),
         actions: [
-          IconButton(onPressed: onCancel, icon: Icon(Icons.cancel)),
-          IconButton(onPressed: onSend, icon: Icon(Icons.send)),
+          Showcase(key: cancelID, description: "Cancel, do NOT send", child:
+          IconButton(onPressed: onCancel, icon: Icon(Icons.cancel))),
+          Showcase(key: sendID4, description: "Confirm, broadcast transaction", child:
+          IconButton(onPressed: onSend, icon: Icon(Icons.send))),
         ],
       ),
       body: CustomScrollView(slivers: [
@@ -33,8 +47,10 @@ class TxPageState extends State<TxPage> {
           child: Column(children: [
             Text("Tx Plan", style: t.titleSmall),
             Text("Fee: ${zatToString(widget.txPlan.fee)}"),
-            Text("Change: ${zatToString(widget.txPlan.change)}"),
-            Text("Change Pool: ${widget.txPlan.changePool}"),
+            Showcase(key: changeID, description: "Amount of change returned to your wallet", child:
+            Text("Change: ${zatToString(widget.txPlan.change)}")),
+            Showcase(key: changePoolID, description: "Pool to which the change goes to (0 for Transparent, etc.)", child:
+            Text("Change Pool: ${widget.txPlan.changePool}")),
             if (txId != null) SelectableText("Transaction ID: ${txId!}"),
           ]),
         ),

@@ -4,10 +4,16 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
+
+final databaseID = GlobalKey();
+final lwdID = GlobalKey();
+final autosyncID = GlobalKey();
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -37,13 +43,24 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     AppStoreBase.instance.autoSync();
   }
 
+  void tutorial() async {
+    tutorialHelper(context, "tutSettings0", [databaseID, lwdID, autosyncID]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
+    Future(tutorial);
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Settings"),
+        actions: [
+          IconButton(
+            tooltip: "Show Tutorials again",
+            onPressed: resetTutorial, icon: Icon(Icons.school))
+        ],
       ),
       body: SingleChildScrollView(
         child: FormBuilder(
@@ -52,19 +69,22 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
+                Showcase(key: databaseID, description: "Change the database file. This requires a RESTART after", child:
                 FormBuilderTextField(
                   name: "database_name",
                   decoration: const InputDecoration(labelText: "Database Name"),
                   initialValue: databaseName,
                   onChanged: onChangedDatabaseName,
-                ),
+                )),
+                Showcase(key: lwdID, description: "Lightwalletd server to connect to", child:
                 FormBuilderTextField(
                   name: "lwd",
                   decoration:
                       const InputDecoration(labelText: "Lightwalletd Server"),
                   initialValue: lwd,
                   onChanged: onChangedLWD,
-                ),
+                )),
+                Showcase(key: autosyncID, description: "AutoSync interval in blocks. Accounts that are behind by more than this value are synchronized.", child:
                 FormBuilderTextField(
                   name: "autosync",
                   decoration:
@@ -74,7 +94,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                   validator: FormBuilderValidators.integer(),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                ),
+                )),
                 Gap(16),
                 Text(AppStoreBase.instance.dbFilepath, style: t.bodySmall),
               ],
