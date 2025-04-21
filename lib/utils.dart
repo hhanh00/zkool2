@@ -125,7 +125,7 @@ Future<String?> inputPassword(BuildContext context,
 }
 
 Future<void> resetTutorial() async {
-  final prefs = await SharedPreferences.getInstance();
+  final prefs = SharedPreferencesAsync();
   await prefs.remove("tutMain0");
   await prefs.remove("tutMain1");
   await prefs.remove("tutNew0");
@@ -143,12 +143,14 @@ Future<void> resetTutorial() async {
 
 void tutorialHelper(BuildContext context, String id,
     List<GlobalKey<State<StatefulWidget>>> ids) async {
-  final prefs = await SharedPreferences.getInstance();
-  final tutNew = prefs.getBool(id) ?? true;
+  final prefs = SharedPreferencesAsync();
+  final tutNew = await prefs.getBool(id) ?? true;
   if (tutNew) {
     if (!context.mounted) return;
     final scw = ShowCaseWidget.of(context);
-    scw.startShowCase(ids);
-    await prefs.setBool(id, false);
+    if (scw.isShowCaseCompleted) {
+      scw.startShowCase(ids);
+      await prefs.setBool(id, false);
+    }
   }
 }

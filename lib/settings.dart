@@ -84,7 +84,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                   initialValue: lwd,
                   onChanged: onChangedLWD,
                 )),
-                Showcase(key: autosyncID, description: "AutoSync interval in blocks. Accounts that are behind by more than this value are synchronized.", child:
+                Showcase(key: autosyncID, description: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization.", child:
                 FormBuilderTextField(
                   name: "autosync",
                   decoration:
@@ -107,7 +107,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
 
   void onChangedDatabaseName(String? value) async {
     if (value == null) return;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setString("database", value);
     AppStoreBase.instance.dbName = value;
     setState(() {

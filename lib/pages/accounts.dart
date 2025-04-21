@@ -41,13 +41,14 @@ class AccountListPage extends StatelessWidget {
       String? password;
       if (!File(dbFilepath).existsSync()) {
         if (dbName != appName) {
-        // do not encrypt default database
+          // do not encrypt default database
           password = await inputPassword(navigatorKey.currentContext!,
               title: "Enter New Database Password",
               message: "Password CANNOT be changed later");
         }
         if (password != null && password.isEmpty) password = null;
-        logger.i("Creating database file: $dbFilepath with password: $password");
+        logger
+            .i("Creating database file: $dbFilepath with password: $password");
         await createDatabase(
             dbFilepath: dbFilepath, password: password, coin: 0);
         logger.i("Database file created: $dbFilepath");
@@ -131,9 +132,10 @@ class AccountListPage2State extends State<AccountListPage2> {
       .toList();
 
   void tutorial() async {
-    tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, hideID, heightID]);
+    tutorialHelper(context, "tutMain0",
+        [newAccountId, settingsID, syncID, hideID, heightID]);
     if (accounts.isNotEmpty)
-      tutorialHelper(context, "tutNew1", [accountListID, avatarID]);
+      tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
   }
 
   @override
@@ -145,89 +147,113 @@ class AccountListPage2State extends State<AccountListPage2> {
       final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
       AppStoreBase.instance.accounts;
 
-      return Showcase(key: accountListID, description: "List of Accounts. Tap on the row to select. Long tap then drag and drop to reorder", child:
-        EditableList<Account>(
-          key: listKey,
-          items: accounts,
-          headerBuilder: (context) => [
-            Showcase(key: heightID, description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually", child:
-                Observer(builder: (context) => ElevatedButton(
-                    onPressed: () => Future(refreshHeight),
-                    child: Text("Height: ${AppStoreBase.instance.currentHeight}")))),
-                const Gap(8),
-                if (price != null) Text("Price: $price USD"),
-                const Gap(8),
-              ],
-          builder: (context, index, account, {selected, onSelectChanged}) {
-            return Material(
-                key: ValueKey(account.id),
-                child: GestureDetector(
-                  child: ListTile(
-                    leading: Showcase(key: avatarID, description: "Tap to select for edit/delete", child:
-                      account.avatar(
-                        selected: selected ?? false, onTap: onSelectChanged)),
-                    title: Text(account.name,
-                        style: !account.enabled
-                            ? TextStyle(color: Colors.grey)
-                            : null),
-                    subtitle: Text(zatToString(account.balance),
-                        style: t.copyWith(fontWeight: FontWeight.w700)),
-                    trailing: Observer(
-                        builder: (context) => Text(
-                              AppStoreBase.instance.heights[account.id]
-                                  .toString(),
-                              textAlign: TextAlign.end,
-                            )),
-                  ),
-                  onTap: () => onOpen(context, account),
-                ));
-          },
-          title: "Account List",
-          onCreate: () => widget.accounts,
-          createBuilder: (context) => GoRouter.of(context).push("/account/new"),
-          editBuilder: (context, a) =>
-              GoRouter.of(context).push("/account/edit", extra: a),
-          deleteBuilder: (context, accounts) async {
-            final confirmed = await AwesomeDialog(
-                context: context,
-                dialogType: DialogType.warning,
-                animType: AnimType.rightSlide,
-                title: 'Delete Account(s)',
-                desc: 'Are you sure you want to delete these accounts?',
-                btnCancelOnPress: () {},
-                btnOkOnPress: () {},
-                autoDismiss: false,
-                onDismissCallback: (d) {
-                  final res = (() {
-                    switch (d) {
-                      case DismissType.btnOk:
-                        return true;
-                      default:
-                        return false;
-                    }
-                  })();
-                  GoRouter.of(context).pop(res);
-                }).show() as bool;
-            if (confirmed) {
-              for (var a in accounts) {
-                await deleteAccount(account: a.id);
-              }
-              await AppStoreBase.instance.loadAccounts();
-            }
-          },
-          isEqual: (a, b) => a.id == b.id,
-          onReorder: onReorder,
-          buttons: [
-            Showcase(key: settingsID, description: "Open Settings", child:
-              IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
-            Showcase(key: syncID, description: "Synchronize all enabled accounts or the accounts currently selected", child:
-              IconButton(onPressed: onSync, icon: Icon(Icons.sync))),
-            Showcase(key: hideID, description: "Show/Hide hidden accounts", child:
-            IconButton(
-                onPressed: onHide,
-                icon: Icon(
-                    includeHidden ? Icons.visibility : Icons.visibility_off))),
-          ]));
+      return Showcase(
+          key: accountListID,
+          description:
+              "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
+          child: EditableList<Account>(
+              key: listKey,
+              items: accounts,
+              headerBuilder: (context) => [
+                    Showcase(
+                        key: heightID,
+                        description:
+                            "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
+                        child: Observer(
+                            builder: (context) => ElevatedButton(
+                                onPressed: () => Future(refreshHeight),
+                                child: Text(
+                                    "Height: ${AppStoreBase.instance.currentHeight}")))),
+                    const Gap(8),
+                    if (price != null) Text("Price: $price USD"),
+                    const Gap(8),
+                  ],
+              builder: (context, index, account, {selected, onSelectChanged}) {
+                final avatar = account.avatar(
+                    selected: selected ?? false, onTap: onSelectChanged);
+                return Material(
+                    key: ValueKey(account.id),
+                    child: GestureDetector(
+                      child: ListTile(
+                        leading: index == 0
+                            ? Showcase(
+                                key: avatarID,
+                                description: "Tap to select for edit/delete",
+                                child: avatar)
+                            : avatar,
+                        title: Text(account.name,
+                            style: !account.enabled
+                                ? TextStyle(color: Colors.grey)
+                                : null),
+                        subtitle: Text(zatToString(account.balance),
+                            style: t.copyWith(fontWeight: FontWeight.w700)),
+                        trailing: Observer(
+                            builder: (context) => Text(
+                                  AppStoreBase.instance.heights[account.id]
+                                      .toString(),
+                                  textAlign: TextAlign.end,
+                                )),
+                      ),
+                      onTap: () => onOpen(context, account),
+                    ));
+              },
+              title: "Account List",
+              onCreate: () => widget.accounts,
+              createBuilder: (context) =>
+                  GoRouter.of(context).push("/account/new"),
+              editBuilder: (context, a) =>
+                  GoRouter.of(context).push("/account/edit", extra: a),
+              deleteBuilder: (context, accounts) async {
+                final confirmed = await AwesomeDialog(
+                    context: context,
+                    dialogType: DialogType.warning,
+                    animType: AnimType.rightSlide,
+                    title: 'Delete Account(s)',
+                    desc: 'Are you sure you want to delete these accounts?',
+                    btnCancelOnPress: () {},
+                    btnOkOnPress: () {},
+                    autoDismiss: false,
+                    onDismissCallback: (d) {
+                      final res = (() {
+                        switch (d) {
+                          case DismissType.btnOk:
+                            return true;
+                          default:
+                            return false;
+                        }
+                      })();
+                      GoRouter.of(context).pop(res);
+                    }).show() as bool;
+                if (confirmed) {
+                  for (var a in accounts) {
+                    await deleteAccount(account: a.id);
+                  }
+                  await AppStoreBase.instance.loadAccounts();
+                }
+              },
+              isEqual: (a, b) => a.id == b.id,
+              onReorder: onReorder,
+              buttons: [
+                Showcase(
+                    key: settingsID,
+                    description: "Open Settings",
+                    child: IconButton(
+                        onPressed: onSettings, icon: Icon(Icons.settings))),
+                Showcase(
+                    key: syncID,
+                    description:
+                        "Synchronize all enabled accounts or the accounts currently selected",
+                    child:
+                        IconButton(onPressed: onSync, icon: Icon(Icons.sync))),
+                Showcase(
+                    key: hideID,
+                    description: "Show/Hide hidden accounts",
+                    child: IconButton(
+                        onPressed: onHide,
+                        icon: Icon(includeHidden
+                            ? Icons.visibility
+                            : Icons.visibility_off))),
+              ]));
     });
   }
 

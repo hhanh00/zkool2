@@ -16,8 +16,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await resetTutorial();
 
-  final prefs = await SharedPreferences.getInstance();
-  final dbName = prefs.getString("database") ?? appName;
+  final prefs = SharedPreferencesAsync();
+  final dbName = await prefs.getString("database") ?? appName;
   await RustLib.init();
   AppStoreBase.instance.dbName = dbName;
 
