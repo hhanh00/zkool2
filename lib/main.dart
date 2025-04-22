@@ -33,5 +33,9 @@ Future<void> main() async {
             backgroundColor: Colors.transparent),
       ],
           builder: (context) => MaterialApp.router(
-              routerConfig: router, debugShowCheckedModeBanner: false))));
+              routerConfig: router,
+              themeMode: ThemeMode.system,
+              theme: ThemeData.light(),
+              darkTheme: ThemeData.dark(),
+              debugShowCheckedModeBanner: false))));
 }
