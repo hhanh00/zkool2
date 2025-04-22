@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/account.dart';
