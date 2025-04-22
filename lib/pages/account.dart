@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/pages/tx.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -388,17 +389,18 @@ class AccountEditPageState extends State<AccountEditPage> {
 
 extension AccountExtension on Account {
   Widget avatar({bool? selected, void Function(bool?)? onTap}) {
+    final t = Theme.of(navigatorKey.currentContext!).colorScheme;
     final i = initials(name);
     final s = selected ?? false;
     return GestureDetector(
         onTap: () => onTap?.call(!s),
         child: CircleAvatar(
-          backgroundColor: s ? Colors.blue.shade700 : Colors.grey.shade300,
+          backgroundColor: s ? Colors.blue.shade700 : t.primaryContainer,
           child: s
               ? Icon(Icons.check, color: Colors.white)
               : icon != null
                   ? ClipOval(child: Image.memory(icon!))
-                  : Text(i),
+                  : Text(i, style: TextStyle(color: t.onPrimaryContainer)),
         ));
   }
 }
@@ -460,6 +462,7 @@ List<Widget> showMemos(List<Memo> memos) {
 }
 
 List<Widget> showNotes(List<TxNote> notes) {
+  final t = Theme.of(navigatorKey.currentContext!);
   return [
     ListView.builder(
       shrinkWrap: true,
@@ -474,7 +477,7 @@ List<Widget> showNotes(List<TxNote> notes) {
           leading: Text("${note.height}"),
           title: Text(poolToString(note.pool)),
           trailing: Text(zatToString(note.value)),
-          textColor: note.locked ? Colors.red.shade500 : null,
+          textColor: note.locked ? t.disabledColor : null,
         );
       },
     ),
