@@ -29,3 +29,7 @@ jobs:
           dart pub global activate fastforge
       - name: Build
         run: fastforge package --platform=linux --targets=deb
+      - name: Upload apk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./**/*.deb
