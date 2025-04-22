@@ -429,7 +429,7 @@ pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -
     .await?;
 
     let notes = sqlx::query(
-        "SELECT id_note, pool, height, value FROM notes
+        "SELECT id_note, pool, height, value, locked FROM notes
         WHERE account = ? AND tx = ?",
     )
     .bind(account)
@@ -439,7 +439,8 @@ pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -
         let pool: u8 = row.get(1);
         let height: u32 = row.get(2);
         let value: u64 = row.get(3);
-        TxNote { id: id_note, pool, height, value }
+        let locked: bool = row.get(4);
+        TxNote { id: id_note, pool, height, value, locked }
     })
     .fetch_all(connection)
     .await?;
@@ -500,6 +501,7 @@ pub struct TxNote {
     pub pool: u8,
     pub height: u32,
     pub value: u64,
+    pub locked: bool,
 }
 
 #[derive(Default, Debug)]

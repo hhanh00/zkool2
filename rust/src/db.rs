@@ -7,6 +7,7 @@ use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
+use crate::account::TxNote;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 
@@ -768,4 +769,41 @@ pub async fn get_account_dindex(connection: &SqlitePool, account: u32) -> Result
         .fetch_one(connection)
         .await?;
     Ok(dindex)
+}
+
+pub async fn get_notes(connection: &SqlitePool, account: u32) -> Result<Vec<TxNote>> {
+    let notes = sqlx::query(
+        "SELECT id_note, height, pool, value, locked
+       FROM notes WHERE account = ? ORDER BY height DESC",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id_note: u32 = row.get(0);
+        let height: u32 = row.get(1);
+        let pool: u8 = row.get(2);
+        let value: u64 = row.get(3);
+        let locked: bool = row.get(4);
+
+        TxNote {
+            id: id_note,
+            height,
+            pool,
+            value,
+            locked,
+        }
+    })
+    .fetch_all(connection)
+    .await?;
+
+    Ok(notes)
+}
+
+pub async fn lock_note(connection: &SqlitePool, account: u32, id: u32, locked: bool) -> Result<()> {
+    sqlx::query("UPDATE notes SET locked = ? WHERE account = ? AND id_note = ?")
+        .bind(locked)
+        .bind(account)
+        .bind(id)
+        .execute(connection)
+        .await?;
+    Ok(())
 }

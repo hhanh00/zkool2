@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:mobx/mobx.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
@@ -26,6 +27,8 @@ abstract class AppStoreBase with Store {
   List<Tx> transactions = [];
   @observable
   List<Memo> memos = [];
+  @observable
+  List<TxNote> notes = [];
   ObservableMap<int, int> heights = ObservableMap.of({});
   @observable
   int currentHeight = 0;
@@ -67,14 +70,19 @@ abstract class AppStoreBase with Store {
     return as;
   }
 
+  @action
   Future<void> loadTxHistory() async {
-    final txs = await listTxHistory();
-    transactions = txs;
+    transactions = await listTxHistory();
   }
 
+  @action
   Future<void> loadMemos() async {
-    final mems = await listMemos();
-    memos = mems;
+    memos = await listMemos();
+  }
+
+  @action
+  Future<void> loadNotes() async {
+    notes = await listNotes();
   }
 
   bool syncInProgress = false;
