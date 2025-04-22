@@ -727,6 +727,7 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
         WHERE b.id_note IS NULL AND a.account = ?
+        AND locked = 0
         ORDER BY a.pool",
     )
     .bind(account)

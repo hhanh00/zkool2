@@ -82,17 +82,23 @@ class TxNote {
   final int pool;
   final int height;
   final BigInt value;
+  final bool locked;
 
   const TxNote({
     required this.id,
     required this.pool,
     required this.height,
     required this.value,
+    required this.locked,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ pool.hashCode ^ height.hashCode ^ value.hashCode;
+      id.hashCode ^
+      pool.hashCode ^
+      height.hashCode ^
+      value.hashCode ^
+      locked.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -102,7 +108,8 @@ class TxNote {
           id == other.id &&
           pool == other.pool &&
           height == other.height &&
-          value == other.value;
+          value == other.value &&
+          locked == other.locked;
 }
 
 class TxSpend {

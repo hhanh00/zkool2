@@ -9,6 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'account.freezed.dart';
 
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AccountNote`
+
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
@@ -69,6 +71,12 @@ Future<Addresses> getAddresses() =>
 
 Future<TxAccount> getTxDetails({required int idTx}) =>
     RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx);
+
+Future<List<TxNote>> listNotes() =>
+    RustLib.instance.api.crateApiAccountListNotes();
+
+Future<void> lockNote({required int id, required bool locked}) =>
+    RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked);
 
 Future<void> transparentSweep(
         {required int endHeight, required int gapLimit}) =>

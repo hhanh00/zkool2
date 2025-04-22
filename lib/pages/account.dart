@@ -10,6 +10,8 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/pages/tx.dart';
+import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
@@ -66,7 +68,7 @@ class AccountViewPageState extends State<AccountViewPage> {
     Future(tutorial);
 
     return DefaultTabController(
-        length: 2,
+        length: 3,
         child: Scaffold(
             appBar: AppBar(
               title: Text(widget.account.name),
@@ -101,6 +103,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                 tabs: [
                   Tab(text: 'Transactions'),
                   Tab(text: 'Memos'),
+                  Tab(text: 'Notes'),
                 ],
               ),
             ),
@@ -123,18 +126,18 @@ class AccountViewPageState extends State<AccountViewPage> {
                     if (b != null)
                       Row(children: [
                         Showcase(key: tBalID, description: "Balance in the Transparent Pool", child:
-                        Text("T: ${zatToString(b.field0[0])}")),
+                        SelectableText("T: ${zatToString(b.field0[0])}")),
                         const Gap(8),
                         Showcase(key: sBalID, description: "Balance in the Sapling Pool", child:
-                        Text("S: ${zatToString(b.field0[1])}")),
+                        SelectableText("S: ${zatToString(b.field0[1])}")),
                         const Gap(8),
                         Showcase(key: oBalID, description: "Balance in the Orchard Pool", child:
-                        Text("O: ${zatToString(b.field0[2])}")),
+                        SelectableText("O: ${zatToString(b.field0[2])}")),
                       ]),
                     Gap(8),
                     if (b != null)
                       Showcase(key: balID, description: "Balance across all pools", child:
-                      Text(
+                      SelectableText(
                           "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}")),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
@@ -144,7 +147,11 @@ class AccountViewPageState extends State<AccountViewPage> {
                     children: [
                       ...showMemos(AppStoreBase.instance.memos),
                     ],
-                  ))
+                  )),
+                  SingleChildScrollView(
+                      child: Observer(builder: (context) => Column(children: [
+                      ...showNotes(AppStoreBase.instance.notes),
+                  ]))),
                 ]);
               }),
             )));
@@ -187,6 +194,7 @@ class AccountViewPageState extends State<AccountViewPage> {
     await AppStoreBase.instance.loadAccounts();
     await AppStoreBase.instance.loadTxHistory();
     await AppStoreBase.instance.loadMemos();
+    await AppStoreBase.instance.loadNotes();
     if (!mounted) return;
     setState(() {
       poolBalance = b;
@@ -447,6 +455,33 @@ List<Widget> showMemos(List<Memo> memos) {
       },
     ),
   ];
+}
+
+List<Widget> showNotes(List<TxNote> notes) {
+  return [
+    ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: notes.length,
+      itemBuilder: (context, index) {
+        final note = notes[index];
+
+        return ListTile(
+          key: ValueKey(note.id),
+          onTap: () => toggleLock(context, note.id, !note.locked),
+          leading: Text("${note.height}"),
+          title: Text(poolToString(note.pool)),
+          trailing: Text(zatToString(note.value)),
+          textColor: note.locked ? Colors.red.shade500 : null,
+        );
+      },
+    ),
+  ];
+}
+
+void toggleLock(BuildContext context, int id, bool locked) async {
+  await lockNote(id: id, locked: locked);
+  await AppStoreBase.instance.loadNotes();
 }
 
 void onOpenLog(BuildContext context) async {
