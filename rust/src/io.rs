@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use age::secrecy::SecretString;
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
+use chacha20::cipher;
 use flate2::{bufread::GzDecoder, write::GzEncoder, Compression};
+use orion::{aead, kdf::{self, Salt}, pwhash};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use tracing::info;
 use std::io::prelude::*;
+use tracing::info;
 
 pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
@@ -169,7 +170,11 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
                 .map(|row: SqliteRow| {
                     let note: u32 = row.get(0);
                     let witness: Vec<u8> = row.get(1);
-                    IOWitness { height: *height, note, witness }
+                    IOWitness {
+                        height: *height,
+                        note,
+                        witness,
+                    }
                 })
                 .fetch_all(connection)
                 .await?;
@@ -323,74 +328,88 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
     // account must be replaced by new_id_account
 
     if let Some(tkeys) = io_account.tkeys.as_ref() {
-        sqlx::query("INSERT INTO transparent_accounts
-            (account, xsk, xvk) VALUES (?, ?, ?)")
-            .bind(new_id_account)
-            .bind(&tkeys.xsk)
-            .bind(&tkeys.xvk)
-            .execute(connection)
-            .await?;
+        sqlx::query(
+            "INSERT INTO transparent_accounts
+            (account, xsk, xvk) VALUES (?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(&tkeys.xsk)
+        .bind(&tkeys.xvk)
+        .execute(connection)
+        .await?;
     }
     if let Some(skeys) = io_account.skeys.as_ref() {
-        sqlx::query("INSERT INTO sapling_accounts
-            (account, xsk, xvk) VALUES (?, ?, ?)")
-            .bind(new_id_account)
-            .bind(&skeys.xsk)
-            .bind(&skeys.xvk)
-            .execute(connection)
-            .await?;
+        sqlx::query(
+            "INSERT INTO sapling_accounts
+            (account, xsk, xvk) VALUES (?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(&skeys.xsk)
+        .bind(&skeys.xvk)
+        .execute(connection)
+        .await?;
     }
     if let Some(okeys) = io_account.okeys.as_ref() {
-        sqlx::query("INSERT INTO orchard_accounts
-            (account, xsk, xvk) VALUES (?, ?, ?)")
-            .bind(new_id_account)
-            .bind(&okeys.xsk)
-            .bind(&okeys.xvk)
-            .execute(connection)
-            .await?;
+        sqlx::query(
+            "INSERT INTO orchard_accounts
+            (account, xsk, xvk) VALUES (?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(&okeys.xsk)
+        .bind(&okeys.xvk)
+        .execute(connection)
+        .await?;
     }
     let mut new_taddresses = HashMap::<u32, u32>::new();
     for taddr in io_account.taddrs.iter() {
-        let r = sqlx::query("INSERT INTO transparent_address_accounts
-            (account, scope, dindex, sk, address) VALUES (?, ?, ?, ?, ?)")
-            .bind(new_id_account)
-            .bind(taddr.scope)
-            .bind(taddr.dindex)
-            .bind(&taddr.sk)
-            .bind(&taddr.address)
-            .execute(connection)
-            .await?;
+        let r = sqlx::query(
+            "INSERT INTO transparent_address_accounts
+            (account, scope, dindex, sk, address) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(taddr.scope)
+        .bind(taddr.dindex)
+        .bind(&taddr.sk)
+        .bind(&taddr.address)
+        .execute(connection)
+        .await?;
         let new_id_taddress = r.last_insert_rowid() as u32;
         new_taddresses.insert(taddr.id_taddress, new_id_taddress);
     }
 
     for sync_height in io_account.sync_heights.iter() {
-        sqlx::query("INSERT INTO sync_heights
-            (account, pool, height) VALUES (?, ?, ?)")
-            .bind(new_id_account)
-            .bind(sync_height.pool)
-            .bind(sync_height.height)
-            .execute(connection)
-            .await?;
+        sqlx::query(
+            "INSERT INTO sync_heights
+            (account, pool, height) VALUES (?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(sync_height.pool)
+        .bind(sync_height.height)
+        .execute(connection)
+        .await?;
     }
 
     let mut new_txs = HashMap::<u32, u32>::new();
     let mut new_notes = HashMap::<u32, u32>::new();
     for transaction in io_account.transactions.iter() {
-        let r = sqlx::query("INSERT INTO transactions
-            (account, txid, height, time, details) VALUES (?, ?, ?, ?, ?)")
-            .bind(new_id_account)
-            .bind(&transaction.txid)
-            .bind(transaction.height)
-            .bind(transaction.time)
-            .bind(transaction.details)
-            .execute(connection)
-            .await?;
+        let r = sqlx::query(
+            "INSERT INTO transactions
+            (account, txid, height, time, details) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(&transaction.txid)
+        .bind(transaction.height)
+        .bind(transaction.time)
+        .bind(transaction.details)
+        .execute(connection)
+        .await?;
         let new_id_tx = r.last_insert_rowid() as u32;
         new_txs.insert(transaction.id_tx, new_id_tx);
 
         for note in transaction.notes.iter() {
-            let new_taddress = note.taddress.and_then(|id_taddress| new_taddresses.get(&id_taddress));
+            let new_taddress = note
+                .taddress
+                .and_then(|id_taddress| new_taddresses.get(&id_taddress));
             let r = sqlx::query("INSERT INTO notes
                 (tx, height, account, pool, scope, nullifier, value, cmx, taddress, position, diversifier,
                 rcm, rho, locked)
@@ -415,19 +434,21 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
             new_notes.insert(note.id_note, new_id_note);
 
             if let Some(vout) = note.vout {
-                sqlx::query("INSERT INTO memos
+                sqlx::query(
+                    "INSERT INTO memos
                     (account, height, tx, pool, vout, note, memo_text, memo_bytes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(new_id_account)
-                    .bind(note.height)
-                    .bind(new_id_tx)
-                    .bind(note.pool)
-                    .bind(vout as u32)
-                    .bind(new_id_note)
-                    .bind(&note.memo_text)
-                    .bind(&note.memo_bytes)
-                    .execute(connection)
-                    .await?;
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(new_id_account)
+                .bind(note.height)
+                .bind(new_id_tx)
+                .bind(note.pool)
+                .bind(vout as u32)
+                .bind(new_id_note)
+                .bind(&note.memo_text)
+                .bind(&note.memo_bytes)
+                .execute(connection)
+                .await?;
             }
         }
     }
@@ -436,38 +457,44 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         let new_id_tx = new_txs.get(&transaction.id_tx).unwrap();
         for spend in transaction.spends.iter() {
             let new_id_note = new_notes.get(&spend.id_note).unwrap();
-            sqlx::query("INSERT INTO spends
-                (id_note, tx, height, account, pool, value) VALUES (?, ?, ?, ?, ?, ?)")
-                .bind(new_id_note)
-                .bind(new_id_tx)
-                .bind(spend.height)
-                .bind(new_id_account)
-                .bind(spend.pool)
-                .bind(spend.value as i64)
-                .execute(connection)
-                .await?;
+            sqlx::query(
+                "INSERT INTO spends
+                (id_note, tx, height, account, pool, value) VALUES (?, ?, ?, ?, ?, ?)",
+            )
+            .bind(new_id_note)
+            .bind(new_id_tx)
+            .bind(spend.height)
+            .bind(new_id_account)
+            .bind(spend.pool)
+            .bind(spend.value as i64)
+            .execute(connection)
+            .await?;
         }
     }
 
     for block in io_account.blocks.iter() {
-        sqlx::query("INSERT INTO headers
-            (height, hash, time) VALUES (?, ?, ?) ON CONFLICT DO NOTHING")
-            .bind(block.height)
-            .bind(&block.hash)
-            .bind(block.time)
-            .execute(connection)
-            .await?;
+        sqlx::query(
+            "INSERT INTO headers
+            (height, hash, time) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+        )
+        .bind(block.height)
+        .bind(&block.hash)
+        .bind(block.time)
+        .execute(connection)
+        .await?;
 
         for witness in block.witness.iter() {
             let new_id_note = new_notes.get(&witness.note).unwrap();
-            sqlx::query("INSERT INTO witnesses
-                (account, height, note, witness) VALUES (?, ?, ?, ?)")
-                .bind(new_id_account)
-                .bind(witness.height)
-                .bind(new_id_note)
-                .bind(&witness.witness)
-                .execute(connection)
-                .await?;
+            sqlx::query(
+                "INSERT INTO witnesses
+                (account, height, note, witness) VALUES (?, ?, ?, ?)",
+            )
+            .bind(new_id_account)
+            .bind(witness.height)
+            .bind(new_id_note)
+            .bind(&witness.witness)
+            .execute(connection)
+            .await?;
         }
     }
 
@@ -578,20 +605,33 @@ pub struct IOSpend {
 }
 
 pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
-    let passphrase = SecretString::from(passphrase.to_owned());
-    let recipient = age::scrypt::Recipient::new(passphrase.clone());
+    info!("Encrypting {} bytes with {}", data.len(), passphrase);
 
-    let encrypted = age::encrypt(&recipient, data)?;
+    let (salt, secret_key) = derive_encryption_key(passphrase, None)?;
+    let mut ciphertext = salt.as_ref().to_vec();
+    ciphertext.extend(aead::seal(&secret_key, data)?);
 
-    Ok(encrypted)
+    Ok(ciphertext)
 }
 
 pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
-    let passphrase = SecretString::from(passphrase.to_owned());
-    let identity = age::scrypt::Identity::new(passphrase);
+    info!("Decrypting {} bytes with {}", data.len(), passphrase);
+    let (salt, ciphertext) = data.split_at(16);
+    let salt = Salt::from_slice(salt)?;
 
-    let decrypted = age::decrypt(&identity, data)
-        .map_err(|_| anyhow::anyhow!("Decryption Error"))?;
+    let (_, secret_key) = derive_encryption_key(passphrase, Some(salt))?;
+    let plaintext = aead::open(&secret_key, ciphertext)?;
 
-    Ok(decrypted)
+    Ok(plaintext)
+}
+
+fn derive_encryption_key(passphrase: &str, salt: Option<Salt>) -> Result<(Salt, aead::SecretKey)> {
+    let user_password = kdf::Password::from_slice(passphrase.as_bytes())?;
+    let salt = match salt {
+        Some(s) => s,
+        None => kdf::Salt::default(),
+    };
+    let derived_key = kdf::derive_key(&user_password, &salt, 3, 1<<16, 32)?;
+
+    Ok((salt, derived_key))
 }

@@ -50,7 +50,7 @@ On the flipside, the UI is relatively simple to understand.
 - No third party swap integration
 - No spending tracking
 - No cold wallet[^4]
-- No Keytool
+- No auto shielding of any sort
 
 [^1]: Ywallet can only save and restore *all* the accounts.
 [^2]: Obviously, not as good as shielding but offers *some* level

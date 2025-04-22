@@ -556,10 +556,6 @@ pub async fn lock_note(id: u32, locked: bool) -> Result<()> {
     Ok(())
 }
 
-pub struct AccountNote {
-
-}
-
 #[frb]
 pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<()> {
     let c = get_coin!();
