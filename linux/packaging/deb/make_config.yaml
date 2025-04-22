@@ -19,7 +19,7 @@ priority: optional
 section: misc
 
 # the size of binary in kilobyte
-# installed_size: 6604
+installed_size: 60604
 
 # direct dependencies required by the application
 # refer: https://www.debian.org/doc/debian-policy/ch-relationships.html
