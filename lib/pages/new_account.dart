@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/store.dart';
@@ -250,6 +251,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         await AppStoreBase.instance.loadAccounts();
       }
     } on AnyhowException catch (e) {
+      logger.e(e);
       if (mounted) await showException(context, e.message);
     }
   }
