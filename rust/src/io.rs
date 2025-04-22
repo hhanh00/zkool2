@@ -2,9 +2,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
-use chacha20::cipher;
 use flate2::{bufread::GzDecoder, write::GzEncoder, Compression};
-use orion::{aead, kdf::{self, Salt}, pwhash};
+use orion::{aead, kdf::{self, Salt}};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use std::io::prelude::*;
 use tracing::info;
