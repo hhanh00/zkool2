@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.10.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.9.0...zkool-v1.10.0) (2025-04-22)
+
+
+### Features
+
+* add confirmation dialog boxes ([#124](https://github.com/hhanh00/zkool2/issues/124)) ([bbed7cf](https://github.com/hhanh00/zkool2/commit/bbed7cfad98365fbdd63197c59b6bf74e1a6e67a))
+* add tutorial ([#122](https://github.com/hhanh00/zkool2/issues/122)) ([22da20c](https://github.com/hhanh00/zkool2/commit/22da20cc086fa65582e5811940e4db8dab11e6ca))
+* coin control ([#129](https://github.com/hhanh00/zkool2/issues/129)) ([b21e18e](https://github.com/hhanh00/zkool2/commit/b21e18e36216f446af9ffe18cf93393dbacb6d05))
+* gzip account files before export ([#126](https://github.com/hhanh00/zkool2/issues/126)) ([387df3b](https://github.com/hhanh00/zkool2/commit/387df3bf9dba2466294943c5792b8153fd88b5f0))
+* market price from coingecko ([#120](https://github.com/hhanh00/zkool2/issues/120)) ([a044e2e](https://github.com/hhanh00/zkool2/commit/a044e2e6c921b811fadc00411ee5172133e6e220))
+* passphrase to seed ([#115](https://github.com/hhanh00/zkool2/issues/115)) ([6013cd6](https://github.com/hhanh00/zkool2/commit/6013cd67d3ce2c3022715b4da383461cea396a34))
+* transaction details page ([#127](https://github.com/hhanh00/zkool2/issues/127)) ([e10ec58](https://github.com/hhanh00/zkool2/commit/e10ec5889d7e83657e11d44022c0ffae2f5a8ece))
+
+
+### Bug Fixes
+
+* account file encryption ([#130](https://github.com/hhanh00/zkool2/issues/130)) ([01118d0](https://github.com/hhanh00/zkool2/commit/01118d0e5484e876769ae5f6f46296a3734246d4))
+* do not include spent notes in note tab ([01118d0](https://github.com/hhanh00/zkool2/commit/01118d0e5484e876769ae5f6f46296a3734246d4))
+* do not reset sync height on edit birth ([#128](https://github.com/hhanh00/zkool2/issues/128)) ([9e3063f](https://github.com/hhanh00/zkool2/commit/9e3063fd89cfbbd68845aa2262f71d013d02277e))
+* improve autosync reliability ([#117](https://github.com/hhanh00/zkool2/issues/117)) ([252cf20](https://github.com/hhanh00/zkool2/commit/252cf2030a4f63f3db8cfaa9d0523eecbfcf141d))
+* missing refresh at end of sync ([#118](https://github.com/hhanh00/zkool2/issues/118)) ([37c1c2e](https://github.com/hhanh00/zkool2/commit/37c1c2ea63a1a2f7ef878d1fa2cbe46da41f4e31))
+* reload accounts at the end of a sync ([#119](https://github.com/hhanh00/zkool2/issues/119)) ([a2e6ed4](https://github.com/hhanh00/zkool2/commit/a2e6ed4d4d9085bc0aa27f2fc2459d739e1b5cda))
+* sync height update ([#116](https://github.com/hhanh00/zkool2/issues/116)) ([f3673f5](https://github.com/hhanh00/zkool2/commit/f3673f5fa602060b5e8025d3067e7af39fc1c97f))
+* tutorial ([#123](https://github.com/hhanh00/zkool2/issues/123)) ([f31df9a](https://github.com/hhanh00/zkool2/commit/f31df9abc4ac90dae1d58df1be18a7185aca5f76))
+* tutorial messages ([#125](https://github.com/hhanh00/zkool2/issues/125)) ([4c13886](https://github.com/hhanh00/zkool2/commit/4c138862b3c02ff3b54ffa523b40186fb4ba8e69))
+* use separate column for orchard address scope ([#113](https://github.com/hhanh00/zkool2/issues/113)) ([bbaf898](https://github.com/hhanh00/zkool2/commit/bbaf898053bd0b70ece794b99f902d5f3fa5f622))
+
 ## [1.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.8.0...zkool-v1.9.0) (2025-04-19)
 
 
