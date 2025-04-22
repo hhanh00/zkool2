@@ -72,6 +72,21 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$notesAtom = Atom(name: 'AppStoreBase.notes', context: context);
+
+  @override
+  List<TxNote> get notes {
+    _$notesAtom.reportRead();
+    return super.notes;
+  }
+
+  @override
+  set notes(List<TxNote> value) {
+    _$notesAtom.reportWrite(value, super.notes, () {
+      super.notes = value;
+    });
+  }
+
   late final _$currentHeightAtom =
       Atom(name: 'AppStoreBase.currentHeight', context: context);
 
@@ -88,6 +103,30 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$loadTxHistoryAsyncAction =
+      AsyncAction('AppStoreBase.loadTxHistory', context: context);
+
+  @override
+  Future<void> loadTxHistory() {
+    return _$loadTxHistoryAsyncAction.run(() => super.loadTxHistory());
+  }
+
+  late final _$loadMemosAsyncAction =
+      AsyncAction('AppStoreBase.loadMemos', context: context);
+
+  @override
+  Future<void> loadMemos() {
+    return _$loadMemosAsyncAction.run(() => super.loadMemos());
+  }
+
+  late final _$loadNotesAsyncAction =
+      AsyncAction('AppStoreBase.loadNotes', context: context);
+
+  @override
+  Future<void> loadNotes() {
+    return _$loadNotesAsyncAction.run(() => super.loadNotes());
+  }
+
   @override
   String toString() {
     return '''
@@ -95,6 +134,7 @@ accountName: ${accountName},
 accounts: ${accounts},
 transactions: ${transactions},
 memos: ${memos},
+notes: ${notes},
 currentHeight: ${currentHeight}
     ''';
   }
