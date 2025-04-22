@@ -165,12 +165,6 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
             .bind(update.id)
             .execute(pool)
             .await?;
-        // TODO: Clear all notes and transactions
-        sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ?")
-            .bind(birth)
-            .bind(update.id)
-            .execute(pool)
-            .await?;
     }
     if let Some(ref enabled) = update.enabled {
         sqlx::query("UPDATE accounts SET enabled = ? WHERE id_account = ?")
