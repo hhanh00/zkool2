@@ -245,6 +245,8 @@ class NewAccountPageState extends State<NewAccountPage> {
         final encryptedFile = File(file.path!);
         final encrypted = encryptedFile.readAsBytesSync();
         await importAccount(passphrase: password, data: encrypted);
+        if (mounted)
+          await showMessage(context, "Account imported successfully");
         await AppStoreBase.instance.loadAccounts();
       }
     } on AnyhowException catch (e) {
