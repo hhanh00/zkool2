@@ -112,6 +112,8 @@ class AccountViewPageState extends State<AccountViewPage> {
               child: Observer(builder: (context) {
                 // make sure there is a dependency on transactions
                 AppStoreBase.instance.transactions.length;
+                AppStoreBase.instance.memos.length;
+                AppStoreBase.instance.notes.length;
 
                 return TabBarView(children: [
                   SingleChildScrollView(
@@ -149,9 +151,9 @@ class AccountViewPageState extends State<AccountViewPage> {
                     ],
                   )),
                   SingleChildScrollView(
-                      child: Observer(builder: (context) => Column(children: [
+                      child: Column(children: [
                       ...showNotes(AppStoreBase.instance.notes),
-                  ]))),
+                  ])),
                 ]);
               }),
             )));

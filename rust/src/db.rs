@@ -776,7 +776,7 @@ pub async fn get_notes(connection: &SqlitePool, account: u32) -> Result<Vec<TxNo
         "SELECT n.id_note, n.height, n.pool, n.value, n.locked
        FROM notes n LEFT JOIN spends s
 	   ON n.id_note = s.id_note
-	   WHERE n.account = 3 AND s.id_note IS NULL ORDER BY n.height DESC",
+	   WHERE n.account = ? AND s.id_note IS NULL ORDER BY n.height DESC",
     )
     .bind(account)
     .map(|row: SqliteRow| {
