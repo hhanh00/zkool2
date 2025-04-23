@@ -1,11 +1,14 @@
-name: Build and Release Linux AppImage/Flatpak
+name: Build and Release Linux Debian Package
 
 on:
   workflow_dispatch:
-  pull_request:
+  workflow_call:
   push:
     tags:
-      - "v*"
+      - zkool-v*
+
+permissions:
+  contents: write
 
 jobs:
   build-linux:
@@ -23,5 +26,24 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+          dart pub global activate fastforge
       - name: Build
-        run: flutter build linux
+        run: |
+          fastforge package --platform=linux --targets=deb
+      - name: Rename deb package
+        id: package
+        run: |
+          PKG_PATH=$(find dist/ -type f -name '*.deb' | head -n 1)
+          echo "Found package: $PKG_PATH"
+          echo "PKG_PATH=$PKG_PATH" >> $GITHUB_OUTPUT
+      - name: Upload deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ${{ steps.package.outputs.PKG_PATH }}
+      - name: Create Release
+        if: startsWith(github.ref_name, 'zkool-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.package.outputs.PKG_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

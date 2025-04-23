@@ -33,7 +33,9 @@ jobs:
           echo keyAlias=zkool >> android/key.properties
           echo storeFile=zkool-keystore.jks >> android/key.properties
       - name: Build
-        run: flutter build apk
+        run: |
+          flutter build apk
+          mv ./build/app/outputs/flutter-apk/app-release.apk ./${RELEASE_VERSION}.apk
       - name: Upload apk artifact
         uses: actions/upload-artifact@v4
         with:
@@ -42,6 +44,6 @@ jobs:
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ./build/app/outputs/flutter-apk/app-release.apk
+          files: ./${RELEASE_VERSION}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
