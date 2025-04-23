@@ -31,8 +31,7 @@ jobs:
       - name: Indentify package
         id: package
         run: |
-          PKG_PATH=$(find dist/ -type f -name '*.msix' | head -n 1)
-          echo "Found package: $PKG_PATH"
+          $PKG_PATH = Get-ChildItem -Recurse -Filter *.exe -Path .\dist | Select-Object -First 1 | ForEach-Object { $_.FullName }
           echo "PKG_PATH=$PKG_PATH" >> $GITHUB_OUTPUT
       - name: Upload artifact
         uses: actions/upload-artifact@v4
