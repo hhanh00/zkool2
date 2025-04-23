@@ -26,11 +26,13 @@ BigInt stringToZat(String s) {
 }
 
 String timeToString(int time) {
+  if (time == 0) return "N/A";
   final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
   return timeago.format(date);
 }
 
 String exactTimeToString(int time) {
+  if (time == 0) return "N/A";
   final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
   return date.toString();
 }
