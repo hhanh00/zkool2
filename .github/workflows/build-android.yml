@@ -44,6 +44,6 @@ jobs:
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ./${RELEASE_VERSION}.apk
+          files: ./*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
