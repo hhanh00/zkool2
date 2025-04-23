@@ -1,4 +1,4 @@
-name: Build and Release Linux AppImage/Flatpak
+name: Build and Release Linux Debian Package
 
 on:
   workflow_dispatch:
