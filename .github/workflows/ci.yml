@@ -18,7 +18,7 @@ jobs:
 
   build:
     if: "!contains(github.head_ref, 'release-please--')"
-    uses: ./.github/workflows/build-mac.yml
+    uses: ./.github/workflows/build-linux.yml
     secrets: inherit
     permissions:
       contents: write
