@@ -1,4 +1,4 @@
-name: Build and Release Linux Debian Package
+name: Build and Release Windows Package
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  build-linux:
+  build-windows:
     runs-on: windows-latest
     steps:
       - name: Install Rust stable
@@ -27,11 +27,12 @@ jobs:
           dart pub global activate fastforge
       - name: Build
         run: |
-          fastforge package --platform=windows --targets=msix
+          fastforge package --platform=windows --targets=exe
       - name: Indentify package
         id: package
+        shell: bash
         run: |
-          PKG_PATH=$(find dist/ -type f -name '*.msix' | head -n 1)
+          PKG_PATH=$(find dist/ -type f -name '*.exe' | head -n 1)
           echo "Found package: $PKG_PATH"
           echo "PKG_PATH=$PKG_PATH" >> $GITHUB_OUTPUT
       - name: Upload artifact
