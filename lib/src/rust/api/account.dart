@@ -9,13 +9,12 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'account.freezed.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AccountNote`
-
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
-Future<String> getAccountUfvk() =>
-    RustLib.instance.api.crateApiAccountGetAccountUfvk();
+Future<String> getAccountUfvk({required int account, required int pools}) =>
+    RustLib.instance.api
+        .crateApiAccountGetAccountUfvk(account: account, pools: pools);
 
 String uaFromUfvk({required String ufvk, int? di}) =>
     RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di);

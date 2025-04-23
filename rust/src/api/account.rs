@@ -61,12 +61,12 @@ pub fn new_seed(phrase: &str) -> Result<String> {
 }
 
 #[frb]
-pub async fn get_account_ufvk() -> Result<String> {
+pub async fn get_account_ufvk(account: u32, pools: u8) -> Result<String> {
     let c = get_coin!();
     let network = c.network;
 
-    let ufvk = crate::key::get_account_ufvk().await?;
-    Ok(ufvk.encode(&network))
+    let ufvk = crate::key::get_account_ufvk(&network, c.get_pool(), account, pools).await?;
+    Ok(ufvk)
 }
 
 #[frb(sync)]

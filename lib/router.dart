@@ -38,6 +38,10 @@ final router = GoRouter(
       builder: (context, state) => NewAccountPage(),
     ),
     GoRoute(
+      path: '/viewing_keys',
+      builder: (context, state) => ViewingKeysPage(state.extra as int),
+    ),
+    GoRoute(
       path: '/receive',
       builder: (context, state) => ReceivePage(),
     ),

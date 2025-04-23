@@ -101,7 +101,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<int> crateApiAccountGenerateNextDindex();
 
-  Future<String> crateApiAccountGetAccountUfvk();
+  Future<String> crateApiAccountGetAccountUfvk(
+      {required int account, required int pools});
 
   Future<Addresses> crateApiAccountGetAddresses();
 
@@ -353,10 +354,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiAccountGetAccountUfvk() {
+  Future<String> crateApiAccountGetAccountUfvk(
+      {required int account, required int pools}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_32(account, serializer);
+        sse_encode_u_8(pools, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 7, port: port_);
       },
@@ -365,7 +369,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountGetAccountUfvkConstMeta,
-      argValues: [],
+      argValues: [account, pools],
       apiImpl: this,
     ));
   }
@@ -373,7 +377,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountGetAccountUfvkConstMeta =>
       const TaskConstMeta(
         debugName: "get_account_ufvk",
-        argNames: [],
+        argNames: ["account", "pools"],
       );
 
   @override
