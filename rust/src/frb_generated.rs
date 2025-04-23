@@ -289,11 +289,14 @@ fn wire__crate__api__account__get_account_ufvk_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_pools = <u8>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::get_account_ufvk().await?;
+                        let output_ok =
+                            crate::api::account::get_account_ufvk(api_account, api_pools).await?;
                         Ok(output_ok)
                     })()
                     .await,
