@@ -14,3 +14,7 @@ releases:
         package:
           platform: macos
           target: dmg
+      - name: release-windows-msix
+        package:
+          platform: windows
+          target: msix
