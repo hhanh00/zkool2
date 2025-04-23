@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.10.0...zkool-v1.11.0) (2025-04-23)
+
+
+### Features
+
+* build for linux ([#134](https://github.com/hhanh00/zkool2/issues/134)) ([8f98db1](https://github.com/hhanh00/zkool2/commit/8f98db1bb8bc8bdbf5d189ef3dbf5d633e9464d7))
+* dark mode ([#131](https://github.com/hhanh00/zkool2/issues/131)) ([10d5097](https://github.com/hhanh00/zkool2/commit/10d509700fa0e8f1e5f5a3d1558deb80926d37a7))
+
 ## [1.10.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.9.0...zkool-v1.10.0) (2025-04-22)
 
 
