@@ -1,0 +1,6 @@
+# script_template: "setup.iss"
+app_id: 3efa25f4-7ef7-40a3-b0ed-c85f38d31472
+display_name: Zkool
+create_desktop_icon: true
+locales:
+  - en
