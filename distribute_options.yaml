@@ -17,4 +17,4 @@ releases:
       - name: release-windows-msix
         package:
           platform: windows
-          target: msix
+          target: exe
