@@ -18,6 +18,7 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:zkool/widgets/pool_select.dart';
 
 final logID = GlobalKey();
 final sync1ID = GlobalKey();
@@ -52,8 +53,15 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void tutorial() async {
     tutorialHelper(context, "tutAccount0", [
-      tBalID, sBalID, oBalID, balID, logID, sync1ID, rewindID,
-      receiveID, sendID
+      tBalID,
+      sBalID,
+      oBalID,
+      balID,
+      logID,
+      sync1ID,
+      rewindID,
+      receiveID,
+      sendID
     ]);
     if (AppStoreBase.instance.transactions.isNotEmpty)
       tutorialHelper(context, "tutAccount1", [
@@ -74,31 +82,41 @@ class AccountViewPageState extends State<AccountViewPage> {
             appBar: AppBar(
               title: Text(widget.account.name),
               actions: [
-                Showcase(key: logID, description: "Open the App Log", child:
-                IconButton(
-                    tooltip: "View Log",
-                    onPressed: () => onOpenLog(context),
-                    icon: Icon(Icons.description))),
-                Showcase(key: sync1ID, description: "Synchronize only this account", child:
-                IconButton(
-                    tooltip: "Sync this account",
-                    onPressed: onSync,
-                    icon: Icon(Icons.sync))),
-                Showcase(key: rewindID, description: "Rewind back a few blocks", child:
-                IconButton(
-                    tooltip: "Rewind to previous checkpoint",
-                    onPressed: onRewind,
-                    icon: Icon(Icons.fast_rewind))),
-                Showcase(key: receiveID, description: "Show the account receiving addresses", child:
-                IconButton(
-                    tooltip: "Receive Funds",
-                    onPressed: onReceive,
-                    icon: Icon(Icons.download))),
-                Showcase(key: sendID, description: "Send funds to one or many addresses", child:
-                IconButton(
-                    tooltip: "Send Funds",
-                    onPressed: onSend,
-                    icon: Icon(Icons.send))),
+                Showcase(
+                    key: logID,
+                    description: "Open the App Log",
+                    child: IconButton(
+                        tooltip: "View Log",
+                        onPressed: () => onOpenLog(context),
+                        icon: Icon(Icons.description))),
+                Showcase(
+                    key: sync1ID,
+                    description: "Synchronize only this account",
+                    child: IconButton(
+                        tooltip: "Sync this account",
+                        onPressed: onSync,
+                        icon: Icon(Icons.sync))),
+                Showcase(
+                    key: rewindID,
+                    description: "Rewind back a few blocks",
+                    child: IconButton(
+                        tooltip: "Rewind to previous checkpoint",
+                        onPressed: onRewind,
+                        icon: Icon(Icons.fast_rewind))),
+                Showcase(
+                    key: receiveID,
+                    description: "Show the account receiving addresses",
+                    child: IconButton(
+                        tooltip: "Receive Funds",
+                        onPressed: onReceive,
+                        icon: Icon(Icons.download))),
+                Showcase(
+                    key: sendID,
+                    description: "Send funds to one or many addresses",
+                    child: IconButton(
+                        tooltip: "Send Funds",
+                        onPressed: onSend,
+                        icon: Icon(Icons.send))),
               ],
               bottom: TabBar(
                 tabs: [
@@ -121,27 +139,41 @@ class AccountViewPageState extends State<AccountViewPage> {
                       child: Column(children: [
                     Text("Height"),
                     Gap(8),
-                    Observer(builder: (context) => Text(
-                      AppStoreBase.instance.heights[widget.account.id].toString(), style: t.bodyLarge)),
+                    Observer(
+                        builder: (context) => Text(
+                            AppStoreBase.instance.heights[widget.account.id]
+                                .toString(),
+                            style: t.bodyLarge)),
                     Gap(16),
                     Text("Balance"),
                     Gap(8),
                     if (b != null)
                       Row(children: [
-                        Showcase(key: tBalID, description: "Balance in the Transparent Pool", child:
-                        SelectableText("T: ${zatToString(b.field0[0])}")),
+                        Showcase(
+                            key: tBalID,
+                            description: "Balance in the Transparent Pool",
+                            child: SelectableText(
+                                "T: ${zatToString(b.field0[0])}")),
                         const Gap(8),
-                        Showcase(key: sBalID, description: "Balance in the Sapling Pool", child:
-                        SelectableText("S: ${zatToString(b.field0[1])}")),
+                        Showcase(
+                            key: sBalID,
+                            description: "Balance in the Sapling Pool",
+                            child: SelectableText(
+                                "S: ${zatToString(b.field0[1])}")),
                         const Gap(8),
-                        Showcase(key: oBalID, description: "Balance in the Orchard Pool", child:
-                        SelectableText("O: ${zatToString(b.field0[2])}")),
+                        Showcase(
+                            key: oBalID,
+                            description: "Balance in the Orchard Pool",
+                            child: SelectableText(
+                                "O: ${zatToString(b.field0[2])}")),
                       ]),
                     Gap(8),
                     if (b != null)
-                      Showcase(key: balID, description: "Balance across all pools", child:
-                      SelectableText(
-                          "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}")),
+                      Showcase(
+                          key: balID,
+                          description: "Balance across all pools",
+                          child: SelectableText(
+                              "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}")),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
@@ -153,7 +185,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                   )),
                   SingleChildScrollView(
                       child: Column(children: [
-                      ...showNotes(AppStoreBase.instance.notes),
+                    ...showNotes(AppStoreBase.instance.notes),
                   ])),
                 ]);
               }),
@@ -163,7 +195,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onSync() async {
     try {
       await AppStoreBase.instance.startSynchronize([widget.account.id],
-      onComplete: () {
+          onComplete: () {
         Future(refresh);
       });
     } on AnyhowException catch (e) {
@@ -175,7 +207,8 @@ class AccountViewPageState extends State<AccountViewPage> {
     final confirmed = await confirmDialog(
       context,
       title: "Rewind",
-      message: "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
+      message:
+          "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
     );
     if (!confirmed) return;
     final dbHeight = await getDbHeight();
@@ -210,6 +243,7 @@ final iconID2 = GlobalKey();
 final birthID2 = GlobalKey();
 final enableID = GlobalKey();
 final hideID2 = GlobalKey();
+final viewID = GlobalKey();
 final exportID = GlobalKey();
 final resetID = GlobalKey();
 
@@ -232,8 +266,16 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2,
-      enableID, hideID2, exportID, resetID]);
+    tutorialHelper(context, "tutEdit0", [
+      nameID2,
+      iconID2,
+      birthID2,
+      enableID,
+      hideID2,
+      viewID,
+      exportID,
+      resetID
+    ]);
   }
 
   @override
@@ -244,67 +286,100 @@ class AccountEditPageState extends State<AccountEditPage> {
 
     return Scaffold(
         appBar: AppBar(title: Text('Account Edit'), actions: [
-          if (account != null) Showcase(key: exportID, description: "Export an encrypted file of this account", child: IconButton(
-              tooltip: "Export Account",
-              onPressed: onExport,
-              icon: Icon(Icons.reset_tv))),
-          Showcase(key: resetID, description: "Clear and reset account to birth height", child:
-          IconButton(
-              tooltip: "Clear Sync Data",
-              onPressed: onReset,
-              icon: Icon(Icons.delete_sweep)))
+          if (account != null)
+            Showcase(
+                key: viewID,
+                description: "Show Viewing Keys",
+                child: IconButton(
+                    tooltip: "Show Viewing Keys",
+                    onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
+                    icon: Icon(Icons.visibility))),
+          if (account != null)
+            Showcase(
+                key: exportID,
+                description: "Export an encrypted file of this account",
+                child: IconButton(
+                    tooltip: "Export Account",
+                    onPressed: onExport,
+                    icon: Icon(Icons.reset_tv))),
+          Showcase(
+              key: resetID,
+              description: "Clear and reset account to birth height",
+              child: IconButton(
+                  tooltip: "Clear Sync Data",
+                  onPressed: onReset,
+                  icon: Icon(Icons.delete_sweep)))
         ]),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FormBuilder(
-            key: formKey,
+              key: formKey,
               child: Column(
-            children: [
-              Row(
                 children: [
-                  Expanded(
-                    child: Showcase(key: nameID2, description: "Edit Name of the account", child:
-                    FormBuilderTextField(
-                    name: 'name',
-                    decoration: InputDecoration(labelText: 'Name'),
-                    initialValue: account?.name ?? "(Multiple)",
-                    readOnly: account == null,
-                    onChanged: (account != null) ? onEditName : null,
-                  ))),
-                  if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child:
-                     account.avatar(onTap: (_) => onEditIcon()))
+                  Row(
+                    children: [
+                      Expanded(
+                          child: Showcase(
+                              key: nameID2,
+                              description: "Edit Name of the account",
+                              child: FormBuilderTextField(
+                                name: 'name',
+                                decoration: InputDecoration(labelText: 'Name'),
+                                initialValue: account?.name ?? "(Multiple)",
+                                readOnly: account == null,
+                                onChanged:
+                                    (account != null) ? onEditName : null,
+                              ))),
+                      if (account != null)
+                        Showcase(
+                            key: iconID2,
+                            description: "Edit Account Icon",
+                            child: account.avatar(onTap: (_) => onEditIcon()))
+                    ],
+                  ),
+                  Showcase(
+                      key: birthID2,
+                      description: "Edit Height at the creation of the account",
+                      child: FormBuilderTextField(
+                        name: 'birth',
+                        decoration: InputDecoration(labelText: 'Birth Height'),
+                        initialValue: account?.birth.toString() ?? "",
+                        keyboardType: TextInputType.number,
+                        readOnly: account == null,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        onChanged: (account != null) ? onEditBirth : null,
+                      )),
+                  Showcase(
+                      key: enableID,
+                      description:
+                          "Enable or disable. Only enabled accounts participate in the global sync",
+                      child: FormBuilderCheckbox(
+                        name: "enabled",
+                        title: Text("Enabled"),
+                        initialValue: accounts
+                                .every((a) => a.enabled == accounts[0].enabled)
+                            ? accounts[0].enabled
+                            : null,
+                        tristate: account == null,
+                        onChanged: onEditEnabled,
+                      )),
+                  Showcase(
+                      key: hideID2,
+                      description: "Hide this account from the account list",
+                      child: FormBuilderCheckbox(
+                        name: "hidden",
+                        title: Text("Hidden"),
+                        initialValue: accounts
+                                .every((a) => a.hidden == accounts[0].hidden)
+                            ? accounts[0].hidden
+                            : null,
+                        tristate: account == null,
+                        onChanged: onEditHidden,
+                      ))
                 ],
-              ),
-              Showcase(key: birthID2, description: "Edit Height at the creation of the account", child:
-              FormBuilderTextField(
-                name: 'birth',
-                decoration: InputDecoration(labelText: 'Birth Height'),
-                initialValue: account?.birth.toString() ?? "",
-                keyboardType: TextInputType.number,
-                readOnly: account == null,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: (account != null) ? onEditBirth : null,
               )),
-              Showcase(key: enableID, description: "Enable or disable. Only enabled accounts participate in the global sync", child:
-              FormBuilderCheckbox(
-                name: "enabled",
-                title: Text("Enabled"),
-                initialValue:
-                  accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
-                tristate: account == null,
-                onChanged: onEditEnabled,
-              )),
-              Showcase(key: hideID2, description: "Hide this account from the account list", child:
-              FormBuilderCheckbox(
-                name: "hidden",
-                title: Text("Hidden"),
-                initialValue:
-                  accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
-                tristate: account == null,
-                onChanged: onEditHidden,
-              ))
-            ],
-          )),
         ));
   }
 
@@ -312,8 +387,8 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (name != null) {
       accounts[0] = accounts[0].copyWith(name: name);
       await updateAccount(
-          update:
-              AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, name: name));
+          update: AccountUpdate(
+              coin: accounts[0].coin, id: accounts[0].id, name: name));
       await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
@@ -326,8 +401,8 @@ class AccountEditPageState extends State<AccountEditPage> {
       final bytes = await icon.readAsBytes();
       accounts[0] = accounts[0].copyWith(icon: bytes);
       await updateAccount(
-          update:
-              AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
+          update: AccountUpdate(
+              coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
       await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
@@ -338,7 +413,9 @@ class AccountEditPageState extends State<AccountEditPage> {
       accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
       await updateAccount(
           update: AccountUpdate(
-              coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth)));
+              coin: accounts[0].coin,
+              id: accounts[0].id,
+              birth: int.parse(birth)));
       await AppStoreBase.instance.loadAccounts();
       setState(() {});
     }
@@ -349,7 +426,8 @@ class AccountEditPageState extends State<AccountEditPage> {
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(enabled: v);
       await updateAccount(
-          update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v));
+          update: AccountUpdate(
+              coin: accounts[i].coin, id: accounts[i].id, enabled: v));
     }
     await AppStoreBase.instance.loadAccounts();
     setState(() {});
@@ -360,7 +438,8 @@ class AccountEditPageState extends State<AccountEditPage> {
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(hidden: v);
       await updateAccount(
-          update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v));
+          update: AccountUpdate(
+              coin: accounts[i].coin, id: accounts[i].id, hidden: v));
     }
     await AppStoreBase.instance.loadAccounts();
     setState(() {});
@@ -381,8 +460,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onReset() async {
-    for (var account in accounts)
-      await resetSync(id: account .id);
+    for (var account in accounts) await resetSync(id: account.id);
     await AppStoreBase.instance.loadAccounts();
   }
 }
@@ -426,11 +504,13 @@ List<Widget> showTxHistory(List<Tx> transactions) {
           trailing: Text(zatToString(BigInt.from(tx.value))),
         );
 
-        return (index == 0) ? Showcase(
-          key: txdID,
-          description: "Tap on a transaction or memo to view details",
-          child: tile,
-        ) : tile;
+        return (index == 0)
+            ? Showcase(
+                key: txdID,
+                description: "Tap on a transaction or memo to view details",
+                child: tile,
+              )
+            : tile;
       },
     ),
   ];
@@ -491,4 +571,46 @@ void toggleLock(BuildContext context, int id, bool locked) async {
 
 void onOpenLog(BuildContext context) async {
   await GoRouter.of(context).push("/log");
+}
+
+class ViewingKeysPage extends StatefulWidget {
+  final int account;
+  const ViewingKeysPage(this.account, {super.key});
+
+  @override
+  State<ViewingKeysPage> createState() => ViewingKeysPageState();
+}
+
+class ViewingKeysPageState extends State<ViewingKeysPage> {
+  int pools = 7;
+  String? uvk;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() => onPoolChanged(pools));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: Text('Viewing Keys')),
+        body: SingleChildScrollView(
+            child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(children: [
+                  PoolSelect(onChanged: onPoolChanged),
+                  Gap(32),
+                  if (uvk != null) SelectableText(uvk!),
+                ]))));
+  }
+
+  onPoolChanged(int? v) async {
+    if (v == null) return;
+    final uuvk = await getAccountUfvk(account: widget.account, pools: v);
+    setState(() {
+      pools = v;
+      uvk = uuvk;
+    });
+  }
 }
