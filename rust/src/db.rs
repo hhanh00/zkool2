@@ -226,19 +226,21 @@ pub async fn store_account_metadata(
     .fetch_one(connection)
     .await?;
 
-    for pool in 0..3 {
-        sqlx::query(
-            "INSERT OR REPLACE INTO sync_heights(account, pool, height)
-            VALUES (?, ?, ?)",
-        )
-        .bind(id)
-        .bind(pool)
-        .bind(birth - 1)
-        .execute(connection)
-        .await?;
-    }
-
     Ok(id)
+}
+
+pub async fn store_synced_height(connection: &SqlitePool, account: u32, pool: u8, height: u32) -> Result<()> {
+    sqlx::query(
+        "INSERT OR REPLACE INTO sync_heights(account, pool, height)
+        VALUES (?, ?, ?)",
+    )
+    .bind(account)
+    .bind(pool)
+    .bind(height)
+    .execute(connection)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn store_account_seed(
@@ -268,10 +270,12 @@ pub async fn store_account_seed(
     Ok(())
 }
 
-pub async fn init_account_transparent(connection: &SqlitePool, account: u32) -> Result<()> {
+pub async fn init_account_transparent(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
     sqlx::query("INSERT INTO transparent_accounts(account) VALUES (?)")
         .bind(account)
         .execute(connection)
+        .await?;
+    store_synced_height(connection, account, 0, birth - 1)
         .await?;
 
     Ok(())
@@ -311,15 +315,6 @@ pub async fn store_account_transparent_vk(
     Ok(())
 }
 
-pub async fn init_account_sapling(connection: &SqlitePool, account: u32) -> Result<()> {
-    sqlx::query("INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')")
-        .bind(account)
-        .execute(connection)
-        .await?;
-
-    Ok(())
-}
-
 pub async fn store_account_transparent_addr(
     connection: &SqlitePool,
     account: u32,
@@ -339,6 +334,17 @@ pub async fn store_account_transparent_addr(
     .bind(address)
     .execute(connection)
     .await?;
+
+    Ok(())
+}
+
+pub async fn init_account_sapling(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
+    sqlx::query("INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')")
+        .bind(account)
+        .execute(connection)
+        .await?;
+    store_synced_height(connection, account, 1, birth - 1)
+        .await?;
 
     Ok(())
 }
@@ -377,10 +383,12 @@ pub async fn store_account_sapling_vk(
     Ok(())
 }
 
-pub async fn init_account_orchard(connection: &SqlitePool, account: u32) -> Result<()> {
+pub async fn init_account_orchard(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
     sqlx::query("INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')")
         .bind(account)
         .execute(connection)
+        .await?;
+    store_synced_height(connection, account, 2, birth - 1)
         .await?;
 
     Ok(())
