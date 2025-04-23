@@ -246,7 +246,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        init_account_transparent(pool, account).await?;
+        init_account_transparent(pool, account, birth).await?;
         let tsk = usk.transparent();
         store_account_transparent_sk(pool, account, tsk).await?;
         let tvk = &tsk.to_account_pubkey();
@@ -263,13 +263,13 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         )
         .await?;
 
-        init_account_sapling(pool, account).await?;
+        init_account_sapling(pool, account, birth).await?;
         let sxsk = usk.sapling();
         store_account_sapling_sk(pool, account, sxsk).await?;
         let sxvk = sxsk.to_diversifiable_full_viewing_key();
         store_account_sapling_vk(pool, account, &sxvk).await?;
 
-        init_account_orchard(pool, account).await?;
+        init_account_orchard(pool, account, birth).await?;
         let oxsk = usk.orchard();
         store_account_orchard_sk(pool, account, oxsk).await?;
         let oxvk = FullViewingKey::from(oxsk);
@@ -278,7 +278,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         update_dindex(pool, account, dindex, true).await?;
     }
     if is_valid_transparent_key(&key) {
-        init_account_transparent(pool, account).await?;
+        init_account_transparent(pool, account, birth).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             println!("1");
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
@@ -325,7 +325,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         }
     }
     if is_valid_sapling_key(&network, &key) {
-        init_account_sapling(pool, account).await?;
+        init_account_sapling(pool, account, birth).await?;
         if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
             &key,
@@ -348,7 +348,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         let dindex: u32 = di.try_into()?;
 
         if let Some(tvk) = uvk.transparent() {
-            init_account_transparent(pool, account).await?;
+            init_account_transparent(pool, account, birth).await?;
             store_account_transparent_vk(pool, account, tvk).await?;
             let address = derive_transparent_address(tvk, 0, dindex)?;
             store_account_transparent_addr(
@@ -362,11 +362,11 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
             .await?;
         }
         if let Some(svk) = uvk.sapling() {
-            init_account_sapling(pool, account).await?;
+            init_account_sapling(pool, account, birth).await?;
             store_account_sapling_vk(pool, account, svk).await?;
         }
         if let Some(ovk) = uvk.orchard() {
-            init_account_orchard(pool, account).await?;
+            init_account_orchard(pool, account, birth).await?;
             store_account_orchard_vk(pool, account, ovk).await?;
         }
         update_dindex(pool, account, dindex, true).await?;

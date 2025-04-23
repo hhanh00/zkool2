@@ -71,6 +71,11 @@ pub async fn warp_sync(
     )
     .await?;
 
+    if sap_dec.has_no_keys() && orch_dec.has_no_keys() {
+        info!("No keys to sync");
+        return Ok(());
+    }
+
     let mut bs = vec![];
     let mut c = 0; // count of outputs & actions
 
