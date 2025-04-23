@@ -30,6 +30,8 @@ jobs:
       - name: Build
         run: |
           fastforge package --platform=linux --targets=deb
+      - name: Rename deb package
+        run: |
           PKG_PATH=$(find dist/ -type f -name '*.deb' | head -n 1)
           mv $PKG_PATH ./${RELEASE_VERSION}.deb
       - name: Upload deb artifact

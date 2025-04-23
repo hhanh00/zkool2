@@ -6,7 +6,7 @@ Zkool is a multi-account wallet for Zcash.
 
 - **It supports nearly every type of account**
     - From 12, 18, 21, 24 words seed phrase with an optional password
-    - With internal address derivation for change (Zashi, ZIP 315)
+    - With internal address derivation for change (Zashi, ZIP 316)
     - From Unified Viewing Key (with complete or partial list of receivers)
     - From legacy shielded extended keys (secret and viewing) of zcashd
     - From transparent xpub/xprv keys (Electrum and BIP 32 compliant wallets)
