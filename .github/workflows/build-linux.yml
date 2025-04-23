@@ -28,8 +28,18 @@ jobs:
           sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
           dart pub global activate fastforge
       - name: Build
-        run: fastforge package --platform=linux --targets=deb
-      - name: Upload apk artifact
+        run: |
+          fastforge package --platform=linux --targets=deb | tee output.txt
+          PKG_PATH=$(grep "Successfully packaged" output.txt | awk '{print $3}')
+          mv $PKG_PATH ./${RELEASE_VERSION}.deb
+      - name: Upload deb artifact
         uses: actions/upload-artifact@v4
         with:
-          path: ./**/*.deb
+          path: ./*.deb
+      - name: Create Release
+        if: startsWith(github.ref_name, 'zkool-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./${RELEASE_VERSION}.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
