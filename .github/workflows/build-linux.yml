@@ -33,6 +33,7 @@ jobs:
       - name: Rename deb package
         run: |
           PKG_PATH=$(find dist/ -type f -name '*.deb' | head -n 1)
+          echo "Found package: $PKG_PATH"
           mv $PKG_PATH ./${RELEASE_VERSION}.deb
       - name: Upload deb artifact
         uses: actions/upload-artifact@v4
