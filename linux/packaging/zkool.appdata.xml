@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+    <id>zkool</id>
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>MIT</project_license>
+    <name>Zkool</name>
+    <summary>Crypto wallet for Zcash</summary>
+    <description>
+        <p>A multi account crypto wallet for the Zcash currency</p>
+    </description>
+    <launchable type="desktop-id">zkool.desktop</launchable>
+    <url type="homepage">https://github.com/hhanh00/zkool2/</url>
+    <releases>
+        <release version="1.0.0" date="2025-04-16"/>
+    </releases>
+    <provides>
+        <id>zkool.desktop</id>
+    </provides>
+    <content_rating type="oars-1.0" />
+    <developer id="io.github.hhanh00">
+        <name>Hanh Huynh Huu</name>
+    </developer>
+</component>
