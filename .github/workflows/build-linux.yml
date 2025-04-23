@@ -29,8 +29,8 @@ jobs:
           dart pub global activate fastforge
       - name: Build
         run: |
-          fastforge package --platform=linux --targets=deb | tee output.txt
-          PKG_PATH=$(grep "Successfully packaged" output.txt | awk '{print $3}')
+          fastforge package --platform=linux --targets=deb
+          PKG_PATH=$(find dist/ -type f -name '*.deb' | head -n 1)
           mv $PKG_PATH ./${RELEASE_VERSION}.deb
       - name: Upload deb artifact
         uses: actions/upload-artifact@v4
