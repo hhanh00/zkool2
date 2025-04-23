@@ -10,3 +10,7 @@ releases:
         package:
           platform: linux
           target: deb
+      - name: release-linux-dmg
+        package:
+          platform: macos
+          target: dmg
