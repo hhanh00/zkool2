@@ -30,8 +30,10 @@ jobs:
           fastforge package --platform=windows --targets=exe
       - name: Indentify package
         id: package
+        shell: bash
         run: |
-          $PKG_PATH = Get-ChildItem -Recurse -Filter *.exe -Path .\dist | Select-Object -First 1 | ForEach-Object { $_.FullName }
+          PKG_PATH=$(find dist/ -type f -name '*.exe' | head -n 1)
+          echo "Found package: $PKG_PATH"
           echo "PKG_PATH=$PKG_PATH" >> $GITHUB_OUTPUT
       - name: Upload artifact
         uses: actions/upload-artifact@v4
