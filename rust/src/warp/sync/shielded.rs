@@ -154,6 +154,10 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         })
     }
 
+    pub fn has_no_keys(&self) -> bool {
+        self.keys.is_empty()
+    }
+
     pub async fn add(&mut self, blocks: &[CompactBlock]) -> Result<()> {
         if blocks.is_empty() {
             return Ok(());
