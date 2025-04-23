@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.11.0...zkool-v1.12.0) (2025-04-23)
+
+
+### Features
+
+* build windows ([#138](https://github.com/hhanh00/zkool2/issues/138)) ([0c0852d](https://github.com/hhanh00/zkool2/commit/0c0852d56d23596ccc7e927fe15159dd8e95c4c9))
+
+
+### Bug Fixes
+
+* build windows ([#139](https://github.com/hhanh00/zkool2/issues/139)) ([7323995](https://github.com/hhanh00/zkool2/commit/7323995d2c05c9c1fd33b3c85082d80ba8f9b73f))
+* macos sign with entitlements ([#136](https://github.com/hhanh00/zkool2/issues/136)) ([47ec6ab](https://github.com/hhanh00/zkool2/commit/47ec6ab3655b0482fd0a0766adf9d66c850cf7dc))
+
 ## [1.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.10.0...zkool-v1.11.0) (2025-04-23)
 
 
