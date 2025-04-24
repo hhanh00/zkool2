@@ -35,7 +35,7 @@ zcash_note_encryption = "0.4"
 zcash_primitives = {version = "0.22", features = ["transparent-inputs"]}
 zcash_proofs = {version = "0.22", features = ["bundled-prover"]}
 zcash_protocol = "0.5"
-zcash_transparent = {version = "0.2", features = ["transparent-inputs"]}
+zcash_transparent = {version = "0.2.3", features = ["transparent-inputs"]}
 zip321 = "0.3"
 
 bincode = {version = "2.0"}

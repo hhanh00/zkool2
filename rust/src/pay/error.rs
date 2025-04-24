@@ -10,6 +10,8 @@ pub enum Error {
     RecipientNotEnoughAmount,
     #[error("Not enough funds")]
     NotEnoughFunds,
+    #[error("No Signing Key")]
+    NoSigningKey,
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
     #[error(transparent)]

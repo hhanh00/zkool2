@@ -58,6 +58,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         scope INTEGER NOT NULL,
         dindex INTEGER NOT NULL,
         sk BLOB,
+        pk BLOB NOT NULL,
         address TEXT NOT NULL,
         UNIQUE (account, scope, dindex))",
     )
@@ -323,16 +324,18 @@ pub async fn store_account_transparent_addr(
     scope: u32,
     dindex: u32,
     sk: Option<Vec<u8>>,
+    pk: &[u8],
     address: &str,
 ) -> Result<()> {
     sqlx::query(
-        "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, address)
-        VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+        "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, pk, address)
+        VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
     )
     .bind(account)
     .bind(scope)
     .bind(dindex)
     .bind(sk)
+    .bind(pk)
     .bind(address)
     .execute(connection)
     .await?;

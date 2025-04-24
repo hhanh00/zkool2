@@ -1,14 +1,16 @@
 use anyhow::Result;
 
-use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
+use crate::pay::{plan::{plan_transaction, PcztPackage}, Recipient, TxPlan};
 use flutter_rust_bridge::frb;
+
+use super::account::Tx;
 
 #[frb]
 pub async fn prepare(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
-) -> Result<TxPlan> {
+) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
     let network = &c.network;
@@ -25,6 +27,11 @@ pub async fn prepare(
         recipient_pays_fee,
     )
     .await
+}
+
+#[frb]
+pub fn to_plan(package: &PcztPackage) -> Result<TxPlan> {
+    TxPlan::from(package)
 }
 
 #[frb]

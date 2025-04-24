@@ -41,7 +41,7 @@ pub fn derive_transparent_address(
     tvk: &AccountPubKey,
     scope: u32,
     dindex: u32,
-) -> Result<TransparentAddress> {
+) -> Result<(Vec<u8>, TransparentAddress)> {
     let sindex = TransparentKeyScope::custom(scope).unwrap();
     let tpk = tvk
         .derive_address_pubkey(sindex, NonHardenedChildIndex::from_index(dindex).unwrap())
@@ -49,7 +49,7 @@ pub fn derive_transparent_address(
         .serialize();
     let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
     let addr = TransparentAddress::PublicKeyHash(pkh);
-    Ok(addr)
+    Ok((tpk.to_vec(), addr))
 }
 
 pub async fn get_sapling_sk(
@@ -59,13 +59,13 @@ pub async fn get_sapling_sk(
     let sk = sqlx::query("SELECT xsk FROM sapling_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
-            let sk: Vec<u8> = row.get(0);
-            ExtendedSpendingKey::read(&*sk).unwrap()
+            let sk: Option<Vec<u8>> = row.get(0);
+            sk.map(|sk| ExtendedSpendingKey::read(&*sk).unwrap())
         })
         .fetch_optional(connection)
         .await?;
 
-    Ok(sk)
+    Ok(sk.flatten())
 }
 
 pub async fn get_sapling_vk(
@@ -143,13 +143,13 @@ pub async fn get_orchard_sk(
     let sk = sqlx::query("SELECT xsk FROM orchard_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
-            let sk: Vec<u8> = row.get(0);
-            orchard::keys::SpendingKey::from_bytes(sk.try_into().unwrap()).unwrap()
+            let sk: Option<Vec<u8>> = row.get(0);
+            sk.map(|sk| orchard::keys::SpendingKey::from_bytes(sk.try_into().unwrap()).unwrap())
         })
         .fetch_optional(connection)
         .await?;
 
-    Ok(sk)
+    Ok(sk.flatten())
 }
 
 pub async fn get_orchard_vk(
@@ -332,8 +332,8 @@ pub async fn generate_next_dindex(network: &Network, connection: &SqlitePool, ac
 
     let (xsk, xvk) = get_transparent_keys(connection, account).await?;
     let sk = xsk.as_ref().map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
-    let taddress = derive_transparent_address(xvk.as_ref().unwrap(), 0, dindex)?;
-    store_account_transparent_addr(connection, account, 0, dindex, sk, &taddress.encode(network)).await?;
+    let (tpk, taddress) = derive_transparent_address(xvk.as_ref().unwrap(), 0, dindex)?;
+    store_account_transparent_addr(connection, account, 0, dindex, sk, &tpk, &taddress.encode(network)).await?;
 
     Ok(dindex)
 }
@@ -362,7 +362,7 @@ pub async fn generate_next_change_address(
         let sk = xsk
             .as_ref()
             .map(|tsk| derive_transparent_sk(tsk, 1, dindex).unwrap());
-        let change_address = derive_transparent_address(tvk, 1, dindex)?;
+        let (change_pk, change_address) = derive_transparent_address(tvk, 1, dindex)?;
         let change_address = change_address.encode(network);
 
         store_account_transparent_addr(
@@ -371,6 +371,7 @@ pub async fn generate_next_change_address(
             1,
             dindex,
             sk,
+            &change_pk,
             &change_address,
         )
         .await?;

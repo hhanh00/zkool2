@@ -2,21 +2,27 @@ use std::{convert::Infallible, str::FromStr as _};
 
 use anyhow::{anyhow, Result};
 
+use bincode::{Decode, Encode};
 use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
+    builder::BundleMetadata,
     circuit::ProvingKey,
     keys::{Scope, SpendAuthorizingKey},
     Address,
 };
-use pczt::roles::{
-    creator::Creator, io_finalizer::IoFinalizer, prover::Prover, signer::Signer,
-    spend_finalizer::SpendFinalizer, tx_extractor::TransactionExtractor, updater::Updater,
+use pczt::{
+    roles::{
+        creator::Creator, io_finalizer::IoFinalizer, prover::Prover, signer::Signer,
+        spend_finalizer::SpendFinalizer, tx_extractor::TransactionExtractor, updater::Updater,
+    },
+    Pczt,
 };
 use rand_core::OsRng;
 use ripemd::Ripemd160;
-use sapling_crypto::PaymentAddress;
-use secp256k1::SecretKey;
+use sapling_crypto::{builder::SaplingMetadata, PaymentAddress};
+use secp256k1::{PublicKey, SecretKey};
+use serde::Serialize;
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
@@ -35,21 +41,24 @@ use zcash_protocol::{
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
-use zcash_transparent::bundle::{OutPoint, TxOut};
+use zcash_transparent::{bundle::{OutPoint, TxOut}, keys::AccountPrivKey, pczt::Bip32Derivation};
 
+use super::{pool::ALL_SHIELDED_POOLS, SerializedPCZT};
 use crate::{
     account::{
-        generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
-    }, lwd::ChainSpec, pay::{
+        derive_transparent_sk, generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
+    },
+    lwd::ChainSpec,
+    pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlan, TxPlanIn, TxPlanOut,
-    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
+    },
+    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
+    Client,
 };
-
-use super::pool::ALL_SHIELDED_POOLS;
 
 pub async fn plan_transaction(
     network: &Network,
@@ -59,17 +68,18 @@ pub async fn plan_transaction(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
-) -> Result<TxPlan> {
+) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction_plan");
     span.in_scope(|| {
         info!("Computing plan");
     });
 
-    let (use_internal, ): (bool, ) =
-    sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
-        .bind(account)
-        .fetch_one(connection)
-        .await?;
+    let mut can_sign = true;
+    let (use_internal,): (bool,) =
+        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(connection)
+            .await?;
 
     let effective_src_pools =
         crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
@@ -81,7 +91,10 @@ pub async fn plan_transaction(
             .intersect(&PoolMask(recipient.pools.unwrap_or(ALL_POOLS)));
         recipient_pools = recipient_pools.union(&pool);
     }
-    info!("effective_src_pools: {src_pools} {:#b}", effective_src_pools.0);
+    info!(
+        "effective_src_pools: {src_pools} {:#b}",
+        effective_src_pools.0
+    );
     info!("recipient_pools: {:#b}", recipient_pools.0);
     let change_pool = get_change_pool(effective_src_pools, recipient_pools);
     debug!("change_pool: {:#b}", change_pool);
@@ -168,8 +181,7 @@ pub async fn plan_transaction(
     // This is because we hope to minimize the amount that would have to go through the
     // turnstile.
 
-    let largest_shielded_pool =
-    if change_pool != 0 {
+    let largest_shielded_pool = if change_pool != 0 {
         PoolMask::from_pool(change_pool)
     } else if balances[1] > balances[2] {
         PoolMask(2)
@@ -202,8 +214,7 @@ pub async fn plan_transaction(
         fee_paid += fee;
     }
 
-    if fee > fee_paid
-    {
+    if fee > fee_paid {
         return Err(Error::NotEnoughFunds.into());
     }
 
@@ -262,14 +273,11 @@ pub async fn plan_transaction(
 
     // generate a new change address if we need a transparent address
     let change_address = if change_pool == 0 {
-        generate_next_change_address(network, connection, account).await?.unwrap()
-    }
-    else {
-        let change_scope = if use_internal {
-            1
-        } else {
-            0
-        };
+        generate_next_change_address(network, connection, account)
+            .await?
+            .unwrap()
+    } else {
+        let change_scope = if use_internal { 1 } else { 0 };
         get_account_full_address(network, connection, account, change_scope).await?
     };
 
@@ -292,11 +300,11 @@ pub async fn plan_transaction(
         info!("Initializing Builder");
     });
 
-    let current_height =
-        client.get_latest_block(Request::new(ChainSpec {}))
-            .await?
-            .into_inner()
-            .height as u32;
+    let current_height = client
+        .get_latest_block(Request::new(ChainSpec {}))
+        .await?
+        .into_inner()
+        .height as u32;
     let target_height = current_height + 100;
 
     let mut builder = Builder::new(
@@ -318,9 +326,12 @@ pub async fn plan_transaction(
     let svk = svk.as_ref().map(|svk| svk.fvk());
     let ovk = get_orchard_vk(connection, account).await?;
 
-    let mut tsk = vec![];
+    let mut tsk_dindex = vec![];
 
     event!(Level::INFO, "Adding Inputs");
+
+    let ssk = get_sapling_sk(connection, account).await?;
+    let osk = get_orchard_sk(connection, account).await?;
 
     let mut n_spends: [usize; 3] = [0, 0, 0];
     let mut inputs = vec![];
@@ -337,8 +348,8 @@ pub async fn plan_transaction(
                 });
                 match pool {
                     0 => {
-                        let (nf, sk): (Vec<u8>, Vec<u8>) = sqlx::query_as(
-                            "SELECT nullifier, t.sk FROM notes
+                        let row = sqlx::query(
+                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex FROM notes
                             JOIN transparent_address_accounts t ON notes.taddress = t.id_taddress
                             WHERE id_note = ?",
                         )
@@ -346,8 +357,17 @@ pub async fn plan_transaction(
                         .fetch_one(connection)
                         .await?;
 
-                        let sk = SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap();
-                        let pubkey = sk.public_key(&secp256k1::Secp256k1::new());
+                        let nf: Vec<u8> = row.get(0);
+                        let pk: Vec<u8> = row.get(1);
+                        let sk: Option<Vec<u8>> = row.get(2);
+                        let scope: u32 = row.get(3);
+                        let dindex: u32 = row.get(4);
+
+                        if sk.is_none() {
+                            can_sign = false;
+                        }
+
+                        let pubkey = PublicKey::from_slice(&pk).unwrap();
                         let mut hash = [0u8; 32];
                         hash.copy_from_slice(&nf[0..32]);
                         let n = u32::from_le_bytes(nf[32..36].try_into().unwrap());
@@ -363,19 +383,49 @@ pub async fn plan_transaction(
                         builder
                             .add_transparent_input(pubkey, utxo, coin)
                             .map_err(|e| anyhow!(e))?;
-                        tsk.push(sk);
+                        tsk_dindex.push((pubkey, scope, dindex));
                     }
                     1 => {
-                        let (note, merkle_path) =
-                            get_sapling_note(connection, *id, height, svk.as_ref().unwrap(), &es, &ers).await?;
+                        let (note, merkle_path) = get_sapling_note(
+                            connection,
+                            *id,
+                            height,
+                            svk.as_ref().unwrap(),
+                            &es,
+                            &ers,
+                        )
+                        .await?;
 
-                        builder.add_sapling_spend::<Infallible>(svk.unwrap().clone(), note, merkle_path)?;
+                        if ssk.is_none() {
+                            can_sign = false;
+                        }
+
+                        builder.add_sapling_spend::<Infallible>(
+                            svk.unwrap().clone(),
+                            note,
+                            merkle_path,
+                        )?;
                     }
                     2 => {
-                        let (note, merkle_path) =
-                            get_orchard_note(connection, *id, height, ovk.as_ref().unwrap(), &eo, &ero).await?;
+                        let (note, merkle_path) = get_orchard_note(
+                            connection,
+                            *id,
+                            height,
+                            ovk.as_ref().unwrap(),
+                            &eo,
+                            &ero,
+                        )
+                        .await?;
 
-                        builder.add_orchard_spend::<Infallible>(ovk.clone().unwrap(), note, merkle_path)?;
+                        if osk.is_none() {
+                            can_sign = false;
+                        }
+
+                        builder.add_orchard_spend::<Infallible>(
+                            ovk.clone().unwrap(),
+                            note,
+                            merkle_path,
+                        )?;
                     }
                     _ => {}
                 }
@@ -435,7 +485,12 @@ pub async fn plan_transaction(
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;
-                builder.add_sapling_output::<Infallible>(svk.as_ref().map(|svk| svk.ovk.clone()), to, value, memo)?;
+                builder.add_sapling_output::<Infallible>(
+                    svk.as_ref().map(|svk| svk.ovk.clone()),
+                    to,
+                    value,
+                    memo,
+                )?;
             }
             2 => {
                 let to = get_orchard_address(network, &recipient.address)?;
@@ -459,45 +514,113 @@ pub async fn plan_transaction(
 
     debug!("Prepared");
 
-    let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
-
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
     debug!("Created");
+
+    let updater = Updater::new(pczt);
+    let updater = updater.update_transparent_with(|mut u| {
+        for i in 0..n_spends[0] {
+            let (pubkey, scope, dindex) = tsk_dindex[i].clone();
+            u.update_input_with(i, |mut u| {
+                let derivation_path = vec![scope, dindex];
+                let path = Bip32Derivation::parse([0u8; 32],
+                    derivation_path).unwrap();
+                u.set_bip32_derivation(pubkey.serialize(), path);
+                u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
+                u.set_proprietary("dindex".to_string(), dindex.to_le_bytes().to_vec());
+                Ok(())
+            })?;
+        }
+        Ok(())
+    }).unwrap();
+    let pczt = updater.finish();
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
     debug!("IO Finalized");
 
+    let pczt_package = PcztPackage {
+        pczt: pczt.serialize(),
+        n_spends,
+        sapling_indices: (0..n_spends[1])
+            .map(|n| sapling_meta.spend_index(n).unwrap())
+            .collect(),
+        orchard_indices: (0..n_spends[2])
+            .map(|n| orchard_meta.spend_action_index(n).unwrap())
+            .collect(),
+        can_sign
+    };
+
+    Ok(pczt_package)
+}
+
+#[derive(Encode, Decode)]
+pub struct PcztPackage {
+    pub pczt: Vec<u8>,
+    pub n_spends: [usize; 3],
+    pub sapling_indices: Vec<usize>,
+    pub orchard_indices: Vec<usize>,
+    pub can_sign: bool,
+}
+
+pub async fn sign_transaction(
+    connection: &SqlitePool,
+    account: u32,
+    pczt: &PcztPackage,
+) -> Result<Vec<u8>> {
+    let span = span!(Level::INFO, "sign_transaction");
+
+    let PcztPackage {
+        pczt,
+        n_spends,
+        sapling_indices,
+        orchard_indices,
+        ..
+    } = pczt;
+    let pczt = Pczt::parse(pczt).unwrap();
+
+    let tsk = get_transparent_sk(connection, account).await?;
     let ssk = get_sapling_sk(connection, account).await?;
     let osk = get_orchard_sk(connection, account).await?;
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
 
-    span.in_scope(|| {
-        info!("Signing PCZT");
-    });
-    let mut signer = Signer::new(pczt).unwrap();
+    let mut signer = Signer::new(pczt.clone()).unwrap();
+    let tbundle = pczt.transparent();
     for index in 0..n_spends[0] {
         debug!("signing transparent {index}");
-        signer.sign_transparent(index, &tsk[index]).unwrap();
+        let inp = &tbundle.inputs()[index];
+        let scope = u32::from_le_bytes(inp.proprietary()["scope"].clone().try_into().unwrap());
+        let dindex = u32::from_le_bytes(inp.proprietary()["dindex"].clone().try_into().unwrap());
+        let Some(tsk) = tsk.as_ref() else {
+            return Err(Error::NoSigningKey.into());
+        };
+        let sk = derive_transparent_sk(tsk, scope, dindex)?;
+        let sk = SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap();
+        signer.sign_transparent(index, &sk).unwrap();
     }
     for index in 0..n_spends[1] {
         debug!("signing sapling {index}");
-        let bundle_index = sapling_meta.spend_index(index).unwrap();
-        signer.sign_sapling(bundle_index, &ssk.as_ref().unwrap().expsk.ask).unwrap();
+        let bundle_index = sapling_indices[index];
+        let Some(sk) = ssk.as_ref().map(|sk| &sk.expsk.ask) else {
+            return Err(Error::NoSigningKey.into());
+        };
+        signer.sign_sapling(bundle_index, sk).unwrap();
     }
     for index in 0..n_spends[2] {
         debug!("signing orchard {index}");
-        let bundle_index = orchard_meta.spend_action_index(index).unwrap();
-        signer.sign_orchard(bundle_index, osak.as_ref().unwrap()).unwrap();
+        let bundle_index = orchard_indices[index];
+        let Some(osak) = osak.as_ref() else {
+            return Err(Error::NoSigningKey.into());
+        };
+        signer.sign_orchard(bundle_index, osak).unwrap();
     }
     let pczt = signer.finish();
-    debug!("Signed");
 
     let updater = Updater::new(pczt);
     let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
     let updater = updater
         .update_sapling_with(|mut u| {
             for i in 0..n_spends[1] {
-                let bundle_index = sapling_meta.spend_index(i).unwrap();
+                let bundle_index = sapling_indices[i];
                 u.update_spend_with(bundle_index, |mut u| {
                     u.set_proof_generation_key(pgk.clone().unwrap()).unwrap();
                     Ok(())
@@ -513,6 +636,8 @@ pub async fn plan_transaction(
     span.in_scope(|| {
         info!("Adding Proofs to PCZT");
     });
+    let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
@@ -540,17 +665,21 @@ pub async fn plan_transaction(
     });
     debug!("{}", hex::encode(&tx_bytes));
 
-    let tx_plan = TxPlan {
-        height,
-        inputs,
-        outputs: outs,
-        fee,
-        change,
-        change_pool,
-        data: tx_bytes,
-    };
+    // let tx_plan = TxPlan {
+    //     height,
+    //     inputs,
+    //     outputs: outs,
+    //     fee,
+    //     change,
+    //     change_pool,
+    //     data: tx_bytes,
+    // };
 
-    Ok(tx_plan)
+    Ok(tx_bytes)
+}
+
+async fn get_transparent_sk(connection: &SqlitePool, account: u32) -> Result<Option<AccountPrivKey>> {
+    todo!()
 }
 
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
