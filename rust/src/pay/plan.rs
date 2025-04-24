@@ -61,9 +61,9 @@ pub async fn plan_transaction(
     recipient_pays_fee: bool,
 ) -> Result<TxPlan> {
     let span = span!(Level::INFO, "transaction_plan");
-    let _guard = span.enter();
-
-    event!(Level::INFO, "Computing plan");
+    span.in_scope(|| {
+        info!("Computing plan");
+    });
 
     let (use_internal, ): (bool, ) =
     sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
@@ -288,7 +288,9 @@ pub async fn plan_transaction(
         .chain(double.iter())
         .chain(std::iter::once(&change_recipient));
 
-    event!(Level::INFO, "Initializing Builder");
+    span.in_scope(|| {
+        info!("Initializing Builder");
+    });
 
     let current_height =
         client.get_latest_block(Request::new(ChainSpec {}))
@@ -469,7 +471,9 @@ pub async fn plan_transaction(
     let osk = get_orchard_sk(connection, account).await?;
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
 
-    event!(Level::INFO, "Signing PCZT");
+    span.in_scope(|| {
+        info!("Signing PCZT");
+    });
     let mut signer = Signer::new(pczt).unwrap();
     for index in 0..n_spends[0] {
         debug!("signing transparent {index}");
@@ -506,7 +510,9 @@ pub async fn plan_transaction(
     let pczt = updater.finish();
     debug!("Updated");
 
-    event!(Level::INFO, "Adding Proofs to PCZT");
+    span.in_scope(|| {
+        info!("Adding Proofs to PCZT");
+    });
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
@@ -518,7 +524,10 @@ pub async fn plan_transaction(
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
     debug!("Spend Finalized");
 
-    event!(Level::INFO, "Extracting Tx");
+    span.in_scope(|| {
+        info!("Extracting Tx");
+    });
+
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
     let tx = tx_extractor.extract().unwrap();
@@ -526,7 +535,9 @@ pub async fn plan_transaction(
     tx.write(&mut tx_bytes).unwrap();
     debug!("Tx Extracted");
 
-    event!(Level::INFO, "Tx Ready - {} bytes", tx_bytes.len());
+    span.in_scope(|| {
+        info!("Tx Ready - {} bytes", tx_bytes.len());
+    });
     debug!("{}", hex::encode(&tx_bytes));
 
     let tx_plan = TxPlan {
