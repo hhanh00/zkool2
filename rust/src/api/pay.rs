@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
+use crate::pay::{plan::{plan_transaction, PcztPackage}, Recipient, TxPlan};
 use flutter_rust_bridge::frb;
 
 #[frb]
@@ -8,7 +8,7 @@ pub async fn prepare(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
-) -> Result<TxPlan> {
+) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
     let network = &c.network;
@@ -25,6 +25,37 @@ pub async fn prepare(
         recipient_pays_fee,
     )
     .await
+}
+
+#[frb]
+pub async fn sign_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
+    let c = crate::get_coin!();
+    let account = c.account;
+    let connection = c.get_pool();
+
+    let tx = crate::pay::plan::sign_transaction(
+        connection,
+        account,
+        pczt,
+    )
+    .await?;
+
+    Ok(tx)
+}
+
+#[frb]
+pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8]) -> Result<String> {
+    let c = crate::get_coin!();
+    let mut client = c.client().await?;
+
+    let tx = crate::pay::send(&mut client, height, tx_bytes).await?;
+    Ok(tx)
+}
+
+#[frb(sync)]
+pub fn to_plan(package: &PcztPackage) -> Result<TxPlan> {
+    let c = crate::get_coin!();
+    TxPlan::from_package(&c.network, package)
 }
 
 #[frb]
