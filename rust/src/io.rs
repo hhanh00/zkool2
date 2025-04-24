@@ -101,16 +101,17 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     }
 
     info!("Exporting transparent addresses");
-    let t_addresses = sqlx::query("SELECT id_taddress, scope, dindex, sk, address FROM transparent_address_accounts WHERE account = ?")
+    let t_addresses = sqlx::query("SELECT id_taddress, scope, dindex, sk, pk, address FROM transparent_address_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let id_taddress: u32 = row.get(0);
             let scope: u32 = row.get(1);
             let dindex: u32 = row.get(2);
             let sk: Option<Vec<u8>> = row.get(3);
-            let address: String = row.get(4);
+            let pk: Vec<u8> = row.get(4);
+            let address: String = row.get(5);
 
-            TAddress {id_taddress, scope, dindex, sk, address}
+            TAddress {id_taddress, scope, dindex, sk, pk, address}
 
         })
         .fetch_all(connection)
@@ -363,12 +364,13 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
     for taddr in io_account.taddrs.iter() {
         let r = sqlx::query(
             "INSERT INTO transparent_address_accounts
-            (account, scope, dindex, sk, address) VALUES (?, ?, ?, ?, ?)",
+            (account, scope, dindex, sk, pk, address) VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(taddr.scope)
         .bind(taddr.dindex)
         .bind(&taddr.sk)
+        .bind(&taddr.pk)
         .bind(&taddr.address)
         .execute(connection)
         .await?;
@@ -538,6 +540,7 @@ pub struct TAddress {
     pub scope: u32,
     pub dindex: u32,
     pub sk: Option<Vec<u8>>,
+    pub pk: Vec<u8>,
     pub address: String,
 }
 

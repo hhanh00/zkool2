@@ -252,12 +252,12 @@ class Send2PageState extends State<Send2Page> {
     final srcPools = form.fields['source pools']?.value ?? 7;
 
     try {
-      final tx = await prepare(
+      final pczt = await prepare(
           srcPools: srcPools,
           recipients: widget.recipients,
           recipientPaysFee: recipientPaysFee);
 
-      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: tx);
+      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
