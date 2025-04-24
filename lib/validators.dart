@@ -41,4 +41,5 @@ String? validHexString(String? s, int lenth) {
   } on FormatException {
     return "Not a valid hex string";
   }
+  return null;
 }
