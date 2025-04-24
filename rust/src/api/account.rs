@@ -261,13 +261,14 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         let tvk = &tsk.to_account_pubkey();
         store_account_transparent_vk(pool, account, tvk).await?;
         let sk = derive_transparent_sk(&tsk, 0, dindex)?;
-        let taddr = derive_transparent_address(tvk, 0, dindex)?;
+        let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
         store_account_transparent_addr(
             pool,
             account,
             0,
             dindex,
             Some(sk),
+            &pk,
             &taddr.encode(&c.network),
         )
         .await?;
@@ -289,22 +290,19 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
     if is_valid_transparent_key(&key) {
         init_account_transparent(pool, account, birth).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
-            println!("1");
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
             store_account_transparent_sk(pool, account, &xsk).await?;
-            println!("1");
             let xvk = xsk.to_account_pubkey();
             store_account_transparent_vk(pool, account, &xvk).await?;
-            println!("1");
             let sk = derive_transparent_sk(&xsk, 0, 0)?;
-            println!("1");
-            let address = derive_transparent_address(&xvk, 0, 0)?;
+            let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(
                 pool,
                 account,
                 0,
                 0,
                 Some(sk),
+                &pk,
                 &address.encode(&network),
             )
             .await?;
@@ -314,8 +312,8 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
             buf.extend_from_slice(&xvk.to_bytes());
             let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
             store_account_transparent_vk(pool, account, &xvk).await?;
-            let address = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(pool, account, 0, 0, None, &address.encode(&network))
+            let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
+            store_account_transparent_addr(pool, account, 0, 0, None, &pk, &address.encode(&network))
                 .await?;
         } else if let Ok(sk) = bip38::import_tsk(&key) {
             let secp = secp256k1::Secp256k1::new();
@@ -328,6 +326,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
                 0,
                 0,
                 Some(sk.to_bytes().to_vec()),
+                &tpk,
                 &addr.encode(&network),
             )
             .await?;
@@ -359,13 +358,14 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         if let Some(tvk) = uvk.transparent() {
             init_account_transparent(pool, account, birth).await?;
             store_account_transparent_vk(pool, account, tvk).await?;
-            let address = derive_transparent_address(tvk, 0, dindex)?;
+            let (pk, address) = derive_transparent_address(tvk, 0, dindex)?;
             store_account_transparent_addr(
                 pool,
                 account,
                 0,
                 dindex,
                 None,
+                &pk,
                 &address.encode(&network),
             )
             .await?;
@@ -510,7 +510,7 @@ pub async fn get_addresses() -> Result<Addresses> {
     let taddr = tkeys
         .xvk
         .as_ref()
-        .map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap());
+        .map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap().1);
 
     let dindex = dindex as u64;
     let saddr = skeys

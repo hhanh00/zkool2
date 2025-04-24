@@ -11,6 +11,7 @@ import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/pay.dart';
+import 'package:zkool/src/rust/pay/plan.dart';
 import 'package:zkool/widgets/scanner.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -55,7 +56,7 @@ final router = GoRouter(
     ),
     GoRoute(
         path: '/tx',
-        builder: (context, state) => TxPage(state.extra as TxPlan)),
+        builder: (context, state) => TxPage(state.extra as PcztPackage)),
     GoRoute(
         path: '/tx_view',
         builder: (context, state) => TxView(state.extra as int)),

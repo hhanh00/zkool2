@@ -4,10 +4,12 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../lib.dart';
 import '../pay.dart';
+import '../pay/plan.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<TxPlan> prepare(
+Future<PcztPackage> prepare(
         {required int srcPools,
         required List<Recipient> recipients,
         required bool recipientPaysFee}) =>
@@ -15,6 +17,17 @@ Future<TxPlan> prepare(
         srcPools: srcPools,
         recipients: recipients,
         recipientPaysFee: recipientPaysFee);
+
+Future<Uint8List> signTransaction({required PcztPackage pczt}) =>
+    RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt);
+
+Future<String> broadcastTransaction(
+        {required int height, required List<int> txBytes}) =>
+    RustLib.instance.api
+        .crateApiPayBroadcastTransaction(height: height, txBytes: txBytes);
+
+TxPlan toPlan({required PcztPackage package}) =>
+    RustLib.instance.api.crateApiPayToPlan(package: package);
 
 Future<String> send({required int height, required List<int> data}) =>
     RustLib.instance.api.crateApiPaySend(height: height, data: data);
