@@ -9,6 +9,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 bool isValidPhrase({required String phrase}) =>
     RustLib.instance.api.crateApiKeyIsValidPhrase(phrase: phrase);
 
+bool isValidFvk({required String fvk}) =>
+    RustLib.instance.api.crateApiKeyIsValidFvk(fvk: fvk);
+
 bool isValidKey({required String key}) =>
     RustLib.instance.api.crateApiKeyIsValidKey(key: key);
 

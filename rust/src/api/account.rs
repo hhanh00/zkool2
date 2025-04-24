@@ -69,6 +69,15 @@ pub async fn get_account_ufvk(account: u32, pools: u8) -> Result<String> {
     Ok(ufvk)
 }
 
+#[frb]
+pub async fn get_account_fingerprint(account: u32) -> Result<Option<String>> {
+    let c = get_coin!();
+
+    let fingerprint = crate::db::get_account_fingerprint(c.get_pool(), account).await?;
+    let fingerprint = fingerprint.as_ref().map(|fp| hex::encode(&fp[..4]));
+    Ok(fingerprint)
+}
+
 #[frb(sync)]
 pub fn ua_from_ufvk(ufvk: &str, di: Option<u32>) -> Result<String> {
     let c = get_coin!();
@@ -220,7 +229,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
 
     let birth = na.birth.unwrap_or(min_height);
 
-    let account = store_account_metadata(pool, &na.name, &na.icon, birth, na.use_internal).await?;
+    let account = store_account_metadata(pool, &na.name, &na.icon, &na.fingerprint, birth, na.use_internal).await?;
     setup!(account);
 
     let mut key = na.key.clone();
@@ -371,6 +380,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         }
         update_dindex(pool, account, dindex, true).await?;
     }
+
     Ok(key)
 }
 
@@ -433,6 +443,7 @@ pub struct NewAccount {
     pub restore: bool,
     pub key: String,
     pub passphrase: Option<String>,
+    pub fingerprint: Option<Vec<u8>>,
     pub aindex: u32,
     pub birth: Option<u32>,
     pub use_internal: bool,
