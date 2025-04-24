@@ -202,6 +202,7 @@ pub async fn store_account_metadata(
     connection: &SqlitePool,
     name: &str,
     icon: &Option<Vec<u8>>,
+    fingerprint: &Option<Vec<u8>>,
     birth: u32,
     use_internal: bool,
 ) -> Result<u32> {
@@ -211,15 +212,16 @@ pub async fn store_account_metadata(
         .unwrap_or_default();
 
     let (id,): (u32,) = sqlx::query_as(
-        "INSERT INTO accounts(name, icon, birth,
+        "INSERT INTO accounts(name, icon, seed_fingerprint, birth,
         aindex, dindex, def_dindex, position, use_internal, saved, hidden)
-        VALUES (?, ?, ?, 0, 0, 0, ?, ?, FALSE, FALSE)
+        VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?, FALSE, FALSE)
         ON CONFLICT(id_account) DO UPDATE SET
             name = excluded.name
         RETURNING id_account",
     )
     .bind(name)
     .bind(icon)
+    .bind(fingerprint)
     .bind(birth)
     .bind(last_position + 1)
     .bind(use_internal)
@@ -584,6 +586,15 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
     }
 
     Ok(accounts)
+}
+
+
+pub async fn get_account_fingerprint(connection: &SqlitePool, account: u32) -> Result<Option<Vec<u8>>> {
+    let (fingerprint, ): (Option<Vec<u8>>, ) = sqlx::query_as(
+        "SELECT seed_fingerprint FROM accounts WHERE id_account = ?",
+    ).bind(account).fetch_one(connection).await?;
+
+    Ok(fingerprint)
 }
 
 pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()> {
