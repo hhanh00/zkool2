@@ -1,12 +1,11 @@
 use crate::{lwd::RawTransaction, Client};
 
 use anyhow::Result;
-use pczt::Pczt;
+use pczt::{roles::verifier::Verifier, Pczt};
 use plan::PcztPackage;
 use pool::PoolMask;
 use tonic::Request;
 use zcash_keys::encoding::AddressCodec as _;
-use zcash_primitives::legacy::{Script, TransparentAddress};
 use zcash_protocol::consensus::Network;
 
 pub mod error;
@@ -84,8 +83,6 @@ pub struct TxPlan {
     pub inputs: Vec<TxPlanIn>,
     pub outputs: Vec<TxPlanOut>,
     pub fee: u64,
-    pub change: u64,
-    pub change_pool: u8,
 }
 
 impl TxPlan {
@@ -93,59 +90,79 @@ impl TxPlan {
         let mut inputs = vec![];
         let mut outputs = vec![];
 
-        let pczt = Pczt::parse(&package.pczt).map_err(|e| e.into())?;
-        let bundle = pczt.transparent();
-        for i in bundle.inputs().iter() {
-            inputs.push(TxPlanIn {
-                pool: 0,
-                amount: *i.value(),
-            });
-        }
-        for o in bundle.outputs().iter() {
-            let script_pubkey = Script(o.script_pubkey().to_vec());
-            outputs.push(TxPlanOut {
-                pool: 0,
-                amount: *o.value(),
-                address: script_pubkey.address().unwrap().encode(network),
-            });
-        }
+        let pczt = Pczt::parse(&package.pczt).unwrap();
+        let height = *pczt.global().expiry_height();
+        let verifier = Verifier::new(pczt);
+        let mut fee = 0i64;
 
-        let bundle = pczt.sapling();
-        let mut net = 0;
-        for i in bundle.spends().iter() {
-            let amount = u64::from_be_bytes(i.proprietary()["value"].try_into().unwrap());
-            inputs.push(TxPlanIn {
-                pool: 1,
-                amount,
-            });
-            net += amount as i64;
-        }
-        for o in bundle.outputs().iter() {
-            let amount = u64::from_be_bytes(o.proprietary()["value"].try_into().unwrap());
-            outputs.push(TxPlanOut {
-                pool: 1,
-                amount,
-                address: o.address().unwrap().encode(network),
-            });
-            net -= amount as i64;
-        }
+        let verifier = verifier.with_transparent(|bundle| {
+            for i in bundle.inputs().iter() {
+                let value = i.value().into_u64();
+                inputs.push(TxPlanIn {
+                    pool: 0,
+                    amount: Some(value),
+                });
+                fee += value as i64;
+            }
+            for o in bundle.outputs().iter() {
+                let script_pubkey = o.script_pubkey();
+                outputs.push(TxPlanOut {
+                    pool: 0,
+                    amount: o.value().into_u64(),
+                    address: script_pubkey.address().unwrap().encode(network),
+                });
+                fee -= o.value().into_u64() as i64;
+            }
+            Ok::<_, pczt::roles::verifier::TransparentError<()>>(())
+        }).unwrap();
 
+        let verifier = verifier.with_sapling(|bundle| {
+            for _ in bundle.spends().iter() {
+                inputs.push(TxPlanIn {
+                    pool: 1,
+                    amount: None,
+                });
+            }
+            for o in bundle.outputs().iter() {
+                outputs.push(TxPlanOut {
+                    pool: 1,
+                    amount: o.value().unwrap().inner(),
+                    address: o.user_address().as_ref().unwrap().clone(),
+                });
+            }
+            fee += bundle.value_sum().to_raw() as i64;
+            Ok::<_, pczt::roles::verifier::SaplingError<()>>(())
+        }).unwrap();
 
-        TxPlan {
-            height: package.height,
+        let _verifier = verifier.with_orchard(|bundle| {
+            for a in bundle.actions().iter() {
+                inputs.push(TxPlanIn {
+                    pool: 2,
+                    amount: None,
+                });
+                outputs.push(TxPlanOut {
+                    pool: 2,
+                    amount: a.output().value().unwrap().inner(),
+                    address: a.output().user_address().as_ref().unwrap().clone(),
+                });
+            }
+            let f: i64 = bundle.value_sum().clone().try_into().unwrap();
+            fee += f;
+            Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
+        }).unwrap();
+
+        Ok(TxPlan {
+            height,
             inputs,
             outputs,
-            fee: todo!(),
-            change: todo!(),
-            change_pool: todo!(),
-        };
-        todo!()
+            fee: fee as u64,
+        })
     }
 }
 
 pub struct TxPlanIn {
     pub pool: u8,
-    pub amount: u64,
+    pub amount: Option<u64>,
 }
 
 pub struct TxPlanOut {

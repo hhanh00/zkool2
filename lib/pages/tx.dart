@@ -4,17 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
+import 'package:zkool/src/rust/pay/plan.dart';
 import 'package:zkool/utils.dart';
 
-final changeID = GlobalKey();
-final changePoolID = GlobalKey();
 final cancelID = GlobalKey();
 final sendID4 = GlobalKey();
 final txID = GlobalKey();
 
 class TxPage extends StatefulWidget {
-  final TxPlan txPlan;
-  const TxPage(this.txPlan, {super.key});
+  final PcztPackage pczt;
+  const TxPage(this.pczt, {super.key});
 
   @override
   State<TxPage> createState() => TxPageState();
@@ -22,9 +21,10 @@ class TxPage extends StatefulWidget {
 
 class TxPageState extends State<TxPage> {
   String? txId;
+  late final TxPlan txPlan = toPlan(package: widget.pczt);
 
   void tutorial() async {
-    tutorialHelper(context, "tutSend3", [changeID, changePoolID, cancelID, sendID4]);
+    tutorialHelper(context, "tutSend3", [cancelID, sendID4]);
     if (txId != null) {
       tutorialHelper(context, "tutSend4", [txID]);
     }
@@ -50,17 +50,13 @@ class TxPageState extends State<TxPage> {
         SliverToBoxAdapter(
           child: Column(children: [
             Text("Tx Plan", style: t.titleSmall),
-            Text("Fee: ${zatToString(widget.txPlan.fee)}"),
-            Showcase(key: changeID, description: "Amount of change returned to your wallet", child:
-            Text("Change: ${zatToString(widget.txPlan.change)}")),
-            Showcase(key: changePoolID, description: "Pool to which the change goes to", child:
-            Text("Change Pool: ${poolToString(widget.txPlan.changePool)}")),
+            Text("Fee: ${zatToString(txPlan.fee)}"),
             if (txId != null)
             Showcase(key: txID, description: "Transaction ID", child:
               SelectableText("Transaction ID: ${txId!}")),
           ]),
         ),
-        showTxPlan(context, widget.txPlan),
+        showTxPlan(context, txPlan),
       ]),
     );
   }
@@ -73,9 +69,12 @@ class TxPageState extends State<TxPage> {
         message: "Are you sure you want to send this transaction?",
       );
       if (!confirmed) return;
-      final txId2 = await send(
-        height: widget.txPlan.height,
-        data: widget.txPlan.data,
+      final txBytes = await signTransaction(
+        pczt: widget.pczt,
+      );
+      final txId2 = await broadcastTransaction(
+        height: txPlan.height,
+        txBytes: txBytes,
       );
       setState(() => txId = txId2);
     } on AnyhowException catch (e) {
@@ -109,7 +108,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           final input = txPlan.inputs[index];
           return ListTile(
             leading: Text("Input ${index + 1}"),
-            trailing: Text("Value: ${zatToString(input.amount)}"),
+            trailing: input.amount != null ? Text("Value: ${zatToString(input.amount!)}") : null,
             subtitle: Text("Pool: ${poolToString(input.pool)}"),
           );
         } else {

@@ -6,7 +6,6 @@ use bincode::{Decode, Encode};
 use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
-    builder::BundleMetadata,
     circuit::ProvingKey,
     keys::{Scope, SpendAuthorizingKey},
     Address,
@@ -20,9 +19,8 @@ use pczt::{
 };
 use rand_core::OsRng;
 use ripemd::Ripemd160;
-use sapling_crypto::{builder::SaplingMetadata, PaymentAddress};
+use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
-use serde::Serialize;
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
@@ -41,23 +39,19 @@ use zcash_protocol::{
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
-use zcash_transparent::{bundle::{OutPoint, TxOut}, keys::AccountPrivKey, pczt::Bip32Derivation};
+use zcash_transparent::{bundle::{OutPoint, TxOut}, pczt::Bip32Derivation};
 
-use super::{pool::ALL_SHIELDED_POOLS, SerializedPCZT};
+use super::pool::ALL_SHIELDED_POOLS;
 use crate::{
     account::{
         derive_transparent_sk, generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
-    },
-    lwd::ChainSpec,
-    pay::{
+    }, db::select_account_transparent, lwd::ChainSpec, pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
-        InputNote, Recipient, RecipientState, TxPlan, TxPlanIn, TxPlanOut,
-    },
-    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
-    Client,
+        InputNote, Recipient, RecipientState, TxPlanIn, TxPlanOut,
+    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
 };
 
 pub async fn plan_transaction(
@@ -343,7 +337,7 @@ pub async fn plan_transaction(
                 } = inp;
                 n_spends[*pool as usize] += 1;
                 inputs.push(TxPlanIn {
-                    amount: *amount,
+                    amount: Some(*amount),
                     pool: *pool,
                 });
                 match pool {
@@ -445,6 +439,7 @@ pub async fn plan_transaction(
     }
 
     event!(Level::INFO, "Adding Outputs");
+    let mut n_outputs: [usize; 3] = [0, 0, 0];
     let mut outs = vec![];
     for r in outputs {
         let RecipientState {
@@ -476,6 +471,7 @@ pub async fn plan_transaction(
             .transpose()?;
         let memo = text_memo.or(byte_memo).unwrap_or(MemoBytes::empty());
 
+        n_outputs[pool as usize] += 1;
         match pool {
             0 => {
                 let to = get_transparent_address(network, &recipient.address)?;
@@ -533,6 +529,53 @@ pub async fn plan_transaction(
         }
         Ok(())
     }).unwrap();
+
+    let outputs = single
+        .iter()
+        .chain(double.iter())
+        .chain(std::iter::once(&change_recipient));
+
+    let updater = updater.update_sapling_with(|mut u| {
+        let mut i = 0;
+        for o in outputs {
+            let pool = o.pool_mask.to_best_pool().unwrap();
+            if pool != 1 {
+                continue;
+            }
+            let bundle_index = sapling_meta.output_index(i).unwrap();
+            u.update_output_with(bundle_index, |mut u| {
+                u.set_user_address(o.recipient.address.clone());
+                Ok(())
+            })?;
+            i += 1;
+        }
+
+        Ok(())
+    }).unwrap();
+
+    let outputs = single
+        .iter()
+        .chain(double.iter())
+        .chain(std::iter::once(&change_recipient));
+
+    let updater = updater.update_orchard_with(|mut u| {
+        let mut i = 0;
+        for o in outputs {
+            let pool = o.pool_mask.to_best_pool().unwrap();
+            if pool != 2 {
+                continue;
+            }
+            let bundle_index = orchard_meta.output_action_index(i).unwrap();
+            u.update_action_with(bundle_index, |mut u| {
+                u.set_output_user_address(o.recipient.address.clone());
+                Ok(())
+            })?;
+            i += 1;
+        }
+
+        Ok(())
+    }).unwrap();
+
     let pczt = updater.finish();
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
@@ -578,7 +621,8 @@ pub async fn sign_transaction(
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
 
-    let tsk = get_transparent_sk(connection, account).await?;
+    let tkeys = select_account_transparent(connection, account).await?;
+    let tsk = tkeys.xsk;
     let ssk = get_sapling_sk(connection, account).await?;
     let osk = get_orchard_sk(connection, account).await?;
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
@@ -665,21 +709,7 @@ pub async fn sign_transaction(
     });
     debug!("{}", hex::encode(&tx_bytes));
 
-    // let tx_plan = TxPlan {
-    //     height,
-    //     inputs,
-    //     outputs: outs,
-    //     fee,
-    //     change,
-    //     change_pool,
-    //     data: tx_bytes,
-    // };
-
     Ok(tx_bytes)
-}
-
-async fn get_transparent_sk(connection: &SqlitePool, account: u32) -> Result<Option<AccountPrivKey>> {
-    todo!()
 }
 
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
