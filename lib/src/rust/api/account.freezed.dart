@@ -947,6 +947,7 @@ mixin _$NewAccount {
   bool get restore => throw _privateConstructorUsedError;
   String get key => throw _privateConstructorUsedError;
   String? get passphrase => throw _privateConstructorUsedError;
+  Uint8List? get fingerprint => throw _privateConstructorUsedError;
   int get aindex => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
   bool get useInternal => throw _privateConstructorUsedError;
@@ -970,6 +971,7 @@ abstract class $NewAccountCopyWith<$Res> {
       bool restore,
       String key,
       String? passphrase,
+      Uint8List? fingerprint,
       int aindex,
       int? birth,
       bool useInternal});
@@ -995,6 +997,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? restore = null,
     Object? key = null,
     Object? passphrase = freezed,
+    Object? fingerprint = freezed,
     Object? aindex = null,
     Object? birth = freezed,
     Object? useInternal = null,
@@ -1020,6 +1023,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.passphrase
           : passphrase // ignore: cast_nullable_to_non_nullable
               as String?,
+      fingerprint: freezed == fingerprint
+          ? _value.fingerprint
+          : fingerprint // ignore: cast_nullable_to_non_nullable
+              as Uint8List?,
       aindex: null == aindex
           ? _value.aindex
           : aindex // ignore: cast_nullable_to_non_nullable
@@ -1050,6 +1057,7 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       bool restore,
       String key,
       String? passphrase,
+      Uint8List? fingerprint,
       int aindex,
       int? birth,
       bool useInternal});
@@ -1073,6 +1081,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? restore = null,
     Object? key = null,
     Object? passphrase = freezed,
+    Object? fingerprint = freezed,
     Object? aindex = null,
     Object? birth = freezed,
     Object? useInternal = null,
@@ -1098,6 +1107,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.passphrase
           : passphrase // ignore: cast_nullable_to_non_nullable
               as String?,
+      fingerprint: freezed == fingerprint
+          ? _value.fingerprint
+          : fingerprint // ignore: cast_nullable_to_non_nullable
+              as Uint8List?,
       aindex: null == aindex
           ? _value.aindex
           : aindex // ignore: cast_nullable_to_non_nullable
@@ -1123,6 +1136,7 @@ class _$NewAccountImpl implements _NewAccount {
       required this.restore,
       required this.key,
       this.passphrase,
+      this.fingerprint,
       required this.aindex,
       this.birth,
       required this.useInternal});
@@ -1138,6 +1152,8 @@ class _$NewAccountImpl implements _NewAccount {
   @override
   final String? passphrase;
   @override
+  final Uint8List? fingerprint;
+  @override
   final int aindex;
   @override
   final int? birth;
@@ -1146,7 +1162,7 @@ class _$NewAccountImpl implements _NewAccount {
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, aindex: $aindex, birth: $birth, useInternal: $useInternal)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, useInternal: $useInternal)';
   }
 
   @override
@@ -1160,6 +1176,8 @@ class _$NewAccountImpl implements _NewAccount {
             (identical(other.key, key) || other.key == key) &&
             (identical(other.passphrase, passphrase) ||
                 other.passphrase == passphrase) &&
+            const DeepCollectionEquality()
+                .equals(other.fingerprint, fingerprint) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.useInternal, useInternal) ||
@@ -1174,6 +1192,7 @@ class _$NewAccountImpl implements _NewAccount {
       restore,
       key,
       passphrase,
+      const DeepCollectionEquality().hash(fingerprint),
       aindex,
       birth,
       useInternal);
@@ -1194,6 +1213,7 @@ abstract class _NewAccount implements NewAccount {
       required final bool restore,
       required final String key,
       final String? passphrase,
+      final Uint8List? fingerprint,
       required final int aindex,
       final int? birth,
       required final bool useInternal}) = _$NewAccountImpl;
@@ -1208,6 +1228,8 @@ abstract class _NewAccount implements NewAccount {
   String get key;
   @override
   String? get passphrase;
+  @override
+  Uint8List? get fingerprint;
   @override
   int get aindex;
   @override

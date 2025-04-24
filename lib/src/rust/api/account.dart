@@ -16,6 +16,9 @@ Future<String> getAccountUfvk({required int account, required int pools}) =>
     RustLib.instance.api
         .crateApiAccountGetAccountUfvk(account: account, pools: pools);
 
+Future<String?> getAccountFingerprint({required int account}) =>
+    RustLib.instance.api.crateApiAccountGetAccountFingerprint(account: account);
+
 String uaFromUfvk({required String ufvk, int? di}) =>
     RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di);
 
@@ -178,6 +181,7 @@ class NewAccount with _$NewAccount {
     required bool restore,
     required String key,
     String? passphrase,
+    Uint8List? fingerprint,
     required int aindex,
     int? birth,
     required bool useInternal,
