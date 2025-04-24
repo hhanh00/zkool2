@@ -469,6 +469,25 @@ pub async fn plan_transaction(
     let osk = get_orchard_sk(connection, account).await?;
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
 
+    event!(Level::INFO, "Signing PCZT");
+    let mut signer = Signer::new(pczt).unwrap();
+    for index in 0..n_spends[0] {
+        debug!("signing transparent {index}");
+        signer.sign_transparent(index, &tsk[index]).unwrap();
+    }
+    for index in 0..n_spends[1] {
+        debug!("signing sapling {index}");
+        let bundle_index = sapling_meta.spend_index(index).unwrap();
+        signer.sign_sapling(bundle_index, &ssk.as_ref().unwrap().expsk.ask).unwrap();
+    }
+    for index in 0..n_spends[2] {
+        debug!("signing orchard {index}");
+        let bundle_index = orchard_meta.spend_action_index(index).unwrap();
+        signer.sign_orchard(bundle_index, osak.as_ref().unwrap()).unwrap();
+    }
+    let pczt = signer.finish();
+    debug!("Signed");
+
     let updater = Updater::new(pczt);
     let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
     let updater = updater
@@ -495,25 +514,6 @@ pub async fn plan_transaction(
         .unwrap()
         .finish();
     debug!("Proved");
-
-    event!(Level::INFO, "Signing PCZT");
-    let mut signer = Signer::new(pczt).unwrap();
-    for index in 0..n_spends[0] {
-        debug!("signing transparent {index}");
-        signer.sign_transparent(index, &tsk[index]).unwrap();
-    }
-    for index in 0..n_spends[1] {
-        debug!("signing sapling {index}");
-        let bundle_index = sapling_meta.spend_index(index).unwrap();
-        signer.sign_sapling(bundle_index, &ssk.as_ref().unwrap().expsk.ask).unwrap();
-    }
-    for index in 0..n_spends[2] {
-        debug!("signing orchard {index}");
-        let bundle_index = orchard_meta.spend_action_index(index).unwrap();
-        signer.sign_orchard(bundle_index, osak.as_ref().unwrap()).unwrap();
-    }
-    let pczt = signer.finish();
-    debug!("Signed");
 
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
     debug!("Spend Finalized");

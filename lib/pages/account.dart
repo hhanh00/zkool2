@@ -9,6 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
@@ -292,7 +293,8 @@ class AccountEditPageState extends State<AccountEditPage> {
                 description: "Show Viewing Keys",
                 child: IconButton(
                     tooltip: "Show Viewing Keys",
-                    onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
+                    onPressed: () => GoRouter.of(context)
+                        .push("/viewing_keys", extra: account.id),
                     icon: Icon(Icons.visibility))),
           if (account != null)
             Showcase(
@@ -584,10 +586,15 @@ class ViewingKeysPage extends StatefulWidget {
 class ViewingKeysPageState extends State<ViewingKeysPage> {
   int pools = 7;
   String? uvk;
+  String? fingerprint;
 
   @override
   void initState() {
     super.initState();
+    Future(() async {
+      fingerprint = await getAccountFingerprint(account: widget.account);
+      setState(() {});
+    });
     Future(() => onPoolChanged(pools));
   }
 
@@ -599,18 +606,32 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Column(children: [
-                  PoolSelect(onChanged: onPoolChanged),
+                  Center(child: PoolSelect(onChanged: onPoolChanged)),
                   Gap(32),
                   if (uvk != null) SelectableText(uvk!),
+                  Gap(32),
+                  if (uvk != null) QrImageView(data: uvk!, size: 200),
+                  Gap(8),
+                  if (fingerprint != null) SelectableText(fingerprint!),
+                  Gap(32),
+                  Text("If the account does not include a pool, its receiver will be absent"),
                 ]))));
   }
 
   onPoolChanged(int? v) async {
     if (v == null) return;
-    final uuvk = await getAccountUfvk(account: widget.account, pools: v);
-    setState(() {
-      pools = v;
-      uvk = uuvk;
-    });
+    try {
+      final uuvk = await getAccountUfvk(account: widget.account, pools: v);
+      setState(() {
+        pools = v;
+        uvk = uuvk;
+      });
+    } on AnyhowException catch (e) {
+      if (!mounted) return;
+      await showException(context, e.message);
+      setState(() {
+        uvk = null;
+      });
+    }
   }
 }
