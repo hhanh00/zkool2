@@ -521,7 +521,7 @@ pub async fn transparent_sweep(
             let mut dindex = 0;
             let mut gap = 0;
             loop {
-                let taddr = derive_transparent_address(xvk, scope, dindex)?;
+                let (pk, taddr) = derive_transparent_address(xvk, scope, dindex)?;
                 let taddr = taddr.encode(network);
                 let mut txids = client
                     .get_taddress_txids(Request::new(TransparentAddressBlockFilter {
@@ -547,7 +547,7 @@ pub async fn transparent_sweep(
                     } else {
                         None
                     };
-                    store_account_transparent_addr(connection, account, scope, dindex, sk, &taddr)
+                    store_account_transparent_addr(connection, account, scope, dindex, sk, &pk, &taddr)
                         .await?;
                 }
                 else {
