@@ -2,7 +2,6 @@ use std::{convert::Infallible, str::FromStr as _};
 
 use anyhow::{anyhow, Result};
 
-use bincode::{Decode, Encode};
 use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
@@ -45,7 +44,7 @@ use super::pool::ALL_SHIELDED_POOLS;
 use crate::{
     account::{
         derive_transparent_sk, generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
-    }, db::select_account_transparent, lwd::ChainSpec, pay::{
+    }, api::pay::PcztPackage, db::select_account_transparent, lwd::ChainSpec, pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
@@ -596,15 +595,6 @@ pub async fn plan_transaction(
     Ok(pczt_package)
 }
 
-#[derive(Encode, Decode)]
-pub struct PcztPackage {
-    pub pczt: Vec<u8>,
-    pub n_spends: [usize; 3],
-    pub sapling_indices: Vec<usize>,
-    pub orchard_indices: Vec<usize>,
-    pub can_sign: bool,
-}
-
 pub async fn sign_transaction(
     connection: &SqlitePool,
     account: u32,
@@ -626,6 +616,24 @@ pub async fn sign_transaction(
     let ssk = get_sapling_sk(connection, account).await?;
     let osk = get_orchard_sk(connection, account).await?;
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
+
+    let updater = Updater::new(pczt);
+    let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
+    let updater = updater
+        .update_sapling_with(|mut u| {
+            for i in 0..n_spends[1] {
+                let bundle_index = sapling_indices[i];
+                u.update_spend_with(bundle_index, |mut u| {
+                    u.set_proof_generation_key(pgk.clone().expect("proof_generation_key")).unwrap();
+                    Ok(())
+                })
+                .unwrap();
+            }
+            Ok(())
+        })
+        .unwrap();
+    let pczt = updater.finish();
+    debug!("Updated");
 
     let mut signer = Signer::new(pczt.clone()).unwrap();
     let tbundle = pczt.transparent();
@@ -658,24 +666,6 @@ pub async fn sign_transaction(
         signer.sign_orchard(bundle_index, osak).unwrap();
     }
     let pczt = signer.finish();
-
-    let updater = Updater::new(pczt);
-    let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
-    let updater = updater
-        .update_sapling_with(|mut u| {
-            for i in 0..n_spends[1] {
-                let bundle_index = sapling_indices[i];
-                u.update_spend_with(bundle_index, |mut u| {
-                    u.set_proof_generation_key(pgk.clone().unwrap()).unwrap();
-                    Ok(())
-                })
-                .unwrap();
-            }
-            Ok(())
-        })
-        .unwrap();
-    let pczt = updater.finish();
-    debug!("Updated");
 
     span.in_scope(|| {
         info!("Adding Proofs to PCZT");

@@ -1,10 +1,10 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
-import 'package:zkool/src/rust/pay/plan.dart';
 import 'package:zkool/utils.dart';
 
 final cancelID = GlobalKey();
@@ -43,7 +43,8 @@ class TxPageState extends State<TxPage> {
           Showcase(key: cancelID, description: "Cancel, do NOT send", child:
           IconButton(onPressed: onCancel, icon: Icon(Icons.cancel))),
           Showcase(key: sendID4, description: "Confirm, broadcast transaction", child:
-          IconButton(onPressed: onSend, icon: Icon(Icons.send))),
+          IconButton(onPressed: txPlan.canSign ? onSend : onSave, icon: Icon(
+            txPlan.canSign ? Icons.send : Icons.save))),
         ],
       ),
       body: CustomScrollView(slivers: [
@@ -76,10 +77,20 @@ class TxPageState extends State<TxPage> {
         height: txPlan.height,
         txBytes: txBytes,
       );
+      showSnackbar("Transaction broadcasted successfully");
       setState(() => txId = txId2);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
+  }
+
+  void onSave() async {
+    final pcztData = await packTransaction(pczt: widget.pczt);
+      await FilePicker.platform.saveFile(
+        dialogTitle: 'Please select an output file for the unsigned transaction',
+        fileName: 'unsigned-tx.bin',
+        bytes: pcztData,
+      );
   }
 
   void onCancel() {
