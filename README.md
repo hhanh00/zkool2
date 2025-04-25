@@ -45,11 +45,9 @@ On the flipside, the UI is relatively simple to understand.
 - No keytool
 - No Market Data charts
 - No customization of reference currency (always USD)
-- No themes
 - No pool transfer tool
 - No third party swap integration
 - No spending tracking
-- No cold wallet[^4]
 - No auto shielding of any sort
 
 [^1]: Ywallet can only save and restore *all* the accounts.
@@ -57,5 +55,3 @@ On the flipside, the UI is relatively simple to understand.
 of privacy.
 [^3]: The diversified address cannot be matched against the *one* address
 recorded in the address book.
-[^4]: Though the transaction format uses PCZT internally. It could
-be made to work with the Keystone HW

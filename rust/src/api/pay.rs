@@ -52,6 +52,7 @@ pub struct PcztPackage {
     pub sapling_indices: Vec<usize>,
     pub orchard_indices: Vec<usize>,
     pub can_sign: bool,
+    pub puri: String,
 }
 
 #[frb]
@@ -88,4 +89,9 @@ pub async fn send(height: u32, data: &[u8]) -> Result<String> {
 
     let tx = crate::pay::send(&mut client, height, data).await?;
     Ok(tx)
+}
+
+#[frb(sync)]
+pub fn parse_payment_uri(uri: &str) -> Option<Vec<Recipient>> {
+    crate::pay::prepare::parse_payment_uri(uri).ok()
 }
