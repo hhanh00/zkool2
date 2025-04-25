@@ -21,6 +21,7 @@ mixin _$PcztPackage {
   Uint64List get saplingIndices => throw _privateConstructorUsedError;
   Uint64List get orchardIndices => throw _privateConstructorUsedError;
   bool get canSign => throw _privateConstructorUsedError;
+  String get puri => throw _privateConstructorUsedError;
 
   /// Create a copy of PcztPackage
   /// with the given fields replaced by the non-null parameter values.
@@ -40,7 +41,8 @@ abstract class $PcztPackageCopyWith<$Res> {
       UsizeArray3 nSpends,
       Uint64List saplingIndices,
       Uint64List orchardIndices,
-      bool canSign});
+      bool canSign,
+      String puri});
 }
 
 /// @nodoc
@@ -63,6 +65,7 @@ class _$PcztPackageCopyWithImpl<$Res, $Val extends PcztPackage>
     Object? saplingIndices = null,
     Object? orchardIndices = null,
     Object? canSign = null,
+    Object? puri = null,
   }) {
     return _then(_value.copyWith(
       pczt: null == pczt
@@ -85,6 +88,10 @@ class _$PcztPackageCopyWithImpl<$Res, $Val extends PcztPackage>
           ? _value.canSign
           : canSign // ignore: cast_nullable_to_non_nullable
               as bool,
+      puri: null == puri
+          ? _value.puri
+          : puri // ignore: cast_nullable_to_non_nullable
+              as String,
     ) as $Val);
   }
 }
@@ -102,7 +109,8 @@ abstract class _$$PcztPackageImplCopyWith<$Res>
       UsizeArray3 nSpends,
       Uint64List saplingIndices,
       Uint64List orchardIndices,
-      bool canSign});
+      bool canSign,
+      String puri});
 }
 
 /// @nodoc
@@ -123,6 +131,7 @@ class __$$PcztPackageImplCopyWithImpl<$Res>
     Object? saplingIndices = null,
     Object? orchardIndices = null,
     Object? canSign = null,
+    Object? puri = null,
   }) {
     return _then(_$PcztPackageImpl(
       pczt: null == pczt
@@ -145,6 +154,10 @@ class __$$PcztPackageImplCopyWithImpl<$Res>
           ? _value.canSign
           : canSign // ignore: cast_nullable_to_non_nullable
               as bool,
+      puri: null == puri
+          ? _value.puri
+          : puri // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -157,7 +170,8 @@ class _$PcztPackageImpl implements _PcztPackage {
       required this.nSpends,
       required this.saplingIndices,
       required this.orchardIndices,
-      required this.canSign});
+      required this.canSign,
+      required this.puri});
 
   @override
   final Uint8List pczt;
@@ -169,10 +183,12 @@ class _$PcztPackageImpl implements _PcztPackage {
   final Uint64List orchardIndices;
   @override
   final bool canSign;
+  @override
+  final String puri;
 
   @override
   String toString() {
-    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, canSign: $canSign)';
+    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, canSign: $canSign, puri: $puri)';
   }
 
   @override
@@ -186,7 +202,8 @@ class _$PcztPackageImpl implements _PcztPackage {
                 .equals(other.saplingIndices, saplingIndices) &&
             const DeepCollectionEquality()
                 .equals(other.orchardIndices, orchardIndices) &&
-            (identical(other.canSign, canSign) || other.canSign == canSign));
+            (identical(other.canSign, canSign) || other.canSign == canSign) &&
+            (identical(other.puri, puri) || other.puri == puri));
   }
 
   @override
@@ -196,7 +213,8 @@ class _$PcztPackageImpl implements _PcztPackage {
       const DeepCollectionEquality().hash(nSpends),
       const DeepCollectionEquality().hash(saplingIndices),
       const DeepCollectionEquality().hash(orchardIndices),
-      canSign);
+      canSign,
+      puri);
 
   /// Create a copy of PcztPackage
   /// with the given fields replaced by the non-null parameter values.
@@ -213,7 +231,8 @@ abstract class _PcztPackage implements PcztPackage {
       required final UsizeArray3 nSpends,
       required final Uint64List saplingIndices,
       required final Uint64List orchardIndices,
-      required final bool canSign}) = _$PcztPackageImpl;
+      required final bool canSign,
+      required final String puri}) = _$PcztPackageImpl;
 
   @override
   Uint8List get pczt;
@@ -225,6 +244,8 @@ abstract class _PcztPackage implements PcztPackage {
   Uint64List get orchardIndices;
   @override
   bool get canSign;
+  @override
+  String get puri;
 
   /// Create a copy of PcztPackage
   /// with the given fields replaced by the non-null parameter values.

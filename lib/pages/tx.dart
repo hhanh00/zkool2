@@ -49,14 +49,15 @@ class TxPageState extends State<TxPage> {
       ),
       body: CustomScrollView(slivers: [
         SliverToBoxAdapter(
-          child: Column(children: [
+          child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Column(children: [
             Text("Tx Plan", style: t.titleSmall),
             Text("Fee: ${zatToString(txPlan.fee)}"),
+            SelectableText("Payment URI: ${widget.pczt.puri}"),
             if (txId != null)
             Showcase(key: txID, description: "Transaction ID", child:
               SelectableText("Transaction ID: ${txId!}")),
           ]),
-        ),
+        )),
         showTxPlan(context, txPlan),
       ]),
     );

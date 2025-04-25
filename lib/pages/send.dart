@@ -36,22 +36,23 @@ class SendPage extends StatefulWidget {
 
 class SendPageState extends State<SendPage> {
   final formKey = GlobalKey<FormBuilderState>();
-  var address = "";
+  final addressController = TextEditingController();
   var amount = "";
   String? memo;
   List<Recipient> recipients = [];
   bool supportsMemo = false;
 
   void tutorial() async {
-    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, logID2, openTxID, addTxID, sendID2]);
-    if (supportsMemo)
-      tutorialHelper(context, "tutSend1", [memoID]);
+    tutorialHelper(context, "tutSend0",
+        [addressID, scanID, amountID, logID2, openTxID, addTxID, sendID2]);
+    if (supportsMemo) tutorialHelper(context, "tutSend1", [memoID]);
   }
 
   @override
   Widget build(BuildContext context) {
     Future(tutorial);
 
+    final address = formKey.currentState?.fields['address']?.value as String? ?? "";
     final recipientTiles = recipients
         .map((r) => ListTile(
               title: Text(r.address),
@@ -67,31 +68,39 @@ class SendPageState extends State<SendPage> {
         .toList();
 
     supportsMemo = validAddress(address) == null &&
-                          !isValidTransparentAddress(address: address);
+        !isValidTransparentAddress(address: address);
     return Scaffold(
         appBar: AppBar(
           title: Text("Recipient"),
           actions: [
-            Showcase(key: logID2, description: "Show App Log", child:
-            IconButton(
-                tooltip: "Open Log",
-                onPressed: () => onOpenLog(context),
-                icon: Icon(Icons.description))),
-            Showcase(key: openTxID, description: "Load an unsigned transaction", child:
-            IconButton(
-                tooltip: "Load Tx",
-                onPressed: onLoad,
-                icon: Icon(Icons.file_open))),
-            Showcase(key: addTxID, description: "Queue this recipient to create a multi send", child:
-            IconButton(
-                tooltip: "Add to Multi Tx",
-                onPressed: onAdd,
-                icon: Icon(Icons.add))),
-            Showcase(key: sendID2, description: "Send transaction (including queued recipients)", child:
-            IconButton(
-                tooltip: "Send (Next Step)",
-                onPressed: onSend,
-                icon: Icon(Icons.send))),
+            Showcase(
+                key: logID2,
+                description: "Show App Log",
+                child: IconButton(
+                    tooltip: "Open Log",
+                    onPressed: () => onOpenLog(context),
+                    icon: Icon(Icons.description))),
+            Showcase(
+                key: openTxID,
+                description: "Load an unsigned transaction",
+                child: IconButton(
+                    tooltip: "Load Tx",
+                    onPressed: onLoad,
+                    icon: Icon(Icons.file_open))),
+            Showcase(
+                key: addTxID,
+                description: "Queue this recipient to create a multi send",
+                child: IconButton(
+                    tooltip: "Add to Multi Tx",
+                    onPressed: onAdd,
+                    icon: Icon(Icons.add))),
+            Showcase(
+                key: sendID2,
+                description: "Send transaction (including queued recipients)",
+                child: IconButton(
+                    tooltip: "Send (Next Step)",
+                    onPressed: onSend,
+                    icon: Icon(Icons.send))),
           ],
         ),
         body: SingleChildScrollView(
@@ -103,55 +112,69 @@ class SendPageState extends State<SendPage> {
                       ...recipientTiles,
                       Row(children: [
                         Expanded(
-                          child: Showcase(key: addressID, description: "Receiver Address (Transparent, Sapling or UA)", child:
-                            FormBuilderTextField(
-                          name: "address",
-                          decoration:
-                              const InputDecoration(labelText: "Address"),
-                          validator: FormBuilderValidators.compose(
-                              [FormBuilderValidators.required(), validAddress]),
-                          initialValue: address,
-                          onChanged: (v) => setState(() => address = v!),
-                        ))),
-                        Showcase(key: scanID, description: "Open the QR Scanner", child:
-                        IconButton(
-                            tooltip: "Scan",
-                            onPressed: onScan,
-                            icon: Icon(Icons.qr_code_scanner))),
+                            child: Showcase(
+                                key: addressID,
+                                description:
+                                    "Receiver Address (Transparent, Sapling or UA)",
+                                child: FormBuilderTextField(
+                                  name: "address",
+                                  controller: addressController,
+                                  decoration: const InputDecoration(
+                                      labelText: "Address"),
+                                  validator: FormBuilderValidators.compose([
+                                    FormBuilderValidators.required(),
+                                    validAddressOrPaymentURI
+                                  ]),
+                                  onChanged: onAddressChanged,
+                                ))),
+                        Showcase(
+                            key: scanID,
+                            description: "Open the QR Scanner",
+                            child: IconButton(
+                                tooltip: "Scan",
+                                onPressed: onScan,
+                                icon: Icon(Icons.qr_code_scanner))),
                       ]),
-                      Showcase(key: amountID, description: "Amount to send", child:
-                      FormBuilderTextField(
-                        name: "amount",
-                        decoration: const InputDecoration(labelText: "Amount"),
-                        validator: FormBuilderValidators.compose(
-                            [FormBuilderValidators.required(), validAmount]),
-                        keyboardType: TextInputType.number,
-                        initialValue: amount,
-                        onChanged: (v) => setState(() => amount = v!),
-                      )),
+                      Showcase(
+                          key: amountID,
+                          description: "Amount to send",
+                          child: FormBuilderTextField(
+                            name: "amount",
+                            decoration:
+                                const InputDecoration(labelText: "Amount"),
+                            validator: FormBuilderValidators.compose([
+                              FormBuilderValidators.required(),
+                              validAmount
+                            ]),
+                            keyboardType: TextInputType.number,
+                            initialValue: amount,
+                            onChanged: (v) => setState(() => amount = v!),
+                          )),
                       if (supportsMemo)
-                        Showcase(key: memoID, description: "Optional memo", child:
-                        FormBuilderTextField(
-                          name: "memo",
-                          decoration: const InputDecoration(labelText: "Memo"),
-                          initialValue: memo,
-                          onChanged: (v) => setState(() => memo = v),
-                          maxLines: 8,
-                        )),
+                        Showcase(
+                            key: memoID,
+                            description: "Optional memo",
+                            child: FormBuilderTextField(
+                              name: "memo",
+                              decoration:
+                                  const InputDecoration(labelText: "Memo"),
+                              initialValue: memo,
+                              onChanged: (v) => setState(() => memo = v),
+                              maxLines: 8,
+                            )),
                     ])))));
   }
 
   void onLoad() async {
-      final files = await FilePicker.platform.pickFiles(
-        dialogTitle: 'Please select a transaction to sign',
-      );
-      if (files == null) return;
-      final file = File(files.files.first.path!);
-      final bytes = await file.readAsBytes();
-      final pczt = await unpackTransaction(bytes: bytes);
-      if (!mounted) return;
-      GoRouter.of(context).go("/tx", extra: pczt.copyWith(
-          canSign: true));
+    final files = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Please select a transaction to sign',
+    );
+    if (files == null) return;
+    final file = File(files.files.first.path!);
+    final bytes = await file.readAsBytes();
+    final pczt = await unpackTransaction(bytes: bytes);
+    if (!mounted) return;
+    GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
   }
 
   void onAdd() async {
@@ -174,8 +197,20 @@ class SendPageState extends State<SendPage> {
     logger.i(address2);
     if (address2 != null) {
       setState(() {
-        address = address2;
         formKey.currentState!.fields['address']!.didChange(address2);
+      });
+    }
+  }
+
+  void onAddressChanged(String? v) {
+    if (v == null || v.isEmpty) return;
+    final recipients2 = parsePaymentUri(uri: v);
+    if (recipients2 != null) {
+      setState(() {
+        recipients = recipients2;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        addressController.clear();
       });
     }
   }
@@ -229,11 +264,13 @@ class Send2PageState extends State<Send2Page> {
               tooltip: "Open Log",
               onPressed: () => onOpenLog(context),
               icon: Icon(Icons.description)),
-          Showcase(key: sendID3, description: "Send (Summary and Confirmation)", child:
-          IconButton(
-              tooltip: "Send (Compute Tx)",
-              onPressed: onSend,
-              icon: Icon(Icons.send))),
+          Showcase(
+              key: sendID3,
+              description: "Send (Summary and Confirmation)",
+              child: IconButton(
+                  tooltip: "Send (Compute Tx)",
+                  onPressed: onSend,
+                  icon: Icon(Icons.send))),
         ],
       ),
       body: SingleChildScrollView(
@@ -242,23 +279,29 @@ class Send2PageState extends State<Send2Page> {
           child: FormBuilder(
               key: formKey,
               child: Column(children: [
-                Showcase(key: sourceID, description: "Pools to take funds from. Uncheck any pool you do not want to use", child:
-                InputDecorator(
-                    decoration: InputDecoration(labelText: "Source Pools"),
-                    child: Align(
-                        alignment: Alignment.centerRight,
-                        child: FormBuilderField<int>(
-                          name: "source pools",
-                          builder: (field) =>
-                              PoolSelect(onChanged: (v) => field.didChange(v)),
-                        )))),
-                Showcase(key: feeSourceID, description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the receipient instead", child:
-                FormBuilderSwitch(
-                  name: "recipientPaysFee",
-                  title: Text("Recipient Pays Fee"),
-                  initialValue: false,
-                  onChanged: (v) => setState(() => recipientPaysFee = v!),
-                )),
+                Showcase(
+                    key: sourceID,
+                    description:
+                        "Pools to take funds from. Uncheck any pool you do not want to use",
+                    child: InputDecorator(
+                        decoration: InputDecoration(labelText: "Source Pools"),
+                        child: Align(
+                            alignment: Alignment.centerRight,
+                            child: FormBuilderField<int>(
+                              name: "source pools",
+                              builder: (field) => PoolSelect(
+                                  onChanged: (v) => field.didChange(v)),
+                            )))),
+                Showcase(
+                    key: feeSourceID,
+                    description:
+                        "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the receipient instead",
+                    child: FormBuilderSwitch(
+                      name: "recipientPaysFee",
+                      title: Text("Recipient Pays Fee"),
+                      initialValue: false,
+                      onChanged: (v) => setState(() => recipientPaysFee = v!),
+                    )),
               ])),
         ),
       ),
