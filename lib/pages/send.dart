@@ -183,6 +183,10 @@ class SendPageState extends State<SendPage> {
       setState(() {
         recipients.add(recipient);
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        addressController.clear();
+        formKey.currentState?.fields['amount']?.reset();
+      });
     }
   }
 

@@ -132,6 +132,7 @@ class TxPageState extends State<TxPage> {
             content: SizedBox(width: 250, height: 250, child: QrImageView(
               data: widget.pczt.puri,
               version: QrVersions.auto,
+              backgroundColor: Colors.white,
               size: 200.0,
             )),
             actions: [
