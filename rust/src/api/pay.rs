@@ -1,6 +1,7 @@
 use anyhow::Result;
+use bincode::{config::legacy, Decode, Encode};
 
-use crate::pay::{plan::{plan_transaction, PcztPackage}, Recipient, TxPlan};
+use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
 use flutter_rust_bridge::frb;
 
 #[frb]
@@ -41,6 +42,28 @@ pub async fn sign_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
     .await?;
 
     Ok(tx)
+}
+
+#[frb(dart_metadata = ("freezed"))]
+#[derive(Encode, Decode)]
+pub struct PcztPackage {
+    pub pczt: Vec<u8>,
+    pub n_spends: [usize; 3],
+    pub sapling_indices: Vec<usize>,
+    pub orchard_indices: Vec<usize>,
+    pub can_sign: bool,
+}
+
+#[frb]
+pub fn pack_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
+    let pkg = bincode::encode_to_vec(pczt, legacy())?;
+    Ok(pkg)
+}
+
+#[frb]
+pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
+    let (pkg, _) = bincode::decode_from_slice(bytes, legacy())?;
+    Ok(pkg)
 }
 
 #[frb]

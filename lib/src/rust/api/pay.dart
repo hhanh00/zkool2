@@ -6,8 +6,11 @@
 import '../frb_generated.dart';
 import '../lib.dart';
 import '../pay.dart';
-import '../pay/plan.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'pay.freezed.dart';
+
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `borrow_decode`, `decode`, `encode`
 
 Future<PcztPackage> prepare(
         {required int srcPools,
@@ -21,6 +24,12 @@ Future<PcztPackage> prepare(
 Future<Uint8List> signTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt);
 
+Future<Uint8List> packTransaction({required PcztPackage pczt}) =>
+    RustLib.instance.api.crateApiPayPackTransaction(pczt: pczt);
+
+Future<PcztPackage> unpackTransaction({required List<int> bytes}) =>
+    RustLib.instance.api.crateApiPayUnpackTransaction(bytes: bytes);
+
 Future<String> broadcastTransaction(
         {required int height, required List<int> txBytes}) =>
     RustLib.instance.api
@@ -31,3 +40,14 @@ TxPlan toPlan({required PcztPackage package}) =>
 
 Future<String> send({required int height, required List<int> data}) =>
     RustLib.instance.api.crateApiPaySend(height: height, data: data);
+
+@freezed
+class PcztPackage with _$PcztPackage {
+  const factory PcztPackage({
+    required Uint8List pczt,
+    required UsizeArray3 nSpends,
+    required Uint64List saplingIndices,
+    required Uint64List orchardIndices,
+    required bool canSign,
+  }) = _PcztPackage;
+}
