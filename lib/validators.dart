@@ -1,6 +1,7 @@
 import 'package:convert/convert.dart';
 import 'package:fixed/fixed.dart';
 import 'package:zkool/src/rust/api/key.dart';
+import 'package:zkool/src/rust/api/pay.dart';
 
 String? validKey(String? key, {bool restore = false}) {
   if ((key == null || key.isEmpty)) {
@@ -14,11 +15,33 @@ String? validKey(String? key, {bool restore = false}) {
 
 String? validAddress(String? address) {
   if ((address == null || address.isEmpty)) {
-    return "Address is required";
+    return null;
   }
   if (!isValidAddress(address: address)) {
     return "Invalid Address";
   }
+  return null;
+}
+
+String? validPaymentURI(String? uri) {
+  if ((uri == null || uri.isEmpty)) {
+    return null;
+  }
+  final recipient = parsePaymentUri(uri: uri);
+  if (recipient == null) {
+    return "Invalid Payment URI";
+  }
+  return null;
+}
+
+String? validAddressOrPaymentURI(String? s) {
+  if ((s == null || s.isEmpty)) {
+    return null;
+  }
+  final checkAddress = validAddress(s);
+  if (checkAddress != null) return checkAddress;
+  final checkURI = validPaymentURI(s);
+  if (checkURI != null) return checkURI;
   return null;
 }
 

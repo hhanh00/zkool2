@@ -154,6 +154,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<Recipient>? dco_decode_opt_list_recipient(dynamic raw);
+
+  @protected
   PcztPackage dco_decode_pczt_package(dynamic raw);
 
   @protected
@@ -335,6 +338,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<Recipient>? sse_decode_opt_list_recipient(SseDeserializer deserializer);
 
   @protected
   PcztPackage sse_decode_pczt_package(SseDeserializer deserializer);
@@ -533,6 +539,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_list_prim_u_8_strict(
       Uint8List? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_recipient(
+      List<Recipient>? self, SseSerializer serializer);
 
   @protected
   void sse_encode_pczt_package(PcztPackage self, SseSerializer serializer);
