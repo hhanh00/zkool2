@@ -10,8 +10,8 @@ import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
-import 'package:zkool/src/rust/pay/plan.dart';
 import 'package:zkool/widgets/scanner.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
