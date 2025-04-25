@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1592007001;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 931446272;
 
 // Section: executor
 
@@ -1210,6 +1210,36 @@ fn wire__crate__api__pay__pack_transaction_impl(
         },
     )
 }
+fn wire__crate__api__pay__parse_payment_uri_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_payment_uri",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_uri = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::pay::parse_payment_uri(&api_uri))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__pay__prepare_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2359,6 +2389,17 @@ impl SseDecode for Option<Vec<u8>> {
     }
 }
 
+impl SseDecode for Option<Vec<crate::pay::Recipient>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<Vec<crate::pay::Recipient>>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for crate::api::pay::PcztPackage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2367,12 +2408,14 @@ impl SseDecode for crate::api::pay::PcztPackage {
         let mut var_saplingIndices = <Vec<usize>>::sse_decode(deserializer);
         let mut var_orchardIndices = <Vec<usize>>::sse_decode(deserializer);
         let mut var_canSign = <bool>::sse_decode(deserializer);
+        let mut var_puri = <String>::sse_decode(deserializer);
         return crate::api::pay::PcztPackage {
             pczt: var_pczt,
             n_spends: var_nSpends,
             sapling_indices: var_saplingIndices,
             orchard_indices: var_orchardIndices,
             can_sign: var_canSign,
+            puri: var_puri,
         };
     }
 }
@@ -2661,21 +2704,21 @@ fn pde_ffi_dispatcher_primary_impl(
         30 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
         32 => wire__crate__api__db__open_database_impl(port, ptr, rust_vec_len, data_len),
         33 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2694,11 +2737,12 @@ fn pde_ffi_dispatcher_sync_impl(
         22 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
         23 => wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len),
         31 => wire__crate__api__account__new_seed_impl(ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2862,6 +2906,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PcztPackage {
             self.sapling_indices.into_into_dart().into_dart(),
             self.orchard_indices.into_into_dart().into_dart(),
             self.can_sign.into_into_dart().into_dart(),
+            self.puri.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3422,6 +3467,16 @@ impl SseEncode for Option<Vec<u8>> {
     }
 }
 
+impl SseEncode for Option<Vec<crate::pay::Recipient>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <Vec<crate::pay::Recipient>>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::pay::PcztPackage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3430,6 +3485,7 @@ impl SseEncode for crate::api::pay::PcztPackage {
         <Vec<usize>>::sse_encode(self.sapling_indices, serializer);
         <Vec<usize>>::sse_encode(self.orchard_indices, serializer);
         <bool>::sse_encode(self.can_sign, serializer);
+        <String>::sse_encode(self.puri, serializer);
     }
 }
 

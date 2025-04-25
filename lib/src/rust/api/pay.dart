@@ -41,6 +41,9 @@ TxPlan toPlan({required PcztPackage package}) =>
 Future<String> send({required int height, required List<int> data}) =>
     RustLib.instance.api.crateApiPaySend(height: height, data: data);
 
+List<Recipient>? parsePaymentUri({required String uri}) =>
+    RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);
+
 @freezed
 class PcztPackage with _$PcztPackage {
   const factory PcztPackage({
@@ -49,5 +52,6 @@ class PcztPackage with _$PcztPackage {
     required Uint64List saplingIndices,
     required Uint64List orchardIndices,
     required bool canSign,
+    required String puri,
   }) = _PcztPackage;
 }
