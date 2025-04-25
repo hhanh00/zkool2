@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -19,6 +22,7 @@ final addressID = GlobalKey();
 final scanID = GlobalKey();
 final amountID = GlobalKey();
 final logID2 = GlobalKey();
+final openTxID = GlobalKey();
 final addTxID = GlobalKey();
 final sendID2 = GlobalKey();
 final memoID = GlobalKey();
@@ -39,7 +43,7 @@ class SendPageState extends State<SendPage> {
   bool supportsMemo = false;
 
   void tutorial() async {
-    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, logID2, addTxID, sendID2]);
+    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, logID2, openTxID, addTxID, sendID2]);
     if (supportsMemo)
       tutorialHelper(context, "tutSend1", [memoID]);
   }
@@ -73,6 +77,11 @@ class SendPageState extends State<SendPage> {
                 tooltip: "Open Log",
                 onPressed: () => onOpenLog(context),
                 icon: Icon(Icons.description))),
+            Showcase(key: openTxID, description: "Load an unsigned transaction", child:
+            IconButton(
+                tooltip: "Load Tx",
+                onPressed: onLoad,
+                icon: Icon(Icons.file_open))),
             Showcase(key: addTxID, description: "Queue this recipient to create a multi send", child:
             IconButton(
                 tooltip: "Add to Multi Tx",
@@ -130,6 +139,19 @@ class SendPageState extends State<SendPage> {
                           maxLines: 8,
                         )),
                     ])))));
+  }
+
+  void onLoad() async {
+      final files = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Please select a transaction to sign',
+      );
+      if (files == null) return;
+      final file = File(files.files.first.path!);
+      final bytes = await file.readAsBytes();
+      final pczt = await unpackTransaction(bytes: bytes);
+      if (!mounted) return;
+      GoRouter.of(context).go("/tx", extra: pczt.copyWith(
+          canSign: true));
   }
 
   void onAdd() async {

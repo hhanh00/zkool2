@@ -68,23 +68,6 @@ pub async fn get_account_ufvk(network: &Network, connection: &SqlitePool, accoun
             let xpub = xpub.to_extended_key(Prefix::XPUB);
             return Ok(xpub.to_string());
         }
-        // special case for transparent keys since UFVK do not support them
-        let tvk = tkeys.xvk.unwrap();
-        let data = tvk.serialize();
-        let chain_code = data[..32].try_into().unwrap(); // first 32 bytes is the chain code
-        let public_key = PublicKey::from_slice(&data[32..])?; // next 33 bytes is the public key
-        let xpub = ExtendedPublicKey::new(
-            public_key,
-            ExtendedKeyAttrs {
-                depth: 3,
-                // dummy values for parent fingerprint and child number
-                parent_fingerprint: [0xff, 0xff, 0xff, 0xff],
-                child_number: ChildNumber::new(0, true).unwrap(),
-                chain_code,
-            },
-        );
-        let xpub = xpub.to_extended_key(Prefix::XPUB);
-        return Ok(xpub.to_string());
     }
 
     let ufvk = Ufvk::try_from_items(items)?;

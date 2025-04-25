@@ -1,8 +1,7 @@
-use crate::{lwd::RawTransaction, Client};
+use crate::{api::pay::PcztPackage, lwd::RawTransaction, Client};
 
 use anyhow::Result;
 use pczt::{roles::verifier::Verifier, Pczt};
-use plan::PcztPackage;
 use pool::PoolMask;
 use tonic::Request;
 use zcash_keys::encoding::AddressCodec as _;
@@ -83,6 +82,7 @@ pub struct TxPlan {
     pub inputs: Vec<TxPlanIn>,
     pub outputs: Vec<TxPlanOut>,
     pub fee: u64,
+    pub can_sign: bool,
 }
 
 impl TxPlan {
@@ -127,7 +127,7 @@ impl TxPlan {
                 outputs.push(TxPlanOut {
                     pool: 1,
                     amount: o.value().unwrap().inner(),
-                    address: o.user_address().as_ref().unwrap().clone(),
+                    address: o.user_address().as_ref().cloned().unwrap_or_default(),
                 });
             }
             fee += bundle.value_sum().to_raw() as i64;
@@ -142,8 +142,8 @@ impl TxPlan {
                 });
                 outputs.push(TxPlanOut {
                     pool: 2,
-                    amount: a.output().value().unwrap().inner(),
-                    address: a.output().user_address().as_ref().unwrap().clone(),
+                    amount: a.output().value().expect("value").inner(),
+                    address: a.output().user_address().as_ref().cloned().unwrap_or_default(),
                 });
             }
             let f: i64 = bundle.value_sum().clone().try_into().unwrap();
@@ -156,6 +156,7 @@ impl TxPlan {
             inputs,
             outputs,
             fee: fee as u64,
+            can_sign: package.can_sign,
         })
     }
 }
