@@ -24,6 +24,7 @@ use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
 use tracing::{debug, event, info, span, Level};
+use zcash_address::ZcashAddress;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::{
     legacy::TransparentAddress,
@@ -38,19 +39,31 @@ use zcash_protocol::{
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
-use zcash_transparent::{bundle::{OutPoint, TxOut}, pczt::Bip32Derivation};
+use zcash_transparent::{
+    bundle::{OutPoint, TxOut},
+    pczt::Bip32Derivation,
+};
+use zip321::{Payment, TransactionRequest};
 
 use super::pool::ALL_SHIELDED_POOLS;
 use crate::{
     account::{
-        derive_transparent_sk, generate_next_change_address, get_account_full_address, get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk
-    }, api::pay::PcztPackage, db::select_account_transparent, lwd::ChainSpec, pay::{
+        derive_transparent_sk, generate_next_change_address, get_account_full_address,
+        get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
+        get_sapling_vk,
+    },
+    api::pay::PcztPackage,
+    db::select_account_transparent,
+    lwd::ChainSpec,
+    pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlanIn, TxPlanOut,
-    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
+    },
+    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
+    Client,
 };
 
 pub async fn plan_transaction(
@@ -66,6 +79,23 @@ pub async fn plan_transaction(
     span.in_scope(|| {
         info!("Computing plan");
     });
+
+    // make a payment uri
+    let payments = recipients.iter().map(|r| {
+        let address = ZcashAddress::from_str(&r.address)?;
+        let amount = Zatoshis::const_from_u64(r.amount);
+        let memo = encode_memo(r)?;
+        Ok::<_, anyhow::Error>(Payment::new(
+            address,
+            amount,
+            memo,
+            None,
+            None,
+            vec![],
+        ).expect("payment"))
+    }).collect::<Result<Vec<_>>>()?;
+    let puri = TransactionRequest::new(payments)?;
+    let puri = puri.to_uri();
 
     let mut can_sign = true;
     let (use_internal,): (bool,) =
@@ -457,18 +487,7 @@ pub async fn plan_transaction(
 
         let pool = pool_mask.to_best_pool().unwrap();
         let value = Zatoshis::from_u64(recipient.amount)?;
-        let text_memo = recipient
-            .user_memo
-            .as_ref()
-            .map(|s| Memo::from_str(&s))
-            .transpose()?
-            .map(MemoBytes::from);
-        let byte_memo = recipient
-            .memo_bytes
-            .as_ref()
-            .map(|mb| MemoBytes::from_bytes(&mb))
-            .transpose()?;
-        let memo = text_memo.or(byte_memo).unwrap_or(MemoBytes::empty());
+        let memo = encode_memo(recipient)?.unwrap_or(MemoBytes::empty());
 
         n_outputs[pool as usize] += 1;
         match pool {
@@ -513,67 +532,72 @@ pub async fn plan_transaction(
     debug!("Created");
 
     let updater = Updater::new(pczt);
-    let updater = updater.update_transparent_with(|mut u| {
-        for i in 0..n_spends[0] {
-            let (pubkey, scope, dindex) = tsk_dindex[i].clone();
-            u.update_input_with(i, |mut u| {
-                let derivation_path = vec![scope, dindex];
-                let path = Bip32Derivation::parse([0u8; 32],
-                    derivation_path).unwrap();
-                u.set_bip32_derivation(pubkey.serialize(), path);
-                u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
-                u.set_proprietary("dindex".to_string(), dindex.to_le_bytes().to_vec());
-                Ok(())
-            })?;
-        }
-        Ok(())
-    }).unwrap();
+    let updater = updater
+        .update_transparent_with(|mut u| {
+            for i in 0..n_spends[0] {
+                let (pubkey, scope, dindex) = tsk_dindex[i].clone();
+                u.update_input_with(i, |mut u| {
+                    let derivation_path = vec![scope, dindex];
+                    let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
+                    u.set_bip32_derivation(pubkey.serialize(), path);
+                    u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
+                    u.set_proprietary("dindex".to_string(), dindex.to_le_bytes().to_vec());
+                    Ok(())
+                })?;
+            }
+            Ok(())
+        })
+        .unwrap();
 
     let outputs = single
         .iter()
         .chain(double.iter())
         .chain(std::iter::once(&change_recipient));
 
-    let updater = updater.update_sapling_with(|mut u| {
-        let mut i = 0;
-        for o in outputs {
-            let pool = o.pool_mask.to_best_pool().unwrap();
-            if pool != 1 {
-                continue;
+    let updater = updater
+        .update_sapling_with(|mut u| {
+            let mut i = 0;
+            for o in outputs {
+                let pool = o.pool_mask.to_best_pool().unwrap();
+                if pool != 1 {
+                    continue;
+                }
+                let bundle_index = sapling_meta.output_index(i).unwrap();
+                u.update_output_with(bundle_index, |mut u| {
+                    u.set_user_address(o.recipient.address.clone());
+                    Ok(())
+                })?;
+                i += 1;
             }
-            let bundle_index = sapling_meta.output_index(i).unwrap();
-            u.update_output_with(bundle_index, |mut u| {
-                u.set_user_address(o.recipient.address.clone());
-                Ok(())
-            })?;
-            i += 1;
-        }
 
-        Ok(())
-    }).unwrap();
+            Ok(())
+        })
+        .unwrap();
 
     let outputs = single
         .iter()
         .chain(double.iter())
         .chain(std::iter::once(&change_recipient));
 
-    let updater = updater.update_orchard_with(|mut u| {
-        let mut i = 0;
-        for o in outputs {
-            let pool = o.pool_mask.to_best_pool().unwrap();
-            if pool != 2 {
-                continue;
+    let updater = updater
+        .update_orchard_with(|mut u| {
+            let mut i = 0;
+            for o in outputs {
+                let pool = o.pool_mask.to_best_pool().unwrap();
+                if pool != 2 {
+                    continue;
+                }
+                let bundle_index = orchard_meta.output_action_index(i).unwrap();
+                u.update_action_with(bundle_index, |mut u| {
+                    u.set_output_user_address(o.recipient.address.clone());
+                    Ok(())
+                })?;
+                i += 1;
             }
-            let bundle_index = orchard_meta.output_action_index(i).unwrap();
-            u.update_action_with(bundle_index, |mut u| {
-                u.set_output_user_address(o.recipient.address.clone());
-                Ok(())
-            })?;
-            i += 1;
-        }
 
-        Ok(())
-    }).unwrap();
+            Ok(())
+        })
+        .unwrap();
 
     let pczt = updater.finish();
 
@@ -589,10 +613,27 @@ pub async fn plan_transaction(
         orchard_indices: (0..n_spends[2])
             .map(|n| orchard_meta.spend_action_index(n).unwrap())
             .collect(),
-        can_sign
+        can_sign,
+        puri,
     };
 
     Ok(pczt_package)
+}
+
+fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
+    let text_memo = recipient
+        .user_memo
+        .as_ref()
+        .map(|s| Memo::from_str(&s))
+        .transpose()?
+        .map(MemoBytes::from);
+    let byte_memo = recipient
+        .memo_bytes
+        .as_ref()
+        .map(|mb| MemoBytes::from_bytes(&mb))
+        .transpose()?;
+    let memo = text_memo.or(byte_memo);
+    Ok(memo)
 }
 
 pub async fn sign_transaction(
@@ -624,7 +665,8 @@ pub async fn sign_transaction(
             for i in 0..n_spends[1] {
                 let bundle_index = sapling_indices[i];
                 u.update_spend_with(bundle_index, |mut u| {
-                    u.set_proof_generation_key(pgk.clone().expect("proof_generation_key")).unwrap();
+                    u.set_proof_generation_key(pgk.clone().expect("proof_generation_key"))
+                        .unwrap();
                     Ok(())
                 })
                 .unwrap();
