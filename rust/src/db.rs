@@ -326,8 +326,8 @@ pub async fn store_account_transparent_addr(
     sk: Option<Vec<u8>>,
     pk: &[u8],
     address: &str,
-) -> Result<()> {
-    sqlx::query(
+) -> Result<bool> {
+    let r = sqlx::query(
         "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, pk, address)
         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
     )
@@ -340,7 +340,7 @@ pub async fn store_account_transparent_addr(
     .execute(connection)
     .await?;
 
-    Ok(())
+    Ok(r.rows_affected() > 0)
 }
 
 pub async fn init_account_sapling(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
