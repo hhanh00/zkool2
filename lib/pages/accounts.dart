@@ -203,8 +203,9 @@ class AccountListPage2State extends State<AccountListPage2> {
               editBuilder: (context, a) =>
                   GoRouter.of(context).push("/account/edit", extra: a),
               deleteBuilder: (context, accounts) async {
-                final confirmed = await confirmDialog(context, title: "Delete Account(s)",
-                  message: "Are you sure you want to delete these accounts?");
+                final confirmed = await confirmDialog(context,
+                    title: "Delete Account(s)",
+                    message: "Are you sure you want to delete these accounts?");
                 if (confirmed) {
                   for (var a in accounts) {
                     await deleteAccount(account: a.id);
@@ -239,7 +240,8 @@ class AccountListPage2State extends State<AccountListPage2> {
   }
 
   onHide() async {
-    final authenticated = await authenticate(reason: "Show/Hide Hidden Accounts");
+    final authenticated =
+        await authenticate(reason: "Show/Hide Hidden Accounts");
     if (!authenticated) return;
     setState(() {
       includeHidden = !includeHidden;
@@ -258,7 +260,8 @@ class AccountListPage2State extends State<AccountListPage2> {
             (!hasSelection && accounts[i].enabled))
           accountIds.add(accounts[i].id);
       }
-      await AppStoreBase.instance.startSynchronize(accountIds);
+      await AppStoreBase.instance.startSynchronize(
+          accountIds, int.parse(AppStoreBase.instance.actionsPerSync));
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }

@@ -1808,6 +1808,7 @@ fn wire__crate__api__sync__synchronize_impl(
             >>::sse_decode(&mut deserializer);
             let api_accounts = <Vec<u32>>::sse_decode(&mut deserializer);
             let api_current_height = <u32>::sse_decode(&mut deserializer);
+            let api_actions_per_sync = <u32>::sse_decode(&mut deserializer);
             let api_transparent_limit = <u32>::sse_decode(&mut deserializer);
             let api_checkpoint_age = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
@@ -1818,6 +1819,7 @@ fn wire__crate__api__sync__synchronize_impl(
                             api_progress,
                             api_accounts,
                             api_current_height,
+                            api_actions_per_sync,
                             api_transparent_limit,
                             api_checkpoint_age,
                         )

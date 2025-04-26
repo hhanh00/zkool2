@@ -201,6 +201,7 @@ abstract class RustLibApi extends BaseApi {
   Stream<SyncProgress> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
+      required int actionsPerSync,
       required int transparentLimit,
       required int checkpointAge});
 
@@ -1429,6 +1430,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Stream<SyncProgress> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
+      required int actionsPerSync,
       required int transparentLimit,
       required int checkpointAge}) {
     final progress = RustStreamSink<SyncProgress>();
@@ -1438,6 +1440,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_StreamSink_sync_progress_Sse(progress, serializer);
         sse_encode_list_prim_u_32_loose(accounts, serializer);
         sse_encode_u_32(currentHeight, serializer);
+        sse_encode_u_32(actionsPerSync, serializer);
         sse_encode_u_32(transparentLimit, serializer);
         sse_encode_u_32(checkpointAge, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
@@ -1452,6 +1455,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         progress,
         accounts,
         currentHeight,
+        actionsPerSync,
         transparentLimit,
         checkpointAge
       ],
@@ -1466,6 +1470,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "progress",
           "accounts",
           "currentHeight",
+          "actionsPerSync",
           "transparentLimit",
           "checkpointAge"
         ],
