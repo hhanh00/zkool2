@@ -39,10 +39,10 @@ String? validAddressOrPaymentURI(String? s) {
     return null;
   }
   final checkAddress = validAddress(s);
-  if (checkAddress != null) return checkAddress;
+  if (checkAddress == null) return null;
   final checkURI = validPaymentURI(s);
-  if (checkURI != null) return checkURI;
-  return null;
+  if (checkURI == null) return null;
+  return "Invalid Address or Payment URI";
 }
 
 String? validAmount(String? amount) {
