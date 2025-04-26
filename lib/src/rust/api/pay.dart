@@ -21,8 +21,11 @@ Future<PcztPackage> prepare(
         recipients: recipients,
         recipientPaysFee: recipientPaysFee);
 
-Future<Uint8List> signTransaction({required PcztPackage pczt}) =>
+Future<PcztPackage> signTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt);
+
+Future<Uint8List> extractTransaction({required PcztPackage package}) =>
+    RustLib.instance.api.crateApiPayExtractTransaction(package: package);
 
 Future<Uint8List> packTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPayPackTransaction(pczt: pczt);
@@ -52,6 +55,7 @@ class PcztPackage with _$PcztPackage {
     required Uint64List saplingIndices,
     required Uint64List orchardIndices,
     required bool canSign,
+    required bool canBroadcast,
     required String puri,
   }) = _PcztPackage;
 }
