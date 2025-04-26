@@ -71,18 +71,13 @@ impl InputNote {
     }
 }
 
-pub struct SerializedPCZT {
-    pub height: u32,
-    pub signed: bool,
-    pub data: Vec<u8>,
-}
-
 pub struct TxPlan {
     pub height: u32,
     pub inputs: Vec<TxPlanIn>,
     pub outputs: Vec<TxPlanOut>,
     pub fee: u64,
     pub can_sign: bool,
+    pub can_broadcast: bool,
 }
 
 impl TxPlan {
@@ -157,6 +152,7 @@ impl TxPlan {
             outputs,
             fee: fee as u64,
             can_sign: package.can_sign,
+            can_broadcast: package.can_broadcast,
         })
     }
 }

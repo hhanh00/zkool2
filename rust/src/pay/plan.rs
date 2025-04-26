@@ -612,6 +612,7 @@ pub async fn plan_transaction(
             .map(|n| orchard_meta.spend_action_index(n).unwrap())
             .collect(),
         can_sign,
+        can_broadcast: false,
         puri,
     };
 
@@ -638,7 +639,7 @@ pub async fn sign_transaction(
     connection: &SqlitePool,
     account: u32,
     pczt: &PcztPackage,
-) -> Result<Vec<u8>> {
+) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "sign_transaction");
 
     let PcztPackage {
@@ -646,6 +647,7 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
+        puri,
         ..
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
@@ -723,10 +725,26 @@ pub async fn sign_transaction(
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
     debug!("Spend Finalized");
 
+    Ok(PcztPackage {
+        pczt: pczt.serialize(),
+        n_spends: *n_spends,
+        sapling_indices: sapling_indices.clone(),
+        orchard_indices: orchard_indices.clone(),
+        can_sign: true,
+        can_broadcast: true,
+        puri: puri.clone(),
+    })
+}
+
+pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
+    let span = span!(Level::INFO, "extract_transaction");
     span.in_scope(|| {
         info!("Extracting Tx");
     });
 
+    let pczt = Pczt::parse(&package.pczt).unwrap();
+
+    let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
     let tx = tx_extractor.extract().unwrap();
