@@ -116,7 +116,7 @@ class ReceivePageState extends State<ReceivePage> {
   void onSweep() async {
     showSnackbar("Starting sweep");
     final endHeight = await getCurrentHeight();
-    await transparentSweep(endHeight: endHeight, gapLimit: 40);
-    showSnackbar("Sweep complete");
+    final nAdded = await transparentSweep(endHeight: endHeight, gapLimit: 40);
+    showSnackbar("Sweep complete. $nAdded new addresses added");
   }
 }
