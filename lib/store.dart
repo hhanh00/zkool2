@@ -106,7 +106,8 @@ abstract class AppStoreBase with Store {
       final progress = synchronize(
           accounts: accounts,
           currentHeight: currentHeight,
-          transparentLimit: 10);
+          transparentLimit: 10, // scan the last 10 known transparent addresses
+          checkpointAge: 200); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
       syncProgressSubscription = progress.listen((p) {
         retryCount = 0;

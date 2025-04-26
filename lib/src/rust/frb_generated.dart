@@ -199,7 +199,8 @@ abstract class RustLibApi extends BaseApi {
   Stream<SyncProgress> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
-      required int transparentLimit});
+      required int transparentLimit,
+      required int checkpointAge});
 
   TxPlan crateApiPayToPlan({required PcztPackage package});
 
@@ -1401,7 +1402,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Stream<SyncProgress> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
-      required int transparentLimit}) {
+      required int transparentLimit,
+      required int checkpointAge}) {
     final progress = RustStreamSink<SyncProgress>();
     unawaited(handler.executeNormal(NormalTask(
       callFfi: (port_) {
@@ -1410,15 +1412,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_list_prim_u_32_loose(accounts, serializer);
         sse_encode_u_32(currentHeight, serializer);
         sse_encode_u_32(transparentLimit, serializer);
+        sse_encode_u_32(checkpointAge, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 49, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: null,
+        decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiSyncSynchronizeConstMeta,
-      argValues: [progress, accounts, currentHeight, transparentLimit],
+      argValues: [
+        progress,
+        accounts,
+        currentHeight,
+        transparentLimit,
+        checkpointAge
+      ],
       apiImpl: this,
     )));
     return progress.stream;
@@ -1426,7 +1435,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSyncSynchronizeConstMeta => const TaskConstMeta(
         debugName: "synchronize",
-        argNames: ["progress", "accounts", "currentHeight", "transparentLimit"],
+        argNames: [
+          "progress",
+          "accounts",
+          "currentHeight",
+          "transparentLimit",
+          "checkpointAge"
+        ],
       );
 
   @override

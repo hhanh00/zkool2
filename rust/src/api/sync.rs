@@ -11,7 +11,7 @@ use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as Z
 use zcash_protocol::consensus::{BranchId, Network};
 
 use crate::db::calculate_balance;
-use crate::sync::recover_from_partial_sync;
+use crate::sync::{prune_old_checkpoints, recover_from_partial_sync};
 use crate::Client;
 use crate::{
     frb_generated::StreamSink,
@@ -25,15 +25,21 @@ pub async fn synchronize(
     accounts: Vec<u32>,
     current_height: u32,
     transparent_limit: u32,
-) {
+    checkpoint_age: u32,
+) -> Result<()> {
     if accounts.is_empty() {
-        return;
+        return Ok(());
     }
 
     let c = get_coin!();
     let network = c.network;
     let pool = c.get_pool();
     let progress2 = progress.clone();
+
+    let checkpoint_cutoff = current_height - checkpoint_age;
+    for account in accounts.iter() {
+        prune_old_checkpoints(pool, *account, checkpoint_cutoff).await?;
+    }
 
     let mut account_use_internal = HashMap::<u32, bool>::new();
     let res = async {
@@ -141,6 +147,8 @@ pub async fn synchronize(
             let _ = progress2.add_error(e);
         }
     }
+
+    Ok(())
 }
 
 pub(crate) async fn transparent_sync(
