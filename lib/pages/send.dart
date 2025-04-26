@@ -12,6 +12,7 @@ import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
+import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
@@ -52,7 +53,8 @@ class SendPageState extends State<SendPage> {
   Widget build(BuildContext context) {
     Future(tutorial);
 
-    final address = formKey.currentState?.fields['address']?.value as String? ?? "";
+    final address =
+        formKey.currentState?.fields['address']?.value as String? ?? "";
     final recipientTiles = recipients
         .map((r) => ListTile(
               title: Text(r.address),
@@ -67,7 +69,8 @@ class SendPageState extends State<SendPage> {
             ))
         .toList();
 
-    supportsMemo = address.isNotEmpty && validAddress(address) == null &&
+    supportsMemo = address.isNotEmpty &&
+        validAddress(address) == null &&
         !isValidTransparentAddress(address: address);
     return Scaffold(
         appBar: AppBar(
@@ -135,21 +138,27 @@ class SendPageState extends State<SendPage> {
                                 onPressed: onScan,
                                 icon: Icon(Icons.qr_code_scanner))),
                       ]),
-                      Showcase(
-                          key: amountID,
-                          description: "Amount to send",
-                          child: FormBuilderTextField(
-                            name: "amount",
-                            decoration:
-                                const InputDecoration(labelText: "Amount"),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(),
-                              validAmount
-                            ]),
-                            keyboardType: TextInputType.number,
-                            initialValue: amount,
-                            onChanged: (v) => setState(() => amount = v!),
-                          )),
+                      Row(children: [
+                        Expanded(child: Showcase(
+                            key: amountID,
+                            description: "Amount to send",
+                            child: FormBuilderTextField(
+                              name: "amount",
+                              decoration:
+                                  const InputDecoration(labelText: "Amount"),
+                              validator: FormBuilderValidators.compose([
+                                FormBuilderValidators.required(),
+                                validAmount
+                              ]),
+                              keyboardType: TextInputType.number,
+                              initialValue: amount,
+                              onChanged: (v) => setState(() => amount = v!),
+                            ))),
+                        IconButton(
+                            tooltip: "Set amount to entire balance",
+                            onPressed: onMax,
+                            icon: Icon(Icons.vertical_align_top )),
+                      ]),
                       if (supportsMemo)
                         Showcase(
                             key: memoID,
@@ -177,6 +186,13 @@ class SendPageState extends State<SendPage> {
     GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
   }
 
+  void onMax() async {
+    final form = formKey.currentState!;
+    final b = await balance();
+    final total = b.field0[0] + b.field0[1] + b.field0[2];
+    form.fields['amount']?.didChange(zatToString(total));
+  }
+
   void onAdd() async {
     final recipient = await validateAndGetRecipient();
     if (recipient != null) {
@@ -192,8 +208,7 @@ class SendPageState extends State<SendPage> {
 
   void onSend() async {
     final recipient = await validateAndGetRecipient();
-    if (recipient != null)
-      recipients.add(recipient);
+    if (recipient != null) recipients.add(recipient);
 
     if (!mounted) return;
     if (addressController.text.isNotEmpty || recipients.isNotEmpty)
@@ -201,7 +216,8 @@ class SendPageState extends State<SendPage> {
   }
 
   void onScan() async {
-    final address2 = await showScanner(context, validator: validAddressOrPaymentURI);
+    final address2 =
+        await showScanner(context, validator: validAddressOrPaymentURI);
     if (address2 != null) {
       setState(() {
         addressController.text = address2;
