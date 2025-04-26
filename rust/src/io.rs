@@ -300,6 +300,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
     decoder.read_to_end(&mut data)?;
     let (io_account, _) = bincode::decode_from_slice::<IOAccount, _>(&data, legacy())?;
 
+    info!("Importing account {}", io_account.name);
     // Move all accounts down by one position
     sqlx::query("UPDATE accounts SET position = position + 1")
         .execute(connection)
@@ -327,6 +328,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
     let new_id_account = r.last_insert_rowid() as u32;
     // account must be replaced by new_id_account
 
+    info!("Importing transparent key");
     if let Some(tkeys) = io_account.tkeys.as_ref() {
         sqlx::query(
             "INSERT INTO transparent_accounts
@@ -338,6 +340,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .execute(connection)
         .await?;
     }
+    info!("Importing sapling key");
     if let Some(skeys) = io_account.skeys.as_ref() {
         sqlx::query(
             "INSERT INTO sapling_accounts
@@ -349,6 +352,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .execute(connection)
         .await?;
     }
+    info!("Importing orchard key");
     if let Some(okeys) = io_account.okeys.as_ref() {
         sqlx::query(
             "INSERT INTO orchard_accounts
@@ -360,6 +364,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .execute(connection)
         .await?;
     }
+    info!("Importing transparent addresses");
     let mut new_taddresses = HashMap::<u32, u32>::new();
     for taddr in io_account.taddrs.iter() {
         let r = sqlx::query(
@@ -378,6 +383,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         new_taddresses.insert(taddr.id_taddress, new_id_taddress);
     }
 
+    info!("Importing sync heights");
     for sync_height in io_account.sync_heights.iter() {
         sqlx::query(
             "INSERT INTO sync_heights
@@ -390,6 +396,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .await?;
     }
 
+    info!("Importing transactions");
     let mut new_txs = HashMap::<u32, u32>::new();
     let mut new_notes = HashMap::<u32, u32>::new();
     for transaction in io_account.transactions.iter() {
@@ -454,10 +461,11 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         }
     }
 
+    info!("Importing spends");
     for transaction in io_account.transactions.iter() {
-        let new_id_tx = new_txs.get(&transaction.id_tx).unwrap();
+        let new_id_tx = new_txs.get(&transaction.id_tx).expect("new_id_tx not found");
         for spend in transaction.spends.iter() {
-            let new_id_note = new_notes.get(&spend.id_note).unwrap();
+            let new_id_note = new_notes.get(&spend.id_note).expect("new_id_note not found");
             sqlx::query(
                 "INSERT INTO spends
                 (id_note, tx, height, account, pool, value) VALUES (?, ?, ?, ?, ?, ?)",
@@ -473,6 +481,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         }
     }
 
+    info!("Importing checkpoints");
     for block in io_account.blocks.iter() {
         sqlx::query(
             "INSERT INTO headers
