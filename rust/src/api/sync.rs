@@ -171,7 +171,7 @@ pub(crate) async fn transparent_sync(
                 (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 0 ORDER BY dindex DESC LIMIT ?2),
                 change AS
                 (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 1 ORDER BY dindex DESC LIMIT ?2)
-                SELECT id_taddress, address FROM receive UNION SELECT id_taddress, address FROM change")
+                SELECT id_taddress, address FROM receive UNION ALL SELECT id_taddress, address FROM change")
             .bind(account)
             .bind(limit)
             .map(|row: SqliteRow| {

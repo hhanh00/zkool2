@@ -722,7 +722,7 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
     let transactions = sqlx::query(
-        "WITH v AS (WITH n AS (SELECT value, tx FROM notes UNION SELECT value, tx FROM spends)
+        "WITH v AS (WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
             SELECT tx, SUM(value) AS value FROM n
             GROUP BY tx)
             SELECT id_tx, txid, height, time, v.value FROM transactions t
