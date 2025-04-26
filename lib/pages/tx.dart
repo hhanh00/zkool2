@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -40,22 +41,45 @@ class TxPageState extends State<TxPage> {
       appBar: AppBar(
         title: Text("Transaction"),
         actions: [
-          Showcase(key: cancelID, description: "Cancel, do NOT send", child:
-          IconButton(onPressed: onCancel, icon: Icon(Icons.cancel))),
-          Showcase(key: sendID4, description: "Confirm, broadcast transaction", child:
-          IconButton(onPressed: txPlan.canSign ? onSend : onSave, icon: Icon(
-            txPlan.canSign ? Icons.send : Icons.save))),
+          Showcase(
+              key: cancelID,
+              description: "Cancel, do NOT send",
+              child: IconButton(onPressed: onCancel, icon: Icon(Icons.cancel))),
+          Showcase(
+              key: sendID4,
+              description: "Confirm, broadcast transaction",
+              child: IconButton(
+                  onPressed: txPlan.canSign ? onSend : onSave,
+                  icon: Icon(txPlan.canSign ? Icons.send : Icons.save))),
         ],
       ),
       body: CustomScrollView(slivers: [
         SliverToBoxAdapter(
-          child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Column(children: [
+            child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Column(children: [
             Text("Tx Plan", style: t.titleSmall),
             Text("Fee: ${zatToString(txPlan.fee)}"),
-            SelectableText("Payment URI: ${widget.pczt.puri}"),
+            SelectableText.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                      text: "Payment URI: ${widget.pczt.puri} ",
+                      style: t.titleSmall),
+                  WidgetSpan(
+                      child: IconButton(
+                    tooltip: "Show Payment URI",
+                    icon: Icon(Icons.qr_code),
+                    onPressed: onUriQr,
+                  )),
+                ],
+              ),
+            ),
             if (txId != null)
-            Showcase(key: txID, description: "Transaction ID", child:
-              SelectableText("Transaction ID: ${txId!}")),
+              Showcase(
+                  key: txID,
+                  description: "Transaction ID",
+                  child: SelectableText("Transaction ID: ${txId!}")),
           ]),
         )),
         showTxPlan(context, txPlan),
@@ -87,15 +111,38 @@ class TxPageState extends State<TxPage> {
 
   void onSave() async {
     final pcztData = await packTransaction(pczt: widget.pczt);
-      await FilePicker.platform.saveFile(
-        dialogTitle: 'Please select an output file for the unsigned transaction',
-        fileName: 'unsigned-tx.bin',
-        bytes: pcztData,
-      );
+    await FilePicker.platform.saveFile(
+      dialogTitle: 'Please select an output file for the unsigned transaction',
+      fileName: 'unsigned-tx.bin',
+      bytes: pcztData,
+    );
   }
 
   void onCancel() {
     GoRouter.of(context).go("/");
+  }
+
+  void onUriQr() async {
+    await showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) {
+          return AlertDialog(
+            title: Text("Payment URI"),
+            content: SizedBox(width: 250, height: 250, child: QrImageView(
+              data: widget.pczt.puri,
+              version: QrVersions.auto,
+              backgroundColor: Colors.white,
+              size: 200.0,
+            )),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text("Close"),
+              ),
+            ],
+          );
+        });
   }
 }
 
@@ -120,7 +167,9 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           final input = txPlan.inputs[index];
           return ListTile(
             leading: Text("Input ${index + 1}"),
-            trailing: input.amount != null ? Text("Value: ${zatToString(input.amount!)}") : null,
+            trailing: input.amount != null
+                ? Text("Value: ${zatToString(input.amount!)}")
+                : null,
             subtitle: Text("Pool: ${poolToString(input.pool)}"),
           );
         } else {

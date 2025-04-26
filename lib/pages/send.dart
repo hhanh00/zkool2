@@ -67,7 +67,7 @@ class SendPageState extends State<SendPage> {
             ))
         .toList();
 
-    supportsMemo = validAddress(address) == null &&
+    supportsMemo = address.isNotEmpty && validAddress(address) == null &&
         !isValidTransparentAddress(address: address);
     return Scaffold(
         appBar: AppBar(
@@ -183,21 +183,28 @@ class SendPageState extends State<SendPage> {
       setState(() {
         recipients.add(recipient);
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        addressController.clear();
+        formKey.currentState?.fields['amount']?.reset();
+      });
     }
   }
 
   void onSend() async {
     final recipient = await validateAndGetRecipient();
-    if (recipient != null && mounted)
-      await GoRouter.of(context).push("/send2", extra: [recipient]);
+    if (recipient != null)
+      recipients.add(recipient);
+
+    if (!mounted) return;
+    if (addressController.text.isNotEmpty || recipients.isNotEmpty)
+      await GoRouter.of(context).push("/send2", extra: recipients);
   }
 
   void onScan() async {
-    final address2 = await showScanner(context, validator: validAddress);
-    logger.i(address2);
+    final address2 = await showScanner(context, validator: validAddressOrPaymentURI);
     if (address2 != null) {
       setState(() {
-        formKey.currentState!.fields['address']!.didChange(address2);
+        addressController.text = address2;
       });
     }
   }
