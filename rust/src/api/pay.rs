@@ -1,7 +1,5 @@
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
-use pczt::Pczt;
-use zcash_primitives::transaction::builder::PcztParts;
 
 use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
 use flutter_rust_bridge::frb;
