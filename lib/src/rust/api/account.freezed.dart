@@ -1246,6 +1246,149 @@ abstract class _NewAccount implements NewAccount {
 }
 
 /// @nodoc
+mixin _$Seed {
+  String get mnemonic => throw _privateConstructorUsedError;
+  String get phrase => throw _privateConstructorUsedError;
+
+  /// Create a copy of Seed
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $SeedCopyWith<Seed> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $SeedCopyWith<$Res> {
+  factory $SeedCopyWith(Seed value, $Res Function(Seed) then) =
+      _$SeedCopyWithImpl<$Res, Seed>;
+  @useResult
+  $Res call({String mnemonic, String phrase});
+}
+
+/// @nodoc
+class _$SeedCopyWithImpl<$Res, $Val extends Seed>
+    implements $SeedCopyWith<$Res> {
+  _$SeedCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of Seed
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? mnemonic = null,
+    Object? phrase = null,
+  }) {
+    return _then(_value.copyWith(
+      mnemonic: null == mnemonic
+          ? _value.mnemonic
+          : mnemonic // ignore: cast_nullable_to_non_nullable
+              as String,
+      phrase: null == phrase
+          ? _value.phrase
+          : phrase // ignore: cast_nullable_to_non_nullable
+              as String,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$SeedImplCopyWith<$Res> implements $SeedCopyWith<$Res> {
+  factory _$$SeedImplCopyWith(
+          _$SeedImpl value, $Res Function(_$SeedImpl) then) =
+      __$$SeedImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String mnemonic, String phrase});
+}
+
+/// @nodoc
+class __$$SeedImplCopyWithImpl<$Res>
+    extends _$SeedCopyWithImpl<$Res, _$SeedImpl>
+    implements _$$SeedImplCopyWith<$Res> {
+  __$$SeedImplCopyWithImpl(_$SeedImpl _value, $Res Function(_$SeedImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of Seed
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? mnemonic = null,
+    Object? phrase = null,
+  }) {
+    return _then(_$SeedImpl(
+      mnemonic: null == mnemonic
+          ? _value.mnemonic
+          : mnemonic // ignore: cast_nullable_to_non_nullable
+              as String,
+      phrase: null == phrase
+          ? _value.phrase
+          : phrase // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$SeedImpl implements _Seed {
+  const _$SeedImpl({required this.mnemonic, required this.phrase});
+
+  @override
+  final String mnemonic;
+  @override
+  final String phrase;
+
+  @override
+  String toString() {
+    return 'Seed(mnemonic: $mnemonic, phrase: $phrase)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SeedImpl &&
+            (identical(other.mnemonic, mnemonic) ||
+                other.mnemonic == mnemonic) &&
+            (identical(other.phrase, phrase) || other.phrase == phrase));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, mnemonic, phrase);
+
+  /// Create a copy of Seed
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$SeedImplCopyWith<_$SeedImpl> get copyWith =>
+      __$$SeedImplCopyWithImpl<_$SeedImpl>(this, _$identity);
+}
+
+abstract class _Seed implements Seed {
+  const factory _Seed(
+      {required final String mnemonic,
+      required final String phrase}) = _$SeedImpl;
+
+  @override
+  String get mnemonic;
+  @override
+  String get phrase;
+
+  /// Create a copy of Seed
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$SeedImplCopyWith<_$SeedImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$Tx {
   int get id => throw _privateConstructorUsedError;
   Uint8List get txid => throw _privateConstructorUsedError;

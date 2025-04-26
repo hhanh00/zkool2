@@ -239,6 +239,8 @@ class AccountListPage2State extends State<AccountListPage2> {
   }
 
   onHide() async {
+    final authenticated = await authenticate(reason: "Show/Hide Hidden Accounts");
+    if (!authenticated) return;
     setState(() {
       includeHidden = !includeHidden;
     });

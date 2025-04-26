@@ -46,6 +46,8 @@ dependencies:
   mobile_scanner: ^6.0.7
   qr_flutter: ^4.1.0
 
+  local_auth: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

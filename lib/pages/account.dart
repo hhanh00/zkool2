@@ -594,12 +594,15 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   int pools = 7;
   String? uvk;
   String? fingerprint;
+  Seed? seed;
+  bool showSeed = false;
 
   @override
   void initState() {
     super.initState();
     Future(() async {
       fingerprint = await getAccountFingerprint(account: widget.account);
+      seed = await getAccountSeed(account: widget.account);
       setState(() {});
     });
     Future(() => onPoolChanged(pools));
@@ -608,7 +611,13 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Viewing Keys')),
+        appBar: AppBar(title: Text('Viewing Keys'),
+        actions: [
+          if (seed != null) IconButton(
+              tooltip: "Show Seed Phrase",
+              onPressed: onShowSeed,
+              icon: Icon(Icons.key))
+        ]),
         body: SingleChildScrollView(
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -617,12 +626,19 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
                   Gap(32),
                   if (uvk != null) SelectableText(uvk!),
                   Gap(32),
-                  if (uvk != null) QrImageView(data: uvk!, size: 200),
+                  if (uvk != null) QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
                   Gap(8),
                   if (fingerprint != null) SelectableText(fingerprint!),
-                  Gap(32),
+                  Gap(16),
                   Text("If the account does not include a pool, its receiver will be absent"),
-                ]))));
+                  if (showSeed && seed != null) ...[
+                    Gap(16),
+                    Divider(),
+                    Gap(16),
+                    SelectableText(seed!.mnemonic),
+                    Gap(8),
+                    SelectableText(seed!.phrase),
+                ]]))));
   }
 
   onPoolChanged(int? v) async {
@@ -640,5 +656,13 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
         uvk = null;
       });
     }
+  }
+
+  void onShowSeed() async {
+    final authenticated = await authenticate(reason: "Show Seed Phrase");
+    if (!authenticated) return;
+    setState(() {
+      showSeed = true;
+    });
   }
 }
