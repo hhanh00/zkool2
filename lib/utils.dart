@@ -218,8 +218,6 @@ Future<bool> authenticate({String? reason}) async {
     switch (e.code) {
       case auth_error.passcodeNotSet:
         return true; // no passcode set
-      case auth_error.notAvailable:
-        return true; // no fingerprint available
       case auth_error.notEnrolled:
         return true; // no fingerprint enrolled
       default:
