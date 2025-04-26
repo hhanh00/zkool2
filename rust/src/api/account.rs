@@ -568,7 +568,7 @@ pub async fn lock_note(id: u32, locked: bool) -> Result<()> {
 }
 
 #[frb]
-pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<()> {
+pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<u32> {
     let c = get_coin!();
     crate::sync::transparent_sweep(
         &c.network,
@@ -578,8 +578,7 @@ pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<()> {
         end_height,
         gap_limit,
     )
-    .await?;
-    Ok(())
+    .await
 }
 
 #[frb]

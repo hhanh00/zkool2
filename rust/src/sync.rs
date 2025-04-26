@@ -432,14 +432,11 @@ pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]
     Ok(())
 }
 
-// remove synchronization data (headers, notes, spends, transactions, witnesses) after the given height
+// remove synchronization data (notes, spends, transactions, witnesses) after the given height
 // keep the data at the given height
+// do not remove headers because they are used by multiple accounts
 pub async fn trim_sync_data(connection: &SqlitePool, account: u32, height: u32) -> Result<()> {
     let mut db_tx = connection.begin().await?;
-    sqlx::query("DELETE FROM headers WHERE height > ?")
-        .bind(height)
-        .execute(&mut *db_tx)
-        .await?;
     sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
         .bind(height)
         .bind(account)
@@ -493,6 +490,12 @@ pub async fn rewind_sync(connection: &SqlitePool, account: u32, height: u32) -> 
         trim_sync_data(connection, account, prev_height).await?;
     }
 
+    // then trim the headers because there are no accounts using them
+    sqlx::query("DELETE FROM headers WHERE height > ?")
+    .bind(height)
+    .execute(connection)
+    .await?;
+
     Ok(())
 }
 
@@ -512,7 +515,8 @@ pub async fn transparent_sweep(
     account: u32,
     end_height: u32,
     gap_limit: u32,
-) -> Result<()> {
+) -> Result<u32> {
+    let mut n_added = 0;
     let tk = select_account_transparent(connection, account).await?;
     let xvk = tk.xvk;
     if let Some(xvk) = xvk.as_ref() {
@@ -547,10 +551,14 @@ pub async fn transparent_sweep(
                     } else {
                         None
                     };
-                    store_account_transparent_addr(connection, account, scope, dindex, sk, &pk, &taddr)
-                        .await?;
-                }
-                else {
+                    if store_account_transparent_addr(
+                        connection, account, scope, dindex, sk, &pk, &taddr,
+                    )
+                    .await?
+                    {
+                        n_added += 1;
+                    }
+                } else {
                     gap += 1;
                 }
                 dindex += 1;
@@ -571,5 +579,5 @@ pub async fn transparent_sweep(
         )
         .await?;
     }
-    Ok(())
+    Ok(n_added)
 }

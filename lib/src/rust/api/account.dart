@@ -80,8 +80,7 @@ Future<List<TxNote>> listNotes() =>
 Future<void> lockNote({required int id, required bool locked}) =>
     RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked);
 
-Future<void> transparentSweep(
-        {required int endHeight, required int gapLimit}) =>
+Future<int> transparentSweep({required int endHeight, required int gapLimit}) =>
     RustLib.instance.api.crateApiAccountTransparentSweep(
         endHeight: endHeight, gapLimit: gapLimit);
 
