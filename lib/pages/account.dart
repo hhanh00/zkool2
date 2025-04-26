@@ -462,6 +462,13 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onReset() async {
+    final confirmed = await confirmDialog(
+      context,
+      title: "Reset Account",
+      message:
+          "Are you sure you want to reset this account? This will clear all sync data and reset the account to the birth height. You will not lose any funds, but you will need to resync the account",
+    );
+    if (!confirmed) return;
     for (var account in accounts) await resetSync(id: account.id);
     await AppStoreBase.instance.loadAccounts();
   }

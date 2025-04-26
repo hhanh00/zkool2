@@ -319,9 +319,7 @@ pub async fn plan_transaction(
         .chain(double.iter())
         .chain(std::iter::once(&change_recipient));
 
-    span.in_scope(|| {
-        info!("Initializing Builder");
-    });
+    info!("Initializing Builder");
 
     let current_height = client
         .get_latest_block(Request::new(ChainSpec {}))
