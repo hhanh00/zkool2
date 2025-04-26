@@ -12,11 +12,13 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Stream<SyncProgress> synchronize(
         {required List<int> accounts,
         required int currentHeight,
-        required int transparentLimit}) =>
+        required int transparentLimit,
+        required int checkpointAge}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
         currentHeight: currentHeight,
-        transparentLimit: transparentLimit);
+        transparentLimit: transparentLimit,
+        checkpointAge: checkpointAge);
 
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 
