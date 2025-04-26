@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.1](https://github.com/hhanh00/zkool2/compare/zkool-v1.13.0...zkool-v1.13.1) (2025-04-26)
+
+
+### Bug Fixes
+
+* authentication bypass by cancel ([a3c6a45](https://github.com/hhanh00/zkool2/commit/a3c6a45120bcd2f09f8579dab6c7abb0cff7e6ac))
+* incorrect tx amount in history when spent notes have the same amount ([#157](https://github.com/hhanh00/zkool2/issues/157)) ([a3c6a45](https://github.com/hhanh00/zkool2/commit/a3c6a45120bcd2f09f8579dab6c7abb0cff7e6ac))
+
 ## [1.13.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.12.0...zkool-v1.13.0) (2025-04-26)
 
 
