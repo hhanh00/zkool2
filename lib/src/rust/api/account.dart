@@ -16,6 +16,9 @@ Future<String> getAccountUfvk({required int account, required int pools}) =>
     RustLib.instance.api
         .crateApiAccountGetAccountUfvk(account: account, pools: pools);
 
+Future<Seed?> getAccountSeed({required int account}) =>
+    RustLib.instance.api.crateApiAccountGetAccountSeed(account: account);
+
 Future<String?> getAccountFingerprint({required int account}) =>
     RustLib.instance.api.crateApiAccountGetAccountFingerprint(account: account);
 
@@ -212,6 +215,14 @@ class Receivers {
           taddr == other.taddr &&
           saddr == other.saddr &&
           oaddr == other.oaddr;
+}
+
+@freezed
+class Seed with _$Seed {
+  const factory Seed({
+    required String mnemonic,
+    required String phrase,
+  }) = _Seed;
 }
 
 @freezed

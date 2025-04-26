@@ -69,6 +69,31 @@ pub async fn get_account_ufvk(account: u32, pools: u8) -> Result<String> {
     Ok(ufvk)
 }
 
+pub async fn get_account_seed(account: u32) -> Result<Option<Seed>> {
+    let c = get_coin!();
+
+    let seed = sqlx::query("SELECT seed, passphrase FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let mnemonic: Option<String> = row.get(0);
+            let phrase: Option<String> = row.get(1);
+            let phrase = phrase.unwrap_or_default();
+            mnemonic.map(|mnemonic| Seed {
+                mnemonic,
+                phrase,
+            })
+        })
+        .fetch_one(c.get_pool())
+        .await?;
+    Ok(seed)
+}
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct Seed {
+    pub mnemonic: String,
+    pub phrase: String,
+}
+
 #[frb]
 pub async fn get_account_fingerprint(account: u32) -> Result<Option<String>> {
     let c = get_coin!();
