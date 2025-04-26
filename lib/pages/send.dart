@@ -157,7 +157,7 @@ class SendPageState extends State<SendPage> {
                         IconButton(
                             tooltip: "Set amount to entire balance",
                             onPressed: onMax,
-                            icon: Icon(Icons.vertical_align_top )),
+                            icon: Icon(Icons.vertical_align_top)),
                       ]),
                       if (supportsMemo)
                         Showcase(

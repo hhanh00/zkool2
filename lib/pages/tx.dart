@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -23,6 +24,7 @@ class TxPage extends StatefulWidget {
 class TxPageState extends State<TxPage> {
   String? txId;
   late final TxPlan txPlan = toPlan(package: widget.pczt);
+  bool canBroadcast = false;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend3", [cancelID, sendID4]);
@@ -32,10 +34,24 @@ class TxPageState extends State<TxPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final state = await (Connectivity().checkConnectivity());
+      if (!state.contains(ConnectivityResult.none)) {
+        canBroadcast = true;
+      }
+      setState(() {});
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
     Future(tutorial);
+
+    final canSend = txPlan.canSign && canBroadcast;
 
     return Scaffold(
       appBar: AppBar(
@@ -49,8 +65,8 @@ class TxPageState extends State<TxPage> {
               key: sendID4,
               description: "Confirm, broadcast transaction",
               child: IconButton(
-                  onPressed: txPlan.canSign ? onSend : onSave,
-                  icon: Icon(txPlan.canSign ? Icons.send : Icons.save))),
+                  onPressed: canSend ? onSend : onSave,
+                  icon: Icon(canSend ? Icons.send : txPlan.canSign ? Icons.draw : Icons.save))),
         ],
       ),
       body: CustomScrollView(slivers: [
@@ -95,9 +111,13 @@ class TxPageState extends State<TxPage> {
         message: "Are you sure you want to send this transaction?",
       );
       if (!confirmed) return;
-      final txBytes = await signTransaction(
-        pczt: widget.pczt,
-      );
+      var pczt = widget.pczt;
+      if (!txPlan.canBroadcast)
+        pczt = await signTransaction(
+          pczt: widget.pczt,
+        );
+
+      final txBytes = await extractTransaction(package: pczt);
       final txId2 = await broadcastTransaction(
         height: txPlan.height,
         txBytes: txBytes,
@@ -110,12 +130,25 @@ class TxPageState extends State<TxPage> {
   }
 
   void onSave() async {
-    final pcztData = await packTransaction(pczt: widget.pczt);
-    await FilePicker.platform.saveFile(
-      dialogTitle: 'Please select an output file for the unsigned transaction',
-      fileName: 'unsigned-tx.bin',
-      bytes: pcztData,
-    );
+    try {
+      var pczt = widget.pczt;
+      if (txPlan.canSign) {
+        pczt = await signTransaction(
+          pczt: widget.pczt,
+        );
+      }
+      final pcztData = await packTransaction(pczt: pczt);
+      final prefix = txPlan.canSign ? "signed" : "unsigned";
+      await FilePicker.platform.saveFile(
+        dialogTitle:
+            'Please select an output file for the unsigned transaction',
+        fileName: '$prefix-tx.bin',
+        bytes: pcztData,
+      );
+    } on AnyhowException catch (e) {
+      if (!mounted) return;
+      await showException(context, e.message);
+    }
   }
 
   void onCancel() {
@@ -129,12 +162,15 @@ class TxPageState extends State<TxPage> {
         builder: (context) {
           return AlertDialog(
             title: Text("Payment URI"),
-            content: SizedBox(width: 250, height: 250, child: QrImageView(
-              data: widget.pczt.puri,
-              version: QrVersions.auto,
-              backgroundColor: Colors.white,
-              size: 200.0,
-            )),
+            content: SizedBox(
+                width: 250,
+                height: 250,
+                child: QrImageView(
+                  data: widget.pczt.puri,
+                  version: QrVersions.auto,
+                  backgroundColor: Colors.white,
+                  size: 200.0,
+                )),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
