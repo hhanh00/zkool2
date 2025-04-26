@@ -197,6 +197,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onSync() async {
     try {
       await AppStoreBase.instance.startSynchronize([widget.account.id],
+        int.parse(AppStoreBase.instance.actionsPerSync),
           onComplete: () {
         Future(refresh);
       });

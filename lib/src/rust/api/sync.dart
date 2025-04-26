@@ -12,11 +12,13 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Stream<SyncProgress> synchronize(
         {required List<int> accounts,
         required int currentHeight,
+        required int actionsPerSync,
         required int transparentLimit,
         required int checkpointAge}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
         currentHeight: currentHeight,
+        actionsPerSync: actionsPerSync,
         transparentLimit: transparentLimit,
         checkpointAge: checkpointAge);
 
