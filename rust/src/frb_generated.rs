@@ -1773,19 +1773,19 @@ fn wire__crate__api__sync__synchronize_impl(
             let api_accounts = <Vec<u32>>::sse_decode(&mut deserializer);
             let api_current_height = <u32>::sse_decode(&mut deserializer);
             let api_transparent_limit = <u32>::sse_decode(&mut deserializer);
+            let api_checkpoint_age = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
-                transform_result_sse::<_, ()>(
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = Result::<_, ()>::Ok({
-                            crate::api::sync::synchronize(
-                                api_progress,
-                                api_accounts,
-                                api_current_height,
-                                api_transparent_limit,
-                            )
-                            .await;
-                        })?;
+                        let output_ok = crate::api::sync::synchronize(
+                            api_progress,
+                            api_accounts,
+                            api_current_height,
+                            api_transparent_limit,
+                            api_checkpoint_age,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
