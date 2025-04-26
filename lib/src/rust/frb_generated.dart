@@ -203,7 +203,7 @@ abstract class RustLibApi extends BaseApi {
 
   TxPlan crateApiPayToPlan({required PcztPackage package});
 
-  Future<void> crateApiAccountTransparentSweep(
+  Future<int> crateApiAccountTransparentSweep(
       {required int endHeight, required int gapLimit});
 
   String crateApiAccountUaFromUfvk({required String ufvk, int? di});
@@ -1453,7 +1453,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAccountTransparentSweep(
+  Future<int> crateApiAccountTransparentSweep(
       {required int endHeight, required int gapLimit}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
@@ -1464,7 +1464,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             funcId: 51, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
+        decodeSuccessData: sse_decode_u_32,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiAccountTransparentSweepConstMeta,
