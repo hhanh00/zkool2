@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.13.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.12.0...zkool-v1.13.0) (2025-04-26)
+
+
+### Features
+
+* add actions/sync option ([#155](https://github.com/hhanh00/zkool2/issues/155)) ([0d8983c](https://github.com/hhanh00/zkool2/commit/0d8983c40fdc4a0081b027a0965233c36d93054a))
+* add max amount button ([#150](https://github.com/hhanh00/zkool2/issues/150)) ([7530107](https://github.com/hhanh00/zkool2/commit/75301078188384dbd4de34b8572c063bd8f8368b))
+* expose seed fingerprint ([#143](https://github.com/hhanh00/zkool2/issues/143)) ([1e759b7](https://github.com/hhanh00/zkool2/commit/1e759b7318da74173581786ac94dcaf337a511fe))
+* payment uris ([#147](https://github.com/hhanh00/zkool2/issues/147)) ([a2542f6](https://github.com/hhanh00/zkool2/commit/a2542f644ddb60f4cf34aae3f5a7dcf7c87c4985))
+* prune old checkpoints ([#151](https://github.com/hhanh00/zkool2/issues/151)) ([bc5d11d](https://github.com/hhanh00/zkool2/commit/bc5d11d484446ae7fa7b21165f35c8c1e97646e0))
+* return number of new transparent addresses found during sweep ([#149](https://github.com/hhanh00/zkool2/issues/149)) ([55a688b](https://github.com/hhanh00/zkool2/commit/55a688b844ff910da80d582c5876759cd6f009ba))
+* separate tx building from signing, proving, etc. ([#145](https://github.com/hhanh00/zkool2/issues/145)) ([8edb8a7](https://github.com/hhanh00/zkool2/commit/8edb8a7a6eea9adb41e0035edef1d52694d5c93c))
+* show seed & biometrics authentication ([#153](https://github.com/hhanh00/zkool2/issues/153)) ([635f472](https://github.com/hhanh00/zkool2/commit/635f47276dfb7da5817d8780691f5f4bc19d311c))
+* show viewing keys ([#140](https://github.com/hhanh00/zkool2/issues/140)) ([9282f66](https://github.com/hhanh00/zkool2/commit/9282f66e18a4c7ae1f7dfa7db7ac25e0a4d1f16c))
+* skip shielded scan when only transparent key available ([#142](https://github.com/hhanh00/zkool2/issues/142)) ([8b4f2f3](https://github.com/hhanh00/zkool2/commit/8b4f2f3f6d33ec6a309b19faa0de1eef9b407918))
+
+
+### Bug Fixes
+
+* center account balance ([#154](https://github.com/hhanh00/zkool2/issues/154)) ([c654ff3](https://github.com/hhanh00/zkool2/commit/c654ff3ac265318ea44ab595d4b5f77f37597b36))
+* cold wallet spending ([#146](https://github.com/hhanh00/zkool2/issues/146)) ([75f7488](https://github.com/hhanh00/zkool2/commit/75f7488b5cedd9fd751aa45edef4396cde895bb7))
+* log span guards ([#144](https://github.com/hhanh00/zkool2/issues/144)) ([26bb2e9](https://github.com/hhanh00/zkool2/commit/26bb2e9f1aefb68b5e12bb616244da20b46a5edc))
+* multi payments ([#148](https://github.com/hhanh00/zkool2/issues/148)) ([fe10298](https://github.com/hhanh00/zkool2/commit/fe1029801f7143d68d83c247a8f71d81cd9fed3f))
+* reset_sync should not trim headers ([55a688b](https://github.com/hhanh00/zkool2/commit/55a688b844ff910da80d582c5876759cd6f009ba))
+* transparent sync when multiple accounts include the same ([#152](https://github.com/hhanh00/zkool2/issues/152)) ([86f1528](https://github.com/hhanh00/zkool2/commit/86f15288552e876ab1b531d8a26d176a9f140156))
+
 ## [1.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.11.0...zkool-v1.12.0) (2025-04-23)
 
 
