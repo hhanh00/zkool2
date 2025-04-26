@@ -13,6 +13,7 @@ import 'package:zkool/utils.dart';
 
 final databaseID = GlobalKey();
 final lwdID = GlobalKey();
+final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
 
 class SettingsPage extends StatefulWidget {
@@ -27,6 +28,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   String databaseName = AppStoreBase.instance.dbName;
   String lwd = AppStoreBase.instance.lwd;
   String syncInterval = AppStoreBase.instance.syncInterval;
+  String actionsPerSync = AppStoreBase.instance.actionsPerSync;
 
   @override
   void didChangeDependencies() {
@@ -84,6 +86,18 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                   initialValue: lwd,
                   onChanged: onChangedLWD,
                 )),
+                Showcase(key: actionsID, description: "Number actions per synchronization chunk", child:
+                FormBuilderTextField(
+                  name: "actions_per_sync",
+                  decoration:
+                      const InputDecoration(labelText: "Actions per Sync"),
+                  initialValue: actionsPerSync,
+                  onChanged: onChangedActionsPerSync,
+                  validator: FormBuilderValidators.integer(),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                )),
+                Gap(16),
                 Showcase(key: autosyncID, description: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization.", child:
                 FormBuilderTextField(
                   name: "autosync",
@@ -122,6 +136,18 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     setLwd(lwd: value);
     setState(() {
       lwd = value;
+    });
+  }
+
+  onChangedActionsPerSync(String? value) async {
+    if (value == null) return;
+    if (int.tryParse(value) == null) {
+      return;
+    }
+    await putProp(key: "actions_per_sync", value: value);
+    AppStoreBase.instance.actionsPerSync = value;
+    setState(() {
+      actionsPerSync = value;
     });
   }
 
