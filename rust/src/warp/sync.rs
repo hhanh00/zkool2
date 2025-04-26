@@ -41,6 +41,7 @@ pub async fn warp_sync(
     accounts: &[(u32, bool)],
     mut blocks: Streaming<CompactBlock>,
     mut heights_without_time: HashSet<u32>,
+    actions_per_sync: u32,
     sapling_state: &CommitmentTreeFrontier,
     orchard_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
@@ -142,7 +143,7 @@ pub async fn warp_sync(
 
         bs.push(block);
 
-        if c >= 10000 {
+        if c >= actions_per_sync as usize {
             if !bs.is_empty() {
                 flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
             }

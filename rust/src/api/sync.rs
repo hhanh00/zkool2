@@ -20,10 +20,12 @@ use crate::{
     sync::shielded_sync,
 };
 
+#[frb]
 pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
     accounts: Vec<u32>,
     current_height: u32,
+    actions_per_sync: u32,
     transparent_limit: u32,
     checkpoint_age: u32,
 ) -> Result<()> {
@@ -126,6 +128,7 @@ pub async fn synchronize(
                 &accounts_to_sync,
                 start_height,
                 end_height,
+                actions_per_sync,
                 tx_progress.clone(),
             )
             .await?;
