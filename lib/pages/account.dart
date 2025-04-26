@@ -149,7 +149,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                     Text("Balance"),
                     Gap(8),
                     if (b != null)
-                      Row(children: [
+                      Row(mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
                         Showcase(
                             key: tBalID,
                             description: "Balance in the Transparent Pool",
