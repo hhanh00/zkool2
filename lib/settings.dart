@@ -110,7 +110,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 )),
                 Gap(16),
-                Text(AppStoreBase.instance.dbFilepath, style: t.bodySmall),
+                SelectableText(AppStoreBase.instance.dbFilepath, style: t.bodySmall),
               ],
             ),
           ),
