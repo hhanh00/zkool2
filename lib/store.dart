@@ -46,7 +46,7 @@ abstract class AppStoreBase with Store {
     stream.listen((m) {
       logger.i(m);
       log.add(m.message);
-      if (m.span == "transaction_plan" || m.span == "sign_transaction") {
+      if (m.span == "transaction_plan" || m.span == "sign_transaction" || m.span == "extract_transaction") {
         toastification.show(
             description: Text(m.message),
             margin: EdgeInsets.all(8),

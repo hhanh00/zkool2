@@ -1,5 +1,7 @@
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
+use pczt::Pczt;
+use zcash_primitives::transaction::builder::PcztParts;
 
 use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
 use flutter_rust_bridge::frb;
@@ -29,7 +31,7 @@ pub async fn prepare(
 }
 
 #[frb]
-pub async fn sign_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
+pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
     let connection = c.get_pool();
@@ -44,6 +46,11 @@ pub async fn sign_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
     Ok(tx)
 }
 
+#[frb]
+pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
+    crate::pay::plan::extract_transaction(package).await
+}
+
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Encode, Decode)]
 pub struct PcztPackage {
@@ -52,6 +59,7 @@ pub struct PcztPackage {
     pub sapling_indices: Vec<usize>,
     pub orchard_indices: Vec<usize>,
     pub can_sign: bool,
+    pub can_broadcast: bool,
     pub puri: String,
 }
 
