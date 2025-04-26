@@ -4,12 +4,15 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_auth/error_codes.dart' as auth_error;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:local_auth/local_auth.dart';
 import 'package:zkool/router.dart';
 
 String initials(String name) =>
@@ -200,6 +203,27 @@ void tutorialHelper(BuildContext context, String id,
     if (scw.isShowCaseCompleted) {
       scw.startShowCase(ids);
       await prefs.setBool(id, false);
+    }
+  }
+}
+
+Future<bool> authenticate({String? reason}) async {
+  final LocalAuthentication auth = LocalAuthentication();
+  try {
+    final didAuthenticate = await auth.authenticate(
+        localizedReason: reason ?? "Authenticate to continue",
+        options: const AuthenticationOptions(useErrorDialogs: false));
+    return didAuthenticate;
+  } on PlatformException catch (e) {
+    switch (e.code) {
+      case auth_error.passcodeNotSet:
+        return true; // no passcode set
+      case auth_error.notAvailable:
+        return true; // no fingerprint available
+      case auth_error.notEnrolled:
+        return true; // no fingerprint enrolled
+      default:
+        return false;
     }
   }
 }
