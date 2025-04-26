@@ -260,13 +260,14 @@ pub(crate) async fn transparent_sync(
                         sqlx::query(
                             "INSERT INTO spends (account, id_note, pool, tx, height, value)
                         SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
-                        ON CONFLICT DO NOTHING",
+                        AND account = ? ON CONFLICT DO NOTHING",
                         )
                         .bind(account)
                         .bind(id)
                         .bind(height)
                         .bind(-amount)
                         .bind(&txid)
+                        .bind(account)
                         .execute(&mut *db_tx)
                         .await?;
                     }
@@ -283,13 +284,14 @@ pub(crate) async fn transparent_sync(
 
                             sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
                             SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
-                            ON CONFLICT DO NOTHING")
+                            AND account = ? ON CONFLICT DO NOTHING")
                                 .bind(account)
                                 .bind(height)
                                 .bind(address_row.0)
                                 .bind(&nf)
                                 .bind(vout.value.into_u64() as i64)
                                 .bind(&txid)
+                                .bind(account)
                                 .execute(&mut *db_tx)
                                 .await?;
                         }
