@@ -47,6 +47,7 @@ class TxPlan {
   final List<TxPlanOut> outputs;
   final BigInt fee;
   final bool canSign;
+  final bool canBroadcast;
 
   const TxPlan({
     required this.height,
@@ -54,6 +55,7 @@ class TxPlan {
     required this.outputs,
     required this.fee,
     required this.canSign,
+    required this.canBroadcast,
   });
 
   @override
@@ -62,7 +64,8 @@ class TxPlan {
       inputs.hashCode ^
       outputs.hashCode ^
       fee.hashCode ^
-      canSign.hashCode;
+      canSign.hashCode ^
+      canBroadcast.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -73,7 +76,8 @@ class TxPlan {
           inputs == other.inputs &&
           outputs == other.outputs &&
           fee == other.fee &&
-          canSign == other.canSign;
+          canSign == other.canSign &&
+          canBroadcast == other.canBroadcast;
 }
 
 class TxPlanIn {
