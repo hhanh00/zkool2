@@ -206,6 +206,7 @@ pub async fn shielded_sync(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
+    actions_per_sync: u32,
     tx_progress: Sender<SyncProgress>,
 ) -> Result<()> {
     let accounts = accounts.to_vec();
@@ -269,6 +270,7 @@ pub async fn shielded_sync(
                 &accounts,
                 blocks,
                 heights_without_time,
+                actions_per_sync,
                 &s,
                 &o,
                 tx_messages.clone(),
@@ -344,7 +346,6 @@ async fn handle_message(
             .bind(&cmx)
             .execute(&mut **db_tx)
             .await?;
-            info!("Processing Witness: account={account}, height={height}");
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Spend(utxo) => {

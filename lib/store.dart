@@ -37,6 +37,7 @@ abstract class AppStoreBase with Store {
   String dbFilepath = "";
   String lwd = "https://zec.rocks";
   String syncInterval = "30"; // in blocks
+  String actionsPerSync = "10000";
 
   ObservableList<String> log = ObservableList.of([]);
 
@@ -59,6 +60,7 @@ abstract class AppStoreBase with Store {
   Future<void> loadSettings() async {
     lwd = await getProp(key: "lwd") ?? lwd;
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
+    actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
   }
 
   Future<List<Account>> loadAccounts() async {
@@ -90,7 +92,7 @@ abstract class AppStoreBase with Store {
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   Timer? retrySyncTimer;
 
-  Future<void> startSynchronize(List<int> accounts,
+  Future<void> startSynchronize(List<int> accounts, int actionsPerSync,
       {void Function()? onComplete}) async {
     if (syncInProgress) {
       return;
@@ -106,6 +108,7 @@ abstract class AppStoreBase with Store {
       final progress = synchronize(
           accounts: accounts,
           currentHeight: currentHeight,
+          actionsPerSync: actionsPerSync,
           transparentLimit: 10, // scan the last 10 known transparent addresses
           checkpointAge: 200); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
@@ -147,7 +150,10 @@ abstract class AppStoreBase with Store {
     showSnackbar(message);
     retrySyncTimer?.cancel();
     retrySyncTimer = Timer(Duration(seconds: delay), () {
-      startSynchronize(accounts);
+      startSynchronize(accounts, int.parse(AppStoreBase.instance.actionsPerSync),
+          onComplete: () {
+        retryCount = 0;
+      });
     });
   }
 
@@ -185,7 +191,7 @@ abstract class AppStoreBase with Store {
       }
     }
     if (accountsToSync.isNotEmpty) {
-      await startSynchronize(accountsToSync);
+      await startSynchronize(accountsToSync, int.parse(AppStoreBase.instance.actionsPerSync));
     }
   }
 
