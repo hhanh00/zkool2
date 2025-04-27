@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.14.0...zkool-v1.15.0) (2025-04-27)
+
+
+### Features
+
+* cancel synchronization button ([#164](https://github.com/hhanh00/zkool2/issues/164)) ([862d272](https://github.com/hhanh00/zkool2/commit/862d2724b73a164d85beb0bcf23abd03440f30c6))
+
 ## [1.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.13.1...zkool-v1.14.0) (2025-04-27)
 
 
