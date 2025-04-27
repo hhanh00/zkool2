@@ -251,7 +251,6 @@ class AccountListPage2State extends State<AccountListPage2> {
   onSync() async {
     try {
       final listState = listKey.currentState!;
-      final accounts = AppStoreBase.instance.accounts;
       List<int> accountIds = [];
       final hasSelection = listState.selected.any((s) => s);
       for (var i = 0; i < accounts.length; i++) {
