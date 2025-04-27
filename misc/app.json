@@ -1,5 +1,5 @@
 {
-  "title": "YWallet",
+  "title": "Zkool",
   "contents": [
     { "x": 448, "y": 128, "type": "link", "path": "/Applications" },
     { "x": 192, "y": 128, "type": "file", "path": "../build/macos/Build/Products/Release/zkool.app" }
