@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.13.1...zkool-v1.14.0) (2025-04-27)
+
+
+### Features
+
+* separate signing and broadcasting for cold wallet ([#159](https://github.com/hhanh00/zkool2/issues/159)) ([a2befd0](https://github.com/hhanh00/zkool2/commit/a2befd079ec4683277a3d9dab92cabe240ee19f4))
+
+
+### Bug Fixes
+
+* show seed should also show passphrase and index ([#162](https://github.com/hhanh00/zkool2/issues/162)) ([738a60b](https://github.com/hhanh00/zkool2/commit/738a60b3c29a484bd810630211916452f86f18bb))
+* sync of selected accounts ([#163](https://github.com/hhanh00/zkool2/issues/163)) ([cf9d4c3](https://github.com/hhanh00/zkool2/commit/cf9d4c356438c2d46c36d036a60763cc282ac7ad))
+
 ## [1.13.1](https://github.com/hhanh00/zkool2/compare/zkool-v1.13.0...zkool-v1.13.1) (2025-04-26)
 
 
