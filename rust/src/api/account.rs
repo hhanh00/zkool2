@@ -72,15 +72,17 @@ pub async fn get_account_ufvk(account: u32, pools: u8) -> Result<String> {
 pub async fn get_account_seed(account: u32) -> Result<Option<Seed>> {
     let c = get_coin!();
 
-    let seed = sqlx::query("SELECT seed, passphrase FROM accounts WHERE id_account = ?")
+    let seed = sqlx::query("SELECT seed, passphrase, aindex FROM accounts WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let mnemonic: Option<String> = row.get(0);
             let phrase: Option<String> = row.get(1);
+            let aindex: u32 = row.get(2);
             let phrase = phrase.unwrap_or_default();
             mnemonic.map(|mnemonic| Seed {
                 mnemonic,
                 phrase,
+                aindex,
             })
         })
         .fetch_one(c.get_pool())
@@ -92,6 +94,7 @@ pub async fn get_account_seed(account: u32) -> Result<Option<Seed>> {
 pub struct Seed {
     pub mnemonic: String,
     pub phrase: String,
+    pub aindex: u32,
 }
 
 #[frb]
