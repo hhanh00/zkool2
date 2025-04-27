@@ -624,6 +624,13 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Column(children: [
+                  if (showSeed && seed != null) ...[
+                    ListTile(title: Text("Mnemonic"), subtitle: SelectableText(seed!.mnemonic)),
+                    ListTile(title: Text("Passphrase"), subtitle: SelectableText(seed!.phrase)),
+                    ListTile(title: Text("Index"), subtitle: SelectableText(seed!.aindex.toString())),
+                    Divider(),
+                    Gap(8),
+                    ],
                   Center(child: PoolSelect(onChanged: onPoolChanged)),
                   Gap(32),
                   if (uvk != null) SelectableText(uvk!),
@@ -633,14 +640,7 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
                   if (fingerprint != null) SelectableText(fingerprint!),
                   Gap(16),
                   Text("If the account does not include a pool, its receiver will be absent"),
-                  if (showSeed && seed != null) ...[
-                    Gap(16),
-                    Divider(),
-                    Gap(16),
-                    SelectableText(seed!.mnemonic),
-                    Gap(8),
-                    SelectableText(seed!.phrase),
-                ]]))));
+                ]))));
   }
 
   onPoolChanged(int? v) async {
