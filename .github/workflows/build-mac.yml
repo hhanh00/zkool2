@@ -1,4 +1,4 @@
-name: Rust CI Mac
+name: Build and Release macOS
 
 on:
   workflow_dispatch:
