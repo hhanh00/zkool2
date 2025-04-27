@@ -2,9 +2,12 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use shielded::Synchronizer;
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::{
+    sqlite::SqliteRow,
+    Row, SqlitePool,
+};
 use thiserror::Error;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::{broadcast, mpsc::Sender};
 use tonic::Streaming;
 use tracing::info;
 use zcash_protocol::consensus::Network;
@@ -25,6 +28,8 @@ mod shielded;
 pub enum SyncError {
     #[error("Reorganization detected at block {0}")]
     Reorg(u32),
+    #[error("Sync cancelled")]
+    Cancelled,
     #[error(transparent)]
     Tonic(#[from] tonic::Status),
     #[error(transparent)]
@@ -45,6 +50,7 @@ pub async fn warp_sync(
     sapling_state: &CommitmentTreeFrontier,
     orchard_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
+    mut rx_cancel: broadcast::Receiver<()>,
 ) -> Result<(), SyncError> {
     let sap_hasher = SaplingHasher::default();
     let mut sap_dec = SaplingSync::new(
@@ -108,44 +114,59 @@ pub async fn warp_sync(
         .bind(start_height - 1)
         .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
         .fetch_optional(connection)
-        .await.unwrap();
+        .await
+        .unwrap();
 
     info!("Start sync");
-    while let Some(block) = blocks.message().await? {
-        // info!("Syncing block {}: {c}", block.height);
-        let block_prev_hash = block.prev_hash.clone();
-        if let Some(prev_hash) = prev_hash {
-            if prev_hash != block_prev_hash {
-                // we need to rewind the database to the previous checkpoint
-                // and start syncing from there next time we get synchronize
-                for (account, _) in accounts.iter() {
-                    crate::sync::rewind_sync(connection, *account, start_height - 1).await?;
-                }
-                return Err(SyncError::Reorg(block.height as u32));
+
+    loop {
+        tokio::select! {
+            _ = rx_cancel.recv() => {
+                info!("Sync cancelled");
+                return Err(SyncError::Cancelled);
             }
-        }
-        prev_hash = Some(block.hash.clone());
+            m = blocks.message() => {
+                if let Some(block) = m? {
+                    // info!("Syncing block {}: {c}", block.height);
+                    let block_prev_hash = block.prev_hash.clone();
+                    if let Some(prev_hash) = prev_hash {
+                        if prev_hash != block_prev_hash {
+                            // we need to rewind the database to the previous checkpoint
+                            // and start syncing from there next time we get synchronize
+                            for (account, _) in accounts.iter() {
+                                crate::sync::rewind_sync(connection, *account, start_height - 1).await?;
+                            }
+                            return Err(SyncError::Reorg(block.height as u32));
+                        }
+                    }
+                    prev_hash = Some(block.hash.clone());
 
-        let bheight = block.height as u32;
-        if heights_without_time.remove(&bheight) {
-            let bh = BlockHeader {
-                height: bheight,
-                hash: block.hash.clone(),
-                time: block.time,
-            };
-            let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
-        }
+                    let bheight = block.height as u32;
+                    if heights_without_time.remove(&bheight) {
+                        let bh = BlockHeader {
+                            height: bheight,
+                            hash: block.hash.clone(),
+                            time: block.time,
+                        };
+                        let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
+                    }
 
-        for vtx in block.vtx.iter() {
-            c += vtx.outputs.len();
-            c += vtx.actions.len();
-        }
+                    for vtx in block.vtx.iter() {
+                        c += vtx.outputs.len();
+                        c += vtx.actions.len();
+                    }
 
-        bs.push(block);
+                    bs.push(block);
 
-        if c >= actions_per_sync as usize {
-            if !bs.is_empty() {
-                flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
+                    if c >= actions_per_sync as usize {
+                        if !bs.is_empty() {
+                            flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
+                        }
+                    }
+                }
+                else {
+                    break;
+                }
             }
         }
     }
