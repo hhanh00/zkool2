@@ -2024,11 +2024,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Seed dco_decode_seed(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return Seed(
       mnemonic: dco_decode_String(arr[0]),
       phrase: dco_decode_String(arr[1]),
+      aindex: dco_decode_u_32(arr[2]),
     );
   }
 
@@ -2707,7 +2708,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_mnemonic = sse_decode_String(deserializer);
     var var_phrase = sse_decode_String(deserializer);
-    return Seed(mnemonic: var_mnemonic, phrase: var_phrase);
+    var var_aindex = sse_decode_u_32(deserializer);
+    return Seed(mnemonic: var_mnemonic, phrase: var_phrase, aindex: var_aindex);
   }
 
   @protected
@@ -3309,6 +3311,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.mnemonic, serializer);
     sse_encode_String(self.phrase, serializer);
+    sse_encode_u_32(self.aindex, serializer);
   }
 
   @protected
