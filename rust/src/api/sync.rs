@@ -4,6 +4,7 @@ use futures::TryStreamExt as _;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use std::collections::HashMap;
 use tokio::sync::mpsc::channel;
+use tokio::sync::{broadcast, Mutex};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
@@ -33,6 +34,16 @@ pub async fn synchronize(
         return Ok(());
     }
 
+    let Ok(_guard) = SYNCING.try_lock() else {
+        return Ok(());
+    };
+
+    let (tx_cancel, _rx_cancel) = broadcast::channel::<()>(1);
+    {
+        let mut cancel = CANCEL_SYNC.lock().await;
+        *cancel = Some(tx_cancel.clone());
+    }
+
     let c = get_coin!();
     let network = c.network;
     let pool = c.get_pool();
@@ -45,7 +56,7 @@ pub async fn synchronize(
 
     let mut account_use_internal = HashMap::<u32, bool>::new();
     let res = async {
-        recover_from_partial_sync(&pool, &accounts).await?;
+        recover_from_partial_sync(pool, &accounts).await?;
 
         // Get account heights
         let mut account_heights = HashMap::new();
@@ -109,7 +120,10 @@ pub async fn synchronize(
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
-            let account_ids = accounts_to_sync.iter().map(|(account, _)| *account).collect::<Vec<_>>();
+            let account_ids = accounts_to_sync
+                .iter()
+                .map(|(account, _)| *account)
+                .collect::<Vec<_>>();
             transparent_sync(
                 &network,
                 pool,
@@ -118,6 +132,7 @@ pub async fn synchronize(
                 start_height,
                 end_height,
                 transparent_limit,
+                tx_cancel.subscribe(),
             )
             .await?;
 
@@ -130,6 +145,7 @@ pub async fn synchronize(
                 end_height,
                 actions_per_sync,
                 tx_progress.clone(),
+                tx_cancel.subscribe(),
             )
             .await?;
 
@@ -151,6 +167,11 @@ pub async fn synchronize(
         }
     }
 
+    {
+        let mut cancel = CANCEL_SYNC.lock().await;
+        *cancel = None;
+    }
+
     Ok(())
 }
 
@@ -162,6 +183,7 @@ pub(crate) async fn transparent_sync(
     start_height: u32,
     end_height: u32,
     limit: u32,
+    mut rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
     let mut addresses = vec![];
     for account in accounts {
@@ -211,99 +233,114 @@ pub(crate) async fn transparent_sync(
         let mut last_branch_id: Option<BranchId> = None;
 
         let mut db_tx = pool.begin().await?;
-        while let Some(tx) = txs.message().await? {
-            // Determine the consensus branch ID based on the block height
-            let height = tx.height as u32;
-
-            // Use memoized branch ID if available for this height, otherwise compute it
-            let consensus_branch_id = match last_height {
-                Some(h) if h == height => last_branch_id.unwrap(),
-                _ => {
-                    let branch_id = BranchId::for_height(&network, height.into());
-                    last_height = Some(height);
-                    last_branch_id = Some(branch_id);
-                    branch_id
+        loop {
+            tokio::select! {
+                _ = rx_cancel.recv() => {
+                    info!("Canceling sync");
+                    anyhow::bail!("Sync canceled");
                 }
-            };
+                m = txs.message() => {
+                    if let Some(tx) = m? {
+                        // Determine the consensus branch ID based on the block height
+                        let height = tx.height as u32;
 
-            // Parse the transaction
-            let transaction = ZcashTransaction::read(&*tx.data, consensus_branch_id)?;
+                        // Use memoized branch ID if available for this height, otherwise compute it
+                        let consensus_branch_id = match last_height {
+                            Some(h) if h == height => last_branch_id.unwrap(),
+                            _ => {
+                                let branch_id = BranchId::for_height(&network, height.into());
+                                last_height = Some(height);
+                                last_branch_id = Some(branch_id);
+                                branch_id
+                            }
+                        };
 
-            let txid = transaction.txid().as_ref().to_vec();
-            // tx time is available in the block (not here)
-            sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")
-                .bind(account)
-                .bind(&txid)
-                .bind(height)
-                .execute(&mut *db_tx)
-                .await?;
+                        // Parse the transaction
+                        let transaction = ZcashTransaction::read(&*tx.data, consensus_branch_id)?;
 
-            // Access the transparent bundle part
-            if let Some(transparent_bundle) = transaction.transparent_bundle() {
-                info!("Transaction: {}", transaction.txid());
-                info!("Transparent inputs: {}", transparent_bundle.vin.len());
-
-                let vins = &transparent_bundle.vin;
-                for vin in vins.iter() {
-                    // The "nullifier" of a transparent input is the outpoint
-                    let mut nf = vec![];
-                    vin.prevout.write(&mut nf)?;
-
-                    let row: Option<(u32, i64)> = sqlx::query_as(
-                        "SELECT id_note, value FROM notes WHERE account = ?1 AND nullifier = ?2",
-                    )
-                    .bind(account)
-                    .bind(&nf)
-                    .fetch_optional(&mut *db_tx)
-                    .await?;
-
-                    if let Some((id, amount)) = row {
-                        // note was found
-                        // add a spent entry
-                        sqlx::query(
-                            "INSERT INTO spends (account, id_note, pool, tx, height, value)
-                        SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
-                        AND account = ? ON CONFLICT DO NOTHING",
-                        )
+                        let txid = transaction.txid().as_ref().to_vec();
+                        // tx time is available in the block (not here)
+                        sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")
                         .bind(account)
-                        .bind(id)
-                        .bind(height)
-                        .bind(-amount)
                         .bind(&txid)
-                        .bind(account)
+                        .bind(height)
                         .execute(&mut *db_tx)
                         .await?;
-                    }
-                }
 
-                let vouts = &transparent_bundle.vout;
-                for (i, vout) in vouts.iter().enumerate() {
-                    if let Some(address) = vout.recipient_address() {
-                        if address == my_address {
-                            // It is for me
-                            // add a new note entry
-                            let mut nf = transaction.txid().as_ref().to_vec();
-                            nf.extend_from_slice(&(i as u32).to_le_bytes());
+                        // Access the transparent bundle part
+                        if let Some(transparent_bundle) = transaction.transparent_bundle() {
+                            info!("Transaction: {}", transaction.txid());
+                            info!("Transparent inputs: {}", transparent_bundle.vin.len());
 
-                            sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
-                            SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
-                            AND account = ? ON CONFLICT DO NOTHING")
-                                .bind(account)
-                                .bind(height)
-                                .bind(address_row.0)
-                                .bind(&nf)
-                                .bind(vout.value.into_u64() as i64)
-                                .bind(&txid)
-                                .bind(account)
-                                .execute(&mut *db_tx)
-                                .await?;
+                            let vins = &transparent_bundle.vin;
+                            for vin in vins.iter() {
+                                // The "nullifier" of a transparent input is the outpoint
+                                let mut nf = vec![];
+                                vin.prevout.write(&mut nf)?;
+
+                                let row: Option<(u32, i64)> = sqlx::query_as(
+                                "SELECT id_note, value FROM notes WHERE account = ?1 AND nullifier = ?2",
+                            )
+                            .bind(account)
+                            .bind(&nf)
+                            .fetch_optional(&mut *db_tx)
+                            .await?;
+
+                                if let Some((id, amount)) = row {
+                                    // note was found
+                                    // add a spent entry
+                                    sqlx::query(
+                                        "INSERT INTO spends (account, id_note, pool, tx, height, value)
+                                SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
+                                AND account = ? ON CONFLICT DO NOTHING",
+                                    )
+                                    .bind(account)
+                                    .bind(id)
+                                    .bind(height)
+                                    .bind(-amount)
+                                    .bind(&txid)
+                                    .bind(account)
+                                    .execute(&mut *db_tx)
+                                    .await?;
+                                }
+                            }
+
+                            let vouts = &transparent_bundle.vout;
+                            for (i, vout) in vouts.iter().enumerate() {
+                                if let Some(address) = vout.recipient_address() {
+                                    if address == my_address {
+                                        // It is for me
+                                        // add a new note entry
+                                        let mut nf = transaction.txid().as_ref().to_vec();
+                                        nf.extend_from_slice(&(i as u32).to_le_bytes());
+
+                                        sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
+                                    SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
+                                    AND account = ? ON CONFLICT DO NOTHING")
+                                        .bind(account)
+                                        .bind(height)
+                                        .bind(address_row.0)
+                                        .bind(&nf)
+                                        .bind(vout.value.into_u64() as i64)
+                                        .bind(&txid)
+                                        .bind(account)
+                                        .execute(&mut *db_tx)
+                                        .await?;
+                                    }
+                                }
+                            }
+
+                            info!("Transparent outputs: {}", transparent_bundle.vout.len());
                         }
                     }
+                    else {
+                        // No more transactions
+                        break;
+                    }
                 }
-
-                info!("Transparent outputs: {}", transparent_bundle.vout.len());
             }
         }
+
         sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND pool = 0")
             .bind(end_height)
             .bind(account)
@@ -320,6 +357,15 @@ pub async fn balance() -> Result<PoolBalance> {
     let account = c.account;
 
     calculate_balance(pool, account).await
+}
+
+#[frb]
+pub async fn cancel_sync() -> Result<()> {
+    let tx = CANCEL_SYNC.lock().await;
+    if let Some(tx) = tx.as_ref() {
+        tx.send(())?;
+    }
+    Ok(())
 }
 
 #[frb]
@@ -352,3 +398,8 @@ pub struct SyncProgress {
 }
 
 pub struct PoolBalance(pub Vec<u64>);
+
+lazy_static::lazy_static! {
+    pub static ref SYNCING: Mutex<()> = Mutex::new(());
+    pub static ref CANCEL_SYNC: Mutex<Option<broadcast::Sender<()>>> = Mutex::new(None);
+}
