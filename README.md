@@ -22,8 +22,7 @@ Zkool is a multi-account wallet for Zcash.
     The entire data (notes, spends, witnesses, etc) gets saved into an
     *encrypted* file.
     - Wallet files can be also encrypted.
-    - Zkool is the only wallet app that supports more than one account and
-    does not lock you to the list of accounts[^1]
+    - Zkool supports more than one account and does not lock you to the list of accounts[^1]
 - Its shielded features are as good as Ywallet. In particular, it will
     - minimize cross pool usage
     - allow you to select your pools
@@ -41,7 +40,6 @@ On the flipside, the UI is relatively simple to understand.
 - Some nice to have features are missing
     - No *address book*. Mainly because Zcash has diversified addresses
     that make address books useless if used[^3]
-- No Payment URI
 - No keytool
 - No Market Data charts
 - No customization of reference currency (always USD)

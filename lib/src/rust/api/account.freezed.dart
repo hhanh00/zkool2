@@ -1249,6 +1249,7 @@ abstract class _NewAccount implements NewAccount {
 mixin _$Seed {
   String get mnemonic => throw _privateConstructorUsedError;
   String get phrase => throw _privateConstructorUsedError;
+  int get aindex => throw _privateConstructorUsedError;
 
   /// Create a copy of Seed
   /// with the given fields replaced by the non-null parameter values.
@@ -1261,7 +1262,7 @@ abstract class $SeedCopyWith<$Res> {
   factory $SeedCopyWith(Seed value, $Res Function(Seed) then) =
       _$SeedCopyWithImpl<$Res, Seed>;
   @useResult
-  $Res call({String mnemonic, String phrase});
+  $Res call({String mnemonic, String phrase, int aindex});
 }
 
 /// @nodoc
@@ -1281,6 +1282,7 @@ class _$SeedCopyWithImpl<$Res, $Val extends Seed>
   $Res call({
     Object? mnemonic = null,
     Object? phrase = null,
+    Object? aindex = null,
   }) {
     return _then(_value.copyWith(
       mnemonic: null == mnemonic
@@ -1291,6 +1293,10 @@ class _$SeedCopyWithImpl<$Res, $Val extends Seed>
           ? _value.phrase
           : phrase // ignore: cast_nullable_to_non_nullable
               as String,
+      aindex: null == aindex
+          ? _value.aindex
+          : aindex // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -1302,7 +1308,7 @@ abstract class _$$SeedImplCopyWith<$Res> implements $SeedCopyWith<$Res> {
       __$$SeedImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String mnemonic, String phrase});
+  $Res call({String mnemonic, String phrase, int aindex});
 }
 
 /// @nodoc
@@ -1319,6 +1325,7 @@ class __$$SeedImplCopyWithImpl<$Res>
   $Res call({
     Object? mnemonic = null,
     Object? phrase = null,
+    Object? aindex = null,
   }) {
     return _then(_$SeedImpl(
       mnemonic: null == mnemonic
@@ -1329,6 +1336,10 @@ class __$$SeedImplCopyWithImpl<$Res>
           ? _value.phrase
           : phrase // ignore: cast_nullable_to_non_nullable
               as String,
+      aindex: null == aindex
+          ? _value.aindex
+          : aindex // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -1336,16 +1347,19 @@ class __$$SeedImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$SeedImpl implements _Seed {
-  const _$SeedImpl({required this.mnemonic, required this.phrase});
+  const _$SeedImpl(
+      {required this.mnemonic, required this.phrase, required this.aindex});
 
   @override
   final String mnemonic;
   @override
   final String phrase;
+  @override
+  final int aindex;
 
   @override
   String toString() {
-    return 'Seed(mnemonic: $mnemonic, phrase: $phrase)';
+    return 'Seed(mnemonic: $mnemonic, phrase: $phrase, aindex: $aindex)';
   }
 
   @override
@@ -1355,11 +1369,12 @@ class _$SeedImpl implements _Seed {
             other is _$SeedImpl &&
             (identical(other.mnemonic, mnemonic) ||
                 other.mnemonic == mnemonic) &&
-            (identical(other.phrase, phrase) || other.phrase == phrase));
+            (identical(other.phrase, phrase) || other.phrase == phrase) &&
+            (identical(other.aindex, aindex) || other.aindex == aindex));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, mnemonic, phrase);
+  int get hashCode => Object.hash(runtimeType, mnemonic, phrase, aindex);
 
   /// Create a copy of Seed
   /// with the given fields replaced by the non-null parameter values.
@@ -1373,12 +1388,15 @@ class _$SeedImpl implements _Seed {
 abstract class _Seed implements Seed {
   const factory _Seed(
       {required final String mnemonic,
-      required final String phrase}) = _$SeedImpl;
+      required final String phrase,
+      required final int aindex}) = _$SeedImpl;
 
   @override
   String get mnemonic;
   @override
   String get phrase;
+  @override
+  int get aindex;
 
   /// Create a copy of Seed
   /// with the given fields replaced by the non-null parameter values.
