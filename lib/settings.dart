@@ -8,6 +8,7 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -15,6 +16,7 @@ final databaseID = GlobalKey();
 final lwdID = GlobalKey();
 final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
+final cancelID = GlobalKey();
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -46,7 +48,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutSettings0", [databaseID, lwdID, autosyncID]);
+    tutorialHelper(context, "tutSettings0", [databaseID, lwdID, actionsID, autosyncID, cancelID]);
   }
 
   @override
@@ -60,8 +62,9 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
         title: Text("Settings"),
         actions: [
           IconButton(
-            tooltip: "Show Tutorials again",
-            onPressed: resetTutorial, icon: Icon(Icons.school))
+              tooltip: "Show Tutorials again",
+              onPressed: resetTutorial,
+              icon: Icon(Icons.school))
         ],
       ),
       body: SingleChildScrollView(
@@ -71,52 +74,85 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                Showcase(key: databaseID, description: "Change the database file. This requires a RESTART after", child:
-                FormBuilderTextField(
-                  name: "database_name",
-                  decoration: const InputDecoration(labelText: "Database Name"),
-                  initialValue: databaseName,
-                  onChanged: onChangedDatabaseName,
-                )),
-                Showcase(key: lwdID, description: "Lightwalletd server to connect to", child:
-                FormBuilderTextField(
-                  name: "lwd",
-                  decoration:
-                      const InputDecoration(labelText: "Lightwalletd Server"),
-                  initialValue: lwd,
-                  onChanged: onChangedLWD,
-                )),
-                Showcase(key: actionsID, description: "Number actions per synchronization chunk", child:
-                FormBuilderTextField(
-                  name: "actions_per_sync",
-                  decoration:
-                      const InputDecoration(labelText: "Actions per Sync"),
-                  initialValue: actionsPerSync,
-                  onChanged: onChangedActionsPerSync,
-                  validator: FormBuilderValidators.integer(),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                )),
+                Showcase(
+                    key: databaseID,
+                    description:
+                        "Change the database file. This requires a RESTART after",
+                    child: FormBuilderTextField(
+                      name: "database_name",
+                      decoration:
+                          const InputDecoration(labelText: "Database Name"),
+                      initialValue: databaseName,
+                      onChanged: onChangedDatabaseName,
+                    )),
+                Showcase(
+                    key: lwdID,
+                    description: "Lightwalletd server to connect to",
+                    child: FormBuilderTextField(
+                      name: "lwd",
+                      decoration: const InputDecoration(
+                          labelText: "Lightwalletd Server"),
+                      initialValue: lwd,
+                      onChanged: onChangedLWD,
+                    )),
+                Showcase(
+                    key: actionsID,
+                    description: "Number actions per synchronization chunk",
+                    child: FormBuilderTextField(
+                      name: "actions_per_sync",
+                      decoration:
+                          const InputDecoration(labelText: "Actions per Sync"),
+                      initialValue: actionsPerSync,
+                      onChanged: onChangedActionsPerSync,
+                      validator: FormBuilderValidators.integer(),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    )),
                 Gap(16),
-                Showcase(key: autosyncID, description: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization.", child:
-                FormBuilderTextField(
-                  name: "autosync",
-                  decoration:
-                      const InputDecoration(labelText: "AutoSync Interval"),
-                  initialValue: syncInterval,
-                  onChanged: onChangedSyncInterval,
-                  validator: FormBuilderValidators.integer(),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                )),
+                Row(
+                  children: [
+                    Expanded(child: Showcase(
+                        key: autosyncID,
+                        description:
+                            "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
+                        child: FormBuilderTextField(
+                          name: "autosync",
+                          decoration: const InputDecoration(
+                              labelText: "AutoSync Interval"),
+                          initialValue: syncInterval,
+                          onChanged: onChangedSyncInterval,
+                          validator: FormBuilderValidators.integer(),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                        ))),
+                        Showcase(
+                        key: cancelID,
+                        description:
+                            "This will cancel the current sync and disable AutoSync",
+                        child: IconButton(
+                          tooltip: "Cancel Sync",
+                          onPressed: onCancelSync, icon: Icon(Icons.cancel)))
+                  ],
+                ),
                 Gap(16),
-                SelectableText(AppStoreBase.instance.dbFilepath, style: t.bodySmall),
+                SelectableText(AppStoreBase.instance.dbFilepath,
+                    style: t.bodySmall),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  void onCancelSync() async {
+    final confirmed = await confirmDialog(context, title: "Cancel Sync",
+      message: "Do you want to cancel the current sync? AutoSync will be disabled too");
+    if (!confirmed) return;
+    formKey.currentState!.fields["autosync"]!.didChange("0");
+    await cancelSync();
   }
 
   void onChangedDatabaseName(String? value) async {

@@ -24,6 +24,8 @@ Stream<SyncProgress> synchronize(
 
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 
+Future<void> cancelSync() => RustLib.instance.api.crateApiSyncCancelSync();
+
 Future<void> rewindSync({required int height}) =>
     RustLib.instance.api.crateApiSyncRewindSync(height: height);
 

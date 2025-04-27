@@ -13,7 +13,7 @@ use bincode::config;
 use flutter_rust_bridge::frb;
 use sqlx::{sqlite::SqliteRow, Sqlite};
 use sqlx::{Row, SqlitePool};
-use tokio::sync::mpsc::{channel, Sender};
+use tokio::sync::{broadcast, mpsc::{channel, Sender}};
 use tonic::{Request, Streaming};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
@@ -208,6 +208,7 @@ pub async fn shielded_sync(
     end: u32,
     actions_per_sync: u32,
     tx_progress: Sender<SyncProgress>,
+    rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
     let accounts = accounts.to_vec();
     let db_writer_task = {
@@ -274,6 +275,7 @@ pub async fn shielded_sync(
                 &s,
                 &o,
                 tx_messages.clone(),
+                rx_cancel,
             )
             .await
         });
@@ -595,6 +597,8 @@ pub async fn transparent_sweep(
             }
         }
 
+        let (tx, _) = broadcast::channel::<()>(1);
+
         transparent_sync(
             network,
             connection,
@@ -603,6 +607,7 @@ pub async fn transparent_sweep(
             start_height,
             end_height,
             u32::MAX,
+            tx.subscribe(),
         )
         .await?;
     }
