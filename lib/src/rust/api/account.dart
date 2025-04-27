@@ -222,6 +222,7 @@ class Seed with _$Seed {
   const factory Seed({
     required String mnemonic,
     required String phrase,
+    required int aindex,
   }) = _Seed;
 }
 

@@ -2552,9 +2552,11 @@ impl SseDecode for crate::api::account::Seed {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_mnemonic = <String>::sse_decode(deserializer);
         let mut var_phrase = <String>::sse_decode(deserializer);
+        let mut var_aindex = <u32>::sse_decode(deserializer);
         return crate::api::account::Seed {
             mnemonic: var_mnemonic,
             phrase: var_phrase,
+            aindex: var_aindex,
         };
     }
 }
@@ -3084,6 +3086,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Seed {
         [
             self.mnemonic.into_into_dart().into_dart(),
             self.phrase.into_into_dart().into_dart(),
+            self.aindex.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3653,6 +3656,7 @@ impl SseEncode for crate::api::account::Seed {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.mnemonic, serializer);
         <String>::sse_encode(self.phrase, serializer);
+        <u32>::sse_encode(self.aindex, serializer);
     }
 }
 
