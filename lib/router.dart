@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
+import 'package:zkool/pages/disclaimer.dart';
 import 'package:zkool/pages/log.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
@@ -17,8 +18,8 @@ import 'package:zkool/widgets/scanner.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
-final router = GoRouter(
-  initialLocation: '/',
+GoRouter router(String initialLocation) => GoRouter(
+  initialLocation: initialLocation,
   observers: [routeObserver],
   navigatorKey: navigatorKey,
   routes: [
@@ -72,5 +73,6 @@ final router = GoRouter(
           return QRPage(text: args["text"], title: args["title"]);
         }),
     GoRoute(path: '/settings', builder: (context, state) => SettingsPage()),
+    GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
   ],
 );

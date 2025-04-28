@@ -21,6 +21,9 @@ Future<void> main() async {
 
   AppStoreBase.instance.init();
 
+  final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
+  final initialLocation = disclaimerAccepted ? "/" : "/disclaimer";
+
   runApp(ToastificationWrapper(
       child: ShowCaseWidget(
           globalTooltipActions: [
@@ -33,7 +36,7 @@ Future<void> main() async {
             backgroundColor: Colors.transparent),
       ],
           builder: (context) => MaterialApp.router(
-              routerConfig: router,
+              routerConfig: router(initialLocation),
               themeMode: ThemeMode.system,
               theme: ThemeData.light(),
               darkTheme: ThemeData.dark(),
