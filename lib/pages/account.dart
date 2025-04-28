@@ -33,8 +33,7 @@ final balID = GlobalKey();
 final txdID = GlobalKey();
 
 class AccountViewPage extends StatefulWidget {
-  final Account account;
-  const AccountViewPage(this.account, {super.key});
+  const AccountViewPage({super.key});
 
   @override
   State<AccountViewPage> createState() => AccountViewPageState();
@@ -47,8 +46,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   @override
   void initState() {
     super.initState();
-    setAccount(id: widget.account.id);
-    AppStoreBase.instance.accountName = widget.account.name;
     Future(refresh);
   }
 
@@ -81,7 +78,7 @@ class AccountViewPageState extends State<AccountViewPage> {
         length: 3,
         child: Scaffold(
             appBar: AppBar(
-              title: Text(widget.account.name),
+              title: Text(account.name),
               actions: [
                 Showcase(
                     key: logID,
@@ -142,7 +139,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                     Gap(8),
                     Observer(
                         builder: (context) => Text(
-                            AppStoreBase.instance.heights[widget.account.id]
+                            AppStoreBase.instance.heights[account.id]
                                 .toString(),
                             style: t.bodyLarge)),
                     Gap(16),
@@ -196,7 +193,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      await AppStoreBase.instance.startSynchronize([widget.account.id],
+      await AppStoreBase.instance.startSynchronize([account.id],
         int.parse(AppStoreBase.instance.actionsPerSync),
           onComplete: () {
         Future(refresh);
@@ -217,7 +214,7 @@ class AccountViewPageState extends State<AccountViewPage> {
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
     final h = await getDbHeight();
-    AppStoreBase.instance.heights[widget.account.id] = h;
+    AppStoreBase.instance.heights[account.id] = h;
   }
 
   void onReceive() async {
@@ -239,6 +236,8 @@ class AccountViewPageState extends State<AccountViewPage> {
       poolBalance = b;
     });
   }
+
+  Account get account => AppStoreBase.instance.selectedAccount!;
 }
 
 final nameID2 = GlobalKey();
@@ -259,12 +258,12 @@ class AccountEditPage extends StatefulWidget {
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
-  late List<Account> accounts = widget.accounts;
+  late List<Account> accounts = accounts;
   final formKey = GlobalKey<FormBuilderState>();
 
   @override
   void didUpdateWidget(covariant AccountEditPage oldWidget) {
-    accounts = widget.accounts;
+    accounts = accounts;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -585,6 +584,9 @@ void onOpenLog(BuildContext context) async {
 }
 
 class ViewingKeysPage extends StatefulWidget {
+  // the viewing keys page is opened from the edit account page
+  // and the account is passed as an argument
+  // because the selected account may be different
   final int account;
   const ViewingKeysPage(this.account, {super.key});
 
