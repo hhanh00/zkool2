@@ -26,10 +26,12 @@ final router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => AccountListPage(),
-    ),
-    GoRoute(
-      path: '/account',
-      builder: (context, state) => AccountViewPage(state.extra as Account),
+      routes: [
+        GoRoute(
+          path: 'account',
+          builder: (context, state) => AccountViewPage(),
+        ),
+      ]
     ),
     GoRoute(
       path: '/account/edit',
