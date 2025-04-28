@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.2](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.1...zkool-v1.16.2) (2025-04-28)
+
+
+### Bug Fixes
+
+* navigation stack after tx cancel/submit ([#171](https://github.com/hhanh00/zkool2/issues/171)) ([94963f4](https://github.com/hhanh00/zkool2/commit/94963f4061bbe64ed1589aa855c0e3c600efb79e))
+
 ## [1.16.1](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.0...zkool-v1.16.1) (2025-04-28)
 
 
