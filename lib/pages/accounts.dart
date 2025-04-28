@@ -108,6 +108,17 @@ class AccountListPage2State extends State<AccountListPage2> {
   double? price;
 
   @override
+  void initState() {
+    super.initState();
+    if (!AppStoreBase.instance.disclaimerAccepted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        logger.i("Disclaimer not accepted");
+        GoRouter.of(context).push("/disclaimer");
+      });
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant AccountListPage2 oldWidget) {
     super.didUpdateWidget(oldWidget);
     for (var account in widget.accounts) {
@@ -131,6 +142,7 @@ class AccountListPage2State extends State<AccountListPage2> {
       .toList();
 
   void tutorial() async {
+    if (!AppStoreBase.instance.disclaimerAccepted) return;
     tutorialHelper(context, "tutMain0",
         [newAccountId, settingsID, syncID, hideID, heightID]);
     if (accounts.isNotEmpty)

@@ -3,6 +3,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zkool/store.dart';
 
 class DisclaimerPage extends StatefulWidget {
   const DisclaimerPage({super.key});
@@ -85,7 +86,8 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
   void onContinue() async {
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("disclaimer_accepted", true);
+    AppStoreBase.instance.disclaimerAccepted = true;
     if (!mounted) return;
-    await GoRouter.of(context).replace("/");
+    GoRouter.of(context).pop();
   }
 }
