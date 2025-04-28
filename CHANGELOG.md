@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.16.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.15.0...zkool-v1.16.0) (2025-04-28)
+
+
+### Features
+
+* display version and build number ([#168](https://github.com/hhanh00/zkool2/issues/168)) ([be91c0e](https://github.com/hhanh00/zkool2/commit/be91c0e66b023dfbd01b78d8d9429a1d31e6f783))
+* splash screen & disclaimer page ([#166](https://github.com/hhanh00/zkool2/issues/166)) ([d5c07fb](https://github.com/hhanh00/zkool2/commit/d5c07fba9ccfe678154d3b30a14a0a6ad3375627))
+
 ## [1.15.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.14.0...zkool-v1.15.0) (2025-04-27)
 
 
