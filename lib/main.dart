@@ -19,7 +19,7 @@ Future<void> main() async {
   await RustLib.init();
   AppStoreBase.instance.dbName = dbName;
 
-  AppStoreBase.instance.init();
+  await AppStoreBase.instance.init();
 
   final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
   final initialLocation = disclaimerAccepted ? "/" : "/disclaimer";

@@ -139,6 +139,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                 Gap(16),
                 SelectableText(AppStoreBase.instance.dbFilepath,
                     style: t.bodySmall),
+                Gap(8),
+                if (AppStoreBase.instance.versionString != null) Text(AppStoreBase.instance.versionString!)
               ],
             ),
           ),
