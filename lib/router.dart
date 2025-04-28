@@ -18,8 +18,8 @@ import 'package:zkool/widgets/scanner.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
-GoRouter router(String initialLocation) => GoRouter(
-  initialLocation: initialLocation,
+final router = GoRouter(
+  initialLocation: '/',
   observers: [routeObserver],
   navigatorKey: navigatorKey,
   routes: [

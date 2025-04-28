@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -39,11 +40,15 @@ abstract class AppStoreBase with Store {
   String lwd = "https://zec.rocks";
   String syncInterval = "30"; // in blocks
   String actionsPerSync = "10000";
+  bool disclaimerAccepted = false;
   String? versionString;
 
   ObservableList<String> log = ObservableList.of([]);
 
   Future<void> init() async {
+    final prefs = SharedPreferencesAsync();
+    dbName = await prefs.getString("database") ?? appName;
+    disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? disclaimerAccepted;
     final packageInfo = await PackageInfo.fromPlatform();
     final version = packageInfo.version;
     final buildNumber = packageInfo.buildNumber;
@@ -53,7 +58,9 @@ abstract class AppStoreBase with Store {
     stream.listen((m) {
       logger.i(m);
       log.add(m.message);
-      if (m.span == "transaction_plan" || m.span == "sign_transaction" || m.span == "extract_transaction") {
+      if (m.span == "transaction_plan" ||
+          m.span == "sign_transaction" ||
+          m.span == "extract_transaction") {
         toastification.show(
             description: Text(m.message),
             margin: EdgeInsets.all(8),
@@ -157,7 +164,8 @@ abstract class AppStoreBase with Store {
     showSnackbar(message);
     retrySyncTimer?.cancel();
     retrySyncTimer = Timer(Duration(seconds: delay), () {
-      startSynchronize(accounts, int.parse(AppStoreBase.instance.actionsPerSync),
+      startSynchronize(
+          accounts, int.parse(AppStoreBase.instance.actionsPerSync),
           onComplete: () {
         retryCount = 0;
       });
@@ -198,7 +206,8 @@ abstract class AppStoreBase with Store {
       }
     }
     if (accountsToSync.isNotEmpty) {
-      await startSynchronize(accountsToSync, int.parse(AppStoreBase.instance.actionsPerSync));
+      await startSynchronize(
+          accountsToSync, int.parse(AppStoreBase.instance.actionsPerSync));
     }
   }
 

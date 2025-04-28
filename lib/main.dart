@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
@@ -14,15 +13,8 @@ const String appName = "zkool";
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final prefs = SharedPreferencesAsync();
-  final dbName = await prefs.getString("database") ?? appName;
   await RustLib.init();
-  AppStoreBase.instance.dbName = dbName;
-
   await AppStoreBase.instance.init();
-
-  final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
-  final initialLocation = disclaimerAccepted ? "/" : "/disclaimer";
 
   runApp(ToastificationWrapper(
       child: ShowCaseWidget(
@@ -36,7 +28,7 @@ Future<void> main() async {
             backgroundColor: Colors.transparent),
       ],
           builder: (context) => MaterialApp.router(
-              routerConfig: router(initialLocation),
+              routerConfig: router,
               themeMode: ThemeMode.system,
               theme: ThemeData.light(),
               darkTheme: ThemeData.dark(),
