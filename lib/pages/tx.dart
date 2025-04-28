@@ -152,7 +152,7 @@ class TxPageState extends State<TxPage> {
   }
 
   void onCancel() {
-    GoRouter.of(context).go("/");
+    GoRouter.of(context).go("/account");
   }
 
   void onUriQr() async {
