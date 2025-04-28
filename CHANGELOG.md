@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.1](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.0...zkool-v1.16.1) (2025-04-28)
+
+
+### Bug Fixes
+
+* disclaimer repeat showing ([#169](https://github.com/hhanh00/zkool2/issues/169)) ([7a843ef](https://github.com/hhanh00/zkool2/commit/7a843ef59c1da8199b55da4f76823ac97521943d))
+
 ## [1.16.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.15.0...zkool-v1.16.0) (2025-04-28)
 
 
