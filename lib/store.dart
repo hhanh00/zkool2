@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -38,10 +39,16 @@ abstract class AppStoreBase with Store {
   String lwd = "https://zec.rocks";
   String syncInterval = "30"; // in blocks
   String actionsPerSync = "10000";
+  String? versionString;
 
   ObservableList<String> log = ObservableList.of([]);
 
-  void init() {
+  Future<void> init() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final version = packageInfo.version;
+    final buildNumber = packageInfo.buildNumber;
+    versionString = "$version+$buildNumber";
+
     final stream = setLogStream();
     stream.listen((m) {
       logger.i(m);
