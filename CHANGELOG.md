@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.3](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.2...zkool-v1.16.3) (2025-05-01)
+
+
+### Bug Fixes
+
+* edit account ([#173](https://github.com/hhanh00/zkool2/issues/173)) ([f6b3013](https://github.com/hhanh00/zkool2/commit/f6b3013ec921b131b90e6f4edafca900c602494c))
+
 ## [1.16.2](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.1...zkool-v1.16.2) (2025-04-28)
 
 
