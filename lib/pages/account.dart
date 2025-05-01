@@ -258,7 +258,7 @@ class AccountEditPage extends StatefulWidget {
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
-  late List<Account> accounts = accounts;
+  late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>();
 
   @override
