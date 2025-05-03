@@ -35,9 +35,6 @@ android {
             def keystoreProperties = new Properties()
             keystoreProperties.load(new FileInputStream(rootProject.file("key.properties")))
 
-println "keyAlias: ${keystoreProperties['keyAlias']}"
-println "Using keystore: ${keystoreProperties['storeFile']}"
-
             storeFile file(keystoreProperties['storeFile'])
             storePassword keystoreProperties['storePassword']
             keyAlias keystoreProperties['keyAlias']
