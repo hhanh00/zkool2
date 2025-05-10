@@ -35,7 +35,7 @@ use zcash_primitives::{
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
-    consensus::{BlockHeight, Network},
+    consensus::{BlockHeight, Network, Parameters},
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
@@ -66,6 +66,17 @@ use crate::{
     Client,
 };
 
+pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
+    let zaddress = ZcashAddress::from_str(address)?;
+    let zaddress: zcash_keys::address::Address = zaddress.convert_if_network(network.network_type()).unwrap();
+
+    let is_tex = match zaddress {
+        zcash_keys::address::Address::Tex(_) => true,
+        _ => false,
+    };
+    Ok(is_tex)
+}
+
 pub async fn plan_transaction(
     network: &Network,
     connection: &SqlitePool,
@@ -79,6 +90,9 @@ pub async fn plan_transaction(
     span.in_scope(|| {
         info!("Computing plan");
     });
+
+    let has_tex = recipients.iter().any(|r| is_tex(network, &r.address).unwrap_or_default());
+    info!("has_tex: {has_tex}");
 
     // make a payment uri
     let payments = recipients.iter().map(|r| {
@@ -104,8 +118,11 @@ pub async fn plan_transaction(
             .fetch_one(connection)
             .await?;
 
-    let effective_src_pools =
-        crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?;
+    let effective_src_pools = if has_tex {
+        PoolMask::from_pool(0) // restrict to transparent pool
+    } else {
+        crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?
+    };
 
     let recipients = recipients.to_vec();
     let mut recipient_pools = PoolMask(0);
@@ -145,7 +162,7 @@ pub async fn plan_transaction(
     // group the inputs by pool
     for (group, items) in inputs.into_iter().chunk_by(|inp| inp.pool).into_iter() {
         // skip if the pool is not in the source pools
-        if src_pools & (1 << group) == 0 {
+        if effective_src_pools.0 & (1 << group) == 0 {
             continue;
         }
         input_pools[group as usize].extend(items);
@@ -761,15 +778,15 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
 }
 
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
-    if let Ok(addr) = TransparentAddress::decode(network, address) {
-        return Ok(addr);
-    }
-    if let Ok(addr) = UnifiedAddress::decode(network, address) {
-        let addr = addr.transparent().unwrap().clone();
-        return Ok(addr);
-    } else {
-        anyhow::bail!("Invalid transparent address: {address}");
-    }
+    let zaddress = ZcashAddress::from_str(address)?;
+    let zaddress: zcash_keys::address::Address = zaddress.convert_if_network(network.network_type())
+        .map_err(|_| anyhow::Error::msg("Conversion error"))?;
+    let taddr = match zaddress {
+        zcash_keys::address::Address::Transparent(addr) => addr,
+        zcash_keys::address::Address::Tex(addr) => TransparentAddress::PublicKeyHash(addr),
+        _ => anyhow::bail!("Invalid transparent address: {address}"),
+    };
+    Ok(taddr)
 }
 
 fn get_sapling_address(network: &Network, address: &str) -> Result<PaymentAddress> {
