@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.3...zkool-v1.17.0) (2025-05-10)
+
+
+### Features
+
+* support for tex addresses ([#176](https://github.com/hhanh00/zkool2/issues/176)) ([e885bbb](https://github.com/hhanh00/zkool2/commit/e885bbbb3496db20234a46ea85373fa50f8c85b8))
+
 ## [1.16.3](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.2...zkool-v1.16.3) (2025-05-01)
 
 
