@@ -25,6 +25,7 @@ sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migra
 tokio = {version = "1", features = ["rt", "rt-multi-thread", "macros"]}
 reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
 serde = "1.0"
+serde_json = "1.0"
 
 orchard = "0.11"
 rayon = "1.10"
@@ -37,8 +38,10 @@ zcash_proofs = {version = "0.22", features = ["bundled-prover"]}
 zcash_protocol = "0.5"
 zcash_transparent = {version = "0.2.3", features = ["transparent-inputs"]}
 zip321 = "0.3"
+reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}
 
-bincode = {version = "2.0"}
+bincode = {version = "2.0", features = ["serde"]}
+postcard = "1.1"
 bip32 = {version = "0.6.0-pre.1", default-features = false}
 blake2b_simd = "1.0"
 bs58 = "0.5"
