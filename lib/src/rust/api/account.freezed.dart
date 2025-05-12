@@ -951,6 +951,7 @@ mixin _$NewAccount {
   int get aindex => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
   bool get useInternal => throw _privateConstructorUsedError;
+  bool get internal => throw _privateConstructorUsedError;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -974,7 +975,8 @@ abstract class $NewAccountCopyWith<$Res> {
       Uint8List? fingerprint,
       int aindex,
       int? birth,
-      bool useInternal});
+      bool useInternal,
+      bool internal});
 }
 
 /// @nodoc
@@ -1001,6 +1003,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? aindex = null,
     Object? birth = freezed,
     Object? useInternal = null,
+    Object? internal = null,
   }) {
     return _then(_value.copyWith(
       icon: freezed == icon
@@ -1039,6 +1042,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.useInternal
           : useInternal // ignore: cast_nullable_to_non_nullable
               as bool,
+      internal: null == internal
+          ? _value.internal
+          : internal // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -1060,7 +1067,8 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       Uint8List? fingerprint,
       int aindex,
       int? birth,
-      bool useInternal});
+      bool useInternal,
+      bool internal});
 }
 
 /// @nodoc
@@ -1085,6 +1093,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? aindex = null,
     Object? birth = freezed,
     Object? useInternal = null,
+    Object? internal = null,
   }) {
     return _then(_$NewAccountImpl(
       icon: freezed == icon
@@ -1123,6 +1132,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.useInternal
           : useInternal // ignore: cast_nullable_to_non_nullable
               as bool,
+      internal: null == internal
+          ? _value.internal
+          : internal // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -1139,7 +1152,8 @@ class _$NewAccountImpl implements _NewAccount {
       this.fingerprint,
       required this.aindex,
       this.birth,
-      required this.useInternal});
+      required this.useInternal,
+      required this.internal});
 
   @override
   final Uint8List? icon;
@@ -1159,10 +1173,12 @@ class _$NewAccountImpl implements _NewAccount {
   final int? birth;
   @override
   final bool useInternal;
+  @override
+  final bool internal;
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, useInternal: $useInternal)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, useInternal: $useInternal, internal: $internal)';
   }
 
   @override
@@ -1181,7 +1197,9 @@ class _$NewAccountImpl implements _NewAccount {
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.useInternal, useInternal) ||
-                other.useInternal == useInternal));
+                other.useInternal == useInternal) &&
+            (identical(other.internal, internal) ||
+                other.internal == internal));
   }
 
   @override
@@ -1195,7 +1213,8 @@ class _$NewAccountImpl implements _NewAccount {
       const DeepCollectionEquality().hash(fingerprint),
       aindex,
       birth,
-      useInternal);
+      useInternal,
+      internal);
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -1216,7 +1235,8 @@ abstract class _NewAccount implements NewAccount {
       final Uint8List? fingerprint,
       required final int aindex,
       final int? birth,
-      required final bool useInternal}) = _$NewAccountImpl;
+      required final bool useInternal,
+      required final bool internal}) = _$NewAccountImpl;
 
   @override
   Uint8List? get icon;
@@ -1236,6 +1256,8 @@ abstract class _NewAccount implements NewAccount {
   int? get birth;
   @override
   bool get useInternal;
+  @override
+  bool get internal;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.

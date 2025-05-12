@@ -72,7 +72,10 @@ class NewAccountPageState extends State<NewAccountPage> {
     return Scaffold(
         appBar: AppBar(
           title: const Text("New Account"),
+
           actions: [
+            IconButton(
+              onPressed: onFrost, icon: Icon(Icons.ac_unit)),
             Showcase(
                 key: importID,
                 description: "Import an account from file",
@@ -204,6 +207,8 @@ class NewAccountPageState extends State<NewAccountPage> {
             )));
   }
 
+  void onFrost() => GoRouter.of(context).pushReplacement("/dkg");
+
   void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
       // Handle the save logic here
@@ -218,7 +223,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
       final icon = iconBytes;
 
-      final key2 = await newAccount(
+      final account = await newAccount(
           na: NewAccount(
         icon: icon,
         name: name ?? "",
@@ -231,9 +236,11 @@ class NewAccountPageState extends State<NewAccountPage> {
             : AppStoreBase.instance.currentHeight,
         fingerprint: fingerprint != null ? Uint8List.fromList(hex.decode(fingerprint)) : null,
         useInternal: useInternal ?? false,
+        internal: false,
       ));
+      final seed = await getAccountSeed(account: account);
       if (mounted && key.isEmpty) {
-        await showSeed(context, key2);
+        await showSeed(context, seed!.mnemonic);
       }
       await AppStoreBase.instance.loadAccounts();
       if (mounted) GoRouter.of(context).pop();
