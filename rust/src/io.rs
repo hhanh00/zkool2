@@ -11,7 +11,7 @@ use tracing::info;
 pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
     let mut io_account = sqlx::query(
-        "SELECT id_account, name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled
+        "SELECT id_account, name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled, internal
         FROM accounts WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
@@ -30,6 +30,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
             let hidden: bool = row.get(12);
             let saved: bool = row.get(13);
             let enabled: bool = row.get(14);
+            let internal: bool = row.get(15);
 
             IOAccount {
                 id_account,
@@ -47,6 +48,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
                 hidden,
                 saved,
                 enabled,
+                internal,
                 ..Default::default()
             }
             // Process the data as needed
@@ -308,8 +310,8 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
 
     // Insert the account into the database
     let r = sqlx::query("INSERT INTO accounts
-        (name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)")
+        (name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled, internal)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)")
         .bind(&io_account.name)
         .bind(&io_account.seed)
         .bind(&io_account.passphrase)
@@ -323,6 +325,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .bind(io_account.hidden)
         .bind(io_account.saved)
         .bind(io_account.enabled)
+        .bind(io_account.internal)
         .execute(connection)
         .await?;
     let new_id_account = r.last_insert_rowid() as u32;
@@ -528,6 +531,7 @@ pub struct IOAccount {
     pub hidden: bool,
     pub saved: bool,
     pub enabled: bool,
+    pub internal: bool,
     pub tkeys: Option<IOKeys>,
     pub skeys: Option<IOKeys>,
     pub okeys: Option<IOKeys>,
