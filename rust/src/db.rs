@@ -207,6 +207,7 @@ pub async fn store_account_metadata(
     fingerprint: &Option<Vec<u8>>,
     birth: u32,
     use_internal: bool,
+    internal: bool,
 ) -> Result<u32> {
     let (last_position,): (u32,) = sqlx::query_as("SELECT MAX(position) FROM accounts")
         .fetch_optional(connection)
@@ -215,8 +216,8 @@ pub async fn store_account_metadata(
 
     let (id,): (u32,) = sqlx::query_as(
         "INSERT INTO accounts(name, icon, seed_fingerprint, birth,
-        aindex, dindex, def_dindex, position, use_internal, saved, hidden)
-        VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?, FALSE, FALSE)
+        aindex, dindex, def_dindex, position, use_internal, saved, hidden, internal)
+        VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?, FALSE, FALSE, ?)
         ON CONFLICT(id_account) DO UPDATE SET
             name = excluded.name
         RETURNING id_account",
@@ -227,6 +228,7 @@ pub async fn store_account_metadata(
     .bind(birth)
     .bind(last_position + 1)
     .bind(use_internal)
+    .bind(internal)
     .fetch_one(connection)
     .await?;
 

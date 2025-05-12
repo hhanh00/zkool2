@@ -12,6 +12,7 @@ pub mod memo;
 pub mod warp;
 pub mod pay;
 pub mod io;
+pub mod frost;
 pub mod api;
 mod frb_generated;
 
