@@ -2662,6 +2662,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_hidden = <bool>::sse_decode(deserializer);
         let mut var_saved = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
+        let mut var_internal = <bool>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_balance = <u64>::sse_decode(deserializer);
         return crate::api::account::Account {
@@ -2676,6 +2677,7 @@ impl SseDecode for crate::api::account::Account {
             hidden: var_hidden,
             saved: var_saved,
             enabled: var_enabled,
+            internal: var_internal,
             height: var_height,
             balance: var_balance,
         };
@@ -3546,6 +3548,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.hidden.into_into_dart().into_dart(),
             self.saved.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
+            self.internal.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
             self.balance.into_into_dart().into_dart(),
         ]
@@ -4035,6 +4038,7 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.hidden, serializer);
         <bool>::sse_encode(self.saved, serializer);
         <bool>::sse_encode(self.enabled, serializer);
+        <bool>::sse_encode(self.internal, serializer);
         <u32>::sse_encode(self.height, serializer);
         <u64>::sse_encode(self.balance, serializer);
     }

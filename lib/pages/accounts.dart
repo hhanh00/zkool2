@@ -138,7 +138,7 @@ class AccountListPage2State extends State<AccountListPage2> {
   }
 
   List<Account> get accounts => AppStoreBase.instance.accounts
-      .where((a) => includeHidden || !a.hidden)
+      .where((a) => !a.internal && (includeHidden || !a.hidden))
       .toList();
 
   void tutorial() async {
@@ -265,11 +265,16 @@ class AccountListPage2State extends State<AccountListPage2> {
       final listState = listKey.currentState!;
       List<int> accountIds = [];
       final hasSelection = listState.selected.any((s) => s);
-      for (var i = 0; i < accounts.length; i++) {
+      if (hasSelection) {
         // if any selection, use the selection, otherwise use the enabled flag
-        if ((hasSelection && listState.selected[i]) ||
-            (!hasSelection && accounts[i].enabled))
-          accountIds.add(accounts[i].id);
+        for (var i = 0; i < listState.selected.length; i++) {
+          if (listState.selected[i]) accountIds.add(accounts[i].id);
+        }
+      } else {
+        // no selection, use the enabled flag
+        for (var a in AppStoreBase.instance.accounts) {
+          if (a.enabled) accountIds.add(a.id);
+        }
       }
       await AppStoreBase.instance.startSynchronize(
           accountIds, int.parse(AppStoreBase.instance.actionsPerSync));
