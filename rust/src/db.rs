@@ -36,7 +36,8 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         use_internal BOOL NOT NULL,
         hidden BOOL NOT NULL,
         saved BOOL NOT NULL,
-        enabled BOOL NOT NULL DEFAULT TRUE
+        enabled BOOL NOT NULL DEFAULT TRUE,
+        internal BOOL NOT NULL DEFAULT FALSE
         )",
     )
     .execute(connection)
@@ -563,6 +564,7 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN unspent ON a.id_account = unspent.account
+        WHERE a.internal = FALSE
         GROUP BY id_account
         ORDER by a.position",
     )
