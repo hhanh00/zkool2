@@ -246,7 +246,7 @@ pub fn set_account(id: u32) -> Result<()> {
 }
 
 #[frb]
-pub async fn new_account(na: &NewAccount) -> Result<String> {
+pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let c = get_coin!();
     let pool = c.get_pool();
     let network = c.network;
@@ -257,7 +257,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
 
     let birth = na.birth.unwrap_or(min_height);
 
-    let account = store_account_metadata(pool, &na.name, &na.icon, &na.fingerprint, birth, na.use_internal).await?;
+    let account = store_account_metadata(pool, &na.name, &na.icon, &na.fingerprint, birth, na.use_internal, na.internal).await?;
     setup!(account);
 
     let mut key = na.key.clone();
@@ -409,7 +409,7 @@ pub async fn new_account(na: &NewAccount) -> Result<String> {
         update_dindex(pool, account, dindex, true).await?;
     }
 
-    Ok(key)
+    Ok(account)
 }
 
 #[frb]
@@ -475,6 +475,7 @@ pub struct NewAccount {
     pub aindex: u32,
     pub birth: Option<u32>,
     pub use_internal: bool,
+    pub internal: bool,
 }
 
 #[frb(dart_metadata = ("freezed"))]
