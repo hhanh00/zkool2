@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/pages/disclaimer.dart';
+import 'package:zkool/pages/frost.dart';
 import 'package:zkool/pages/log.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
@@ -11,6 +12,7 @@ import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -74,6 +76,11 @@ final router = GoRouter(
           final args = state.extra as Map<String, dynamic>;
           return QRPage(text: args["text"], title: args["title"]);
         }),
+    GoRoute(path: '/dkg', builder: (context, state) => DKGPage1(),
+        routes: [
+          GoRoute(path: 'step2', builder: (context, state) => DKGPage2(state.extra as FrostPackage)),
+          GoRoute(path: 'step3', builder: (context, state) => DKGPage3()),
+        ]),
     GoRoute(path: '/settings', builder: (context, state) => SettingsPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
   ],
