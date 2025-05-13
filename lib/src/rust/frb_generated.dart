@@ -2225,8 +2225,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -2239,8 +2239,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       hidden: dco_decode_bool(arr[8]),
       saved: dco_decode_bool(arr[9]),
       enabled: dco_decode_bool(arr[10]),
-      height: dco_decode_u_32(arr[11]),
-      balance: dco_decode_u_64(arr[12]),
+      internal: dco_decode_bool(arr[11]),
+      height: dco_decode_u_32(arr[12]),
+      balance: dco_decode_u_64(arr[13]),
     );
   }
 
@@ -2897,6 +2898,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_hidden = sse_decode_bool(deserializer);
     var var_saved = sse_decode_bool(deserializer);
     var var_enabled = sse_decode_bool(deserializer);
+    var var_internal = sse_decode_bool(deserializer);
     var var_height = sse_decode_u_32(deserializer);
     var var_balance = sse_decode_u_64(deserializer);
     return Account(
@@ -2911,6 +2913,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         hidden: var_hidden,
         saved: var_saved,
         enabled: var_enabled,
+        internal: var_internal,
         height: var_height,
         balance: var_balance);
   }
@@ -3698,6 +3701,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.hidden, serializer);
     sse_encode_bool(self.saved, serializer);
     sse_encode_bool(self.enabled, serializer);
+    sse_encode_bool(self.internal, serializer);
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_64(self.balance, serializer);
   }

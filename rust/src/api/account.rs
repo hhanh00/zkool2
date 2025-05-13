@@ -449,6 +449,7 @@ pub struct Account {
     pub hidden: bool,
     pub saved: bool,
     pub enabled: bool,
+    pub internal: bool,
     pub height: u32,
     pub balance: u64,
 }

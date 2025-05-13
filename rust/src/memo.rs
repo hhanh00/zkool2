@@ -189,6 +189,7 @@ async fn process_memo(
     cmx: &[u8],
     memo_bytes: &[u8],
 ) -> Result<()> {
+    info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
     if let Ok(memo) = Memo::from_bytes(&memo_bytes) {
         let id_note =
             sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
