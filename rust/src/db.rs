@@ -561,12 +561,11 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
                 LEFT JOIN spends b ON a.id_note = b.id_note
                 WHERE b.id_note IS NULL)
         SELECT id_account, name, seed, aindex,
-        icon, birth, a.position, hidden, saved, enabled,
+        icon, birth, a.position, hidden, saved, enabled, internal,
         sh.height, COALESCE(SUM(unspent.value), 0) AS balance
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN unspent ON a.id_account = unspent.account
-        WHERE a.internal = FALSE
         GROUP BY id_account
         ORDER by a.position",
     )
@@ -582,8 +581,9 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
         hidden: row.get(7),
         saved: row.get(8),
         enabled: row.get(9),
-        height: row.get(10),
-        balance: row.get::<i64, _>(11) as u64,
+        internal: row.get(10),
+        height: row.get(11),
+        balance: row.get::<i64, _>(12) as u64,
     })
     .fetch(connection);
 

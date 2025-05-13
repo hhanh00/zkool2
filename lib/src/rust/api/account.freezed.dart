@@ -27,6 +27,7 @@ mixin _$Account {
   bool get hidden => throw _privateConstructorUsedError;
   bool get saved => throw _privateConstructorUsedError;
   bool get enabled => throw _privateConstructorUsedError;
+  bool get internal => throw _privateConstructorUsedError;
   int get height => throw _privateConstructorUsedError;
   BigInt get balance => throw _privateConstructorUsedError;
 
@@ -53,6 +54,7 @@ abstract class $AccountCopyWith<$Res> {
       bool hidden,
       bool saved,
       bool enabled,
+      bool internal,
       int height,
       BigInt balance});
 }
@@ -83,6 +85,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? hidden = null,
     Object? saved = null,
     Object? enabled = null,
+    Object? internal = null,
     Object? height = null,
     Object? balance = null,
   }) {
@@ -131,6 +134,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
               as bool,
+      internal: null == internal
+          ? _value.internal
+          : internal // ignore: cast_nullable_to_non_nullable
+              as bool,
       height: null == height
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
@@ -162,6 +169,7 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       bool hidden,
       bool saved,
       bool enabled,
+      bool internal,
       int height,
       BigInt balance});
 }
@@ -190,6 +198,7 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? hidden = null,
     Object? saved = null,
     Object? enabled = null,
+    Object? internal = null,
     Object? height = null,
     Object? balance = null,
   }) {
@@ -238,6 +247,10 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
               as bool,
+      internal: null == internal
+          ? _value.internal
+          : internal // ignore: cast_nullable_to_non_nullable
+              as bool,
       height: null == height
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
@@ -265,6 +278,7 @@ class _$AccountImpl implements _Account {
       required this.hidden,
       required this.saved,
       required this.enabled,
+      required this.internal,
       required this.height,
       required this.balance});
 
@@ -291,13 +305,15 @@ class _$AccountImpl implements _Account {
   @override
   final bool enabled;
   @override
+  final bool internal;
+  @override
   final int height;
   @override
   final BigInt balance;
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, height: $height, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, height: $height, balance: $balance)';
   }
 
   @override
@@ -317,6 +333,8 @@ class _$AccountImpl implements _Account {
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
             (identical(other.saved, saved) || other.saved == saved) &&
             (identical(other.enabled, enabled) || other.enabled == enabled) &&
+            (identical(other.internal, internal) ||
+                other.internal == internal) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.balance, balance) || other.balance == balance));
   }
@@ -335,6 +353,7 @@ class _$AccountImpl implements _Account {
       hidden,
       saved,
       enabled,
+      internal,
       height,
       balance);
 
@@ -360,6 +379,7 @@ abstract class _Account implements Account {
       required final bool hidden,
       required final bool saved,
       required final bool enabled,
+      required final bool internal,
       required final int height,
       required final BigInt balance}) = _$AccountImpl;
 
@@ -385,6 +405,8 @@ abstract class _Account implements Account {
   bool get saved;
   @override
   bool get enabled;
+  @override
+  bool get internal;
   @override
   int get height;
   @override
