@@ -3,6 +3,7 @@ import 'package:logger/logger.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
+import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 
@@ -15,6 +16,7 @@ Future<void> main() async {
 
   await RustLib.init();
   await AppStoreBase.instance.init();
+  testFrost();
 
   runApp(ToastificationWrapper(
       child: ShowCaseWidget(

@@ -59,77 +59,81 @@ class DKGPage1State extends State<DKGPage1> {
 
   @override
   Widget build(BuildContext context) {
-    return buildDKGPage(context, index: 0, child: FormBuilder(
-        key: formKey,
-        child: Column(
-          children: [
-            FormBuilderTextField(
-              name: "name",
-              decoration: const InputDecoration(labelText: "Name"),
-              validator: FormBuilderValidators.required(),
-            ),
-            FormBuilderDropdown(
-              name: "participants",
-              decoration:
-                  const InputDecoration(labelText: "Number of Participants"),
-              initialValue: 2,
-              items: List.generate(
-                4,
-                (i) => DropdownMenuItem(
-                  value: i + 2,
-                  child: Text("${i + 2}"),
+    return buildDKGPage(context,
+        index: 0,
+        child: FormBuilder(
+            key: formKey,
+            child: Column(
+              children: [
+                FormBuilderTextField(
+                  name: "name",
+                  decoration: const InputDecoration(labelText: "Name"),
+                  validator: FormBuilderValidators.required(),
                 ),
-              ),
-            ),
-            FormBuilderDropdown(
-              name: "id",
-              decoration:
-                  const InputDecoration(labelText: "Your Participant ID"),
-              initialValue: 1,
-              items: List.generate(
-                5,
-                (i) => DropdownMenuItem(
-                  value: i + 1,
-                  child: Text("${i + 1}"),
-                ),
-              ),
-            ),
-            FormBuilderDropdown(
-                name: "threshold",
-                decoration: const InputDecoration(
-                    labelText: "Number of Signers Required (Threshold)"),
-                initialValue: 2,
-                items: List.generate(
-                  4,
-                  (i) => DropdownMenuItem(
-                    value: i + 2,
-                    child: Text("${i + 2}"),
+                FormBuilderDropdown(
+                  name: "participants",
+                  decoration: const InputDecoration(
+                      labelText: "Number of Participants"),
+                  initialValue: 2,
+                  items: List.generate(
+                    4,
+                    (i) => DropdownMenuItem(
+                      value: i + 2,
+                      child: Text("${i + 2}"),
+                    ),
                   ),
                 ),
-                validator: (v) {
-                  final n = formKey.currentState?.fields["participants"]!.value
-                      as int;
-                  if (v! > n) return "Threshold must be less than participants";
-                  return null;
-                }),
-            FormBuilderDropdown(
-              name: "account",
-              decoration: const InputDecoration(labelText: "Funding Account"),
-              items: accounts
-                  .map((a) => DropdownMenuItem(
-                        value: a.id,
-                        child: Text(a.name),
-                      ))
-                  .toList(),
-              validator: FormBuilderValidators.required(),
-            ),
-            Gap(16),
-            ElevatedButton.icon(
-                onPressed: () => onNext(context),
-                label: Text("Next"),
-                icon: Icon(Icons.arrow_forward))
-          ],
-        )));
+                FormBuilderDropdown(
+                  name: "id",
+                  decoration:
+                      const InputDecoration(labelText: "Your Participant ID"),
+                  initialValue: 1,
+                  items: List.generate(
+                    5,
+                    (i) => DropdownMenuItem(
+                      value: i + 1,
+                      child: Text("${i + 1}"),
+                    ),
+                  ),
+                ),
+                FormBuilderDropdown(
+                    name: "threshold",
+                    decoration: const InputDecoration(
+                        labelText: "Number of Signers Required (Threshold)"),
+                    initialValue: 2,
+                    items: List.generate(
+                      4,
+                      (i) => DropdownMenuItem(
+                        value: i + 2,
+                        child: Text("${i + 2}"),
+                      ),
+                    ),
+                    validator: (v) {
+                      final n = formKey
+                          .currentState?.fields["participants"]!.value as int;
+                      if (v! > n)
+                        return "Threshold must be less than participants";
+                      return null;
+                    }),
+                FormBuilderDropdown(
+                  name: "account",
+                  decoration:
+                      const InputDecoration(labelText: "Funding Account"),
+                  items: accounts
+                      .map((a) => DropdownMenuItem(
+                            value: a.id,
+                            child: Text(a.name),
+                          ))
+                      .toList(),
+                  validator: FormBuilderValidators.required(),
+                ),
+                Gap(16),
+                ElevatedButton.icon(
+                    onPressed: () => onNext(context),
+                    label: Text("Next"),
+                    icon: Icon(Icons.arrow_forward))
+              ],
+            )));
   }
 
   onNext(BuildContext context) async {
@@ -169,29 +173,32 @@ class DKGPage2State extends State<DKGPage2> {
   Widget build(BuildContext context) {
     logger.i("DKGPage2: $package");
 
-    return buildDKGPage(context, index: 1, child: FormBuilder(
-      key: formKey,
-      child: Column(
-      children: [...package.addresses.asMap().entries.map((kv) {
-        final i = kv.key;
-        final address = kv.value;
+    return buildDKGPage(context,
+        index: 1,
+        child: FormBuilder(
+            key: formKey,
+            child: Column(children: [
+              ...package.addresses.asMap().entries.map((kv) {
+                final i = kv.key;
+                final address = kv.value;
 
-        return FormBuilderTextField(name: "$i",
-            decoration: InputDecoration(labelText: "Address for Participant #${i + 1}"),
-            initialValue: address,
-            readOnly: i == package.id - 1,
-            validator: FormBuilderValidators.compose([
-              FormBuilderValidators.required(),
-              validAddress,
-            ]));
-      }),
-      Gap(16),
-      ElevatedButton.icon(
-          onPressed: () => onNext(context),
-          label: Text("Next"),
-          icon: Icon(Icons.arrow_forward))
-      ]
-    )));
+                return FormBuilderTextField(
+                    name: "$i",
+                    decoration: InputDecoration(
+                        labelText: "Address for Participant #${i + 1}"),
+                    initialValue: address,
+                    readOnly: i == package.id - 1,
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(),
+                      validAddress,
+                    ]));
+              }),
+              Gap(16),
+              ElevatedButton.icon(
+                  onPressed: () => onNext(context),
+                  label: Text("Next"),
+                  icon: Icon(Icons.arrow_forward))
+            ])));
   }
 
   onNext(BuildContext context) async {
@@ -218,6 +225,7 @@ class DKGPage3 extends StatefulWidget {
 
 class DKGPage3State extends State<DKGPage3> {
   FrostPackage? package;
+  String? sharedUA;
 
   @override
   void initState() {
@@ -229,14 +237,17 @@ class DKGPage3State extends State<DKGPage3> {
         logger.e("DKG state is incomplete");
         return;
       }
-      await state.run();
-      setState(() => this.package = package);
+      final sharedUA = await state.run();
+      setState(() {
+        this.package = package;
+        this.sharedUA = sharedUA;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return buildDKGPage(context, index: 2, child: SizedBox.shrink());
+    return buildDKGPage(context, index: 2, child: SelectableText("Your shared UA: $sharedUA"));
   }
 }
 

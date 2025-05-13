@@ -1,33 +1,62 @@
-use anyhow::Result;
+use std::collections::BTreeMap;
+
+use anyhow::{Context, Result};
+use bincode::config;
 use bip39::Mnemonic;
+use futures::StreamExt as _;
+use group::ff::PrimeField as _;
+use orchard::keys::{FullViewingKey, Scope};
+use rand_core::{CryptoRng, RngCore, SeedableRng};
+use reddsa::frost::redpallas::{
+    frost::{
+        keys::dkg::{self, part1, part2, round1, round2},
+        Identifier,
+    },
+    keys::{dkg::part3, EvenY},
+    PallasBlake2b512,
+};
+use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use tonic::Request;
 use tracing::info;
+use zcash_keys::address::UnifiedAddress;
+use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
-    account::get_birth_height,
+    account::{get_birth_height, get_orchard_vk},
     api::{
         account::{new_account, NewAccount},
-        frost::DKGState,
+        frost::{DKGPackage, DKGState},
     },
-    get_coin,
+    lwd::ChainSpec,
+    pay::{
+        plan::{extract_transaction, plan_transaction, sign_transaction},
+        pool::ALL_POOLS,
+        Recipient,
+    },
+    Client,
 };
 
+pub type PK1Map = BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>;
+pub type PK2Map = BTreeMap<Identifier<PallasBlake2b512>, round2::Package<PallasBlake2b512>>;
+
 impl DKGState {
-    pub fn seed(&self) -> Mnemonic {
+    pub fn seed(&self) -> Option<Mnemonic> {
         let mut state = blake2b_simd::Params::new()
             .hash_length(32)
             .personal(b"Zcash__FROST_DKG")
             .to_state();
         for a in self.package.addresses.iter() {
+            if a.is_empty() {
+                return None;
+            }
             state.update(a.as_bytes());
         }
         let hash = state.finalize();
-        Mnemonic::from_entropy(hash.as_ref()).expect("Failed to create mnemonic from hash")
+        let m = Mnemonic::from_entropy(hash.as_ref()).expect("Failed to create mnemonic from hash");
+        Some(m)
     }
 
-    pub async fn create_broadcast_account(&mut self, seed: &str) -> Result<u32> {
-        let c = get_coin!();
-        let connection = c.get_pool();
-
+    pub async fn get_broadcast_account(&self, connection: &SqlitePool, seed: &str) -> Result<u32> {
         let r: Option<(u32,)> = sqlx::query_as("SELECT id_account FROM accounts WHERE seed = ?1")
             .bind(seed)
             .fetch_optional(connection)
@@ -51,8 +80,446 @@ impl DKGState {
             internal: true,
         };
         let broadcast_account = new_account(&na).await?;
-        self.broadcast_account = broadcast_account;
 
         Ok(broadcast_account)
     }
+
+    pub async fn get_broadcast_address(
+        &self,
+        network: &Network,
+        connection: &SqlitePool,
+        broadcast_account: u32,
+    ) -> Result<String> {
+        let fvk = get_orchard_vk(connection, broadcast_account)
+            .await?
+            .unwrap();
+        let address = fvk.address_at(0u64, Scope::External);
+        let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+        let broadcast_address = ua.encode(network);
+        Ok(broadcast_address)
+    }
+
+    pub async fn get_sk1(
+        &self,
+        connection: &SqlitePool,
+    ) -> Result<Option<round1::SecretPackage<PallasBlake2b512>>> {
+        let sk1 = sqlx::query("SELECT value FROM props WHERE key = 'frost-sk1'")
+            .map(|row: SqliteRow| {
+                let sk1b: Vec<u8> = row.get(0);
+                let (sk1, _) = bincode::serde::decode_from_slice::<
+                    round1::SecretPackage<PallasBlake2b512>,
+                    _,
+                >(&sk1b, config::standard())
+                .expect("Failed to decode SecretPackage");
+                sk1
+            })
+            .fetch_optional(connection)
+            .await?;
+        info!("sk1: {:?}", sk1);
+        Ok(sk1)
+    }
+
+    pub async fn get_pk1(
+        &self,
+        connection: &SqlitePool,
+        broadcast_account: u32,
+    ) -> Result<Option<PK1Map>> {
+        let mut pkg1map: PK1Map = BTreeMap::new();
+        let mut pk1s = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
+            .bind(broadcast_account)
+            .map(|row: SqliteRow| {
+                let memo_bytes: Vec<u8> = row.get(0);
+                info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
+                let memo = Memo::from_bytes(&memo_bytes);
+                if let Ok(memo) = memo {
+                    match memo {
+                        Memo::Arbitrary(pk1b) => {
+                            if let Ok((pk1, _)) =
+                                bincode::serde::decode_from_slice::<DKGPackage, _>(
+                                    &pk1b[..],
+                                    config::standard(),
+                                )
+                                .context("Failed to decode DKGPackage")
+                            {
+                                return Some(pk1);
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+                None
+            })
+            .fetch(connection);
+        while let Some(pk1) = pk1s.next().await {
+            if let Some(pk1) = pk1? {
+                let id = pk1.from_id;
+                if id == self.package.id as u16 {
+                    continue;
+                }
+                let pkg = round1::Package::deserialize(&pk1.payload)
+                    .context("Failed to decode round1::Package")?;
+                pkg1map.insert(id.try_into().unwrap(), pkg);
+            }
+        }
+
+        if pkg1map.len() + 1 == self.package.n as usize {
+            info!("All pk1 received");
+            Ok(Some(pkg1map))
+        } else {
+            info!("Waiting for pk1s: {}/{}", pkg1map.len(), self.package.n - 1);
+            Ok(None)
+        }
+    }
+
+    pub async fn get_pk2(
+        &self,
+        connection: &SqlitePool,
+        mailbox_account: u32,
+    ) -> Result<Option<PK2Map>> {
+        let mut pkg2map: PK2Map = BTreeMap::new();
+        let mut pk2s = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
+            .bind(mailbox_account)
+            .map(|row: SqliteRow| {
+                let memo_bytes: Vec<u8> = row.get(0);
+                info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
+                let memo = Memo::from_bytes(&memo_bytes);
+                if let Ok(memo) = memo {
+                    match memo {
+                        Memo::Arbitrary(pk2b) => {
+                            if let Ok((pk2, _)) =
+                                bincode::serde::decode_from_slice::<DKGPackage, _>(
+                                    &pk2b[..],
+                                    config::standard(),
+                                )
+                                .context("Failed to decode DKGPackage")
+                            {
+                                return Some(pk2);
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+                None
+            })
+            .fetch(connection);
+        while let Some(pk2) = pk2s.next().await {
+            if let Some(pk2) = pk2? {
+                let id = pk2.from_id;
+                if id == self.package.id as u16 {
+                    continue;
+                }
+                info!("pk2 id: {} -> {}", id, hex::encode(&pk2.payload[0..32]));
+                let pkg = round2::Package::deserialize(&pk2.payload)
+                    .context("Failed to decode round2::Package")?;
+                pkg2map.insert(id.try_into().unwrap(), pkg);
+            }
+        }
+
+        if pkg2map.len() + 1 == self.package.n as usize {
+            info!("All pk2 received");
+            Ok(Some(pkg2map))
+        } else {
+            info!("Waiting for pk2s: {}/{}", pkg2map.len(), self.package.n - 1);
+            Ok(None)
+        }
+    }
+
+    pub async fn run_phase1<R: RngCore + CryptoRng>(
+        &self,
+        network: &Network,
+        connection: &SqlitePool,
+        client: &mut Client,
+        broadcast_address: &str,
+        rng: R,
+    ) -> Result<()> {
+        let id = self.package.id as u16;
+        let (sk1, pk1) = dkg::part1::<PallasBlake2b512, R>(
+            id.try_into().unwrap(),
+            self.package.n as u16,
+            self.package.t as u16,
+            rng,
+        )?;
+        let pk1 = DKGPackage {
+            from_id: id,
+            payload: pk1.serialize()?,
+        };
+
+        let sk1b = bincode::serde::encode_to_vec(&sk1, config::standard())?;
+        let pk1 = bincode::serde::encode_to_vec(&pk1, config::standard())?;
+        let height = client
+            .get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner()
+            .height;
+        let pczt = plan_transaction(
+            network,
+            connection,
+            client,
+            self.package.funding_account,
+            ALL_POOLS,
+            std::slice::from_ref(&Recipient {
+                address: broadcast_address.to_string(),
+                amount: 0,
+                pools: None,
+                user_memo: None,
+                memo_bytes: Some(to_arb_memo(&pk1)),
+            }),
+            false,
+        )
+        .await?;
+        let pczt = sign_transaction(connection, self.package.funding_account, &pczt).await?;
+        let txb = extract_transaction(&pczt).await?;
+        let txid = crate::pay::send(client, height as u32, &txb).await?;
+        info!("Broadcasted transaction: {txid}");
+
+        sqlx::query(
+            r#"INSERT INTO props(key, value) VALUES ('frost-sk1', $1) ON CONFLICT(key) DO NOTHING"#,
+        )
+        .bind(&sk1b)
+        .execute(connection)
+        .await?;
+
+        sqlx::query(r#"INSERT INTO props(key, value) VALUES ($1, $2) ON CONFLICT(key) DO NOTHING"#)
+            .bind(format!("frost-pk1-{id}"))
+            .bind(&pk1)
+            .execute(connection)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_sk2(
+        &self,
+        connection: &SqlitePool,
+    ) -> Result<Option<round2::SecretPackage<PallasBlake2b512>>> {
+        let sk2 = sqlx::query("SELECT value FROM props WHERE key = 'frost-sk2'")
+            .map(|row: SqliteRow| {
+                let sk2b: Vec<u8> = row.get(0);
+                let (sk2, _) = bincode::serde::decode_from_slice::<
+                    round2::SecretPackage<PallasBlake2b512>,
+                    _,
+                >(&sk2b, config::standard())
+                .expect("Failed to decode SecretPackage");
+                sk2
+            })
+            .fetch_optional(connection)
+            .await?;
+        Ok(sk2)
+    }
+
+    pub async fn run_phase2(
+        &self,
+        network: &Network,
+        connection: &SqlitePool,
+        client: &mut Client,
+        sk1: round1::SecretPackage<PallasBlake2b512>,
+        pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
+    ) -> Result<()> {
+        let (sk2, pk2s) = part2(sk1, pk1s)?;
+        info!("Frost secret key 2: {:?}", sk2);
+
+        let sk2b = bincode::serde::encode_to_vec(&sk2, config::standard())?;
+        let height = client
+            .get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner()
+            .height;
+        let mut recipients = vec![];
+        for (id, pk2) in pk2s.into_iter() {
+            let e = id.to_scalar().to_repr();
+            let id = e[0] as u16;
+
+            let pk2b = bincode::serde::encode_to_vec(&pk2, config::standard())?;
+            sqlx::query(
+                r#"INSERT INTO props(key, value) VALUES ($1, $2) ON CONFLICT(key) DO NOTHING"#,
+            )
+            .bind(format!("frost-pk2-{}-{id}", self.package.id))
+            .bind(&pk2b)
+            .execute(connection)
+            .await?;
+
+            let pk2p = DKGPackage {
+                from_id: self.package.id as u16,
+                payload: pk2b.clone(),
+            };
+            let pk2b = bincode::serde::encode_to_vec(&pk2p, config::standard())?;
+
+            let recipient = Recipient {
+                address: self.package.addresses[id as usize - 1].to_string(),
+                amount: 0,
+                pools: None,
+                user_memo: None,
+                memo_bytes: Some(to_arb_memo(&pk2b)),
+            };
+            recipients.push(recipient);
+        }
+
+        let pczt = plan_transaction(
+            network,
+            connection,
+            client,
+            self.package.funding_account,
+            ALL_POOLS,
+            &recipients,
+            false,
+        )
+        .await?;
+        let pczt = sign_transaction(connection, self.package.funding_account, &pczt).await?;
+        let txb = extract_transaction(&pczt).await?;
+        let txid = crate::pay::send(client, height as u32, &txb).await?;
+        info!("Broadcasted transaction: {txid}");
+
+        sqlx::query(
+            r#"INSERT INTO props(key, value) VALUES ('frost-sk2', ?) ON CONFLICT(key) DO NOTHING"#,
+        )
+        .bind(&sk2b)
+        .execute(connection)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn process(
+        &self,
+        network: &Network,
+        connection: &SqlitePool,
+        client: &mut Client,
+    ) -> Result<String> {
+        let mut rng = rand_chacha::ChaCha20Rng::from_seed([self.package.id; 32]);
+
+        let Some(seed) = self.seed() else {
+            anyhow::bail!("Waiting for all participant addresses");
+        };
+        let seed = seed.to_string();
+        let broadcast_account = self.get_broadcast_account(connection, &seed).await?;
+        let broadcast_address = self
+            .get_broadcast_address(network, connection, broadcast_account)
+            .await?;
+        let Some(sk1) = self.get_sk1(connection).await? else {
+            self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
+                .await?;
+            anyhow::bail!("Submitted phase 1 public package");
+        };
+        info!("++ SK1: {}", hex::encode(&sk1.serialize().unwrap()));
+        let Some(pk1s) = self.get_pk1(connection, broadcast_account).await? else {
+            anyhow::bail!("Waiting for all pk1s");
+        };
+        let Some(sk2) = self.get_sk2(connection).await? else {
+            self.run_phase2(network, connection, client, sk1, &pk1s)
+                .await?;
+            anyhow::bail!("Submitted phase 2 public package");
+        };
+        let Some(pk2s) = self
+            .get_pk2(connection, self.package.mailbox_account)
+            .await?
+        else {
+            anyhow::bail!("Waiting for all pk2s");
+        };
+        info!("pk1s and pk2s received");
+        info!("SK2: {}", hex::encode(&sk2.serialize().unwrap()));
+        info!("PK1: {:?}", &pk1s);
+        for pk in pk2s.values() {
+            info!("PK2: {:?}", hex::encode(&pk.signing_share().serialize()));
+        }
+
+        let (_sk, pk) = dkg::part3(&sk2, &pk1s, &pk2s)?;
+        println!(
+            "PK3 {}",
+            hex::encode(&pk.verifying_key().serialize().unwrap())
+        );
+
+        let fvk = get_orchard_vk(connection, broadcast_account)
+            .await?
+            .expect("broadcast account vk not found");
+        let mut fvkb = fvk.to_bytes();
+        let pk = pk.into_even_y(None);
+        let pk = pk.verifying_key();
+
+        let pkb = pk.serialize()?;
+        fvkb[0..32].copy_from_slice(&pkb);
+        let fvk = FullViewingKey::from_bytes(&fvkb).expect("Failed to create shared FVK");
+        let address = fvk.address_at(0u64, Scope::External);
+        let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+        let sua = ua.encode(network);
+        info!("Shared address: {sua}");
+
+        Ok(sua)
+    }
+}
+
+pub fn to_arb_memo(pk1: &[u8]) -> Vec<u8> {
+    let mut memo_bytes = vec![0xFF];
+    memo_bytes.extend_from_slice(&pk1);
+    memo_bytes
+}
+
+pub fn test_frost() -> Result<()> {
+    let mut dkgs = vec![];
+
+    for i in 1..=2 {
+        let mut rng = rand_chacha::ChaCha20Rng::from_seed([i as u8; 32]);
+        let identifier = Identifier::<PallasBlake2b512>::try_from(i).unwrap();
+        let (sk1, pk1) = part1(identifier, 2, 2, &mut rng)?;
+        info!("SK1: {}", hex::encode(&sk1.serialize().unwrap()));
+        let dkg = DKG {
+            identifier: Some(identifier),
+            sk1: Some(sk1),
+            pk1: Some(pk1),
+            sk2: None,
+            pk1s: PK1Map::new(),
+            pk2s: PK2Map::new(),
+        };
+        dkgs.push(dkg);
+    }
+    for i in 0..2 {
+        let me = &dkgs[i];
+        let other = &dkgs[1 - i];
+        let mut other_pkgs = PK1Map::new();
+        other_pkgs.insert(other.identifier.unwrap(), other.pk1.clone().unwrap());
+        let (sk2, pk2s) = part2(me.sk1.clone().unwrap(), &other_pkgs)?;
+        dkgs[i].sk2 = Some(sk2);
+        dkgs[i].pk2s = pk2s;
+        dkgs[i].pk1s = other_pkgs;
+    }
+    for i in 0..2 {
+        let me = &dkgs[i];
+        let mut other_pkgs = PK2Map::new();
+        for j in 0..2 {
+            if i == j {
+                continue;
+            }
+            let other = &dkgs[j];
+            other_pkgs.insert(
+                other.identifier.unwrap(),
+                other.pk2s[&me.identifier.unwrap()].clone(),
+            );
+        }
+        let (_sk3, pk3) = part3(&me.sk2.clone().unwrap(), &me.pk1s, &other_pkgs)?;
+        let pk3 = pk3.into_even_y(None);
+        info!(
+            "SK2: {}",
+            hex::encode(&me.sk2.clone().unwrap().serialize().unwrap())
+        );
+        info!("PK1: {:?}", &me.pk1s);
+        for pk in other_pkgs.values() {
+            info!("PK2: {:?}", hex::encode(&pk.signing_share().serialize()));
+        }
+
+        info!(
+            "PK3 {}",
+            hex::encode(&pk3.verifying_key().serialize().unwrap())
+        );
+    }
+
+    Ok(())
+}
+
+#[derive(Clone, Default)]
+struct DKG {
+    identifier: Option<Identifier<PallasBlake2b512>>,
+    sk1: Option<round1::SecretPackage<PallasBlake2b512>>,
+    pk1: Option<round1::Package<PallasBlake2b512>>,
+    sk2: Option<round2::SecretPackage<PallasBlake2b512>>,
+    pk1s: PK1Map,
+    pk2s: PK2Map,
 }
