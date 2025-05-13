@@ -120,6 +120,13 @@ pub async fn synchronize(
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
+            info!("Start height: {}", start_height);
+            info!("End height: {}", end_height);
+
+            if start_height > end_height {
+                return Ok(());
+            }
+
             let account_ids = accounts_to_sync
                 .iter()
                 .map(|(account, _)| *account)
