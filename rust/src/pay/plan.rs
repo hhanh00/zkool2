@@ -92,7 +92,7 @@ pub async fn plan_transaction(
     });
 
     let has_tex = recipients.iter().any(|r| is_tex(network, &r.address).unwrap_or_default());
-    info!("has_tex: {has_tex}");
+    info!("has_tex: {account} {has_tex}");
 
     // make a payment uri
     let payments = recipients.iter().map(|r| {
