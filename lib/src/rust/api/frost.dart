@@ -26,13 +26,11 @@ Future<FrostPackage?> loadFrost() =>
 Future<void> submitDkg({required FrostPackage package}) =>
     RustLib.instance.api.crateApiFrostSubmitDkg(package: package);
 
+void testFrost() => RustLib.instance.api.crateApiFrostTestFrost();
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DKGState>>
 abstract class DkgState implements RustOpaqueInterface {
-  int get broadcastAccount;
-
   FrostPackage get package;
-
-  set broadcastAccount(int broadcastAccount);
 
   set package(FrostPackage package);
 
@@ -40,7 +38,7 @@ abstract class DkgState implements RustOpaqueInterface {
   static Future<DkgState> newInstance({required FrostPackage package}) =>
       RustLib.instance.api.crateApiFrostDkgStateNew(package: package);
 
-  Future<void> run();
+  Future<String> run();
 }
 
 @freezed
