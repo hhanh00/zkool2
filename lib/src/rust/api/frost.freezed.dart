@@ -15,6 +15,600 @@ final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
+mixin _$DKGStatus {
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function(String field0) sharedAddress,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function(String field0)? sharedAddress,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $DKGStatusCopyWith<$Res> {
+  factory $DKGStatusCopyWith(DKGStatus value, $Res Function(DKGStatus) then) =
+      _$DKGStatusCopyWithImpl<$Res, DKGStatus>;
+}
+
+/// @nodoc
+class _$DKGStatusCopyWithImpl<$Res, $Val extends DKGStatus>
+    implements $DKGStatusCopyWith<$Res> {
+  _$DKGStatusCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_WaitAddressesImplCopyWith<$Res> {
+  factory _$$DKGStatus_WaitAddressesImplCopyWith(
+          _$DKGStatus_WaitAddressesImpl value,
+          $Res Function(_$DKGStatus_WaitAddressesImpl) then) =
+      __$$DKGStatus_WaitAddressesImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_WaitAddressesImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_WaitAddressesImpl>
+    implements _$$DKGStatus_WaitAddressesImplCopyWith<$Res> {
+  __$$DKGStatus_WaitAddressesImplCopyWithImpl(
+      _$DKGStatus_WaitAddressesImpl _value,
+      $Res Function(_$DKGStatus_WaitAddressesImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
+  const _$DKGStatus_WaitAddressesImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitAddresses()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_WaitAddressesImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return waitAddresses();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return waitAddresses?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitAddresses != null) {
+      return waitAddresses();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return waitAddresses(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return waitAddresses?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitAddresses != null) {
+      return waitAddresses(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_WaitAddresses extends DKGStatus {
+  const factory DKGStatus_WaitAddresses() = _$DKGStatus_WaitAddressesImpl;
+  const DKGStatus_WaitAddresses._() : super._();
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_WaitRound1PkgImplCopyWith<$Res> {
+  factory _$$DKGStatus_WaitRound1PkgImplCopyWith(
+          _$DKGStatus_WaitRound1PkgImpl value,
+          $Res Function(_$DKGStatus_WaitRound1PkgImpl) then) =
+      __$$DKGStatus_WaitRound1PkgImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_WaitRound1PkgImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_WaitRound1PkgImpl>
+    implements _$$DKGStatus_WaitRound1PkgImplCopyWith<$Res> {
+  __$$DKGStatus_WaitRound1PkgImplCopyWithImpl(
+      _$DKGStatus_WaitRound1PkgImpl _value,
+      $Res Function(_$DKGStatus_WaitRound1PkgImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
+  const _$DKGStatus_WaitRound1PkgImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitRound1Pkg()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_WaitRound1PkgImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return waitRound1Pkg();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return waitRound1Pkg?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitRound1Pkg != null) {
+      return waitRound1Pkg();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return waitRound1Pkg(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return waitRound1Pkg?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitRound1Pkg != null) {
+      return waitRound1Pkg(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_WaitRound1Pkg extends DKGStatus {
+  const factory DKGStatus_WaitRound1Pkg() = _$DKGStatus_WaitRound1PkgImpl;
+  const DKGStatus_WaitRound1Pkg._() : super._();
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_WaitRound2PkgImplCopyWith<$Res> {
+  factory _$$DKGStatus_WaitRound2PkgImplCopyWith(
+          _$DKGStatus_WaitRound2PkgImpl value,
+          $Res Function(_$DKGStatus_WaitRound2PkgImpl) then) =
+      __$$DKGStatus_WaitRound2PkgImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_WaitRound2PkgImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_WaitRound2PkgImpl>
+    implements _$$DKGStatus_WaitRound2PkgImplCopyWith<$Res> {
+  __$$DKGStatus_WaitRound2PkgImplCopyWithImpl(
+      _$DKGStatus_WaitRound2PkgImpl _value,
+      $Res Function(_$DKGStatus_WaitRound2PkgImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
+  const _$DKGStatus_WaitRound2PkgImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitRound2Pkg()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_WaitRound2PkgImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return waitRound2Pkg();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return waitRound2Pkg?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitRound2Pkg != null) {
+      return waitRound2Pkg();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return waitRound2Pkg(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return waitRound2Pkg?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitRound2Pkg != null) {
+      return waitRound2Pkg(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_WaitRound2Pkg extends DKGStatus {
+  const factory DKGStatus_WaitRound2Pkg() = _$DKGStatus_WaitRound2PkgImpl;
+  const DKGStatus_WaitRound2Pkg._() : super._();
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_SharedAddressImplCopyWith<$Res> {
+  factory _$$DKGStatus_SharedAddressImplCopyWith(
+          _$DKGStatus_SharedAddressImpl value,
+          $Res Function(_$DKGStatus_SharedAddressImpl) then) =
+      __$$DKGStatus_SharedAddressImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({String field0});
+}
+
+/// @nodoc
+class __$$DKGStatus_SharedAddressImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_SharedAddressImpl>
+    implements _$$DKGStatus_SharedAddressImplCopyWith<$Res> {
+  __$$DKGStatus_SharedAddressImplCopyWithImpl(
+      _$DKGStatus_SharedAddressImpl _value,
+      $Res Function(_$DKGStatus_SharedAddressImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(_$DKGStatus_SharedAddressImpl(
+      null == field0
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
+  const _$DKGStatus_SharedAddressImpl(this.field0) : super._();
+
+  @override
+  final String field0;
+
+  @override
+  String toString() {
+    return 'DKGStatus.sharedAddress(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_SharedAddressImpl &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$DKGStatus_SharedAddressImplCopyWith<_$DKGStatus_SharedAddressImpl>
+      get copyWith => __$$DKGStatus_SharedAddressImplCopyWithImpl<
+          _$DKGStatus_SharedAddressImpl>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return sharedAddress(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return sharedAddress?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (sharedAddress != null) {
+      return sharedAddress(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return sharedAddress(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return sharedAddress?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (sharedAddress != null) {
+      return sharedAddress(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_SharedAddress extends DKGStatus {
+  const factory DKGStatus_SharedAddress(final String field0) =
+      _$DKGStatus_SharedAddressImpl;
+  const DKGStatus_SharedAddress._() : super._();
+
+  String get field0;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$DKGStatus_SharedAddressImplCopyWith<_$DKGStatus_SharedAddressImpl>
+      get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$FrostPackage {
   String get name => throw _privateConstructorUsedError;
   int get id => throw _privateConstructorUsedError;
