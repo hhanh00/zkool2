@@ -22,18 +22,14 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
-    account::{get_birth_height, get_orchard_vk},
-    api::{
+    account::{get_birth_height, get_orchard_vk}, api::{
         account::{new_account, NewAccount},
         frost::{DKGPackage, DKGState, DKGStatus},
-    },
-    lwd::ChainSpec,
-    pay::{
+    }, db::{init_account_orchard, store_account_metadata, store_account_orchard_vk}, lwd::ChainSpec, pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
         pool::ALL_POOLS,
         Recipient,
-    },
-    Client,
+    }, Client
 };
 
 pub type PK1Map = BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>;
@@ -312,10 +308,10 @@ impl DKGState {
         network: &Network,
         connection: &SqlitePool,
         client: &mut Client,
-        sk1: round1::SecretPackage<PallasBlake2b512>,
+        sk1: &round1::SecretPackage<PallasBlake2b512>,
         pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
     ) -> Result<round2::SecretPackage<PallasBlake2b512>> {
-        let (sk2, pk2s) = dkg::part2(sk1, pk1s)?;
+        let (sk2, pk2s) = dkg::part2(sk1.clone(), pk1s)?;
         info!("Frost secret key 2: {:?}", sk2);
 
         let sk2b = bincode::serde::encode_to_vec(&sk2, config::standard())?;
@@ -379,6 +375,116 @@ impl DKGState {
         Ok(sk2)
     }
 
+    pub async fn finalize(&self, connection: &SqlitePool, fvk: &FullViewingKey,
+        sk1: &round1::SecretPackage<PallasBlake2b512>,
+        sk2: &round2::SecretPackage<PallasBlake2b512>,
+        pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
+        pk2s: &BTreeMap<Identifier<PallasBlake2b512>, round2::Package<PallasBlake2b512>>,
+    ) -> Result<()> {
+        let r = sqlx::query("SELECT 1 FROM props WHERE key = 'frost'")
+            .fetch_optional(connection)
+            .await?;
+        if r.is_none() {
+            info!("Frost already finalized");
+            return Ok(());
+        }
+
+        let package = &self.package;
+        let birth = get_birth_height(connection, package.mailbox_account).await?;
+        let account = store_account_metadata(connection,
+            &package.name, &None, &None, birth, false, false).await?;
+        init_account_orchard(connection, account, birth).await?;
+        store_account_orchard_vk(connection, account, fvk).await?;
+
+        let (seed, ): (String, ) = sqlx::query_as(
+            "SELECT seed FROM accounts WHERE id_account = ?1",
+        )
+        .bind(package.mailbox_account)
+        .fetch_one(connection).await?;
+
+        sqlx::query(
+            r#"INSERT INTO dkg_params(account, id, n, t, seed, birth_height)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING"#)
+        .bind(account)
+        .bind(package.id)
+        .bind(package.n)
+        .bind(package.t)
+        .bind(&seed)
+        .bind(birth)
+        .execute(connection)
+        .await?;
+
+        for (i, address) in package.addresses.iter().enumerate() {
+            sqlx::query(
+                r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
+                VALUES (?, TRUE, 0, ?, ?) ON CONFLICT DO NOTHING"#
+            )
+            .bind(account)
+            .bind(i as u32 + 1)
+            .bind(address)
+            .execute(connection)
+            .await?;
+        }
+
+        for round in 1..=2 {
+            let sk = if round == 1 {
+                sk1.serialize()?
+            } else {
+                sk2.serialize()?
+            };
+            sqlx::query(
+                r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
+                VALUES (?, FALSE, ?, ?, ?) ON CONFLICT DO NOTHING"#
+            )
+            .bind(account)
+            .bind(round as u32)
+            .bind(package.id)
+            .bind(&sk)
+            .execute(connection).await?;
+
+            for id in 1..=package.n {
+                if id == package.id {
+                    continue;
+                }
+
+                let other_id: Identifier<PallasBlake2b512> = (id as u16).try_into().unwrap();
+                let pk = if round == 1 {
+                    let pk1 = pk1s.get(&other_id).unwrap();
+                    pk1.serialize()?
+                } else {
+                    let pk2 = pk2s.get(&other_id).unwrap();
+                    pk2.serialize()?
+                };
+
+                sqlx::query(
+                    r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
+                    VALUES (?, TRUE, ?, ?, ?) ON CONFLICT DO NOTHING"#
+                )
+                .bind(account)
+                .bind(round)
+                .bind(id)
+                .bind(&pk)
+                .execute(connection).await?;
+            }
+        }
+
+        let frost_keys = sqlx::query("SELECT key FROM props WHERE key LIKE 'frost%'")
+            .map(|row: SqliteRow| {
+                let key: String = row.get(0);
+                key
+            })
+            .fetch_all(connection)
+            .await?;
+        for key in frost_keys {
+            sqlx::query("DELETE FROM props WHERE key = ?1")
+                .bind(key)
+                .execute(connection)
+                .await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn process<R: CryptoRng + RngCore>(
         &self,
         network: &Network,
@@ -404,7 +510,7 @@ impl DKGState {
         };
         let sk2 = match self.get_sk2(connection).await? {
             Some(sk2) => sk2,
-            None => self.run_phase2(network, connection, client, sk1, &pk1s)
+            None => self.run_phase2(network, connection, client, &sk1, &pk1s)
                 .await?,
         };
         let Some(pk2s) = self
@@ -431,6 +537,8 @@ impl DKGState {
         let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
         let sua = ua.encode(network);
         info!("Shared address: {sua}");
+
+        self.finalize(connection, &fvk, &sk1, &sk2, &pk1s, &pk2s).await?;
 
         Ok(DKGStatus::SharedAddress(sua))
     }
