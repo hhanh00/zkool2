@@ -182,7 +182,7 @@ abstract class AppStoreBase with Store {
     }
     try {
       final height = await getCurrentHeight();
-      if (height > currentHeight) {
+      if (now || height > currentHeight) {
         runInAction(() => currentHeight = height);
         await checkSyncNeeded(now: now);
       }

@@ -13,7 +13,7 @@ import 'package:zkool/validators.dart';
 
 Widget buildDKGPage(BuildContext context,
     {required int index, required Widget child}) {
-  onSync() async {
+  onSync() {
     AppStoreBase.instance.autoSync(now: true);
   }
 
@@ -316,11 +316,11 @@ class FrostSteps extends StatelessWidget {
           icon: Icon(Icons.people),
         ),
         EasyStep(
-          title: "Mailbox",
+          title: "Round 1",
           icon: Icon(Icons.mail),
         ),
         EasyStep(
-          title: "Mailbox",
+          title: "Round 2",
           icon: Icon(Icons.mail),
         ),
         EasyStep(
