@@ -1,6 +1,7 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
 use orchard::keys::Scope;
+use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, Row};
 use zcash_keys::address::UnifiedAddress;
@@ -136,15 +137,10 @@ impl DKGState {
         let connection = c.get_pool();
         let mut client = c.client().await?;
 
-        let sua = self.process(network, connection, &mut client).await?;
+        let sua = self.process(network, connection, &mut client, OsRng).await?;
 
         Ok(sua)
     }
-}
-
-#[frb(sync)]
-pub fn test_frost() {
-    crate::frost::test_frost().unwrap();
 }
 
 #[derive(Serialize, Deserialize)]

@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1168985261;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -898358081;
 
 // Section: executor
 
@@ -2311,37 +2311,6 @@ fn wire__crate__api__sync__synchronize_impl(
         },
     )
 }
-fn wire__crate__api__frost__test_frost_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "test_frost",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok({
-                    crate::api::frost::test_frost();
-                })?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
 fn wire__crate__api__pay__to_plan_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -3399,9 +3368,9 @@ fn pde_ffi_dispatcher_primary_impl(
         60 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
         61 => wire__crate__api__frost__submit_dkg_impl(port, ptr, rust_vec_len, data_len),
         62 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3434,9 +3403,8 @@ fn pde_ffi_dispatcher_sync_impl(
         51 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
         58 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
         59 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__frost__test_frost_impl(ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

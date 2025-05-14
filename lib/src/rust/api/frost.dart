@@ -26,8 +26,6 @@ Future<FrostPackage?> loadFrost() =>
 Future<void> submitDkg({required FrostPackage package}) =>
     RustLib.instance.api.crateApiFrostSubmitDkg(package: package);
 
-void testFrost() => RustLib.instance.api.crateApiFrostTestFrost();
-
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DKGState>>
 abstract class DkgState implements RustOpaqueInterface {
   FrostPackage get package;
