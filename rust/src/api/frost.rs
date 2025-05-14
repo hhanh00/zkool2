@@ -131,7 +131,7 @@ impl DKGState {
         Self { package }
     }
 
-    pub async fn run(&mut self) -> Result<String> {
+    pub async fn run(&mut self) -> Result<DKGStatus> {
         let c = get_coin!();
         let network = &c.network;
         let connection = c.get_pool();
@@ -147,6 +147,13 @@ impl DKGState {
 pub struct DKGPackage {
     pub from_id: u16,
     pub payload: Vec<u8>,
+}
+
+pub enum DKGStatus {
+    WaitAddresses,
+    WaitRound1Pkg,
+    WaitRound2Pkg,
+    SharedAddress(String)
 }
 
 /*

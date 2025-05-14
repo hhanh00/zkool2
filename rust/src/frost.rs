@@ -6,18 +6,16 @@ use bip39::Mnemonic;
 use futures::StreamExt as _;
 use group::ff::PrimeField as _;
 use orchard::keys::{FullViewingKey, Scope};
-use rand::Rng;
-use rand_core::{CryptoRng, RngCore, SeedableRng};
+use rand_core::{CryptoRng, RngCore};
 use reddsa::frost::redpallas::{
     frost::{
-        keys::dkg::{self, part1, part2, round1, round2},
+        keys::dkg::{self, round1, round2},
         Identifier,
     },
-    keys::{dkg::part3, EvenY},
+    keys::EvenY,
     PallasBlake2b512,
 };
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use thiserror::Error;
 use tonic::Request;
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
@@ -27,7 +25,7 @@ use crate::{
     account::{get_birth_height, get_orchard_vk},
     api::{
         account::{new_account, NewAccount},
-        frost::{DKGPackage, DKGState},
+        frost::{DKGPackage, DKGState, DKGStatus},
     },
     lwd::ChainSpec,
     pay::{
@@ -233,7 +231,7 @@ impl DKGState {
         client: &mut Client,
         broadcast_address: &str,
         rng: R,
-    ) -> Result<()> {
+    ) -> Result<round1::SecretPackage<PallasBlake2b512>> {
         let id = self.package.id as u16;
         let (sk1, pk1) = dkg::part1::<PallasBlake2b512, R>(
             id.try_into().unwrap(),
@@ -287,7 +285,7 @@ impl DKGState {
             .execute(connection)
             .await?;
 
-        Ok(())
+        Ok(sk1)
     }
 
     pub async fn get_sk2(
@@ -316,8 +314,8 @@ impl DKGState {
         client: &mut Client,
         sk1: round1::SecretPackage<PallasBlake2b512>,
         pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
-    ) -> Result<()> {
-        let (sk2, pk2s) = part2(sk1, pk1s)?;
+    ) -> Result<round2::SecretPackage<PallasBlake2b512>> {
+        let (sk2, pk2s) = dkg::part2(sk1, pk1s)?;
         info!("Frost secret key 2: {:?}", sk2);
 
         let sk2b = bincode::serde::encode_to_vec(&sk2, config::standard())?;
@@ -378,7 +376,7 @@ impl DKGState {
         .execute(connection)
         .await?;
 
-        Ok(())
+        Ok(sk2)
     }
 
     pub async fn process<R: CryptoRng + RngCore>(
@@ -387,33 +385,33 @@ impl DKGState {
         connection: &SqlitePool,
         client: &mut Client,
         mut rng: R,
-    ) -> Result<String, DKGError> {
+    ) -> Result<DKGStatus> {
         let Some(seed) = self.seed() else {
-            return Err(DKGError::WaitAddresses);
+            return Ok(DKGStatus::WaitAddresses);
         };
         let seed = seed.to_string();
         let broadcast_account = self.get_broadcast_account(connection, &seed).await?;
         let broadcast_address = self
             .get_broadcast_address(network, connection, broadcast_account)
             .await?;
-        let Some(sk1) = self.get_sk1(connection).await? else {
-            self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
-                .await?;
-            return Err(DKGError::SubmitRound1Pkg);
+        let sk1 = match self.get_sk1(connection).await? {
+            Some(sk1) => sk1,
+            None => self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
+                .await?,
         };
         let Some(pk1s) = self.get_pk1(connection, broadcast_account).await? else {
-            return Err(DKGError::WaitRound1Pkg);
+            return Ok(DKGStatus::WaitRound1Pkg);
         };
-        let Some(sk2) = self.get_sk2(connection).await? else {
-            self.run_phase2(network, connection, client, sk1, &pk1s)
-                .await?;
-            return Err(DKGError::SubmitRound2Pkg);
+        let sk2 = match self.get_sk2(connection).await? {
+            Some(sk2) => sk2,
+            None => self.run_phase2(network, connection, client, sk1, &pk1s)
+                .await?,
         };
         let Some(pk2s) = self
             .get_pk2(connection, self.package.mailbox_account)
             .await?
         else {
-            return Err(DKGError::WaitRound2Pkg);
+            return Ok(DKGStatus::WaitRound2Pkg);
         };
 
         let (_sk, pk) = dkg::part3(&sk2, &pk1s, &pk2s)
@@ -434,41 +432,13 @@ impl DKGState {
         let sua = ua.encode(network);
         info!("Shared address: {sua}");
 
-        Ok(sua)
+        Ok(DKGStatus::SharedAddress(sua))
     }
 }
-
-#[derive(Error, Debug)]
-pub enum DKGError {
-    #[error("Waiting for all participant addresses")]
-    WaitAddresses,
-    #[error("Submitting Round 1 package")]
-    SubmitRound1Pkg,
-    #[error("Waiting for other Round 1 packages")]
-    WaitRound1Pkg,
-    #[error("Submitting Round 2 package")]
-    SubmitRound2Pkg,
-    #[error("Waiting for other Round 2 packages")]
-    WaitRound2Pkg,
-    #[error(transparent)]
-    Anyhow(#[from] anyhow::Error),
-}
-
-
 
 
 pub fn to_arb_memo(pk1: &[u8]) -> Vec<u8> {
     let mut memo_bytes = vec![0xFF];
     memo_bytes.extend_from_slice(&pk1);
     memo_bytes
-}
-
-#[derive(Clone, Default)]
-struct DKG {
-    identifier: Option<Identifier<PallasBlake2b512>>,
-    sk1: Option<round1::SecretPackage<PallasBlake2b512>>,
-    pk1: Option<round1::Package<PallasBlake2b512>>,
-    sk2: Option<round2::SecretPackage<PallasBlake2b512>>,
-    pk1s: PK1Map,
-    pk2s: PK2Map,
 }

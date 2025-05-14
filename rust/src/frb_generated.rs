@@ -2632,6 +2632,31 @@ impl SseDecode for bool {
     }
 }
 
+impl SseDecode for crate::api::frost::DKGStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                return crate::api::frost::DKGStatus::WaitAddresses;
+            }
+            1 => {
+                return crate::api::frost::DKGStatus::WaitRound1Pkg;
+            }
+            2 => {
+                return crate::api::frost::DKGStatus::WaitRound2Pkg;
+            }
+            3 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::api::frost::DKGStatus::SharedAddress(var_field0);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 impl SseDecode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3506,6 +3531,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Addresses>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::frost::DKGStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::api::frost::DKGStatus::WaitAddresses => [0.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound1Pkg => [1.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound2Pkg => [2.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                [3.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::frost::DKGStatus {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::DKGStatus>
+    for crate::api::frost::DKGStatus
+{
+    fn into_into_dart(self) -> crate::api::frost::DKGStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::frost::FrostPackage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -3964,6 +4013,30 @@ impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_u8(self as _).unwrap();
+    }
+}
+
+impl SseEncode for crate::api::frost::DKGStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::api::frost::DKGStatus::WaitAddresses => {
+                <i32>::sse_encode(0, serializer);
+            }
+            crate::api::frost::DKGStatus::WaitRound1Pkg => {
+                <i32>::sse_encode(1, serializer);
+            }
+            crate::api::frost::DKGStatus::WaitRound2Pkg => {
+                <i32>::sse_encode(2, serializer);
+            }
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                <i32>::sse_encode(3, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
