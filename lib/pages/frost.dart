@@ -252,7 +252,12 @@ class DKGPage3State extends State<DKGPage3> {
     try {
       running = true;
       AppStoreBase.instance.autoSync();
-      final package = (await loadFrost())!;
+      final package = (await loadFrost());
+      if (package == null) {
+        if (!mounted) return;
+        GoRouter.of(context).pop();
+        return;
+      }
       final state = await package.toState();
       if (state == null) {
         logger.e("DKG state is incomplete");

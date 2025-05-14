@@ -178,6 +178,31 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     .execute(connection)
     .await?;
 
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS dkg_params (
+        account INTEGER PRIMARY KEY,
+        id INTEGER NOT NULL,
+        n INTEGER NOT NULL,
+        t INTEGER NOT NULL,
+        seed BLOB NOT NULL,
+        birth_height INTEGER NOT NULL
+    )"#)
+    .execute(connection)
+    .await?;
+
+    sqlx::query(
+    r#"CREATE TABLE IF NOT EXISTS dkg_packages (
+        id_dkg_package INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
+        public BOOL NOT NULL,
+        round INTEGER NOT NULL,
+        from_id INTEGER NOT NULL,
+        data BLOB NOT NULL,
+        UNIQUE (account, public, round, from_id)
+    )"#)
+    .execute(connection)
+    .await?;
+
     Ok(())
 }
 
