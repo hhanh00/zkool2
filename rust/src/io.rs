@@ -287,6 +287,36 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     }
     io_account.transactions = transactions;
 
+    let dkg_params = sqlx::query("SELECT id, n, t, seed, birth_height FROM dkg_params WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let id: u8 = row.get(0);
+            let n: u8 = row.get(1);
+            let t: u8 = row.get(2);
+            let seed: String = row.get(3);
+            let birth: u32 = row.get(4);
+
+            DKGParams { id, n, t, seed, birth }
+        })
+        .fetch_optional(connection)
+        .await?;
+    io_account.dkg_params = dkg_params;
+
+    let dkg_packages = sqlx::query("SELECT account, public, round, from_id, data FROM dkg_packages WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let public: bool = row.get(1);
+            let round: u32 = row.get(2);
+            let from_id: u16 = row.get(3);
+            let data: Vec<u8> = row.get(4);
+
+            DKGPackage { account, public, round, from_id, data }
+        })
+        .fetch_all(connection)
+        .await?;
+    io_account.dkg_packages = dkg_packages;
+
     let io_account = bincode::encode_to_vec(&io_account, legacy())?;
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&io_account)?;
@@ -511,6 +541,35 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         }
     }
 
+    if let Some(dkg_params) = io_account.dkg_params {
+        sqlx::query(
+            "INSERT INTO dkg_params
+            (account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(dkg_params.id)
+        .bind(dkg_params.n)
+        .bind(dkg_params.t)
+        .bind(&dkg_params.seed)
+        .bind(dkg_params.birth)
+        .execute(connection)
+        .await?;
+    }
+
+    for dkg_package in io_account.dkg_packages.iter() {
+        sqlx::query(
+            "INSERT INTO dkg_packages
+            (account, public, round, from_id, data) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(dkg_package.public)
+        .bind(dkg_package.round)
+        .bind(dkg_package.from_id)
+        .bind(&dkg_package.data)
+        .execute(connection)
+        .await?;
+    }
+
     Ok(())
 }
 
@@ -539,6 +598,8 @@ pub struct IOAccount {
     pub sync_heights: Vec<SyncHeight>,
     pub blocks: Vec<IOBlock>,
     pub transactions: Vec<IOTransaction>,
+    pub dkg_params: Option<DKGParams>,
+    pub dkg_packages: Vec<DKGPackage>,
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
@@ -617,6 +678,24 @@ pub struct IOSpend {
     pub account: u32,
     pub pool: u8,
     pub value: u64,
+}
+
+#[derive(Clone, Encode, Decode, Default, Debug)]
+pub struct DKGParams {
+    pub id: u8,
+    pub n: u8,
+    pub t: u8,
+    pub seed: String,
+    pub birth: u32,
+}
+
+#[derive(Clone, Encode, Decode, Default, Debug)]
+pub struct DKGPackage {
+    pub account: u32,
+    pub public: bool,
+    pub round: u32,
+    pub from_id: u16,
+    pub data: Vec<u8>,
 }
 
 pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
