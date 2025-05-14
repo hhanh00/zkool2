@@ -61,23 +61,24 @@ pub async fn synchronize(
         // Get account heights
         let mut account_heights = HashMap::new();
         for account in accounts.iter() {
-            let (account, height): (u32, u32) = sqlx::query_as(
-                "SELECT account, MIN(height) FROM sync_heights
-        JOIN accounts ON account = id_account
-        WHERE account = ?",
+            let r: Option<(u32, u32)> = sqlx::query_as(
+                r#"SELECT account, MIN(height) FROM sync_heights
+                JOIN accounts ON account = id_account
+                WHERE account = ?"#,
             )
             .bind(account)
-            .fetch_one(pool)
+            .fetch_optional(pool)
             .await?;
+            if let Some((account, height)) = r {
+                account_heights.insert(account, height + 1);
 
-            account_heights.insert(account, height + 1);
-
-            let (use_internal,): (bool,) =
-                sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
-                    .bind(account)
-                    .fetch_one(pool)
-                    .await?;
-            account_use_internal.insert(account, use_internal);
+                let (use_internal,): (bool,) =
+                    sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+                        .bind(account)
+                        .fetch_one(pool)
+                        .await?;
+                account_use_internal.insert(account, use_internal);
+            }
         }
 
         // Create a sorted list of unique heights
