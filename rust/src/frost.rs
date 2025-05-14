@@ -25,7 +25,7 @@ use crate::{
     account::{get_birth_height, get_orchard_vk}, api::{
         account::{new_account, NewAccount},
         frost::{DKGPackage, DKGState, DKGStatus},
-    }, db::{init_account_orchard, store_account_metadata, store_account_orchard_vk}, lwd::ChainSpec, pay::{
+    }, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, lwd::ChainSpec, pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
         pool::ALL_POOLS,
         Recipient,
@@ -376,6 +376,8 @@ impl DKGState {
     }
 
     pub async fn finalize(&self, connection: &SqlitePool, fvk: &FullViewingKey,
+        mailbox_account: u32,
+        broadcast_account: u32,
         sk1: &round1::SecretPackage<PallasBlake2b512>,
         sk2: &round2::SecretPackage<PallasBlake2b512>,
         pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
@@ -482,6 +484,9 @@ impl DKGState {
                 .await?;
         }
 
+        delete_account(connection, mailbox_account).await?;
+        delete_account(connection, broadcast_account).await?;
+
         Ok(())
     }
 
@@ -538,7 +543,9 @@ impl DKGState {
         let sua = ua.encode(network);
         info!("Shared address: {sua}");
 
-        self.finalize(connection, &fvk, &sk1, &sk2, &pk1s, &pk2s).await?;
+        self.finalize(connection, &fvk,
+            self.package.mailbox_account, broadcast_account,
+            &sk1, &sk2, &pk1s, &pk2s).await?;
 
         Ok(DKGStatus::SharedAddress(sua))
     }

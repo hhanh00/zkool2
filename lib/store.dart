@@ -174,7 +174,7 @@ abstract class AppStoreBase with Store {
 
   Timer? autosyncTimer;
 
-  void autoSync() async {
+  void autoSync({bool now = false}) async {
     final interval = int.tryParse(syncInterval) ?? 0;
 
     if (interval <= 0) {
@@ -184,7 +184,7 @@ abstract class AppStoreBase with Store {
       final height = await getCurrentHeight();
       if (height > currentHeight) {
         runInAction(() => currentHeight = height);
-        await checkSyncNeeded();
+        await checkSyncNeeded(now: now);
       }
     } on AnyhowException catch (e) {
       logger.i(e);
@@ -194,12 +194,12 @@ abstract class AppStoreBase with Store {
     }
   }
 
-  Future<void> checkSyncNeeded() async {
+  Future<void> checkSyncNeeded({required bool now}) async {
     List<int> accountsToSync = [];
     for (var account in accounts) {
       if (account.enabled) {
         final height = heights[account.id] ?? 0;
-        if (currentHeight - height >= int.parse(syncInterval)) {
+        if (now || currentHeight - height >= int.parse(syncInterval)) {
           logger.i("Sync needed for ${account.name}");
           accountsToSync.add(account.id);
         }
