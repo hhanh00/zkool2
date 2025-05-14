@@ -13,10 +13,14 @@ import 'package:zkool/validators.dart';
 
 Widget buildDKGPage(BuildContext context,
     {required int index, required Widget child}) {
+  onSync() async {
+    AppStoreBase.instance.autoSync(now: true);
+  }
+
   return Scaffold(
-      appBar: AppBar(
-        title: const Text("Distributed Key Generation"),
-      ),
+      appBar: AppBar(title: const Text("Distributed Key Generation"), actions: [
+        IconButton(onPressed: onSync, icon: const Icon(Icons.refresh))
+      ]),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: FrostSteps(currentIndex: index)),
         SliverPadding(
