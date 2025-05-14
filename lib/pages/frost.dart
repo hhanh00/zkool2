@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -225,29 +227,65 @@ class DKGPage3 extends StatefulWidget {
 
 class DKGPage3State extends State<DKGPage3> {
   FrostPackage? package;
-  String? sharedUA;
+  String message = "";
+  int index = 0;
+  Timer? runTimer;
+  bool running = false;
 
   @override
   void initState() {
     super.initState();
-    Future(() async {
+    runTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      await run();
+    });
+    unawaited(run());
+  }
+
+  @override
+  void dispose() {
+    runTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> run() async {
+    if (running) return;
+    try {
+      running = true;
+      AppStoreBase.instance.autoSync();
       final package = (await loadFrost())!;
       final state = await package.toState();
       if (state == null) {
         logger.e("DKG state is incomplete");
         return;
       }
-      final sharedUA = await state.run();
-      setState(() {
-        this.package = package;
-        this.sharedUA = sharedUA;
-      });
-    });
+      final status = await state.run();
+      if (status is DKGStatus_WaitRound1Pkg) {
+        message =
+            "Waiting for other participants to send their round 1 packages";
+        index = 1;
+      }
+      if (status is DKGStatus_WaitRound2Pkg) {
+        message =
+            "Waiting for other participants to send their round 2 packages";
+        index = 2;
+      }
+      if (status is DKGStatus_SharedAddress) {
+        final sharedUA = status.field0;
+        message = "The shared address is: $sharedUA";
+        index = 3;
+      }
+
+      setState(() {});
+    } finally {
+      running = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return buildDKGPage(context, index: 2, child: SelectableText("Your shared UA: $sharedUA"));
+    final t = Theme.of(context).textTheme;
+    return buildDKGPage(context,
+        index: index, child: SelectableText(message, style: t.bodyLarge));
   }
 }
 
@@ -275,16 +313,6 @@ class FrostSteps extends StatelessWidget {
         EasyStep(
           title: "Mailbox",
           icon: Icon(Icons.mail),
-        ),
-        EasyStep(
-          title: "Distribute",
-          lineText: "Share 1/2",
-          icon: Icon(Icons.podcasts),
-        ),
-        EasyStep(
-          title: "Distribute",
-          lineText: "Share 2/2",
-          icon: Icon(Icons.podcasts),
         ),
         EasyStep(
           title: "Finalize",

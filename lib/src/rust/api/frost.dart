@@ -26,8 +26,6 @@ Future<FrostPackage?> loadFrost() =>
 Future<void> submitDkg({required FrostPackage package}) =>
     RustLib.instance.api.crateApiFrostSubmitDkg(package: package);
 
-void testFrost() => RustLib.instance.api.crateApiFrostTestFrost();
-
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DKGState>>
 abstract class DkgState implements RustOpaqueInterface {
   FrostPackage get package;
@@ -38,7 +36,19 @@ abstract class DkgState implements RustOpaqueInterface {
   static Future<DkgState> newInstance({required FrostPackage package}) =>
       RustLib.instance.api.crateApiFrostDkgStateNew(package: package);
 
-  Future<String> run();
+  Future<DKGStatus> run();
+}
+
+@freezed
+sealed class DKGStatus with _$DKGStatus {
+  const DKGStatus._();
+
+  const factory DKGStatus.waitAddresses() = DKGStatus_WaitAddresses;
+  const factory DKGStatus.waitRound1Pkg() = DKGStatus_WaitRound1Pkg;
+  const factory DKGStatus.waitRound2Pkg() = DKGStatus_WaitRound2Pkg;
+  const factory DKGStatus.sharedAddress(
+    String field0,
+  ) = DKGStatus_SharedAddress;
 }
 
 @freezed
