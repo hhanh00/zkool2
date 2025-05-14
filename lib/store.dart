@@ -199,7 +199,7 @@ abstract class AppStoreBase with Store {
     for (var account in accounts) {
       if (account.enabled) {
         final height = heights[account.id] ?? 0;
-        if (currentHeight - height > int.parse(syncInterval)) {
+        if (currentHeight - height >= int.parse(syncInterval)) {
           logger.i("Sync needed for ${account.name}");
           accountsToSync.add(account.id);
         }

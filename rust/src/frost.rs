@@ -6,13 +6,13 @@ use bip39::Mnemonic;
 use futures::StreamExt as _;
 use group::ff::PrimeField as _;
 use orchard::keys::{FullViewingKey, Scope};
-use rand_core::{CryptoRng, RngCore, SeedableRng};
+use rand_core::{CryptoRng, RngCore};
 use reddsa::frost::redpallas::{
     frost::{
-        keys::dkg::{self, part1, part2, round1, round2},
+        keys::dkg::{self, round1, round2},
         Identifier,
     },
-    keys::{dkg::part3, EvenY},
+    keys::EvenY,
     PallasBlake2b512,
 };
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
@@ -25,7 +25,7 @@ use crate::{
     account::{get_birth_height, get_orchard_vk},
     api::{
         account::{new_account, NewAccount},
-        frost::{DKGPackage, DKGState},
+        frost::{DKGPackage, DKGState, DKGStatus},
     },
     lwd::ChainSpec,
     pay::{
@@ -231,7 +231,7 @@ impl DKGState {
         client: &mut Client,
         broadcast_address: &str,
         rng: R,
-    ) -> Result<()> {
+    ) -> Result<round1::SecretPackage<PallasBlake2b512>> {
         let id = self.package.id as u16;
         let (sk1, pk1) = dkg::part1::<PallasBlake2b512, R>(
             id.try_into().unwrap(),
@@ -285,7 +285,7 @@ impl DKGState {
             .execute(connection)
             .await?;
 
-        Ok(())
+        Ok(sk1)
     }
 
     pub async fn get_sk2(
@@ -314,8 +314,8 @@ impl DKGState {
         client: &mut Client,
         sk1: round1::SecretPackage<PallasBlake2b512>,
         pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
-    ) -> Result<()> {
-        let (sk2, pk2s) = part2(sk1, pk1s)?;
+    ) -> Result<round2::SecretPackage<PallasBlake2b512>> {
+        let (sk2, pk2s) = dkg::part2(sk1, pk1s)?;
         info!("Frost secret key 2: {:?}", sk2);
 
         let sk2b = bincode::serde::encode_to_vec(&sk2, config::standard())?;
@@ -376,57 +376,46 @@ impl DKGState {
         .execute(connection)
         .await?;
 
-        Ok(())
+        Ok(sk2)
     }
 
-    pub async fn process(
+    pub async fn process<R: CryptoRng + RngCore>(
         &self,
         network: &Network,
         connection: &SqlitePool,
         client: &mut Client,
-    ) -> Result<String> {
-        let mut rng = rand_chacha::ChaCha20Rng::from_seed([self.package.id; 32]);
-
+        mut rng: R,
+    ) -> Result<DKGStatus> {
         let Some(seed) = self.seed() else {
-            anyhow::bail!("Waiting for all participant addresses");
+            return Ok(DKGStatus::WaitAddresses);
         };
         let seed = seed.to_string();
         let broadcast_account = self.get_broadcast_account(connection, &seed).await?;
         let broadcast_address = self
             .get_broadcast_address(network, connection, broadcast_account)
             .await?;
-        let Some(sk1) = self.get_sk1(connection).await? else {
-            self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
-                .await?;
-            anyhow::bail!("Submitted phase 1 public package");
+        let sk1 = match self.get_sk1(connection).await? {
+            Some(sk1) => sk1,
+            None => self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
+                .await?,
         };
-        info!("++ SK1: {}", hex::encode(&sk1.serialize().unwrap()));
         let Some(pk1s) = self.get_pk1(connection, broadcast_account).await? else {
-            anyhow::bail!("Waiting for all pk1s");
+            return Ok(DKGStatus::WaitRound1Pkg);
         };
-        let Some(sk2) = self.get_sk2(connection).await? else {
-            self.run_phase2(network, connection, client, sk1, &pk1s)
-                .await?;
-            anyhow::bail!("Submitted phase 2 public package");
+        let sk2 = match self.get_sk2(connection).await? {
+            Some(sk2) => sk2,
+            None => self.run_phase2(network, connection, client, sk1, &pk1s)
+                .await?,
         };
         let Some(pk2s) = self
             .get_pk2(connection, self.package.mailbox_account)
             .await?
         else {
-            anyhow::bail!("Waiting for all pk2s");
+            return Ok(DKGStatus::WaitRound2Pkg);
         };
-        info!("pk1s and pk2s received");
-        info!("SK2: {}", hex::encode(&sk2.serialize().unwrap()));
-        info!("PK1: {:?}", &pk1s);
-        for pk in pk2s.values() {
-            info!("PK2: {:?}", hex::encode(&pk.signing_share().serialize()));
-        }
 
-        let (_sk, pk) = dkg::part3(&sk2, &pk1s, &pk2s)?;
-        println!(
-            "PK3 {}",
-            hex::encode(&pk.verifying_key().serialize().unwrap())
-        );
+        let (_sk, pk) = dkg::part3(&sk2, &pk1s, &pk2s)
+            .map_err(anyhow::Error::new)?;
 
         let fvk = get_orchard_vk(connection, broadcast_account)
             .await?
@@ -435,7 +424,7 @@ impl DKGState {
         let pk = pk.into_even_y(None);
         let pk = pk.verifying_key();
 
-        let pkb = pk.serialize()?;
+        let pkb = pk.serialize().expect("pk serialize");
         fvkb[0..32].copy_from_slice(&pkb);
         let fvk = FullViewingKey::from_bytes(&fvkb).expect("Failed to create shared FVK");
         let address = fvk.address_at(0u64, Scope::External);
@@ -443,83 +432,13 @@ impl DKGState {
         let sua = ua.encode(network);
         info!("Shared address: {sua}");
 
-        Ok(sua)
+        Ok(DKGStatus::SharedAddress(sua))
     }
 }
+
 
 pub fn to_arb_memo(pk1: &[u8]) -> Vec<u8> {
     let mut memo_bytes = vec![0xFF];
     memo_bytes.extend_from_slice(&pk1);
     memo_bytes
-}
-
-pub fn test_frost() -> Result<()> {
-    let mut dkgs = vec![];
-
-    for i in 1..=2 {
-        let mut rng = rand_chacha::ChaCha20Rng::from_seed([i as u8; 32]);
-        let identifier = Identifier::<PallasBlake2b512>::try_from(i).unwrap();
-        let (sk1, pk1) = part1(identifier, 2, 2, &mut rng)?;
-        info!("SK1: {}", hex::encode(&sk1.serialize().unwrap()));
-        let dkg = DKG {
-            identifier: Some(identifier),
-            sk1: Some(sk1),
-            pk1: Some(pk1),
-            sk2: None,
-            pk1s: PK1Map::new(),
-            pk2s: PK2Map::new(),
-        };
-        dkgs.push(dkg);
-    }
-    for i in 0..2 {
-        let me = &dkgs[i];
-        let other = &dkgs[1 - i];
-        let mut other_pkgs = PK1Map::new();
-        other_pkgs.insert(other.identifier.unwrap(), other.pk1.clone().unwrap());
-        let (sk2, pk2s) = part2(me.sk1.clone().unwrap(), &other_pkgs)?;
-        dkgs[i].sk2 = Some(sk2);
-        dkgs[i].pk2s = pk2s;
-        dkgs[i].pk1s = other_pkgs;
-    }
-    for i in 0..2 {
-        let me = &dkgs[i];
-        let mut other_pkgs = PK2Map::new();
-        for j in 0..2 {
-            if i == j {
-                continue;
-            }
-            let other = &dkgs[j];
-            other_pkgs.insert(
-                other.identifier.unwrap(),
-                other.pk2s[&me.identifier.unwrap()].clone(),
-            );
-        }
-        let (_sk3, pk3) = part3(&me.sk2.clone().unwrap(), &me.pk1s, &other_pkgs)?;
-        let pk3 = pk3.into_even_y(None);
-        info!(
-            "SK2: {}",
-            hex::encode(&me.sk2.clone().unwrap().serialize().unwrap())
-        );
-        info!("PK1: {:?}", &me.pk1s);
-        for pk in other_pkgs.values() {
-            info!("PK2: {:?}", hex::encode(&pk.signing_share().serialize()));
-        }
-
-        info!(
-            "PK3 {}",
-            hex::encode(&pk3.verifying_key().serialize().unwrap())
-        );
-    }
-
-    Ok(())
-}
-
-#[derive(Clone, Default)]
-struct DKG {
-    identifier: Option<Identifier<PallasBlake2b512>>,
-    sk1: Option<round1::SecretPackage<PallasBlake2b512>>,
-    pk1: Option<round1::Package<PallasBlake2b512>>,
-    sk2: Option<round2::SecretPackage<PallasBlake2b512>>,
-    pk1s: PK1Map,
-    pk2s: PK2Map,
 }

@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1168985261;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -898358081;
 
 // Section: executor
 
@@ -2311,37 +2311,6 @@ fn wire__crate__api__sync__synchronize_impl(
         },
     )
 }
-fn wire__crate__api__frost__test_frost_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "test_frost",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok({
-                    crate::api::frost::test_frost();
-                })?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
 fn wire__crate__api__pay__to_plan_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -2660,6 +2629,31 @@ impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_u8().unwrap() != 0
+    }
+}
+
+impl SseDecode for crate::api::frost::DKGStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                return crate::api::frost::DKGStatus::WaitAddresses;
+            }
+            1 => {
+                return crate::api::frost::DKGStatus::WaitRound1Pkg;
+            }
+            2 => {
+                return crate::api::frost::DKGStatus::WaitRound2Pkg;
+            }
+            3 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::api::frost::DKGStatus::SharedAddress(var_field0);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
@@ -3399,9 +3393,9 @@ fn pde_ffi_dispatcher_primary_impl(
         60 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
         61 => wire__crate__api__frost__submit_dkg_impl(port, ptr, rust_vec_len, data_len),
         62 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3434,9 +3428,8 @@ fn pde_ffi_dispatcher_sync_impl(
         51 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
         58 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
         59 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__frost__test_frost_impl(ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3534,6 +3527,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Addresses>
     for crate::api::account::Addresses
 {
     fn into_into_dart(self) -> crate::api::account::Addresses {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::frost::DKGStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::api::frost::DKGStatus::WaitAddresses => [0.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound1Pkg => [1.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound2Pkg => [2.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                [3.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::frost::DKGStatus {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::DKGStatus>
+    for crate::api::frost::DKGStatus
+{
+    fn into_into_dart(self) -> crate::api::frost::DKGStatus {
         self
     }
 }
@@ -3996,6 +4013,30 @@ impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_u8(self as _).unwrap();
+    }
+}
+
+impl SseEncode for crate::api::frost::DKGStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::api::frost::DKGStatus::WaitAddresses => {
+                <i32>::sse_encode(0, serializer);
+            }
+            crate::api::frost::DKGStatus::WaitRound1Pkg => {
+                <i32>::sse_encode(1, serializer);
+            }
+            crate::api::frost::DKGStatus::WaitRound2Pkg => {
+                <i32>::sse_encode(2, serializer);
+            }
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                <i32>::sse_encode(3, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
