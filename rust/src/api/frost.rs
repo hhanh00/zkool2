@@ -1,6 +1,7 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
 use orchard::keys::Scope;
+use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, Row};
 use zcash_keys::address::UnifiedAddress;
@@ -130,27 +131,29 @@ impl DKGState {
         Self { package }
     }
 
-    pub async fn run(&mut self) -> Result<String> {
+    pub async fn run(&mut self) -> Result<DKGStatus> {
         let c = get_coin!();
         let network = &c.network;
         let connection = c.get_pool();
         let mut client = c.client().await?;
 
-        let sua = self.process(network, connection, &mut client).await?;
+        let sua = self.process(network, connection, &mut client, OsRng).await?;
 
         Ok(sua)
     }
-}
-
-#[frb(sync)]
-pub fn test_frost() {
-    crate::frost::test_frost().unwrap();
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct DKGPackage {
     pub from_id: u16,
     pub payload: Vec<u8>,
+}
+
+pub enum DKGStatus {
+    WaitAddresses,
+    WaitRound1Pkg,
+    WaitRound2Pkg,
+    SharedAddress(String)
 }
 
 /*

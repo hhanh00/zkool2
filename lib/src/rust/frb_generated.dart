@@ -78,7 +78,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.9.0';
 
   @override
-  int get rustContentHash => 1168985261;
+  int get rustContentHash => -898358081;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -97,7 +97,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<DkgState> crateApiFrostDkgStateNew({required FrostPackage package});
 
-  Future<String> crateApiFrostDkgStateRun({required DkgState that});
+  Future<DKGStatus> crateApiFrostDkgStateRun({required DkgState that});
 
   Future<PoolBalance> crateApiSyncBalance();
 
@@ -240,8 +240,6 @@ abstract class RustLibApi extends BaseApi {
       required int transparentLimit,
       required int checkpointAge});
 
-  void crateApiFrostTestFrost();
-
   TxPlan crateApiPayToPlan({required PcztPackage package});
 
   Future<int> crateApiAccountTransparentSweep(
@@ -355,7 +353,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiFrostDkgStateRun({required DkgState that}) {
+  Future<DKGStatus> crateApiFrostDkgStateRun({required DkgState that}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -366,7 +364,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 4, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_dkg_status,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiFrostDkgStateRunConstMeta,
@@ -1957,37 +1955,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  void crateApiFrostTestFrost() {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 63)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiFrostTestFrostConstMeta,
-        argValues: [],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiFrostTestFrostConstMeta => const TaskConstMeta(
-        debugName: "test_frost",
-        argNames: [],
-      );
-
-  @override
   TxPlan crateApiPayToPlan({required PcztPackage package}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_pczt_package(package, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 64)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 63)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_tx_plan,
@@ -2015,7 +1989,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(endHeight, serializer);
           sse_encode_u_32(gapLimit, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 65, port: port_);
+              funcId: 64, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_32,
@@ -2042,7 +2016,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(ufvk, serializer);
           sse_encode_opt_box_autoadd_u_32(di, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 66)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 65)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -2068,7 +2042,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 67, port: port_);
+              funcId: 66, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_pczt_package,
@@ -2095,7 +2069,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_account_update(update, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 68, port: port_);
+              funcId: 67, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -2302,6 +2276,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int dco_decode_box_autoadd_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  DKGStatus dco_decode_dkg_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return DKGStatus_WaitAddresses();
+      case 1:
+        return DKGStatus_WaitRound1Pkg();
+      case 2:
+        return DKGStatus_WaitRound2Pkg();
+      case 3:
+        return DKGStatus_SharedAddress(
+          dco_decode_String(raw[1]),
+        );
+      default:
+        throw Exception("unreachable");
+    }
   }
 
   @protected
@@ -2978,6 +2971,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_u_8(deserializer));
+  }
+
+  @protected
+  DKGStatus sse_decode_dkg_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        return DKGStatus_WaitAddresses();
+      case 1:
+        return DKGStatus_WaitRound1Pkg();
+      case 2:
+        return DKGStatus_WaitRound2Pkg();
+      case 3:
+        var var_field0 = sse_decode_String(deserializer);
+        return DKGStatus_SharedAddress(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
   }
 
   @protected
@@ -3760,6 +3773,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case DKGStatus_WaitAddresses():
+        sse_encode_i_32(0, serializer);
+      case DKGStatus_WaitRound1Pkg():
+        sse_encode_i_32(1, serializer);
+      case DKGStatus_WaitRound2Pkg():
+        sse_encode_i_32(2, serializer);
+      case DKGStatus_SharedAddress(field0: final field0):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(field0, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
@@ -4266,7 +4295,7 @@ class DkgStateImpl extends RustOpaque implements DkgState {
       RustLib.instance.api.crateApiFrostDkgStateAutoAccessorSetPackage(
           that: this, package: package);
 
-  Future<String> run() => RustLib.instance.api.crateApiFrostDkgStateRun(
+  Future<DKGStatus> run() => RustLib.instance.api.crateApiFrostDkgStateRun(
         that: this,
       );
 }
