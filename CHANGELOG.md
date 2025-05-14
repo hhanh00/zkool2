@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.17.0...zkool-v2.0.0) (2025-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* internal flag added to account table
+
+### Features
+
+* **dkg:** auto-run dkg state machine ([#183](https://github.com/hhanh00/zkool2/issues/183)) ([a41c7dc](https://github.com/hhanh00/zkool2/commit/a41c7dcfacec8234cd42127fc87929197769cbb7))
+* **dkg:** broadcast public package 1 ([#181](https://github.com/hhanh00/zkool2/issues/181)) ([27e5042](https://github.com/hhanh00/zkool2/commit/27e50429f0b4747c357fb1268a80f12ef23aea06))
+* **dkg:** import/export frost dkg data ([#185](https://github.com/hhanh00/zkool2/issues/185)) ([21b4893](https://github.com/hhanh00/zkool2/commit/21b48935f2c92bc4d47b684de99bf4d9c11395ac))
+* **dkg:** save packages to dkg_* tables ([#184](https://github.com/hhanh00/zkool2/issues/184)) ([d69ea14](https://github.com/hhanh00/zkool2/commit/d69ea14a41ca49247fee774b95f9f922824022d4))
+* **dkg:** shared address generation ([#182](https://github.com/hhanh00/zkool2/issues/182)) ([82796d9](https://github.com/hhanh00/zkool2/commit/82796d9bfef6fe8dab16e1b5abdff5a31bcaa668))
+* frost dkg - parameters - ui ([#178](https://github.com/hhanh00/zkool2/issues/178)) ([03915fd](https://github.com/hhanh00/zkool2/commit/03915fd86fba3823ccea4135b6190e31e8ccc08c))
+* internal flag added to account table ([7132c16](https://github.com/hhanh00/zkool2/commit/7132c16aae34e7b8fffc5bdc50a0101a9907a2bc))
+
+
+### Bug Fixes
+
+* sync now ([7132c16](https://github.com/hhanh00/zkool2/commit/7132c16aae34e7b8fffc5bdc50a0101a9907a2bc))
+
 ## [1.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.16.3...zkool-v1.17.0) (2025-05-10)
 
 
