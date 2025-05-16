@@ -231,6 +231,7 @@ class AccountViewPageState extends State<AccountViewPage> {
     await AppStoreBase.instance.loadTxHistory();
     await AppStoreBase.instance.loadMemos();
     await AppStoreBase.instance.loadNotes();
+    await AppStoreBase.instance.loadOtherData();
     if (!mounted) return;
     setState(() {
       poolBalance = b;
