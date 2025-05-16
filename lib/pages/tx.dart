@@ -7,6 +7,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 final cancelID = GlobalKey();
@@ -52,11 +53,14 @@ class TxPageState extends State<TxPage> {
     Future(tutorial);
 
     final canSend = txPlan.canSign && canBroadcast;
+    final hasFrost = AppStoreBase.instance.frostParams != null;
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Transaction"),
         actions: [
+          if (hasFrost)
+            IconButton(onPressed: onFrost, icon: Icon(Icons.ac_unit)),
           Showcase(
               key: cancelID,
               description: "Cancel, do NOT send",
@@ -101,6 +105,10 @@ class TxPageState extends State<TxPage> {
         showTxPlan(context, txPlan),
       ]),
     );
+  }
+
+  void onFrost() async {
+    await GoRouter.of(context).push("/frost1", extra: widget.pczt);
   }
 
   void onSend() async {

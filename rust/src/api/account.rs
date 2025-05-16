@@ -702,3 +702,19 @@ pub async fn print_keys(id: u32) -> Result<()> {
 
     Ok(())
 }
+
+#[frb]
+pub async fn get_account_frost_params() -> Result<Option<FrostParams>> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+
+    crate::account::get_account_frost_params(connection, c.account).await
+}
+
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct FrostParams {
+    pub id: u8,
+    pub n: u8,
+    pub t: u8,
+}

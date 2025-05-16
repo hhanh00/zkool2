@@ -674,6 +674,169 @@ abstract class _AccountUpdate implements AccountUpdate {
 }
 
 /// @nodoc
+mixin _$FrostParams {
+  int get id => throw _privateConstructorUsedError;
+  int get n => throw _privateConstructorUsedError;
+  int get t => throw _privateConstructorUsedError;
+
+  /// Create a copy of FrostParams
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $FrostParamsCopyWith<FrostParams> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $FrostParamsCopyWith<$Res> {
+  factory $FrostParamsCopyWith(
+          FrostParams value, $Res Function(FrostParams) then) =
+      _$FrostParamsCopyWithImpl<$Res, FrostParams>;
+  @useResult
+  $Res call({int id, int n, int t});
+}
+
+/// @nodoc
+class _$FrostParamsCopyWithImpl<$Res, $Val extends FrostParams>
+    implements $FrostParamsCopyWith<$Res> {
+  _$FrostParamsCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of FrostParams
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? n = null,
+    Object? t = null,
+  }) {
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      n: null == n
+          ? _value.n
+          : n // ignore: cast_nullable_to_non_nullable
+              as int,
+      t: null == t
+          ? _value.t
+          : t // ignore: cast_nullable_to_non_nullable
+              as int,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$FrostParamsImplCopyWith<$Res>
+    implements $FrostParamsCopyWith<$Res> {
+  factory _$$FrostParamsImplCopyWith(
+          _$FrostParamsImpl value, $Res Function(_$FrostParamsImpl) then) =
+      __$$FrostParamsImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({int id, int n, int t});
+}
+
+/// @nodoc
+class __$$FrostParamsImplCopyWithImpl<$Res>
+    extends _$FrostParamsCopyWithImpl<$Res, _$FrostParamsImpl>
+    implements _$$FrostParamsImplCopyWith<$Res> {
+  __$$FrostParamsImplCopyWithImpl(
+      _$FrostParamsImpl _value, $Res Function(_$FrostParamsImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of FrostParams
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? n = null,
+    Object? t = null,
+  }) {
+    return _then(_$FrostParamsImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      n: null == n
+          ? _value.n
+          : n // ignore: cast_nullable_to_non_nullable
+              as int,
+      t: null == t
+          ? _value.t
+          : t // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$FrostParamsImpl implements _FrostParams {
+  const _$FrostParamsImpl({required this.id, required this.n, required this.t});
+
+  @override
+  final int id;
+  @override
+  final int n;
+  @override
+  final int t;
+
+  @override
+  String toString() {
+    return 'FrostParams(id: $id, n: $n, t: $t)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$FrostParamsImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.n, n) || other.n == n) &&
+            (identical(other.t, t) || other.t == t));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id, n, t);
+
+  /// Create a copy of FrostParams
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$FrostParamsImplCopyWith<_$FrostParamsImpl> get copyWith =>
+      __$$FrostParamsImplCopyWithImpl<_$FrostParamsImpl>(this, _$identity);
+}
+
+abstract class _FrostParams implements FrostParams {
+  const factory _FrostParams(
+      {required final int id,
+      required final int n,
+      required final int t}) = _$FrostParamsImpl;
+
+  @override
+  int get id;
+  @override
+  int get n;
+  @override
+  int get t;
+
+  /// Create a copy of FrostParams
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$FrostParamsImplCopyWith<_$FrostParamsImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$Memo {
   int get id => throw _privateConstructorUsedError;
   int get idTx => throw _privateConstructorUsedError;

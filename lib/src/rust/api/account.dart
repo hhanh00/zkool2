@@ -100,6 +100,9 @@ Future<void> importAccount(
 Future<void> printKeys({required int id}) =>
     RustLib.instance.api.crateApiAccountPrintKeys(id: id);
 
+Future<FrostParams?> getAccountFrostParams() =>
+    RustLib.instance.api.crateApiAccountGetAccountFrostParams();
+
 @freezed
 class Account with _$Account {
   const factory Account({
@@ -159,6 +162,15 @@ class Addresses {
           saddr == other.saddr &&
           oaddr == other.oaddr &&
           ua == other.ua;
+}
+
+@freezed
+class FrostParams with _$FrostParams {
+  const factory FrostParams({
+    required int id,
+    required int n,
+    required int t,
+  }) = _FrostParams;
 }
 
 @freezed
