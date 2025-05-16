@@ -201,10 +201,10 @@ pub async fn get_frost_sign_params() -> Result<Option<FrostSignParams>> {
     Ok(p)
 }
 
-pub async fn set_frost_sign_params(coordinator: u8) -> Result<()> {
+pub async fn set_frost_sign_params(coordinator: u8, funding_account: u32) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let p = FrostSignParams { coordinator };
+    let p = FrostSignParams { coordinator, funding_account };
     let p = serde_json::to_string(&p)?;
     sqlx::query(
         "INSERT INTO props(key, value) VALUES ('frost_sign_params', ?)",
@@ -217,6 +217,11 @@ pub async fn set_frost_sign_params(coordinator: u8) -> Result<()> {
 }
 
 pub async fn frost_run() -> Result<FrostSignStatus> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let mut client = c.client().await?;
+
+    crate::frost::run(&c.network, connection, c.account, &mut client, OsRng).await?;
     Ok(FrostSignStatus::WaitSigningPackage)
 }
 
@@ -224,6 +229,7 @@ pub async fn frost_run() -> Result<FrostSignStatus> {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FrostSignParams {
     pub coordinator: u8,
+    pub funding_account: u32,
 }
 
 pub enum FrostSignStatus {

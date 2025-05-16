@@ -875,6 +875,7 @@ abstract class _FrostPackage extends FrostPackage {
 /// @nodoc
 mixin _$FrostSignParams {
   int get coordinator => throw _privateConstructorUsedError;
+  int get fundingAccount => throw _privateConstructorUsedError;
 
   /// Create a copy of FrostSignParams
   /// with the given fields replaced by the non-null parameter values.
@@ -889,7 +890,7 @@ abstract class $FrostSignParamsCopyWith<$Res> {
           FrostSignParams value, $Res Function(FrostSignParams) then) =
       _$FrostSignParamsCopyWithImpl<$Res, FrostSignParams>;
   @useResult
-  $Res call({int coordinator});
+  $Res call({int coordinator, int fundingAccount});
 }
 
 /// @nodoc
@@ -908,11 +909,16 @@ class _$FrostSignParamsCopyWithImpl<$Res, $Val extends FrostSignParams>
   @override
   $Res call({
     Object? coordinator = null,
+    Object? fundingAccount = null,
   }) {
     return _then(_value.copyWith(
       coordinator: null == coordinator
           ? _value.coordinator
           : coordinator // ignore: cast_nullable_to_non_nullable
+              as int,
+      fundingAccount: null == fundingAccount
+          ? _value.fundingAccount
+          : fundingAccount // ignore: cast_nullable_to_non_nullable
               as int,
     ) as $Val);
   }
@@ -926,7 +932,7 @@ abstract class _$$FrostSignParamsImplCopyWith<$Res>
       __$$FrostSignParamsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int coordinator});
+  $Res call({int coordinator, int fundingAccount});
 }
 
 /// @nodoc
@@ -943,11 +949,16 @@ class __$$FrostSignParamsImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? coordinator = null,
+    Object? fundingAccount = null,
   }) {
     return _then(_$FrostSignParamsImpl(
       coordinator: null == coordinator
           ? _value.coordinator
           : coordinator // ignore: cast_nullable_to_non_nullable
+              as int,
+      fundingAccount: null == fundingAccount
+          ? _value.fundingAccount
+          : fundingAccount // ignore: cast_nullable_to_non_nullable
               as int,
     ));
   }
@@ -956,14 +967,18 @@ class __$$FrostSignParamsImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$FrostSignParamsImpl extends _FrostSignParams {
-  const _$FrostSignParamsImpl({required this.coordinator}) : super._();
+  const _$FrostSignParamsImpl(
+      {required this.coordinator, required this.fundingAccount})
+      : super._();
 
   @override
   final int coordinator;
+  @override
+  final int fundingAccount;
 
   @override
   String toString() {
-    return 'FrostSignParams(coordinator: $coordinator)';
+    return 'FrostSignParams(coordinator: $coordinator, fundingAccount: $fundingAccount)';
   }
 
   @override
@@ -972,11 +987,13 @@ class _$FrostSignParamsImpl extends _FrostSignParams {
         (other.runtimeType == runtimeType &&
             other is _$FrostSignParamsImpl &&
             (identical(other.coordinator, coordinator) ||
-                other.coordinator == coordinator));
+                other.coordinator == coordinator) &&
+            (identical(other.fundingAccount, fundingAccount) ||
+                other.fundingAccount == fundingAccount));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, coordinator);
+  int get hashCode => Object.hash(runtimeType, coordinator, fundingAccount);
 
   /// Create a copy of FrostSignParams
   /// with the given fields replaced by the non-null parameter values.
@@ -989,12 +1006,15 @@ class _$FrostSignParamsImpl extends _FrostSignParams {
 }
 
 abstract class _FrostSignParams extends FrostSignParams {
-  const factory _FrostSignParams({required final int coordinator}) =
-      _$FrostSignParamsImpl;
+  const factory _FrostSignParams(
+      {required final int coordinator,
+      required final int fundingAccount}) = _$FrostSignParamsImpl;
   const _FrostSignParams._() : super._();
 
   @override
   int get coordinator;
+  @override
+  int get fundingAccount;
 
   /// Create a copy of FrostSignParams
   /// with the given fields replaced by the non-null parameter values.
