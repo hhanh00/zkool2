@@ -33,9 +33,10 @@ Future<void> startFrostSign({required PcztPackage pczt}) =>
 Future<FrostSignParams?> getFrostSignParams() =>
     RustLib.instance.api.crateApiFrostGetFrostSignParams();
 
-Future<void> setFrostSignParams({required int coordinator}) =>
-    RustLib.instance.api
-        .crateApiFrostSetFrostSignParams(coordinator: coordinator);
+Future<void> setFrostSignParams(
+        {required int coordinator, required int fundingAccount}) =>
+    RustLib.instance.api.crateApiFrostSetFrostSignParams(
+        coordinator: coordinator, fundingAccount: fundingAccount);
 
 Future<FrostSignStatus> frostRun() =>
     RustLib.instance.api.crateApiFrostFrostRun();
@@ -96,6 +97,7 @@ class FrostSignParams with _$FrostSignParams {
   const FrostSignParams._();
   const factory FrostSignParams({
     required int coordinator,
+    required int fundingAccount,
   }) = _FrostSignParams;
   static Future<FrostSignParams> default_() =>
       RustLib.instance.api.crateApiFrostFrostSignParamsDefault();

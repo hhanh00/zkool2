@@ -1,20 +1,22 @@
 use std::collections::BTreeMap;
 
 use anyhow::{Context, Result};
-use bincode::config;
+use bincode::{config, Decode, Encode};
 use bip39::Mnemonic;
 use futures::StreamExt as _;
 use group::ff::PrimeField as _;
 use orchard::keys::{FullViewingKey, Scope};
+use pczt::Pczt;
 use rand_core::{CryptoRng, RngCore};
 use reddsa::frost::redpallas::{
-    frost::{
-        keys::dkg::{self, round1, round2},
-        Identifier,
+    frost::keys::SigningShare,
+    keys::{
+        dkg::{self, round1, round2},
+        EvenY, KeyPackage, PublicKeyPackage,
     },
-    keys::EvenY,
-    PallasBlake2b512,
+    Identifier, PallasBlake2b512,
 };
+use serde::Deserialize;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
 use tracing::info;
@@ -22,18 +24,24 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
-    account::{get_birth_height, get_orchard_vk}, api::{
-        account::{new_account, NewAccount},
-        frost::{DKGPackage, DKGState, DKGStatus},
-    }, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, lwd::ChainSpec, pay::{
+    account::{get_birth_height, get_orchard_vk},
+    api::{
+        account::{new_account, FrostParams, NewAccount},
+        frost::{DKGPackage, DKGState, DKGStatus, FrostSignParams},
+        pay::PcztPackage,
+    },
+    db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk},
+    lwd::ChainSpec,
+    pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
         pool::ALL_POOLS,
-        Recipient,
-    }, Client
+        prepare, Recipient,
+    },
+    Client,
 };
 
-pub type PK1Map = BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>;
-pub type PK2Map = BTreeMap<Identifier<PallasBlake2b512>, round2::Package<PallasBlake2b512>>;
+pub type PK1Map = BTreeMap<Identifier, round1::Package>;
+pub type PK2Map = BTreeMap<Identifier, round2::Package>;
 
 impl DKGState {
     pub fn seed(&self) -> Option<Mnemonic> {
@@ -95,17 +103,14 @@ impl DKGState {
         Ok(broadcast_address)
     }
 
-    pub async fn get_sk1(
-        &self,
-        connection: &SqlitePool,
-    ) -> Result<Option<round1::SecretPackage<PallasBlake2b512>>> {
+    pub async fn get_sk1(&self, connection: &SqlitePool) -> Result<Option<round1::SecretPackage>> {
         let sk1 = sqlx::query("SELECT value FROM props WHERE key = 'frost-sk1'")
             .map(|row: SqliteRow| {
                 let sk1b: Vec<u8> = row.get(0);
-                let (sk1, _) = bincode::serde::decode_from_slice::<
-                    round1::SecretPackage<PallasBlake2b512>,
-                    _,
-                >(&sk1b, config::standard())
+                let (sk1, _) = bincode::serde::decode_from_slice::<round1::SecretPackage, _>(
+                    &sk1b,
+                    config::standard(),
+                )
                 .expect("Failed to decode SecretPackage");
                 sk1
             })
@@ -227,9 +232,9 @@ impl DKGState {
         client: &mut Client,
         broadcast_address: &str,
         rng: R,
-    ) -> Result<round1::SecretPackage<PallasBlake2b512>> {
+    ) -> Result<round1::SecretPackage> {
         let id = self.package.id as u16;
-        let (sk1, pk1) = dkg::part1::<PallasBlake2b512, R>(
+        let (sk1, pk1) = dkg::part1::<R>(
             id.try_into().unwrap(),
             self.package.n as u16,
             self.package.t as u16,
@@ -284,17 +289,14 @@ impl DKGState {
         Ok(sk1)
     }
 
-    pub async fn get_sk2(
-        &self,
-        connection: &SqlitePool,
-    ) -> Result<Option<round2::SecretPackage<PallasBlake2b512>>> {
+    pub async fn get_sk2(&self, connection: &SqlitePool) -> Result<Option<round2::SecretPackage>> {
         let sk2 = sqlx::query("SELECT value FROM props WHERE key = 'frost-sk2'")
             .map(|row: SqliteRow| {
                 let sk2b: Vec<u8> = row.get(0);
-                let (sk2, _) = bincode::serde::decode_from_slice::<
-                    round2::SecretPackage<PallasBlake2b512>,
-                    _,
-                >(&sk2b, config::standard())
+                let (sk2, _) = bincode::serde::decode_from_slice::<round2::SecretPackage, _>(
+                    &sk2b,
+                    config::standard(),
+                )
                 .expect("Failed to decode SecretPackage");
                 sk2
             })
@@ -308,9 +310,9 @@ impl DKGState {
         network: &Network,
         connection: &SqlitePool,
         client: &mut Client,
-        sk1: &round1::SecretPackage<PallasBlake2b512>,
-        pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
-    ) -> Result<round2::SecretPackage<PallasBlake2b512>> {
+        sk1: &round1::SecretPackage,
+        pk1s: &BTreeMap<Identifier, round1::Package>,
+    ) -> Result<round2::SecretPackage> {
         let (sk2, pk2s) = dkg::part2(sk1.clone(), pk1s)?;
         info!("Frost secret key 2: {:?}", sk2);
 
@@ -375,13 +377,18 @@ impl DKGState {
         Ok(sk2)
     }
 
-    pub async fn finalize(&self, connection: &SqlitePool, fvk: &FullViewingKey,
+    pub async fn finalize(
+        &self,
+        connection: &SqlitePool,
+        fvk: &FullViewingKey,
         mailbox_account: u32,
         broadcast_account: u32,
-        sk1: &round1::SecretPackage<PallasBlake2b512>,
-        sk2: &round2::SecretPackage<PallasBlake2b512>,
-        pk1s: &BTreeMap<Identifier<PallasBlake2b512>, round1::Package<PallasBlake2b512>>,
-        pk2s: &BTreeMap<Identifier<PallasBlake2b512>, round2::Package<PallasBlake2b512>>,
+        sk1: &round1::SecretPackage,
+        sk2: &round2::SecretPackage,
+        sk: &KeyPackage,
+        pk: &PublicKeyPackage,
+        pk1s: &BTreeMap<Identifier, round1::Package>,
+        pk2s: &BTreeMap<Identifier, round2::Package>,
     ) -> Result<()> {
         let r = sqlx::query("SELECT 1 FROM props WHERE key = 'frost'")
             .fetch_optional(connection)
@@ -393,20 +400,21 @@ impl DKGState {
 
         let package = &self.package;
         let birth = get_birth_height(connection, package.mailbox_account).await?;
-        let account = store_account_metadata(connection,
-            &package.name, &None, &None, birth, false, false).await?;
+        let account =
+            store_account_metadata(connection, &package.name, &None, &None, birth, false, false)
+                .await?;
         init_account_orchard(connection, account, birth).await?;
         store_account_orchard_vk(connection, account, fvk).await?;
 
-        let (seed, ): (String, ) = sqlx::query_as(
-            "SELECT seed FROM accounts WHERE id_account = ?1",
-        )
-        .bind(package.mailbox_account)
-        .fetch_one(connection).await?;
+        let (seed,): (String,) = sqlx::query_as("SELECT seed FROM accounts WHERE id_account = ?1")
+            .bind(package.mailbox_account)
+            .fetch_one(connection)
+            .await?;
 
         sqlx::query(
             r#"INSERT INTO dkg_params(account, id, n, t, seed, birth_height)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING"#)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING"#,
+        )
         .bind(account)
         .bind(package.id)
         .bind(package.n)
@@ -419,7 +427,7 @@ impl DKGState {
         for (i, address) in package.addresses.iter().enumerate() {
             sqlx::query(
                 r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
-                VALUES (?, TRUE, 0, ?, ?) ON CONFLICT DO NOTHING"#
+                VALUES (?, TRUE, 0, ?, ?) ON CONFLICT DO NOTHING"#,
             )
             .bind(account)
             .bind(i as u32 + 1)
@@ -436,20 +444,21 @@ impl DKGState {
             };
             sqlx::query(
                 r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
-                VALUES (?, FALSE, ?, ?, ?) ON CONFLICT DO NOTHING"#
+                VALUES (?, FALSE, ?, ?, ?) ON CONFLICT DO NOTHING"#,
             )
             .bind(account)
             .bind(round as u32)
             .bind(package.id)
             .bind(&sk)
-            .execute(connection).await?;
+            .execute(connection)
+            .await?;
 
             for id in 1..=package.n {
                 if id == package.id {
                     continue;
                 }
 
-                let other_id: Identifier<PallasBlake2b512> = (id as u16).try_into().unwrap();
+                let other_id: Identifier = (id as u16).try_into().unwrap();
                 let pk = if round == 1 {
                     let pk1 = pk1s.get(&other_id).unwrap();
                     pk1.serialize()?
@@ -460,15 +469,34 @@ impl DKGState {
 
                 sqlx::query(
                     r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
-                    VALUES (?, TRUE, ?, ?, ?) ON CONFLICT DO NOTHING"#
+                    VALUES (?, TRUE, ?, ?, ?) ON CONFLICT DO NOTHING"#,
                 )
                 .bind(account)
                 .bind(round)
                 .bind(id)
                 .bind(&pk)
-                .execute(connection).await?;
+                .execute(connection)
+                .await?;
             }
         }
+        sqlx::query(
+            r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
+            VALUES (?, FALSE, 3, ?, ?) ON CONFLICT DO NOTHING"#,
+        )
+        .bind(account)
+        .bind(package.id)
+        .bind(&sk.serialize()?)
+        .execute(connection)
+        .await?;
+        sqlx::query(
+            r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
+            VALUES (?, TRUE, 3, ?, ?) ON CONFLICT DO NOTHING"#,
+        )
+        .bind(account)
+        .bind(package.id)
+        .bind(&pk.serialize()?)
+        .execute(connection)
+        .await?;
 
         let frost_keys = sqlx::query("SELECT key FROM props WHERE key LIKE 'frost%'")
             .map(|row: SqliteRow| {
@@ -507,16 +535,20 @@ impl DKGState {
             .await?;
         let sk1 = match self.get_sk1(connection).await? {
             Some(sk1) => sk1,
-            None => self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
-                .await?,
+            None => {
+                self.run_phase1(network, connection, client, &broadcast_address, &mut rng)
+                    .await?
+            }
         };
         let Some(pk1s) = self.get_pk1(connection, broadcast_account).await? else {
             return Ok(DKGStatus::WaitRound1Pkg);
         };
         let sk2 = match self.get_sk2(connection).await? {
             Some(sk2) => sk2,
-            None => self.run_phase2(network, connection, client, &sk1, &pk1s)
-                .await?,
+            None => {
+                self.run_phase2(network, connection, client, &sk1, &pk1s)
+                    .await?
+            }
         };
         let Some(pk2s) = self
             .get_pk2(connection, self.package.mailbox_account)
@@ -525,17 +557,16 @@ impl DKGState {
             return Ok(DKGStatus::WaitRound2Pkg);
         };
 
-        let (_sk, pk) = dkg::part3(&sk2, &pk1s, &pk2s)
-            .map_err(anyhow::Error::new)?;
+        let (sk, pk) = dkg::part3(&sk2, &pk1s, &pk2s).map_err(anyhow::Error::new)?;
 
         let fvk = get_orchard_vk(connection, broadcast_account)
             .await?
             .expect("broadcast account vk not found");
         let mut fvkb = fvk.to_bytes();
         let pk = pk.into_even_y(None);
-        let pk = pk.verifying_key();
+        let vk = pk.verifying_key();
 
-        let pkb = pk.serialize().expect("pk serialize");
+        let pkb = vk.serialize().expect("pk serialize");
         fvkb[0..32].copy_from_slice(&pkb);
         let fvk = FullViewingKey::from_bytes(&fvkb).expect("Failed to create shared FVK");
         let address = fvk.address_at(0u64, Scope::External);
@@ -543,14 +574,147 @@ impl DKGState {
         let sua = ua.encode(network);
         info!("Shared address: {sua}");
 
-        self.finalize(connection, &fvk,
-            self.package.mailbox_account, broadcast_account,
-            &sk1, &sk2, &pk1s, &pk2s).await?;
+        self.finalize(
+            connection,
+            &fvk,
+            self.package.mailbox_account,
+            broadcast_account,
+            &sk1,
+            &sk2,
+            &sk,
+            &pk,
+            &pk1s,
+            &pk2s,
+        )
+        .await?;
 
         Ok(DKGStatus::SharedAddress(sua))
     }
 }
 
+pub async fn run<R: RngCore + CryptoRng>(
+    network: &Network,
+    connection: &SqlitePool,
+    account: u32,
+    client: &mut Client,
+    mut rng: R,
+) -> Result<()> {
+    let pczt = sqlx::query("SELECT value FROM props WHERE key = 'frost_pczt'")
+        .map(|row: SqliteRow| {
+            let value: Vec<u8> = row.get(0);
+            let pczt: PcztPackage = bincode::decode_from_slice(&value, config::legacy())
+                .unwrap()
+                .0;
+            pczt
+        })
+        .fetch_one(connection)
+        .await
+        .context("Fetch pczt failed")?;
+    let params = sqlx::query("SELECT value FROM props WHERE key = 'frost_sign_params'")
+        .map(|row: SqliteRow| {
+            let value: String = row.get(0);
+            let params: FrostSignParams =
+                serde_json::from_str(&value).expect("Failed to decode FrostSignParams");
+            params
+        })
+        .fetch_one(connection)
+        .await
+        .context("Fetch params failed")?;
+    let FrostSignParams {
+        coordinator,
+        funding_account,
+    } = params;
+    let (coordinator_address,): (String,) = sqlx::query_as(
+        "SELECT data FROM dkg_packages WHERE account = ?1
+        AND public = 1 AND round = 0 AND from_id = ?2",
+    )
+    .bind(account)
+    .bind(coordinator)
+    .fetch_one(connection)
+    .await
+    .context("Fetch coordinator address failed")?;
+
+    let s = pczt.n_spends;
+    if s[0] != 0 {
+        anyhow::bail!("PCZT cannot have transparent inputs");
+    }
+    if s[1] != 0 {
+        anyhow::bail!("PCZT cannot have sapling inputs");
+    }
+    let n_actions = s[2];
+
+    let sk = sqlx::query(
+        "SELECT data FROM dkg_packages WHERE account = ?1
+        AND public = 0 AND round = 3",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let sk: Vec<u8> = row.get(0);
+        let sk: KeyPackage = KeyPackage::deserialize(&sk).expect("Failed to decode KeyPackage");
+        sk
+    })
+    .fetch_one(connection)
+    .await
+    .context("Fetch keypage failed")?;
+
+    let has_commitments = sqlx::query("SELECT 1 FROM frost_signature WHERE account = ?1")
+        .bind(account)
+        .fetch_optional(connection)
+        .await?
+        .is_some();
+
+    if !has_commitments {
+        let mut commitbs = vec![];
+        for i in 0..n_actions {
+            let (nonces, commitments) =
+                reddsa::frost::redpallas::frost::round1::commit(sk.signing_share(), &mut rng);
+            sqlx::query("INSERT OR REPLACE INTO frost_signature(account, idx, nonces, commitments) VALUES (?, ?, ?, ?)")
+            .bind(account)
+            .bind(i as u32)
+            .bind(&nonces.serialize()?)
+            .bind(&commitments.serialize()?)
+            .execute(connection).await?;
+            let commitb = commitments.serialize()?;
+            commitbs.push(commitb);
+        }
+        let commitments = Commitments {
+            commitments: commitbs,
+        };
+        let commitments = bincode::encode_to_vec(&commitments, config::legacy())?;
+        let pczt = plan_transaction(
+            network,
+            connection,
+            client,
+            funding_account,
+            ALL_POOLS,
+            std::slice::from_ref(&Recipient {
+                address: coordinator_address,
+                amount: 0,
+                pools: None,
+                user_memo: None,
+                memo_bytes: Some(to_arb_memo(&commitments)),
+            }),
+            false,
+        )
+        .await?;
+        let height = client
+            .get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner()
+            .height;
+        let pczt = sign_transaction(connection, funding_account, &pczt).await?;
+        let txb = extract_transaction(&pczt).await?;
+        let txid = crate::pay::send(client, height as u32, &txb).await?;
+        info!("Broadcasted transaction: {txid}");
+    }
+
+    Ok(())
+}
+
+#[derive(Encode, Decode)]
+pub struct Commitments {
+    pub commitments: Vec<Vec<u8>>,
+}
 
 pub fn to_arb_memo(pk1: &[u8]) -> Vec<u8> {
     let mut memo_bytes = vec![0xFF];

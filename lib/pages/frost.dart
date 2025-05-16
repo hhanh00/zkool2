@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/frost.dart';
@@ -32,22 +33,25 @@ Widget buildFrostPage(BuildContext context,
 class FrostPage1State extends State<FrostPage1> {
   final formKey = GlobalKey<FormBuilderState>();
   final frostParams = AppStoreBase.instance.frostParams!;
+  late final accounts = AppStoreBase.instance.accounts.where((e) => !e.hidden);
 
   @override
   void initState() {
     super.initState();
     startFrostSign(pczt: widget.pczt);
+
+    Future(() async {
+      final fsm = await getFrostSignParams();
+      if (fsm != null && context.mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          GoRouter.of(context).pushReplacement("/frost2");
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    Future(() async {
-      final fsm = await getFrostSignParams();
-      if (fsm != null && context.mounted) {
-        GoRouter.of(context).go("/frost2");
-      }
-    });
-
     return buildFrostPage(context,
         index: 0,
         child: FormBuilder(
@@ -70,6 +74,19 @@ class FrostPage1State extends State<FrostPage1> {
                   child: Text("${i + 1}"),
                 ),
               ))),
+            Padding(padding: EdgeInsets.symmetric(horizontal: 16),
+            child: FormBuilderDropdown(
+              name: "account",
+              decoration:
+                  const InputDecoration(labelText: "Funding Account"),
+              items: accounts
+                  .map((a) => DropdownMenuItem(
+                        value: a.id,
+                        child: Text(a.name),
+                      ))
+                  .toList(),
+              validator: FormBuilderValidators.required(),
+            )),
             Gap(16),
             ElevatedButton.icon(
                 onPressed: onNext,
@@ -82,9 +99,10 @@ class FrostPage1State extends State<FrostPage1> {
     final form = formKey.currentState!;
     if (form.saveAndValidate()) {
       final coordinator = form.fields["coordinator"]!.value as int;
-      await setFrostSignParams(coordinator: coordinator);
+      final fundingAccount = form.fields["account"]!.value as int;
+      await setFrostSignParams(coordinator: coordinator, fundingAccount: fundingAccount);
       if (!mounted) return;
-      await GoRouter.of(context).push("/frost/step2");
+      await GoRouter.of(context).push("/frost2");
     }
   }
 }

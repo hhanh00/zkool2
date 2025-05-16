@@ -203,7 +203,17 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     .execute(connection)
     .await?;
 
-    Ok(())
+    sqlx::query(
+    r#"CREATE TABLE IF NOT EXISTS frost_signature (
+        id_signature INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
+        idx INTEGER NOT NULL,
+        nonces BLOB NOT NULL,
+        commitments BLOB NOT NULL)"#)
+    .execute(connection)
+    .await?;
+
+        Ok(())
 }
 
 pub async fn put_prop(connection: &SqlitePool, key: &str, value: &str) -> Result<()> {
