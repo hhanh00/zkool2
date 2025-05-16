@@ -93,6 +93,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FrostPackage dco_decode_box_autoadd_frost_package(dynamic raw);
 
   @protected
+  FrostParams dco_decode_box_autoadd_frost_params(dynamic raw);
+
+  @protected
+  FrostSignParams dco_decode_box_autoadd_frost_sign_params(dynamic raw);
+
+  @protected
   NewAccount dco_decode_box_autoadd_new_account(dynamic raw);
 
   @protected
@@ -118,6 +124,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostPackage dco_decode_frost_package(dynamic raw);
+
+  @protected
+  FrostParams dco_decode_frost_params(dynamic raw);
+
+  @protected
+  FrostSignParams dco_decode_frost_sign_params(dynamic raw);
+
+  @protected
+  FrostSignStatus dco_decode_frost_sign_status(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
@@ -192,6 +210,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostPackage? dco_decode_opt_box_autoadd_frost_package(dynamic raw);
+
+  @protected
+  FrostParams? dco_decode_opt_box_autoadd_frost_params(dynamic raw);
+
+  @protected
+  FrostSignParams? dco_decode_opt_box_autoadd_frost_sign_params(dynamic raw);
 
   @protected
   Seed? dco_decode_opt_box_autoadd_seed(dynamic raw);
@@ -334,6 +358,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  FrostParams sse_decode_box_autoadd_frost_params(SseDeserializer deserializer);
+
+  @protected
+  FrostSignParams sse_decode_box_autoadd_frost_sign_params(
+      SseDeserializer deserializer);
+
+  @protected
   NewAccount sse_decode_box_autoadd_new_account(SseDeserializer deserializer);
 
   @protected
@@ -359,6 +390,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostPackage sse_decode_frost_package(SseDeserializer deserializer);
+
+  @protected
+  FrostParams sse_decode_frost_params(SseDeserializer deserializer);
+
+  @protected
+  FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer);
+
+  @protected
+  FrostSignStatus sse_decode_frost_sign_status(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
@@ -433,6 +476,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostPackage? sse_decode_opt_box_autoadd_frost_package(
+      SseDeserializer deserializer);
+
+  @protected
+  FrostParams? sse_decode_opt_box_autoadd_frost_params(
+      SseDeserializer deserializer);
+
+  @protected
+  FrostSignParams? sse_decode_opt_box_autoadd_frost_sign_params(
       SseDeserializer deserializer);
 
   @protected
@@ -514,9 +565,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray3 sse_decode_usize_array_3(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
 
@@ -580,6 +628,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       FrostPackage self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_frost_params(
+      FrostParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_frost_sign_params(
+      FrostSignParams self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_new_account(
       NewAccount self, SseSerializer serializer);
 
@@ -607,6 +663,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_frost_package(FrostPackage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_frost_params(FrostParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_frost_sign_params(
+      FrostSignParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_frost_sign_status(
+      FrostSignStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
@@ -692,6 +762,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       FrostPackage? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_frost_params(
+      FrostParams? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_frost_sign_params(
+      FrostSignParams? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_seed(Seed? self, SseSerializer serializer);
 
   @protected
@@ -770,9 +848,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class

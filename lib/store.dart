@@ -12,6 +12,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
 
@@ -44,6 +45,8 @@ abstract class AppStoreBase with Store {
   String? versionString;
 
   ObservableList<String> log = ObservableList.of([]);
+
+  FrostParams? frostParams;
 
   Future<void> init() async {
     final prefs = SharedPreferencesAsync();
@@ -84,6 +87,10 @@ abstract class AppStoreBase with Store {
       heights[a.id] = a.height;
     }
     return as;
+  }
+
+  Future<void> loadOtherData() async {
+    frostParams = await getAccountFrostParams();
   }
 
   @action

@@ -4,12 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+import 'pay.dart';
 part 'frost.freezed.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGPackage`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 Future<FrostPackage> newFrost(
         {required String name,
@@ -25,6 +26,19 @@ Future<FrostPackage?> loadFrost() =>
 
 Future<void> submitDkg({required FrostPackage package}) =>
     RustLib.instance.api.crateApiFrostSubmitDkg(package: package);
+
+Future<void> startFrostSign({required PcztPackage pczt}) =>
+    RustLib.instance.api.crateApiFrostStartFrostSign(pczt: pczt);
+
+Future<FrostSignParams?> getFrostSignParams() =>
+    RustLib.instance.api.crateApiFrostGetFrostSignParams();
+
+Future<void> setFrostSignParams({required int coordinator}) =>
+    RustLib.instance.api
+        .crateApiFrostSetFrostSignParams(coordinator: coordinator);
+
+Future<FrostSignStatus> frostRun() =>
+    RustLib.instance.api.crateApiFrostFrostRun();
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DKGState>>
 abstract class DkgState implements RustOpaqueInterface {
@@ -75,4 +89,20 @@ class FrostPackage with _$FrostPackage {
       RustLib.instance.api.crateApiFrostFrostPackageUserInputCompleted(
         that: this,
       );
+}
+
+@freezed
+class FrostSignParams with _$FrostSignParams {
+  const FrostSignParams._();
+  const factory FrostSignParams({
+    required int coordinator,
+  }) = _FrostSignParams;
+  static Future<FrostSignParams> default_() =>
+      RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
+}
+
+enum FrostSignStatus {
+  waitSigningPackage,
+  completed,
+  ;
 }

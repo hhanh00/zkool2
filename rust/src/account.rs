@@ -21,7 +21,7 @@ use zcash_transparent::keys::{
 };
 
 use crate::{
-    db::store_account_transparent_addr, sync::trim_sync_data, warp::{AuthPath, Witness, MERKLE_DEPTH}
+    api::account::FrostParams, db::store_account_transparent_addr, sync::trim_sync_data, warp::{AuthPath, Witness, MERKLE_DEPTH}
 };
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
@@ -483,6 +483,25 @@ pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -
 
     Ok(tx)
 }
+
+pub async fn get_account_frost_params(
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<Option<FrostParams>> {
+    let frost = sqlx::query("SELECT id, n, t FROM dkg_params WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let id: u8 = row.get(0);
+            let n: u8 = row.get(1);
+            let t: u8 = row.get(2);
+            FrostParams { id, n, t }
+        })
+        .fetch_optional(connection)
+        .await?;
+
+    Ok(frost)
+}
+
 
 #[derive(Default, Debug)]
 pub struct TxAccount {

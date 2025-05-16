@@ -207,7 +207,7 @@ class NewAccountPageState extends State<NewAccountPage> {
             )));
   }
 
-  void onFrost() => GoRouter.of(context).pushReplacement("/dkg");
+  void onFrost() => GoRouter.of(context).push("/dkg1");
 
   void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
