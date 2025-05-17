@@ -13,7 +13,10 @@ use bincode::config;
 use flutter_rust_bridge::frb;
 use sqlx::{sqlite::SqliteRow, Sqlite};
 use sqlx::{Row, SqlitePool};
-use tokio::sync::{broadcast, mpsc::{channel, Sender}};
+use tokio::sync::{
+    broadcast,
+    mpsc::{channel, Sender},
+};
 use tonic::{Request, Streaming};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
@@ -495,9 +498,9 @@ pub async fn rewind_sync(connection: &SqlitePool, account: u32, height: u32) -> 
 
     // then trim the headers because there are no accounts using them
     sqlx::query("DELETE FROM headers WHERE height > ?")
-    .bind(height)
-    .execute(connection)
-    .await?;
+        .bind(height)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
@@ -508,15 +511,16 @@ pub async fn prune_old_checkpoints(
     height: u32,
 ) -> Result<()> {
     // find the latest checkpoint before the given height
-    let checkpoint_height = sqlx::query("SELECT MAX(height) FROM witnesses WHERE account = ? AND height < ?")
-        .bind(account)
-        .bind(height)
-        .map(|row: SqliteRow| {
-            let height: Option<u32> = row.get(0);
-            height
-        })
-        .fetch_one(connection)
-        .await?;
+    let checkpoint_height =
+        sqlx::query("SELECT MAX(height) FROM witnesses WHERE account = ? AND height < ?")
+            .bind(account)
+            .bind(height)
+            .map(|row: SqliteRow| {
+                let height: Option<u32> = row.get(0);
+                height
+            })
+            .fetch_one(connection)
+            .await?;
     // delete all witnesses before the checkpoint height
     if let Some(checkpoint_height) = checkpoint_height {
         sqlx::query("DELETE FROM witnesses WHERE account = ? AND height < ?")

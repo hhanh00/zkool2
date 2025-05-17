@@ -1,12 +1,12 @@
-use crate::{
-    coin::Coin,
-    db::create_schema, get_coin,
-};
+use crate::{coin::Coin, db::create_schema, get_coin};
 use anyhow::Result;
 use flutter_rust_bridge::frb;
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 
-pub(crate) fn get_connect_options(db_filepath: &str, password: Option<String>) -> SqliteConnectOptions {
+pub(crate) fn get_connect_options(
+    db_filepath: &str,
+    password: Option<String>,
+) -> SqliteConnectOptions {
     let options = SqliteConnectOptions::new()
         .filename(db_filepath)
         .create_if_missing(true);
