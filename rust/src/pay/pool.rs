@@ -65,10 +65,14 @@ impl PoolMask {
         if address.can_receive_as(PoolType::Transparent) {
             pool_mask |= 1;
         }
-        if address.can_receive_as(PoolType::Shielded(zcash_protocol::ShieldedProtocol::Sapling)) {
+        if address.can_receive_as(PoolType::Shielded(
+            zcash_protocol::ShieldedProtocol::Sapling,
+        )) {
             pool_mask |= 2;
         }
-        if address.can_receive_as(PoolType::Shielded(zcash_protocol::ShieldedProtocol::Orchard)) {
+        if address.can_receive_as(PoolType::Shielded(
+            zcash_protocol::ShieldedProtocol::Orchard,
+        )) {
             pool_mask |= 4;
         }
         Ok(PoolMask(pool_mask))
@@ -97,4 +101,3 @@ impl From<Option<u8>> for PoolMask {
         PoolMask(p)
     }
 }
-

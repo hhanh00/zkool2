@@ -1,13 +1,13 @@
 use anyhow::Result;
-use sapling_crypto::{
-    zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk
-};
+use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqlitePool;
-use zcash_protocol::consensus::Network;
 use zcash_primitives::zip32::Scope;
+use zcash_protocol::consensus::Network;
 
 use crate::{
-    lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx}, warp::{hasher::SaplingHasher, try_sapling_decrypt}, Hash32
+    lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx},
+    warp::{hasher::SaplingHasher, try_sapling_decrypt},
+    Hash32,
 };
 
 use super::ShieldedProtocol;
@@ -43,18 +43,18 @@ impl ShieldedProtocol for SaplingProtocol {
         account: u32,
         scope: u8,
     ) -> Result<Option<(Self::IVK, Self::NK)>> {
-        let vk: Option<(Vec<u8>, )> = sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
-            .bind(account)
-            .fetch_optional(connection)
-            .await?;
-        let keys = vk.map(|(vk, )| {
+        let vk: Option<(Vec<u8>,)> =
+            sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
+                .bind(account)
+                .fetch_optional(connection)
+                .await?;
+        let keys = vk.map(|(vk,)| {
             let vk = DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
             let (ivk, nk) = if scope == 1 {
                 let ivk = vk.to_internal_fvk().vk.ivk();
                 let nk = vk.to_nk(Scope::Internal);
                 (ivk, nk)
-            }
-            else {
+            } else {
                 let ivk = vk.fvk().vk.ivk();
                 let nk = vk.to_nk(Scope::External);
                 (ivk, nk)

@@ -14,16 +14,21 @@ pub fn set_lwd(lwd: &str) {
 pub async fn get_current_height() -> Result<u32> {
     let c = crate::get_coin!();
     let mut client = c.client().await?;
-    let height = client.get_latest_block(Request::new(ChainSpec {})).await?.into_inner().height;
+    let height = client
+        .get_latest_block(Request::new(ChainSpec {}))
+        .await?
+        .into_inner()
+        .height;
     Ok(height as u32)
 }
 
 pub async fn get_coingecko_price() -> Result<f64> {
-    let rep = reqwest::get("https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd")
-        .await?
-        .error_for_status()?
-        .json::<ZcashUSD>()
-        .await?;
+    let rep =
+        reqwest::get("https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd")
+            .await?
+            .error_for_status()?
+            .json::<ZcashUSD>()
+            .await?;
     Ok(rep.zcash.usd)
 }
 

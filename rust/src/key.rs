@@ -17,7 +17,12 @@ use crate::{
     db::{select_account_orchard, select_account_sapling, select_account_transparent},
 };
 
-pub async fn get_account_ufvk(network: &Network, connection: &SqlitePool, account: u32, pools: u8) -> Result<String> {
+pub async fn get_account_ufvk(
+    network: &Network,
+    connection: &SqlitePool,
+    account: u32,
+    pools: u8,
+) -> Result<String> {
     let tkeys = select_account_transparent(connection, account).await?;
     let skeys = select_account_sapling(connection, account).await?;
     let okeys = select_account_orchard(connection, account).await?;

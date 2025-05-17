@@ -20,7 +20,8 @@ use orchard::{
     note_encryption::{CompactAction, OrchardDomain},
 };
 use sapling_crypto::{
-    note_encryption::{plaintext_version_is_valid, SaplingDomain, KDF_SAPLING_PERSONALIZATION}, SaplingIvk,
+    note_encryption::{plaintext_version_is_valid, SaplingDomain, KDF_SAPLING_PERSONALIZATION},
+    SaplingIvk,
 };
 use zcash_note_encryption::{EphemeralKeyBytes, COMPACT_NOTE_SIZE};
 use zcash_primitives::transaction::components::sapling::zip212_enforcement;

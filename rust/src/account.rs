@@ -21,7 +21,10 @@ use zcash_transparent::keys::{
 };
 
 use crate::{
-    api::account::FrostParams, db::store_account_transparent_addr, sync::trim_sync_data, warp::{AuthPath, Witness, MERKLE_DEPTH}
+    api::account::FrostParams,
+    db::store_account_transparent_addr,
+    sync::trim_sync_data,
+    warp::{AuthPath, Witness, MERKLE_DEPTH},
 };
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
@@ -227,7 +230,7 @@ pub async fn get_orchard_note(
 }
 
 pub async fn get_birth_height(connection: &SqlitePool, account: u32) -> Result<u32> {
-    let (birth, ): (u32, ) = sqlx::query_as("SELECT birth FROM accounts WHERE id_account = ?")
+    let (birth,): (u32,) = sqlx::query_as("SELECT birth FROM accounts WHERE id_account = ?")
         .bind(account)
         .fetch_one(connection)
         .await?;
@@ -265,14 +268,14 @@ pub async fn get_account_full_address(
         let dindex: u32 = row.get(0);
         let xvk: Vec<u8> = row.get(1);
         let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
-        let saddress =
-            if scope == 1 {
-                // we do not need to derive a diversified change address
-                // since they are not exposed to the user
-                let (_, pa) = fvk.change_address();
-                pa
-            }
-            else { fvk.address(dindex.into()).unwrap() };
+        let saddress = if scope == 1 {
+            // we do not need to derive a diversified change address
+            // since they are not exposed to the user
+            let (_, pa) = fvk.change_address();
+            pa
+        } else {
+            fvk.address(dindex.into()).unwrap()
+        };
         saddress
     })
     .fetch_optional(connection)
@@ -309,7 +312,11 @@ pub async fn get_account_full_address(
     Ok(address)
 }
 
-pub async fn generate_next_dindex(network: &Network, connection: &SqlitePool, account: u32) -> Result<u32> {
+pub async fn generate_next_dindex(
+    network: &Network,
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<u32> {
     let (mut dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
         .bind(account)
         .fetch_one(connection)
@@ -331,9 +338,20 @@ pub async fn generate_next_dindex(network: &Network, connection: &SqlitePool, ac
         .await?;
 
     let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-    let sk = xsk.as_ref().map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
+    let sk = xsk
+        .as_ref()
+        .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
     let (tpk, taddress) = derive_transparent_address(xvk.as_ref().unwrap(), 0, dindex)?;
-    store_account_transparent_addr(connection, account, 0, dindex, sk, &tpk, &taddress.encode(network)).await?;
+    store_account_transparent_addr(
+        connection,
+        account,
+        0,
+        dindex,
+        sk,
+        &tpk,
+        &taddress.encode(network),
+    )
+    .await?;
 
     Ok(dindex)
 }
@@ -413,7 +431,11 @@ pub async fn reset_sync(connection: &SqlitePool, account: u32) -> Result<()> {
     trim_sync_data(connection, account, birth_height - 1).await
 }
 
-pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -> Result<TxAccount> {
+pub async fn get_tx_details(
+    connection: &SqlitePool,
+    account: u32,
+    id_tx: u32,
+) -> Result<TxAccount> {
     let mut tx = sqlx::query(
         "SELECT txid, height, time FROM transactions
         WHERE account = ? AND id_tx = ?",
@@ -424,7 +446,14 @@ pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -
         let txid: Vec<u8> = row.get(0);
         let height: u32 = row.get(1);
         let time: u32 = row.get(2);
-        TxAccount { id: id_tx, account, txid, height, time, ..Default::default() }
+        TxAccount {
+            id: id_tx,
+            account,
+            txid,
+            height,
+            time,
+            ..Default::default()
+        }
     })
     .fetch_one(connection)
     .await?;
@@ -441,7 +470,13 @@ pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -
         let height: u32 = row.get(2);
         let value: u64 = row.get(3);
         let locked: bool = row.get(4);
-        TxNote { id: id_note, pool, height, value, locked }
+        TxNote {
+            id: id_note,
+            pool,
+            height,
+            value,
+            locked,
+        }
     })
     .fetch_all(connection)
     .await?;
@@ -457,7 +492,12 @@ pub async fn get_tx_details(connection: &SqlitePool, account: u32, id_tx: u32) -
         let pool: u8 = row.get(1);
         let height: u32 = row.get(2);
         let value: i64 = row.get(3);
-        TxSpend { id, pool, height, value: -value as u64}
+        TxSpend {
+            id,
+            pool,
+            height,
+            value: -value as u64,
+        }
     })
     .fetch_all(connection)
     .await?;
@@ -501,7 +541,6 @@ pub async fn get_account_frost_params(
 
     Ok(frost)
 }
-
 
 #[derive(Default, Debug)]
 pub struct TxAccount {
