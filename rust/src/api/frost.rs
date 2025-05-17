@@ -31,7 +31,7 @@ pub async fn new_frost(
     let na = NewAccount {
         name: format!("{}-frost", name),
         icon: None,
-        restore: false,
+        restore: true,
         key: String::new(),
         passphrase: None,
         fingerprint: None,
