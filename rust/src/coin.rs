@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
-use sqlx::SqlitePool;
 use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::SqlitePool;
 use tonic::transport::ClientTlsConfig;
 use zcash_protocol::consensus::Network;
 
@@ -79,8 +79,7 @@ impl Coin {
     pub async fn client(&self) -> Result<Client> {
         let mut channel = tonic::transport::Channel::from_shared(self.lwd.clone())?;
         if self.lwd.starts_with("https") {
-            let tls = ClientTlsConfig::new()
-                .with_enabled_roots();
+            let tls = ClientTlsConfig::new().with_enabled_roots();
             channel = channel.tls_config(tls)?;
         }
         let client = CompactTxStreamerClient::connect(channel).await?;

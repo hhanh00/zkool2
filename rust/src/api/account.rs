@@ -257,7 +257,16 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
 
     let birth = na.birth.unwrap_or(min_height);
 
-    let account = store_account_metadata(pool, &na.name, &na.icon, &na.fingerprint, birth, na.use_internal, na.internal).await?;
+    let account = store_account_metadata(
+        pool,
+        &na.name,
+        &na.icon,
+        &na.fingerprint,
+        birth,
+        na.use_internal,
+        na.internal,
+    )
+    .await?;
     setup!(account);
 
     let mut key = na.key.clone();
@@ -273,7 +282,15 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let passphrase = na.passphrase.clone().unwrap_or(String::new());
         let seed = seed_phrase.to_seed(&passphrase);
         let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
-        store_account_seed(pool, account, &key, &passphrase, &seed_fingerprint, na.aindex).await?;
+        store_account_seed(
+            pool,
+            account,
+            &key,
+            &passphrase,
+            &seed_fingerprint,
+            na.aindex,
+        )
+        .await?;
         let usk = UnifiedSpendingKey::from_seed(
             &c.network,
             &seed,
@@ -341,8 +358,16 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
             store_account_transparent_vk(pool, account, &xvk).await?;
             let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
-            store_account_transparent_addr(pool, account, 0, 0, None, &pk, &address.encode(&network))
-                .await?;
+            store_account_transparent_addr(
+                pool,
+                account,
+                0,
+                0,
+                None,
+                &pk,
+                &address.encode(&network),
+            )
+            .await?;
         } else if let Ok(sk) = bip38::import_tsk(&key) {
             let secp = secp256k1::Secp256k1::new();
             let tpk = sk.public_key(&secp).serialize();
@@ -710,7 +735,6 @@ pub async fn get_account_frost_params() -> Result<Option<FrostParams>> {
 
     crate::account::get_account_frost_params(connection, c.account).await
 }
-
 
 #[frb(dart_metadata = ("freezed"))]
 pub struct FrostParams {

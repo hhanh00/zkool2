@@ -8,7 +8,8 @@ use zcash_protocol::consensus::Network;
 
 use crate::{
     lwd::{CompactOrchardAction, CompactTx},
-    warp::{hasher::OrchardHasher, try_orchard_decrypt}, Hash32,
+    warp::{hasher::OrchardHasher, try_orchard_decrypt},
+    Hash32,
 };
 
 use super::ShieldedProtocol;
@@ -23,12 +24,17 @@ impl ShieldedProtocol for OrchardProtocol {
     type Output = CompactOrchardAction;
     type Note = Note;
 
-    async fn extract_ivk(connection: &SqlitePool, account: u32, scope: u8) -> Result<Option<(Self::IVK, Self::NK)>> {
-        let vk: Option<(Vec<u8>, )> = sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
-            .bind(account)
-            .fetch_optional(connection)
-            .await?;
-        let keys = vk.map(|(vk, )| {
+    async fn extract_ivk(
+        connection: &SqlitePool,
+        account: u32,
+        scope: u8,
+    ) -> Result<Option<(Self::IVK, Self::NK)>> {
+        let vk: Option<(Vec<u8>,)> =
+            sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
+                .bind(account)
+                .fetch_optional(connection)
+                .await?;
+        let keys = vk.map(|(vk,)| {
             let vk = FullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
             let scope = if scope == 1 {
                 Scope::Internal

@@ -11,7 +11,8 @@ use crate::{account::get_orchard_vk, get_coin};
 
 use super::{
     account::{new_account, NewAccount},
-    network::get_current_height, pay::PcztPackage,
+    network::get_current_height,
+    pay::PcztPackage,
 };
 
 #[frb]
@@ -138,7 +139,9 @@ impl DKGState {
         let connection = c.get_pool();
         let mut client = c.client().await?;
 
-        let sua = self.process(network, connection, &mut client, OsRng).await?;
+        let sua = self
+            .process(network, connection, &mut client, OsRng)
+            .await?;
 
         Ok(sua)
     }
@@ -154,7 +157,7 @@ pub enum DKGStatus {
     WaitAddresses,
     WaitRound1Pkg,
     WaitRound2Pkg,
-    SharedAddress(String)
+    SharedAddress(String),
 }
 
 pub async fn start_frost_sign(pczt: &PcztPackage) -> Result<()> {
@@ -164,24 +167,21 @@ pub async fn start_frost_sign(pczt: &PcztPackage) -> Result<()> {
     let frost = sqlx::query("SELECT value FROM props WHERE key = 'frost_pczt'")
         .map(|row: SqliteRow| {
             let value: Vec<u8> = row.get(0);
-            let frost: PcztPackage = bincode::decode_from_slice(
-                &value,
-                legacy(),
-            ).unwrap().0;
+            let frost: PcztPackage = bincode::decode_from_slice(&value, legacy()).unwrap().0;
             frost
         })
         .fetch_optional(connection)
         .await?;
     // TODO: Check that pczt is identical to the one in the frost package
-    if frost.is_some() { return Ok(()); }
+    if frost.is_some() {
+        return Ok(());
+    }
 
     let pczt = bincode::encode_to_vec(&pczt, legacy())?;
-    sqlx::query(
-        "INSERT INTO props(key, value) VALUES ('frost_pczt', ?)",
-    )
-    .bind(&pczt)
-    .execute(connection)
-    .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?)")
+        .bind(&pczt)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
@@ -204,14 +204,15 @@ pub async fn get_frost_sign_params() -> Result<Option<FrostSignParams>> {
 pub async fn set_frost_sign_params(coordinator: u8, funding_account: u32) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let p = FrostSignParams { coordinator, funding_account };
+    let p = FrostSignParams {
+        coordinator,
+        funding_account,
+    };
     let p = serde_json::to_string(&p)?;
-    sqlx::query(
-        "INSERT INTO props(key, value) VALUES ('frost_sign_params', ?)",
-    )
-    .bind(&p)
-    .execute(connection)
-    .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('frost_sign_params', ?)")
+        .bind(&p)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
