@@ -1,11 +1,11 @@
 mod decrypter;
+pub mod edge;
 pub mod hasher;
 pub mod legacy;
-pub mod edge;
-pub mod witnesses;
 mod orchard;
 mod sapling;
 pub mod sync;
+pub mod witnesses;
 
 use crate::{lwd::CompactBlock, Hash32};
 use bincode::{Decode, Encode};

@@ -66,7 +66,7 @@ pub async fn decrypt_memo(
     let tx = Transaction::read(data, branch_id)?;
     let tx_data = tx.into_data();
 
-    let (id_tx, ): (u32,) =
+    let (id_tx,): (u32,) =
         sqlx::query_as("SELECT id_tx FROM transactions WHERE account = ? AND txid = ?")
             .bind(account)
             .bind(&txid)
@@ -98,9 +98,7 @@ pub async fn decrypt_memo(
                         &memo_bytes,
                     )
                     .await?;
-                }
-
-                else if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
+                } else if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
                     &domain,
                     ovk,
                     sout,
@@ -149,9 +147,7 @@ pub async fn decrypt_memo(
                         &memo_bytes,
                     )
                     .await?;
-                }
-
-                else if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
+                } else if let Some((note, _address, memo_bytes)) = try_output_recovery_with_ovk(
                     &domain,
                     &ovk,
                     action,
@@ -191,13 +187,12 @@ async fn process_memo(
 ) -> Result<()> {
     info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
     if let Ok(memo) = Memo::from_bytes(&memo_bytes) {
-        let id_note =
-            sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
-                .bind(account)
-                .bind(cmx)
-                .map(|row: SqliteRow| row.get::<u32, _>(0))
-                .fetch_optional(connection)
-                .await?;
+        let id_note = sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
+            .bind(account)
+            .bind(cmx)
+            .map(|row: SqliteRow| row.get::<u32, _>(0))
+            .fetch_optional(connection)
+            .await?;
 
         match memo {
             Memo::Empty => {}

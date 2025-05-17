@@ -61,7 +61,8 @@ impl FeeManager {
 
 impl std::fmt::Display for FeeManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,
+        write!(
+            f,
             "fee: {}:{} {}:{} {}:{}",
             self.num_inputs[0],
             self.num_outputs[0],

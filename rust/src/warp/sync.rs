@@ -2,10 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use shielded::Synchronizer;
-use sqlx::{
-    sqlite::SqliteRow,
-    Row, SqlitePool,
-};
+use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use thiserror::Error;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tonic::Streaming;

@@ -3,10 +3,15 @@ use std::sync::Mutex;
 use flutter_rust_bridge::frb;
 use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
 use tracing_subscriber::{
-    field::MakeVisitor, fmt::{
+    field::MakeVisitor,
+    fmt::{
         self,
         format::{FmtSpan, Writer},
-    }, layer::{Context, SubscriberExt as _}, registry::LookupSpan, util::SubscriberInitExt as _, EnvFilter, Layer, Registry
+    },
+    layer::{Context, SubscriberExt as _},
+    registry::LookupSpan,
+    util::SubscriberInitExt as _,
+    EnvFilter, Layer, Registry,
 };
 
 use crate::frb_generated::StreamSink;
@@ -57,32 +62,22 @@ where
 
 struct FrbLogger;
 
-impl <S> Layer<S> for FrbLogger
+impl<S> Layer<S> for FrbLogger
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
     fn on_event(&self, event: &Event, ctx: Context<S>) {
         let mut message = String::new();
         let writer = Writer::new(&mut message);
-        let mut visitor = tracing_subscriber::fmt::format::DefaultFields::default()
-        .make_visitor(writer);
+        let mut visitor =
+            tracing_subscriber::fmt::format::DefaultFields::default().make_visitor(writer);
         event.record(&mut visitor);
         let level: u8 = match event.metadata().level() {
-            &Level::ERROR => {
-                4
-            }
-            &Level::WARN => {
-                3
-            }
-            &Level::INFO => {
-                2
-            }
-            &Level::DEBUG => {
-                1
-            }
-            &Level::TRACE => {
-                0
-            }
+            &Level::ERROR => 4,
+            &Level::WARN => 3,
+            &Level::INFO => 2,
+            &Level::DEBUG => 1,
+            &Level::TRACE => 0,
         };
         let span = ctx.lookup_current().map(|s| s.name().to_string());
         let log = LogMessage {

@@ -68,7 +68,8 @@ use crate::{
 
 pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
     let zaddress = ZcashAddress::from_str(address)?;
-    let zaddress: zcash_keys::address::Address = zaddress.convert_if_network(network.network_type()).unwrap();
+    let zaddress: zcash_keys::address::Address =
+        zaddress.convert_if_network(network.network_type()).unwrap();
 
     let is_tex = match zaddress {
         zcash_keys::address::Address::Tex(_) => true,
@@ -91,23 +92,23 @@ pub async fn plan_transaction(
         info!("Computing plan");
     });
 
-    let has_tex = recipients.iter().any(|r| is_tex(network, &r.address).unwrap_or_default());
+    let has_tex = recipients
+        .iter()
+        .any(|r| is_tex(network, &r.address).unwrap_or_default());
     info!("has_tex: {account} {has_tex}");
 
     // make a payment uri
-    let payments = recipients.iter().map(|r| {
-        let address = ZcashAddress::from_str(&r.address)?;
-        let amount = Zatoshis::const_from_u64(r.amount);
-        let memo = encode_memo(r)?;
-        Ok::<_, anyhow::Error>(Payment::new(
-            address,
-            amount,
-            memo,
-            None,
-            None,
-            vec![],
-        ).expect("payment"))
-    }).collect::<Result<Vec<_>>>()?;
+    let payments = recipients
+        .iter()
+        .map(|r| {
+            let address = ZcashAddress::from_str(&r.address)?;
+            let amount = Zatoshis::const_from_u64(r.amount);
+            let memo = encode_memo(r)?;
+            Ok::<_, anyhow::Error>(
+                Payment::new(address, amount, memo, None, None, vec![]).expect("payment"),
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
     let puri = TransactionRequest::new(payments)?;
     let puri = puri.to_uri();
 
@@ -779,7 +780,8 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
 
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
     let zaddress = ZcashAddress::from_str(address)?;
-    let zaddress: zcash_keys::address::Address = zaddress.convert_if_network(network.network_type())
+    let zaddress: zcash_keys::address::Address = zaddress
+        .convert_if_network(network.network_type())
         .map_err(|_| anyhow::Error::msg("Conversion error"))?;
     let taddr = match zaddress {
         zcash_keys::address::Address::Transparent(addr) => addr,

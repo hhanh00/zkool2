@@ -186,12 +186,13 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         t INTEGER NOT NULL,
         seed BLOB NOT NULL,
         birth_height INTEGER NOT NULL
-    )"#)
+    )"#,
+    )
     .execute(connection)
     .await?;
 
     sqlx::query(
-    r#"CREATE TABLE IF NOT EXISTS dkg_packages (
+        r#"CREATE TABLE IF NOT EXISTS dkg_packages (
         id_dkg_package INTEGER PRIMARY KEY,
         account INTEGER NOT NULL,
         public BOOL NOT NULL,
@@ -199,21 +200,23 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         from_id INTEGER NOT NULL,
         data BLOB NOT NULL,
         UNIQUE (account, public, round, from_id)
-    )"#)
+    )"#,
+    )
     .execute(connection)
     .await?;
 
     sqlx::query(
-    r#"CREATE TABLE IF NOT EXISTS frost_signature (
+        r#"CREATE TABLE IF NOT EXISTS frost_signature (
         id_signature INTEGER PRIMARY KEY,
         account INTEGER NOT NULL,
         idx INTEGER NOT NULL,
         nonces BLOB NOT NULL,
-        commitments BLOB NOT NULL)"#)
+        commitments BLOB NOT NULL)"#,
+    )
     .execute(connection)
     .await?;
 
-        Ok(())
+    Ok(())
 }
 
 pub async fn put_prop(connection: &SqlitePool, key: &str, value: &str) -> Result<()> {
@@ -270,7 +273,12 @@ pub async fn store_account_metadata(
     Ok(id)
 }
 
-pub async fn store_synced_height(connection: &SqlitePool, account: u32, pool: u8, height: u32) -> Result<()> {
+pub async fn store_synced_height(
+    connection: &SqlitePool,
+    account: u32,
+    pool: u8,
+    height: u32,
+) -> Result<()> {
     sqlx::query(
         "INSERT OR REPLACE INTO sync_heights(account, pool, height)
         VALUES (?, ?, ?)",
@@ -311,13 +319,16 @@ pub async fn store_account_seed(
     Ok(())
 }
 
-pub async fn init_account_transparent(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
+pub async fn init_account_transparent(
+    connection: &SqlitePool,
+    account: u32,
+    birth: u32,
+) -> Result<()> {
     sqlx::query("INSERT INTO transparent_accounts(account) VALUES (?)")
         .bind(account)
         .execute(connection)
         .await?;
-    store_synced_height(connection, account, 0, birth - 1)
-        .await?;
+    store_synced_height(connection, account, 0, birth - 1).await?;
 
     Ok(())
 }
@@ -386,8 +397,7 @@ pub async fn init_account_sapling(connection: &SqlitePool, account: u32, birth: 
         .bind(account)
         .execute(connection)
         .await?;
-    store_synced_height(connection, account, 1, birth - 1)
-        .await?;
+    store_synced_height(connection, account, 1, birth - 1).await?;
 
     Ok(())
 }
@@ -431,8 +441,7 @@ pub async fn init_account_orchard(connection: &SqlitePool, account: u32, birth: 
         .bind(account)
         .execute(connection)
         .await?;
-    store_synced_height(connection, account, 2, birth - 1)
-        .await?;
+    store_synced_height(connection, account, 2, birth - 1).await?;
 
     Ok(())
 }
@@ -630,11 +639,15 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
     Ok(accounts)
 }
 
-
-pub async fn get_account_fingerprint(connection: &SqlitePool, account: u32) -> Result<Option<Vec<u8>>> {
-    let (fingerprint, ): (Option<Vec<u8>>, ) = sqlx::query_as(
-        "SELECT seed_fingerprint FROM accounts WHERE id_account = ?",
-    ).bind(account).fetch_one(connection).await?;
+pub async fn get_account_fingerprint(
+    connection: &SqlitePool,
+    account: u32,
+) -> Result<Option<Vec<u8>>> {
+    let (fingerprint,): (Option<Vec<u8>>,) =
+        sqlx::query_as("SELECT seed_fingerprint FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(connection)
+            .await?;
 
     Ok(fingerprint)
 }
