@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
 use flate2::{bufread::GzDecoder, write::GzEncoder, Compression};
-use orion::{aead, kdf::{self, Salt}};
+use orion::{
+    aead,
+    kdf::{self, Salt},
+};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use std::io::prelude::*;
 use tracing::info;
@@ -287,34 +290,49 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     }
     io_account.transactions = transactions;
 
-    let dkg_params = sqlx::query("SELECT id, n, t, seed, birth_height FROM dkg_params WHERE account = ?")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let id: u8 = row.get(0);
-            let n: u8 = row.get(1);
-            let t: u8 = row.get(2);
-            let seed: String = row.get(3);
-            let birth: u32 = row.get(4);
+    let dkg_params =
+        sqlx::query("SELECT id, n, t, seed, birth_height FROM dkg_params WHERE account = ?")
+            .bind(account)
+            .map(|row: SqliteRow| {
+                let id: u8 = row.get(0);
+                let n: u8 = row.get(1);
+                let t: u8 = row.get(2);
+                let seed: String = row.get(3);
+                let birth: u32 = row.get(4);
 
-            DKGParams { id, n, t, seed, birth }
-        })
-        .fetch_optional(connection)
-        .await?;
+                DKGParams {
+                    id,
+                    n,
+                    t,
+                    seed,
+                    birth,
+                }
+            })
+            .fetch_optional(connection)
+            .await?;
     io_account.dkg_params = dkg_params;
 
-    let dkg_packages = sqlx::query("SELECT account, public, round, from_id, data FROM dkg_packages WHERE account = ?")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let public: bool = row.get(1);
-            let round: u32 = row.get(2);
-            let from_id: u16 = row.get(3);
-            let data: Vec<u8> = row.get(4);
+    let dkg_packages = sqlx::query(
+        "SELECT account, public, round, from_id, data FROM dkg_packages WHERE account = ?",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let account: u32 = row.get(0);
+        let public: bool = row.get(1);
+        let round: u32 = row.get(2);
+        let from_id: u16 = row.get(3);
+        let data: Vec<u8> = row.get(4);
 
-            DKGPackage { account, public, round, from_id, data }
-        })
-        .fetch_all(connection)
-        .await?;
+        DKGPackage {
+            account,
+            public,
+            round,
+            from_id,
+            data,
+        }
+    })
+    .fetch_all(connection)
+    .await?;
     io_account.dkg_packages = dkg_packages;
 
     let io_account = bincode::encode_to_vec(&io_account, legacy())?;
@@ -496,9 +514,13 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
 
     info!("Importing spends");
     for transaction in io_account.transactions.iter() {
-        let new_id_tx = new_txs.get(&transaction.id_tx).expect("new_id_tx not found");
+        let new_id_tx = new_txs
+            .get(&transaction.id_tx)
+            .expect("new_id_tx not found");
         for spend in transaction.spends.iter() {
-            let new_id_note = new_notes.get(&spend.id_note).expect("new_id_note not found");
+            let new_id_note = new_notes
+                .get(&spend.id_note)
+                .expect("new_id_note not found");
             sqlx::query(
                 "INSERT INTO spends
                 (id_note, tx, height, account, pool, value) VALUES (?, ?, ?, ?, ?, ?)",
@@ -725,7 +747,7 @@ fn derive_encryption_key(passphrase: &str, salt: Option<Salt>) -> Result<(Salt, 
         Some(s) => s,
         None => kdf::Salt::default(),
     };
-    let derived_key = kdf::derive_key(&user_password, &salt, 3, 1<<16, 32)?;
+    let derived_key = kdf::derive_key(&user_password, &salt, 3, 1 << 16, 32)?;
 
     Ok((salt, derived_key))
 }

@@ -90,61 +90,72 @@ impl TxPlan {
         let verifier = Verifier::new(pczt);
         let mut fee = 0i64;
 
-        let verifier = verifier.with_transparent(|bundle| {
-            for i in bundle.inputs().iter() {
-                let value = i.value().into_u64();
-                inputs.push(TxPlanIn {
-                    pool: 0,
-                    amount: Some(value),
-                });
-                fee += value as i64;
-            }
-            for o in bundle.outputs().iter() {
-                let script_pubkey = o.script_pubkey();
-                outputs.push(TxPlanOut {
-                    pool: 0,
-                    amount: o.value().into_u64(),
-                    address: script_pubkey.address().unwrap().encode(network),
-                });
-                fee -= o.value().into_u64() as i64;
-            }
-            Ok::<_, pczt::roles::verifier::TransparentError<()>>(())
-        }).unwrap();
+        let verifier = verifier
+            .with_transparent(|bundle| {
+                for i in bundle.inputs().iter() {
+                    let value = i.value().into_u64();
+                    inputs.push(TxPlanIn {
+                        pool: 0,
+                        amount: Some(value),
+                    });
+                    fee += value as i64;
+                }
+                for o in bundle.outputs().iter() {
+                    let script_pubkey = o.script_pubkey();
+                    outputs.push(TxPlanOut {
+                        pool: 0,
+                        amount: o.value().into_u64(),
+                        address: script_pubkey.address().unwrap().encode(network),
+                    });
+                    fee -= o.value().into_u64() as i64;
+                }
+                Ok::<_, pczt::roles::verifier::TransparentError<()>>(())
+            })
+            .unwrap();
 
-        let verifier = verifier.with_sapling(|bundle| {
-            for _ in bundle.spends().iter() {
-                inputs.push(TxPlanIn {
-                    pool: 1,
-                    amount: None,
-                });
-            }
-            for o in bundle.outputs().iter() {
-                outputs.push(TxPlanOut {
-                    pool: 1,
-                    amount: o.value().unwrap().inner(),
-                    address: o.user_address().as_ref().cloned().unwrap_or_default(),
-                });
-            }
-            fee += bundle.value_sum().to_raw() as i64;
-            Ok::<_, pczt::roles::verifier::SaplingError<()>>(())
-        }).unwrap();
+        let verifier = verifier
+            .with_sapling(|bundle| {
+                for _ in bundle.spends().iter() {
+                    inputs.push(TxPlanIn {
+                        pool: 1,
+                        amount: None,
+                    });
+                }
+                for o in bundle.outputs().iter() {
+                    outputs.push(TxPlanOut {
+                        pool: 1,
+                        amount: o.value().unwrap().inner(),
+                        address: o.user_address().as_ref().cloned().unwrap_or_default(),
+                    });
+                }
+                fee += bundle.value_sum().to_raw() as i64;
+                Ok::<_, pczt::roles::verifier::SaplingError<()>>(())
+            })
+            .unwrap();
 
-        let _verifier = verifier.with_orchard(|bundle| {
-            for a in bundle.actions().iter() {
-                inputs.push(TxPlanIn {
-                    pool: 2,
-                    amount: None,
-                });
-                outputs.push(TxPlanOut {
-                    pool: 2,
-                    amount: a.output().value().expect("value").inner(),
-                    address: a.output().user_address().as_ref().cloned().unwrap_or_default(),
-                });
-            }
-            let f: i64 = bundle.value_sum().clone().try_into().unwrap();
-            fee += f;
-            Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
-        }).unwrap();
+        let _verifier = verifier
+            .with_orchard(|bundle| {
+                for a in bundle.actions().iter() {
+                    inputs.push(TxPlanIn {
+                        pool: 2,
+                        amount: None,
+                    });
+                    outputs.push(TxPlanOut {
+                        pool: 2,
+                        amount: a.output().value().expect("value").inner(),
+                        address: a
+                            .output()
+                            .user_address()
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_default(),
+                    });
+                }
+                let f: i64 = bundle.value_sum().clone().try_into().unwrap();
+                fee += f;
+                Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
+            })
+            .unwrap();
 
         Ok(TxPlan {
             height,

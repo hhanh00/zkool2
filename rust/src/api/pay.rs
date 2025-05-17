@@ -34,12 +34,7 @@ pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
     let account = c.account;
     let connection = c.get_pool();
 
-    let tx = crate::pay::plan::sign_transaction(
-        connection,
-        account,
-        pczt,
-    )
-    .await?;
+    let tx = crate::pay::plan::sign_transaction(connection, account, pczt).await?;
 
     Ok(tx)
 }

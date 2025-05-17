@@ -9,24 +9,26 @@ use orchard::keys::{FullViewingKey, Scope};
 use pczt::Pczt;
 use rand_core::{CryptoRng, RngCore};
 use reddsa::frost::redpallas::{
-    frost::{keys::SigningShare, SigningPackage},
+    frost::{round1::SigningCommitments, SigningPackage},
     keys::{
         dkg::{self, round1, round2},
         EvenY, KeyPackage, PublicKeyPackage,
     },
     Identifier, PallasBlake2b512,
 };
-use serde::Deserialize;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
+use zcash_primitives::transaction::{
+    sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
+};
 use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
     account::{get_birth_height, get_orchard_vk},
     api::{
-        account::{get_account_seed, new_account, FrostParams, NewAccount},
+        account::{new_account, NewAccount},
         frost::{DKGPackage, DKGState, DKGStatus, FrostSignParams},
         pay::PcztPackage,
     },
@@ -35,7 +37,7 @@ use crate::{
     pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
         pool::ALL_POOLS,
-        prepare, Recipient,
+        Recipient,
     },
     Client,
 };
@@ -641,9 +643,9 @@ pub async fn run<R: RngCore + CryptoRng>(
     if s[1] != 0 {
         anyhow::bail!("PCZT cannot have sapling inputs");
     }
-    let n_actions = s[2];
+    let n_sigs = s[2];
 
-    let (id, ): (u8, ) = sqlx::query_as("SELECT id FROM dkg_params WHERE account = ?1")
+    let (id,): (u8,) = sqlx::query_as("SELECT id FROM dkg_params WHERE account = ?1")
         .bind(account)
         .fetch_one(connection)
         .await
@@ -654,23 +656,26 @@ pub async fn run<R: RngCore + CryptoRng>(
             network,
             connection,
             client,
+            id,
             account,
             funding_account,
-            n_actions,
+            n_sigs,
             &mut rng,
-        ).await?;
-    }
-    else {
+        )
+        .await?;
+    } else {
         run_frost_participant(
             network,
             connection,
             client,
+            id,
             account,
             funding_account,
-            n_actions,
+            n_sigs,
             coordinator_address,
             &mut rng,
-        ).await?;
+        )
+        .await?;
     }
 
     Ok(())
@@ -680,33 +685,59 @@ pub async fn run_frost_coordinator<R: RngCore + CryptoRng>(
     network: &Network,
     connection: &SqlitePool,
     client: &mut Client,
+    id: u8,
     account: u32,
     funding_account: u32,
-    n_actions: usize,
+    n_sigs: usize,
     rng: &mut R,
 ) -> Result<()> {
+    let height = client
+        .get_latest_block(Request::new(ChainSpec {}))
+        .await?
+        .into_inner()
+        .height as u32;
+
+    let sk = sqlx::query(
+        "SELECT data FROM dkg_packages WHERE account = ?1
+        AND public = 0 AND round = 3",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let sk: Vec<u8> = row.get(0);
+        let sk: KeyPackage = KeyPackage::deserialize(&sk).expect("Failed to decode KeyPackage");
+        sk
+    })
+    .fetch_one(connection)
+    .await
+    .context("Fetch keypage failed")?;
+
     let r = sqlx::query_as::<_, (String,)>(
         "SELECT value FROM props WHERE key = 'frost_coordinator_mailbox'",
-    ).fetch_optional(connection).await?;
+    )
+    .fetch_optional(connection)
+    .await?;
     let mailbox_account = match r {
-        Some((mailbox_account, )) => str::parse::<u32>(&mailbox_account).expect("should be int"),
+        Some((mailbox_account,)) => str::parse::<u32>(&mailbox_account).expect("should be int"),
         None => {
-            let (name, ) = sqlx::query_as::<_, (String, )>(
-                "SELECT name FROM accounts WHERE id_account = ?1",
-            ).bind(account).fetch_one(connection).await?;
+            let (name,) = sqlx::query_as::<_, (String,)>(
+                "SELECT name, seed FROM accounts WHERE id_account = ?1",
+            )
+            .bind(account)
+            .fetch_one(connection)
+            .await?;
+            let (seed,): (String,) =
+                sqlx::query_as("SELECT seed FROM dkg_params WHERE account = ?1")
+                    .bind(account)
+                    .fetch_one(connection)
+                    .await?;
 
-            let height = client
-            .get_latest_block(Request::new(ChainSpec {}))
-            .await?
-            .into_inner()
-            .height;
             // generate an internal account for receiving messages from the
             // other participants
             let na = NewAccount {
                 name: format!("{}-frost", name),
                 icon: None,
                 restore: true,
-                key: String::new(),
+                key: seed,
                 passphrase: None,
                 fingerprint: None,
                 aindex: 0,
@@ -723,13 +754,157 @@ pub async fn run_frost_coordinator<R: RngCore + CryptoRng>(
     };
     info!("Coordinator mailbox account: {mailbox_account}");
 
+    // Check messages in mailbox
+    let mut messages = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?1")
+        .bind(mailbox_account)
+        .map(|row: SqliteRow| {
+            let memo_bytes: Vec<u8> = row.get(0);
+            info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
+            let memo = Memo::from_bytes(&memo_bytes);
+            if let Ok(memo) = memo {
+                match memo {
+                    Memo::Arbitrary(pk1b) => {
+                        if pk1b.len() < 4 || pk1b[0..4] != *b"COM1" {
+                            return None;
+                        }
+                        if let Ok((commitments, _)) = bincode::decode_from_slice::<Commitments, _>(
+                            &pk1b[4..],
+                            config::legacy(),
+                        )
+                        .context("Failed to decode DKGPackage")
+                        {
+                            return Some(commitments);
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            None
+        })
+        .fetch(connection);
+    let mut signing_commitments = vec![];
+    let mut noncess = vec![];
+    for _ in 0..n_sigs {
+        let mut signing_commitment =
+            BTreeMap::<Identifier, SigningCommitments<PallasBlake2b512>>::new();
+        let (nonces, commitments) =
+            reddsa::frost::redpallas::frost::round1::commit(sk.signing_share(), &mut *rng);
+        noncess.push(nonces);
+        signing_commitment.insert(Identifier::try_from(id as u16).unwrap(), commitments);
+        signing_commitments
+            .push(BTreeMap::<Identifier, SigningCommitments<PallasBlake2b512>>::new());
+    }
+
+    while let Some(commitments) = messages.next().await {
+        if let Some(commitments) = commitments? {
+            for (idx, c) in commitments.commitments.iter().enumerate() {
+                let c = SigningCommitments::<PallasBlake2b512>::deserialize(c)
+                    .context("Failed to decode SigningCommitments")?;
+                signing_commitments[idx].insert(commitments.from_id.try_into().unwrap(), c);
+                info!("SigningCommitments: {idx} from {}", commitments.from_id);
+            }
+        }
+    }
+
+    let pczt = sqlx::query("SELECT value FROM props WHERE key = 'frost_pczt'")
+        .map(|row: SqliteRow| {
+            let value: Vec<u8> = row.get(0);
+            let pczt: PcztPackage = bincode::decode_from_slice(&value, config::legacy())
+                .unwrap()
+                .0;
+            pczt
+        })
+        .fetch_one(connection)
+        .await
+        .context("Fetch pczt failed")?;
+    // let orchard_indices = &pczt.orchard_indices;
+    let pczt = Pczt::parse(&pczt.pczt).expect("Failed to decode pczt");
+    let tx = pczt.into_effects().unwrap();
+    let txid_parts = tx.digest(TxIdDigester);
+    let shielded_sighash = v5_signature_hash(&tx, &SignableInput::Shielded, &txid_parts);
+    let sighash = shielded_sighash.as_bytes();
+    info!("sighash: {}", hex::encode(sighash));
+
+    let addresses = sqlx::query_as::<_, (String,)>(
+        r#"SELECT data FROM dkg_packages WHERE account = ?1 AND round = 0
+        ORDER BY from_id"#,
+    )
+    .bind(account)
+    .fetch_all(connection)
+    .await?;
+    let addresses = addresses.into_iter().map(|row| row.0).collect::<Vec<_>>();
+
+    let (_broadcast_account, broadcast_address) = get_coordinator_broadcast_account(
+        network,
+        connection,
+        height,
+        &"coordinator-broadcast",
+        &addresses,
+    )
+    .await?;
+
+    let mut recipients = vec![];
+    for (idx, signing_commitments) in signing_commitments.iter().enumerate() {
+        let signing_package = SigningPackage::new(signing_commitments.clone(), sighash);
+        let mut sp = vec![];
+        sp.extend_from_slice(b"SPK1");
+        let spkg = SigningPkg {
+            idx: idx as u32,
+            spkg: signing_package.serialize()?,
+        };
+        bincode::encode_into_std_write(&spkg, &mut sp, config::legacy())?;
+        let memo_bytes = to_arb_memo(&sp);
+        let recipient = Recipient {
+            address: broadcast_address.to_string(),
+            amount: 0,
+            pools: None,
+            user_memo: None,
+            memo_bytes: Some(memo_bytes),
+        };
+        recipients.push(recipient);
+    }
+    let pczt = plan_transaction(
+        network,
+        connection,
+        client,
+        funding_account,
+        ALL_POOLS,
+        &recipients,
+        false,
+    )
+    .await?;
+    info!("Funding account: {funding_account}");
+    let pczt = sign_transaction(connection, funding_account, &pczt).await?;
+    let txb = extract_transaction(&pczt).await?;
+
+    let has_spkg_txid =
+        sqlx::query("SELECT 1 FROM props WHERE key = 'frost_coordinator_spkg_txid'")
+            .fetch_optional(connection)
+            .await?
+            .is_some();
+
+    if !has_spkg_txid {
+        let txid = crate::pay::send(client, height, &txb).await?;
+        info!("Broadcasted transaction for signing packages: {txid}");
+
+        sqlx::query("INSERT INTO props(key, value) VALUES ('frost_coordinator_spkg_txid', ?1) ON CONFLICT(key) DO NOTHING")
+        .bind(&txid).execute(connection).await?;
+    }
+
     Ok(())
+}
+
+#[derive(Encode, Decode)]
+pub struct SigningPkg {
+    pub idx: u32,
+    pub spkg: Vec<u8>,
 }
 
 pub async fn run_frost_participant<R: RngCore + CryptoRng>(
     network: &Network,
     connection: &SqlitePool,
     client: &mut Client,
+    id: u8,
     account: u32,
     funding_account: u32,
     n_actions: usize,
@@ -771,9 +946,12 @@ pub async fn run_frost_participant<R: RngCore + CryptoRng>(
             commitbs.push(commitb);
         }
         let commitments = Commitments {
+            from_id: id as u16,
             commitments: commitbs,
         };
-        let commitments = bincode::encode_to_vec(&commitments, config::legacy())?;
+        let mut commitments_buffer = vec![];
+        commitments_buffer.extend_from_slice(b"COM1");
+        bincode::encode_into_std_write(&commitments, &mut commitments_buffer, config::legacy())?;
         let pczt = plan_transaction(
             network,
             connection,
@@ -785,7 +963,7 @@ pub async fn run_frost_participant<R: RngCore + CryptoRng>(
                 amount: 0,
                 pools: None,
                 user_memo: None,
-                memo_bytes: Some(to_arb_memo(&commitments)),
+                memo_bytes: Some(to_arb_memo(&commitments_buffer)),
             }),
             false,
         )
@@ -801,24 +979,12 @@ pub async fn run_frost_participant<R: RngCore + CryptoRng>(
         info!("Broadcasted transaction: {txid}");
     }
 
-    let s: SigningPackage<PallasBlake2b512> = sqlx::query("SELECT data FROM dkg_packages WHERE account = ?1
-        AND public = 0 AND round = 3")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let s: Vec<u8> = row.get(0);
-            let s: SigningPackage<PallasBlake2b512> =
-                SigningPackage::deserialize(&s).expect("Failed to decode SigningPackage");
-            s
-        })
-        .fetch_one(connection)
-        .await
-        .context("Fetch signing package failed")?;
-
     Ok(())
 }
 
 #[derive(Encode, Decode)]
 pub struct Commitments {
+    pub from_id: u16,
     pub commitments: Vec<Vec<u8>>,
 }
 
@@ -826,4 +992,63 @@ pub fn to_arb_memo(pk1: &[u8]) -> Vec<u8> {
     let mut memo_bytes = vec![0xFF];
     memo_bytes.extend_from_slice(&pk1);
     memo_bytes
+}
+
+pub async fn get_coordinator_broadcast_account(
+    network: &Network,
+    connection: &SqlitePool,
+    height: u32,
+    name: &str,
+    addresses: &[String],
+) -> Result<(u32, String)> {
+    let mut state = blake2b_simd::Params::new()
+        .hash_length(32)
+        .personal(b"Zcash__FROST_DKG")
+        .to_state();
+    for a in addresses.iter() {
+        state.update(a.as_bytes());
+    }
+    let hash = state.finalize();
+    let m = Mnemonic::from_entropy(hash.as_ref()).expect("Failed to create mnemonic from hash");
+    let seed = m.to_string();
+
+    let (account, broadcast_address) = loop {
+        let r = sqlx::query_as::<_, (u32, Vec<u8>)>(
+            "SELECT a.id_account, o.xvk FROM accounts a
+        JOIN orchard_accounts o ON a.id_account = o.account
+        WHERE seed = ?1",
+        )
+        .bind(&seed)
+        .fetch_optional(connection)
+        .await?;
+
+        match r {
+            None => {
+                let na = NewAccount {
+                    name: format!("{}-frost-broadcast", name),
+                    icon: None,
+                    restore: true,
+                    key: seed.to_string(),
+                    passphrase: None,
+                    fingerprint: None,
+                    aindex: 0,
+                    birth: Some(height),
+                    use_internal: false,
+                    internal: true,
+                };
+                new_account(&na).await?;
+            }
+            Some((account, xvk)) => {
+                let fvk = FullViewingKey::from_bytes(&xvk.try_into().unwrap())
+                    .expect("Failed to create shared FVK");
+                let address = fvk.address_at(0u64, Scope::External);
+                let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+                let broadcast_address = ua.encode(network);
+                info!("Broadcast address: {broadcast_address}");
+                break (account, broadcast_address);
+            }
+        }
+    };
+
+    Ok((account, broadcast_address))
 }

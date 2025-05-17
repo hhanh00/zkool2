@@ -1,6 +1,6 @@
 use super::{hasher::OrchardHasher, Hash32, Hasher};
-use halo2_proofs::pasta::group::{ff::PrimeField as _, prime::PrimeCurveAffine as _, Curve as _};
 use halo2_gadgets::sinsemilla::primitives::SINSEMILLA_S;
+use halo2_proofs::pasta::group::{ff::PrimeField as _, prime::PrimeCurveAffine as _, Curve as _};
 use halo2_proofs::{
     arithmetic::{CurveAffine as _, CurveExt as _},
     pasta::{
@@ -76,7 +76,12 @@ impl Hasher for OrchardHasher {
         p.to_repr()
     }
 
-    fn parallel_combine(&self, depth: u8, layer: &[crate::Hash32], pairs: usize) -> Vec<crate::Hash32> {
+    fn parallel_combine(
+        &self,
+        depth: u8,
+        layer: &[crate::Hash32],
+        pairs: usize,
+    ) -> Vec<crate::Hash32> {
         let hash_extended: Vec<_> = (0..pairs)
             .into_par_iter()
             .map(|i| self.node_combine_inner(depth, &layer[2 * i], &layer[2 * i + 1]))
