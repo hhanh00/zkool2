@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.0.0...zkool-v2.1.0) (2025-05-17)
+
+
+### Features
+
+* **frost:** calculate nonce & commitments, send to coordinator ([#189](https://github.com/hhanh00/zkool2/issues/189)) ([6344169](https://github.com/hhanh00/zkool2/commit/6344169b7267bf3cc58bf8a1ab4087f561f3453a))
+* **frost:** coordinator sends signingpackage ([#191](https://github.com/hhanh00/zkool2/issues/191)) ([cf598ee](https://github.com/hhanh00/zkool2/commit/cf598ee7ae2e8b59fd649d432e318c38a466a75e))
+* **frost:** create coordinator mailbox account ([#190](https://github.com/hhanh00/zkool2/issues/190)) ([47f02ef](https://github.com/hhanh00/zkool2/commit/47f02efb42b84aabb533cc4ad6bba7a3a4805b68))
+* **frost:** initial frost mpc signature - phase 1 ([#187](https://github.com/hhanh00/zkool2/issues/187)) ([aa0fd7b](https://github.com/hhanh00/zkool2/commit/aa0fd7bbb0ad3ac7864376f66c4ca1e8340112c5))
+
 ## [2.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.17.0...zkool-v2.0.0) (2025-05-14)
 
 
