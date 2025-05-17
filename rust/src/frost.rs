@@ -9,7 +9,7 @@ use orchard::keys::{FullViewingKey, Scope};
 use pczt::Pczt;
 use rand_core::{CryptoRng, RngCore};
 use reddsa::frost::redpallas::{
-    frost::keys::SigningShare,
+    frost::{keys::SigningShare, SigningPackage},
     keys::{
         dkg::{self, round1, round2},
         EvenY, KeyPackage, PublicKeyPackage,
@@ -26,7 +26,7 @@ use zcash_protocol::{consensus::Network, memo::Memo};
 use crate::{
     account::{get_birth_height, get_orchard_vk},
     api::{
-        account::{new_account, FrostParams, NewAccount},
+        account::{get_account_seed, new_account, FrostParams, NewAccount},
         frost::{DKGPackage, DKGState, DKGStatus, FrostSignParams},
         pay::PcztPackage,
     },
@@ -74,7 +74,7 @@ impl DKGState {
         let na = NewAccount {
             name: format!("{}-frost-broadcast", self.package.name),
             icon: None,
-            restore: false,
+            restore: true,
             key: seed.to_string(),
             passphrase: None,
             fingerprint: None,
@@ -643,6 +643,99 @@ pub async fn run<R: RngCore + CryptoRng>(
     }
     let n_actions = s[2];
 
+    let (id, ): (u8, ) = sqlx::query_as("SELECT id FROM dkg_params WHERE account = ?1")
+        .bind(account)
+        .fetch_one(connection)
+        .await
+        .context("Fetch dkg id failed")?;
+
+    if id == coordinator {
+        run_frost_coordinator(
+            network,
+            connection,
+            client,
+            account,
+            funding_account,
+            n_actions,
+            &mut rng,
+        ).await?;
+    }
+    else {
+        run_frost_participant(
+            network,
+            connection,
+            client,
+            account,
+            funding_account,
+            n_actions,
+            coordinator_address,
+            &mut rng,
+        ).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn run_frost_coordinator<R: RngCore + CryptoRng>(
+    network: &Network,
+    connection: &SqlitePool,
+    client: &mut Client,
+    account: u32,
+    funding_account: u32,
+    n_actions: usize,
+    rng: &mut R,
+) -> Result<()> {
+    let r = sqlx::query_as::<_, (String,)>(
+        "SELECT value FROM props WHERE key = 'frost_coordinator_mailbox'",
+    ).fetch_optional(connection).await?;
+    let mailbox_account = match r {
+        Some((mailbox_account, )) => str::parse::<u32>(&mailbox_account).expect("should be int"),
+        None => {
+            let (name, ) = sqlx::query_as::<_, (String, )>(
+                "SELECT name FROM accounts WHERE id_account = ?1",
+            ).bind(account).fetch_one(connection).await?;
+
+            let height = client
+            .get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner()
+            .height;
+            // generate an internal account for receiving messages from the
+            // other participants
+            let na = NewAccount {
+                name: format!("{}-frost", name),
+                icon: None,
+                restore: true,
+                key: String::new(),
+                passphrase: None,
+                fingerprint: None,
+                aindex: 0,
+                birth: Some(height as u32),
+                use_internal: false,
+                internal: true,
+            };
+            let mailbox_account = new_account(&na).await?;
+            sqlx::query(
+                "INSERT INTO props(key, value) VALUES ('frost_coordinator_mailbox', ?1) ON CONFLICT(key) DO NOTHING",
+            ).bind(mailbox_account).execute(connection).await?;
+            mailbox_account
+        }
+    };
+    info!("Coordinator mailbox account: {mailbox_account}");
+
+    Ok(())
+}
+
+pub async fn run_frost_participant<R: RngCore + CryptoRng>(
+    network: &Network,
+    connection: &SqlitePool,
+    client: &mut Client,
+    account: u32,
+    funding_account: u32,
+    n_actions: usize,
+    coordinator_address: String,
+    rng: &mut R,
+) -> Result<()> {
     let sk = sqlx::query(
         "SELECT data FROM dkg_packages WHERE account = ?1
         AND public = 0 AND round = 3",
@@ -667,7 +760,7 @@ pub async fn run<R: RngCore + CryptoRng>(
         let mut commitbs = vec![];
         for i in 0..n_actions {
             let (nonces, commitments) =
-                reddsa::frost::redpallas::frost::round1::commit(sk.signing_share(), &mut rng);
+                reddsa::frost::redpallas::frost::round1::commit(sk.signing_share(), &mut *rng);
             sqlx::query("INSERT OR REPLACE INTO frost_signature(account, idx, nonces, commitments) VALUES (?, ?, ?, ?)")
             .bind(account)
             .bind(i as u32)
@@ -707,6 +800,19 @@ pub async fn run<R: RngCore + CryptoRng>(
         let txid = crate::pay::send(client, height as u32, &txb).await?;
         info!("Broadcasted transaction: {txid}");
     }
+
+    let s: SigningPackage<PallasBlake2b512> = sqlx::query("SELECT data FROM dkg_packages WHERE account = ?1
+        AND public = 0 AND round = 3")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let s: Vec<u8> = row.get(0);
+            let s: SigningPackage<PallasBlake2b512> =
+                SigningPackage::deserialize(&s).expect("Failed to decode SigningPackage");
+            s
+        })
+        .fetch_one(connection)
+        .await
+        .context("Fetch signing package failed")?;
 
     Ok(())
 }
