@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT value FROM props WHERE key = 'dkg_name'",
+  "describe": {
+    "columns": [
+      {
+        "name": "VALUE",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6f01bf5dbc095767e941f608528e23b31c41fbd839aadb4c2aec8970b0aafff9"
+}
