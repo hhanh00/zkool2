@@ -18,50 +18,62 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$DKGStatus {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function() waitAddresses,
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
     required TResult Function() waitRound1Pkg,
     required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function()? waitAddresses,
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
     TResult? Function()? waitRound1Pkg,
     TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function()? waitAddresses,
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
     TResult Function()? waitRound1Pkg,
     TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     required TResult orElse(),
   }) =>
@@ -89,11 +101,144 @@ class _$DKGStatusCopyWithImpl<$Res, $Val extends DKGStatus>
 }
 
 /// @nodoc
+abstract class _$$DKGStatus_WaitParamsImplCopyWith<$Res> {
+  factory _$$DKGStatus_WaitParamsImplCopyWith(_$DKGStatus_WaitParamsImpl value,
+          $Res Function(_$DKGStatus_WaitParamsImpl) then) =
+      __$$DKGStatus_WaitParamsImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_WaitParamsImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_WaitParamsImpl>
+    implements _$$DKGStatus_WaitParamsImplCopyWith<$Res> {
+  __$$DKGStatus_WaitParamsImplCopyWithImpl(_$DKGStatus_WaitParamsImpl _value,
+      $Res Function(_$DKGStatus_WaitParamsImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
+  const _$DKGStatus_WaitParamsImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitParams()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_WaitParamsImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return waitParams();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return waitParams?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitParams != null) {
+      return waitParams();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return waitParams(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return waitParams?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (waitParams != null) {
+      return waitParams(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_WaitParams extends DKGStatus {
+  const factory DKGStatus_WaitParams() = _$DKGStatus_WaitParamsImpl;
+  const DKGStatus_WaitParams._() : super._();
+}
+
+/// @nodoc
 abstract class _$$DKGStatus_WaitAddressesImplCopyWith<$Res> {
   factory _$$DKGStatus_WaitAddressesImplCopyWith(
           _$DKGStatus_WaitAddressesImpl value,
           $Res Function(_$DKGStatus_WaitAddressesImpl) then) =
       __$$DKGStatus_WaitAddressesImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({List<String> field0});
 }
 
 /// @nodoc
@@ -107,61 +252,100 @@ class __$$DKGStatus_WaitAddressesImplCopyWithImpl<$Res>
 
   /// Create a copy of DKGStatus
   /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(_$DKGStatus_WaitAddressesImpl(
+      null == field0
+          ? _value._field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+    ));
+  }
 }
 
 /// @nodoc
 
 class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
-  const _$DKGStatus_WaitAddressesImpl() : super._();
+  const _$DKGStatus_WaitAddressesImpl(final List<String> field0)
+      : _field0 = field0,
+        super._();
+
+  final List<String> _field0;
+  @override
+  List<String> get field0 {
+    if (_field0 is EqualUnmodifiableListView) return _field0;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_field0);
+  }
 
   @override
   String toString() {
-    return 'DKGStatus.waitAddresses()';
+    return 'DKGStatus.waitAddresses(field0: $field0)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$DKGStatus_WaitAddressesImpl);
+            other is _$DKGStatus_WaitAddressesImpl &&
+            const DeepCollectionEquality().equals(other._field0, _field0));
   }
 
   @override
-  int get hashCode => runtimeType.hashCode;
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(_field0));
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$DKGStatus_WaitAddressesImplCopyWith<_$DKGStatus_WaitAddressesImpl>
+      get copyWith => __$$DKGStatus_WaitAddressesImplCopyWithImpl<
+          _$DKGStatus_WaitAddressesImpl>(this, _$identity);
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function() waitAddresses,
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
     required TResult Function() waitRound1Pkg,
     required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
   }) {
-    return waitAddresses();
+    return waitAddresses(field0);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function()? waitAddresses,
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
     TResult? Function()? waitRound1Pkg,
     TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
   }) {
-    return waitAddresses?.call();
+    return waitAddresses?.call(field0);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function()? waitAddresses,
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
     TResult Function()? waitRound1Pkg,
     TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     required TResult orElse(),
   }) {
     if (waitAddresses != null) {
-      return waitAddresses();
+      return waitAddresses(field0);
     }
     return orElse();
   }
@@ -169,9 +353,11 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
   }) {
     return waitAddresses(this);
@@ -180,9 +366,11 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
   }) {
     return waitAddresses?.call(this);
@@ -191,9 +379,11 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -205,8 +395,17 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
 }
 
 abstract class DKGStatus_WaitAddresses extends DKGStatus {
-  const factory DKGStatus_WaitAddresses() = _$DKGStatus_WaitAddressesImpl;
+  const factory DKGStatus_WaitAddresses(final List<String> field0) =
+      _$DKGStatus_WaitAddressesImpl;
   const DKGStatus_WaitAddresses._() : super._();
+
+  List<String> get field0;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$DKGStatus_WaitAddressesImplCopyWith<_$DKGStatus_WaitAddressesImpl>
+      get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -253,9 +452,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function() waitAddresses,
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
     required TResult Function() waitRound1Pkg,
     required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
   }) {
     return waitRound1Pkg();
@@ -264,9 +465,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function()? waitAddresses,
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
     TResult? Function()? waitRound1Pkg,
     TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
   }) {
     return waitRound1Pkg?.call();
@@ -275,9 +478,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function()? waitAddresses,
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
     TResult Function()? waitRound1Pkg,
     TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -290,9 +495,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
   }) {
     return waitRound1Pkg(this);
@@ -301,9 +508,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
   }) {
     return waitRound1Pkg?.call(this);
@@ -312,9 +521,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -374,9 +585,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function() waitAddresses,
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
     required TResult Function() waitRound1Pkg,
     required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
   }) {
     return waitRound2Pkg();
@@ -385,9 +598,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function()? waitAddresses,
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
     TResult? Function()? waitRound1Pkg,
     TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
   }) {
     return waitRound2Pkg?.call();
@@ -396,9 +611,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function()? waitAddresses,
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
     TResult Function()? waitRound1Pkg,
     TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -411,9 +628,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
   }) {
     return waitRound2Pkg(this);
@@ -422,9 +641,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
   }) {
     return waitRound2Pkg?.call(this);
@@ -433,9 +654,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -449,6 +672,136 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
 abstract class DKGStatus_WaitRound2Pkg extends DKGStatus {
   const factory DKGStatus_WaitRound2Pkg() = _$DKGStatus_WaitRound2PkgImpl;
   const DKGStatus_WaitRound2Pkg._() : super._();
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_FinalizeImplCopyWith<$Res> {
+  factory _$$DKGStatus_FinalizeImplCopyWith(_$DKGStatus_FinalizeImpl value,
+          $Res Function(_$DKGStatus_FinalizeImpl) then) =
+      __$$DKGStatus_FinalizeImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_FinalizeImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_FinalizeImpl>
+    implements _$$DKGStatus_FinalizeImplCopyWith<$Res> {
+  __$$DKGStatus_FinalizeImplCopyWithImpl(_$DKGStatus_FinalizeImpl _value,
+      $Res Function(_$DKGStatus_FinalizeImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
+  const _$DKGStatus_FinalizeImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.finalize()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _$DKGStatus_FinalizeImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return finalize();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return finalize?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (finalize != null) {
+      return finalize();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return finalize(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return finalize?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (finalize != null) {
+      return finalize(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_Finalize extends DKGStatus {
+  const factory DKGStatus_Finalize() = _$DKGStatus_FinalizeImpl;
+  const DKGStatus_Finalize._() : super._();
 }
 
 /// @nodoc
@@ -522,9 +875,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function() waitAddresses,
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
     required TResult Function() waitRound1Pkg,
     required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
   }) {
     return sharedAddress(field0);
@@ -533,9 +888,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function()? waitAddresses,
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
     TResult? Function()? waitRound1Pkg,
     TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
   }) {
     return sharedAddress?.call(field0);
@@ -544,9 +901,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function()? waitAddresses,
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
     TResult Function()? waitRound1Pkg,
     TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -559,9 +918,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
   }) {
     return sharedAddress(this);
@@ -570,9 +931,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
   }) {
     return sharedAddress?.call(this);
@@ -581,9 +944,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     required TResult orElse(),
   }) {
@@ -606,420 +971,4 @@ abstract class DKGStatus_SharedAddress extends DKGStatus {
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$DKGStatus_SharedAddressImplCopyWith<_$DKGStatus_SharedAddressImpl>
       get copyWith => throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-mixin _$FrostPackage {
-  String get name => throw _privateConstructorUsedError;
-  int get id => throw _privateConstructorUsedError;
-  int get n => throw _privateConstructorUsedError;
-  int get t => throw _privateConstructorUsedError;
-  int get fundingAccount => throw _privateConstructorUsedError;
-  int get mailboxAccount => throw _privateConstructorUsedError;
-  List<String> get addresses => throw _privateConstructorUsedError;
-
-  /// Create a copy of FrostPackage
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $FrostPackageCopyWith<FrostPackage> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $FrostPackageCopyWith<$Res> {
-  factory $FrostPackageCopyWith(
-          FrostPackage value, $Res Function(FrostPackage) then) =
-      _$FrostPackageCopyWithImpl<$Res, FrostPackage>;
-  @useResult
-  $Res call(
-      {String name,
-      int id,
-      int n,
-      int t,
-      int fundingAccount,
-      int mailboxAccount,
-      List<String> addresses});
-}
-
-/// @nodoc
-class _$FrostPackageCopyWithImpl<$Res, $Val extends FrostPackage>
-    implements $FrostPackageCopyWith<$Res> {
-  _$FrostPackageCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of FrostPackage
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? name = null,
-    Object? id = null,
-    Object? n = null,
-    Object? t = null,
-    Object? fundingAccount = null,
-    Object? mailboxAccount = null,
-    Object? addresses = null,
-  }) {
-    return _then(_value.copyWith(
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as int,
-      n: null == n
-          ? _value.n
-          : n // ignore: cast_nullable_to_non_nullable
-              as int,
-      t: null == t
-          ? _value.t
-          : t // ignore: cast_nullable_to_non_nullable
-              as int,
-      fundingAccount: null == fundingAccount
-          ? _value.fundingAccount
-          : fundingAccount // ignore: cast_nullable_to_non_nullable
-              as int,
-      mailboxAccount: null == mailboxAccount
-          ? _value.mailboxAccount
-          : mailboxAccount // ignore: cast_nullable_to_non_nullable
-              as int,
-      addresses: null == addresses
-          ? _value.addresses
-          : addresses // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-    ) as $Val);
-  }
-}
-
-/// @nodoc
-abstract class _$$FrostPackageImplCopyWith<$Res>
-    implements $FrostPackageCopyWith<$Res> {
-  factory _$$FrostPackageImplCopyWith(
-          _$FrostPackageImpl value, $Res Function(_$FrostPackageImpl) then) =
-      __$$FrostPackageImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call(
-      {String name,
-      int id,
-      int n,
-      int t,
-      int fundingAccount,
-      int mailboxAccount,
-      List<String> addresses});
-}
-
-/// @nodoc
-class __$$FrostPackageImplCopyWithImpl<$Res>
-    extends _$FrostPackageCopyWithImpl<$Res, _$FrostPackageImpl>
-    implements _$$FrostPackageImplCopyWith<$Res> {
-  __$$FrostPackageImplCopyWithImpl(
-      _$FrostPackageImpl _value, $Res Function(_$FrostPackageImpl) _then)
-      : super(_value, _then);
-
-  /// Create a copy of FrostPackage
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? name = null,
-    Object? id = null,
-    Object? n = null,
-    Object? t = null,
-    Object? fundingAccount = null,
-    Object? mailboxAccount = null,
-    Object? addresses = null,
-  }) {
-    return _then(_$FrostPackageImpl(
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as int,
-      n: null == n
-          ? _value.n
-          : n // ignore: cast_nullable_to_non_nullable
-              as int,
-      t: null == t
-          ? _value.t
-          : t // ignore: cast_nullable_to_non_nullable
-              as int,
-      fundingAccount: null == fundingAccount
-          ? _value.fundingAccount
-          : fundingAccount // ignore: cast_nullable_to_non_nullable
-              as int,
-      mailboxAccount: null == mailboxAccount
-          ? _value.mailboxAccount
-          : mailboxAccount // ignore: cast_nullable_to_non_nullable
-              as int,
-      addresses: null == addresses
-          ? _value._addresses
-          : addresses // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-    ));
-  }
-}
-
-/// @nodoc
-
-class _$FrostPackageImpl extends _FrostPackage {
-  const _$FrostPackageImpl(
-      {required this.name,
-      required this.id,
-      required this.n,
-      required this.t,
-      required this.fundingAccount,
-      required this.mailboxAccount,
-      required final List<String> addresses})
-      : _addresses = addresses,
-        super._();
-
-  @override
-  final String name;
-  @override
-  final int id;
-  @override
-  final int n;
-  @override
-  final int t;
-  @override
-  final int fundingAccount;
-  @override
-  final int mailboxAccount;
-  final List<String> _addresses;
-  @override
-  List<String> get addresses {
-    if (_addresses is EqualUnmodifiableListView) return _addresses;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_addresses);
-  }
-
-  @override
-  String toString() {
-    return 'FrostPackage(name: $name, id: $id, n: $n, t: $t, fundingAccount: $fundingAccount, mailboxAccount: $mailboxAccount, addresses: $addresses)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$FrostPackageImpl &&
-            (identical(other.name, name) || other.name == name) &&
-            (identical(other.id, id) || other.id == id) &&
-            (identical(other.n, n) || other.n == n) &&
-            (identical(other.t, t) || other.t == t) &&
-            (identical(other.fundingAccount, fundingAccount) ||
-                other.fundingAccount == fundingAccount) &&
-            (identical(other.mailboxAccount, mailboxAccount) ||
-                other.mailboxAccount == mailboxAccount) &&
-            const DeepCollectionEquality()
-                .equals(other._addresses, _addresses));
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, name, id, n, t, fundingAccount,
-      mailboxAccount, const DeepCollectionEquality().hash(_addresses));
-
-  /// Create a copy of FrostPackage
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$FrostPackageImplCopyWith<_$FrostPackageImpl> get copyWith =>
-      __$$FrostPackageImplCopyWithImpl<_$FrostPackageImpl>(this, _$identity);
-}
-
-abstract class _FrostPackage extends FrostPackage {
-  const factory _FrostPackage(
-      {required final String name,
-      required final int id,
-      required final int n,
-      required final int t,
-      required final int fundingAccount,
-      required final int mailboxAccount,
-      required final List<String> addresses}) = _$FrostPackageImpl;
-  const _FrostPackage._() : super._();
-
-  @override
-  String get name;
-  @override
-  int get id;
-  @override
-  int get n;
-  @override
-  int get t;
-  @override
-  int get fundingAccount;
-  @override
-  int get mailboxAccount;
-  @override
-  List<String> get addresses;
-
-  /// Create a copy of FrostPackage
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$FrostPackageImplCopyWith<_$FrostPackageImpl> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-mixin _$FrostSignParams {
-  int get coordinator => throw _privateConstructorUsedError;
-  int get fundingAccount => throw _privateConstructorUsedError;
-
-  /// Create a copy of FrostSignParams
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $FrostSignParamsCopyWith<FrostSignParams> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $FrostSignParamsCopyWith<$Res> {
-  factory $FrostSignParamsCopyWith(
-          FrostSignParams value, $Res Function(FrostSignParams) then) =
-      _$FrostSignParamsCopyWithImpl<$Res, FrostSignParams>;
-  @useResult
-  $Res call({int coordinator, int fundingAccount});
-}
-
-/// @nodoc
-class _$FrostSignParamsCopyWithImpl<$Res, $Val extends FrostSignParams>
-    implements $FrostSignParamsCopyWith<$Res> {
-  _$FrostSignParamsCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of FrostSignParams
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? coordinator = null,
-    Object? fundingAccount = null,
-  }) {
-    return _then(_value.copyWith(
-      coordinator: null == coordinator
-          ? _value.coordinator
-          : coordinator // ignore: cast_nullable_to_non_nullable
-              as int,
-      fundingAccount: null == fundingAccount
-          ? _value.fundingAccount
-          : fundingAccount // ignore: cast_nullable_to_non_nullable
-              as int,
-    ) as $Val);
-  }
-}
-
-/// @nodoc
-abstract class _$$FrostSignParamsImplCopyWith<$Res>
-    implements $FrostSignParamsCopyWith<$Res> {
-  factory _$$FrostSignParamsImplCopyWith(_$FrostSignParamsImpl value,
-          $Res Function(_$FrostSignParamsImpl) then) =
-      __$$FrostSignParamsImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({int coordinator, int fundingAccount});
-}
-
-/// @nodoc
-class __$$FrostSignParamsImplCopyWithImpl<$Res>
-    extends _$FrostSignParamsCopyWithImpl<$Res, _$FrostSignParamsImpl>
-    implements _$$FrostSignParamsImplCopyWith<$Res> {
-  __$$FrostSignParamsImplCopyWithImpl(
-      _$FrostSignParamsImpl _value, $Res Function(_$FrostSignParamsImpl) _then)
-      : super(_value, _then);
-
-  /// Create a copy of FrostSignParams
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? coordinator = null,
-    Object? fundingAccount = null,
-  }) {
-    return _then(_$FrostSignParamsImpl(
-      coordinator: null == coordinator
-          ? _value.coordinator
-          : coordinator // ignore: cast_nullable_to_non_nullable
-              as int,
-      fundingAccount: null == fundingAccount
-          ? _value.fundingAccount
-          : fundingAccount // ignore: cast_nullable_to_non_nullable
-              as int,
-    ));
-  }
-}
-
-/// @nodoc
-
-class _$FrostSignParamsImpl extends _FrostSignParams {
-  const _$FrostSignParamsImpl(
-      {required this.coordinator, required this.fundingAccount})
-      : super._();
-
-  @override
-  final int coordinator;
-  @override
-  final int fundingAccount;
-
-  @override
-  String toString() {
-    return 'FrostSignParams(coordinator: $coordinator, fundingAccount: $fundingAccount)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$FrostSignParamsImpl &&
-            (identical(other.coordinator, coordinator) ||
-                other.coordinator == coordinator) &&
-            (identical(other.fundingAccount, fundingAccount) ||
-                other.fundingAccount == fundingAccount));
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, coordinator, fundingAccount);
-
-  /// Create a copy of FrostSignParams
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$FrostSignParamsImplCopyWith<_$FrostSignParamsImpl> get copyWith =>
-      __$$FrostSignParamsImplCopyWithImpl<_$FrostSignParamsImpl>(
-          this, _$identity);
-}
-
-abstract class _FrostSignParams extends FrostSignParams {
-  const factory _FrostSignParams(
-      {required final int coordinator,
-      required final int fundingAccount}) = _$FrostSignParamsImpl;
-  const _FrostSignParams._() : super._();
-
-  @override
-  int get coordinator;
-  @override
-  int get fundingAccount;
-
-  /// Create a copy of FrostSignParams
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$FrostSignParamsImplCopyWith<_$FrostSignParamsImpl> get copyWith =>
-      throw _privateConstructorUsedError;
 }
