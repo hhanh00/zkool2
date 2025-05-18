@@ -269,11 +269,11 @@ pub async fn do_dkg(
     let sua = ua.encode(network);
     info!("Shared address: {sua}");
 
-    let rname = sqlx::query!("SELECT value FROM props WHERE key = 'dkg_name'")
+    let (name, ) = sqlx::query_as::<_, (String, )>("SELECT value FROM props WHERE key = 'dkg_name'")
         .fetch_one(connection)
         .await?;
     let frost_account =
-        store_account_metadata(connection, &rname.VALUE, &None, &None, height, false, false)
+        store_account_metadata(connection, &name, &None, &None, height, false, false)
             .await?;
     init_account_orchard(connection, frost_account, height).await?;
     store_account_orchard_vk(connection, frost_account, &fvk).await?;
