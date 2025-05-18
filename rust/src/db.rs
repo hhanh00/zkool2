@@ -211,7 +211,9 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         account INTEGER NOT NULL,
         idx INTEGER NOT NULL,
         nonces BLOB NOT NULL,
-        commitments BLOB NOT NULL)"#,
+        commitments BLOB NOT NULL,
+        signature BLOB,
+        UNIQUE (account, idx))"#,
     )
     .execute(connection)
     .await?;
