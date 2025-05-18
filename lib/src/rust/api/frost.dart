@@ -4,107 +4,39 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-import '../lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
-import 'pay.dart';
 part 'frost.freezed.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
-Future<FrostPackage> newFrost(
+Future<void> setDkgParams(
         {required String name,
         required int id,
         required int n,
         required int t,
         required int fundingAccount}) =>
-    RustLib.instance.api.crateApiFrostNewFrost(
+    RustLib.instance.api.crateApiFrostSetDkgParams(
         name: name, id: id, n: n, t: t, fundingAccount: fundingAccount);
 
-Future<FrostPackage?> loadFrost() =>
-    RustLib.instance.api.crateApiFrostLoadFrost();
+Future<DKGStatus> dkg() => RustLib.instance.api.crateApiFrostDkg();
 
-Future<void> submitDkg({required FrostPackage package}) =>
-    RustLib.instance.api.crateApiFrostSubmitDkg(package: package);
-
-Future<void> startFrostSign({required PcztPackage pczt}) =>
-    RustLib.instance.api.crateApiFrostStartFrostSign(pczt: pczt);
-
-Future<FrostSignParams?> getFrostSignParams() =>
-    RustLib.instance.api.crateApiFrostGetFrostSignParams();
-
-Future<void> setFrostSignParams(
-        {required int coordinator, required int fundingAccount}) =>
-    RustLib.instance.api.crateApiFrostSetFrostSignParams(
-        coordinator: coordinator, fundingAccount: fundingAccount);
-
-Future<FrostSignStatus> frostRun() =>
-    RustLib.instance.api.crateApiFrostFrostRun();
-
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DKGState>>
-abstract class DkgState implements RustOpaqueInterface {
-  FrostPackage get package;
-
-  set package(FrostPackage package);
-
-  // HINT: Make it `#[frb(sync)]` to let it become the default constructor of Dart class.
-  static Future<DkgState> newInstance({required FrostPackage package}) =>
-      RustLib.instance.api.crateApiFrostDkgStateNew(package: package);
-
-  Future<DKGStatus> run();
-}
+Future<void> setDkgAddress({required int id, required String address}) =>
+    RustLib.instance.api.crateApiFrostSetDkgAddress(id: id, address: address);
 
 @freezed
 sealed class DKGStatus with _$DKGStatus {
   const DKGStatus._();
 
-  const factory DKGStatus.waitAddresses() = DKGStatus_WaitAddresses;
+  const factory DKGStatus.waitParams() = DKGStatus_WaitParams;
+  const factory DKGStatus.waitAddresses(
+    List<String> field0,
+  ) = DKGStatus_WaitAddresses;
   const factory DKGStatus.waitRound1Pkg() = DKGStatus_WaitRound1Pkg;
   const factory DKGStatus.waitRound2Pkg() = DKGStatus_WaitRound2Pkg;
+  const factory DKGStatus.finalize() = DKGStatus_Finalize;
   const factory DKGStatus.sharedAddress(
     String field0,
   ) = DKGStatus_SharedAddress;
-}
-
-@freezed
-class FrostPackage with _$FrostPackage {
-  const FrostPackage._();
-  const factory FrostPackage({
-    required String name,
-    required int id,
-    required int n,
-    required int t,
-    required int fundingAccount,
-    required int mailboxAccount,
-    required List<String> addresses,
-  }) = _FrostPackage;
-  static Future<FrostPackage> default_() =>
-      RustLib.instance.api.crateApiFrostFrostPackageDefault();
-
-  Future<DkgState?> toState() =>
-      RustLib.instance.api.crateApiFrostFrostPackageToState(
-        that: this,
-      );
-
-  Future<bool> userInputCompleted() =>
-      RustLib.instance.api.crateApiFrostFrostPackageUserInputCompleted(
-        that: this,
-      );
-}
-
-@freezed
-class FrostSignParams with _$FrostSignParams {
-  const FrostSignParams._();
-  const factory FrostSignParams({
-    required int coordinator,
-    required int fundingAccount,
-  }) = _FrostSignParams;
-  static Future<FrostSignParams> default_() =>
-      RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
-}
-
-enum FrostSignStatus {
-  waitSigningPackage,
-  completed,
-  ;
 }

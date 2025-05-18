@@ -44,23 +44,44 @@ class DKGPage1State extends State<DKGPage1> {
   void initState() {
     super.initState();
     Future(() async {
-      logger.i("DKGPage1 initState");
-      final package = await loadFrost();
-      if (package != null) {
-        logger.i("package: $package");
-        final userInputCompleted = await package.userInputCompleted();
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          logger.i("context mounted: ${context.mounted}");
-          if (!context.mounted) return;
-          GoRouter.of(context).pop();
-          if (!userInputCompleted) {
-            await GoRouter.of(context).pushReplacement("/dkg2", extra: package);
-          } else {
-            await GoRouter.of(context).pushReplacement("/dkg3", extra: package);
-          }
-        });
+      final status = await dkg();
+      logger.i("DKG status: $status");
+      if (status is DKGStatus_WaitParams) {}
+      else if (status is DKGStatus_WaitAddresses) {
+        final addresses = status.field0;
+        logger.i("Waiting to fill other participants addresses");
+        if (context.mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            GoRouter.of(context).pushReplacement("/dkg2", extra: addresses);
+          });
+        }
+      }
+      else {
+        if (context.mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            GoRouter.of(context).pushReplacement("/dkg3");
+          });
+        }
       }
     });
+    // Future(() async {
+    //   logger.i("DKGPage1 initState");
+    //   final package = await loadFrost();
+    //   if (package != null) {
+    //     logger.i("package: $package");
+    //     final userInputCompleted = await package.userInputCompleted();
+    //     WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //       logger.i("context mounted: ${context.mounted}");
+    //       if (!context.mounted) return;
+    //       GoRouter.of(context).pop();
+    //       if (!userInputCompleted) {
+    //         await GoRouter.of(context).pushReplacement("/dkg2", extra: package);
+    //       } else {
+    //         await GoRouter.of(context).pushReplacement("/dkg3", extra: package);
+    //       }
+    //     });
+    //   }
+    // });
   }
 
   @override
@@ -150,7 +171,7 @@ class DKGPage1State extends State<DKGPage1> {
       final id = form.fields["id"]!.value as int;
       final threshold = form.fields["threshold"]!.value as int;
       final account = form.fields["account"]!.value as int;
-      final frost = await newFrost(
+      await setDkgParams(
         name: name,
         id: id,
         n: participants,
@@ -158,33 +179,30 @@ class DKGPage1State extends State<DKGPage1> {
         fundingAccount: account,
       );
       if (!context.mounted) return;
-      await GoRouter.of(context).pushReplacement("/dkg2", extra: frost);
+      GoRouter.of(context).pop();
     }
   }
 }
 
 class DKGPage2 extends StatefulWidget {
-  final FrostPackage package;
-  const DKGPage2(this.package, {super.key});
+  final List<String> addresses;
+  const DKGPage2({super.key, required this.addresses});
 
   @override
   State<StatefulWidget> createState() => DKGPage2State();
 }
 
 class DKGPage2State extends State<DKGPage2> {
-  late FrostPackage package = widget.package;
   final formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
-    logger.i("DKGPage2: $package");
-
     return buildDKGPage(context,
         index: 1,
         child: FormBuilder(
             key: formKey,
             child: Column(children: [
-              ...package.addresses.asMap().entries.map((kv) {
+              ...widget.addresses.asMap().entries.map((kv) {
                 final i = kv.key;
                 final address = kv.value;
 
@@ -193,7 +211,6 @@ class DKGPage2State extends State<DKGPage2> {
                     decoration: InputDecoration(
                         labelText: "Address for Participant #${i + 1}"),
                     initialValue: address,
-                    readOnly: i == package.id - 1,
                     validator: FormBuilderValidators.compose([
                       FormBuilderValidators.required(),
                       validAddress,
@@ -204,20 +221,19 @@ class DKGPage2State extends State<DKGPage2> {
                   onPressed: () => onNext(context),
                   label: Text("Next"),
                   icon: Icon(Icons.arrow_forward))
-            ])));
+            ])
+      ));
   }
 
   onNext(BuildContext context) async {
     final form = formKey.currentState!;
     if (form.saveAndValidate()) {
-      final addresses = List.generate(package.n, (i) {
+      for (var i = 0; i < widget.addresses.length; i++) {
         final address = form.fields["$i"]!.value as String;
-        return address;
-      });
-      package = package.copyWith(addresses: addresses);
-      await submitDkg(package: package);
+        await setDkgAddress(id: i + 1, address: address);
+      }
       if (!context.mounted) return;
-      GoRouter.of(context).go("/");
+      GoRouter.of(context).pop();
     }
   }
 }
@@ -230,7 +246,6 @@ class DKGPage3 extends StatefulWidget {
 }
 
 class DKGPage3State extends State<DKGPage3> {
-  FrostPackage? package;
   String message = "";
   int index = 0;
   Timer? runTimer;
@@ -239,10 +254,10 @@ class DKGPage3State extends State<DKGPage3> {
   @override
   void initState() {
     super.initState();
-    runTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
-      await run();
-    });
-    unawaited(run());
+    // runTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+    //   await run();
+    // });
+    // unawaited(run());
   }
 
   @override
@@ -251,44 +266,44 @@ class DKGPage3State extends State<DKGPage3> {
     super.dispose();
   }
 
-  Future<void> run() async {
-    if (running) return;
-    try {
-      running = true;
-      AppStoreBase.instance.autoSync();
-      final package = (await loadFrost());
-      if (package == null) {
-        if (!mounted) return;
-        GoRouter.of(context).pop();
-        return;
-      }
-      final state = await package.toState();
-      if (state == null) {
-        logger.e("DKG state is incomplete");
-        return;
-      }
-      final status = await state.run();
-      if (status is DKGStatus_WaitRound1Pkg) {
-        message =
-            "Waiting for other participants to send their round 1 packages";
-        index = 1;
-      }
-      if (status is DKGStatus_WaitRound2Pkg) {
-        message =
-            "Waiting for other participants to send their round 2 packages";
-        index = 2;
-      }
-      if (status is DKGStatus_SharedAddress) {
-        final sharedUA = status.field0;
-        message = "The shared address is: $sharedUA";
-        index = 3;
-      }
+  // Future<void> run() async {
+  //   if (running) return;
+  //   try {
+  //     running = true;
+  //     AppStoreBase.instance.autoSync();
+  //     final package = (await loadFrost());
+  //     if (package == null) {
+  //       if (!mounted) return;
+  //       GoRouter.of(context).pop();
+  //       return;
+  //     }
+  //     final state = await package.toState();
+  //     if (state == null) {
+  //       logger.e("DKG state is incomplete");
+  //       return;
+  //     }
+  //     final status = await state.run();
+  //     if (status is DKGStatus_WaitRound1Pkg) {
+  //       message =
+  //           "Waiting for other participants to send their round 1 packages";
+  //       index = 1;
+  //     }
+  //     if (status is DKGStatus_WaitRound2Pkg) {
+  //       message =
+  //           "Waiting for other participants to send their round 2 packages";
+  //       index = 2;
+  //     }
+  //     if (status is DKGStatus_SharedAddress) {
+  //       final sharedUA = status.field0;
+  //       message = "The shared address is: $sharedUA";
+  //       index = 3;
+  //     }
 
-      setState(() {});
-    } finally {
-      running = false;
-    }
-  }
+  //     setState(() {});
+  //   } finally {
+  //     running = false;
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
