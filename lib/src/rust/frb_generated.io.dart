@@ -28,31 +28,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.portManager,
   });
 
-  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_DkgStatePtr => wire
-      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGStatePtr;
-
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
-
-  @protected
-  DkgState
-      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          dynamic raw);
-
-  @protected
-  DkgState
-      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          dynamic raw);
-
-  @protected
-  DkgState
-      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          dynamic raw);
-
-  @protected
-  DkgState
-      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          dynamic raw);
 
   @protected
   RustStreamSink<LogMessage> dco_decode_StreamSink_log_message_Sse(dynamic raw);
@@ -77,24 +54,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
-  DkgState
-      dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          dynamic raw);
-
-  @protected
   AccountUpdate dco_decode_box_autoadd_account_update(dynamic raw);
 
   @protected
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
-  FrostPackage dco_decode_box_autoadd_frost_package(dynamic raw);
-
-  @protected
   FrostParams dco_decode_box_autoadd_frost_params(dynamic raw);
-
-  @protected
-  FrostSignParams dco_decode_box_autoadd_frost_sign_params(dynamic raw);
 
   @protected
   NewAccount dco_decode_box_autoadd_new_account(dynamic raw);
@@ -121,19 +87,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
-  FrostPackage dco_decode_frost_package(dynamic raw);
-
-  @protected
   FrostParams dco_decode_frost_params(dynamic raw);
-
-  @protected
-  FrostSignParams dco_decode_frost_sign_params(dynamic raw);
-
-  @protected
-  FrostSignStatus dco_decode_frost_sign_status(dynamic raw);
-
-  @protected
-  int dco_decode_i_32(dynamic raw);
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
@@ -199,21 +153,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
-  DkgState?
-      dco_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          dynamic raw);
-
-  @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
-  FrostPackage? dco_decode_opt_box_autoadd_frost_package(dynamic raw);
-
-  @protected
   FrostParams? dco_decode_opt_box_autoadd_frost_params(dynamic raw);
-
-  @protected
-  FrostSignParams? dco_decode_opt_box_autoadd_frost_sign_params(dynamic raw);
 
   @protected
   Seed? dco_decode_opt_box_autoadd_seed(dynamic raw);
@@ -276,6 +219,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TxSpend dco_decode_tx_spend(dynamic raw);
 
   @protected
+  int dco_decode_u_16(dynamic raw);
+
+  @protected
   int dco_decode_u_32(dynamic raw);
 
   @protected
@@ -295,26 +241,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
-
-  @protected
-  DkgState
-      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          SseDeserializer deserializer);
-
-  @protected
-  DkgState
-      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          SseDeserializer deserializer);
-
-  @protected
-  DkgState
-      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          SseDeserializer deserializer);
-
-  @protected
-  DkgState
-      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          SseDeserializer deserializer);
 
   @protected
   RustStreamSink<LogMessage> sse_decode_StreamSink_log_message_Sse(
@@ -340,11 +266,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
-  DkgState
-      sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          SseDeserializer deserializer);
-
-  @protected
   AccountUpdate sse_decode_box_autoadd_account_update(
       SseDeserializer deserializer);
 
@@ -352,15 +273,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
-  FrostPackage sse_decode_box_autoadd_frost_package(
-      SseDeserializer deserializer);
-
-  @protected
   FrostParams sse_decode_box_autoadd_frost_params(SseDeserializer deserializer);
-
-  @protected
-  FrostSignParams sse_decode_box_autoadd_frost_sign_params(
-      SseDeserializer deserializer);
 
   @protected
   NewAccount sse_decode_box_autoadd_new_account(SseDeserializer deserializer);
@@ -387,19 +300,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
-  FrostPackage sse_decode_frost_package(SseDeserializer deserializer);
-
-  @protected
   FrostParams sse_decode_frost_params(SseDeserializer deserializer);
-
-  @protected
-  FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer);
-
-  @protected
-  FrostSignStatus sse_decode_frost_sign_status(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
@@ -465,23 +366,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
-  DkgState?
-      sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          SseDeserializer deserializer);
-
-  @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
-  FrostPackage? sse_decode_opt_box_autoadd_frost_package(
-      SseDeserializer deserializer);
-
-  @protected
   FrostParams? sse_decode_opt_box_autoadd_frost_params(
-      SseDeserializer deserializer);
-
-  @protected
-  FrostSignParams? sse_decode_opt_box_autoadd_frost_sign_params(
       SseDeserializer deserializer);
 
   @protected
@@ -545,6 +433,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TxSpend sse_decode_tx_spend(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_u_16(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
@@ -563,28 +454,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray3 sse_decode_usize_array_3(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
-
-  @protected
-  void
-      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          DkgState self, SseSerializer serializer);
-
-  @protected
-  void
-      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          DkgState self, SseSerializer serializer);
-
-  @protected
-  void
-      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          DkgState self, SseSerializer serializer);
-
-  @protected
-  void
-      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          DkgState self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_log_message_Sse(
@@ -610,11 +484,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
-  void
-      sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          DkgState self, SseSerializer serializer);
-
-  @protected
   void sse_encode_box_autoadd_account_update(
       AccountUpdate self, SseSerializer serializer);
 
@@ -622,16 +491,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_frost_package(
-      FrostPackage self, SseSerializer serializer);
-
-  @protected
   void sse_encode_box_autoadd_frost_params(
       FrostParams self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_frost_sign_params(
-      FrostSignParams self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_new_account(
@@ -660,21 +521,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
-  void sse_encode_frost_package(FrostPackage self, SseSerializer serializer);
-
-  @protected
   void sse_encode_frost_params(FrostParams self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_frost_sign_params(
-      FrostSignParams self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_frost_sign_status(
-      FrostSignStatus self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
@@ -748,24 +595,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
-  void
-      sse_encode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-          DkgState? self, SseSerializer serializer);
-
-  @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_frost_package(
-      FrostPackage? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_frost_params(
       FrostParams? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_frost_sign_params(
-      FrostSignParams? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_seed(Seed? self, SseSerializer serializer);
@@ -830,6 +664,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_tx_spend(TxSpend self, SseSerializer serializer);
 
   @protected
+  void sse_encode_u_16(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
@@ -846,6 +683,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
@@ -861,36 +701,4 @@ class RustLibWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   RustLibWire(ffi.DynamicLibrary dynamicLibrary)
       : _lookup = dynamicLibrary.lookup;
-
-  void
-      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGStatePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-          'frbgen_zkool_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState');
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState =
-      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGStatePtr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
-
-  void
-      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGStatePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-          'frbgen_zkool_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState');
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGState =
-      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDKGStatePtr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 }
