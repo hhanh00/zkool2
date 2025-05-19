@@ -7,8 +7,11 @@ use pczt::Pczt;
 use rand_core::OsRng;
 use reddsa::frost::redpallas::{
     frost::{
+        aggregate,
         keys::{KeyPackage, PublicKeyPackage},
         round1::{SigningCommitments, SigningNonces},
+        round2::{sign, SignatureShare},
+        SigningPackage,
     },
     round1::commit,
     Identifier,
@@ -16,7 +19,7 @@ use reddsa::frost::redpallas::{
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tracing::info;
 use zcash_primitives::transaction::{
-    sighash::{self, SignableInput},
+    sighash::SignableInput,
     sighash_v5::v5_signature_hash,
     txid::TxIdDigester,
 };
@@ -27,18 +30,21 @@ use crate::{
         frost::{DKGParams, FrostSignParams},
         pay::PcztPackage,
     },
-    frost::{db::get_mailbox_account, dkg::publish},
-    pay::{pool::ALL_POOLS, Recipient},
+    frost::{
+        db::{get_coordinator_broadcast_account, get_mailbox_account},
+        dkg::publish,
+    },
     Client,
 };
 
-use super::{FrostMessage, FrostSigMessage, P};
+use super::{FrostSigMessage, P};
 
 type CommitmentMap = BTreeMap<Identifier, SigningCommitments<P>>;
+type SignatureMap = BTreeMap<Identifier, SignatureShare<P>>;
 
 pub async fn init_sign(
     connection: &SqlitePool,
-    account: u32,
+    _account: u32,
     funding_account: u32,
     coordinator: u16,
     pczt: &PcztPackage,
@@ -83,8 +89,14 @@ pub async fn do_sign(
     let nsigs = pczt_pkg.orchard_indices.len() as u32;
 
     // Create a mailbox account if it doesn't exist
-    let (mailbox_account, _mailbox_address) =
-        get_mailbox_account(network, connection, account, params.coordinator, birth_height).await?;
+    let (mailbox_account, _mailbox_address) = get_mailbox_account(
+        network,
+        connection,
+        account,
+        params.coordinator,
+        birth_height,
+    )
+    .await?;
 
     // Parse commitment memos and store them
     process_memos(
@@ -93,7 +105,7 @@ pub async fn do_sign(
         mailbox_account,
         b"CMT2",
         async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
-            sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?)")
+            sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .bind(account)
                 .bind(pkg.sighash.as_slice())
                 .bind(pkg.idx)
@@ -105,14 +117,19 @@ pub async fn do_sign(
         },
     ).await?;
 
-    let nonces = loop {
-        let nonces = get_nonces(connection, account, &sighash).await?;
-        if !nonces.is_empty() {
-            break nonces;
+    let (broadcast_account, broadcast_address) =
+        get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
+
+    info!("Processing commitments for account {}", account);
+    let commitments_vec = loop {
+        let commitments_vec = get_commitments(connection, account, &sighash, nsigs).await?;
+        if !commitments_vec[0].is_empty() {
+            break commitments_vec; // we have published our commitments
         }
         let mut recipients = vec![];
         for idx in 0..nsigs {
             let (nonces, commitments) = commit(spkg.signing_share(), &mut OsRng);
+            // store nonces and commitments
             let nonces = nonces.serialize()?;
             sqlx::query(
                 "INSERT INTO frost_signatures(account, sighash, idx, nonce) VALUES (?, ?, ?, ?)",
@@ -141,6 +158,7 @@ pub async fn do_sign(
             let memo_bytes = message.encode_with_prefix(b"CMT2")?;
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
+        // send the commitments to the coordinator
         if dkg_params.id as u16 != params.coordinator {
             let txid = publish(
                 network,
@@ -154,7 +172,200 @@ pub async fn do_sign(
             info!("Published commitment transaction: {}", txid);
         }
     };
-    info!("Nonces: {:?}", nonces);
+    info!("Commitments: {:?}", commitments_vec);
+
+    // process sigpackages
+    process_memos(
+        connection,
+        account,
+        broadcast_account,
+        b"SPK1",
+        async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
+            sqlx::query("UPDATE frost_signatures SET sigpackage = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4")
+                .bind(&pkg.data)
+                .bind(account)
+                .bind(pkg.sighash.as_slice())
+                .bind(pkg.idx)
+                .execute(connection)
+                .await?;
+            Ok(())
+        },
+    ).await?;
+
+    let sigpackages = loop {
+        let sigpackages = get_sigpackages(connection, account, &sighash).await?;
+        if sigpackages.len() == nsigs as usize {
+            break sigpackages; // we have all sigpackages
+        }
+
+        if dkg_params.id as u16 != params.coordinator {
+            info!("Waiting for sigpackages");
+            return Ok(());
+        }
+
+        let mut tx = connection.begin().await?;
+        let mut recipients = vec![];
+        for (idx, c) in commitments_vec.iter().enumerate() {
+            if c.len() != dkg_params.t as usize {
+                info!(
+                    "Not enough commitments for input {idx}: {}/{}",
+                    c.len(),
+                    dkg_params.t
+                );
+                return Ok(());
+            }
+            let sigpackage = SigningPackage::new(c.clone(), &sighash);
+            let sigpackage = sigpackage.serialize()?;
+            sqlx::query(
+                "UPDATE frost_signatures SET sigpackage = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4",
+            )
+            .bind(&sigpackage)
+            .bind(account)
+            .bind(&sighash)
+            .bind(idx as u32)
+            .execute(&mut *tx)
+            .await?;
+
+            let message = FrostSigMessage {
+                sighash: sighash.clone().try_into().unwrap(),
+                from_id: params.coordinator as u16,
+                idx: idx as u32,
+                data: sigpackage,
+            };
+            let memo_bytes = message.encode_with_prefix(b"SPK1")?;
+            recipients.push((broadcast_address.as_str(), memo_bytes));
+        }
+        // we got all the sigshares, commit them
+        let txid = publish(
+            network,
+            connection,
+            params.funding_account,
+            client,
+            height,
+            &recipients,
+        )
+        .await?;
+        info!("Published sigpackages transaction: {}", txid);
+        tx.commit().await?;
+    };
+
+    info!("Completed sigpackages: {:?}", sigpackages);
+
+    let nonces = get_nonces(connection, account, &sighash).await?;
+
+    let sigshares = loop {
+        let sigshares = get_sigshares(connection, account, &sighash).await?;
+        if !sigshares.is_empty() {
+            break sigshares; // we have all sigshares, it's all or none
+        }
+
+        let mut tx = connection.begin().await?;
+        let mut recipients = vec![];
+        for (idx, (signing_package, nonces)) in sigpackages.iter().zip(nonces.iter()).enumerate() {
+            let signature_share =
+                sign(&signing_package, nonces, &spkg).context("Failed to sign")?;
+            let signature_share = signature_share.serialize();
+
+            sqlx::query(
+                "UPDATE frost_signatures SET sigshare = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4",
+            )
+            .bind(&signature_share)
+            .bind(account)
+            .bind(&sighash)
+            .bind(idx as u32)
+            .execute(&mut *tx)
+            .await?;
+
+            let message = FrostSigMessage {
+                sighash: sighash.clone().try_into().unwrap(),
+                from_id: dkg_params.id as u16,
+                idx: idx as u32,
+                data: signature_share,
+            };
+            let memo_bytes = message.encode_with_prefix(b"SSH1")?;
+            recipients.push((coordinator_address.as_str(), memo_bytes));
+        }
+
+        if dkg_params.id as u16 != params.coordinator {
+            let txid = publish(
+                network,
+                connection,
+                params.funding_account,
+                client,
+                height,
+                &recipients,
+            )
+            .await?;
+
+            info!("Published sigshares transaction: {}", txid);
+        }
+        tx.commit().await?;
+    };
+
+    info!("Signature shares: {:?}", sigshares);
+
+    // copy our own sigshares to the commitments table
+    for idx in 0..nsigs {
+        sqlx::query(
+            "UPDATE frost_commitments SET sigshare =
+            (SELECT sigshare FROM frost_signatures WHERE account = ?1 AND sighash = ?2 AND idx = ?3)
+            WHERE account = ?1 AND sighash = ?2 AND idx = ?3 AND from_id = ?4",
+        )
+        .bind(account)
+        .bind(&sighash)
+        .bind(idx as u32)
+        .bind(dkg_params.id)
+        .execute(connection)
+        .await?;
+    }
+
+    // add sigshares from the mailbox
+    process_memos(
+        connection,
+        account,
+        mailbox_account,
+        b"SSH1",
+        async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
+            sqlx::query("UPDATE frost_commitments SET sigshare = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4 AND from_id = ?5")
+                .bind(&pkg.data)
+                .bind(account)
+                .bind(pkg.sighash.as_slice())
+                .bind(pkg.idx)
+                .bind(pkg.from_id)
+                .execute(connection)
+                .await?;
+            Ok(())
+        },
+    ).await?;
+
+    if dkg_params.id as u16 == params.coordinator {
+        let mut tx = connection.begin().await?;
+        let sigsharess = get_all_sigshares(connection, account, &sighash, nsigs).await?;
+        for (idx, (sigshares, sigpackage)) in sigsharess.iter().zip(sigpackages.iter()).enumerate()
+        {
+            if sigshares.len() != dkg_params.t as usize {
+                info!(
+                    "Not enough sigshares for input {}: {}/{}",
+                    idx,
+                    sigshares.len(),
+                    dkg_params.t
+                );
+                return Ok(());
+            }
+            let signature = aggregate(sigpackage, sigshares, &ppkg)?;
+            let signature = signature.serialize()?;
+            sqlx::query("UPDATE frost_signatures SET signature = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4")
+            .bind(&signature)
+            .bind(account)
+            .bind(&sighash)
+            .bind(idx as u32)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        info!("Signature completed");
+    }
+
     Ok(())
 }
 
@@ -295,15 +506,6 @@ async fn process_memos(
     Ok(())
 }
 
-struct Commitment {
-    from_id: i64,
-    commitment: Vec<u8>,
-}
-
-struct Nonce {
-    nonce: Vec<u8>,
-}
-
 async fn get_nonces(
     connection: &SqlitePool,
     account: u32,
@@ -341,21 +543,93 @@ async fn get_commitments(
         .bind(sighash)
         .bind(i)
         .map(|row: SqliteRow| {
-            let from_id: i64 = row.get(0);
+            let from_id: u16 = row.get(0);
             let commitment: Vec<u8> = row.get(1);
-            Commitment { from_id, commitment }
+            (from_id, commitment)
         })
         .fetch_all(connection)
         .await?;
+        info!(
+            "Found {} commitments for sighash {}",
+            commitments.len(),
+            hex::encode(sighash)
+        );
 
-        for commitment in commitments {
+        for (from_id, commitment) in commitments {
             commitments_map.insert(
-                (commitment.from_id as u16).try_into().unwrap(),
-                SigningCommitments::<P>::deserialize(&commitment.commitment).unwrap(),
+                from_id.try_into().unwrap(),
+                SigningCommitments::<P>::deserialize(&commitment).unwrap(),
             );
         }
         commitments_maps.push(commitments_map);
     }
 
     Ok(commitments_maps)
+}
+
+async fn get_sigpackages(
+    connection: &SqlitePool,
+    account: u32,
+    sighash: &[u8],
+) -> Result<Vec<SigningPackage<P>>> {
+    let sigpackages =
+        sqlx::query("SELECT sigpackage FROM frost_signatures WHERE account = ? AND sighash = ? AND sigpackage IS NOT NULL")
+            .bind(account)
+            .bind(sighash)
+            .map(|row| {
+                let sigpackage: Vec<u8> = row.get(0);
+                SigningPackage::<P>::deserialize(&sigpackage).unwrap()
+            })
+            .fetch_all(connection)
+            .await?;
+
+    Ok(sigpackages)
+}
+
+async fn get_sigshares(
+    connection: &SqlitePool,
+    account: u32,
+    sighash: &[u8],
+) -> Result<Vec<SignatureShare<P>>> {
+    let sigshares = sqlx::query("SELECT sigshare FROM frost_signatures WHERE account = ? AND sighash = ? AND sigshare IS NOT NULL")
+        .bind(account)
+        .bind(sighash)
+        .map(|row| {
+            let sigshare: Vec<u8> = row.get(0);
+            SignatureShare::<P>::deserialize(&sigshare).unwrap()
+        })
+        .fetch_all(connection)
+        .await?;
+
+    Ok(sigshares)
+}
+
+async fn get_all_sigshares(
+    connection: &SqlitePool,
+    account: u32,
+    sighash: &[u8],
+    nsigs: u32,
+) -> Result<Vec<SignatureMap>> {
+    let mut sigshare_maps = vec![];
+    for i in 0..nsigs {
+        let mut map = SignatureMap::new();
+        let sigshares = sqlx::query("SELECT from_id, sigshare FROM frost_commitments WHERE account = ?1 AND sighash = ?2 AND idx = ?3 AND sigshare IS NOT NULL")
+            .bind(account)
+            .bind(sighash)
+            .bind(i)
+            .map(|row| {
+                let from_id: u16 = row.get(0);
+                let id: Identifier = from_id.try_into().unwrap();
+                let sigshare: Vec<u8> = row.get(1);
+                let sigshare = SignatureShare::<P>::deserialize(&sigshare).unwrap();
+                (id, sigshare)
+            })
+            .fetch_all(connection)
+            .await?;
+        for (id, sigshare) in sigshares {
+            map.insert(id, sigshare);
+        }
+        sigshare_maps.push(map);
+    }
+    Ok(sigshare_maps)
 }
