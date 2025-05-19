@@ -179,20 +179,20 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     .await?;
 
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS dkg_params (
+        "CREATE TABLE IF NOT EXISTS dkg_params (
         account INTEGER PRIMARY KEY,
         id INTEGER NOT NULL,
         n INTEGER NOT NULL,
         t INTEGER NOT NULL,
-        seed BLOB NOT NULL,
+        seed TEXT NOT NULL,
         birth_height INTEGER NOT NULL
-    )"#,
-    )
+    )"
+)
     .execute(connection)
     .await?;
 
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS dkg_packages (
+        "CREATE TABLE IF NOT EXISTS dkg_packages (
         id_dkg_package INTEGER PRIMARY KEY,
         account INTEGER NOT NULL,
         public BOOL NOT NULL,
@@ -200,20 +200,33 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         from_id INTEGER NOT NULL,
         data BLOB NOT NULL,
         UNIQUE (account, public, round, from_id)
-    )"#,
+    )",
     )
     .execute(connection)
     .await?;
 
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS frost_signature (
+        "CREATE TABLE IF NOT EXISTS frost_signatures (
         id_signature INTEGER PRIMARY KEY,
         account INTEGER NOT NULL,
+        sighash BLOB NOT NULL,
         idx INTEGER NOT NULL,
-        nonces BLOB NOT NULL,
-        commitments BLOB NOT NULL,
+        nonce BLOB NOT NULL,
         signature BLOB,
-        UNIQUE (account, idx))"#,
+        UNIQUE (account, sighash, idx))",
+    )
+    .execute(connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS frost_commitments (
+        id_nonce INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
+        sighash BLOB NOT NULL,
+        idx INTEGER NOT NULL,
+        from_id INTEGER NOT NULL,
+        commitment BLOB NOT NULL,
+        UNIQUE (account, sighash, idx, from_id))",
     )
     .execute(connection)
     .await?;

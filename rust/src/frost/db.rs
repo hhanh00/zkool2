@@ -1,13 +1,16 @@
 use anyhow::Result;
 use bip39::Mnemonic;
+use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, Scope};
 use sqlx::SqlitePool;
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::consensus::Network;
-use futures::TryStreamExt;
 
-use crate::{account::get_orchard_vk, api::account::{new_account, NewAccount}};
+use crate::{
+    account::get_orchard_vk,
+    api::account::{new_account, NewAccount},
+};
 
 /// Get (and create if needed) the private mailbox address for
 /// communication between all participants in the group
@@ -19,6 +22,14 @@ pub async fn get_mailbox_account(
     self_id: u16,
     birth_height: u32,
 ) -> Result<(u32, String)> {
+    // seed or empty string if not set
+    let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
+        .bind(account)
+        .fetch_optional(connection)
+        .await?
+        .map(|row| row.0)
+        .unwrap_or_default();
+
     let (account, mailbox_address) = loop {
         let address = sqlx::query_as::<_, (String,)>(
             "SELECT data FROM dkg_packages WHERE account = ? AND round = 0
@@ -28,26 +39,26 @@ pub async fn get_mailbox_account(
         .bind(self_id)
         .fetch_optional(connection)
         .await?;
-        let mailbox_account = sqlx::query_as::<_, (u32,)>(
-            "SELECT data FROM dkg_packages WHERE account = ? AND round = 0
-            AND public = 0",
-        )
-        .bind(account)
-        .bind(self_id)
-        .fetch_optional(connection)
-        .await?;
+        let mailbox_account = if !seed.is_empty() {
+            sqlx::query_as::<_, (u32,)>("SELECT id_account FROM accounts WHERE seed = ?1")
+                .bind(&seed)
+                .fetch_optional(connection)
+                .await?
+        } else {
+            None
+        };
 
         match (address, mailbox_account) {
-            (Some((mailbox_address, )), Some((mailbox_account, ))) => {
+            (Some((mailbox_address,)), Some((mailbox_account,))) => {
                 break (mailbox_account, mailbox_address);
             }
-            (None, None) => {
-                // The account does not exist, create it
+            (_, None) => {
+                // The account does not exist, create it with a random seed
                 let na = NewAccount {
                     name: "frost-mailbox".to_string(),
                     icon: None,
                     restore: true,
-                    key: String::new(),
+                    key: seed.clone(),
                     passphrase: None,
                     fingerprint: None,
                     aindex: 0,
@@ -56,19 +67,26 @@ pub async fn get_mailbox_account(
                     internal: true,
                 };
                 let mailbox_account = new_account(&na).await?;
-                let fvk = get_orchard_vk(connection, mailbox_account).await?.expect("Mailbox account should have orchard");
+                let fvk = get_orchard_vk(connection, mailbox_account)
+                    .await?
+                    .expect("Mailbox account should have orchard");
                 let address = fvk.address_at(0u64, Scope::External);
                 let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
                 let ua = ua.encode(network);
                 sqlx::query(
                     "INSERT INTO dkg_packages (account, round, public, from_id, data)
-                    VALUES (?1, 0, 1, ?2, ?3)",
+                    VALUES (?1, 0, 1, ?2, ?3) ON CONFLICT DO NOTHING",
                 )
                 .bind(account)
                 .bind(self_id)
                 .bind(ua)
                 .execute(connection)
                 .await?;
+                sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
+                    .bind(&seed)
+                    .bind(account)
+                    .execute(connection)
+                    .await?;
                 sqlx::query(
                     "INSERT INTO dkg_packages (account, round, public, from_id, data)
                     VALUES (?1, 0, 0, ?2, ?3)",
@@ -162,7 +180,7 @@ pub async fn get_coordinator_broadcast_account(
 
 pub async fn get_addresses(connection: &SqlitePool, account: u32, n: u8) -> Result<Vec<String>> {
     let mut addresses = vec![String::new(); n as usize];
-    let mut rs = sqlx::query_as::<_, (u16, String,)>(
+    let mut rs = sqlx::query_as::<_, (u16, String)>(
         "SELECT from_id, data FROM dkg_packages WHERE account = ?1 AND round = 0
         AND public = 1",
     )
