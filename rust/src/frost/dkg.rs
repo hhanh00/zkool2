@@ -20,7 +20,10 @@ use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
     account::get_orchard_vk,
-    api::{account::delete_account, frost::DKGStatus},
+    api::{
+        account::{delete_account, get_account_seed},
+        frost::DKGStatus,
+    },
     db::{init_account_orchard, store_account_metadata, store_account_orchard_vk},
     frost::FrostMessage,
     pay::{
@@ -51,10 +54,7 @@ pub async fn set_dkg_address(
 
 /// Get the round 1 secret package from the database
 ///
-async fn get_spkg1(
-    connection: &SqlitePool,
-    account: u32,
-) -> Result<Option<round1::SecretPackage>> {
+async fn get_spkg1(connection: &SqlitePool, account: u32) -> Result<Option<round1::SecretPackage>> {
     let spkg = sqlx::query(
         "SELECT data FROM dkg_packages WHERE
             account = ? AND public = 0 AND round = 1",
@@ -74,10 +74,7 @@ async fn get_spkg1(
 
 /// Get the round 2 secret package from the database
 ///
-async fn get_spkg2(
-    connection: &SqlitePool,
-    account: u32,
-) -> Result<Option<round2::SecretPackage>> {
+async fn get_spkg2(connection: &SqlitePool, account: u32) -> Result<Option<round2::SecretPackage>> {
     let spkg = sqlx::query(
         "SELECT data FROM dkg_packages WHERE
             account = ? AND public = 0 AND round = 2",
@@ -172,6 +169,10 @@ pub async fn do_dkg(
         return Ok(DKGStatus::WaitParams); // no dkg in progress
     };
 
+    // Create a mailbox account if it doesn't exist
+    let (mailbox_account, _mailbox_address) =
+        get_mailbox_account(network, connection, account, self_id, birth_height).await?;
+
     let addresses = get_addresses(connection, account, n).await?;
     let have_all_addresses = addresses.iter().all(|a| !a.is_empty());
     if !have_all_addresses {
@@ -180,8 +181,6 @@ pub async fn do_dkg(
 
     let (broadcast_account, broadcast_address) =
         get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
-    let (mailbox_account, _mailbox_address) =
-        get_mailbox_account(network, connection, account, self_id, birth_height).await?;
 
     let Some(spkg1) = get_spkg1(connection, account).await? else {
         let (spkg1, ppkg1) =
@@ -269,12 +268,11 @@ pub async fn do_dkg(
     let sua = ua.encode(network);
     info!("Shared address: {sua}");
 
-    let (name, ) = sqlx::query_as::<_, (String, )>("SELECT value FROM props WHERE key = 'dkg_name'")
+    let (name,) = sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_name'")
         .fetch_one(connection)
         .await?;
     let frost_account =
-        store_account_metadata(connection, &name, &None, &None, height, false, false)
-            .await?;
+        store_account_metadata(connection, &name, &None, &None, height, false, false).await?;
     init_account_orchard(connection, frost_account, height).await?;
     store_account_orchard_vk(connection, frost_account, &fvk).await?;
 
@@ -310,6 +308,15 @@ async fn dkg_finalize(
         .await?;
     // Delete the dkg_* keys from the props table
     sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
+        .execute(connection)
+        .await?;
+    let seed = get_account_seed(mailbox_account)
+        .await?
+        .expect("mailbox seed not found")
+        .mnemonic;
+    sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
+        .bind(seed)
+        .bind(frost_account)
         .execute(connection)
         .await?;
     delete_account(mailbox_account).await?;
@@ -398,7 +405,7 @@ async fn publish_round2(
     Ok(())
 }
 
-async fn publish(
+pub async fn publish(
     network: &Network,
     connection: &SqlitePool,
     account: u32,

@@ -7,6 +7,8 @@ use tonic::Request;
 use crate::{api::network, frost, get_coin, lwd::ChainSpec};
 use std::str::FromStr;
 
+use super::pay::PcztPackage;
+
 #[frb]
 pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u32) -> Result<()> {
     let c = get_coin!();
@@ -100,4 +102,44 @@ pub enum DKGStatus {
     WaitRound2Pkg,
     Finalize,
     SharedAddress(String),
+}
+
+#[frb]
+pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackage) -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    crate::frost::sign::init_sign(
+        connection,
+        c.account,
+        funding_account,
+        coordinator,
+        pczt,
+    ).await
+}
+
+#[frb]
+pub async fn do_sign(
+) -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let mut client = c.client().await?;
+    let height = client
+        .get_latest_block(Request::new(ChainSpec {}))
+        .await?
+        .into_inner()
+        .height as u32;
+    crate::frost::sign::do_sign(
+        &c.network,
+        connection,
+        c.account,
+        &mut client,
+        height,
+    ).await
+}
+
+#[frb(dart_metadata = ("freezed"))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FrostSignParams {
+    pub coordinator: u16,
+    pub funding_account: u32,
 }
