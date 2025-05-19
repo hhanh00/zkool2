@@ -52,6 +52,7 @@ pub type P = PallasBlake2b512;
 
 pub mod db;
 pub mod dkg;
+pub mod sign;
 
 pub type PK1Map = BTreeMap<Identifier, round1::Package>;
 pub type PK2Map = BTreeMap<Identifier, round2::Package>;
@@ -71,6 +72,22 @@ impl FrostMessage {
     }
 }
 
+#[derive(Encode, Decode)]
+pub struct FrostSigMessage {
+    pub sighash: [u8; 32],
+    pub from_id: u16,
+    pub idx: u32,
+    pub data: Vec<u8>,
+}
+
+impl FrostSigMessage {
+    pub fn encode_with_prefix(&self, prefix: &[u8]) -> Result<Vec<u8>> {
+        let mut data = vec![];
+        data.extend_from_slice(prefix);
+        bincode::encode_into_std_write(self, &mut data, config::legacy())?;
+        Ok(data)
+    }
+}
 
 /*
 pub async fn run<R: RngCore + CryptoRng>(
