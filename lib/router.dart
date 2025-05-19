@@ -4,6 +4,7 @@ import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/pages/disclaimer.dart';
 import 'package:zkool/pages/dkg.dart';
+import 'package:zkool/pages/frost.dart';
 import 'package:zkool/pages/log.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
@@ -78,7 +79,7 @@ final router = GoRouter(
     GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
     GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2(addresses: state.extra as List<String>)),
     GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
-    // GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
+    GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
     // GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
     GoRoute(path: '/settings', builder: (context, state) => SettingsPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
