@@ -212,6 +212,8 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         sighash BLOB NOT NULL,
         idx INTEGER NOT NULL,
         nonce BLOB NOT NULL,
+        sigpackage BLOB,
+        sigshare BLOB,
         signature BLOB,
         UNIQUE (account, sighash, idx))",
     )
@@ -226,6 +228,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         idx INTEGER NOT NULL,
         from_id INTEGER NOT NULL,
         commitment BLOB NOT NULL,
+        sigshare BLOB,
         UNIQUE (account, sighash, idx, from_id))",
     )
     .execute(connection)
