@@ -4,12 +4,14 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+import 'pay.dart';
 part 'frost.freezed.dart';
 
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 Future<void> setDkgParams(
         {required String name,
@@ -25,6 +27,15 @@ Future<DKGStatus> dkg() => RustLib.instance.api.crateApiFrostDkg();
 Future<void> setDkgAddress({required int id, required String address}) =>
     RustLib.instance.api.crateApiFrostSetDkgAddress(id: id, address: address);
 
+Future<void> initSign(
+        {required int coordinator,
+        required int fundingAccount,
+        required PcztPackage pczt}) =>
+    RustLib.instance.api.crateApiFrostInitSign(
+        coordinator: coordinator, fundingAccount: fundingAccount, pczt: pczt);
+
+Future<void> doSign() => RustLib.instance.api.crateApiFrostDoSign();
+
 @freezed
 sealed class DKGStatus with _$DKGStatus {
   const DKGStatus._();
@@ -39,4 +50,15 @@ sealed class DKGStatus with _$DKGStatus {
   const factory DKGStatus.sharedAddress(
     String field0,
   ) = DKGStatus_SharedAddress;
+}
+
+@freezed
+class FrostSignParams with _$FrostSignParams {
+  const FrostSignParams._();
+  const factory FrostSignParams({
+    required int coordinator,
+    required int fundingAccount,
+  }) = _FrostSignParams;
+  static Future<FrostSignParams> default_() =>
+      RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
 }

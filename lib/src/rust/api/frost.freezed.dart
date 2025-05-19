@@ -972,3 +972,155 @@ abstract class DKGStatus_SharedAddress extends DKGStatus {
   _$$DKGStatus_SharedAddressImplCopyWith<_$DKGStatus_SharedAddressImpl>
       get copyWith => throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$FrostSignParams {
+  int get coordinator => throw _privateConstructorUsedError;
+  int get fundingAccount => throw _privateConstructorUsedError;
+
+  /// Create a copy of FrostSignParams
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $FrostSignParamsCopyWith<FrostSignParams> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $FrostSignParamsCopyWith<$Res> {
+  factory $FrostSignParamsCopyWith(
+          FrostSignParams value, $Res Function(FrostSignParams) then) =
+      _$FrostSignParamsCopyWithImpl<$Res, FrostSignParams>;
+  @useResult
+  $Res call({int coordinator, int fundingAccount});
+}
+
+/// @nodoc
+class _$FrostSignParamsCopyWithImpl<$Res, $Val extends FrostSignParams>
+    implements $FrostSignParamsCopyWith<$Res> {
+  _$FrostSignParamsCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of FrostSignParams
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? coordinator = null,
+    Object? fundingAccount = null,
+  }) {
+    return _then(_value.copyWith(
+      coordinator: null == coordinator
+          ? _value.coordinator
+          : coordinator // ignore: cast_nullable_to_non_nullable
+              as int,
+      fundingAccount: null == fundingAccount
+          ? _value.fundingAccount
+          : fundingAccount // ignore: cast_nullable_to_non_nullable
+              as int,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$FrostSignParamsImplCopyWith<$Res>
+    implements $FrostSignParamsCopyWith<$Res> {
+  factory _$$FrostSignParamsImplCopyWith(_$FrostSignParamsImpl value,
+          $Res Function(_$FrostSignParamsImpl) then) =
+      __$$FrostSignParamsImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({int coordinator, int fundingAccount});
+}
+
+/// @nodoc
+class __$$FrostSignParamsImplCopyWithImpl<$Res>
+    extends _$FrostSignParamsCopyWithImpl<$Res, _$FrostSignParamsImpl>
+    implements _$$FrostSignParamsImplCopyWith<$Res> {
+  __$$FrostSignParamsImplCopyWithImpl(
+      _$FrostSignParamsImpl _value, $Res Function(_$FrostSignParamsImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of FrostSignParams
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? coordinator = null,
+    Object? fundingAccount = null,
+  }) {
+    return _then(_$FrostSignParamsImpl(
+      coordinator: null == coordinator
+          ? _value.coordinator
+          : coordinator // ignore: cast_nullable_to_non_nullable
+              as int,
+      fundingAccount: null == fundingAccount
+          ? _value.fundingAccount
+          : fundingAccount // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$FrostSignParamsImpl extends _FrostSignParams {
+  const _$FrostSignParamsImpl(
+      {required this.coordinator, required this.fundingAccount})
+      : super._();
+
+  @override
+  final int coordinator;
+  @override
+  final int fundingAccount;
+
+  @override
+  String toString() {
+    return 'FrostSignParams(coordinator: $coordinator, fundingAccount: $fundingAccount)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$FrostSignParamsImpl &&
+            (identical(other.coordinator, coordinator) ||
+                other.coordinator == coordinator) &&
+            (identical(other.fundingAccount, fundingAccount) ||
+                other.fundingAccount == fundingAccount));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, coordinator, fundingAccount);
+
+  /// Create a copy of FrostSignParams
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$FrostSignParamsImplCopyWith<_$FrostSignParamsImpl> get copyWith =>
+      __$$FrostSignParamsImplCopyWithImpl<_$FrostSignParamsImpl>(
+          this, _$identity);
+}
+
+abstract class _FrostSignParams extends FrostSignParams {
+  const factory _FrostSignParams(
+      {required final int coordinator,
+      required final int fundingAccount}) = _$FrostSignParamsImpl;
+  const _FrostSignParams._() : super._();
+
+  @override
+  int get coordinator;
+  @override
+  int get fundingAccount;
+
+  /// Create a copy of FrostSignParams
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$FrostSignParamsImplCopyWith<_$FrostSignParamsImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
