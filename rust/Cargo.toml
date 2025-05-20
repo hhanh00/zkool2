@@ -41,6 +41,7 @@ zcash_protocol = "0.5"
 zcash_transparent = {version = "0.2.3", features = ["transparent-inputs"]}
 zip321 = "0.3"
 reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}
+frost-rerandomized = "2.1.0"
 
 bincode = {version = "2.0", features = ["serde"]}
 postcard = "1.1"
