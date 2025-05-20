@@ -213,7 +213,6 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         idx INTEGER NOT NULL,
         nonce BLOB NOT NULL,
         sigpackage BLOB,
-        random BLOB,
         randomizer BLOB,
         sigshare BLOB,
         signature BLOB,
