@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use anyhow::{Context as _, Result};
 use bincode::{config::{self, legacy}, Decode, Encode};
 use futures::StreamExt as _;
-use pczt::Pczt;
+use group::ff::PrimeField;
+use pczt::{roles::low_level_signer::Signer, Pczt};
 use rand_chacha::ChaCha20Rng;
 use rand_core::{OsRng, RngCore as _, SeedableRng as _};
 use reddsa::frost::redpallas::{
@@ -43,6 +44,10 @@ use super::{FrostSigMessage, P};
 type CommitmentMap = BTreeMap<Identifier, SigningCommitments<P>>;
 type SignatureMap = BTreeMap<Identifier, SignatureShare<P>>;
 
+const COMMITMENT_PREFIX: &[u8] = b"CMT5";
+const SIGPACKAGE_PREFIX: &[u8] = b"SPK4";
+const SIGSHARE_PREFIX: &[u8] = b"SSH2";
+
 pub async fn init_sign(
     connection: &SqlitePool,
     _account: u32,
@@ -79,6 +84,18 @@ pub async fn do_sign(
     let Some(pczt_pkg) = get_pczt(connection).await? else {
         return Ok(()); // No signing in progress
     };
+
+    let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Unable to parse PCZT");
+    let signer = Signer::new(pczt.clone());
+    signer.sign_orchard_with(|_pczt, bundle, _| {
+        for a in bundle.actions().iter() {
+            let spend = a.spend();
+            let alpha = spend.alpha().expect("Failed to get alpha");
+            info!("spend alpha: {}", hex::encode(alpha.to_repr()));
+        }
+        Ok::<_, orchard::pczt::ParseError>(())
+    }).unwrap();
+
     let birth_height = height - 10000;
     let params = get_sign_params(connection).await?;
     let coordinator_address =
@@ -106,7 +123,7 @@ pub async fn do_sign(
         connection,
         account,
         mailbox_account,
-        b"CMT2",
+        COMMITMENT_PREFIX,
         async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .bind(account)
@@ -129,6 +146,7 @@ pub async fn do_sign(
         if !commitments_vec[0].is_empty() {
             break commitments_vec; // we have published our commitments
         }
+        let mut tx = connection.begin().await?;
         let mut recipients = vec![];
         for idx in 0..nsigs {
             let (nonces, commitments) = commit(spkg.signing_share(), &mut OsRng);
@@ -142,7 +160,7 @@ pub async fn do_sign(
             .bind(&sighash)
             .bind(idx)
             .bind(&nonces)
-            .execute(connection)
+            .execute(&mut *tx)
             .await?;
             // commitments go to the frost_commitments table
             let commitments = commitments.serialize()?;
@@ -152,7 +170,7 @@ pub async fn do_sign(
                 .bind(idx)
                 .bind(dkg_params.id)
                 .bind(&commitments)
-                .execute(connection)
+                .execute(&mut *tx)
                 .await?;
             let message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
@@ -160,7 +178,7 @@ pub async fn do_sign(
                 idx,
                 data: commitments,
             };
-            let memo_bytes = message.encode_with_prefix(b"CMT2")?;
+            let memo_bytes = message.encode_with_prefix(COMMITMENT_PREFIX)?;
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
         // send the commitments to the coordinator
@@ -179,6 +197,7 @@ pub async fn do_sign(
             .await?;
             info!("Published commitment transaction: {}", txid);
         }
+        tx.commit().await?;
     };
     info!("Commitments: {:?}", commitments_vec);
 
@@ -191,7 +210,7 @@ pub async fn do_sign(
         connection,
         account,
         broadcast_account,
-        b"SPK2",
+        SIGPACKAGE_PREFIX,
         async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
             let randomized_sigpackage: RandomizedSigPackage =
                 bincode::decode_from_slice(&pkg.data, config::legacy()).unwrap().0;
@@ -270,7 +289,7 @@ pub async fn do_sign(
                 idx: idx as u32,
                 data: randomized_sigpackage,
             };
-            let memo_bytes = message.encode_with_prefix(b"SPK2")?;
+            let memo_bytes = message.encode_with_prefix(SIGPACKAGE_PREFIX)?;
             // broadcast the sigpackage to all participants
             recipients.push((broadcast_address.as_str(), memo_bytes));
         }
@@ -328,7 +347,7 @@ pub async fn do_sign(
                 idx: idx as u32,
                 data: signature_share,
             };
-            let memo_bytes = message.encode_with_prefix(b"SSH1")?;
+            let memo_bytes = message.encode_with_prefix(SIGSHARE_PREFIX)?;
             // send the sigshare to the coordinator
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
@@ -371,7 +390,7 @@ pub async fn do_sign(
         connection,
         account,
         mailbox_account,
-        b"SSH1",
+        SIGSHARE_PREFIX,
         async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
             sqlx::query("UPDATE frost_commitments SET sigshare = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4 AND from_id = ?5")
                 .bind(&pkg.data)
