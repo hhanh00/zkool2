@@ -2239,8 +2239,7 @@ dependencies = [
 [[package]]
 name = "orchard"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1ef66fcf99348242a20d582d7434da381a867df8dc155b3a980eca767c56137"
+source = "git+https://github.com/hhanh00/orchard.git?rev=c06fec6d69c7e6d9619273d8217bf600832a1e66#c06fec6d69c7e6d9619273d8217bf600832a1e66"
 dependencies = [
  "aes",
  "bitvec",

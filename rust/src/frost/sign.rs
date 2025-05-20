@@ -1,10 +1,14 @@
 use std::collections::BTreeMap;
 
 use anyhow::{Context as _, Result};
-use bincode::{config::{self, legacy}, Decode, Encode};
+use bincode::{
+    config::{self, legacy},
+    Decode, Encode,
+};
+use frost_rerandomized::{aggregate, sign, RandomizedParams};
 use futures::StreamExt as _;
 use halo2_proofs::pasta::Fq;
-use pczt::{roles::low_level_signer::Signer, Pczt};
+use pczt::{roles::{low_level_signer::Signer, prover::Prover, spend_finalizer::SpendFinalizer, tx_extractor::TransactionExtractor}, Pczt};
 use rand_core::OsRng;
 use reddsa::frost::redpallas::{
     frost::{
@@ -16,13 +20,10 @@ use reddsa::frost::redpallas::{
     round1::commit,
     Identifier, Randomizer,
 };
-use frost_rerandomized::{sign, aggregate, RandomizedParams};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tracing::info;
 use zcash_primitives::transaction::{
-    sighash::SignableInput,
-    sighash_v5::v5_signature_hash,
-    txid::TxIdDigester,
+    sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
 };
 use zcash_protocol::{consensus::Network, memo::Memo};
 
@@ -30,12 +31,10 @@ use crate::{
     api::{
         frost::{DKGParams, FrostSignParams},
         pay::PcztPackage,
-    },
-    frost::{
+    }, frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::publish,
-    },
-    Client,
+    }, pay::{plan::ORCHARD_PK, send}, Client
 };
 
 use super::{FrostSigMessage, P};
@@ -250,12 +249,14 @@ pub async fn do_sign(
             let action_index = pczt_pkg.orchard_indices[idx as usize];
             let signer = Signer::new(pczt.clone());
             let mut alpha = Fq::zero();
-            signer.sign_orchard_with(|_pczt, bundle, _| {
-                let a = &bundle.actions()[action_index];
-                let spend = a.spend();
-                alpha = spend.alpha().expect("Failed to get alpha");
-                Ok::<_, orchard::pczt::ParseError>(())
-            }).unwrap();
+            signer
+                .sign_orchard_with(|_pczt, bundle, _| {
+                    let a = &bundle.actions()[action_index];
+                    let spend = a.spend();
+                    alpha = spend.alpha().expect("Failed to get alpha");
+                    Ok::<_, orchard::pczt::ParseError>(())
+                })
+                .unwrap();
 
             let randomizer = Randomizer::from_scalar(alpha);
             let sigpackage = sigpackage.serialize()?;
@@ -275,10 +276,8 @@ pub async fn do_sign(
                 sigpackage: sigpackage.clone(),
                 randomizer: randomizer.serialize(),
             };
-            let randomized_sigpackage = bincode::encode_to_vec(
-                &randomized_sigpackage,
-                config::legacy(),
-            )?;
+            let randomized_sigpackage =
+                bincode::encode_to_vec(&randomized_sigpackage, config::legacy())?;
 
             let message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
@@ -323,9 +322,11 @@ pub async fn do_sign(
         // the sigshares if we fail to send them
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
-        for (idx, ((signing_package, randomizer), nonces)) in sigpackages.iter().zip(nonces.iter()).enumerate() {
-            let signature_share =
-                sign(&signing_package, nonces, &spkg, randomizer.clone()).context("Failed to sign")?;
+        for (idx, ((signing_package, randomizer), nonces)) in
+            sigpackages.iter().zip(nonces.iter()).enumerate()
+        {
+            let signature_share = sign(&signing_package, nonces, &spkg, randomizer.clone())
+                .context("Failed to sign")?;
             let signature_share = signature_share.serialize();
 
             sqlx::query(
@@ -406,7 +407,9 @@ pub async fn do_sign(
     if dkg_params.id as u16 == params.coordinator {
         let mut tx = connection.begin().await?;
         let sigsharess = get_all_sigshares(connection, account, &sighash, nsigs).await?;
-        for (idx, (sigshares, (sigpackage, randomizer))) in sigsharess.iter().zip(sigpackages.iter()).enumerate()
+        let mut signatures = vec![];
+        for (idx, (sigshares, (sigpackage, randomizer))) in
+            sigsharess.iter().zip(sigpackages.iter()).enumerate()
         {
             if sigshares.len() != dkg_params.t as usize {
                 info!(
@@ -420,17 +423,12 @@ pub async fn do_sign(
             let randomized_params =
                 RandomizedParams::from_randomizer(ppkg.verifying_key(), randomizer.clone());
             let signature = aggregate(sigpackage, sigshares, &ppkg, &randomized_params)?;
-
-            let signer = Signer::new(pczt.clone());
-            signer.sign_orchard_with(|_pczt, bundle, _| {
-                let _a = bundle.actions_mut();
-                // How do we update the spend_auth_sig?
-                // a[0].spend().spend_auth_sig = Some(signature.clone());
-
-                Ok::<_, orchard::pczt::ParseError>(())
-            }).unwrap();
-
             let signature = signature.serialize()?;
+            let signature_bytes: [u8; 64] = signature.clone().try_into().unwrap();
+            let orchard_signature =
+                orchard::primitives::redpallas::Signature::from(signature_bytes);
+            signatures.push(orchard_signature);
+
             sqlx::query("UPDATE frost_signatures SET signature = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4")
             .bind(&signature)
             .bind(account)
@@ -441,6 +439,40 @@ pub async fn do_sign(
         }
         tx.commit().await?;
         info!("Signature completed");
+
+        let signer = Signer::new(pczt);
+        let signer = signer
+            .sign_orchard_with(|_pczt, bundle, _| {
+                for (idx, signature) in signatures.into_iter().enumerate() {
+                    let action_index = pczt_pkg.orchard_indices[idx as usize];
+                    let action = &mut bundle.actions_mut()[action_index];
+                    action.spend_auth_sig(signature);
+                    // How do we update the spend_auth_sig?
+                    // a[0].spend().spend_auth_sig = Some(signature.clone());
+                }
+                Ok::<_, orchard::pczt::ParseError>(())
+            })
+            .unwrap();
+        let pczt = signer.finish();
+        info!("Signed");
+
+        let pczt = Prover::new(pczt)
+            .create_orchard_proof(&ORCHARD_PK)
+            .unwrap()
+            .finish();
+        info!("Proved");
+
+        let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
+        info!("Spend Finalized");
+
+        let tx_extractor = TransactionExtractor::new(pczt);
+        let tx = tx_extractor.extract().map_err(|e| anyhow::anyhow!("{:?}", e))?;
+        let mut tx_bytes = vec![];
+        tx.write(&mut tx_bytes).unwrap();
+        info!("Transaction Len: {}", tx_bytes.len());
+
+        let txid = send(client, height, &tx_bytes).await?;
+        info!("Transaction sent: {}", txid);
     }
 
     Ok(())

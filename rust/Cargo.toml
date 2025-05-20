@@ -80,3 +80,5 @@ tonic-build = "0.13"
 [patch.crates-io]
 # pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "a35a6c021e35eb53becc7e611ca0213328534be8" }
 # pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "c1c020d" }
+orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
+# orchard = { path = "../../orchard" }
