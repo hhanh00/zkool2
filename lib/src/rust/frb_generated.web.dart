@@ -37,6 +37,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<LogMessage> dco_decode_StreamSink_log_message_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<SigningStatus> dco_decode_StreamSink_signing_status_Sse(
+      dynamic raw);
+
+  @protected
   RustStreamSink<SyncProgress> dco_decode_StreamSink_sync_progress_Sse(
       dynamic raw);
 
@@ -197,6 +201,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Seed dco_decode_seed(dynamic raw);
 
   @protected
+  SigningStatus dco_decode_signing_status(dynamic raw);
+
+  @protected
   SyncProgress dco_decode_sync_progress(dynamic raw);
 
   @protected
@@ -249,6 +256,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<LogMessage> sse_decode_StreamSink_log_message_Sse(
+      SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<SigningStatus> sse_decode_StreamSink_signing_status_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -414,6 +425,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Seed sse_decode_seed(SseDeserializer deserializer);
 
   @protected
+  SigningStatus sse_decode_signing_status(SseDeserializer deserializer);
+
+  @protected
   SyncProgress sse_decode_sync_progress(SseDeserializer deserializer);
 
   @protected
@@ -471,6 +485,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_log_message_Sse(
       RustStreamSink<LogMessage> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_signing_status_Sse(
+      RustStreamSink<SigningStatus> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_sync_progress_Sse(
@@ -647,6 +665,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_signing_status(SigningStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer);

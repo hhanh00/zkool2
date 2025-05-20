@@ -3,7 +3,7 @@ use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
 use tonic::Request;
 
-use crate::{get_coin, lwd::ChainSpec};
+use crate::{frb_generated::StreamSink, get_coin, lwd::ChainSpec};
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
@@ -117,8 +117,14 @@ pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackag
 }
 
 #[frb]
-pub async fn do_sign(
-) -> Result<()> {
+pub async fn is_signing_in_progress() -> Result<bool> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    crate::frost::sign::is_signing_in_progress(connection).await
+}
+
+#[frb]
+pub async fn do_sign(status: StreamSink<SigningStatus>) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
     let mut client = c.client().await?;
@@ -133,6 +139,7 @@ pub async fn do_sign(
         c.account,
         &mut client,
         height,
+        status,
     ).await
 }
 
@@ -141,4 +148,16 @@ pub async fn do_sign(
 pub struct FrostSignParams {
     pub coordinator: u16,
     pub funding_account: u32,
+}
+
+pub enum SigningStatus {
+    SendingCommitment,
+    WaitingForCommitments,
+    SendingSigningPackage,
+    WaitingForSigningPackage,
+    SendingSignatureShare,
+    WaitingForSignatureShares,
+    PreparingTransaction,
+    SendingTransaction,
+    TransactionSent(String),
 }

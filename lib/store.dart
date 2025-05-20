@@ -12,7 +12,6 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/network.dart';
-import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
 
@@ -113,12 +112,12 @@ abstract class AppStoreBase with Store {
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   Timer? retrySyncTimer;
 
-  Future<void> startSynchronize(List<int> accounts, int actionsPerSync,
-      {void Function()? onComplete}) async {
+  Future<void> startSynchronize(List<int> accounts, int actionsPerSync) async {
     if (syncInProgress) {
       return;
     }
 
+    final completer = Completer<void>();
     try {
       showSnackbar("Starting Synchronization");
       syncInProgress = true;
@@ -153,11 +152,12 @@ abstract class AppStoreBase with Store {
         syncProgressSubscription = null;
         Future(loadAccounts);
         showSnackbar("Synchronization Completed");
-        onComplete?.call();
+        completer.complete();
       });
     } on AnyhowException catch (e) {
       retry(accounts, e);
     }
+    return completer.future;
   }
 
   void retry(List<int> accounts, AnyhowException e) {
@@ -170,12 +170,11 @@ abstract class AppStoreBase with Store {
     logger.e(message);
     showSnackbar(message);
     retrySyncTimer?.cancel();
-    retrySyncTimer = Timer(Duration(seconds: delay), () {
-      startSynchronize(
+    retrySyncTimer = Timer(Duration(seconds: delay), () async {
+      await startSynchronize(
           accounts, int.parse(AppStoreBase.instance.actionsPerSync),
-          onComplete: () {
-        retryCount = 0;
-      });
+      );
+      retryCount = 0;
     });
   }
 

@@ -194,10 +194,8 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onSync() async {
     try {
       await AppStoreBase.instance.startSynchronize([account.id],
-        int.parse(AppStoreBase.instance.actionsPerSync),
-          onComplete: () {
-        Future(refresh);
-      });
+        int.parse(AppStoreBase.instance.actionsPerSync));
+      refresh();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
