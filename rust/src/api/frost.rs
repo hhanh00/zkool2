@@ -1,10 +1,9 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
-use rustls::client;
 use serde::{Deserialize, Serialize};
 use tonic::Request;
 
-use crate::{api::network, frost, get_coin, lwd::ChainSpec};
+use crate::{get_coin, lwd::ChainSpec};
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
