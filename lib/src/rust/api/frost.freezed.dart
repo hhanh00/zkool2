@@ -1124,3 +1124,1761 @@ abstract class _FrostSignParams extends FrostSignParams {
   _$$FrostSignParamsImplCopyWith<_$FrostSignParamsImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$SigningStatus {
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $SigningStatusCopyWith<$Res> {
+  factory $SigningStatusCopyWith(
+          SigningStatus value, $Res Function(SigningStatus) then) =
+      _$SigningStatusCopyWithImpl<$Res, SigningStatus>;
+}
+
+/// @nodoc
+class _$SigningStatusCopyWithImpl<$Res, $Val extends SigningStatus>
+    implements $SigningStatusCopyWith<$Res> {
+  _$SigningStatusCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_SendingCommitmentImplCopyWith<$Res> {
+  factory _$$SigningStatus_SendingCommitmentImplCopyWith(
+          _$SigningStatus_SendingCommitmentImpl value,
+          $Res Function(_$SigningStatus_SendingCommitmentImpl) then) =
+      __$$SigningStatus_SendingCommitmentImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_SendingCommitmentImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_SendingCommitmentImpl>
+    implements _$$SigningStatus_SendingCommitmentImplCopyWith<$Res> {
+  __$$SigningStatus_SendingCommitmentImplCopyWithImpl(
+      _$SigningStatus_SendingCommitmentImpl _value,
+      $Res Function(_$SigningStatus_SendingCommitmentImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_SendingCommitmentImpl
+    extends SigningStatus_SendingCommitment {
+  const _$SigningStatus_SendingCommitmentImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.sendingCommitment()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_SendingCommitmentImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return sendingCommitment();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return sendingCommitment?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingCommitment != null) {
+      return sendingCommitment();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return sendingCommitment(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return sendingCommitment?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingCommitment != null) {
+      return sendingCommitment(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_SendingCommitment extends SigningStatus {
+  const factory SigningStatus_SendingCommitment() =
+      _$SigningStatus_SendingCommitmentImpl;
+  const SigningStatus_SendingCommitment._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_WaitingForCommitmentsImplCopyWith<$Res> {
+  factory _$$SigningStatus_WaitingForCommitmentsImplCopyWith(
+          _$SigningStatus_WaitingForCommitmentsImpl value,
+          $Res Function(_$SigningStatus_WaitingForCommitmentsImpl) then) =
+      __$$SigningStatus_WaitingForCommitmentsImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_WaitingForCommitmentsImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_WaitingForCommitmentsImpl>
+    implements _$$SigningStatus_WaitingForCommitmentsImplCopyWith<$Res> {
+  __$$SigningStatus_WaitingForCommitmentsImplCopyWithImpl(
+      _$SigningStatus_WaitingForCommitmentsImpl _value,
+      $Res Function(_$SigningStatus_WaitingForCommitmentsImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_WaitingForCommitmentsImpl
+    extends SigningStatus_WaitingForCommitments {
+  const _$SigningStatus_WaitingForCommitmentsImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitingForCommitments()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_WaitingForCommitmentsImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return waitingForCommitments();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return waitingForCommitments?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (waitingForCommitments != null) {
+      return waitingForCommitments();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return waitingForCommitments(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return waitingForCommitments?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (waitingForCommitments != null) {
+      return waitingForCommitments(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_WaitingForCommitments extends SigningStatus {
+  const factory SigningStatus_WaitingForCommitments() =
+      _$SigningStatus_WaitingForCommitmentsImpl;
+  const SigningStatus_WaitingForCommitments._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_SendingSigningPackageImplCopyWith<$Res> {
+  factory _$$SigningStatus_SendingSigningPackageImplCopyWith(
+          _$SigningStatus_SendingSigningPackageImpl value,
+          $Res Function(_$SigningStatus_SendingSigningPackageImpl) then) =
+      __$$SigningStatus_SendingSigningPackageImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_SendingSigningPackageImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_SendingSigningPackageImpl>
+    implements _$$SigningStatus_SendingSigningPackageImplCopyWith<$Res> {
+  __$$SigningStatus_SendingSigningPackageImplCopyWithImpl(
+      _$SigningStatus_SendingSigningPackageImpl _value,
+      $Res Function(_$SigningStatus_SendingSigningPackageImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_SendingSigningPackageImpl
+    extends SigningStatus_SendingSigningPackage {
+  const _$SigningStatus_SendingSigningPackageImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.sendingSigningPackage()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_SendingSigningPackageImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return sendingSigningPackage();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return sendingSigningPackage?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingSigningPackage != null) {
+      return sendingSigningPackage();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return sendingSigningPackage(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return sendingSigningPackage?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingSigningPackage != null) {
+      return sendingSigningPackage(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_SendingSigningPackage extends SigningStatus {
+  const factory SigningStatus_SendingSigningPackage() =
+      _$SigningStatus_SendingSigningPackageImpl;
+  const SigningStatus_SendingSigningPackage._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_WaitingForSigningPackageImplCopyWith<$Res> {
+  factory _$$SigningStatus_WaitingForSigningPackageImplCopyWith(
+          _$SigningStatus_WaitingForSigningPackageImpl value,
+          $Res Function(_$SigningStatus_WaitingForSigningPackageImpl) then) =
+      __$$SigningStatus_WaitingForSigningPackageImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_WaitingForSigningPackageImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_WaitingForSigningPackageImpl>
+    implements _$$SigningStatus_WaitingForSigningPackageImplCopyWith<$Res> {
+  __$$SigningStatus_WaitingForSigningPackageImplCopyWithImpl(
+      _$SigningStatus_WaitingForSigningPackageImpl _value,
+      $Res Function(_$SigningStatus_WaitingForSigningPackageImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_WaitingForSigningPackageImpl
+    extends SigningStatus_WaitingForSigningPackage {
+  const _$SigningStatus_WaitingForSigningPackageImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitingForSigningPackage()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_WaitingForSigningPackageImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return waitingForSigningPackage();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return waitingForSigningPackage?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (waitingForSigningPackage != null) {
+      return waitingForSigningPackage();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return waitingForSigningPackage(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return waitingForSigningPackage?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (waitingForSigningPackage != null) {
+      return waitingForSigningPackage(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_WaitingForSigningPackage extends SigningStatus {
+  const factory SigningStatus_WaitingForSigningPackage() =
+      _$SigningStatus_WaitingForSigningPackageImpl;
+  const SigningStatus_WaitingForSigningPackage._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_SendingSignatureShareImplCopyWith<$Res> {
+  factory _$$SigningStatus_SendingSignatureShareImplCopyWith(
+          _$SigningStatus_SendingSignatureShareImpl value,
+          $Res Function(_$SigningStatus_SendingSignatureShareImpl) then) =
+      __$$SigningStatus_SendingSignatureShareImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_SendingSignatureShareImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_SendingSignatureShareImpl>
+    implements _$$SigningStatus_SendingSignatureShareImplCopyWith<$Res> {
+  __$$SigningStatus_SendingSignatureShareImplCopyWithImpl(
+      _$SigningStatus_SendingSignatureShareImpl _value,
+      $Res Function(_$SigningStatus_SendingSignatureShareImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_SendingSignatureShareImpl
+    extends SigningStatus_SendingSignatureShare {
+  const _$SigningStatus_SendingSignatureShareImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.sendingSignatureShare()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_SendingSignatureShareImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return sendingSignatureShare();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return sendingSignatureShare?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingSignatureShare != null) {
+      return sendingSignatureShare();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return sendingSignatureShare(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return sendingSignatureShare?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingSignatureShare != null) {
+      return sendingSignatureShare(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_SendingSignatureShare extends SigningStatus {
+  const factory SigningStatus_SendingSignatureShare() =
+      _$SigningStatus_SendingSignatureShareImpl;
+  const SigningStatus_SendingSignatureShare._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_WaitingForSignatureSharesImplCopyWith<$Res> {
+  factory _$$SigningStatus_WaitingForSignatureSharesImplCopyWith(
+          _$SigningStatus_WaitingForSignatureSharesImpl value,
+          $Res Function(_$SigningStatus_WaitingForSignatureSharesImpl) then) =
+      __$$SigningStatus_WaitingForSignatureSharesImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_WaitingForSignatureSharesImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_WaitingForSignatureSharesImpl>
+    implements _$$SigningStatus_WaitingForSignatureSharesImplCopyWith<$Res> {
+  __$$SigningStatus_WaitingForSignatureSharesImplCopyWithImpl(
+      _$SigningStatus_WaitingForSignatureSharesImpl _value,
+      $Res Function(_$SigningStatus_WaitingForSignatureSharesImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_WaitingForSignatureSharesImpl
+    extends SigningStatus_WaitingForSignatureShares {
+  const _$SigningStatus_WaitingForSignatureSharesImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitingForSignatureShares()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_WaitingForSignatureSharesImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return waitingForSignatureShares();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return waitingForSignatureShares?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (waitingForSignatureShares != null) {
+      return waitingForSignatureShares();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return waitingForSignatureShares(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return waitingForSignatureShares?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (waitingForSignatureShares != null) {
+      return waitingForSignatureShares(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_WaitingForSignatureShares extends SigningStatus {
+  const factory SigningStatus_WaitingForSignatureShares() =
+      _$SigningStatus_WaitingForSignatureSharesImpl;
+  const SigningStatus_WaitingForSignatureShares._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_PreparingTransactionImplCopyWith<$Res> {
+  factory _$$SigningStatus_PreparingTransactionImplCopyWith(
+          _$SigningStatus_PreparingTransactionImpl value,
+          $Res Function(_$SigningStatus_PreparingTransactionImpl) then) =
+      __$$SigningStatus_PreparingTransactionImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_PreparingTransactionImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_PreparingTransactionImpl>
+    implements _$$SigningStatus_PreparingTransactionImplCopyWith<$Res> {
+  __$$SigningStatus_PreparingTransactionImplCopyWithImpl(
+      _$SigningStatus_PreparingTransactionImpl _value,
+      $Res Function(_$SigningStatus_PreparingTransactionImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_PreparingTransactionImpl
+    extends SigningStatus_PreparingTransaction {
+  const _$SigningStatus_PreparingTransactionImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.preparingTransaction()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_PreparingTransactionImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return preparingTransaction();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return preparingTransaction?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (preparingTransaction != null) {
+      return preparingTransaction();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return preparingTransaction(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return preparingTransaction?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (preparingTransaction != null) {
+      return preparingTransaction(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_PreparingTransaction extends SigningStatus {
+  const factory SigningStatus_PreparingTransaction() =
+      _$SigningStatus_PreparingTransactionImpl;
+  const SigningStatus_PreparingTransaction._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_SendingTransactionImplCopyWith<$Res> {
+  factory _$$SigningStatus_SendingTransactionImplCopyWith(
+          _$SigningStatus_SendingTransactionImpl value,
+          $Res Function(_$SigningStatus_SendingTransactionImpl) then) =
+      __$$SigningStatus_SendingTransactionImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_SendingTransactionImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_SendingTransactionImpl>
+    implements _$$SigningStatus_SendingTransactionImplCopyWith<$Res> {
+  __$$SigningStatus_SendingTransactionImplCopyWithImpl(
+      _$SigningStatus_SendingTransactionImpl _value,
+      $Res Function(_$SigningStatus_SendingTransactionImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_SendingTransactionImpl
+    extends SigningStatus_SendingTransaction {
+  const _$SigningStatus_SendingTransactionImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.sendingTransaction()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_SendingTransactionImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return sendingTransaction();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return sendingTransaction?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingTransaction != null) {
+      return sendingTransaction();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return sendingTransaction(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return sendingTransaction?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (sendingTransaction != null) {
+      return sendingTransaction(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_SendingTransaction extends SigningStatus {
+  const factory SigningStatus_SendingTransaction() =
+      _$SigningStatus_SendingTransactionImpl;
+  const SigningStatus_SendingTransaction._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_TransactionSentImplCopyWith<$Res> {
+  factory _$$SigningStatus_TransactionSentImplCopyWith(
+          _$SigningStatus_TransactionSentImpl value,
+          $Res Function(_$SigningStatus_TransactionSentImpl) then) =
+      __$$SigningStatus_TransactionSentImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({String field0});
+}
+
+/// @nodoc
+class __$$SigningStatus_TransactionSentImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_TransactionSentImpl>
+    implements _$$SigningStatus_TransactionSentImplCopyWith<$Res> {
+  __$$SigningStatus_TransactionSentImplCopyWithImpl(
+      _$SigningStatus_TransactionSentImpl _value,
+      $Res Function(_$SigningStatus_TransactionSentImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(_$SigningStatus_TransactionSentImpl(
+      null == field0
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$SigningStatus_TransactionSentImpl
+    extends SigningStatus_TransactionSent {
+  const _$SigningStatus_TransactionSentImpl(this.field0) : super._();
+
+  @override
+  final String field0;
+
+  @override
+  String toString() {
+    return 'SigningStatus.transactionSent(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_TransactionSentImpl &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$SigningStatus_TransactionSentImplCopyWith<
+          _$SigningStatus_TransactionSentImpl>
+      get copyWith => __$$SigningStatus_TransactionSentImplCopyWithImpl<
+          _$SigningStatus_TransactionSentImpl>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return transactionSent(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return transactionSent?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (transactionSent != null) {
+      return transactionSent(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return transactionSent(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return transactionSent?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (transactionSent != null) {
+      return transactionSent(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_TransactionSent extends SigningStatus {
+  const factory SigningStatus_TransactionSent(final String field0) =
+      _$SigningStatus_TransactionSentImpl;
+  const SigningStatus_TransactionSent._() : super._();
+
+  String get field0;
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$SigningStatus_TransactionSentImplCopyWith<
+          _$SigningStatus_TransactionSentImpl>
+      get copyWith => throw _privateConstructorUsedError;
+}

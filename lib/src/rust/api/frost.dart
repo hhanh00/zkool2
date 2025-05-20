@@ -34,7 +34,10 @@ Future<void> initSign(
     RustLib.instance.api.crateApiFrostInitSign(
         coordinator: coordinator, fundingAccount: fundingAccount, pczt: pczt);
 
-Future<void> doSign() => RustLib.instance.api.crateApiFrostDoSign();
+Future<bool> isSigningInProgress() =>
+    RustLib.instance.api.crateApiFrostIsSigningInProgress();
+
+Stream<SigningStatus> doSign() => RustLib.instance.api.crateApiFrostDoSign();
 
 @freezed
 sealed class DKGStatus with _$DKGStatus {
@@ -61,4 +64,29 @@ class FrostSignParams with _$FrostSignParams {
   }) = _FrostSignParams;
   static Future<FrostSignParams> default_() =>
       RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
+}
+
+@freezed
+sealed class SigningStatus with _$SigningStatus {
+  const SigningStatus._();
+
+  const factory SigningStatus.sendingCommitment() =
+      SigningStatus_SendingCommitment;
+  const factory SigningStatus.waitingForCommitments() =
+      SigningStatus_WaitingForCommitments;
+  const factory SigningStatus.sendingSigningPackage() =
+      SigningStatus_SendingSigningPackage;
+  const factory SigningStatus.waitingForSigningPackage() =
+      SigningStatus_WaitingForSigningPackage;
+  const factory SigningStatus.sendingSignatureShare() =
+      SigningStatus_SendingSignatureShare;
+  const factory SigningStatus.waitingForSignatureShares() =
+      SigningStatus_WaitingForSignatureShares;
+  const factory SigningStatus.preparingTransaction() =
+      SigningStatus_PreparingTransaction;
+  const factory SigningStatus.sendingTransaction() =
+      SigningStatus_SendingTransaction;
+  const factory SigningStatus.transactionSent(
+    String field0,
+  ) = SigningStatus_TransactionSent;
 }
