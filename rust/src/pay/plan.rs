@@ -986,6 +986,6 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
 }
 
 lazy_static::lazy_static! {
-    static ref SAPLING_PROVER: LocalTxProver = LocalTxProver::bundled();
-    static ref ORCHARD_PK: ProvingKey = ProvingKey::build();
+    pub static ref SAPLING_PROVER: LocalTxProver = LocalTxProver::bundled();
+    pub static ref ORCHARD_PK: ProvingKey = ProvingKey::build();
 }
