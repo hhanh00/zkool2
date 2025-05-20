@@ -7,15 +7,15 @@ use pczt::Pczt;
 use rand_core::OsRng;
 use reddsa::frost::redpallas::{
     frost::{
-        aggregate,
         keys::{KeyPackage, PublicKeyPackage},
         round1::{SigningCommitments, SigningNonces},
-        round2::{sign, SignatureShare},
+        round2::{SignatureShare},
         SigningPackage,
     },
     round1::commit,
     Identifier,
 };
+use frost_rerandomized::{sign, aggregate, RandomizedParams};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tracing::info;
 use zcash_primitives::transaction::{
@@ -99,6 +99,8 @@ pub async fn do_sign(
     .await?;
 
     // Parse commitment memos and store them
+    // commitments are privately received by the coordinator
+    // the participants will not get anything
     process_memos(
         connection,
         account,
@@ -130,6 +132,7 @@ pub async fn do_sign(
         for idx in 0..nsigs {
             let (nonces, commitments) = commit(spkg.signing_share(), &mut OsRng);
             // store nonces and commitments
+            // nonces go to the frost_signatures table
             let nonces = nonces.serialize()?;
             sqlx::query(
                 "INSERT INTO frost_signatures(account, sighash, idx, nonce) VALUES (?, ?, ?, ?)",
@@ -140,6 +143,7 @@ pub async fn do_sign(
             .bind(&nonces)
             .execute(connection)
             .await?;
+            // commitments go to the frost_commitments table
             let commitments = commitments.serialize()?;
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?)")
                 .bind(account)
@@ -159,6 +163,9 @@ pub async fn do_sign(
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
         // send the commitments to the coordinator
+        // we send all the commitments in one zcash transaction
+        // the coordinator does not need to send a message to itself,
+        //   (the commitments are already in the database)
         if dkg_params.id as u16 != params.coordinator {
             let txid = publish(
                 network,
@@ -175,6 +182,10 @@ pub async fn do_sign(
     info!("Commitments: {:?}", commitments_vec);
 
     // process sigpackages
+    // there is one sigpackage per signature
+    //
+    // this is for the participants other than the coordinator
+    // the coordinator will produce the sigpackages
     process_memos(
         connection,
         account,
@@ -198,14 +209,18 @@ pub async fn do_sign(
             break sigpackages; // we have all sigpackages
         }
 
+        // we are not the coordinator, and we haven't received all the sigpackages
         if dkg_params.id as u16 != params.coordinator {
             info!("Waiting for sigpackages");
             return Ok(());
         }
 
+        // we are the coordinator, let's try to make the sigpackages
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
         for (idx, c) in commitments_vec.iter().enumerate() {
+            // each sigpackage needs t commitments
+            // if we don't have them, bail out
             if c.len() != dkg_params.t as usize {
                 info!(
                     "Not enough commitments for input {idx}: {}/{}",
@@ -214,6 +229,9 @@ pub async fn do_sign(
                 );
                 return Ok(());
             }
+            // build the sigpackage for this input and store it
+            // note that it will be kept in the database only if we succesfully sent it out
+            // because of the db transaction
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
             let sigpackage = sigpackage.serialize()?;
             sqlx::query(
@@ -233,9 +251,11 @@ pub async fn do_sign(
                 data: sigpackage,
             };
             let memo_bytes = message.encode_with_prefix(b"SPK1")?;
+            // broadcast the sigpackage to all participants
             recipients.push((broadcast_address.as_str(), memo_bytes));
         }
-        // we got all the sigshares, commit them
+        // we send all the sigpackages in one zcash transaction
+        // with one output/memo per input/signature needed
         let txid = publish(
             network,
             connection,
@@ -246,6 +266,7 @@ pub async fn do_sign(
         )
         .await?;
         info!("Published sigpackages transaction: {}", txid);
+        // we got all the sigshares, commit them
         tx.commit().await?;
     };
 
@@ -254,11 +275,16 @@ pub async fn do_sign(
     let nonces = get_nonces(connection, account, &sighash).await?;
 
     let sigshares = loop {
+        // get the sigshares from the database
+        // if we have them all, we have already signed the sigpackages and we are done
         let sigshares = get_sigshares(connection, account, &sighash).await?;
         if !sigshares.is_empty() {
             break sigshares; // we have all sigshares, it's all or none
         }
 
+        // same as above
+        // we start a database transaction to make sure we don't store
+        // the sigshares if we fail to send them
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
         for (idx, (signing_package, nonces)) in sigpackages.iter().zip(nonces.iter()).enumerate() {
@@ -283,6 +309,7 @@ pub async fn do_sign(
                 data: signature_share,
             };
             let memo_bytes = message.encode_with_prefix(b"SSH1")?;
+            // send the sigshare to the coordinator
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
 
@@ -338,6 +365,8 @@ pub async fn do_sign(
         },
     ).await?;
 
+    // final step: aggregate the sigshares
+    // this is only done by the coordinator
     if dkg_params.id as u16 == params.coordinator {
         let mut tx = connection.begin().await?;
         let sigsharess = get_all_sigshares(connection, account, &sighash, nsigs).await?;
