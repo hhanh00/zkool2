@@ -1,21 +1,22 @@
 use std::collections::BTreeMap;
 
 use anyhow::{Context as _, Result};
-use bincode::config::{self, legacy};
+use bincode::{config::{self, legacy}, Decode, Encode};
 use futures::StreamExt as _;
 use pczt::Pczt;
-use rand_core::OsRng;
+use rand_chacha::ChaCha20Rng;
+use rand_core::{OsRng, RngCore as _, SeedableRng as _};
 use reddsa::frost::redpallas::{
     frost::{
-        aggregate,
         keys::{KeyPackage, PublicKeyPackage},
         round1::{SigningCommitments, SigningNonces},
-        round2::{sign, SignatureShare},
+        round2::SignatureShare,
         SigningPackage,
     },
     round1::commit,
-    Identifier,
+    Identifier, Randomizer,
 };
+use frost_rerandomized::{sign, aggregate, RandomizedParams};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tracing::info;
 use zcash_primitives::transaction::{
@@ -99,6 +100,8 @@ pub async fn do_sign(
     .await?;
 
     // Parse commitment memos and store them
+    // commitments are privately received by the coordinator
+    // the participants will not get anything
     process_memos(
         connection,
         account,
@@ -130,6 +133,7 @@ pub async fn do_sign(
         for idx in 0..nsigs {
             let (nonces, commitments) = commit(spkg.signing_share(), &mut OsRng);
             // store nonces and commitments
+            // nonces go to the frost_signatures table
             let nonces = nonces.serialize()?;
             sqlx::query(
                 "INSERT INTO frost_signatures(account, sighash, idx, nonce) VALUES (?, ?, ?, ?)",
@@ -140,6 +144,7 @@ pub async fn do_sign(
             .bind(&nonces)
             .execute(connection)
             .await?;
+            // commitments go to the frost_commitments table
             let commitments = commitments.serialize()?;
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?)")
                 .bind(account)
@@ -159,6 +164,9 @@ pub async fn do_sign(
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
         // send the commitments to the coordinator
+        // we send all the commitments in one zcash transaction
+        // the coordinator does not need to send a message to itself,
+        //   (the commitments are already in the database)
         if dkg_params.id as u16 != params.coordinator {
             let txid = publish(
                 network,
@@ -175,14 +183,21 @@ pub async fn do_sign(
     info!("Commitments: {:?}", commitments_vec);
 
     // process sigpackages
+    // there is one sigpackage per signature
+    //
+    // this is for the participants other than the coordinator
+    // the coordinator will produce the sigpackages
     process_memos(
         connection,
         account,
         broadcast_account,
-        b"SPK1",
+        b"SPK2",
         async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
-            sqlx::query("UPDATE frost_signatures SET sigpackage = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4")
-                .bind(&pkg.data)
+            let randomized_sigpackage: RandomizedSigPackage =
+                bincode::decode_from_slice(&pkg.data, config::legacy()).unwrap().0;
+            sqlx::query("UPDATE frost_signatures SET sigpackage = ?1, randomizer = ?2 WHERE account = ?3 AND sighash = ?4 AND idx = ?5")
+                .bind(&randomized_sigpackage.sigpackage)
+                .bind(&randomized_sigpackage.randomizer)
                 .bind(account)
                 .bind(pkg.sighash.as_slice())
                 .bind(pkg.idx)
@@ -198,14 +213,18 @@ pub async fn do_sign(
             break sigpackages; // we have all sigpackages
         }
 
+        // we are not the coordinator, and we haven't received all the sigpackages
         if dkg_params.id as u16 != params.coordinator {
             info!("Waiting for sigpackages");
             return Ok(());
         }
 
+        // we are the coordinator, let's try to make the sigpackages
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
         for (idx, c) in commitments_vec.iter().enumerate() {
+            // each sigpackage needs t commitments
+            // if we don't have them, bail out
             if c.len() != dkg_params.t as usize {
                 info!(
                     "Not enough commitments for input {idx}: {}/{}",
@@ -214,28 +233,49 @@ pub async fn do_sign(
                 );
                 return Ok(());
             }
+            // build the sigpackage for this input and store it
+            // note that it will be kept in the database only if we succesfully sent it out
+            // because of the db transaction
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
+            let mut random = [0u8; 32];
+            OsRng.fill_bytes(&mut random);
+            let rng = ChaCha20Rng::from_seed(random.clone());
+            let randomizer = Randomizer::new(rng, &sigpackage)?;
             let sigpackage = sigpackage.serialize()?;
             sqlx::query(
-                "UPDATE frost_signatures SET sigpackage = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4",
+                "UPDATE frost_signatures SET sigpackage = ?1, random = ?2, randomizer = ?3 WHERE account = ?4 AND sighash = ?5 AND idx = ?6",
             )
             .bind(&sigpackage)
+            .bind(&random[..])
+            .bind(&randomizer.serialize())
             .bind(account)
             .bind(&sighash)
             .bind(idx as u32)
             .execute(&mut *tx)
             .await?;
 
+            // build the randomized package
+            let randomized_sigpackage = RandomizedSigPackage {
+                sigpackage: sigpackage.clone(),
+                randomizer: randomizer.serialize(),
+            };
+            let randomized_sigpackage = bincode::encode_to_vec(
+                &randomized_sigpackage,
+                config::legacy(),
+            )?;
+
             let message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
                 from_id: params.coordinator as u16,
                 idx: idx as u32,
-                data: sigpackage,
+                data: randomized_sigpackage,
             };
-            let memo_bytes = message.encode_with_prefix(b"SPK1")?;
+            let memo_bytes = message.encode_with_prefix(b"SPK2")?;
+            // broadcast the sigpackage to all participants
             recipients.push((broadcast_address.as_str(), memo_bytes));
         }
-        // we got all the sigshares, commit them
+        // we send all the sigpackages in one zcash transaction
+        // with one output/memo per input/signature needed
         let txid = publish(
             network,
             connection,
@@ -246,6 +286,7 @@ pub async fn do_sign(
         )
         .await?;
         info!("Published sigpackages transaction: {}", txid);
+        // we got all the sigshares, commit them
         tx.commit().await?;
     };
 
@@ -254,16 +295,21 @@ pub async fn do_sign(
     let nonces = get_nonces(connection, account, &sighash).await?;
 
     let sigshares = loop {
+        // get the sigshares from the database
+        // if we have them all, we have already signed the sigpackages and we are done
         let sigshares = get_sigshares(connection, account, &sighash).await?;
         if !sigshares.is_empty() {
             break sigshares; // we have all sigshares, it's all or none
         }
 
+        // same as above
+        // we start a database transaction to make sure we don't store
+        // the sigshares if we fail to send them
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
-        for (idx, (signing_package, nonces)) in sigpackages.iter().zip(nonces.iter()).enumerate() {
+        for (idx, ((signing_package, randomizer), nonces)) in sigpackages.iter().zip(nonces.iter()).enumerate() {
             let signature_share =
-                sign(&signing_package, nonces, &spkg).context("Failed to sign")?;
+                sign(&signing_package, nonces, &spkg, randomizer.clone()).context("Failed to sign")?;
             let signature_share = signature_share.serialize();
 
             sqlx::query(
@@ -283,6 +329,7 @@ pub async fn do_sign(
                 data: signature_share,
             };
             let memo_bytes = message.encode_with_prefix(b"SSH1")?;
+            // send the sigshare to the coordinator
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
 
@@ -338,10 +385,12 @@ pub async fn do_sign(
         },
     ).await?;
 
+    // final step: aggregate the sigshares
+    // this is only done by the coordinator
     if dkg_params.id as u16 == params.coordinator {
         let mut tx = connection.begin().await?;
         let sigsharess = get_all_sigshares(connection, account, &sighash, nsigs).await?;
-        for (idx, (sigshares, sigpackage)) in sigsharess.iter().zip(sigpackages.iter()).enumerate()
+        for (idx, (sigshares, (sigpackage, randomizer))) in sigsharess.iter().zip(sigpackages.iter()).enumerate()
         {
             if sigshares.len() != dkg_params.t as usize {
                 info!(
@@ -352,7 +401,9 @@ pub async fn do_sign(
                 );
                 return Ok(());
             }
-            let signature = aggregate(sigpackage, sigshares, &ppkg)?;
+            let randomized_params =
+                RandomizedParams::from_randomizer(ppkg.verifying_key(), randomizer.clone());
+            let signature = aggregate(sigpackage, sigshares, &ppkg, &randomized_params)?;
             let signature = signature.serialize()?;
             sqlx::query("UPDATE frost_signatures SET signature = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4")
             .bind(&signature)
@@ -571,19 +622,22 @@ async fn get_sigpackages(
     connection: &SqlitePool,
     account: u32,
     sighash: &[u8],
-) -> Result<Vec<SigningPackage<P>>> {
-    let sigpackages =
-        sqlx::query("SELECT sigpackage FROM frost_signatures WHERE account = ? AND sighash = ? AND sigpackage IS NOT NULL")
+) -> Result<Vec<(SigningPackage<P>, Randomizer)>> {
+    let randomized_sigpackages =
+        sqlx::query("SELECT sigpackage, randomizer FROM frost_signatures WHERE account = ? AND sighash = ? AND sigpackage IS NOT NULL")
             .bind(account)
             .bind(sighash)
             .map(|row| {
                 let sigpackage: Vec<u8> = row.get(0);
-                SigningPackage::<P>::deserialize(&sigpackage).unwrap()
+                let randomizer: Vec<u8> = row.get(1);
+                let sigpackage = SigningPackage::<P>::deserialize(&sigpackage).unwrap();
+                let randomizer = Randomizer::deserialize(&randomizer).unwrap();
+                (sigpackage, randomizer)
             })
             .fetch_all(connection)
             .await?;
 
-    Ok(sigpackages)
+    Ok(randomized_sigpackages)
 }
 
 async fn get_sigshares(
@@ -632,4 +686,10 @@ async fn get_all_sigshares(
         sigshare_maps.push(map);
     }
     Ok(sigshare_maps)
+}
+
+#[derive(Encode, Decode)]
+struct RandomizedSigPackage {
+    sigpackage: Vec<u8>,
+    randomizer: Vec<u8>,
 }
