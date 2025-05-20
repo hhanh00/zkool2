@@ -80,7 +80,7 @@ final router = GoRouter(
     GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2(addresses: state.extra as List<String>)),
     GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
     GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
-    // GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
+    GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
     GoRoute(path: '/settings', builder: (context, state) => SettingsPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
   ],
