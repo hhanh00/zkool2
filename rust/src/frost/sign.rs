@@ -3,10 +3,9 @@ use std::collections::BTreeMap;
 use anyhow::{Context as _, Result};
 use bincode::{config::{self, legacy}, Decode, Encode};
 use futures::StreamExt as _;
-use group::ff::PrimeField;
+use halo2_proofs::pasta::Fq;
 use pczt::{roles::low_level_signer::Signer, Pczt};
-use rand_chacha::ChaCha20Rng;
-use rand_core::{OsRng, RngCore as _, SeedableRng as _};
+use rand_core::OsRng;
 use reddsa::frost::redpallas::{
     frost::{
         keys::{KeyPackage, PublicKeyPackage},
@@ -84,17 +83,6 @@ pub async fn do_sign(
     let Some(pczt_pkg) = get_pczt(connection).await? else {
         return Ok(()); // No signing in progress
     };
-
-    let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Unable to parse PCZT");
-    let signer = Signer::new(pczt.clone());
-    signer.sign_orchard_with(|_pczt, bundle, _| {
-        for a in bundle.actions().iter() {
-            let spend = a.spend();
-            let alpha = spend.alpha().expect("Failed to get alpha");
-            info!("spend alpha: {}", hex::encode(alpha.to_repr()));
-        }
-        Ok::<_, orchard::pczt::ParseError>(())
-    }).unwrap();
 
     let birth_height = height - 10000;
     let params = get_sign_params(connection).await?;
@@ -241,6 +229,7 @@ pub async fn do_sign(
         // we are the coordinator, let's try to make the sigpackages
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
+
         for (idx, c) in commitments_vec.iter().enumerate() {
             // each sigpackage needs t commitments
             // if we don't have them, bail out
@@ -256,16 +245,24 @@ pub async fn do_sign(
             // note that it will be kept in the database only if we succesfully sent it out
             // because of the db transaction
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
-            let mut random = [0u8; 32];
-            OsRng.fill_bytes(&mut random);
-            let rng = ChaCha20Rng::from_seed(random.clone());
-            let randomizer = Randomizer::new(rng, &sigpackage)?;
+
+            // get the randomizer from the pczt
+            let action_index = pczt_pkg.orchard_indices[idx as usize];
+            let signer = Signer::new(pczt.clone());
+            let mut alpha = Fq::zero();
+            signer.sign_orchard_with(|_pczt, bundle, _| {
+                let a = &bundle.actions()[action_index];
+                let spend = a.spend();
+                alpha = spend.alpha().expect("Failed to get alpha");
+                Ok::<_, orchard::pczt::ParseError>(())
+            }).unwrap();
+
+            let randomizer = Randomizer::from_scalar(alpha);
             let sigpackage = sigpackage.serialize()?;
             sqlx::query(
-                "UPDATE frost_signatures SET sigpackage = ?1, random = ?2, randomizer = ?3 WHERE account = ?4 AND sighash = ?5 AND idx = ?6",
+                "UPDATE frost_signatures SET sigpackage = ?1, randomizer = ?2 WHERE account = ?3 AND sighash = ?4 AND idx = ?5",
             )
             .bind(&sigpackage)
-            .bind(&random[..])
             .bind(&randomizer.serialize())
             .bind(account)
             .bind(&sighash)
@@ -423,6 +420,16 @@ pub async fn do_sign(
             let randomized_params =
                 RandomizedParams::from_randomizer(ppkg.verifying_key(), randomizer.clone());
             let signature = aggregate(sigpackage, sigshares, &ppkg, &randomized_params)?;
+
+            let signer = Signer::new(pczt.clone());
+            signer.sign_orchard_with(|_pczt, bundle, _| {
+                let _a = bundle.actions_mut();
+                // How do we update the spend_auth_sig?
+                // a[0].spend().spend_auth_sig = Some(signature.clone());
+
+                Ok::<_, orchard::pczt::ParseError>(())
+            }).unwrap();
+
             let signature = signature.serialize()?;
             sqlx::query("UPDATE frost_signatures SET signature = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4")
             .bind(&signature)
