@@ -75,7 +75,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
           actions: [
             IconButton(
-              onPressed: onFrost, icon: Icon(Icons.ac_unit)),
+              onPressed: onFrost, icon: Icon(Icons.group)),
             Showcase(
                 key: importID,
                 description: "Import an account from file",

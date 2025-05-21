@@ -71,6 +71,7 @@ class QRPage extends StatelessWidget {
             version: QrVersions.auto,
             errorCorrectionLevel: QrErrorCorrectLevel.L,
             gapless: false,
+            backgroundColor: Colors.white,
             padding: const EdgeInsets.all(16)), // Add your QR code widget here
       ),
     );
