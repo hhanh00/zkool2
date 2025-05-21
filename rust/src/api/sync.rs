@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
@@ -76,7 +76,8 @@ pub async fn synchronize(
                     sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
                         .bind(account)
                         .fetch_one(pool)
-                        .await?;
+                        .await
+                        .context("Fetch use_internal")?;
                 account_use_internal.insert(account, use_internal);
             }
         }

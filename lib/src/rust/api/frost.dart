@@ -10,6 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'pay.dart';
 part 'frost.freezed.dart';
 
+// These functions are ignored because they are not marked as `pub`: `get_funding_account`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
@@ -22,10 +23,22 @@ Future<void> setDkgParams(
     RustLib.instance.api.crateApiFrostSetDkgParams(
         name: name, id: id, n: n, t: t, fundingAccount: fundingAccount);
 
-Future<DKGStatus> dkg() => RustLib.instance.api.crateApiFrostDkg();
+Future<bool> hasDkgParams() => RustLib.instance.api.crateApiFrostHasDkgParams();
+
+Future<void> initDkg() => RustLib.instance.api.crateApiFrostInitDkg();
+
+Future<bool> hasDkgAddresses() =>
+    RustLib.instance.api.crateApiFrostHasDkgAddresses();
+
+Stream<DKGStatus> doDkg() => RustLib.instance.api.crateApiFrostDoDkg();
+
+Future<List<String>> getDkgAddresses() =>
+    RustLib.instance.api.crateApiFrostGetDkgAddresses();
 
 Future<void> setDkgAddress({required int id, required String address}) =>
     RustLib.instance.api.crateApiFrostSetDkgAddress(id: id, address: address);
+
+Future<void> cancelDkg() => RustLib.instance.api.crateApiFrostCancelDkg();
 
 Future<void> initSign(
         {required int coordinator,
@@ -47,7 +60,9 @@ sealed class DKGStatus with _$DKGStatus {
   const factory DKGStatus.waitAddresses(
     List<String> field0,
   ) = DKGStatus_WaitAddresses;
+  const factory DKGStatus.publishRound1Pkg() = DKGStatus_PublishRound1Pkg;
   const factory DKGStatus.waitRound1Pkg() = DKGStatus_WaitRound1Pkg;
+  const factory DKGStatus.publishRound2Pkg() = DKGStatus_PublishRound2Pkg;
   const factory DKGStatus.waitRound2Pkg() = DKGStatus_WaitRound2Pkg;
   const factory DKGStatus.finalize() = DKGStatus_Finalize;
   const factory DKGStatus.sharedAddress(

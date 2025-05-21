@@ -20,7 +20,9 @@ mixin _$DKGStatus {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -30,7 +32,9 @@ mixin _$DKGStatus {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -40,7 +44,9 @@ mixin _$DKGStatus {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -51,7 +57,11 @@ mixin _$DKGStatus {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -61,7 +71,9 @@ mixin _$DKGStatus {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -71,7 +83,9 @@ mixin _$DKGStatus {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -144,7 +158,9 @@ class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -157,7 +173,9 @@ class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -170,7 +188,9 @@ class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -187,7 +207,11 @@ class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -200,7 +224,9 @@ class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -213,7 +239,9 @@ class _$DKGStatus_WaitParamsImpl extends DKGStatus_WaitParams {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -312,7 +340,9 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -325,7 +355,9 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -338,7 +370,9 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -355,7 +389,11 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -368,7 +406,9 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -381,7 +421,9 @@ class _$DKGStatus_WaitAddressesImpl extends DKGStatus_WaitAddresses {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -406,6 +448,153 @@ abstract class DKGStatus_WaitAddresses extends DKGStatus {
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$DKGStatus_WaitAddressesImplCopyWith<_$DKGStatus_WaitAddressesImpl>
       get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_PublishRound1PkgImplCopyWith<$Res> {
+  factory _$$DKGStatus_PublishRound1PkgImplCopyWith(
+          _$DKGStatus_PublishRound1PkgImpl value,
+          $Res Function(_$DKGStatus_PublishRound1PkgImpl) then) =
+      __$$DKGStatus_PublishRound1PkgImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_PublishRound1PkgImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_PublishRound1PkgImpl>
+    implements _$$DKGStatus_PublishRound1PkgImplCopyWith<$Res> {
+  __$$DKGStatus_PublishRound1PkgImplCopyWithImpl(
+      _$DKGStatus_PublishRound1PkgImpl _value,
+      $Res Function(_$DKGStatus_PublishRound1PkgImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_PublishRound1PkgImpl extends DKGStatus_PublishRound1Pkg {
+  const _$DKGStatus_PublishRound1PkgImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.publishRound1Pkg()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_PublishRound1PkgImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return publishRound1Pkg();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return publishRound1Pkg?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (publishRound1Pkg != null) {
+      return publishRound1Pkg();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return publishRound1Pkg(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return publishRound1Pkg?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (publishRound1Pkg != null) {
+      return publishRound1Pkg(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_PublishRound1Pkg extends DKGStatus {
+  const factory DKGStatus_PublishRound1Pkg() = _$DKGStatus_PublishRound1PkgImpl;
+  const DKGStatus_PublishRound1Pkg._() : super._();
 }
 
 /// @nodoc
@@ -454,7 +643,9 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -467,7 +658,9 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -480,7 +673,9 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -497,7 +692,11 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -510,7 +709,9 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -523,7 +724,9 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -539,6 +742,153 @@ class _$DKGStatus_WaitRound1PkgImpl extends DKGStatus_WaitRound1Pkg {
 abstract class DKGStatus_WaitRound1Pkg extends DKGStatus {
   const factory DKGStatus_WaitRound1Pkg() = _$DKGStatus_WaitRound1PkgImpl;
   const DKGStatus_WaitRound1Pkg._() : super._();
+}
+
+/// @nodoc
+abstract class _$$DKGStatus_PublishRound2PkgImplCopyWith<$Res> {
+  factory _$$DKGStatus_PublishRound2PkgImplCopyWith(
+          _$DKGStatus_PublishRound2PkgImpl value,
+          $Res Function(_$DKGStatus_PublishRound2PkgImpl) then) =
+      __$$DKGStatus_PublishRound2PkgImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$DKGStatus_PublishRound2PkgImplCopyWithImpl<$Res>
+    extends _$DKGStatusCopyWithImpl<$Res, _$DKGStatus_PublishRound2PkgImpl>
+    implements _$$DKGStatus_PublishRound2PkgImplCopyWith<$Res> {
+  __$$DKGStatus_PublishRound2PkgImplCopyWithImpl(
+      _$DKGStatus_PublishRound2PkgImpl _value,
+      $Res Function(_$DKGStatus_PublishRound2PkgImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$DKGStatus_PublishRound2PkgImpl extends DKGStatus_PublishRound2Pkg {
+  const _$DKGStatus_PublishRound2PkgImpl() : super._();
+
+  @override
+  String toString() {
+    return 'DKGStatus.publishRound2Pkg()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$DKGStatus_PublishRound2PkgImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() waitParams,
+    required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
+    required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
+    required TResult Function() waitRound2Pkg,
+    required TResult Function() finalize,
+    required TResult Function(String field0) sharedAddress,
+  }) {
+    return publishRound2Pkg();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? waitParams,
+    TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
+    TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
+    TResult? Function()? waitRound2Pkg,
+    TResult? Function()? finalize,
+    TResult? Function(String field0)? sharedAddress,
+  }) {
+    return publishRound2Pkg?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? waitParams,
+    TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
+    TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
+    TResult Function()? waitRound2Pkg,
+    TResult Function()? finalize,
+    TResult Function(String field0)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (publishRound2Pkg != null) {
+      return publishRound2Pkg();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(DKGStatus_WaitParams value) waitParams,
+    required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
+    required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
+    required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_Finalize value) finalize,
+    required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+  }) {
+    return publishRound2Pkg(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus_WaitParams value)? waitParams,
+    TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
+    TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
+    TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_Finalize value)? finalize,
+    TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+  }) {
+    return publishRound2Pkg?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(DKGStatus_WaitParams value)? waitParams,
+    TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
+    TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
+    TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_Finalize value)? finalize,
+    TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    required TResult orElse(),
+  }) {
+    if (publishRound2Pkg != null) {
+      return publishRound2Pkg(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class DKGStatus_PublishRound2Pkg extends DKGStatus {
+  const factory DKGStatus_PublishRound2Pkg() = _$DKGStatus_PublishRound2PkgImpl;
+  const DKGStatus_PublishRound2Pkg._() : super._();
 }
 
 /// @nodoc
@@ -587,7 +937,9 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -600,7 +952,9 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -613,7 +967,9 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -630,7 +986,11 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -643,7 +1003,9 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -656,7 +1018,9 @@ class _$DKGStatus_WaitRound2PkgImpl extends DKGStatus_WaitRound2Pkg {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -717,7 +1081,9 @@ class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -730,7 +1096,9 @@ class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -743,7 +1111,9 @@ class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -760,7 +1130,11 @@ class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -773,7 +1147,9 @@ class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -786,7 +1162,9 @@ class _$DKGStatus_FinalizeImpl extends DKGStatus_Finalize {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -877,7 +1255,9 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   TResult when<TResult extends Object?>({
     required TResult Function() waitParams,
     required TResult Function(List<String> field0) waitAddresses,
+    required TResult Function() publishRound1Pkg,
     required TResult Function() waitRound1Pkg,
+    required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
@@ -890,7 +1270,9 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? waitParams,
     TResult? Function(List<String> field0)? waitAddresses,
+    TResult? Function()? publishRound1Pkg,
     TResult? Function()? waitRound1Pkg,
+    TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
@@ -903,7 +1285,9 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? waitParams,
     TResult Function(List<String> field0)? waitAddresses,
+    TResult Function()? publishRound1Pkg,
     TResult Function()? waitRound1Pkg,
+    TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
@@ -920,7 +1304,11 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
+    required TResult Function(DKGStatus_PublishRound1Pkg value)
+        publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value)
+        publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -933,7 +1321,9 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus_WaitParams value)? waitParams,
     TResult? Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult? Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
@@ -946,7 +1336,9 @@ class _$DKGStatus_SharedAddressImpl extends DKGStatus_SharedAddress {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(DKGStatus_WaitParams value)? waitParams,
     TResult Function(DKGStatus_WaitAddresses value)? waitAddresses,
+    TResult Function(DKGStatus_PublishRound1Pkg value)? publishRound1Pkg,
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
+    TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,

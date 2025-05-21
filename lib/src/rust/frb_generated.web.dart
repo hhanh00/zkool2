@@ -34,6 +34,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  RustStreamSink<DKGStatus> dco_decode_StreamSink_dkg_status_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<LogMessage> dco_decode_StreamSink_log_message_Sse(dynamic raw);
 
   @protected
@@ -253,6 +256,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<DKGStatus> sse_decode_StreamSink_dkg_status_Sse(
+      SseDeserializer deserializer);
 
   @protected
   RustStreamSink<LogMessage> sse_decode_StreamSink_log_message_Sse(
@@ -481,6 +488,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_dkg_status_Sse(
+      RustStreamSink<DKGStatus> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_log_message_Sse(
