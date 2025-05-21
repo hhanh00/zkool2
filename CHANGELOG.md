@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.0.0...zkool-v2.1.0) (2025-05-21)
+
+
+### Features
+
+* end to end frost transaction ([#199](https://github.com/hhanh00/zkool2/issues/199)) ([e278307](https://github.com/hhanh00/zkool2/commit/e278307778b0242aa116a9898551b6cd928e7f96))
+* **frost:** calculate nonce & commitments, send to coordinator ([#189](https://github.com/hhanh00/zkool2/issues/189)) ([6344169](https://github.com/hhanh00/zkool2/commit/6344169b7267bf3cc58bf8a1ab4087f561f3453a))
+* **frost:** coordinator sends signingpackage ([#191](https://github.com/hhanh00/zkool2/issues/191)) ([cf598ee](https://github.com/hhanh00/zkool2/commit/cf598ee7ae2e8b59fd649d432e318c38a466a75e))
+* **frost:** create coordinator mailbox account ([#190](https://github.com/hhanh00/zkool2/issues/190)) ([47f02ef](https://github.com/hhanh00/zkool2/commit/47f02efb42b84aabb533cc4ad6bba7a3a4805b68))
+* **frost:** initial frost mpc signature - phase 1 ([#187](https://github.com/hhanh00/zkool2/issues/187)) ([aa0fd7b](https://github.com/hhanh00/zkool2/commit/aa0fd7bbb0ad3ac7864376f66c4ca1e8340112c5))
+* **frost:** rerandomized signature ([#196](https://github.com/hhanh00/zkool2/issues/196)) ([e4acb73](https://github.com/hhanh00/zkool2/commit/e4acb730a5f5ac101f12d2034446fbb6c89c6220))
+* **frost:** tx/rx signature shares & aggregate ([#192](https://github.com/hhanh00/zkool2/issues/192)) ([89a3087](https://github.com/hhanh00/zkool2/commit/89a3087e361bd0bdcd82bfa48ba42590afa8b194))
+
+
+### Bug Fixes
+
+* delete dkg & frost tables with account ([#204](https://github.com/hhanh00/zkool2/issues/204)) ([f4e1f00](https://github.com/hhanh00/zkool2/commit/f4e1f00502a6d45380efae6e96bc1969c4511700))
+* **dkg:** ui ([#201](https://github.com/hhanh00/zkool2/issues/201)) ([28a9aaa](https://github.com/hhanh00/zkool2/commit/28a9aaa1a448ee29520be4c0a54b1eb1f7f4853f))
+* **frost:** misc bugs ([#202](https://github.com/hhanh00/zkool2/issues/202)) ([a7d9852](https://github.com/hhanh00/zkool2/commit/a7d985230fe28d3c6c73d9069ef49be104307662))
+* **frost:** ui ([#200](https://github.com/hhanh00/zkool2/issues/200)) ([e0dfbf7](https://github.com/hhanh00/zkool2/commit/e0dfbf795efb4243c983dd8962c65a442770179e))
+* icons and close button ([#203](https://github.com/hhanh00/zkool2/issues/203)) ([4942093](https://github.com/hhanh00/zkool2/commit/4942093f14e4fa83a46ee7a5083e51a3d13a45e2))
+* use randomizer from pczt ([#198](https://github.com/hhanh00/zkool2/issues/198)) ([eb2cefb](https://github.com/hhanh00/zkool2/commit/eb2cefb5539e481024f3a97b549c0e94bac74cdb))
+
 ## [2.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v1.17.0...zkool-v2.0.0) (2025-05-14)
 
 
