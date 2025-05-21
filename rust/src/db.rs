@@ -673,6 +673,24 @@ pub async fn get_account_fingerprint(
 
 pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()> {
     let mut tx = connection.begin().await?;
+
+    sqlx::query("DELETE FROM dkg_params WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM dkg_packages WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM frost_signatures WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM frost_commitments WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+
     sqlx::query("DELETE FROM memos WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
