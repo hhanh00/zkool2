@@ -191,6 +191,11 @@ class FrostPage2State extends State<FrostPage2> {
           message = "Sending our signature share to the coordinator";
           currentIndex = 3; // other
         });
+      } else if (s is SigningStatus_SigningCompleted) {
+        setState(() {
+          message = "Signing completed";
+          currentIndex = 3; // other
+        });
       } else if (s is SigningStatus_WaitingForSignatureShares) {
         setState(() {
           message = "Waiting for the signature share from the other participants";

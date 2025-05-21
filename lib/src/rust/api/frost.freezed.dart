@@ -1526,6 +1526,7 @@ mixin _$SigningStatus {
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -1539,6 +1540,7 @@ mixin _$SigningStatus {
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -1552,6 +1554,7 @@ mixin _$SigningStatus {
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -1571,6 +1574,8 @@ mixin _$SigningStatus {
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -1592,6 +1597,7 @@ mixin _$SigningStatus {
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -1612,6 +1618,7 @@ mixin _$SigningStatus {
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -1696,6 +1703,7 @@ class _$SigningStatus_SendingCommitmentImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -1712,6 +1720,7 @@ class _$SigningStatus_SendingCommitmentImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -1728,6 +1737,7 @@ class _$SigningStatus_SendingCommitmentImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -1753,6 +1763,8 @@ class _$SigningStatus_SendingCommitmentImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -1777,6 +1789,7 @@ class _$SigningStatus_SendingCommitmentImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -1800,6 +1813,7 @@ class _$SigningStatus_SendingCommitmentImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -1873,6 +1887,7 @@ class _$SigningStatus_WaitingForCommitmentsImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -1889,6 +1904,7 @@ class _$SigningStatus_WaitingForCommitmentsImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -1905,6 +1921,7 @@ class _$SigningStatus_WaitingForCommitmentsImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -1930,6 +1947,8 @@ class _$SigningStatus_WaitingForCommitmentsImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -1954,6 +1973,7 @@ class _$SigningStatus_WaitingForCommitmentsImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -1977,6 +1997,7 @@ class _$SigningStatus_WaitingForCommitmentsImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -2050,6 +2071,7 @@ class _$SigningStatus_SendingSigningPackageImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -2066,6 +2088,7 @@ class _$SigningStatus_SendingSigningPackageImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -2082,6 +2105,7 @@ class _$SigningStatus_SendingSigningPackageImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -2107,6 +2131,8 @@ class _$SigningStatus_SendingSigningPackageImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -2131,6 +2157,7 @@ class _$SigningStatus_SendingSigningPackageImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -2154,6 +2181,7 @@ class _$SigningStatus_SendingSigningPackageImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -2227,6 +2255,7 @@ class _$SigningStatus_WaitingForSigningPackageImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -2243,6 +2272,7 @@ class _$SigningStatus_WaitingForSigningPackageImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -2259,6 +2289,7 @@ class _$SigningStatus_WaitingForSigningPackageImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -2284,6 +2315,8 @@ class _$SigningStatus_WaitingForSigningPackageImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -2308,6 +2341,7 @@ class _$SigningStatus_WaitingForSigningPackageImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -2331,6 +2365,7 @@ class _$SigningStatus_WaitingForSigningPackageImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -2404,6 +2439,7 @@ class _$SigningStatus_SendingSignatureShareImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -2420,6 +2456,7 @@ class _$SigningStatus_SendingSignatureShareImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -2436,6 +2473,7 @@ class _$SigningStatus_SendingSignatureShareImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -2461,6 +2499,8 @@ class _$SigningStatus_SendingSignatureShareImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -2485,6 +2525,7 @@ class _$SigningStatus_SendingSignatureShareImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -2508,6 +2549,7 @@ class _$SigningStatus_SendingSignatureShareImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -2528,6 +2570,190 @@ abstract class SigningStatus_SendingSignatureShare extends SigningStatus {
   const factory SigningStatus_SendingSignatureShare() =
       _$SigningStatus_SendingSignatureShareImpl;
   const SigningStatus_SendingSignatureShare._() : super._();
+}
+
+/// @nodoc
+abstract class _$$SigningStatus_SigningCompletedImplCopyWith<$Res> {
+  factory _$$SigningStatus_SigningCompletedImplCopyWith(
+          _$SigningStatus_SigningCompletedImpl value,
+          $Res Function(_$SigningStatus_SigningCompletedImpl) then) =
+      __$$SigningStatus_SigningCompletedImplCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$SigningStatus_SigningCompletedImplCopyWithImpl<$Res>
+    extends _$SigningStatusCopyWithImpl<$Res,
+        _$SigningStatus_SigningCompletedImpl>
+    implements _$$SigningStatus_SigningCompletedImplCopyWith<$Res> {
+  __$$SigningStatus_SigningCompletedImplCopyWithImpl(
+      _$SigningStatus_SigningCompletedImpl _value,
+      $Res Function(_$SigningStatus_SigningCompletedImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+
+class _$SigningStatus_SigningCompletedImpl
+    extends SigningStatus_SigningCompleted {
+  const _$SigningStatus_SigningCompletedImpl() : super._();
+
+  @override
+  String toString() {
+    return 'SigningStatus.signingCompleted()';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningStatus_SigningCompletedImpl);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() sendingCommitment,
+    required TResult Function() waitingForCommitments,
+    required TResult Function() sendingSigningPackage,
+    required TResult Function() waitingForSigningPackage,
+    required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
+    required TResult Function() waitingForSignatureShares,
+    required TResult Function() preparingTransaction,
+    required TResult Function() sendingTransaction,
+    required TResult Function(String field0) transactionSent,
+  }) {
+    return signingCompleted();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? sendingCommitment,
+    TResult? Function()? waitingForCommitments,
+    TResult? Function()? sendingSigningPackage,
+    TResult? Function()? waitingForSigningPackage,
+    TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
+    TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? preparingTransaction,
+    TResult? Function()? sendingTransaction,
+    TResult? Function(String field0)? transactionSent,
+  }) {
+    return signingCompleted?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? sendingCommitment,
+    TResult Function()? waitingForCommitments,
+    TResult Function()? sendingSigningPackage,
+    TResult Function()? waitingForSigningPackage,
+    TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
+    TResult Function()? waitingForSignatureShares,
+    TResult Function()? preparingTransaction,
+    TResult Function()? sendingTransaction,
+    TResult Function(String field0)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (signingCompleted != null) {
+      return signingCompleted();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_SendingCommitment value)
+        sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value)
+        waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value)
+        sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value)
+        waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value)
+        sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value)
+        waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value)
+        preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value)
+        sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value)
+        transactionSent,
+  }) {
+    return signingCompleted(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult? Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
+  }) {
+    return signingCompleted?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
+    TResult Function(SigningStatus_WaitingForCommitments value)?
+        waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)?
+        sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)?
+        waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)?
+        sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)?
+        waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)?
+        preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)?
+        sendingTransaction,
+    TResult Function(SigningStatus_TransactionSent value)? transactionSent,
+    required TResult orElse(),
+  }) {
+    if (signingCompleted != null) {
+      return signingCompleted(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningStatus_SigningCompleted extends SigningStatus {
+  const factory SigningStatus_SigningCompleted() =
+      _$SigningStatus_SigningCompletedImpl;
+  const SigningStatus_SigningCompleted._() : super._();
 }
 
 /// @nodoc
@@ -2581,6 +2807,7 @@ class _$SigningStatus_WaitingForSignatureSharesImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -2597,6 +2824,7 @@ class _$SigningStatus_WaitingForSignatureSharesImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -2613,6 +2841,7 @@ class _$SigningStatus_WaitingForSignatureSharesImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -2638,6 +2867,8 @@ class _$SigningStatus_WaitingForSignatureSharesImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -2662,6 +2893,7 @@ class _$SigningStatus_WaitingForSignatureSharesImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -2685,6 +2917,7 @@ class _$SigningStatus_WaitingForSignatureSharesImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -2758,6 +2991,7 @@ class _$SigningStatus_PreparingTransactionImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -2774,6 +3008,7 @@ class _$SigningStatus_PreparingTransactionImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -2790,6 +3025,7 @@ class _$SigningStatus_PreparingTransactionImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -2815,6 +3051,8 @@ class _$SigningStatus_PreparingTransactionImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -2839,6 +3077,7 @@ class _$SigningStatus_PreparingTransactionImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -2862,6 +3101,7 @@ class _$SigningStatus_PreparingTransactionImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -2935,6 +3175,7 @@ class _$SigningStatus_SendingTransactionImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -2951,6 +3192,7 @@ class _$SigningStatus_SendingTransactionImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -2967,6 +3209,7 @@ class _$SigningStatus_SendingTransactionImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -2992,6 +3235,8 @@ class _$SigningStatus_SendingTransactionImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -3016,6 +3261,7 @@ class _$SigningStatus_SendingTransactionImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -3039,6 +3285,7 @@ class _$SigningStatus_SendingTransactionImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
@@ -3140,6 +3387,7 @@ class _$SigningStatus_TransactionSentImpl
     required TResult Function() sendingSigningPackage,
     required TResult Function() waitingForSigningPackage,
     required TResult Function() sendingSignatureShare,
+    required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
@@ -3156,6 +3404,7 @@ class _$SigningStatus_TransactionSentImpl
     TResult? Function()? sendingSigningPackage,
     TResult? Function()? waitingForSigningPackage,
     TResult? Function()? sendingSignatureShare,
+    TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
@@ -3172,6 +3421,7 @@ class _$SigningStatus_TransactionSentImpl
     TResult Function()? sendingSigningPackage,
     TResult Function()? waitingForSigningPackage,
     TResult Function()? sendingSignatureShare,
+    TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
@@ -3197,6 +3447,8 @@ class _$SigningStatus_TransactionSentImpl
         waitingForSigningPackage,
     required TResult Function(SigningStatus_SendingSignatureShare value)
         sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value)
+        signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
     required TResult Function(SigningStatus_PreparingTransaction value)
@@ -3221,6 +3473,7 @@ class _$SigningStatus_TransactionSentImpl
         waitingForSigningPackage,
     TResult? Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_PreparingTransaction value)?
@@ -3244,6 +3497,7 @@ class _$SigningStatus_TransactionSentImpl
         waitingForSigningPackage,
     TResult Function(SigningStatus_SendingSignatureShare value)?
         sendingSignatureShare,
+    TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_PreparingTransaction value)?
