@@ -199,6 +199,7 @@ pub enum SigningStatus {
     SendingSigningPackage,
     WaitingForSigningPackage,
     SendingSignatureShare,
+    SigningCompleted,
     WaitingForSignatureShares,
     PreparingTransaction,
     SendingTransaction,

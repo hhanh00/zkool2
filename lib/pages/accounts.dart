@@ -284,7 +284,7 @@ class AccountListPage2State extends State<AccountListPage2> {
   }
 
   onOpen(BuildContext context, Account account) {
-    setAccount(id: account.id);
+    setAccount(account: account.id);
     AppStoreBase.instance.selectedAccount = account;
     GoRouter.of(context).push('/account', extra: account);
   }

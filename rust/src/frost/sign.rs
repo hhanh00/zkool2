@@ -373,6 +373,7 @@ pub async fn do_sign(
             )
             .await?;
 
+            status.add(SigningStatus::SigningCompleted).map_err(anyhow::Error::msg)?;
             info!("Published sigshares transaction: {}", txid);
         }
         tx.commit().await?;
@@ -540,15 +541,15 @@ async fn get_coordinator_address(
     account: u32,
     coordinator: u16,
 ) -> Result<String> {
-    let (address,) = sqlx::query_as::<_, (String,)>(
+    let (address,) = sqlx::query_as::<_, (Vec<u8>,)>(
         "SELECT data FROM dkg_packages WHERE
         account = ? AND round = 0 AND public = 1 AND from_id = ?",
     )
     .bind(account)
     .bind(coordinator)
     .fetch_one(connection)
-    .await?;
-    Ok(address)
+    .await.with_context(|| format!("Failed getting coordinator address {account} {coordinator}"))?;
+    Ok(String::from_utf8(address).expect("Failed to convert utf8"))
 }
 
 async fn get_keys(
