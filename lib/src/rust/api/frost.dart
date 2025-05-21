@@ -95,6 +95,8 @@ sealed class SigningStatus with _$SigningStatus {
       SigningStatus_WaitingForSigningPackage;
   const factory SigningStatus.sendingSignatureShare() =
       SigningStatus_SendingSignatureShare;
+  const factory SigningStatus.signingCompleted() =
+      SigningStatus_SigningCompleted;
   const factory SigningStatus.waitingForSignatureShares() =
       SigningStatus_WaitingForSignatureShares;
   const factory SigningStatus.preparingTransaction() =

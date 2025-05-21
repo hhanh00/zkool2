@@ -2134,12 +2134,12 @@ fn wire__crate__api__account__set_account_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <u32>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || {
-                        let output_ok = crate::api::account::set_account(api_id)?;
+                        let output_ok = crate::api::account::set_account(api_account)?;
                         Ok(output_ok)
                     })(),
                 )
@@ -3212,15 +3212,18 @@ impl SseDecode for crate::api::frost::SigningStatus {
                 return crate::api::frost::SigningStatus::SendingSignatureShare;
             }
             5 => {
-                return crate::api::frost::SigningStatus::WaitingForSignatureShares;
+                return crate::api::frost::SigningStatus::SigningCompleted;
             }
             6 => {
-                return crate::api::frost::SigningStatus::PreparingTransaction;
+                return crate::api::frost::SigningStatus::WaitingForSignatureShares;
             }
             7 => {
-                return crate::api::frost::SigningStatus::SendingTransaction;
+                return crate::api::frost::SigningStatus::PreparingTransaction;
             }
             8 => {
+                return crate::api::frost::SigningStatus::SendingTransaction;
+            }
+            9 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::SigningStatus::TransactionSent(var_field0);
             }
@@ -3886,13 +3889,14 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::SigningStatus {
                 [3.into_dart()].into_dart()
             }
             crate::api::frost::SigningStatus::SendingSignatureShare => [4.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SigningCompleted => [5.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::WaitingForSignatureShares => {
-                [5.into_dart()].into_dart()
+                [6.into_dart()].into_dart()
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => [6.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SendingTransaction => [7.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::PreparingTransaction => [7.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingTransaction => [8.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::TransactionSent(field0) => {
-                [8.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [9.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -4587,17 +4591,20 @@ impl SseEncode for crate::api::frost::SigningStatus {
             crate::api::frost::SigningStatus::SendingSignatureShare => {
                 <i32>::sse_encode(4, serializer);
             }
-            crate::api::frost::SigningStatus::WaitingForSignatureShares => {
+            crate::api::frost::SigningStatus::SigningCompleted => {
                 <i32>::sse_encode(5, serializer);
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => {
+            crate::api::frost::SigningStatus::WaitingForSignatureShares => {
                 <i32>::sse_encode(6, serializer);
             }
-            crate::api::frost::SigningStatus::SendingTransaction => {
+            crate::api::frost::SigningStatus::PreparingTransaction => {
                 <i32>::sse_encode(7, serializer);
             }
-            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+            crate::api::frost::SigningStatus::SendingTransaction => {
                 <i32>::sse_encode(8, serializer);
+            }
+            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+                <i32>::sse_encode(9, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {

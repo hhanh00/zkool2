@@ -36,14 +36,14 @@ pub async fn get_mailbox_account(
         .map(|row| row.0)
         .unwrap_or_default();
 
-        let address = sqlx::query_as::<_, (String,)>(
+        let address = sqlx::query_as::<_, (Vec<u8>,)>(
             "SELECT data FROM dkg_packages WHERE account = ? AND round = 0
             AND public = 1 AND from_id = ?",
         )
         .bind(account)
         .bind(self_id)
         .fetch_optional(connection)
-        .await?;
+        .await?.map(|a| String::from_utf8(a.0).expect("Failed to convert utf8"));
         let mailbox_account = if !seed.is_empty() {
             sqlx::query_as::<_, (u32,)>("SELECT id_account FROM accounts WHERE seed = ?1")
                 .bind(&seed)
@@ -54,7 +54,7 @@ pub async fn get_mailbox_account(
         };
 
         match (address, mailbox_account) {
-            (Some((mailbox_address,)), Some((mailbox_account,))) => {
+            (Some(mailbox_address), Some((mailbox_account,))) => {
                 break (mailbox_account, mailbox_address);
             }
             (_, None) => {
@@ -113,14 +113,15 @@ pub async fn get_coordinator_broadcast_account(
     account: u32,
     height: u32,
 ) -> Result<(u32, String)> {
-    let addresses = sqlx::query_as::<_, (String,)>(
+    let addresses = sqlx::query_as::<_, (Vec<u8>,)>(
         "SELECT data FROM dkg_packages WHERE account = ?1 AND round = 0
         AND public = 1 ORDER BY from_id",
     )
     .bind(account)
     .fetch_all(connection)
     .await?;
-    let addresses = addresses.into_iter().map(|row| row.0).collect::<Vec<_>>();
+    let addresses = addresses.into_iter().map(|row|
+        String::from_utf8(row.0).unwrap()).collect::<Vec<_>>();
 
     let mut state = blake2b_simd::Params::new()
         .hash_length(32)
@@ -179,14 +180,14 @@ pub async fn get_coordinator_broadcast_account(
 
 pub async fn get_addresses(connection: &SqlitePool, account: u32, n: u8) -> Result<Vec<String>> {
     let mut addresses = vec![String::new(); n as usize];
-    let mut rs = sqlx::query_as::<_, (u16, String)>(
+    let mut rs = sqlx::query_as::<_, (u16, Vec<u8>)>(
         "SELECT from_id, data FROM dkg_packages WHERE account = ?1 AND round = 0
         AND public = 1",
     )
     .bind(account)
     .fetch(connection);
     while let Some((from_id, address)) = rs.try_next().await? {
-        addresses[(from_id - 1) as usize] = address;
+        addresses[(from_id - 1) as usize] = String::from_utf8(address).unwrap();
     }
 
     Ok(addresses)
