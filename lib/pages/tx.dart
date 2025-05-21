@@ -60,7 +60,7 @@ class TxPageState extends State<TxPage> {
         title: Text("Transaction"),
         actions: [
           if (hasFrost)
-            IconButton(onPressed: onFrost, icon: Icon(Icons.ac_unit)),
+            IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
           Showcase(
               key: cancelID,
               description: "Cancel, do NOT send",

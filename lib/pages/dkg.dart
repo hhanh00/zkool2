@@ -13,11 +13,16 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 
 Widget buildDKGPage(BuildContext context,
-    {required int index, required Widget child}) {
+    {required int index, required bool finished, required Widget child}) {
   return Scaffold(
       appBar: AppBar(title: const Text("Distributed Key Generation"), actions: [
-        IconButton(
-            onPressed: () => onCancel(context), icon: const Icon(Icons.cancel))
+        finished
+            ? IconButton(
+                onPressed: () => onClose(context),
+                icon: const Icon(Icons.close))
+            : IconButton(
+                onPressed: () => onCancel(context),
+                icon: const Icon(Icons.cancel))
       ]),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: DKGSteps(currentIndex: index)),
@@ -249,6 +254,7 @@ class DKGPage3State extends State<DKGPage3> {
   int index = 0;
   Timer? runTimer;
   int? currentHeight;
+  bool finished = false;
 
   @override
   void initState() {
@@ -309,6 +315,7 @@ class DKGPage3State extends State<DKGPage3> {
         setState(() {
           message = "The shared address is: $sharedUA";
           index = 3;
+          finished = true;
         });
       }
     });
@@ -318,7 +325,9 @@ class DKGPage3State extends State<DKGPage3> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return buildDKGPage(context,
-        index: index, child: SelectableText(message, style: t.bodyLarge));
+        index: index,
+        finished: finished,
+        child: SelectableText(message, style: t.bodyLarge));
   }
 }
 
@@ -355,6 +364,8 @@ class DKGSteps extends StatelessWidget {
     );
   }
 }
+
+void onClose(BuildContext context) => GoRouter.of(context).go("/");
 
 void onCancel(BuildContext context) async {
   final confirmed = await confirmDialog(
