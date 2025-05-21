@@ -20,9 +20,17 @@ class FrostPage1 extends StatefulWidget {
 }
 
 Widget buildFrostPage(BuildContext context,
-    {required int index, required Widget child}) {
+    {required int index, required bool finished, required Widget child}) {
   return Scaffold(
-      appBar: AppBar(title: const Text("Frost Multi Party Signature")),
+      appBar:
+          AppBar(title: const Text("Frost Multi Party Signature"), actions: [
+        if (finished)
+          IconButton(
+              onPressed: () {
+                GoRouter.of(context).go("/");
+              },
+              icon: Icon(Icons.close))
+      ]),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: FrostSteps(currentIndex: index)),
         SliverPadding(
@@ -54,49 +62,49 @@ class FrostPage1State extends State<FrostPage1> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Frost Multi Party Signature")),
-      body:
-      FormBuilder(
-        key: formKey,
-        child: Column(children: [
-          ListTile(
-            title: Text("Your Participant ID"),
-            subtitle: Text(frostParams.id.toString()),
-          ),
-          Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: FormBuilderDropdown(
-                  name: "coordinator",
-                  decoration: const InputDecoration(
-                    labelText: "ID of the coordinator",
-                  ),
-                  initialValue: 1,
-                  items: List.generate(
-                    5,
-                    (i) => DropdownMenuItem(
-                      value: i + 1,
-                      child: Text("${i + 1}"),
-                    ),
-                  ))),
-          Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: FormBuilderDropdown(
-                name: "account",
-                decoration: const InputDecoration(labelText: "Funding Account"),
-                items: accounts
-                    .map((a) => DropdownMenuItem(
-                          value: a.id,
-                          child: Text(a.name),
-                        ))
-                    .toList(),
-                validator: FormBuilderValidators.required(),
-              )),
-          Gap(16),
-          ElevatedButton.icon(
-              onPressed: onNext,
-              label: Text("Next"),
-              icon: Icon(Icons.arrow_forward))
-        ])));
+        appBar: AppBar(title: const Text("Frost Multi Party Signature")),
+        body: FormBuilder(
+            key: formKey,
+            child: Column(children: [
+              ListTile(
+                title: Text("Your Participant ID"),
+                subtitle: Text(frostParams.id.toString()),
+              ),
+              Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: FormBuilderDropdown(
+                      name: "coordinator",
+                      decoration: const InputDecoration(
+                        labelText: "ID of the coordinator",
+                      ),
+                      initialValue: 1,
+                      items: List.generate(
+                        5,
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text("${i + 1}"),
+                        ),
+                      ))),
+              Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: FormBuilderDropdown(
+                    name: "account",
+                    decoration:
+                        const InputDecoration(labelText: "Funding Account for the FROST messages"),
+                    items: accounts
+                        .map((a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.name),
+                            ))
+                        .toList(),
+                    validator: FormBuilderValidators.required(),
+                  )),
+              Gap(16),
+              ElevatedButton.icon(
+                  onPressed: onNext,
+                  label: Text("Next"),
+                  icon: Icon(Icons.arrow_forward))
+            ])));
   }
 
   void onNext() async {
@@ -125,6 +133,7 @@ class FrostPage2State extends State<FrostPage2> {
   String message = "";
   Timer? timer;
   int currentIndex = 0;
+  bool finished = false;
 
   @override
   void initState() {
@@ -146,9 +155,8 @@ class FrostPage2State extends State<FrostPage2> {
     final t = Theme.of(context).textTheme;
     return buildFrostPage(context,
         index: currentIndex,
-        child: Column(children: [
-          Text(message, style: t.bodyLarge)
-        ]));
+        finished: finished,
+        child: Column(children: [Text(message, style: t.bodyLarge)]));
   }
 
   int? currentHeight;
@@ -161,8 +169,8 @@ class FrostPage2State extends State<FrostPage2> {
         .where((e) => e.enabled)
         .map((e) => e.id)
         .toList();
-    await AppStoreBase.instance.startSynchronize(accounts,
-        int.parse(AppStoreBase.instance.actionsPerSync));
+    await AppStoreBase.instance.startSynchronize(
+        accounts, int.parse(AppStoreBase.instance.actionsPerSync));
 
     final status = doSign();
     status.listen((s) {
@@ -195,10 +203,12 @@ class FrostPage2State extends State<FrostPage2> {
         setState(() {
           message = "Signing completed";
           currentIndex = 3; // other
+          finished = true;
         });
       } else if (s is SigningStatus_WaitingForSignatureShares) {
         setState(() {
-          message = "Waiting for the signature share from the other participants";
+          message =
+              "Waiting for the signature share from the other participants";
           currentIndex = 2; // coordinator
         });
       } else if (s is SigningStatus_PreparingTransaction) {
@@ -215,6 +225,7 @@ class FrostPage2State extends State<FrostPage2> {
         setState(() {
           message = "TX ID: ${s.field0}";
           currentIndex = 3; // coordinator
+          finished = true;
         });
       }
     });
