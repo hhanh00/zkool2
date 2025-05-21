@@ -221,7 +221,7 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiPaySend(
       {required int height, required List<int> data});
 
-  Future<void> crateApiAccountSetAccount({required int id});
+  Future<void> crateApiAccountSetAccount({required int account});
 
   Future<void> crateApiFrostSetDkgAddress(
       {required int id, required String address});
@@ -1811,12 +1811,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAccountSetAccount({required int id}) {
+  Future<void> crateApiAccountSetAccount({required int account}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_u_32(id, serializer);
+          sse_encode_u_32(account, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 59, port: port_);
         },
@@ -1825,7 +1825,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiAccountSetAccountConstMeta,
-        argValues: [id],
+        argValues: [account],
         apiImpl: this,
       ),
     );
@@ -1833,7 +1833,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiAccountSetAccountConstMeta => const TaskConstMeta(
         debugName: "set_account",
-        argNames: ["id"],
+        argNames: ["account"],
       );
 
   @override
@@ -2671,12 +2671,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 4:
         return SigningStatus_SendingSignatureShare();
       case 5:
-        return SigningStatus_WaitingForSignatureShares();
+        return SigningStatus_SigningCompleted();
       case 6:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitingForSignatureShares();
       case 7:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_PreparingTransaction();
       case 8:
+        return SigningStatus_SendingTransaction();
+      case 9:
         return SigningStatus_TransactionSent(
           dco_decode_String(raw[1]),
         );
@@ -3483,12 +3485,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 4:
         return SigningStatus_SendingSignatureShare();
       case 5:
-        return SigningStatus_WaitingForSignatureShares();
+        return SigningStatus_SigningCompleted();
       case 6:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitingForSignatureShares();
       case 7:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_PreparingTransaction();
       case 8:
+        return SigningStatus_SendingTransaction();
+      case 9:
         var var_field0 = sse_decode_String(deserializer);
         return SigningStatus_TransactionSent(var_field0);
       default:
@@ -4222,14 +4226,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(3, serializer);
       case SigningStatus_SendingSignatureShare():
         sse_encode_i_32(4, serializer);
-      case SigningStatus_WaitingForSignatureShares():
+      case SigningStatus_SigningCompleted():
         sse_encode_i_32(5, serializer);
-      case SigningStatus_PreparingTransaction():
+      case SigningStatus_WaitingForSignatureShares():
         sse_encode_i_32(6, serializer);
-      case SigningStatus_SendingTransaction():
+      case SigningStatus_PreparingTransaction():
         sse_encode_i_32(7, serializer);
-      case SigningStatus_TransactionSent(field0: final field0):
+      case SigningStatus_SendingTransaction():
         sse_encode_i_32(8, serializer);
+      case SigningStatus_TransactionSent(field0: final field0):
+        sse_encode_i_32(9, serializer);
         sse_encode_String(field0, serializer);
     }
   }

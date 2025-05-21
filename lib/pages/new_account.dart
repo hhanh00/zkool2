@@ -238,6 +238,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         useInternal: useInternal ?? false,
         internal: false,
       ));
+      await setAccount(account: account);
       final seed = await getAccountSeed(account: account);
       if (mounted && key.isEmpty) {
         await showSeed(context, seed!.mnemonic);

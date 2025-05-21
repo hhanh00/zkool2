@@ -240,8 +240,8 @@ pub async fn reorder_account(old_position: u32, new_position: u32) -> Result<()>
 }
 
 #[frb]
-pub fn set_account(id: u32) -> Result<()> {
-    setup!(id);
+pub fn set_account(account: u32) -> Result<()> {
+    setup!(account);
     Ok(())
 }
 
@@ -267,7 +267,6 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         na.internal,
     )
     .await?;
-    setup!(account);
 
     let mut key = na.key.clone();
     if key.is_empty() {
