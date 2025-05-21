@@ -22,9 +22,11 @@ use crate::{
     account::get_orchard_vk,
     api::{
         account::{delete_account, get_account_seed},
-        frost::DKGStatus,
+        frost::{DKGParams, DKGStatus},
+        sync::SYNCING,
     },
     db::{init_account_orchard, store_account_metadata, store_account_orchard_vk},
+    frb_generated::StreamSink,
     frost::FrostMessage,
     pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
@@ -144,40 +146,61 @@ async fn get_ppkg2(connection: &SqlitePool, account: u32) -> Result<PK2Map> {
     Ok(pkg2map)
 }
 
+pub async fn have_all_addresses(connection: &SqlitePool, account: u32, n: u8) -> Result<bool> {
+    let addresses = get_addresses(connection, account, n).await?;
+    let have_all_addresses = addresses.iter().all(|a| !a.is_empty());
+    Ok(have_all_addresses)
+}
+
+pub async fn get_dkg_params(connection: &SqlitePool, account: u32) -> Result<DKGParams> {
+    let dkg_params = sqlx::query("SELECT id, n, t, birth_height FROM dkg_params WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let id: u16 = row.get(0);
+            let n: u8 = row.get(1);
+            let t: u8 = row.get(2);
+            let birth_height: u32 = row.get(3);
+            DKGParams {
+                id,
+                n,
+                t,
+                birth_height,
+            }
+        })
+        .fetch_one(connection)
+        .await
+        .context("Fetch id, n, t, ...")?;
+
+    Ok(dkg_params)
+}
+
 pub async fn do_dkg(
     network: &Network,
     connection: &SqlitePool,
     account: u32,
     client: &mut Client,
     height: u32,
-) -> Result<DKGStatus> {
+    status: StreamSink<DKGStatus>,
+) -> Result<()> {
     info!("dkg: {account}");
-    let Some((self_id, n, t, birth_height)) =
-        sqlx::query("SELECT id, n, t, birth_height FROM dkg_params WHERE account = ?1")
-            .bind(account)
-            .map(|row: SqliteRow| {
-                let id: u16 = row.get(0);
-                let n: u8 = row.get(1);
-                let t: u8 = row.get(2);
-                let birth_height: u32 = row.get(3);
-                (id, n, t, birth_height)
-            })
-            .fetch_optional(connection)
-            .await
-            .context("Fetch id, n, t, ...")?
-    else {
-        return Ok(DKGStatus::WaitParams); // no dkg in progress
-    };
+
+    let guard = SYNCING.try_lock();
+    if guard.is_err() {
+        return Ok(());
+    }
+
+    let dkg_params = get_dkg_params(connection, account).await?;
+    let DKGParams {
+        id: self_id,
+        n,
+        t,
+        birth_height,
+    } = dkg_params;
+    let addresses = get_addresses(connection, account, n).await?;
 
     // Create a mailbox account if it doesn't exist
     let (mailbox_account, _mailbox_address) =
         get_mailbox_account(network, connection, account, self_id, birth_height).await?;
-
-    let addresses = get_addresses(connection, account, n).await?;
-    let have_all_addresses = addresses.iter().all(|a| !a.is_empty());
-    if !have_all_addresses {
-        return Ok(DKGStatus::WaitAddresses(addresses));
-    }
 
     let (broadcast_account, broadcast_address) =
         get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
@@ -186,6 +209,9 @@ pub async fn do_dkg(
         let (spkg1, ppkg1) =
             dkg::part1::<_>(self_id.try_into().unwrap(), n as u16, t as u16, OsRng)?;
         // in round 1, every other participant receives the same public package from us
+        status
+            .add(DKGStatus::PublishRound1Pkg)
+            .map_err(anyhow::Error::msg)?;
         publish_round1(
             network,
             connection,
@@ -198,31 +224,46 @@ pub async fn do_dkg(
             &ppkg1,
         )
         .await?;
-        return Ok(DKGStatus::WaitRound1Pkg);
+        status
+            .add(DKGStatus::WaitRound1Pkg)
+            .map_err(anyhow::Error::msg)?;
+        return Ok(());
     };
 
     process_memos(connection, account, broadcast_account, 1, b"DK11").await?;
     let ppkg1s = get_ppkg1(connection, account, self_id).await?;
     info!("Round 1 packages: {}", ppkg1s.len());
     if ppkg1s.len() != n as usize - 1 {
-        return Ok(DKGStatus::WaitRound1Pkg);
+        status
+            .add(DKGStatus::WaitRound1Pkg)
+            .map_err(anyhow::Error::msg)?;
+        return Ok(());
     }
 
     info!("Round 1 Complete");
 
     let Some(spkg2) = get_spkg2(connection, account).await? else {
         let (spkg2, ppkg2s) = dkg::part2(spkg1, &ppkg1s)?;
+        status
+            .add(DKGStatus::PublishRound2Pkg)
+            .map_err(anyhow::Error::msg)?;
         publish_round2(
             network, connection, account, self_id, client, height, &addresses, &spkg2, &ppkg2s,
         )
         .await?;
-        return Ok(DKGStatus::WaitRound2Pkg);
+        status
+            .add(DKGStatus::WaitRound2Pkg)
+            .map_err(anyhow::Error::msg)?;
+        return Ok(());
     };
     process_memos(connection, account, mailbox_account, 2, b"DK21").await?;
     let ppkg2s = get_ppkg2(connection, account).await?;
     info!("Round 2 packages: {}", ppkg2s.len());
     if ppkg2s.len() != n as usize - 1 {
-        return Ok(DKGStatus::WaitRound2Pkg);
+        status
+            .add(DKGStatus::WaitRound2Pkg)
+            .map_err(anyhow::Error::msg)?;
+        return Ok(());
     }
 
     info!("Round 2 Complete");
@@ -285,7 +326,12 @@ pub async fn do_dkg(
     )
     .await?;
 
-    Ok(DKGStatus::SharedAddress(sua))
+    status
+        .add(DKGStatus::SharedAddress(sua))
+        .map_err(anyhow::Error::msg)?;
+
+    cancel_dkg(connection, Some(account)).await?;
+    Ok(())
 }
 
 async fn dkg_finalize(
@@ -486,6 +532,40 @@ async fn process_memos(
             .execute(connection)
             .await?;
         }
+    }
+
+    Ok(())
+}
+
+pub async fn cancel_dkg(connection: &SqlitePool, account: Option<u32>) -> Result<()> {
+    if let Some(account) = account {
+        sqlx::query("DELETE FROM dkg_packages WHERE account = ?")
+            .bind(account)
+            .execute(connection)
+            .await?;
+        sqlx::query("DELETE FROM dkg_params WHERE account = ?")
+            .bind(account)
+            .execute(connection)
+            .await?;
+        sqlx::query("DELETE FROM dkg_packages WHERE account = ?")
+            .bind(account)
+            .execute(connection)
+            .await?;
+    }
+    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
+        .execute(connection)
+        .await?;
+    delete_frost_accounts(connection).await
+}
+
+pub async fn delete_frost_accounts(connection: &SqlitePool) -> Result<()> {
+    let frost_accounts = sqlx::query_as::<_, (u32,)>(
+        "SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1",
+    )
+    .fetch_all(connection)
+    .await?;
+    for (frost_account,) in frost_accounts {
+        delete_account(frost_account).await?;
     }
 
     Ok(())

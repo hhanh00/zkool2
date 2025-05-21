@@ -29,11 +29,11 @@ use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
     api::{
-        frost::{DKGParams, FrostSignParams, SigningStatus},
+        frost::{FrostSignParams, SigningStatus},
         pay::PcztPackage, sync::SYNCING,
     }, frb_generated::StreamSink, frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
-        dkg::publish,
+        dkg::{delete_frost_accounts, get_dkg_params, publish},
     }, pay::{plan::ORCHARD_PK, send}, Client
 };
 
@@ -494,6 +494,7 @@ pub async fn do_sign(
     sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'")
         .execute(connection)
         .await?;
+    delete_frost_accounts(connection).await?;
 
     Ok(())
 }
@@ -548,26 +549,6 @@ async fn get_coordinator_address(
     .fetch_one(connection)
     .await?;
     Ok(address)
-}
-
-async fn get_dkg_params(connection: &SqlitePool, account: u32) -> Result<DKGParams> {
-    let dkg_params = sqlx::query("SELECT id, n, t FROM dkg_params WHERE account = ?")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let id: u8 = row.get(0);
-            let n: u8 = row.get(1);
-            let t: u8 = row.get(2);
-            DKGParams {
-                name: String::new(),
-                id,
-                n,
-                t,
-                funding_account: account,
-            }
-        })
-        .fetch_one(connection)
-        .await?;
-    Ok(dkg_params)
 }
 
 async fn get_keys(

@@ -9,7 +9,7 @@ use zcash_protocol::consensus::Network;
 
 use crate::{
     account::get_orchard_vk,
-    api::account::{new_account, NewAccount},
+    api::account::{get_account_seed, new_account, NewAccount},
 };
 
 /// Get (and create if needed) the private mailbox address for
@@ -22,15 +22,20 @@ pub async fn get_mailbox_account(
     self_id: u16,
     birth_height: u32,
 ) -> Result<(u32, String)> {
-    // seed or empty string if not set
-    let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
+    let mut retry = 0;
+    let (account, mailbox_address) = loop {
+        if retry > 1 {
+            anyhow::bail!("Failed to create mailbox account");
+        }
+
+        // seed or empty string if not set
+        let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
         .bind(account)
         .fetch_optional(connection)
         .await?
         .map(|row| row.0)
         .unwrap_or_default();
 
-    let (account, mailbox_address) = loop {
         let address = sqlx::query_as::<_, (String,)>(
             "SELECT data FROM dkg_packages WHERE account = ? AND round = 0
             AND public = 1 AND from_id = ?",
@@ -53,6 +58,7 @@ pub async fn get_mailbox_account(
                 break (mailbox_account, mailbox_address);
             }
             (_, None) => {
+                info!("Creating mailbox account");
                 // The account does not exist, create it with a random seed
                 let na = NewAccount {
                     name: "frost-mailbox".to_string(),
@@ -82,23 +88,16 @@ pub async fn get_mailbox_account(
                 .bind(ua)
                 .execute(connection)
                 .await?;
+                let seed = get_account_seed(mailbox_account).await?.expect("Seed should be set");
                 sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
-                    .bind(&seed)
-                    .bind(account)
-                    .execute(connection)
-                    .await?;
-                sqlx::query(
-                    "INSERT INTO dkg_packages (account, round, public, from_id, data)
-                    VALUES (?1, 0, 0, ?2, ?3)",
-                )
+                .bind(&seed.mnemonic)
                 .bind(account)
-                .bind(self_id)
-                .bind(mailbox_account)
                 .execute(connection)
                 .await?;
             }
             _ => unreachable!(),
         }
+        retry += 1;
     };
 
     Ok((account, mailbox_address))

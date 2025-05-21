@@ -6,20 +6,18 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/frost.dart';
+import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 
 Widget buildDKGPage(BuildContext context,
     {required int index, required Widget child}) {
-  onSync() {
-    AppStoreBase.instance.autoSync(now: true);
-  }
-
   return Scaffold(
       appBar: AppBar(title: const Text("Distributed Key Generation"), actions: [
-        IconButton(onPressed: onSync, icon: const Icon(Icons.refresh))
+        IconButton(
+            onPressed: () => onCancel(context), icon: const Icon(Icons.cancel))
       ]),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: DKGSteps(currentIndex: index)),
@@ -44,123 +42,103 @@ class DKGPage1State extends State<DKGPage1> {
   void initState() {
     super.initState();
     Future(() async {
-      final status = await dkg();
-      logger.i("DKG status: $status");
-      if (status is DKGStatus_WaitParams) {}
-      else if (status is DKGStatus_WaitAddresses) {
-        final addresses = status.field0;
-        logger.i("Waiting to fill other participants addresses");
-        if (context.mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            GoRouter.of(context).pushReplacement("/dkg2", extra: addresses);
-          });
-        }
-      }
-      else {
-        if (context.mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            GoRouter.of(context).pushReplacement("/dkg3");
-          });
-        }
+      final dkgInProgress = await hasDkgParams();
+      if (dkgInProgress && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          GoRouter.of(context).pushReplacement("/dkg2");
+        });
       }
     });
-    // Future(() async {
-    //   logger.i("DKGPage1 initState");
-    //   final package = await loadFrost();
-    //   if (package != null) {
-    //     logger.i("package: $package");
-    //     final userInputCompleted = await package.userInputCompleted();
-    //     WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //       logger.i("context mounted: ${context.mounted}");
-    //       if (!context.mounted) return;
-    //       GoRouter.of(context).pop();
-    //       if (!userInputCompleted) {
-    //         await GoRouter.of(context).pushReplacement("/dkg2", extra: package);
-    //       } else {
-    //         await GoRouter.of(context).pushReplacement("/dkg3", extra: package);
-    //       }
-    //     });
-    //   }
-    // });
   }
 
   @override
   Widget build(BuildContext context) {
-    return buildDKGPage(context,
-        index: 0,
-        child: FormBuilder(
-            key: formKey,
-            child: Column(
-              children: [
-                FormBuilderTextField(
-                  name: "name",
-                  decoration: const InputDecoration(labelText: "Name"),
-                  validator: FormBuilderValidators.required(),
-                ),
-                FormBuilderDropdown(
-                  name: "participants",
-                  decoration: const InputDecoration(
-                      labelText: "Number of Participants"),
-                  initialValue: 2,
-                  items: List.generate(
-                    4,
-                    (i) => DropdownMenuItem(
-                      value: i + 2,
-                      child: Text("${i + 2}"),
-                    ),
-                  ),
-                ),
-                FormBuilderDropdown(
-                  name: "id",
-                  decoration:
-                      const InputDecoration(labelText: "Your Participant ID"),
-                  initialValue: 1,
-                  items: List.generate(
-                    5,
-                    (i) => DropdownMenuItem(
-                      value: i + 1,
-                      child: Text("${i + 1}"),
-                    ),
-                  ),
-                ),
-                FormBuilderDropdown(
-                    name: "threshold",
-                    decoration: const InputDecoration(
-                        labelText: "Number of Signers Required (Threshold)"),
-                    initialValue: 2,
-                    items: List.generate(
-                      4,
-                      (i) => DropdownMenuItem(
-                        value: i + 2,
-                        child: Text("${i + 2}"),
-                      ),
-                    ),
-                    validator: (v) {
-                      final n = formKey
-                          .currentState?.fields["participants"]!.value as int;
-                      if (v! > n)
-                        return "Threshold must be less than participants";
-                      return null;
-                    }),
-                FormBuilderDropdown(
-                  name: "account",
-                  decoration:
-                      const InputDecoration(labelText: "Funding Account"),
-                  items: accounts
-                      .map((a) => DropdownMenuItem(
-                            value: a.id,
-                            child: Text(a.name),
-                          ))
-                      .toList(),
-                  validator: FormBuilderValidators.required(),
-                ),
-                Gap(16),
-                ElevatedButton.icon(
-                    onPressed: () => onNext(context),
-                    label: Text("Next"),
-                    icon: Icon(Icons.arrow_forward))
-              ],
-            )));
+    return Scaffold(
+        appBar: AppBar(
+            title: const Text("Distributed Key Generation"),
+            actions: [
+              IconButton(
+                  onPressed: () => onCancel(context),
+                  icon: const Icon(Icons.cancel))
+            ]),
+        body: SingleChildScrollView(
+            child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: FormBuilder(
+                    key: formKey,
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          name: "name",
+                          decoration: const InputDecoration(labelText: "Name"),
+                          validator: FormBuilderValidators.required(),
+                        ),
+                        FormBuilderDropdown(
+                          name: "participants",
+                          decoration: const InputDecoration(
+                              labelText: "Number of Participants"),
+                          initialValue: 2,
+                          items: List.generate(
+                            4,
+                            (i) => DropdownMenuItem(
+                              value: i + 2,
+                              child: Text("${i + 2}"),
+                            ),
+                          ),
+                        ),
+                        FormBuilderDropdown(
+                          name: "id",
+                          decoration: const InputDecoration(
+                              labelText: "Your Participant ID"),
+                          initialValue: 1,
+                          items: List.generate(
+                            5,
+                            (i) => DropdownMenuItem(
+                              value: i + 1,
+                              child: Text("${i + 1}"),
+                            ),
+                          ),
+                        ),
+                        FormBuilderDropdown(
+                            name: "threshold",
+                            decoration: const InputDecoration(
+                                labelText:
+                                    "Number of Signers Required (Threshold)"),
+                            initialValue: 2,
+                            items: List.generate(
+                              4,
+                              (i) => DropdownMenuItem(
+                                value: i + 2,
+                                child: Text("${i + 2}"),
+                              ),
+                            ),
+                            validator: (v) {
+                              final n = formKey.currentState
+                                  ?.fields["participants"]!.value as int;
+                              if (v! > n)
+                                return "Threshold must be less than participants";
+                              return null;
+                            }),
+                        FormBuilderDropdown(
+                          name: "account",
+                          decoration: const InputDecoration(
+                              labelText:
+                                  "Funding Account for the DKG messages"),
+                          items: accounts
+                              .map((a) => DropdownMenuItem(
+                                    value: a.id,
+                                    child: Text(a.name),
+                                  ))
+                              .toList(),
+                          validator: FormBuilderValidators.required(),
+                        ),
+                        Gap(16),
+                        ElevatedButton.icon(
+                            onPressed: () => onNext(context),
+                            label: Text("Next"),
+                            icon: Icon(Icons.arrow_forward))
+                      ],
+                    )))));
   }
 
   onNext(BuildContext context) async {
@@ -179,14 +157,13 @@ class DKGPage1State extends State<DKGPage1> {
         fundingAccount: account,
       );
       if (!context.mounted) return;
-      GoRouter.of(context).pop();
+      await GoRouter.of(context).push("/dkg2");
     }
   }
 }
 
 class DKGPage2 extends StatefulWidget {
-  final List<String> addresses;
-  const DKGPage2({super.key, required this.addresses});
+  const DKGPage2({super.key});
 
   @override
   State<StatefulWidget> createState() => DKGPage2State();
@@ -194,46 +171,68 @@ class DKGPage2 extends StatefulWidget {
 
 class DKGPage2State extends State<DKGPage2> {
   final formKey = GlobalKey<FormBuilderState>();
+  List<String> addresses = [];
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      await initDkg();
+      final addresses = await getDkgAddresses();
+      setState(() => this.addresses = addresses);
+      if (await hasDkgAddresses()) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          GoRouter.of(context).pushReplacement("/dkg3");
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return buildDKGPage(context,
-        index: 1,
-        child: FormBuilder(
-            key: formKey,
-            child: Column(children: [
-              ...widget.addresses.asMap().entries.map((kv) {
-                final i = kv.key;
-                final address = kv.value;
+    return Scaffold(
+        appBar: AppBar(title: const Text("DKG Addresses"), actions: [
+          IconButton(
+              onPressed: () => onCancel(context),
+              icon: const Icon(Icons.cancel))
+        ]),
+        body: SingleChildScrollView(
+            child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: FormBuilder(
+                    key: formKey,
+                    child: Column(children: [
+                      ...addresses.asMap().entries.map((kv) {
+                        final i = kv.key;
+                        final address = kv.value;
 
-                return FormBuilderTextField(
-                    name: "$i",
-                    decoration: InputDecoration(
-                        labelText: "Address for Participant #${i + 1}"),
-                    initialValue: address,
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(),
-                      validAddress,
-                    ]));
-              }),
-              Gap(16),
-              ElevatedButton.icon(
-                  onPressed: () => onNext(context),
-                  label: Text("Next"),
-                  icon: Icon(Icons.arrow_forward))
-            ])
-      ));
+                        return FormBuilderTextField(
+                            name: "$i",
+                            decoration: InputDecoration(
+                                labelText: "Address for Participant #${i + 1}"),
+                            initialValue: address,
+                            validator: FormBuilderValidators.compose([
+                              FormBuilderValidators.required(),
+                              validAddress,
+                            ]));
+                      }),
+                      Gap(16),
+                      ElevatedButton.icon(
+                          onPressed: () => onNext(context),
+                          label: Text("Next"),
+                          icon: Icon(Icons.arrow_forward))
+                    ])))));
   }
 
   onNext(BuildContext context) async {
     final form = formKey.currentState!;
     if (form.saveAndValidate()) {
-      for (var i = 0; i < widget.addresses.length; i++) {
+      for (var i = 0; i < addresses.length; i++) {
         final address = form.fields["$i"]!.value as String;
         await setDkgAddress(id: i + 1, address: address);
       }
       if (!context.mounted) return;
-      GoRouter.of(context).pop();
+      await GoRouter.of(context).pushReplacement("/dkg3");
     }
   }
 }
@@ -249,15 +248,15 @@ class DKGPage3State extends State<DKGPage3> {
   String message = "";
   int index = 0;
   Timer? runTimer;
-  bool running = false;
+  int? currentHeight;
 
   @override
   void initState() {
     super.initState();
-    // runTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
-    //   await run();
-    // });
-    // unawaited(run());
+    runTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      await runDkg();
+    });
+    unawaited(runDkg());
   }
 
   @override
@@ -266,44 +265,54 @@ class DKGPage3State extends State<DKGPage3> {
     super.dispose();
   }
 
-  // Future<void> run() async {
-  //   if (running) return;
-  //   try {
-  //     running = true;
-  //     AppStoreBase.instance.autoSync();
-  //     final package = (await loadFrost());
-  //     if (package == null) {
-  //       if (!mounted) return;
-  //       GoRouter.of(context).pop();
-  //       return;
-  //     }
-  //     final state = await package.toState();
-  //     if (state == null) {
-  //       logger.e("DKG state is incomplete");
-  //       return;
-  //     }
-  //     final status = await state.run();
-  //     if (status is DKGStatus_WaitRound1Pkg) {
-  //       message =
-  //           "Waiting for other participants to send their round 1 packages";
-  //       index = 1;
-  //     }
-  //     if (status is DKGStatus_WaitRound2Pkg) {
-  //       message =
-  //           "Waiting for other participants to send their round 2 packages";
-  //       index = 2;
-  //     }
-  //     if (status is DKGStatus_SharedAddress) {
-  //       final sharedUA = status.field0;
-  //       message = "The shared address is: $sharedUA";
-  //       index = 3;
-  //     }
+  Future<void> runDkg() async {
+    final h = await getCurrentHeight();
+    if (currentHeight != null && currentHeight == h) return;
+    currentHeight = h;
+    final accounts = AppStoreBase.instance.accounts
+        .where((e) => e.enabled)
+        .map((e) => e.id)
+        .toList();
+    await AppStoreBase.instance.startSynchronize(
+        accounts, int.parse(AppStoreBase.instance.actionsPerSync));
 
-  //     setState(() {});
-  //   } finally {
-  //     running = false;
-  //   }
-  // }
+    final status = doDkg();
+    status.listen((s) {
+      if (s is DKGStatus_PublishRound1Pkg) {
+        setState(() {
+          message = "Broadcasting round 1 packages";
+          index = 1;
+        });
+      }
+      if (s is DKGStatus_WaitRound1Pkg) {
+        setState(() {
+          message =
+              "Waiting for other participants to send their round 1 packages";
+          index = 1;
+        });
+      }
+      if (s is DKGStatus_PublishRound2Pkg) {
+        setState(() {
+          message = "Broadcasting round 2 packages";
+          index = 2;
+        });
+      }
+      if (s is DKGStatus_WaitRound2Pkg) {
+        setState(() {
+          message =
+              "Waiting for other participants to send their round 2 packages";
+          index = 2;
+        });
+      }
+      if (s is DKGStatus_SharedAddress) {
+        final sharedUA = s.field0;
+        setState(() {
+          message = "The shared address is: $sharedUA";
+          index = 3;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -344,5 +353,18 @@ class DKGSteps extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+void onCancel(BuildContext context) async {
+  final confirmed = await confirmDialog(
+    context,
+    title: "Cancel DKG",
+    message: "Are you sure you want to cancel the DKG process?",
+  );
+  if (confirmed) {
+    await cancelDkg();
+    if (!context.mounted) return;
+    GoRouter.of(context).pop();
   }
 }
