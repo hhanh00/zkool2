@@ -77,7 +77,7 @@ final router = GoRouter(
           return QRPage(text: args["text"], title: args["title"]);
         }),
     GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
-    GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2(addresses: state.extra as List<String>)),
+    GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2()),
     GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
     GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
     GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),

@@ -1,9 +1,10 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
 use tonic::Request;
 
-use crate::{frb_generated::StreamSink, get_coin, lwd::ChainSpec};
+use crate::{frb_generated::StreamSink, frost::{db::get_mailbox_account, dkg::get_dkg_params}, get_coin, lwd::ChainSpec};
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
@@ -20,7 +21,7 @@ pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u
         .height as u32;
     let birth_height = height - 10000;
 
-    sqlx::query("INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, '', ?) ON CONFLICT DO NOTHING")
+    sqlx::query("INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, '', ?)")
         .bind(funding_account)
         .bind(id)
         .bind(n)
@@ -28,11 +29,11 @@ pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u
         .bind(birth_height)
         .execute(connection)
         .await?;
-    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_name', ?1) ON CONFLICT DO NOTHING")
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_name', ?1)")
         .bind(name)
         .execute(connection)
         .await?;
-    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_funding', ?1) ON CONFLICT DO NOTHING")
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_funding', ?1)")
         .bind(funding_account)
         .execute(connection)
         .await?;
@@ -41,7 +42,39 @@ pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u
 }
 
 #[frb]
-pub async fn dkg() -> Result<DKGStatus> {
+pub async fn has_dkg_params() -> Result<bool> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let exists =
+        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
+            .fetch_optional(connection)
+            .await?;
+    Ok(exists.is_some())
+}
+
+#[frb]
+pub async fn init_dkg() -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let dkg_params = get_dkg_params(connection, account).await?;
+    get_mailbox_account(&c.network, connection, account, dkg_params.id, dkg_params.birth_height).await?;
+
+    Ok(())
+}
+
+#[frb]
+pub async fn has_dkg_addresses() -> Result<bool> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let dkg_params = get_dkg_params(connection, account).await?;
+    let addresses = crate::frost::db::get_addresses(connection, account, dkg_params.n).await?;
+    Ok(addresses.iter().all(|a| !a.is_empty()))
+}
+
+#[frb]
+pub async fn do_dkg(status: StreamSink<DKGStatus>) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
     let mut client = c.client().await?;
@@ -50,54 +83,69 @@ pub async fn dkg() -> Result<DKGStatus> {
         .await?
         .into_inner()
         .height as u32;
+    let account = get_funding_account(connection).await?.expect("Funding account not set");
 
-    let Some((account,)) =
-        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
-            .fetch_optional(connection)
-            .await?
-    else {
-        return Ok(DKGStatus::WaitParams);
-    };
     crate::frost::dkg::do_dkg(
         &c.network,
         connection,
-        u32::from_str(&account).unwrap(),
+        account,
         &mut client,
         height,
+        status,
     )
     .await
+}
+
+pub async fn get_dkg_addresses() -> Result<Vec<String>> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let n = get_dkg_params(connection, account).await?.n;
+    let addresses = crate::frost::db::get_addresses(connection, account, n).await?;
+    Ok(addresses)
 }
 
 pub async fn set_dkg_address(id: u16, address: &str) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let (account,) =
-        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
-            .fetch_one(connection)
-            .await?;
+    let account = get_funding_account(connection).await?.expect("Funding account not set");
 
-    crate::frost::dkg::set_dkg_address(
-        connection,
-        u32::from_str(&account).unwrap(),
-        id,
-        address,
-    ).await
+    crate::frost::dkg::set_dkg_address(connection, account, id, address)
+        .await
+}
+
+#[frb]
+pub async fn cancel_dkg() -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    let account = get_funding_account(connection).await?;
+    crate::frost::dkg::cancel_dkg(connection, account).await
+}
+
+async fn get_funding_account(connection: &SqlitePool) -> Result<Option<u32>> {
+    let rs =
+        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
+            .fetch_optional(connection)
+            .await?;
+    let account = rs.map(|(account, )| u32::from_str(&account).unwrap());
+    Ok(account)
 }
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DKGParams {
-    pub name: String,
-    pub id: u8,
+    pub id: u16,
     pub n: u8,
     pub t: u8,
-    pub funding_account: u32,
+    pub birth_height: u32,
 }
 
 pub enum DKGStatus {
     WaitParams,
     WaitAddresses(Vec<String>),
+    PublishRound1Pkg,
     WaitRound1Pkg,
+    PublishRound2Pkg,
     WaitRound2Pkg,
     Finalize,
     SharedAddress(String),
@@ -107,13 +155,7 @@ pub enum DKGStatus {
 pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackage) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    crate::frost::sign::init_sign(
-        connection,
-        c.account,
-        funding_account,
-        coordinator,
-        pczt,
-    ).await
+    crate::frost::sign::init_sign(connection, c.account, funding_account, coordinator, pczt).await
 }
 
 #[frb]
@@ -140,7 +182,8 @@ pub async fn do_sign(status: StreamSink<SigningStatus>) -> Result<()> {
         &mut client,
         height,
         status,
-    ).await
+    )
+    .await
 }
 
 #[frb(dart_metadata = ("freezed"))]
