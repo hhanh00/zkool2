@@ -40,6 +40,8 @@ Future<void> setDkgAddress({required int id, required String address}) =>
 
 Future<void> cancelDkg() => RustLib.instance.api.crateApiFrostCancelDkg();
 
+Future<void> resetSign() => RustLib.instance.api.crateApiFrostResetSign();
+
 Future<void> initSign(
         {required int coordinator,
         required int fundingAccount,

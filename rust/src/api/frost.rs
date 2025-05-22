@@ -152,6 +152,13 @@ pub enum DKGStatus {
 }
 
 #[frb]
+pub async fn reset_sign() -> Result<()> {
+    let c = get_coin!();
+    let connection = c.get_pool();
+    crate::frost::sign::reset_sign(connection).await
+}
+
+#[frb]
 pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackage) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
