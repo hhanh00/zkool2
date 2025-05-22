@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.1.1...zkool-v2.2.0) (2025-05-22)
+
+
+### Features
+
+* add cancel button to frost sign ([#209](https://github.com/hhanh00/zkool2/issues/209)) ([e91b917](https://github.com/hhanh00/zkool2/commit/e91b917446bcc5700e0c9e8c726937abdd961c60))
+
+
+### Bug Fixes
+
+* macos camera permissions ([#207](https://github.com/hhanh00/zkool2/issues/207)) ([87f5395](https://github.com/hhanh00/zkool2/commit/87f53954104257e3ee8c168428a11cb80c1f16cc))
+
 ## [2.1.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.1.0...zkool-v2.1.1) (2025-05-21)
 
 
