@@ -555,10 +555,20 @@ pub async fn cancel_dkg(connection: &SqlitePool, account: Option<u32>) -> Result
     sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
         .execute(connection)
         .await?;
-    delete_frost_accounts(connection).await
+    delete_frost_state(connection).await
 }
 
-pub async fn delete_frost_accounts(connection: &SqlitePool) -> Result<()> {
+pub async fn delete_frost_state(connection: &SqlitePool) -> Result<()> {
+    info!("delete_frost_state");
+    sqlx::query("DELETE FROM frost_signatures")
+        .execute(connection)
+        .await?;
+    sqlx::query("DELETE FROM frost_commitments")
+        .execute(connection)
+        .await?;
+    sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'")
+        .execute(connection)
+        .await?;
     let frost_accounts = sqlx::query_as::<_, (u32,)>(
         "SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1",
     )
