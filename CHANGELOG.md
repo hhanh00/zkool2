@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.2.0...zkool-v2.2.1) (2025-05-22)
+
+
+### Bug Fixes
+
+* race condition in 3/3 signatures ([#210](https://github.com/hhanh00/zkool2/issues/210)) ([329ed5a](https://github.com/hhanh00/zkool2/commit/329ed5ac47d06037cf009fcb38a8da8165692616))
+
 ## [2.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.1.1...zkool-v2.2.0) (2025-05-22)
 
 
