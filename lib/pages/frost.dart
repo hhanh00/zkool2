@@ -10,6 +10,7 @@ import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 
 class FrostPage1 extends StatefulWidget {
   final PcztPackage pczt;
@@ -24,12 +25,15 @@ Widget buildFrostPage(BuildContext context,
   return Scaffold(
       appBar:
           AppBar(title: const Text("Frost Multi Party Signature"), actions: [
-        if (finished)
-          IconButton(
-              onPressed: () {
-                GoRouter.of(context).go("/");
-              },
-              icon: Icon(Icons.close))
+        (finished)
+            ? IconButton(
+                onPressed: () {
+                  GoRouter.of(context).go("/");
+                },
+                icon: Icon(Icons.close))
+            : IconButton(
+                onPressed: () => onCancel(context),
+                icon: const Icon(Icons.cancel))
       ]),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: FrostSteps(currentIndex: index)),
@@ -89,8 +93,8 @@ class FrostPage1State extends State<FrostPage1> {
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: FormBuilderDropdown(
                     name: "account",
-                    decoration:
-                        const InputDecoration(labelText: "Funding Account for the FROST messages"),
+                    decoration: const InputDecoration(
+                        labelText: "Funding Account for the FROST messages"),
                     items: accounts
                         .map((a) => DropdownMenuItem(
                               value: a.id,
@@ -264,4 +268,13 @@ class FrostSteps extends StatelessWidget {
       ],
     );
   }
+}
+
+void onCancel(BuildContext context) async {
+  final confirmed = await confirmDialog(context, title: "Cancel Multi Signature",
+    message: "Are you sure you want to cancel the multi signature process?");
+  if (!confirmed) return;
+  await resetSign();
+  if (!context.mounted) return;
+  GoRouter.of(context).pop();
 }

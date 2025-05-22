@@ -33,7 +33,7 @@ use crate::{
         pay::PcztPackage, sync::SYNCING,
     }, frb_generated::StreamSink, frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
-        dkg::{delete_frost_accounts, get_dkg_params, publish},
+        dkg::{delete_frost_state, get_dkg_params, publish},
     }, pay::{plan::ORCHARD_PK, send}, Client
 };
 
@@ -45,6 +45,12 @@ type SignatureMap = BTreeMap<Identifier, SignatureShare<P>>;
 const COMMITMENT_PREFIX: &[u8] = b"CMT5";
 const SIGPACKAGE_PREFIX: &[u8] = b"SPK4";
 const SIGSHARE_PREFIX: &[u8] = b"SSH2";
+
+pub async fn reset_sign(connection: &SqlitePool) -> Result<()> {
+    delete_frost_state(connection).await?;
+
+    Ok(())
+}
 
 pub async fn init_sign(
     connection: &SqlitePool,
@@ -492,10 +498,7 @@ pub async fn do_sign(
         status.add(SigningStatus::TransactionSent(txid)).map_err(anyhow::Error::msg)?;
     }
 
-    sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'")
-        .execute(connection)
-        .await?;
-    delete_frost_accounts(connection).await?;
+    delete_frost_state(connection).await?;
 
     Ok(())
 }
