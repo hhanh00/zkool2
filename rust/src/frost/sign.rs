@@ -141,9 +141,21 @@ pub async fn do_sign(
         get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
 
     info!("Processing commitments for account {}", account);
+
+
     let commitments_vec = loop {
         let commitments_vec = get_commitments(connection, account, &sighash, nsigs).await?;
-        if !commitments_vec[0].is_empty() {
+        // does the commitment table have our commitments?
+        // we do not need to have the "idx" column here because
+        // we create all the commitments at once
+        let has_commitments = sqlx::query("SELECT 1 FROM frost_commitments WHERE account = ? AND sighash = ? AND from_id = ? AND commitment IS NOT NULL")
+            .bind(account)
+            .bind(&sighash)
+            .bind(dkg_params.id)
+            .fetch_optional(connection)
+            .await?.is_some();
+
+        if has_commitments {
             break commitments_vec; // we have published our commitments
         }
         let mut tx = connection.begin().await?;
