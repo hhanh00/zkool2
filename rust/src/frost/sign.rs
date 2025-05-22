@@ -25,6 +25,7 @@ use tracing::info;
 use zcash_primitives::transaction::{
     sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
 };
+use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{consensus::Network, memo::Memo};
 
 use crate::{
@@ -34,7 +35,7 @@ use crate::{
     }, frb_generated::StreamSink, frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::{delete_frost_state, get_dkg_params, publish},
-    }, pay::{plan::ORCHARD_PK, send}, Client
+    }, pay::{plan::{ORCHARD_PK, SAPLING_PROVER}, send}, Client
 };
 
 use super::{FrostSigMessage, P};
@@ -489,7 +490,11 @@ pub async fn do_sign(
         let pczt = signer.finish();
         info!("Signed");
 
+        let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+
         let pczt = Prover::new(pczt)
+            .create_sapling_proofs(sapling_prover, sapling_prover)
+            .unwrap()
             .create_orchard_proof(&ORCHARD_PK)
             .unwrap()
             .finish();
@@ -498,7 +503,9 @@ pub async fn do_sign(
         let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
         info!("Spend Finalized");
 
-        let tx_extractor = TransactionExtractor::new(pczt);
+        let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+        let (svk, ovk) = sapling_prover.verifying_keys();
+        let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
         let tx = tx_extractor.extract().map_err(|e| anyhow::anyhow!("{:?}", e))?;
         let mut tx_bytes = vec![];
         tx.write(&mut tx_bytes).unwrap();
