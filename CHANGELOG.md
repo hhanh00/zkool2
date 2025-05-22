@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.2.1...zkool-v2.3.0) (2025-05-22)
+
+
+### Features
+
+* frost to sapling address ([#212](https://github.com/hhanh00/zkool2/issues/212)) ([c21b0f7](https://github.com/hhanh00/zkool2/commit/c21b0f7cc6a7ccf5747dcd4b6060789c478c8176))
+
 ## [2.2.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.2.0...zkool-v2.2.1) (2025-05-22)
 
 
