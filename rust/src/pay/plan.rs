@@ -87,7 +87,7 @@ pub async fn plan_transaction(
     recipients: &[Recipient],
     recipient_pays_fee: bool,
 ) -> Result<PcztPackage> {
-    let span = span!(Level::INFO, "transaction_plan");
+    let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
         info!("Computing plan");
     });
@@ -658,7 +658,7 @@ pub async fn sign_transaction(
     account: u32,
     pczt: &PcztPackage,
 ) -> Result<PcztPackage> {
-    let span = span!(Level::INFO, "sign_transaction");
+    let span = span!(Level::INFO, "transaction");
 
     let PcztPackage {
         pczt,
@@ -755,7 +755,7 @@ pub async fn sign_transaction(
 }
 
 pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
-    let span = span!(Level::INFO, "extract_transaction");
+    let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
         info!("Extracting Tx");
     });
