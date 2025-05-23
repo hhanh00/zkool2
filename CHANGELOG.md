@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.3.0...zkool-v2.3.1) (2025-05-23)
+
+
+### Bug Fixes
+
+* iOS build ([#214](https://github.com/hhanh00/zkool2/issues/214)) ([7ee7ed5](https://github.com/hhanh00/zkool2/commit/7ee7ed55499176104439abe2b1d2a09b28552d3c))
+
 ## [2.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.2.1...zkool-v2.3.0) (2025-05-22)
 
 
