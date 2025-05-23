@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.3.1...zkool-v2.4.0) (2025-05-23)
+
+
+### Features
+
+* show txid toast ([#216](https://github.com/hhanh00/zkool2/issues/216)) ([b841195](https://github.com/hhanh00/zkool2/commit/b841195d289e9027e44d404394737c764eb9091f))
+
 ## [2.3.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.3.0...zkool-v2.3.1) (2025-05-23)
 
 
