@@ -4,6 +4,7 @@ use anyhow::Result;
 use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
 use tonic::Request;
+use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_protocol::consensus::Network;
 
@@ -180,6 +181,7 @@ pub struct TxPlanOut {
 }
 
 pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<String> {
+    let span = span!(Level::INFO, "transaction");
     let rep = client
         .send_transaction(Request::new(RawTransaction {
             height: height as u64,
@@ -190,5 +192,8 @@ pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<Strin
     if rep.error_code != 0 {
         return Err(anyhow::anyhow!(rep.error_message));
     }
+    span.in_scope(|| {
+        info!("TXID: {}", rep.error_message);
+    });
     Ok(rep.error_message)
 }
