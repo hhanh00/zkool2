@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.4.0...zkool-v2.5.0) (2025-05-24)
+
+
+### Features
+
+* add mempool page ([#218](https://github.com/hhanh00/zkool2/issues/218)) ([b6a6a16](https://github.com/hhanh00/zkool2/commit/b6a6a16babb2f8b762575d8a935c55562d470615))
+
 ## [2.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.3.1...zkool-v2.4.0) (2025-05-23)
 
 
