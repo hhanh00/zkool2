@@ -74,6 +74,7 @@ class AccountListPage extends StatelessWidget {
       await AppStoreBase.instance.loadSettings();
       setLwd(lwd: AppStoreBase.instance.lwd);
       AppStoreBase.instance.autoSync();
+      runMempoolListener();
     }
 
     AppStoreBase.instance.loaded = true;
@@ -176,6 +177,8 @@ class AccountListPage2State extends State<AccountListPage2> {
                                 child: Text(
                                     "Height: ${AppStoreBase.instance.currentHeight}")))),
                     const Gap(8),
+                    ElevatedButton(onPressed: onMempool, child: Text("Mempool")),
+                    const Gap(8),
                     if (price != null) Text("Price: $price USD"),
                     const Gap(8),
                   ],
@@ -250,6 +253,8 @@ class AccountListPage2State extends State<AccountListPage2> {
               ]));
     });
   }
+
+  onMempool() => GoRouter.of(context).push('/mempool');
 
   onHide() async {
     final authenticated =
