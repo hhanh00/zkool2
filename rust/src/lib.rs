@@ -15,6 +15,7 @@ pub mod memo;
 pub mod pay;
 pub mod sync;
 pub mod warp;
+pub mod mempool;
 
 pub type Hash32 = [u8; 32];
 pub type Client = CompactTxStreamerClient<tonic::transport::Channel>;

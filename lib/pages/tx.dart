@@ -1,6 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -59,8 +60,7 @@ class TxPageState extends State<TxPage> {
       appBar: AppBar(
         title: Text("Transaction"),
         actions: [
-          if (hasFrost)
-            IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
+          if (hasFrost) IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
           Showcase(
               key: cancelID,
               description: "Cancel, do NOT send",
@@ -70,7 +70,11 @@ class TxPageState extends State<TxPage> {
               description: "Confirm, broadcast transaction",
               child: IconButton(
                   onPressed: canSend ? onSend : onSave,
-                  icon: Icon(canSend ? Icons.send : txPlan.canSign ? Icons.draw : Icons.save))),
+                  icon: Icon(canSend
+                      ? Icons.send
+                      : txPlan.canSign
+                          ? Icons.draw
+                          : Icons.save))),
         ],
       ),
       body: CustomScrollView(slivers: [
@@ -227,4 +231,23 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           );
         }
       });
+}
+
+class MempoolPage extends StatelessWidget {
+  const MempoolPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Mempool")),
+      body: Observer(builder: (context) {
+        final mempool = AppStoreBase.instance.mempoolTxIds;
+        return ListView.builder(itemBuilder: (context, index) {
+          return ListTile(
+            title: Text(mempool[index]),
+          );
+        }, itemCount: mempool.length);
+      }),
+    );
+  }
 }

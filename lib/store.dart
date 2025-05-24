@@ -11,6 +11,7 @@ import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
+import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
@@ -44,13 +45,15 @@ abstract class AppStoreBase with Store {
   String? versionString;
 
   ObservableList<String> log = ObservableList.of([]);
+  ObservableList<String> mempoolTxIds = ObservableList.of([]);
 
   FrostParams? frostParams;
 
   Future<void> init() async {
     final prefs = SharedPreferencesAsync();
     dbName = await prefs.getString("database") ?? appName;
-    disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? disclaimerAccepted;
+    disclaimerAccepted =
+        await prefs.getBool("disclaimer_accepted") ?? disclaimerAccepted;
     final packageInfo = await PackageInfo.fromPlatform();
     final version = packageInfo.version;
     final buildNumber = packageInfo.buildNumber;
@@ -170,7 +173,8 @@ abstract class AppStoreBase with Store {
     retrySyncTimer?.cancel();
     retrySyncTimer = Timer(Duration(seconds: delay), () async {
       await startSynchronize(
-          accounts, int.parse(AppStoreBase.instance.actionsPerSync),
+        accounts,
+        int.parse(AppStoreBase.instance.actionsPerSync),
       );
       retryCount = 0;
     });
@@ -216,4 +220,27 @@ abstract class AppStoreBase with Store {
   }
 
   static AppStore instance = AppStore();
+}
+
+void runMempoolListener() async {
+  while (true) {
+    logger.i("Mempool clear");
+    AppStoreBase.instance.mempoolTxIds.clear();
+    final height = await getCurrentHeight();
+    final c = Completer();
+    runMempool(height: height).listen(
+        (msg) {
+          if (msg is MempoolMsg_TxId) {
+            final txId = msg.field0;
+            AppStoreBase.instance.mempoolTxIds.add(txId);
+            logger.i("New transaction in mempool: $txId");
+          }
+        },
+        onDone: c.complete,
+        onError: (e) {
+          c.complete();
+        });
+    await c.future; // wait for the stream to complete
+    await Future.delayed(Duration(seconds: 5));
+  }
 }

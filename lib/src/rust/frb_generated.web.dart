@@ -12,6 +12,7 @@ import 'api/db.dart';
 import 'api/frost.dart';
 import 'api/init.dart';
 import 'api/key.dart';
+import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
 import 'api/sync.dart';
@@ -38,6 +39,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<LogMessage> dco_decode_StreamSink_log_message_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<MempoolMsg> dco_decode_StreamSink_mempool_msg_Sse(dynamic raw);
 
   @protected
   RustStreamSink<SigningStatus> dco_decode_StreamSink_signing_status_Sse(
@@ -159,6 +163,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Memo dco_decode_memo(dynamic raw);
 
   @protected
+  MempoolMsg dco_decode_mempool_msg(dynamic raw);
+
+  @protected
   NewAccount dco_decode_new_account(dynamic raw);
 
   @protected
@@ -263,6 +270,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<LogMessage> sse_decode_StreamSink_log_message_Sse(
+      SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<MempoolMsg> sse_decode_StreamSink_mempool_msg_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -386,6 +397,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Memo sse_decode_memo(SseDeserializer deserializer);
 
   @protected
+  MempoolMsg sse_decode_mempool_msg(SseDeserializer deserializer);
+
+  @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
 
   @protected
@@ -496,6 +510,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_log_message_Sse(
       RustStreamSink<LogMessage> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_mempool_msg_Sse(
+      RustStreamSink<MempoolMsg> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_signing_status_Sse(
@@ -628,6 +646,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_memo(Memo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_mempool_msg(MempoolMsg self, SseSerializer serializer);
 
   @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);

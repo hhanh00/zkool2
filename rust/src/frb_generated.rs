@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.9.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1558873349;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -706022595;
 
 // Section: executor
 
@@ -2110,6 +2110,47 @@ fn wire__crate__api__sync__rewind_sync_impl(
         },
     )
 }
+fn wire__crate__api__mempool__run_mempool_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "run_mempool",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_mempool_sink = <StreamSink<
+                crate::api::mempool::MempoolMsg,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            let api_height = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::mempool::run_mempool(api_mempool_sink, api_height).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__pay__send_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2629,6 +2670,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for StreamSink<crate::api::mempool::MempoolMsg, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<crate::api::frost::SigningStatus, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -3020,6 +3071,22 @@ impl SseDecode for crate::api::account::Memo {
             memo_bytes: var_memoBytes,
             memo: var_memo,
         };
+    }
+}
+
+impl SseDecode for crate::api::mempool::MempoolMsg {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::api::mempool::MempoolMsg::TxId(var_field0);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
@@ -3557,15 +3624,16 @@ fn pde_ffi_dispatcher_primary_impl(
         56 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
         57 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
         58 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__mempool__run_mempool_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__account__set_account_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3586,10 +3654,10 @@ fn pde_ffi_dispatcher_sync_impl(
         45 => wire__crate__api__account__new_seed_impl(ptr, rust_vec_len, data_len),
         48 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
         53 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        69 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
+        68 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        70 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3787,6 +3855,30 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Memo {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::account::Memo {}
 impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Memo> for crate::api::account::Memo {
     fn into_into_dart(self) -> crate::api::account::Memo {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::mempool::MempoolMsg {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::api::mempool::MempoolMsg::TxId(field0) => {
+                [0.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::mempool::MempoolMsg
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::mempool::MempoolMsg>
+    for crate::api::mempool::MempoolMsg
+{
+    fn into_into_dart(self) -> crate::api::mempool::MempoolMsg {
         self
     }
 }
@@ -4147,6 +4239,15 @@ impl SseEncode
 }
 
 impl SseEncode
+    for StreamSink<crate::api::mempool::MempoolMsg, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
     for StreamSink<crate::api::frost::SigningStatus, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -4450,6 +4551,21 @@ impl SseEncode for crate::api::account::Memo {
         <u32>::sse_encode(self.time, serializer);
         <Vec<u8>>::sse_encode(self.memo_bytes, serializer);
         <Option<String>>::sse_encode(self.memo, serializer);
+    }
+}
+
+impl SseEncode for crate::api::mempool::MempoolMsg {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::api::mempool::MempoolMsg::TxId(field0) => {
+                <i32>::sse_encode(0, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
