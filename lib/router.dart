@@ -76,6 +76,7 @@ final router = GoRouter(
           final args = state.extra as Map<String, dynamic>;
           return QRPage(text: args["text"], title: args["title"]);
         }),
+    GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
     GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
     GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2()),
     GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
