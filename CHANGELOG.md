@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/hhanh00/zkool2/compare/zkool-v2.6.1...zkool-v2.6.2) (2025-05-25)
+
+
+### Bug Fixes
+
+* android build ([#227](https://github.com/hhanh00/zkool2/issues/227)) ([f2e740a](https://github.com/hhanh00/zkool2/commit/f2e740a974abe43d53c806966ac503db383bb80c))
+
 ## [2.6.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.6.0...zkool-v2.6.1) (2025-05-25)
 
 
