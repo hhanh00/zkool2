@@ -15,6 +15,7 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
+import 'package:tuple/tuple.dart';
 
 part 'store.g.dart';
 
@@ -45,7 +46,7 @@ abstract class AppStoreBase with Store {
   String? versionString;
 
   ObservableList<String> log = ObservableList.of([]);
-  ObservableList<String> mempoolTxIds = ObservableList.of([]);
+  ObservableList<Tuple2<String, String>> mempoolTxIds = ObservableList.of([]);
 
   FrostParams? frostParams;
 
@@ -232,7 +233,9 @@ void runMempoolListener() async {
         (msg) {
           if (msg is MempoolMsg_TxId) {
             final txId = msg.field0;
-            AppStoreBase.instance.mempoolTxIds.add(txId);
+            final amounts = msg.field1.map((a) => "${a.$1} ${zatToString(BigInt.from(a.$2))}")
+              .join(", ");
+            AppStoreBase.instance.mempoolTxIds.add(Tuple2(txId, amounts));
             logger.i("New transaction in mempool: $txId");
           }
         },
