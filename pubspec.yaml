@@ -51,6 +51,7 @@ dependencies:
   flutter_native_splash: ^2.4.6
   package_info_plus: ^8.3.0
   easy_stepper: ^0.8.5+1
+  tuple: ^2.0.2
 
 dev_dependencies:
   flutter_test:
