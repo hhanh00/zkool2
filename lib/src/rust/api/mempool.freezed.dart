@@ -17,24 +17,26 @@ final _privateConstructorUsedError = UnsupportedError(
 /// @nodoc
 mixin _$MempoolMsg {
   String get field0 => throw _privateConstructorUsedError;
-  List<(String, int)> get field1 => throw _privateConstructorUsedError;
+  List<(int, String, int)> get field1 => throw _privateConstructorUsedError;
   int get field2 => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(
-            String field0, List<(String, int)> field1, int field2)
+            String field0, List<(int, String, int)> field1, int field2)
         txId,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(String field0, List<(String, int)> field1, int field2)?
+    TResult? Function(
+            String field0, List<(int, String, int)> field1, int field2)?
         txId,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(String field0, List<(String, int)> field1, int field2)?
+    TResult Function(
+            String field0, List<(int, String, int)> field1, int field2)?
         txId,
     required TResult orElse(),
   }) =>
@@ -69,7 +71,7 @@ abstract class $MempoolMsgCopyWith<$Res> {
           MempoolMsg value, $Res Function(MempoolMsg) then) =
       _$MempoolMsgCopyWithImpl<$Res, MempoolMsg>;
   @useResult
-  $Res call({String field0, List<(String, int)> field1, int field2});
+  $Res call({String field0, List<(int, String, int)> field1, int field2});
 }
 
 /// @nodoc
@@ -99,7 +101,7 @@ class _$MempoolMsgCopyWithImpl<$Res, $Val extends MempoolMsg>
       field1: null == field1
           ? _value.field1
           : field1 // ignore: cast_nullable_to_non_nullable
-              as List<(String, int)>,
+              as List<(int, String, int)>,
       field2: null == field2
           ? _value.field2
           : field2 // ignore: cast_nullable_to_non_nullable
@@ -116,7 +118,7 @@ abstract class _$$MempoolMsg_TxIdImplCopyWith<$Res>
       __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String field0, List<(String, int)> field1, int field2});
+  $Res call({String field0, List<(int, String, int)> field1, int field2});
 }
 
 /// @nodoc
@@ -144,7 +146,7 @@ class __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>
       null == field1
           ? _value._field1
           : field1 // ignore: cast_nullable_to_non_nullable
-              as List<(String, int)>,
+              as List<(int, String, int)>,
       null == field2
           ? _value.field2
           : field2 // ignore: cast_nullable_to_non_nullable
@@ -157,15 +159,15 @@ class __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>
 
 class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
   const _$MempoolMsg_TxIdImpl(
-      this.field0, final List<(String, int)> field1, this.field2)
+      this.field0, final List<(int, String, int)> field1, this.field2)
       : _field1 = field1,
         super._();
 
   @override
   final String field0;
-  final List<(String, int)> _field1;
+  final List<(int, String, int)> _field1;
   @override
-  List<(String, int)> get field1 {
+  List<(int, String, int)> get field1 {
     if (_field1 is EqualUnmodifiableListView) return _field1;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_field1);
@@ -206,7 +208,7 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(
-            String field0, List<(String, int)> field1, int field2)
+            String field0, List<(int, String, int)> field1, int field2)
         txId,
   }) {
     return txId(field0, field1, field2);
@@ -215,7 +217,8 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(String field0, List<(String, int)> field1, int field2)?
+    TResult? Function(
+            String field0, List<(int, String, int)> field1, int field2)?
         txId,
   }) {
     return txId?.call(field0, field1, field2);
@@ -224,7 +227,8 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(String field0, List<(String, int)> field1, int field2)?
+    TResult Function(
+            String field0, List<(int, String, int)> field1, int field2)?
         txId,
     required TResult orElse(),
   }) {
@@ -266,14 +270,14 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
 abstract class MempoolMsg_TxId extends MempoolMsg {
   const factory MempoolMsg_TxId(
       final String field0,
-      final List<(String, int)> field1,
+      final List<(int, String, int)> field1,
       final int field2) = _$MempoolMsg_TxIdImpl;
   const MempoolMsg_TxId._() : super._();
 
   @override
   String get field0;
   @override
-  List<(String, int)> get field1;
+  List<(int, String, int)> get field1;
   @override
   int get field2;
 
