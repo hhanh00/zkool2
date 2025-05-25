@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.5.0...zkool-v2.6.0) (2025-05-25)
+
+
+### Features
+
+* add showcase tooltips for dkg/frost ([#224](https://github.com/hhanh00/zkool2/issues/224)) ([f61c352](https://github.com/hhanh00/zkool2/commit/f61c3520b33da356115f562c66bfe9e1b2ac6770))
+* mempool tx amounts ([#220](https://github.com/hhanh00/zkool2/issues/220)) ([c9a9361](https://github.com/hhanh00/zkool2/commit/c9a93611f3de82f5c261e6a6f7dbe0fbdbd0e562))
+* run mempool scanner button ([#222](https://github.com/hhanh00/zkool2/issues/222)) ([fec3deb](https://github.com/hhanh00/zkool2/commit/fec3debd3b3a162ecf62272b55666ebbacd92c1c))
+
+
+### Bug Fixes
+
+* ui tweaks ([#223](https://github.com/hhanh00/zkool2/issues/223)) ([46dd47e](https://github.com/hhanh00/zkool2/commit/46dd47e242ffcf7148b631af5b8b1314cd9f4d74))
+
 ## [2.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.4.0...zkool-v2.5.0) (2025-05-24)
 
 
