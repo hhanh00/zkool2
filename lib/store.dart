@@ -15,7 +15,6 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
-import 'package:tuple/tuple.dart';
 
 part 'store.g.dart';
 
@@ -48,7 +47,8 @@ abstract class AppStoreBase with Store {
   ObservableList<String> log = ObservableList.of([]);
   @observable
   bool mempoolRunning = false;
-  ObservableList<Tuple3<String, String, int>> mempoolTxIds = ObservableList.of([]);
+  ObservableMap<int, int> mempoolAccounts = ObservableMap.of({});
+  ObservableList<(String, String, int)> mempoolTxIds = ObservableList.of([]);
 
   FrostParams? frostParams;
 
@@ -228,9 +228,12 @@ abstract class AppStoreBase with Store {
 void runMempoolListener() async {
   while (true) {
     try {
-      runInAction(() => AppStoreBase.instance.mempoolRunning = true);
+      final appStore = AppStoreBase.instance;
+      runInAction(() => appStore.mempoolRunning = true);
       logger.i("Mempool clear");
-      AppStoreBase.instance.mempoolTxIds.clear();
+      appStore.mempoolAccounts.clear();
+      appStore.mempoolTxIds.clear();
+
       final height = await getCurrentHeight();
       final c = Completer();
       runMempool(height: height).listen(
@@ -238,10 +241,17 @@ void runMempoolListener() async {
             if (msg is MempoolMsg_TxId) {
               final txId = msg.field0;
               final amounts = msg.field1
-                  .map((a) => "${a.$1} ${zatToString(BigInt.from(a.$2))}")
+                  .map((a) => "${a.$2} ${zatToString(BigInt.from(a.$3))}")
                   .join(", ");
               final size = msg.field2;
-              AppStoreBase.instance.mempoolTxIds.add(Tuple3(txId, amounts, size));
+              appStore.mempoolTxIds.add((txId, amounts, size));
+              for (var (account, _, amount) in msg.field1) {
+                appStore.mempoolAccounts.update(
+                  account,
+                  (value) => value + amount,
+                  ifAbsent: () => amount,
+                );
+              }
               logger.i("New transaction in mempool: $txId");
             }
           },

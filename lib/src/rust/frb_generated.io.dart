@@ -137,7 +137,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> dco_decode_list_recipient(dynamic raw);
 
   @protected
-  List<(String, PlatformInt64)> dco_decode_list_record_string_i_64(dynamic raw);
+  List<(int, String, PlatformInt64)> dco_decode_list_record_u_32_string_i_64(
+      dynamic raw);
 
   @protected
   List<Tx> dco_decode_list_tx(dynamic raw);
@@ -209,7 +210,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient dco_decode_recipient(dynamic raw);
 
   @protected
-  (String, PlatformInt64) dco_decode_record_string_i_64(dynamic raw);
+  (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw);
 
   @protected
   Seed dco_decode_seed(dynamic raw);
@@ -377,7 +378,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer);
 
   @protected
-  List<(String, PlatformInt64)> sse_decode_list_record_string_i_64(
+  List<(int, String, PlatformInt64)> sse_decode_list_record_u_32_string_i_64(
       SseDeserializer deserializer);
 
   @protected
@@ -451,7 +452,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient sse_decode_recipient(SseDeserializer deserializer);
 
   @protected
-  (String, PlatformInt64) sse_decode_record_string_i_64(
+  (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
       SseDeserializer deserializer);
 
   @protected
@@ -634,8 +635,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Recipient> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_record_string_i_64(
-      List<(String, PlatformInt64)> self, SseSerializer serializer);
+  void sse_encode_list_record_u_32_string_i_64(
+      List<(int, String, PlatformInt64)> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_tx(List<Tx> self, SseSerializer serializer);
@@ -712,8 +713,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
 
   @protected
-  void sse_encode_record_string_i_64(
-      (String, PlatformInt64) self, SseSerializer serializer);
+  void sse_encode_record_u_32_string_i_64(
+      (int, String, PlatformInt64) self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);

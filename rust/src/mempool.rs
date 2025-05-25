@@ -86,8 +86,8 @@ pub async fn run_mempool(
             &tx_data,
         ).await?;
         let a = notes.iter().map(|n| ((n.account, n.name.clone()), n.value)).into_group_map();
-        let amounts = a.into_iter().map(|((_, name), note_values)|
-            (name, note_values.iter().sum::<i64>())).collect::<Vec<_>>();
+        let amounts = a.into_iter().map(|((account, name), note_values)|
+            (account, name, note_values.iter().sum::<i64>())).collect::<Vec<_>>();
 
         let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, txdata.len() as u32));
     }
