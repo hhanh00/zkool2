@@ -103,6 +103,22 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$mempoolRunningAtom =
+      Atom(name: 'AppStoreBase.mempoolRunning', context: context);
+
+  @override
+  bool get mempoolRunning {
+    _$mempoolRunningAtom.reportRead();
+    return super.mempoolRunning;
+  }
+
+  @override
+  set mempoolRunning(bool value) {
+    _$mempoolRunningAtom.reportWrite(value, super.mempoolRunning, () {
+      super.mempoolRunning = value;
+    });
+  }
+
   late final _$loadTxHistoryAsyncAction =
       AsyncAction('AppStoreBase.loadTxHistory', context: context);
 
@@ -135,7 +151,8 @@ accounts: ${accounts},
 transactions: ${transactions},
 memos: ${memos},
 notes: ${notes},
-currentHeight: ${currentHeight}
+currentHeight: ${currentHeight},
+mempoolRunning: ${mempoolRunning}
     ''';
   }
 }

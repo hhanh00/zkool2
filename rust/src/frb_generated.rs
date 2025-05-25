@@ -3094,7 +3094,8 @@ impl SseDecode for crate::api::mempool::MempoolMsg {
             0 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 let mut var_field1 = <Vec<(String, i64)>>::sse_decode(deserializer);
-                return crate::api::mempool::MempoolMsg::TxId(var_field0, var_field1);
+                let mut var_field2 = <u32>::sse_decode(deserializer);
+                return crate::api::mempool::MempoolMsg::TxId(var_field0, var_field1, var_field2);
             }
             _ => {
                 unimplemented!("");
@@ -3884,10 +3885,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Memo> for crate::api
 impl flutter_rust_bridge::IntoDart for crate::api::mempool::MempoolMsg {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            crate::api::mempool::MempoolMsg::TxId(field0, field1) => [
+            crate::api::mempool::MempoolMsg::TxId(field0, field1, field2) => [
                 0.into_dart(),
                 field0.into_into_dart().into_dart(),
                 field1.into_into_dart().into_dart(),
+                field2.into_into_dart().into_dart(),
             ]
             .into_dart(),
             _ => {
@@ -4593,10 +4595,11 @@ impl SseEncode for crate::api::mempool::MempoolMsg {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         match self {
-            crate::api::mempool::MempoolMsg::TxId(field0, field1) => {
+            crate::api::mempool::MempoolMsg::TxId(field0, field1, field2) => {
                 <i32>::sse_encode(0, serializer);
                 <String>::sse_encode(field0, serializer);
                 <Vec<(String, i64)>>::sse_encode(field1, serializer);
+                <u32>::sse_encode(field2, serializer);
             }
             _ => {
                 unimplemented!("");
