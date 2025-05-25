@@ -243,8 +243,10 @@ class MempoolPage extends StatelessWidget {
       body: Observer(builder: (context) {
         final mempool = AppStoreBase.instance.mempoolTxIds;
         return ListView.builder(itemBuilder: (context, index) {
+          final tx = mempool[index];
           return ListTile(
-            title: Text(mempool[index]),
+            title: Text(tx.item1),
+            subtitle: Text(tx.item2),
           );
         }, itemCount: mempool.length);
       }),

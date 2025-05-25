@@ -2962,6 +2962,18 @@ impl SseDecode for Vec<crate::pay::Recipient> {
     }
 }
 
+impl SseDecode for Vec<(String, i64)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<(String, i64)>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::account::Tx> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3081,7 +3093,8 @@ impl SseDecode for crate::api::mempool::MempoolMsg {
         match tag_ {
             0 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
-                return crate::api::mempool::MempoolMsg::TxId(var_field0);
+                let mut var_field1 = <Vec<(String, i64)>>::sse_decode(deserializer);
+                return crate::api::mempool::MempoolMsg::TxId(var_field0, var_field1);
             }
             _ => {
                 unimplemented!("");
@@ -3276,6 +3289,15 @@ impl SseDecode for crate::pay::Recipient {
             user_memo: var_userMemo,
             memo_bytes: var_memoBytes,
         };
+    }
+}
+
+impl SseDecode for (String, i64) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <String>::sse_decode(deserializer);
+        let mut var_field1 = <i64>::sse_decode(deserializer);
+        return (var_field0, var_field1);
     }
 }
 
@@ -3862,9 +3884,12 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Memo> for crate::api
 impl flutter_rust_bridge::IntoDart for crate::api::mempool::MempoolMsg {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            crate::api::mempool::MempoolMsg::TxId(field0) => {
-                [0.into_dart(), field0.into_into_dart().into_dart()].into_dart()
-            }
+            crate::api::mempool::MempoolMsg::TxId(field0, field1) => [
+                0.into_dart(),
+                field0.into_into_dart().into_dart(),
+                field1.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
             _ => {
                 unimplemented!("");
             }
@@ -4470,6 +4495,16 @@ impl SseEncode for Vec<crate::pay::Recipient> {
     }
 }
 
+impl SseEncode for Vec<(String, i64)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <(String, i64)>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::account::Tx> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4558,9 +4593,10 @@ impl SseEncode for crate::api::mempool::MempoolMsg {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         match self {
-            crate::api::mempool::MempoolMsg::TxId(field0) => {
+            crate::api::mempool::MempoolMsg::TxId(field0, field1) => {
                 <i32>::sse_encode(0, serializer);
                 <String>::sse_encode(field0, serializer);
+                <Vec<(String, i64)>>::sse_encode(field1, serializer);
             }
             _ => {
                 unimplemented!("");
@@ -4712,6 +4748,14 @@ impl SseEncode for crate::pay::Recipient {
         <Option<u8>>::sse_encode(self.pools, serializer);
         <Option<String>>::sse_encode(self.user_memo, serializer);
         <Option<Vec<u8>>>::sse_encode(self.memo_bytes, serializer);
+    }
+}
+
+impl SseEncode for (String, i64) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.0, serializer);
+        <i64>::sse_encode(self.1, serializer);
     }
 }
 

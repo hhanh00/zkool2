@@ -137,6 +137,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> dco_decode_list_recipient(dynamic raw);
 
   @protected
+  List<(String, PlatformInt64)> dco_decode_list_record_string_i_64(dynamic raw);
+
+  @protected
   List<Tx> dco_decode_list_tx(dynamic raw);
 
   @protected
@@ -204,6 +207,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient dco_decode_recipient(dynamic raw);
+
+  @protected
+  (String, PlatformInt64) dco_decode_record_string_i_64(dynamic raw);
 
   @protected
   Seed dco_decode_seed(dynamic raw);
@@ -371,6 +377,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer);
 
   @protected
+  List<(String, PlatformInt64)> sse_decode_list_record_string_i_64(
+      SseDeserializer deserializer);
+
+  @protected
   List<Tx> sse_decode_list_tx(SseDeserializer deserializer);
 
   @protected
@@ -439,6 +449,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient sse_decode_recipient(SseDeserializer deserializer);
+
+  @protected
+  (String, PlatformInt64) sse_decode_record_string_i_64(
+      SseDeserializer deserializer);
 
   @protected
   Seed sse_decode_seed(SseDeserializer deserializer);
@@ -620,6 +634,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Recipient> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_record_string_i_64(
+      List<(String, PlatformInt64)> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_tx(List<Tx> self, SseSerializer serializer);
 
   @protected
@@ -692,6 +710,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_string_i_64(
+      (String, PlatformInt64) self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);

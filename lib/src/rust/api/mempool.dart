@@ -17,5 +17,6 @@ sealed class MempoolMsg with _$MempoolMsg {
 
   const factory MempoolMsg.txId(
     String field0,
+    List<(String, PlatformInt64)> field1,
   ) = MempoolMsg_TxId;
 }
