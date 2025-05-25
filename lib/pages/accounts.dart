@@ -19,6 +19,7 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
 
 final heightID = GlobalKey();
+final mempoolID = GlobalKey();
 final settingsID = GlobalKey();
 final syncID = GlobalKey();
 final hideID = GlobalKey();
@@ -145,7 +146,7 @@ class AccountListPage2State extends State<AccountListPage2> {
   void tutorial() async {
     if (!AppStoreBase.instance.disclaimerAccepted) return;
     tutorialHelper(context, "tutMain0",
-        [newAccountId, settingsID, syncID, hideID, heightID]);
+        [newAccountId, settingsID, syncID, hideID, heightID, mempoolID]);
     if (accounts.isNotEmpty)
       tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
   }
@@ -177,7 +178,8 @@ class AccountListPage2State extends State<AccountListPage2> {
                                 child: Text(
                                     "Height: ${AppStoreBase.instance.currentHeight}")))),
                     const Gap(8),
-                    ElevatedButton(onPressed: onMempool, child: Text("Mempool")),
+                    Showcase(key: mempoolID, description: "Show the transactions in the mempool", child:
+                      ElevatedButton(onPressed: onMempool, child: Text("Mempool"))),
                     const Gap(8),
                     if (price != null) Text("Price: $price USD"),
                     const Gap(8),
