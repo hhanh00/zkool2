@@ -252,9 +252,9 @@ class MempoolPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final tx = mempool[index];
               return ListTile(
-                title: Text(tx.item1),
-                subtitle: Text(tx.item2),
-                trailing: Text(tx.item3.toString()),
+                title: Text(tx.$1),
+                subtitle: Text(tx.$2),
+                trailing: Text(tx.$3.toString()),
               );
             },
             itemCount: mempool.length);

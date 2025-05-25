@@ -74,6 +74,8 @@ class AccountViewPageState extends State<AccountViewPage> {
 
     Future(tutorial);
 
+    final unconfirmedAmount = AppStoreBase.instance.mempoolAccounts[account.id];
+
     return DefaultTabController(
         length: 3,
         child: Scaffold(
@@ -167,6 +169,10 @@ class AccountViewPageState extends State<AccountViewPage> {
                                 "O: ${zatToString(b.field0[2])}")),
                       ]),
                     Gap(8),
+                    if (unconfirmedAmount != null) ...[
+                      Text("U: ${zatToString(BigInt.from(unconfirmedAmount))}"),
+                      Gap(8),
+                    ],
                     if (b != null)
                       Showcase(
                           key: balID,

@@ -2962,13 +2962,13 @@ impl SseDecode for Vec<crate::pay::Recipient> {
     }
 }
 
-impl SseDecode for Vec<(String, i64)> {
+impl SseDecode for Vec<(u32, String, i64)> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = vec![];
         for idx_ in 0..len_ {
-            ans_.push(<(String, i64)>::sse_decode(deserializer));
+            ans_.push(<(u32, String, i64)>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -3093,7 +3093,7 @@ impl SseDecode for crate::api::mempool::MempoolMsg {
         match tag_ {
             0 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
-                let mut var_field1 = <Vec<(String, i64)>>::sse_decode(deserializer);
+                let mut var_field1 = <Vec<(u32, String, i64)>>::sse_decode(deserializer);
                 let mut var_field2 = <u32>::sse_decode(deserializer);
                 return crate::api::mempool::MempoolMsg::TxId(var_field0, var_field1, var_field2);
             }
@@ -3293,12 +3293,13 @@ impl SseDecode for crate::pay::Recipient {
     }
 }
 
-impl SseDecode for (String, i64) {
+impl SseDecode for (u32, String, i64) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_field0 = <String>::sse_decode(deserializer);
-        let mut var_field1 = <i64>::sse_decode(deserializer);
-        return (var_field0, var_field1);
+        let mut var_field0 = <u32>::sse_decode(deserializer);
+        let mut var_field1 = <String>::sse_decode(deserializer);
+        let mut var_field2 = <i64>::sse_decode(deserializer);
+        return (var_field0, var_field1, var_field2);
     }
 }
 
@@ -4497,12 +4498,12 @@ impl SseEncode for Vec<crate::pay::Recipient> {
     }
 }
 
-impl SseEncode for Vec<(String, i64)> {
+impl SseEncode for Vec<(u32, String, i64)> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <(String, i64)>::sse_encode(item, serializer);
+            <(u32, String, i64)>::sse_encode(item, serializer);
         }
     }
 }
@@ -4598,7 +4599,7 @@ impl SseEncode for crate::api::mempool::MempoolMsg {
             crate::api::mempool::MempoolMsg::TxId(field0, field1, field2) => {
                 <i32>::sse_encode(0, serializer);
                 <String>::sse_encode(field0, serializer);
-                <Vec<(String, i64)>>::sse_encode(field1, serializer);
+                <Vec<(u32, String, i64)>>::sse_encode(field1, serializer);
                 <u32>::sse_encode(field2, serializer);
             }
             _ => {
@@ -4754,11 +4755,12 @@ impl SseEncode for crate::pay::Recipient {
     }
 }
 
-impl SseEncode for (String, i64) {
+impl SseEncode for (u32, String, i64) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.0, serializer);
-        <i64>::sse_encode(self.1, serializer);
+        <u32>::sse_encode(self.0, serializer);
+        <String>::sse_encode(self.1, serializer);
+        <i64>::sse_encode(self.2, serializer);
     }
 }
 
