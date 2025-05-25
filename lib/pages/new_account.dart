@@ -17,6 +17,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 
+final dkgID = GlobalKey();
 final importID = GlobalKey();
 final saveID = GlobalKey();
 final iconID = GlobalKey();
@@ -48,7 +49,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
   void tutorial() async {
     tutorialHelper(context, "tutNew0", [
-      nameID, iconID, internalID, restoreID, importID, saveID
+      nameID, iconID, internalID, restoreID, dkgID, importID, saveID
     ]);
     if (restore) tutorialHelper(context, "tutNew1", [
       keyID, birthID
@@ -74,8 +75,9 @@ class NewAccountPageState extends State<NewAccountPage> {
           title: const Text("New Account"),
 
           actions: [
-            IconButton(
-              onPressed: onFrost, icon: Icon(Icons.group)),
+            Showcase(key: dkgID, description: "Start Distributed Key Generation",
+            child: IconButton(
+              onPressed: onFrost, icon: Icon(Icons.group))),
             Showcase(
                 key: importID,
                 description: "Import an account from file",
