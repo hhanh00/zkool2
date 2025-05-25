@@ -89,7 +89,7 @@ pub async fn run_mempool(
         let amounts = a.into_iter().map(|((_, name), note_values)|
             (name, note_values.iter().sum::<i64>())).collect::<Vec<_>>();
 
-        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts));
+        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, txdata.len() as u32));
     }
     Ok(())
 }
@@ -176,7 +176,7 @@ pub async fn decode_raw_transaction(
                 let co = CompactSaplingOutput {
                     cmu: v.cmu().to_bytes().to_vec(),
                     epk: v.ephemeral_key().0.to_vec(),
-                    ciphertext: v.enc_ciphertext().to_vec(),
+                    ciphertext: v.enc_ciphertext()[..COMPACT_NOTE_SIZE].to_vec(),
                 };
                 if let Some((note, _)) =
                     try_sapling_decrypt(network, *account, 0, &ivk, height, 0, 0, &co)?
