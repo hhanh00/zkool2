@@ -6,11 +6,15 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+
+final coordinatorID = GlobalKey();
+final fundingID2 = GlobalKey();
 
 class FrostPage1 extends StatefulWidget {
   final PcztPackage pczt;
@@ -63,46 +67,61 @@ class FrostPage1State extends State<FrostPage1> {
     });
   }
 
+  void tutorial() async {
+    tutorialHelper(context, "frost", [coordinatorID, fundingID2]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
+
     return Scaffold(
         appBar: AppBar(title: const Text("Frost Multi Party Signature")),
         body: FormBuilder(
             key: formKey,
             child: Column(children: [
               ListTile(
-                title: Text("Your Participant ID"),
-                subtitle: Text(frostParams.id.toString()),
-              ),
+                  title: Text("Your Participant ID"),
+                  subtitle: Text(frostParams.id.toString()),
+                ),
               Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: FormBuilderDropdown(
-                      name: "coordinator",
-                      decoration: const InputDecoration(
-                        labelText: "ID of the coordinator",
-                      ),
-                      initialValue: 1,
-                      items: List.generate(
-                        5,
-                        (i) => DropdownMenuItem(
-                          value: i + 1,
-                          child: Text("${i + 1}"),
-                        ),
+                  child: Showcase(
+                      key: coordinatorID,
+                      description:
+                          "Participant ID who is coordinating the multisignature",
+                      child: FormBuilderDropdown(
+                          name: "coordinator",
+                          decoration: const InputDecoration(
+                            labelText: "ID of the coordinator",
+                          ),
+                          initialValue: 1,
+                          items: List.generate(
+                            5,
+                            (i) => DropdownMenuItem(
+                              value: i + 1,
+                              child: Text("${i + 1}"),
+                            ),
+                          )))),
+              Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Showcase(
+                      key: fundingID2,
+                      description:
+                          "Multisig uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                      child: FormBuilderDropdown(
+                        name: "account",
+                        decoration: const InputDecoration(
+                            labelText:
+                                "Funding Account for the FROST messages"),
+                        items: accounts
+                            .map((a) => DropdownMenuItem(
+                                  value: a.id,
+                                  child: Text(a.name),
+                                ))
+                            .toList(),
+                        validator: FormBuilderValidators.required(),
                       ))),
-              Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: FormBuilderDropdown(
-                    name: "account",
-                    decoration: const InputDecoration(
-                        labelText: "Funding Account for the FROST messages"),
-                    items: accounts
-                        .map((a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.name),
-                            ))
-                        .toList(),
-                    validator: FormBuilderValidators.required(),
-                  )),
               Gap(16),
               ElevatedButton.icon(
                   onPressed: onNext,
@@ -271,8 +290,9 @@ class FrostSteps extends StatelessWidget {
 }
 
 void onCancel(BuildContext context) async {
-  final confirmed = await confirmDialog(context, title: "Cancel Multi Signature",
-    message: "Are you sure you want to cancel the multi signature process?");
+  final confirmed = await confirmDialog(context,
+      title: "Cancel Multi Signature",
+      message: "Are you sure you want to cancel the multi signature process?");
   if (!confirmed) return;
   await resetSign();
   if (!context.mounted) return;
