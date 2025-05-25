@@ -6,11 +6,18 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
+
+final nameID3 = GlobalKey();
+final participantID = GlobalKey();
+final pID = GlobalKey();
+final thresholdID = GlobalKey();
+final fundingID = GlobalKey();
 
 Widget buildDKGPage(BuildContext context,
     {required int index, required bool finished, required Widget child}) {
@@ -56,8 +63,15 @@ class DKGPage1State extends State<DKGPage1> {
     });
   }
 
+  void tutorial() async {
+    tutorialHelper(
+        context, "dkg", [nameID3, participantID, pID, thresholdID, fundingID]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    Future(tutorial);
+
     return Scaffold(
         appBar: AppBar(
             title: const Text("Distributed Key Generation"),
@@ -73,70 +87,89 @@ class DKGPage1State extends State<DKGPage1> {
                     key: formKey,
                     child: Column(
                       children: [
-                        FormBuilderTextField(
-                          name: "name",
-                          decoration: const InputDecoration(labelText: "Name"),
-                          validator: FormBuilderValidators.required(),
-                        ),
-                        FormBuilderDropdown(
-                          name: "participants",
-                          decoration: const InputDecoration(
-                              labelText: "Number of Participants"),
-                          initialValue: 2,
-                          items: List.generate(
-                            4,
-                            (i) => DropdownMenuItem(
-                              value: i + 2,
-                              child: Text("${i + 2}"),
-                            ),
-                          ),
-                        ),
-                        FormBuilderDropdown(
-                          name: "id",
-                          decoration: const InputDecoration(
-                              labelText: "Your Participant ID"),
-                          initialValue: 1,
-                          items: List.generate(
-                            5,
-                            (i) => DropdownMenuItem(
-                              value: i + 1,
-                              child: Text("${i + 1}"),
-                            ),
-                          ),
-                        ),
-                        FormBuilderDropdown(
-                            name: "threshold",
-                            decoration: const InputDecoration(
-                                labelText:
-                                    "Number of Signers Required (Threshold)"),
-                            initialValue: 2,
-                            items: List.generate(
-                              4,
-                              (i) => DropdownMenuItem(
-                                value: i + 2,
-                                child: Text("${i + 2}"),
+                        Showcase(
+                            key: nameID3,
+                            description:
+                                "The name of the multisig account, once created. It can be changed later in the Edit Page",
+                            child: FormBuilderTextField(
+                              name: "name",
+                              decoration:
+                                  const InputDecoration(labelText: "Name"),
+                              validator: FormBuilderValidators.required(),
+                            )),
+                        Showcase(
+                            key: participantID,
+                            description: "Number of signers",
+                            child: FormBuilderDropdown(
+                              name: "participants",
+                              decoration: const InputDecoration(
+                                  labelText: "Number of Participants"),
+                              initialValue: 2,
+                              items: List.generate(
+                                4,
+                                (i) => DropdownMenuItem(
+                                  value: i + 2,
+                                  child: Text("${i + 2}"),
+                                ),
                               ),
-                            ),
-                            validator: (v) {
-                              final n = formKey.currentState
-                                  ?.fields["participants"]!.value as int;
-                              if (v! > n)
-                                return "Threshold must be less than participants";
-                              return null;
-                            }),
-                        FormBuilderDropdown(
-                          name: "account",
-                          decoration: const InputDecoration(
-                              labelText:
-                                  "Funding Account for the DKG messages"),
-                          items: accounts
-                              .map((a) => DropdownMenuItem(
-                                    value: a.id,
-                                    child: Text(a.name),
-                                  ))
-                              .toList(),
-                          validator: FormBuilderValidators.required(),
-                        ),
+                            )),
+                        Showcase(
+                            key: pID,
+                            description:
+                                "Every participant should choose a different slot ID",
+                            child: FormBuilderDropdown(
+                              name: "id",
+                              decoration: const InputDecoration(
+                                  labelText: "Your Participant ID"),
+                              initialValue: 1,
+                              items: List.generate(
+                                5,
+                                (i) => DropdownMenuItem(
+                                  value: i + 1,
+                                  child: Text("${i + 1}"),
+                                ),
+                              ),
+                            )),
+                        Showcase(
+                            key: thresholdID,
+                            description: "Minimum number of signers",
+                            child: FormBuilderDropdown(
+                                name: "threshold",
+                                decoration: const InputDecoration(
+                                    labelText:
+                                        "Number of Signers Required (Threshold)"),
+                                initialValue: 2,
+                                items: List.generate(
+                                  4,
+                                  (i) => DropdownMenuItem(
+                                    value: i + 2,
+                                    child: Text("${i + 2}"),
+                                  ),
+                                ),
+                                validator: (v) {
+                                  final n = formKey.currentState
+                                      ?.fields["participants"]!.value as int;
+                                  if (v! > n)
+                                    return "Threshold must be less than participants";
+                                  return null;
+                                })),
+                        Showcase(
+                            key: fundingID,
+                            description:
+                                "DKG uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                            child: FormBuilderDropdown(
+                              name: "account",
+                              decoration: const InputDecoration(
+                                  labelText:
+                                      "Funding Account for the DKG messages"),
+                              items: accounts
+                                  .map((a) => DropdownMenuItem(
+                                        value: a.id,
+                                        child: Text(a.name),
+                                      ))
+                                  .toList(),
+                              validator: FormBuilderValidators.required(),
+                            )),
                         Gap(16),
                         ElevatedButton.icon(
                             onPressed: () => onNext(context),
