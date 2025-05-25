@@ -46,7 +46,9 @@ abstract class AppStoreBase with Store {
   String? versionString;
 
   ObservableList<String> log = ObservableList.of([]);
-  ObservableList<Tuple2<String, String>> mempoolTxIds = ObservableList.of([]);
+  @observable
+  bool mempoolRunning = false;
+  ObservableList<Tuple3<String, String, int>> mempoolTxIds = ObservableList.of([]);
 
   FrostParams? frostParams;
 
@@ -225,25 +227,30 @@ abstract class AppStoreBase with Store {
 
 void runMempoolListener() async {
   while (true) {
-    logger.i("Mempool clear");
-    AppStoreBase.instance.mempoolTxIds.clear();
-    final height = await getCurrentHeight();
-    final c = Completer();
-    runMempool(height: height).listen(
-        (msg) {
-          if (msg is MempoolMsg_TxId) {
-            final txId = msg.field0;
-            final amounts = msg.field1.map((a) => "${a.$1} ${zatToString(BigInt.from(a.$2))}")
-              .join(", ");
-            AppStoreBase.instance.mempoolTxIds.add(Tuple2(txId, amounts));
-            logger.i("New transaction in mempool: $txId");
-          }
-        },
-        onDone: c.complete,
-        onError: (e) {
-          c.complete();
-        });
-    await c.future; // wait for the stream to complete
-    await Future.delayed(Duration(seconds: 5));
+    try {
+      runInAction(() => AppStoreBase.instance.mempoolRunning = true);
+      logger.i("Mempool clear");
+      AppStoreBase.instance.mempoolTxIds.clear();
+      final height = await getCurrentHeight();
+      final c = Completer();
+      runMempool(height: height).listen(
+          (msg) {
+            if (msg is MempoolMsg_TxId) {
+              final txId = msg.field0;
+              final amounts = msg.field1
+                  .map((a) => "${a.$1} ${zatToString(BigInt.from(a.$2))}")
+                  .join(", ");
+              final size = msg.field2;
+              AppStoreBase.instance.mempoolTxIds.add(Tuple3(txId, amounts, size));
+              logger.i("New transaction in mempool: $txId");
+            }
+          },
+          onDone: c.complete,
+          onError: (e) {
+            c.complete();
+          });
+      await c.future; // wait for the stream to complete
+      await Future.delayed(Duration(seconds: 5));
+    } catch (_) {}
   }
 }

@@ -2596,6 +2596,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return MempoolMsg_TxId(
           dco_decode_String(raw[1]),
           dco_decode_list_record_string_i_64(raw[2]),
+          dco_decode_u_32(raw[3]),
         );
       default:
         throw Exception("unreachable");
@@ -3412,7 +3413,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 0:
         var var_field0 = sse_decode_String(deserializer);
         var var_field1 = sse_decode_list_record_string_i_64(deserializer);
-        return MempoolMsg_TxId(var_field0, var_field1);
+        var var_field2 = sse_decode_u_32(deserializer);
+        return MempoolMsg_TxId(var_field0, var_field1, var_field2);
       default:
         throw UnimplementedError('');
     }
@@ -4235,10 +4237,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_mempool_msg(MempoolMsg self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     switch (self) {
-      case MempoolMsg_TxId(field0: final field0, field1: final field1):
+      case MempoolMsg_TxId(
+          field0: final field0,
+          field1: final field1,
+          field2: final field2
+        ):
         sse_encode_i_32(0, serializer);
         sse_encode_String(field0, serializer);
         sse_encode_list_record_string_i_64(field1, serializer);
+        sse_encode_u_32(field2, serializer);
     }
   }
 

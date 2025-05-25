@@ -18,19 +18,24 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$MempoolMsg {
   String get field0 => throw _privateConstructorUsedError;
   List<(String, int)> get field1 => throw _privateConstructorUsedError;
+  int get field2 => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(String field0, List<(String, int)> field1) txId,
+    required TResult Function(
+            String field0, List<(String, int)> field1, int field2)
+        txId,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(String field0, List<(String, int)> field1)? txId,
+    TResult? Function(String field0, List<(String, int)> field1, int field2)?
+        txId,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(String field0, List<(String, int)> field1)? txId,
+    TResult Function(String field0, List<(String, int)> field1, int field2)?
+        txId,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -64,7 +69,7 @@ abstract class $MempoolMsgCopyWith<$Res> {
           MempoolMsg value, $Res Function(MempoolMsg) then) =
       _$MempoolMsgCopyWithImpl<$Res, MempoolMsg>;
   @useResult
-  $Res call({String field0, List<(String, int)> field1});
+  $Res call({String field0, List<(String, int)> field1, int field2});
 }
 
 /// @nodoc
@@ -84,6 +89,7 @@ class _$MempoolMsgCopyWithImpl<$Res, $Val extends MempoolMsg>
   $Res call({
     Object? field0 = null,
     Object? field1 = null,
+    Object? field2 = null,
   }) {
     return _then(_value.copyWith(
       field0: null == field0
@@ -94,6 +100,10 @@ class _$MempoolMsgCopyWithImpl<$Res, $Val extends MempoolMsg>
           ? _value.field1
           : field1 // ignore: cast_nullable_to_non_nullable
               as List<(String, int)>,
+      field2: null == field2
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -106,7 +116,7 @@ abstract class _$$MempoolMsg_TxIdImplCopyWith<$Res>
       __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String field0, List<(String, int)> field1});
+  $Res call({String field0, List<(String, int)> field1, int field2});
 }
 
 /// @nodoc
@@ -124,6 +134,7 @@ class __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>
   $Res call({
     Object? field0 = null,
     Object? field1 = null,
+    Object? field2 = null,
   }) {
     return _then(_$MempoolMsg_TxIdImpl(
       null == field0
@@ -134,6 +145,10 @@ class __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>
           ? _value._field1
           : field1 // ignore: cast_nullable_to_non_nullable
               as List<(String, int)>,
+      null == field2
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -141,7 +156,8 @@ class __$$MempoolMsg_TxIdImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
-  const _$MempoolMsg_TxIdImpl(this.field0, final List<(String, int)> field1)
+  const _$MempoolMsg_TxIdImpl(
+      this.field0, final List<(String, int)> field1, this.field2)
       : _field1 = field1,
         super._();
 
@@ -156,8 +172,11 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
   }
 
   @override
+  final int field2;
+
+  @override
   String toString() {
-    return 'MempoolMsg.txId(field0: $field0, field1: $field1)';
+    return 'MempoolMsg.txId(field0: $field0, field1: $field1, field2: $field2)';
   }
 
   @override
@@ -166,12 +185,13 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
         (other.runtimeType == runtimeType &&
             other is _$MempoolMsg_TxIdImpl &&
             (identical(other.field0, field0) || other.field0 == field0) &&
-            const DeepCollectionEquality().equals(other._field1, _field1));
+            const DeepCollectionEquality().equals(other._field1, _field1) &&
+            (identical(other.field2, field2) || other.field2 == field2));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, field0, const DeepCollectionEquality().hash(_field1));
+  int get hashCode => Object.hash(runtimeType, field0,
+      const DeepCollectionEquality().hash(_field1), field2);
 
   /// Create a copy of MempoolMsg
   /// with the given fields replaced by the non-null parameter values.
@@ -185,27 +205,31 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(String field0, List<(String, int)> field1) txId,
+    required TResult Function(
+            String field0, List<(String, int)> field1, int field2)
+        txId,
   }) {
-    return txId(field0, field1);
+    return txId(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(String field0, List<(String, int)> field1)? txId,
+    TResult? Function(String field0, List<(String, int)> field1, int field2)?
+        txId,
   }) {
-    return txId?.call(field0, field1);
+    return txId?.call(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(String field0, List<(String, int)> field1)? txId,
+    TResult Function(String field0, List<(String, int)> field1, int field2)?
+        txId,
     required TResult orElse(),
   }) {
     if (txId != null) {
-      return txId(field0, field1);
+      return txId(field0, field1, field2);
     }
     return orElse();
   }
@@ -241,14 +265,17 @@ class _$MempoolMsg_TxIdImpl extends MempoolMsg_TxId {
 
 abstract class MempoolMsg_TxId extends MempoolMsg {
   const factory MempoolMsg_TxId(
-          final String field0, final List<(String, int)> field1) =
-      _$MempoolMsg_TxIdImpl;
+      final String field0,
+      final List<(String, int)> field1,
+      final int field2) = _$MempoolMsg_TxIdImpl;
   const MempoolMsg_TxId._() : super._();
 
   @override
   String get field0;
   @override
   List<(String, int)> get field1;
+  @override
+  int get field2;
 
   /// Create a copy of MempoolMsg
   /// with the given fields replaced by the non-null parameter values.
