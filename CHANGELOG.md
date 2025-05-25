@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.6.0...zkool-v2.6.1) (2025-05-25)
+
+
+### Bug Fixes
+
+* show unconfirmed amount on account page ([#225](https://github.com/hhanh00/zkool2/issues/225)) ([ca4e82a](https://github.com/hhanh00/zkool2/commit/ca4e82aa595156bdedab57af7834717684d8a068))
+
 ## [2.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.5.0...zkool-v2.6.0) (2025-05-25)
 
 
