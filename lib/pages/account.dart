@@ -172,7 +172,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                           key: balID,
                           description: "Balance across all pools",
                           child: SelectableText(
-                              "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}")),
+                              "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}",
+                              style: t.titleLarge)),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
