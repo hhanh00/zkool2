@@ -20,6 +20,6 @@ pub async fn run_mempool(mempool_sink: StreamSink<MempoolMsg>, height: u32) -> R
 
 #[frb]
 pub enum MempoolMsg {
-    TxId(String, Vec<(String, i64)>),
+    TxId(String, Vec<(String, i64)>, u32),
 }
 
