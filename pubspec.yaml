@@ -16,7 +16,7 @@ dependencies:
   shared_preferences: ^2.5.3
   convert: ^3.1.1
   cupertino_icons: ^1.0.8
-  rust_lib_zkool:
+  rlz:
     path: rust_builder
   flutter_rust_bridge: 2.9.0
 
