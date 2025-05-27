@@ -7,6 +7,7 @@ use itertools::Itertools;
 use orchard::keys::Scope;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
+use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
 use zcash_primitives::transaction::{Authorized, TransactionData};
@@ -73,6 +74,7 @@ pub async fn run_mempool(
         let tx = Transaction::read(&*txdata, consensus_branch_id)?;
         let txid = tx.txid();
         let tx_hash = txid.to_string();
+        info!("Processing mempool transaction {}", tx_hash);
 
         let tx_data = tx.into_data();
 
