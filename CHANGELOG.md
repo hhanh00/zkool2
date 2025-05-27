@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.6.2...zkool-v2.7.0) (2025-05-27)
+
+
+### Features
+
+* monitor app lifecycle and restart mempool monitor on resume ([#230](https://github.com/hhanh00/zkool2/issues/230)) ([e4b0d4c](https://github.com/hhanh00/zkool2/commit/e4b0d4c8f034c8747ef266da418f3675cde8dbca))
+
 ## [2.6.2](https://github.com/hhanh00/zkool2/compare/zkool-v2.6.1...zkool-v2.6.2) (2025-05-25)
 
 
