@@ -16,9 +16,10 @@ Future<void> main() async {
   await RustLib.init();
   await AppStoreBase.instance.init();
 
-  runApp(ToastificationWrapper(
-      child: ShowCaseWidget(
-          globalTooltipActions: [
+  runApp(LifecycleWatcher(
+      child: ToastificationWrapper(
+          child: ShowCaseWidget(
+              globalTooltipActions: [
         const TooltipActionButton(
             type: TooltipDefaultActionType.skip,
             textStyle: TextStyle(color: Colors.red),
@@ -27,10 +28,52 @@ Future<void> main() async {
             type: TooltipDefaultActionType.next,
             backgroundColor: Colors.transparent),
       ],
-          builder: (context) => MaterialApp.router(
-              routerConfig: router,
-              themeMode: ThemeMode.system,
-              theme: ThemeData.light(),
-              darkTheme: ThemeData.dark(),
-              debugShowCheckedModeBanner: false))));
+              builder: (context) => MaterialApp.router(
+                  routerConfig: router,
+                  themeMode: ThemeMode.system,
+                  theme: ThemeData.light(),
+                  darkTheme: ThemeData.dark(),
+                  debugShowCheckedModeBanner: false)))));
+}
+
+class LifecycleWatcher extends StatefulWidget {
+  final Widget child;
+  const LifecycleWatcher({super.key, required this.child});
+
+  @override
+  State<LifecycleWatcher> createState() => LifecycleWatcherState();
+}
+
+class LifecycleWatcherState extends State<LifecycleWatcher>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      logger.i("App paused");
+    } else if (state == AppLifecycleState.inactive) {
+      logger.i("App inactive");
+    } else if (state == AppLifecycleState.detached) {
+      logger.i("App detached");
+    } else if (state == AppLifecycleState.resumed) {
+      logger.i("App resumed");
+      cancelMempoolListener();
+    }
+  }
 }

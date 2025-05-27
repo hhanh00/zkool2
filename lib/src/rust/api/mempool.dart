@@ -11,6 +11,9 @@ part 'mempool.freezed.dart';
 Stream<MempoolMsg> runMempool({required int height}) =>
     RustLib.instance.api.crateApiMempoolRunMempool(height: height);
 
+Future<void> cancelMempool() =>
+    RustLib.instance.api.crateApiMempoolCancelMempool();
+
 @freezed
 sealed class MempoolMsg with _$MempoolMsg {
   const MempoolMsg._();
