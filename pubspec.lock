@@ -1026,7 +1026,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.4.15"
-  rust_lib_zkool:
+  rlz:
     dependency: "direct main"
     description:
       path: rust_builder
