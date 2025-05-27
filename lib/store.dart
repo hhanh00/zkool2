@@ -264,3 +264,7 @@ void runMempoolListener() async {
     } catch (_) {}
   }
 }
+
+void cancelMempoolListener() async {
+  await cancelMempool();
+}
