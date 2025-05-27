@@ -18,7 +18,7 @@ PODS:
     - FlutterMacOS
   - rive_common (0.0.1):
     - FlutterMacOS
-  - rust_lib_zkool (0.0.1):
+  - rlz (0.0.1):
     - FlutterMacOS
   - shared_preferences_foundation (0.0.1):
     - Flutter
@@ -34,7 +34,7 @@ DEPENDENCIES:
   - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
   - rive_common (from `Flutter/ephemeral/.symlinks/plugins/rive_common/macos`)
-  - rust_lib_zkool (from `Flutter/ephemeral/.symlinks/plugins/rust_lib_zkool/macos`)
+  - rlz (from `Flutter/ephemeral/.symlinks/plugins/rlz/macos`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
 
 EXTERNAL SOURCES:
@@ -56,8 +56,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
   rive_common:
     :path: Flutter/ephemeral/.symlinks/plugins/rive_common/macos
-  rust_lib_zkool:
-    :path: Flutter/ephemeral/.symlinks/plugins/rust_lib_zkool/macos
+  rlz:
+    :path: Flutter/ephemeral/.symlinks/plugins/rlz/macos
   shared_preferences_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
 
@@ -71,7 +71,7 @@ SPEC CHECKSUMS:
   package_info_plus: f0052d280d17aa382b932f399edf32507174e870
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   rive_common: ea79040f86acf053a2d5a75a2506175ee39796a5
-  rust_lib_zkool: a884a77088cc0022afe6145f8101d7f5b9646e9d
+  rlz: 74607dabecce4c70f6a34d6571dc4b38358330c0
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
 
 PODFILE CHECKSUM: 236401fc2c932af29a9fcf0e97baeeb2d750d367

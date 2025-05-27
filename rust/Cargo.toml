@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "rust_lib_zkool"
+name = "rlz"
 version = "0.1.0"
 
 [lib]
