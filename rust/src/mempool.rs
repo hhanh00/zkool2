@@ -1,4 +1,4 @@
-use crate::api::mempool::MempoolMsg;
+use crate::api::mempool::{MempoolMsg, MEMPOOL_TX_CANCEL};
 use crate::frb_generated::StreamSink;
 use crate::lwd::{CompactOrchardAction, CompactSaplingOutput, Empty};
 use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
@@ -7,6 +7,7 @@ use itertools::Itertools;
 use orchard::keys::Scope;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use tonic::Request;
+use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
 use zcash_primitives::transaction::{Authorized, TransactionData};
@@ -25,42 +26,54 @@ pub async fn run_mempool(
     let transparent_accounts = sqlx::query(
         r#"SELECT a.id_account, a.name, ta.address FROM accounts a
         JOIN transparent_address_accounts ta
-        ON a.id_account = ta.account"#)
+        ON a.id_account = ta.account"#,
+    )
     .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let name: String = row.get(1);
-            let address: String = row.get(2);
-            let address = TransparentAddress::decode(network, &address).unwrap();
-            (account, name, address)
-        })
+        let account: u32 = row.get(0);
+        let name: String = row.get(1);
+        let address: String = row.get(2);
+        let address = TransparentAddress::decode(network, &address).unwrap();
+        (account, name, address)
+    })
     .fetch_all(connection)
-    .await.context("transparent_accounts")?;
+    .await
+    .context("transparent_accounts")?;
 
     let sapling_accounts = sqlx::query(
         r#"SELECT account, name, xvk FROM accounts a JOIN sapling_accounts s
-        ON a.id_account = s.account"#)
+        ON a.id_account = s.account"#,
+    )
     .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let name: String = row.get(1);
-            let xvk: Vec<u8> = row.get(2);
-            let fvk = sapling_crypto::keys::FullViewingKey::read(&*xvk).unwrap();
-            (account, name, fvk)
-        })
+        let account: u32 = row.get(0);
+        let name: String = row.get(1);
+        let xvk: Vec<u8> = row.get(2);
+        let fvk = sapling_crypto::keys::FullViewingKey::read(&*xvk).unwrap();
+        (account, name, fvk)
+    })
     .fetch_all(connection)
-    .await.context("sapling_accounts")?;
+    .await
+    .context("sapling_accounts")?;
 
     let orchard_accounts = sqlx::query(
         r#"SELECT account, name, xvk FROM accounts a JOIN orchard_accounts o
-        ON a.id_account = o.account"#)
+        ON a.id_account = o.account"#,
+    )
     .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let name: String = row.get(1);
-            let xvk: Vec<u8> = row.get(2);
-            let fvk = orchard::keys::FullViewingKey::read(&*xvk).unwrap();
-            (account, name, fvk)
-        })
+        let account: u32 = row.get(0);
+        let name: String = row.get(1);
+        let xvk: Vec<u8> = row.get(2);
+        let fvk = orchard::keys::FullViewingKey::read(&*xvk).unwrap();
+        (account, name, fvk)
+    })
     .fetch_all(connection)
-    .await.context("orchard_accounts")?;
+    .await
+    .context("orchard_accounts")?;
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(1);
+    {
+        let mut tx_cancel = MEMPOOL_TX_CANCEL.lock().await;
+        *tx_cancel = Some(tx);
+    }
 
     let mut mempool_txs = client
         .get_mempool_stream(Request::new(Empty {}))
@@ -68,28 +81,56 @@ pub async fn run_mempool(
         .into_inner();
 
     let consensus_branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
-    while let Some(tx) = mempool_txs.message().await? {
-        let txdata = tx.data;
-        let tx = Transaction::read(&*txdata, consensus_branch_id)?;
-        let txid = tx.txid();
-        let tx_hash = txid.to_string();
+    loop {
+        tokio::select! {
+            _ = rx.recv() => {
+                info!("Mempool stream cancelled");
+                break;
+            }
+            tx = mempool_txs.message() => {
+                match tx {
+                    Ok(Some(tx)) => {
+                        let txdata = tx.data;
+                        let tx = Transaction::read(&*txdata, consensus_branch_id)?;
+                        let txid = tx.txid();
+                        let tx_hash = txid.to_string();
+                        info!("Processing mempool transaction {}", tx_hash);
 
-        let tx_data = tx.into_data();
+                        let tx_data = tx.into_data();
 
-        let notes = decode_raw_transaction(
-            network,
-            connection,
-            height,
-            &transparent_accounts,
-            &sapling_accounts,
-            &orchard_accounts,
-            &tx_data,
-        ).await?;
-        let a = notes.iter().map(|n| ((n.account, n.name.clone()), n.value)).into_group_map();
-        let amounts = a.into_iter().map(|((account, name), note_values)|
-            (account, name, note_values.iter().sum::<i64>())).collect::<Vec<_>>();
+                        let notes = decode_raw_transaction(
+                            network,
+                            connection,
+                            height,
+                            &transparent_accounts,
+                            &sapling_accounts,
+                            &orchard_accounts,
+                            &tx_data,
+                        ).await?;
+                        let a = notes
+                            .iter()
+                            .map(|n| ((n.account, n.name.clone()), n.value))
+                            .into_group_map();
+                        let amounts = a
+                            .into_iter()
+                            .map(|((account, name), note_values)| {
+                                (account, name, note_values.iter().sum::<i64>())
+                            })
+                            .collect::<Vec<_>>();
 
-        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, txdata.len() as u32));
+                        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, txdata.len() as u32));
+                    }
+                    Ok(None) => {
+                        info!("No more transactions in mempool stream");
+                        break;
+                    }
+                    Err(e) => {
+                        tracing::error!("Error receiving mempool transaction: {}", e);
+                    }
+                }
+            }
+
+        }
     }
     Ok(())
 }
@@ -118,25 +159,27 @@ pub async fn decode_raw_transaction(
             let spent_amount = sqlx::query(
                 "SELECT account, name, value FROM notes n
                 JOIN accounts a ON n.account = a.id_account
-                WHERE nullifier = ?")
-                .bind(&nf)
-                .map(|row: SqliteRow| {
-                    let account: u32 = row.get(0);
-                    let name: String = row.get(1);
-                    let value: i64 = row.get(2);
-                    MempoolNote {
-                        account,
-                        name,
-                        value: -value,
-                    }
-                })
-                .fetch_all(connection)
-                .await?;
+                WHERE nullifier = ?",
+            )
+            .bind(&nf)
+            .map(|row: SqliteRow| {
+                let account: u32 = row.get(0);
+                let name: String = row.get(1);
+                let value: i64 = row.get(2);
+                MempoolNote {
+                    account,
+                    name,
+                    value: -value,
+                }
+            })
+            .fetch_all(connection)
+            .await?;
             notes.extend(spent_amount);
         }
         for v in tbundle.vout.iter() {
             if let Some(vout_address) = v.script_pubkey.address() {
-                if let Some((account, name, _)) = tkeys.iter().find(|(_, _, a)| a == &vout_address) {
+                if let Some((account, name, _)) = tkeys.iter().find(|(_, _, a)| a == &vout_address)
+                {
                     let n = MempoolNote {
                         account: *account,
                         name: name.clone(),
@@ -154,20 +197,21 @@ pub async fn decode_raw_transaction(
             let spent_amount = sqlx::query(
                 "SELECT account, name, value FROM notes n
                 JOIN accounts a ON n.account = a.id_account
-                WHERE nullifier = ?")
-                .bind(nf)
-                .map(|row: SqliteRow| {
-                    let account: u32 = row.get(0);
-                    let name: String = row.get(1);
-                    let value: i64 = row.get(2);
-                    MempoolNote {
-                        account,
-                        name,
-                        value: -value,
-                    }
-                })
-                .fetch_all(connection)
-                .await?;
+                WHERE nullifier = ?",
+            )
+            .bind(nf)
+            .map(|row: SqliteRow| {
+                let account: u32 = row.get(0);
+                let name: String = row.get(1);
+                let value: i64 = row.get(2);
+                MempoolNote {
+                    account,
+                    name,
+                    value: -value,
+                }
+            })
+            .fetch_all(connection)
+            .await?;
             notes.extend(spent_amount);
         }
         for v in sbundle.shielded_outputs().iter() {
@@ -198,20 +242,21 @@ pub async fn decode_raw_transaction(
             let spent_amount = sqlx::query(
                 "SELECT account, name, value FROM notes n
                 JOIN accounts a ON n.account = a.id_account
-                WHERE nullifier = ?")
-                .bind(&nf)
-                .map(|row: SqliteRow| {
-                    let account: u32 = row.get(0);
-                    let name: String = row.get(1);
-                    let value: i64 = row.get(2);
-                    MempoolNote {
-                        account,
-                        name,
-                        value: -value,
-                    }
-                })
-                .fetch_all(connection)
-                .await?;
+                WHERE nullifier = ?",
+            )
+            .bind(&nf)
+            .map(|row: SqliteRow| {
+                let account: u32 = row.get(0);
+                let name: String = row.get(1);
+                let value: i64 = row.get(2);
+                MempoolNote {
+                    account,
+                    name,
+                    value: -value,
+                }
+            })
+            .fetch_all(connection)
+            .await?;
             notes.extend(spent_amount);
 
             for (account, name, fvk) in okeys.iter() {
