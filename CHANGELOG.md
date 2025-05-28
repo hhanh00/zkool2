@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.7.0...zkool-v2.7.1) (2025-05-28)
+
+
+### Bug Fixes
+
+* mempool hang ([#232](https://github.com/hhanh00/zkool2/issues/232)) ([0dab800](https://github.com/hhanh00/zkool2/commit/0dab8004d5e84d0ff200a3646150d009bffeac59))
+* mempool listener hang on server error ([#234](https://github.com/hhanh00/zkool2/issues/234)) ([131c691](https://github.com/hhanh00/zkool2/commit/131c6911e62203db6843e781da454e6ec5ed1468))
+
 ## [2.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.6.2...zkool-v2.7.0) (2025-05-27)
 
 
