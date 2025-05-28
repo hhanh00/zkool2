@@ -39,7 +39,7 @@ jobs:
       - name: Upload apk artifact
         uses: actions/upload-artifact@v4
         with:
-          path: ./${RELEASE_VERSION}.apk
+          path: ./*.apk
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
