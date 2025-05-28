@@ -8,11 +8,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'mempool.freezed.dart';
 
-Stream<MempoolMsg> runMempool({required int height}) =>
-    RustLib.instance.api.crateApiMempoolRunMempool(height: height);
+// These functions are ignored because they are not marked as `pub`: `run_mempool`
 
-Future<void> cancelMempool() =>
-    RustLib.instance.api.crateApiMempoolCancelMempool();
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Mempool>>
+abstract class Mempool implements RustOpaqueInterface {
+  Future<void> cancel();
+
+  factory Mempool() => RustLib.instance.api.crateApiMempoolMempoolNew();
+
+  Stream<MempoolMsg> run({required int height});
+}
 
 @freezed
 sealed class MempoolMsg with _$MempoolMsg {

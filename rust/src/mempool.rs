@@ -1,17 +1,16 @@
-use crate::api::mempool::{MempoolMsg, MEMPOOL_TX_CANCEL};
-use crate::frb_generated::StreamSink;
+use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
 use crate::lwd::{CompactOrchardAction, CompactSaplingOutput, Empty};
 use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::keys::Scope;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use tokio_util::sync::CancellationToken;
 use tonic::Request;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
-use zcash_primitives::transaction::{Authorized, TransactionData};
-use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction};
+use zcash_primitives::{legacy::TransparentAddress, transaction::{Authorized, Transaction, TransactionData}};
 use zcash_protocol::consensus::{BlockHeight, BranchId, Network};
 
 use crate::Client;
@@ -22,6 +21,7 @@ pub async fn run_mempool(
     connection: &SqlitePool,
     client: &mut Client,
     height: u32,
+    cancel_token: CancellationToken
 ) -> Result<()> {
     let transparent_accounts = sqlx::query(
         r#"SELECT a.id_account, a.name, ta.address FROM accounts a
@@ -69,12 +69,6 @@ pub async fn run_mempool(
     .await
     .context("orchard_accounts")?;
 
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(1);
-    {
-        let mut tx_cancel = MEMPOOL_TX_CANCEL.lock().await;
-        *tx_cancel = Some(tx);
-    }
-
     let mut mempool_txs = client
         .get_mempool_stream(Request::new(Empty {}))
         .await?
@@ -83,7 +77,7 @@ pub async fn run_mempool(
     let consensus_branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
     loop {
         tokio::select! {
-            _ = rx.recv() => {
+            _ = cancel_token.cancelled() => {
                 info!("Mempool stream cancelled");
                 break;
             }
