@@ -31,8 +31,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.portManager,
   });
 
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_MempoolPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  Mempool
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          dynamic raw);
+
+  @protected
+  Mempool
+      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          dynamic raw);
+
+  @protected
+  Mempool
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          dynamic raw);
 
   @protected
   RustStreamSink<DKGStatus> dco_decode_StreamSink_dkg_status_Sse(dynamic raw);
@@ -270,6 +288,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  Mempool
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          SseDeserializer deserializer);
+
+  @protected
+  Mempool
+      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          SseDeserializer deserializer);
+
+  @protected
+  Mempool
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          SseDeserializer deserializer);
 
   @protected
   RustStreamSink<DKGStatus> sse_decode_StreamSink_dkg_status_Sse(
@@ -517,6 +550,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          Mempool self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          Mempool self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          Mempool self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_dkg_status_Sse(
@@ -780,6 +828,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
 class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -787,4 +847,12 @@ external RustLibWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type RustLibWasmModule._(JSObject _) implements JSObject {}
+extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          int ptr);
+}
