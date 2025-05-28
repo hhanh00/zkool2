@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -51,6 +52,7 @@ abstract class AppStoreBase with Store {
   ObservableList<(String, String, int)> mempoolTxIds = ObservableList.of([]);
 
   FrostParams? frostParams;
+  Mempool mempool = Mempool();
 
   Future<void> init() async {
     final prefs = SharedPreferencesAsync();
@@ -226,6 +228,7 @@ abstract class AppStoreBase with Store {
 }
 
 void runMempoolListener() async {
+  final mp = AppStoreBase.instance.mempool;
   while (true) {
     try {
       final appStore = AppStoreBase.instance;
@@ -236,7 +239,7 @@ void runMempoolListener() async {
 
       final height = await getCurrentHeight();
       final c = Completer();
-      runMempool(height: height).listen(
+      mp.run(height: height).listen(
           (msg) {
             if (msg is MempoolMsg_TxId) {
               final txId = msg.field0;
@@ -266,5 +269,7 @@ void runMempoolListener() async {
 }
 
 void cancelMempoolListener() async {
-  await cancelMempool();
+  logger.i("Cancelling mempool listener");
+  final appStore = AppStoreBase.instance;
+  await appStore.mempool.cancel();
 }
