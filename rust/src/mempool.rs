@@ -120,6 +120,7 @@ pub async fn run_mempool(
                     }
                     Err(e) => {
                         tracing::error!("Error receiving mempool transaction: {}", e);
+                        break;
                     }
                 }
             }
