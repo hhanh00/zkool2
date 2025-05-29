@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.7.1...zkool-v2.8.0) (2025-05-29)
+
+
+### Features
+
+* search memos ([#236](https://github.com/hhanh00/zkool2/issues/236)) ([c67285a](https://github.com/hhanh00/zkool2/commit/c67285a75d0bbb6b7917eb8d7077ea302716a20d))
+
 ## [2.7.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.7.0...zkool-v2.7.1) (2025-05-28)
 
 
