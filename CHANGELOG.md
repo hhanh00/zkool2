@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.0...zkool-v2.8.1) (2025-05-29)
+
+
+### Bug Fixes
+
+* trim trailing zeros in memo bytes for display ([#238](https://github.com/hhanh00/zkool2/issues/238)) ([4215d12](https://github.com/hhanh00/zkool2/commit/4215d12149de1d598ef60f005bc5a9a9fcf8086e))
+
 ## [2.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.7.1...zkool-v2.8.0) (2025-05-29)
 
 
