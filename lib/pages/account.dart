@@ -10,6 +10,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
@@ -136,7 +137,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
                 return TabBarView(children: [
                   SingleChildScrollView(
-                      child: Column(children: [
+                    child: Column(children: [
                     Text("Height"),
                     Gap(8),
                     Observer(
@@ -183,12 +184,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
-                  SingleChildScrollView(
-                      child: Column(
-                    children: [
-                      ...showMemos(AppStoreBase.instance.memos),
-                    ],
-                  )),
+                  showMemos(context, AppStoreBase.instance.memos),
                   SingleChildScrollView(
                       child: Column(children: [
                     ...showNotes(AppStoreBase.instance.notes),
@@ -536,15 +532,11 @@ void gotoTransaction(BuildContext context, int idTx) async {
   await GoRouter.of(context).push("/tx_view", extra: idTx);
 }
 
-List<Widget> showMemos(List<Memo> memos) {
-  return [
-    ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: memos.length,
-      itemBuilder: (context, index) {
-        final memo = memos[index];
-
+Widget showMemos(BuildContext context, List<Memo> memos) {
+  return
+    SearchableList(
+      initialList: memos,
+      itemBuilder: (memo) {
         return ListTile(
           onTap: () => gotoTransaction(context, memo.idTx),
           leading: Text("${memo.height}"),
@@ -553,8 +545,11 @@ List<Widget> showMemos(List<Memo> memos) {
           trailing: Text(memo.idNote != null ? "In" : "Out"),
         );
       },
-    ),
-  ];
+      filter: (query) => memos.where((m) => m.memo == null || m.memo!.contains(query)).toList(),
+      inputDecoration: InputDecoration(
+        labelText: "Search Memos",
+        fillColor: Colors.white,
+    ));
 }
 
 List<Widget> showNotes(List<TxNote> notes) {

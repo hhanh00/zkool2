@@ -76,14 +76,17 @@ A wallet for zcash
     - [x] lwd url
     - [ ] fiat currency
     - [ ] min confs
-    - [ ] get tx details
+    - [x] get tx details
     - [ ] protect open/send
-- [ ] Market price
-- [ ] Tx details page
-- [ ] Payment URI generation
-- [ ] App Icons
-- [ ] Bugs
-    - [ ] heights do not update when the sync finishes
+- [x] Market price
+- [x] Tx details page
+- [x] Payment URI generation
+- [x] App Icons
+- [x] Mempool monitoring
+- [x] offline signing, PCZT
+- [x] multisig accounts
+    - [x] DKG
+    - [x] FROST
 
 ## User Stories
 
@@ -93,7 +96,7 @@ In order of priority,
 - [x] Sync Tx Details
 - [x] Send
 - [x] Display
-- [ ] Search
+- [x] Search
 
 ### Rotate Transparent Addresses
 - [x] Auto New change address
@@ -103,6 +106,3 @@ In order of priority,
 ### Account Import/Export
 - [x] Single/Multi account export
 - [x] Add/Import to current database
-
-### Contacts
-TBD
