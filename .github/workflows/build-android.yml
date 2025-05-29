@@ -42,6 +42,7 @@ jobs:
         with:
           path: |
             ./*.apk
+            ./build/app/outputs/bundle/release/app-release.aab
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
