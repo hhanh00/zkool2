@@ -35,11 +35,13 @@ jobs:
       - name: Build
         run: |
           flutter build apk
+          flutter build aab
           mv ./build/app/outputs/flutter-apk/app-release.apk ./${RELEASE_VERSION}.apk
       - name: Upload apk artifact
         uses: actions/upload-artifact@v4
         with:
-          path: ./*.apk
+          path: |
+            ./*.apk
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
