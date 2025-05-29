@@ -532,6 +532,14 @@ void gotoTransaction(BuildContext context, int idTx) async {
   await GoRouter.of(context).push("/tx_view", extra: idTx);
 }
 
+Uint8List trimTrailingZeros(Uint8List bytes) {
+  int end = bytes.length;
+  while (end > 0 && bytes[end - 1] == 0x00) {
+    end--;
+  }
+  return bytes.sublist(0, end);
+}
+
 Widget showMemos(BuildContext context, List<Memo> memos) {
   return
     SearchableList(
@@ -540,7 +548,7 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
         return ListTile(
           onTap: () => gotoTransaction(context, memo.idTx),
           leading: Text("${memo.height}"),
-          title: SelectableText(memo.memo ?? hex.encode(memo.memoBytes)),
+          title: SelectableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
           subtitle: Text(timeToString(memo.time)),
           trailing: Text(memo.idNote != null ? "In" : "Out"),
         );
