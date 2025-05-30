@@ -24,7 +24,6 @@ import 'package:zkool/widgets/pool_select.dart';
 
 final logID = GlobalKey();
 final sync1ID = GlobalKey();
-final rewindID = GlobalKey();
 final receiveID = GlobalKey();
 final sendID = GlobalKey();
 final tBalID = GlobalKey();
@@ -58,7 +57,6 @@ class AccountViewPageState extends State<AccountViewPage> {
       balID,
       logID,
       sync1ID,
-      rewindID,
       receiveID,
       sendID
     ]);
@@ -97,13 +95,6 @@ class AccountViewPageState extends State<AccountViewPage> {
                         tooltip: "Sync this account",
                         onPressed: onSync,
                         icon: Icon(Icons.sync))),
-                Showcase(
-                    key: rewindID,
-                    description: "Rewind back a few blocks",
-                    child: IconButton(
-                        tooltip: "Rewind to previous checkpoint",
-                        onPressed: onRewind,
-                        icon: Icon(Icons.fast_rewind))),
                 Showcase(
                     key: receiveID,
                     description: "Show the account receiving addresses",
@@ -204,20 +195,6 @@ class AccountViewPageState extends State<AccountViewPage> {
     }
   }
 
-  void onRewind() async {
-    final confirmed = await confirmDialog(
-      context,
-      title: "Rewind",
-      message:
-          "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
-    );
-    if (!confirmed) return;
-    final dbHeight = await getDbHeight();
-    await rewindSync(height: dbHeight - 60);
-    final h = await getDbHeight();
-    AppStoreBase.instance.heights[account.id] = h;
-  }
-
   void onReceive() async {
     await GoRouter.of(context).push("/receive");
   }
@@ -249,6 +226,7 @@ final enableID = GlobalKey();
 final hideID2 = GlobalKey();
 final viewID = GlobalKey();
 final exportID = GlobalKey();
+final rewindID = GlobalKey();
 final resetID = GlobalKey();
 
 class AccountEditPage extends StatefulWidget {
@@ -278,6 +256,7 @@ class AccountEditPageState extends State<AccountEditPage> {
       hideID2,
       viewID,
       exportID,
+      rewindID,
       resetID
     ]);
   }
@@ -299,14 +278,22 @@ class AccountEditPageState extends State<AccountEditPage> {
                     onPressed: () => GoRouter.of(context)
                         .push("/viewing_keys", extra: account.id),
                     icon: Icon(Icons.visibility))),
-          if (account != null)
+          if (account != null) ...[
             Showcase(
                 key: exportID,
                 description: "Export an encrypted file of this account",
                 child: IconButton(
                     tooltip: "Export Account",
                     onPressed: onExport,
-                    icon: Icon(Icons.reset_tv))),
+                    icon: Icon(Icons.input))),
+            Showcase(
+                key: rewindID,
+                description: "Rewind back a few blocks",
+                child: IconButton(
+                    tooltip: "Rewind to previous checkpoint",
+                    onPressed: onRewind,
+                    icon: Icon(Icons.fast_rewind)))
+          ],
           Showcase(
               key: resetID,
               description: "Clear and reset account to birth height",
@@ -462,6 +449,21 @@ class AccountEditPageState extends State<AccountEditPage> {
         bytes: res,
       );
     }
+  }
+
+  void onRewind() async {
+    final account = accounts.first;
+    final confirmed = await confirmDialog(
+      context,
+      title: "Rewind",
+      message:
+          "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
+    );
+    if (!confirmed) return;
+    final dbHeight = await getDbHeight();
+    await rewindSync(height: dbHeight - 60);
+    final h = await getDbHeight();
+    AppStoreBase.instance.heights[account.id] = h;
   }
 
   void onReset() async {
