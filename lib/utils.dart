@@ -223,5 +223,8 @@ Future<bool> authenticate({String? reason}) async {
       default:
         return false;
     }
+  } on MissingPluginException {
+    // Fallback for platforms that do not support local authentication
+    return true; // Assume authentication is successful
   }
 }
