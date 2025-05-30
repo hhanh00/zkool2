@@ -1,0 +1,48 @@
+name: Build and Release iOS
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    tags:
+      - zkool-v*
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.head_ref || github.ref_name }}
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Codesign
+        run: ./misc/codesign-ios.sh
+        env:
+          KEYCHAIN_PWD: azB27DoYCFe5kzd3
+          APPLE_DEV_CERT: ${{ secrets.APPLE_DEV_CERT }}
+          APPLE_DEV_CERT_PWD: ${{ secrets.APPLE_DEV_CERT_PWD }}
+          IOS_PROVISION: ${{ secrets.IOS_PROVISION }}
+          UUID: '336c9eba-d7c8-48d4-a408-941e89c747a8'
+      - name: Build
+        run: flutter build ipa
+      - name: Upload dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./build/ios/ipa/*.ipa
+      - name: Create Release
+        if: startsWith(github.ref_name, 'zkool-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./build/ios/ipa/*.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
