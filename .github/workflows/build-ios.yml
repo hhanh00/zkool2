@@ -14,9 +14,15 @@ env:
   RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.head_ref || github.ref_name }}
 
 jobs:
-  build-macos:
+  build-ios:
     runs-on: macos-latest
     steps:
+      - name: select Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
+      - name: check Xcode version
+        run: /usr/bin/xcodebuild -version
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Check out code
@@ -25,17 +31,24 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Codesign
+      - name: Install python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install codemagic
+        run: pip3 install codemagic-cli-tools
+      - name: Install Codesign certs
         run: ./misc/codesign-ios.sh
         env:
           KEYCHAIN_PWD: azB27DoYCFe5kzd3
           APPLE_DEV_CERT: ${{ secrets.APPLE_DEV_CERT }}
           APPLE_DEV_CERT_PWD: ${{ secrets.APPLE_DEV_CERT_PWD }}
           IOS_PROVISION: ${{ secrets.IOS_PROVISION }}
-          UUID: '336c9eba-d7c8-48d4-a408-941e89c747a8'
       - name: Build
-        run: flutter build ipa
-      - name: Upload dmg artifact
+        run: |
+          xcode-project use-profiles
+          flutter build ipa --export-options-plist=ios/export_options.plist
+      - name: Upload ipa artifact
         uses: actions/upload-artifact@v4
         with:
           path: ./build/ios/ipa/*.ipa
