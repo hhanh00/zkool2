@@ -7,7 +7,7 @@
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>cc.methyl.zkool</key>
-		<string>Zkool3</string>
+		<string>Zkool</string>
 	</dict>
 	<key>signingCertificate</key>
 	<string>Apple Distribution</string>
