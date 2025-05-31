@@ -13,7 +13,7 @@ security import certs/apple-distrib.p12 -k $HOME/build.keychain -P $APPLE_DEV_CE
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $KEYCHAIN_PWD $HOME/build.keychain
 
 mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-cp certs/zkool3.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+cp certs/zkool.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
 popd
 
