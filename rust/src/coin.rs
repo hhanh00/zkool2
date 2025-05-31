@@ -1,12 +1,12 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use tonic::transport::ClientTlsConfig;
 use zcash_protocol::consensus::Network;
 
-use crate::api::db::get_connect_options;
+use crate::db::create_schema;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::Client;
 
@@ -46,6 +46,15 @@ impl Coin {
             .max_lifetime(std::time::Duration::from_secs(60 * 60))
             .connect_with(options)
             .await?;
+
+        if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='props'")
+            .fetch_optional(&pool)
+            .await?
+            .is_none()
+        {
+            create_schema(&pool).await?;
+            crate::db::put_prop(&pool, "coin", "0").await?;
+        }
 
         let (coin,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
             .fetch_one(&pool)
@@ -98,6 +107,17 @@ impl Default for Coin {
             lwd: String::new(),
         }
     }
+}
+
+fn get_connect_options(db_filepath: &str, password: Option<String>) -> SqliteConnectOptions {
+    let options = SqliteConnectOptions::new()
+        .filename(db_filepath)
+        .create_if_missing(true);
+    let options = match password.as_ref() {
+        Some(password) => options.pragma("key", password.clone()),
+        None => options,
+    };
+    options
 }
 
 lazy_static::lazy_static! {
