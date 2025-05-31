@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.8.2](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.1...zkool-v2.8.2) (2025-05-31)
+
+
+### Bug Fixes
+
+* ios ipa build ([#244](https://github.com/hhanh00/zkool2/issues/244)) ([ff9dafe](https://github.com/hhanh00/zkool2/commit/ff9dafee5c0a75c106753c675c9c0b0670e9ee64))
+* race condition on new db creation ([#245](https://github.com/hhanh00/zkool2/issues/245)) ([4413dfe](https://github.com/hhanh00/zkool2/commit/4413dfe5ed6244fdfd80fc09c0f0974151fa8280))
+* tweak icons and move rewind to edit account page ([#241](https://github.com/hhanh00/zkool2/issues/241)) ([4276735](https://github.com/hhanh00/zkool2/commit/427673544b3a9ed0cb2556bc0546aefe118c8cc9))
+
 ## [2.8.1](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.0...zkool-v2.8.1) (2025-05-29)
 
 
