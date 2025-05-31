@@ -27,11 +27,13 @@ jobs:
           channel: stable
       - name: Install codesign
         run: |
-          echo ${{ secrets.ANDROID_JKS }} | base64 --decode > android/app/zkool-keystore.jks
-          echo storePassword=${{ secrets.JKS_PASSWORD }} > android/key.properties
-          echo keyPassword=${{ secrets.JKS_PASSWORD }} >> android/key.properties
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
+          echo storePassword=$JKS_PASSWORD > android/key.properties
+          echo keyPassword=$JKS_PASSWORD >> android/key.properties
           echo keyAlias=zkool >> android/key.properties
           echo storeFile=zkool-keystore.jks >> android/key.properties
+        env:
+          JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
       - name: Build
         run: |
           flutter build apk
@@ -41,7 +43,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: |
-            ./*.apk
             ./build/app/outputs/bundle/release/app-release.aab
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
