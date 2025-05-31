@@ -47,11 +47,6 @@ class AccountListPage extends StatelessWidget {
               message: "Password CANNOT be changed later");
         }
         if (password != null && password.isEmpty) password = null;
-        logger
-            .i("Creating database file: $dbFilepath with password: $password");
-        await createDatabase(
-            dbFilepath: dbFilepath, password: password, coin: 0);
-        logger.i("Database file created: $dbFilepath");
       }
 
       while (true) {
