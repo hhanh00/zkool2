@@ -1,7 +1,7 @@
 #!/bin/bash
 pushd ios
 pushd certs
-openssl enc -pbkdf2 -aes-256-cbc -salt -d -in zkool3.mobileprovision.enc -out zkool3.mobileprovision -pass pass:$APPLE_DEV_CERT_PWD
+openssl enc -pbkdf2 -aes-256-cbc -salt -d -in zkool.mobileprovision.enc -out zkool.mobileprovision -pass pass:$APPLE_DEV_CERT_PWD
 openssl enc -pbkdf2 -aes-256-cbc -salt -d -in apple-distrib.p12.enc -out apple-distrib.p12 -pass pass:$APPLE_DEV_CERT_PWD
 popd
 
