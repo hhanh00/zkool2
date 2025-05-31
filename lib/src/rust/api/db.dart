@@ -6,13 +6,6 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `get_connect_options`
-
-Future<void> createDatabase(
-        {required int coin, required String dbFilepath, String? password}) =>
-    RustLib.instance.api.crateApiDbCreateDatabase(
-        coin: coin, dbFilepath: dbFilepath, password: password);
-
 Future<void> openDatabase({required String dbFilepath, String? password}) =>
     RustLib.instance.api
         .crateApiDbOpenDatabase(dbFilepath: dbFilepath, password: password);

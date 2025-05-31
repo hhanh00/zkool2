@@ -164,6 +164,7 @@ Future<String?> inputPassword(BuildContext context,
           })();
           GoRouter.of(context).pop(res);
         },
+        dismissOnTouchOutside: false,
         autoDismiss: false,
       ).show() ??
       false;
