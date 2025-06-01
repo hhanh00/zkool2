@@ -53,3 +53,16 @@ pub fn is_valid_transparent_address(address: &str) -> bool {
     let c = get_coin!();
     TransparentAddress::decode(&c.network, address).is_ok()
 }
+
+#[frb(sync)]
+pub fn is_tex_address(address: &str) -> bool {
+    let c = get_coin!();
+    let Some(address) = zcash_keys::address::Address::decode(&c.network, address) else {
+        return false;
+    };
+    let is_tex = match address {
+        zcash_keys::address::Address::Tex(_) => true,
+        _ => false,
+    };
+    is_tex
+}
