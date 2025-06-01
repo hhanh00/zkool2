@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.4](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.3...zkool-v2.8.4) (2025-06-01)
+
+
+### Bug Fixes
+
+* split per abi android build ([#251](https://github.com/hhanh00/zkool2/issues/251)) ([7c2c98b](https://github.com/hhanh00/zkool2/commit/7c2c98bd11a22fab22629a1be5c5fc464ddd83c7))
+
 ## [2.8.3](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.2...zkool-v2.8.3) (2025-06-01)
 
 
