@@ -1,7 +1,6 @@
-use crate::{coin::Coin, db::create_schema, get_coin};
+use crate::{coin::Coin, get_coin};
 use anyhow::Result;
 use flutter_rust_bridge::frb;
-use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 
 pub async fn open_database(db_filepath: &str, password: Option<String>) -> Result<()> {
     let lwd = {
