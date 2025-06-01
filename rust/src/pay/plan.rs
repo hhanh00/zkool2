@@ -249,26 +249,23 @@ pub async fn plan_transaction(
     let fee = fee_manager.fee();
 
     if recipient_pays_fee {
-        if n_recipients > 1 {
-            return Err(Error::TooManyRecipients.into());
-        }
         fee_paid += fee;
     }
 
     if fee > fee_paid {
-        return Err(Error::NotEnoughFunds.into());
+        return Err(Error::NotEnoughFunds(to_zec(fee - fee_paid)).into());
     }
 
     let recipients = single.iter_mut().chain(double.iter_mut());
     for (i, r) in recipients.enumerate() {
         if r.remaining > 0 {
-            return Err(Error::NotEnoughFunds.into());
+            return Err(Error::NotEnoughFunds(to_zec(r.remaining)).into());
         }
         if i == 0 && recipient_pays_fee {
             // if the recipient pays the fee, we need to pay it
             // from the first recipient
             if r.recipient.amount < fee {
-                return Err(Error::NotEnoughFunds.into());
+                return Err(Error::NotEnoughFunds(to_zec(fee - r.recipient.amount)).into());
             }
             r.recipient.amount -= fee;
         }
