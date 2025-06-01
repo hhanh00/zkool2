@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.6](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.5...zkool-v2.8.6) (2025-06-01)
+
+
+### Bug Fixes
+
+* include encryption declaration ([#257](https://github.com/hhanh00/zkool2/issues/257)) ([37b7e09](https://github.com/hhanh00/zkool2/commit/37b7e0907e50e52c50d04105c75ccf4d65cd1686))
+
 ## [2.8.5](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.4...zkool-v2.8.5) (2025-06-01)
 
 
