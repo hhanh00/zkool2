@@ -4,12 +4,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("InvalidPoolMask. Mask must have at least one pool")]
     InvalidPoolMask,
-    #[error("Multiple recipients, but recipient pays fee")]
-    TooManyRecipients,
-    #[error("Recipient pays fee, but amount is not enough")]
-    RecipientNotEnoughAmount,
-    #[error("Not enough funds")]
-    NotEnoughFunds,
+    #[error("Not enough funds, {0} more ZEC required")]
+    NotEnoughFunds(String),
     #[error("No Signing Key")]
     NoSigningKey,
     #[error(transparent)]
