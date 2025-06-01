@@ -130,7 +130,6 @@ abstract class AppStoreBase with Store {
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
       final currentHeight = await getCurrentHeight();
-      logger.i(accounts);
       final progress = synchronize(
           accounts: accounts,
           currentHeight: currentHeight,
@@ -233,7 +232,6 @@ void runMempoolListener() async {
     try {
       final appStore = AppStoreBase.instance;
       runInAction(() => appStore.mempoolRunning = true);
-      logger.i("Mempool clear");
       appStore.mempoolAccounts.clear();
       appStore.mempoolTxIds.clear();
 
@@ -255,7 +253,6 @@ void runMempoolListener() async {
                   ifAbsent: () => amount,
                 );
               }
-              logger.i("New transaction in mempool: $txId");
             }
           },
           onDone: c.complete,
@@ -269,7 +266,6 @@ void runMempoolListener() async {
 }
 
 void cancelMempoolListener() async {
-  logger.i("Cancelling mempool listener");
   final appStore = AppStoreBase.instance;
   await appStore.mempool.cancel();
 }

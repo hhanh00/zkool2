@@ -555,7 +555,7 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
           trailing: Text(memo.idNote != null ? "In" : "Out"),
         );
       },
-      filter: (query) => memos.where((m) => m.memo == null || m.memo!.contains(query)).toList(),
+      filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
       inputDecoration: InputDecoration(
         labelText: "Search Memos",
         fillColor: Colors.white,

@@ -267,6 +267,9 @@ pub async fn plan_transaction(
         if i == 0 && recipient_pays_fee {
             // if the recipient pays the fee, we need to pay it
             // from the first recipient
+            if r.recipient.amount < fee {
+                return Err(Error::NotEnoughFunds.into());
+            }
             r.recipient.amount -= fee;
         }
     }
