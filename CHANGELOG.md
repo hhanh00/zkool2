@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.3](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.2...zkool-v2.8.3) (2025-06-01)
+
+
+### Bug Fixes
+
+* sending to tex address should disable pool selection ([#249](https://github.com/hhanh00/zkool2/issues/249)) ([b3b51da](https://github.com/hhanh00/zkool2/commit/b3b51da198c8516100a70aeb248996ea438f661f))
+
 ## [2.8.2](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.1...zkool-v2.8.2) (2025-05-31)
 
 
