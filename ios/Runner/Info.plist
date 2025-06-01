@@ -47,6 +47,8 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>We need access to your photo library to import QR codes if requested.</string>
 		<key>NSCameraUsageDescription</key>
