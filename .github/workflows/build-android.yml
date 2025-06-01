@@ -36,9 +36,11 @@ jobs:
           JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
       - name: Build
         run: |
-          flutter build apk
+          flutter build apk --split-per-abi
           flutter build aab
-          mv ./build/app/outputs/flutter-apk/app-release.apk ./${RELEASE_VERSION}.apk
+          mv ./build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ./${RELEASE_VERSION}-armeabi-v7a.apk
+          mv ./build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ./${RELEASE_VERSION}-arm64-v8a.apk
+          mv ./build/app/outputs/flutter-apk/app-x86_64-release.apk ./${RELEASE_VERSION}-x86_64.apk
       - name: Upload apk artifact
         uses: actions/upload-artifact@v4
         with:
