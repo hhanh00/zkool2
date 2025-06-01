@@ -65,14 +65,7 @@ class LifecycleWatcherState extends State<LifecycleWatcher>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      logger.i("App paused");
-    } else if (state == AppLifecycleState.inactive) {
-      logger.i("App inactive");
-    } else if (state == AppLifecycleState.detached) {
-      logger.i("App detached");
-    } else if (state == AppLifecycleState.resumed) {
-      logger.i("App resumed");
+    if (state == AppLifecycleState.resumed) {
       cancelMempoolListener();
     }
   }
