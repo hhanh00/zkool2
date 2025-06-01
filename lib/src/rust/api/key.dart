@@ -20,3 +20,6 @@ bool isValidAddress({required String address}) =>
 
 bool isValidTransparentAddress({required String address}) =>
     RustLib.instance.api.crateApiKeyIsValidTransparentAddress(address: address);
+
+bool isTexAddress({required String address}) =>
+    RustLib.instance.api.crateApiKeyIsTexAddress(address: address);

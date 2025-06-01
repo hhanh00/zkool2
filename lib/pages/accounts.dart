@@ -292,8 +292,6 @@ class AccountListPage2State extends State<AccountListPage2> {
   }
 
   onReorder(int oldIndex, int newIndex) async {
-    logger.i("Reorder $oldIndex to $newIndex");
-
     await reorderAccount(
         oldPosition: accounts[oldIndex].position,
         newPosition: accounts[newIndex].position);

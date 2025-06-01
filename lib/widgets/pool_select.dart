@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class PoolSelect extends StatefulWidget {
+  final int initialValue;
   final void Function(int v)? onChanged;
-  const PoolSelect({super.key, required this.onChanged});
+  const PoolSelect({super.key, this.initialValue = 7, required this.onChanged});
 
   @override
   State<PoolSelect> createState() => _PoolSelectState();
@@ -11,10 +12,23 @@ class PoolSelect extends StatefulWidget {
 enum Pool { transparent, sapling, orchard }
 
 class _PoolSelectState extends State<PoolSelect> {
-  Set<Pool> pools = {Pool.transparent, Pool.sapling, Pool.orchard};
+  late Set<Pool> pools;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialValue = widget.initialValue;
+    pools = {
+      if (initialValue & 1 != 0) Pool.transparent,
+      if (initialValue & 2 != 0) Pool.sapling,
+      if (initialValue & 4 != 0) Pool.orchard,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final onChanged = widget.onChanged;
+
     return Row(mainAxisSize: MainAxisSize.min,
       children: [SegmentedButton<Pool>(
       style: SegmentedButton.styleFrom(
@@ -40,10 +54,10 @@ class _PoolSelectState extends State<PoolSelect> {
         ),
       ],
       selected: pools,
-      onSelectionChanged: (Set<Pool> newSelection) {
+      onSelectionChanged: onChanged != null ? (Set<Pool> newSelection) {
         setState(() {
           pools = newSelection;
-          widget.onChanged?.call(
+          onChanged(
             newSelection.fold(0, (previousValue, element) {
               switch (element) {
                 case Pool.transparent:
@@ -56,7 +70,7 @@ class _PoolSelectState extends State<PoolSelect> {
             }),
           );
         });
-      },
+      } : null,
     )]);
   }
 }

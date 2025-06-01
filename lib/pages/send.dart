@@ -268,6 +268,7 @@ class Send2Page extends StatefulWidget {
 
 class Send2PageState extends State<Send2Page> {
   String? txId;
+  late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
   var recipientPaysFee = false;
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -278,6 +279,7 @@ class Send2PageState extends State<Send2Page> {
   @override
   Widget build(BuildContext context) {
     Future(tutorial);
+    logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
 
     return Scaffold(
       appBar: AppBar(
@@ -312,8 +314,10 @@ class Send2PageState extends State<Send2Page> {
                             alignment: Alignment.centerRight,
                             child: FormBuilderField<int>(
                               name: "source pools",
+                              initialValue: hasTex ? 1 : 7,
                               builder: (field) => PoolSelect(
-                                  onChanged: (v) => field.didChange(v)),
+                                  initialValue: field.value!,
+                                  onChanged: hasTex ? null : (v) => field.didChange(v)),
                             )))),
                 Showcase(
                     key: feeSourceID,
