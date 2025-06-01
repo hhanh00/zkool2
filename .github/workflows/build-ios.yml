@@ -48,6 +48,7 @@ jobs:
         run: |
           xcode-project use-profiles
           flutter build ipa --export-options-plist=ios/export_options.plist
+          mv ./build/ios/ipa/zkool.ipa ./build/ios/ipa/$RELEASE_VERSION.ipa
       - name: Upload ipa artifact
         uses: actions/upload-artifact@v4
         with:
