@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.5](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.4...zkool-v2.8.5) (2025-06-01)
+
+
+### Bug Fixes
+
+* linux arm build ([#256](https://github.com/hhanh00/zkool2/issues/256)) ([e712da0](https://github.com/hhanh00/zkool2/commit/e712da0ed889d6dfc50a15b2098f5669d1c3e3a9))
+* show required amount needed ([#253](https://github.com/hhanh00/zkool2/issues/253)) ([8845a9f](https://github.com/hhanh00/zkool2/commit/8845a9fbb92ba297a549127975784a7f605e7e7d))
+
 ## [2.8.4](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.3...zkool-v2.8.4) (2025-06-01)
 
 
