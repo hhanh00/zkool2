@@ -2674,6 +2674,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TxOutput> dco_decode_list_tx_output(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_tx_output).toList();
+  }
+
+  @protected
   List<TxPlanIn> dco_decode_list_tx_plan_in(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_tx_plan_in).toList();
@@ -2942,14 +2948,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Tx dco_decode_tx(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return Tx(
       id: dco_decode_u_32(arr[0]),
       txid: dco_decode_list_prim_u_8_strict(arr[1]),
       height: dco_decode_u_32(arr[2]),
       time: dco_decode_u_32(arr[3]),
       value: dco_decode_i_64(arr[4]),
+      tpe: dco_decode_opt_box_autoadd_u_8(arr[5]),
     );
   }
 
@@ -2957,8 +2964,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxAccount dco_decode_tx_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return TxAccount(
       id: dco_decode_u_32(arr[0]),
       account: dco_decode_u_32(arr[1]),
@@ -2967,7 +2974,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       time: dco_decode_u_32(arr[4]),
       notes: dco_decode_list_tx_note(arr[5]),
       spends: dco_decode_list_tx_spend(arr[6]),
-      memos: dco_decode_list_tx_memo(arr[7]),
+      outputs: dco_decode_list_tx_output(arr[7]),
+      memos: dco_decode_list_tx_memo(arr[8]),
     );
   }
 
@@ -2975,12 +2983,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxMemo dco_decode_tx_memo(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return TxMemo(
-      id: dco_decode_u_32(arr[0]),
-      pool: dco_decode_u_8(arr[1]),
-      memo: dco_decode_opt_String(arr[2]),
+      note: dco_decode_opt_box_autoadd_u_32(arr[0]),
+      output: dco_decode_opt_box_autoadd_u_32(arr[1]),
+      pool: dco_decode_u_8(arr[2]),
+      memo: dco_decode_opt_String(arr[3]),
     );
   }
 
@@ -2996,6 +3005,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       height: dco_decode_u_32(arr[2]),
       value: dco_decode_u_64(arr[3]),
       locked: dco_decode_bool(arr[4]),
+    );
+  }
+
+  @protected
+  TxOutput dco_decode_tx_output(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return TxOutput(
+      id: dco_decode_u_32(arr[0]),
+      pool: dco_decode_u_8(arr[1]),
+      height: dco_decode_u_32(arr[2]),
+      value: dco_decode_u_64(arr[3]),
+      address: dco_decode_String(arr[4]),
     );
   }
 
@@ -3499,6 +3523,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TxOutput> sse_decode_list_tx_output(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TxOutput>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_tx_output(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<TxPlanIn> sse_decode_list_tx_plan_in(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3828,12 +3864,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_height = sse_decode_u_32(deserializer);
     var var_time = sse_decode_u_32(deserializer);
     var var_value = sse_decode_i_64(deserializer);
+    var var_tpe = sse_decode_opt_box_autoadd_u_8(deserializer);
     return Tx(
         id: var_id,
         txid: var_txid,
         height: var_height,
         time: var_time,
-        value: var_value);
+        value: var_value,
+        tpe: var_tpe);
   }
 
   @protected
@@ -3846,6 +3884,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_time = sse_decode_u_32(deserializer);
     var var_notes = sse_decode_list_tx_note(deserializer);
     var var_spends = sse_decode_list_tx_spend(deserializer);
+    var var_outputs = sse_decode_list_tx_output(deserializer);
     var var_memos = sse_decode_list_tx_memo(deserializer);
     return TxAccount(
         id: var_id,
@@ -3855,16 +3894,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         time: var_time,
         notes: var_notes,
         spends: var_spends,
+        outputs: var_outputs,
         memos: var_memos);
   }
 
   @protected
   TxMemo sse_decode_tx_memo(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_id = sse_decode_u_32(deserializer);
+    var var_note = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_output = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_pool = sse_decode_u_8(deserializer);
     var var_memo = sse_decode_opt_String(deserializer);
-    return TxMemo(id: var_id, pool: var_pool, memo: var_memo);
+    return TxMemo(
+        note: var_note, output: var_output, pool: var_pool, memo: var_memo);
   }
 
   @protected
@@ -3881,6 +3923,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         height: var_height,
         value: var_value,
         locked: var_locked);
+  }
+
+  @protected
+  TxOutput sse_decode_tx_output(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_u_32(deserializer);
+    var var_pool = sse_decode_u_8(deserializer);
+    var var_height = sse_decode_u_32(deserializer);
+    var var_value = sse_decode_u_64(deserializer);
+    var var_address = sse_decode_String(deserializer);
+    return TxOutput(
+        id: var_id,
+        pool: var_pool,
+        height: var_height,
+        value: var_value,
+        address: var_address);
   }
 
   @protected
@@ -4374,6 +4432,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_tx_output(
+      List<TxOutput> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_tx_output(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_tx_plan_in(
       List<TxPlanIn> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -4644,6 +4712,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_32(self.time, serializer);
     sse_encode_i_64(self.value, serializer);
+    sse_encode_opt_box_autoadd_u_8(self.tpe, serializer);
   }
 
   @protected
@@ -4656,13 +4725,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.time, serializer);
     sse_encode_list_tx_note(self.notes, serializer);
     sse_encode_list_tx_spend(self.spends, serializer);
+    sse_encode_list_tx_output(self.outputs, serializer);
     sse_encode_list_tx_memo(self.memos, serializer);
   }
 
   @protected
   void sse_encode_tx_memo(TxMemo self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_32(self.id, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.note, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.output, serializer);
     sse_encode_u_8(self.pool, serializer);
     sse_encode_opt_String(self.memo, serializer);
   }
@@ -4675,6 +4746,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_64(self.value, serializer);
     sse_encode_bool(self.locked, serializer);
+  }
+
+  @protected
+  void sse_encode_tx_output(TxOutput self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.id, serializer);
+    sse_encode_u_8(self.pool, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_u_64(self.value, serializer);
+    sse_encode_String(self.address, serializer);
   }
 
   @protected

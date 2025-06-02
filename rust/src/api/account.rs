@@ -510,6 +510,7 @@ pub struct Tx {
     pub height: u32,
     pub time: u32,
     pub value: i64,
+    pub tpe: Option<u8>,
 }
 
 pub async fn remove_account(account_id: u32) -> Result<()> {

@@ -14,6 +14,7 @@ class TxAccount {
   final int time;
   final List<TxNote> notes;
   final List<TxSpend> spends;
+  final List<TxOutput> outputs;
   final List<TxMemo> memos;
 
   const TxAccount({
@@ -24,6 +25,7 @@ class TxAccount {
     required this.time,
     required this.notes,
     required this.spends,
+    required this.outputs,
     required this.memos,
   });
 
@@ -36,6 +38,7 @@ class TxAccount {
       time.hashCode ^
       notes.hashCode ^
       spends.hashCode ^
+      outputs.hashCode ^
       memos.hashCode;
 
   @override
@@ -50,29 +53,34 @@ class TxAccount {
           time == other.time &&
           notes == other.notes &&
           spends == other.spends &&
+          outputs == other.outputs &&
           memos == other.memos;
 }
 
 class TxMemo {
-  final int id;
+  final int? note;
+  final int? output;
   final int pool;
   final String? memo;
 
   const TxMemo({
-    required this.id,
+    this.note,
+    this.output,
     required this.pool,
     this.memo,
   });
 
   @override
-  int get hashCode => id.hashCode ^ pool.hashCode ^ memo.hashCode;
+  int get hashCode =>
+      note.hashCode ^ output.hashCode ^ pool.hashCode ^ memo.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TxMemo &&
           runtimeType == other.runtimeType &&
-          id == other.id &&
+          note == other.note &&
+          output == other.output &&
           pool == other.pool &&
           memo == other.memo;
 }
@@ -110,6 +118,41 @@ class TxNote {
           height == other.height &&
           value == other.value &&
           locked == other.locked;
+}
+
+class TxOutput {
+  final int id;
+  final int pool;
+  final int height;
+  final BigInt value;
+  final String address;
+
+  const TxOutput({
+    required this.id,
+    required this.pool,
+    required this.height,
+    required this.value,
+    required this.address,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      pool.hashCode ^
+      height.hashCode ^
+      value.hashCode ^
+      address.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxOutput &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          pool == other.pool &&
+          height == other.height &&
+          value == other.value &&
+          address == other.address;
 }
 
 class TxSpend {
