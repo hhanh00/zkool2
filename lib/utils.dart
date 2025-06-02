@@ -9,6 +9,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -49,6 +50,12 @@ String txIdToString(Uint8List txid) {
 Uint8List stringToTxId(String txid) {
   var bytes = hex.decode(txid);
   return Uint8List.fromList(bytes.reversed.toList());
+}
+
+Future<String> getFullDatabasePath(String dbName) async {
+  final dbDir = await getApplicationDocumentsDirectory();
+  final dbFilepath = '${dbDir.path}/$dbName.db';
+  return dbFilepath;
 }
 
 Future<void> showException(BuildContext context, String message) async {
