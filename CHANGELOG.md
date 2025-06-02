@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.6...zkool-v2.9.0) (2025-06-02)
+
+
+### Features
+
+* delete db and change db password ([#260](https://github.com/hhanh00/zkool2/issues/260)) ([b79ef41](https://github.com/hhanh00/zkool2/commit/b79ef4138981449e885f1f0b7879e8a3010b0198))
+
 ## [2.8.6](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.5...zkool-v2.8.6) (2025-06-01)
 
 
