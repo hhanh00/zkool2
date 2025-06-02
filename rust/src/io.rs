@@ -192,7 +192,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     info!("Exporting transactions");
     // Get the transactions for the given account
     let mut transactions = sqlx::query(
-        "SELECT id_tx, txid, height, time, details FROM transactions WHERE account = ?",
+        "SELECT id_tx, txid, height, time, details, tpe, value FROM transactions WHERE account = ?",
     )
     .bind(account)
     .map(|row: SqliteRow| {
@@ -201,6 +201,8 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         let height: u32 = row.get(2);
         let time: u32 = row.get(3);
         let details: bool = row.get(4);
+        let tpe: u8 = row.get(5);
+        let value: i64 = row.get(6);
 
         IOTransaction {
             id_tx,
@@ -208,6 +210,8 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
             height,
             time,
             details,
+            tpe,
+            value,
             ..Default::default()
         }
     })
@@ -264,6 +268,40 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         .fetch_all(connection)
         .await?;
         tx.notes = notes;
+
+        // Get the outputs for the given transaction
+        let outputs = sqlx::query(
+            "SELECT id_output, o.account, o.height, o.pool, o.value, o.address,
+            o.vout, memo_text, memo_bytes
+            FROM outputs o
+            LEFT JOIN memos m ON o.id_output = m.output WHERE o.tx = ?")
+            .bind(tx.id_tx)
+            .map(|row: SqliteRow| {
+                let id_output: u32 = row.get(0);
+                let account: u32 = row.get(1);
+                let height: u32 = row.get(2);
+                let pool: u8 = row.get(3);
+                let value: u64 = row.get::<i64, _>(4) as u64;
+                let address: String = row.get(5);
+                let vout: u32 = row.get(6);
+                let memo_text: Option<String> = row.get(7);
+                let memo_bytes: Option<Vec<u8>> = row.get(8);
+
+                IOOutput {
+                    id_output,
+                    height,
+                    account,
+                    pool,
+                    value,
+                    address,
+                    vout,
+                    memo_text,
+                    memo_bytes,
+                }
+            })
+            .fetch_all(connection)
+            .await?;
+        tx.outputs = outputs;
 
         // Get the spends for the given transaction
         let spends =
@@ -453,13 +491,15 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
     for transaction in io_account.transactions.iter() {
         let r = sqlx::query(
             "INSERT INTO transactions
-            (account, txid, height, time, details) VALUES (?, ?, ?, ?, ?)",
+            (account, txid, height, time, details, tpe, value) VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(&transaction.txid)
         .bind(transaction.height)
         .bind(transaction.time)
         .bind(transaction.details)
+        .bind(transaction.tpe)
+        .bind(transaction.value)
         .execute(connection)
         .await?;
         let new_id_tx = r.last_insert_rowid() as u32;
@@ -506,6 +546,41 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
                 .bind(new_id_note)
                 .bind(&note.memo_text)
                 .bind(&note.memo_bytes)
+                .execute(connection)
+                .await?;
+            }
+        }
+
+        for output in transaction.outputs.iter() {
+            let r = sqlx::query(
+                "INSERT INTO outputs
+                (tx, height, account, pool, value, address, vout) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(new_id_tx)
+            .bind(output.height)
+            .bind(new_id_account)
+            .bind(output.pool)
+            .bind(output.value as i64)
+            .bind(&output.address)
+            .bind(output.vout)
+            .execute(connection)
+            .await?;
+            let new_id_output = r.last_insert_rowid() as u32;
+
+            if let Some(memo_bytes) = &output.memo_bytes {
+                sqlx::query(
+                    "INSERT INTO memos
+                    (account, height, tx, pool, vout, output, memo_text, memo_bytes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(new_id_account)
+                .bind(output.height)
+                .bind(new_id_tx)
+                .bind(output.pool)
+                .bind(output.vout as u32)
+                .bind(new_id_output) // Assuming output is linked to the note
+                .bind(&output.memo_text)
+                .bind(memo_bytes)
                 .execute(connection)
                 .await?;
             }
@@ -668,8 +743,11 @@ pub struct IOTransaction {
     pub height: u32,
     pub time: u32,
     pub details: bool,
+    pub tpe: u8,
+    pub value: i64,
     pub notes: Vec<IONote>,
     pub spends: Vec<IOSpend>,
+    pub outputs: Vec<IOOutput>,
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
@@ -700,6 +778,19 @@ pub struct IOSpend {
     pub account: u32,
     pub pool: u8,
     pub value: u64,
+}
+
+#[derive(Clone, Encode, Decode, Default, Debug)]
+pub struct IOOutput {
+    pub id_output: u32,
+    pub height: u32,
+    pub account: u32,
+    pub pool: u8,
+    pub value: u64,
+    pub address: String,
+    pub vout: u32,
+    pub memo_text: Option<String>,
+    pub memo_bytes: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]

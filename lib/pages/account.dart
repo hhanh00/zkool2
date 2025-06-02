@@ -507,13 +507,10 @@ List<Widget> showTxHistory(List<Tx> transactions) {
       itemCount: transactions.length,
       itemBuilder: (context, index) {
         final tx = transactions[index];
-        // encode tx.txid to hex string
-        String txId = txIdToString(tx.txid);
-
         final tile = ListTile(
           onTap: () => gotoTransaction(context, tx.id),
           leading: Text("${tx.height}"),
-          title: SelectableText(txId),
+          title: Text(getTransactionType(tx.tpe)),
           subtitle: Text(timeToString(tx.time)),
           trailing: Text(zatToString(BigInt.from(tx.value))),
         );
@@ -528,6 +525,26 @@ List<Widget> showTxHistory(List<Tx> transactions) {
       },
     ),
   ];
+}
+
+String getTransactionType(int? tpe) {
+  if (tpe == null) return "";
+  switch (tpe) {
+    case 0:
+      return "Shielded Self Transfer";
+    case 1:
+      return "\u2295 Received";
+    case 2:
+      return "\u2296 Spent";
+    case 4:
+      return "\u{1F513} Unshielding";
+    case 8:
+      return "\u{1F6E1} Shielding";
+    case 12:
+      return "Transparent Self Transfer";
+    default:
+      return "Unknown";
+  }
 }
 
 void gotoTransaction(BuildContext context, int idTx) async {

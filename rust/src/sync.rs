@@ -463,6 +463,11 @@ pub async fn trim_sync_data(connection: &SqlitePool, account: u32, height: u32) 
         .bind(account)
         .execute(&mut *db_tx)
         .await?;
+    sqlx::query("DELETE FROM outputs WHERE height > ? AND account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
     sqlx::query("DELETE FROM memos WHERE height > ? AND account = ?")
         .bind(height)
         .bind(account)

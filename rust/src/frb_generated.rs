@@ -3166,6 +3166,18 @@ impl SseDecode for Vec<crate::account::TxNote> {
     }
 }
 
+impl SseDecode for Vec<crate::account::TxOutput> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::account::TxOutput>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::pay::TxPlanIn> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3536,12 +3548,14 @@ impl SseDecode for crate::api::account::Tx {
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_value = <i64>::sse_decode(deserializer);
+        let mut var_tpe = <Option<u8>>::sse_decode(deserializer);
         return crate::api::account::Tx {
             id: var_id,
             txid: var_txid,
             height: var_height,
             time: var_time,
             value: var_value,
+            tpe: var_tpe,
         };
     }
 }
@@ -3556,6 +3570,7 @@ impl SseDecode for crate::account::TxAccount {
         let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_notes = <Vec<crate::account::TxNote>>::sse_decode(deserializer);
         let mut var_spends = <Vec<crate::account::TxSpend>>::sse_decode(deserializer);
+        let mut var_outputs = <Vec<crate::account::TxOutput>>::sse_decode(deserializer);
         let mut var_memos = <Vec<crate::account::TxMemo>>::sse_decode(deserializer);
         return crate::account::TxAccount {
             id: var_id,
@@ -3565,6 +3580,7 @@ impl SseDecode for crate::account::TxAccount {
             time: var_time,
             notes: var_notes,
             spends: var_spends,
+            outputs: var_outputs,
             memos: var_memos,
         };
     }
@@ -3573,11 +3589,13 @@ impl SseDecode for crate::account::TxAccount {
 impl SseDecode for crate::account::TxMemo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_note = <Option<u32>>::sse_decode(deserializer);
+        let mut var_output = <Option<u32>>::sse_decode(deserializer);
         let mut var_pool = <u8>::sse_decode(deserializer);
         let mut var_memo = <Option<String>>::sse_decode(deserializer);
         return crate::account::TxMemo {
-            id: var_id,
+            note: var_note,
+            output: var_output,
             pool: var_pool,
             memo: var_memo,
         };
@@ -3598,6 +3616,24 @@ impl SseDecode for crate::account::TxNote {
             height: var_height,
             value: var_value,
             locked: var_locked,
+        };
+    }
+}
+
+impl SseDecode for crate::account::TxOutput {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <u32>::sse_decode(deserializer);
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_value = <u64>::sse_decode(deserializer);
+        let mut var_address = <String>::sse_decode(deserializer);
+        return crate::account::TxOutput {
+            id: var_id,
+            pool: var_pool,
+            height: var_height,
+            value: var_value,
+            address: var_address,
         };
     }
 }
@@ -4275,6 +4311,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Tx {
             self.height.into_into_dart().into_dart(),
             self.time.into_into_dart().into_dart(),
             self.value.into_into_dart().into_dart(),
+            self.tpe.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4296,6 +4333,7 @@ impl flutter_rust_bridge::IntoDart for crate::account::TxAccount {
             self.time.into_into_dart().into_dart(),
             self.notes.into_into_dart().into_dart(),
             self.spends.into_into_dart().into_dart(),
+            self.outputs.into_into_dart().into_dart(),
             self.memos.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -4311,7 +4349,8 @@ impl flutter_rust_bridge::IntoIntoDart<crate::account::TxAccount> for crate::acc
 impl flutter_rust_bridge::IntoDart for crate::account::TxMemo {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
-            self.id.into_into_dart().into_dart(),
+            self.note.into_into_dart().into_dart(),
+            self.output.into_into_dart().into_dart(),
             self.pool.into_into_dart().into_dart(),
             self.memo.into_into_dart().into_dart(),
         ]
@@ -4340,6 +4379,25 @@ impl flutter_rust_bridge::IntoDart for crate::account::TxNote {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::account::TxNote {}
 impl flutter_rust_bridge::IntoIntoDart<crate::account::TxNote> for crate::account::TxNote {
     fn into_into_dart(self) -> crate::account::TxNote {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::account::TxOutput {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.pool.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.value.into_into_dart().into_dart(),
+            self.address.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::account::TxOutput {}
+impl flutter_rust_bridge::IntoIntoDart<crate::account::TxOutput> for crate::account::TxOutput {
+    fn into_into_dart(self) -> crate::account::TxOutput {
         self
     }
 }
@@ -4728,6 +4786,16 @@ impl SseEncode for Vec<crate::account::TxNote> {
     }
 }
 
+impl SseEncode for Vec<crate::account::TxOutput> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::account::TxOutput>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::pay::TxPlanIn> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -5021,6 +5089,7 @@ impl SseEncode for crate::api::account::Tx {
         <u32>::sse_encode(self.height, serializer);
         <u32>::sse_encode(self.time, serializer);
         <i64>::sse_encode(self.value, serializer);
+        <Option<u8>>::sse_encode(self.tpe, serializer);
     }
 }
 
@@ -5034,6 +5103,7 @@ impl SseEncode for crate::account::TxAccount {
         <u32>::sse_encode(self.time, serializer);
         <Vec<crate::account::TxNote>>::sse_encode(self.notes, serializer);
         <Vec<crate::account::TxSpend>>::sse_encode(self.spends, serializer);
+        <Vec<crate::account::TxOutput>>::sse_encode(self.outputs, serializer);
         <Vec<crate::account::TxMemo>>::sse_encode(self.memos, serializer);
     }
 }
@@ -5041,7 +5111,8 @@ impl SseEncode for crate::account::TxAccount {
 impl SseEncode for crate::account::TxMemo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u32>::sse_encode(self.id, serializer);
+        <Option<u32>>::sse_encode(self.note, serializer);
+        <Option<u32>>::sse_encode(self.output, serializer);
         <u8>::sse_encode(self.pool, serializer);
         <Option<String>>::sse_encode(self.memo, serializer);
     }
@@ -5055,6 +5126,17 @@ impl SseEncode for crate::account::TxNote {
         <u32>::sse_encode(self.height, serializer);
         <u64>::sse_encode(self.value, serializer);
         <bool>::sse_encode(self.locked, serializer);
+    }
+}
+
+impl SseEncode for crate::account::TxOutput {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.id, serializer);
+        <u8>::sse_encode(self.pool, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <u64>::sse_encode(self.value, serializer);
+        <String>::sse_encode(self.address, serializer);
     }
 }
 
