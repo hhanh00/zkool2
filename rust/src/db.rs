@@ -1,8 +1,11 @@
+use std::fs::File;
+
 use anyhow::{anyhow, Result};
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
-use sqlx::Row as _;
+use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{sqlite::SqliteRow, SqlitePool};
+use sqlx::{Connection as _, Row as _, SqliteConnection};
 use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
@@ -186,8 +189,8 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         t INTEGER NOT NULL,
         seed TEXT NOT NULL,
         birth_height INTEGER NOT NULL
-    )"
-)
+    )",
+    )
     .execute(connection)
     .await?;
 
@@ -918,5 +921,42 @@ pub async fn lock_note(connection: &SqlitePool, account: u32, id: u32, locked: b
         .bind(id)
         .execute(connection)
         .await?;
+    Ok(())
+}
+
+// #[frb]
+pub async fn change_db_password(
+    db_filepath: &str,
+    tmp_dir: &str,
+    old_password: &str,
+    new_password: &str,
+) -> Result<()> {
+    let mut options = SqliteConnectOptions::new().filename(db_filepath);
+    if !old_password.is_empty() {
+        options = options.pragma("key", old_password.to_string());
+    }
+
+    let tmp_db_filepath = format!("{}/__tmp.db", tmp_dir);
+    File::create(&tmp_db_filepath)?;
+
+    {
+        let mut connection = SqliteConnection::connect_with(&options).await?;
+        sqlx::query(&format!(
+            "ATTACH DATABASE '{}' AS new_db KEY '{}'",
+            &tmp_db_filepath, new_password
+        ))
+        .execute(&mut connection)
+        .await?;
+        sqlx::query("SELECT sqlcipher_export('new_db')")
+            .execute(&mut connection)
+            .await?;
+        sqlx::query("DETACH DATABASE new_db")
+            .execute(&mut connection)
+            .await?;
+    }
+
+    std::fs::remove_file(db_filepath)?;
+    std::fs::rename(tmp_db_filepath, db_filepath)?;
+
     Ok(())
 }
