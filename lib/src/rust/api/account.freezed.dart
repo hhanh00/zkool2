@@ -1620,6 +1620,7 @@ mixin _$Tx {
   int get height => throw _privateConstructorUsedError;
   int get time => throw _privateConstructorUsedError;
   int get value => throw _privateConstructorUsedError;
+  int? get tpe => throw _privateConstructorUsedError;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -1632,7 +1633,8 @@ abstract class $TxCopyWith<$Res> {
   factory $TxCopyWith(Tx value, $Res Function(Tx) then) =
       _$TxCopyWithImpl<$Res, Tx>;
   @useResult
-  $Res call({int id, Uint8List txid, int height, int time, int value});
+  $Res call(
+      {int id, Uint8List txid, int height, int time, int value, int? tpe});
 }
 
 /// @nodoc
@@ -1654,6 +1656,7 @@ class _$TxCopyWithImpl<$Res, $Val extends Tx> implements $TxCopyWith<$Res> {
     Object? height = null,
     Object? time = null,
     Object? value = null,
+    Object? tpe = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -1676,6 +1679,10 @@ class _$TxCopyWithImpl<$Res, $Val extends Tx> implements $TxCopyWith<$Res> {
           ? _value.value
           : value // ignore: cast_nullable_to_non_nullable
               as int,
+      tpe: freezed == tpe
+          ? _value.tpe
+          : tpe // ignore: cast_nullable_to_non_nullable
+              as int?,
     ) as $Val);
   }
 }
@@ -1686,7 +1693,8 @@ abstract class _$$TxImplCopyWith<$Res> implements $TxCopyWith<$Res> {
       __$$TxImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int id, Uint8List txid, int height, int time, int value});
+  $Res call(
+      {int id, Uint8List txid, int height, int time, int value, int? tpe});
 }
 
 /// @nodoc
@@ -1705,6 +1713,7 @@ class __$$TxImplCopyWithImpl<$Res> extends _$TxCopyWithImpl<$Res, _$TxImpl>
     Object? height = null,
     Object? time = null,
     Object? value = null,
+    Object? tpe = freezed,
   }) {
     return _then(_$TxImpl(
       id: null == id
@@ -1727,6 +1736,10 @@ class __$$TxImplCopyWithImpl<$Res> extends _$TxCopyWithImpl<$Res, _$TxImpl>
           ? _value.value
           : value // ignore: cast_nullable_to_non_nullable
               as int,
+      tpe: freezed == tpe
+          ? _value.tpe
+          : tpe // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -1739,7 +1752,8 @@ class _$TxImpl implements _Tx {
       required this.txid,
       required this.height,
       required this.time,
-      required this.value});
+      required this.value,
+      this.tpe});
 
   @override
   final int id;
@@ -1751,10 +1765,12 @@ class _$TxImpl implements _Tx {
   final int time;
   @override
   final int value;
+  @override
+  final int? tpe;
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe)';
   }
 
   @override
@@ -1766,12 +1782,13 @@ class _$TxImpl implements _Tx {
             const DeepCollectionEquality().equals(other.txid, txid) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
-            (identical(other.value, value) || other.value == value));
+            (identical(other.value, value) || other.value == value) &&
+            (identical(other.tpe, tpe) || other.tpe == tpe));
   }
 
   @override
   int get hashCode => Object.hash(runtimeType, id,
-      const DeepCollectionEquality().hash(txid), height, time, value);
+      const DeepCollectionEquality().hash(txid), height, time, value, tpe);
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -1788,7 +1805,8 @@ abstract class _Tx implements Tx {
       required final Uint8List txid,
       required final int height,
       required final int time,
-      required final int value}) = _$TxImpl;
+      required final int value,
+      final int? tpe}) = _$TxImpl;
 
   @override
   int get id;
@@ -1800,6 +1818,8 @@ abstract class _Tx implements Tx {
   int get time;
   @override
   int get value;
+  @override
+  int? get tpe;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
