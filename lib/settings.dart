@@ -1,8 +1,14 @@
+import 'dart:io';
+
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
@@ -28,6 +34,7 @@ class SettingsPage extends StatefulWidget {
 class SettingsPageState extends State<SettingsPage> with RouteAware {
   final formKey = GlobalKey<FormBuilderState>();
   String databaseName = AppStoreBase.instance.dbName;
+  late String currentDatabaseName = databaseName;
   String lwd = AppStoreBase.instance.lwd;
   String syncInterval = AppStoreBase.instance.syncInterval;
   String actionsPerSync = AppStoreBase.instance.actionsPerSync;
@@ -48,7 +55,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutSettings0", [databaseID, lwdID, actionsID, autosyncID, cancelID]);
+    tutorialHelper(context, "tutSettings0",
+        [databaseID, lwdID, actionsID, autosyncID, cancelID]);
   }
 
   @override
@@ -74,17 +82,29 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                Showcase(
-                    key: databaseID,
-                    description:
-                        "Change the database file. This requires a RESTART after",
-                    child: FormBuilderTextField(
-                      name: "database_name",
-                      decoration:
-                          const InputDecoration(labelText: "Database Name"),
-                      initialValue: databaseName,
-                      onChanged: onChangedDatabaseName,
-                    )),
+                Row(children: [
+                  Expanded(child: Showcase(
+                      key: databaseID,
+                      description:
+                          "Change the database file. This requires a RESTART after",
+                      child: FormBuilderTextField(
+                        name: "database_name",
+                        decoration:
+                            const InputDecoration(labelText: "Database Name"),
+                        initialValue: databaseName,
+                        onChanged: onChangedDatabaseName,
+                      ))),
+                  if (databaseName != currentDatabaseName) ...[
+                    IconButton(
+                        tooltip: "Delete Database",
+                        onPressed: onDeleteDatabase,
+                        icon: Icon(Icons.delete)),
+                    IconButton(
+                        tooltip: "Change Database Password",
+                        onPressed: onChangePassword,
+                        icon: Icon(Icons.lock_reset)),
+                  ]
+                ]),
                 Showcase(
                     key: lwdID,
                     description: "Lightwalletd server to connect to",
@@ -111,36 +131,39 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                 Gap(16),
                 Row(
                   children: [
-                    Expanded(child: Showcase(
-                        key: autosyncID,
-                        description:
-                            "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
-                        child: FormBuilderTextField(
-                          name: "autosync",
-                          decoration: const InputDecoration(
-                              labelText: "AutoSync Interval"),
-                          initialValue: syncInterval,
-                          onChanged: onChangedSyncInterval,
-                          validator: FormBuilderValidators.integer(),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                        ))),
-                        Showcase(
+                    Expanded(
+                        child: Showcase(
+                            key: autosyncID,
+                            description:
+                                "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
+                            child: FormBuilderTextField(
+                              name: "autosync",
+                              decoration: const InputDecoration(
+                                  labelText: "AutoSync Interval"),
+                              initialValue: syncInterval,
+                              onChanged: onChangedSyncInterval,
+                              validator: FormBuilderValidators.integer(),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                            ))),
+                    Showcase(
                         key: cancelID,
                         description:
                             "This will cancel the current sync and disable AutoSync",
                         child: IconButton(
-                          tooltip: "Cancel Sync",
-                          onPressed: onCancelSync, icon: Icon(Icons.cancel)))
+                            tooltip: "Cancel Sync",
+                            onPressed: onCancelSync,
+                            icon: Icon(Icons.cancel)))
                   ],
                 ),
                 Gap(16),
                 SelectableText(AppStoreBase.instance.dbFilepath,
                     style: t.bodySmall),
                 Gap(8),
-                if (AppStoreBase.instance.versionString != null) Text(AppStoreBase.instance.versionString!)
+                if (AppStoreBase.instance.versionString != null)
+                  Text(AppStoreBase.instance.versionString!)
               ],
             ),
           ),
@@ -150,8 +173,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   void onCancelSync() async {
-    final confirmed = await confirmDialog(context, title: "Cancel Sync",
-      message: "Do you want to cancel the current sync? AutoSync will be disabled too");
+    final confirmed = await confirmDialog(context,
+        title: "Cancel Sync",
+        message:
+            "Do you want to cancel the current sync? AutoSync will be disabled too");
     if (!confirmed) return;
     formKey.currentState!.fields["autosync"]!.didChange("0");
     await cancelSync();
@@ -200,4 +225,95 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       syncInterval = value;
     });
   }
+
+  void onDeleteDatabase() async {
+    final confirmed = await confirmDialog(context,
+        title: "Delete Database",
+        message:
+            "Do you really want to delete the database $databaseName? This will remove all your data and cannot be undone!");
+    if (!confirmed) return;
+    final dbDir = await getApplicationDocumentsDirectory();
+    final dbFilepath = '${dbDir.path}/$databaseName.db';
+    await File(dbFilepath).delete();
+    if (!mounted) return;
+    await showMessage(context, "Database $databaseName deleted");
+    setState(() {
+      formKey.currentState!.fields["database_name"]!.didChange(currentDatabaseName);
+      databaseName = currentDatabaseName;
+      AppStoreBase.instance.dbName = databaseName;
+    });
+  }
+
+  void onChangePassword() async {
+    final res = await showChangeDbPassword(context, databaseName: databaseName);
+    if (res == null) return;
+    final (oldPassword, newPassword) = res;
+    try {
+    await changeDbPassword(
+        dbFilepath: await getFullDatabasePath(databaseName),
+        tmpDir: (await getTemporaryDirectory()).path,
+        oldPassword: oldPassword,
+        newPassword: newPassword);
+    } on AnyhowException catch (e) {
+      if (!mounted) return;
+      await showException(context, "Failed to change database password: $e");
+      return;
+    }
+    if (!mounted) return;
+    await showMessage(context, "Database password changed successfully");
+  }
+}
+
+Future<(String, String)?> showChangeDbPassword(BuildContext context,
+    {required String databaseName}) async {
+  final oldPassword = TextEditingController();
+  final newPassword = TextEditingController();
+
+  bool confirmed = await AwesomeDialog(
+        context: context,
+        dialogType: DialogType.question,
+        animType: AnimType.rightSlide,
+        title: "Change Database Password",
+        body: FormBuilder(
+            child: Column(children: [
+          Text("Change $databaseName Password",
+              style: Theme.of(context).textTheme.headlineSmall),
+          Gap(8),
+          FormBuilderTextField(
+            name: 'old_password',
+            decoration: InputDecoration(labelText: 'Old Password'),
+            obscureText: true,
+            controller: oldPassword,
+          ),
+          Gap(8),
+          FormBuilderTextField(
+            name: 'new_password',
+            decoration: InputDecoration(labelText: 'New Password'),
+            obscureText: true,
+            controller: newPassword,
+          ),
+        ])),
+        btnCancelOnPress: () {},
+        btnOkOnPress: () {},
+        onDismissCallback: (type) {
+          final res = (() {
+            switch (type) {
+              case DismissType.btnOk:
+                return true;
+              default:
+                return false;
+            }
+          })();
+          GoRouter.of(context).pop(res);
+        },
+        dismissOnTouchOutside: false,
+        autoDismiss: false,
+      ).show() ??
+      false;
+  if (confirmed) {
+    final op = oldPassword.text;
+    final np = newPassword.text;
+    return (op, np);
+  }
+  return null;
 }
