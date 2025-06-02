@@ -248,5 +248,6 @@ class Tx with _$Tx {
     required int height,
     required int time,
     required PlatformInt64 value,
+    int? tpe,
   }) = _Tx;
 }
