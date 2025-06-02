@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.9.0...zkool-v3.0.0) (2025-06-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* decode and store outputs ([#262](https://github.com/hhanh00/zkool2/issues/262))
+
+### Features
+
+* decode and store outputs ([#262](https://github.com/hhanh00/zkool2/issues/262)) ([cf681e7](https://github.com/hhanh00/zkool2/commit/cf681e7ec2f69a161af2752ee184b0823c6985d5))
+* show transaction type ([cf681e7](https://github.com/hhanh00/zkool2/commit/cf681e7ec2f69a161af2752ee184b0823c6985d5))
+
 ## [2.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.8.6...zkool-v2.9.0) (2025-06-02)
 
 
