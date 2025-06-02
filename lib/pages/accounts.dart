@@ -6,7 +6,6 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
@@ -33,8 +32,7 @@ class AccountListPage extends StatelessWidget {
   Future<List<Account>> loadAccounts() async {
     if (!AppStoreBase.instance.loaded) {
       final dbName = AppStoreBase.instance.dbName;
-      final dbDir = await getApplicationDocumentsDirectory();
-      final dbFilepath = '${dbDir.path}/$dbName.db';
+      final dbFilepath = await getFullDatabasePath(dbName);
       logger.i('dbFilepath: $dbFilepath');
       AppStoreBase.instance.dbFilepath = dbFilepath;
 

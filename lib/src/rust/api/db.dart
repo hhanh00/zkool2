@@ -10,6 +10,17 @@ Future<void> openDatabase({required String dbFilepath, String? password}) =>
     RustLib.instance.api
         .crateApiDbOpenDatabase(dbFilepath: dbFilepath, password: password);
 
+Future<void> changeDbPassword(
+        {required String dbFilepath,
+        required String tmpDir,
+        required String oldPassword,
+        required String newPassword}) =>
+    RustLib.instance.api.crateApiDbChangeDbPassword(
+        dbFilepath: dbFilepath,
+        tmpDir: tmpDir,
+        oldPassword: oldPassword,
+        newPassword: newPassword);
+
 Future<String?> getProp({required String key}) =>
     RustLib.instance.api.crateApiDbGetProp(key: key);
 
