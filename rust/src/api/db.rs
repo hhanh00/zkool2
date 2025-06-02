@@ -15,6 +15,11 @@ pub async fn open_database(db_filepath: &str, password: Option<String>) -> Resul
 }
 
 #[frb]
+pub async fn change_db_password(db_filepath: &str, tmp_dir: &str, old_password: &str, new_password: &str) -> Result<()> {
+    crate::db::change_db_password(db_filepath, tmp_dir, old_password, new_password).await
+}
+
+#[frb]
 pub async fn get_prop(key: &str) -> Result<Option<String>> {
     let coin = get_coin!();
     crate::db::get_prop(coin.get_pool(), key).await

@@ -190,7 +190,6 @@ pub async fn plan_transaction(
     // choose what pool to use for the inputs.
     // This is handled by the function fill_single_receivers
     //
-    let n_recipients = recipient_states.len();
     let (mut single, mut double) = recipient_states
         .into_iter()
         .partition::<Vec<_>, _>(|r| r.pool_mask != PoolMask(6));
