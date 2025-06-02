@@ -78,6 +78,14 @@ class TxViewState extends State<TxView> {
                 title: Text("Value"), subtitle: Text(zatToString(n.value))),
             Divider()
           ]),
+      if (txd.outputs.isNotEmpty) Text("Outputs", style: t.titleSmall),
+      ...txd.outputs.expand((n) => [
+            ListTile(title: Text("Pool"), subtitle: Text(poolToString(n.pool))),
+            ListTile(title: Text("Address"), subtitle: Text(n.address)),
+            ListTile(
+                title: Text("Value"), subtitle: Text(zatToString(n.value))),
+            Divider()
+          ]),
       if (txd.memos.isNotEmpty) Text("Memos", style: t.titleSmall),
       ...txd.memos.expand((m) => [
             ListTile(title: Text("Pool"), subtitle: Text(poolToString(m.pool))),

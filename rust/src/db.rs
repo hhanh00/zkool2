@@ -148,6 +148,8 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         account INTEGER NOT NULL,
         time INTEGER,
         details BOOL NOT NULL DEFAULT FALSE,
+        tpe INTEGER,
+        value INTEGER NOT NULL DEFAULT 0,
         UNIQUE (account, txid))",
     )
     .execute(connection)
@@ -166,6 +168,19 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
     .await?;
 
     sqlx::query(
+        "CREATE TABLE IF NOT EXISTS outputs (
+        id_output INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        tx INTEGER NOT NULL,
+        pool INTEGER NOT NULL,
+        vout INTEGER NOT NULL,
+        value INTEGER NOT NULL,
+        address TEXT NOT NULL,
+        UNIQUE (tx, pool, vout))")
+        .execute(connection).await?;
+
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS memos(
         id_memo INTEGER PRIMARY KEY,
         account INTEGER NOT NULL,
@@ -174,6 +189,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         pool INTEGER NOT NULL,
         vout INTEGER NOT NULL,
         note INTEGER,
+        output INTEGER,
         memo_text TEXT,
         memo_bytes BLOB NOT NULL,
         UNIQUE (tx, pool, vout))",
@@ -694,6 +710,10 @@ pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()>
         .execute(&mut *tx)
         .await?;
 
+    sqlx::query("DELETE FROM outputs WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM memos WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
@@ -814,11 +834,7 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
     let transactions = sqlx::query(
-        "WITH v AS (WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
-            SELECT tx, SUM(value) AS value FROM n
-            GROUP BY tx)
-            SELECT id_tx, txid, height, time, v.value FROM transactions t
-            JOIN v ON t.id_tx = v.tx
+        "SELECT id_tx, txid, height, time, value, tpe FROM transactions t
             WHERE account = ?
             ORDER BY height DESC",
     )
@@ -829,12 +845,14 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
         let height: u32 = row.get(2);
         let time: u32 = row.get(3);
         let value: i64 = row.get(4);
+        let tpe: Option<u8> = row.get(5);
         Tx {
             id,
             txid,
             height,
             time,
             value,
+            tpe,
         }
     })
     .fetch_all(connection)

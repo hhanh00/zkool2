@@ -481,6 +481,29 @@ pub async fn get_tx_details(
     .fetch_all(connection)
     .await?;
 
+    let outputs = sqlx::query(
+        "SELECT id_output, pool, height, value, address FROM outputs
+        WHERE account = ? AND tx = ?",
+    )
+    .bind(account)
+    .bind(tx.id)
+    .map(|row: SqliteRow| {
+        let id_output: u32 = row.get(0);
+        let pool: u8 = row.get(1);
+        let height: u32 = row.get(2);
+        let value: u64 = row.get(3);
+        let address: String = row.get(4);
+        TxOutput {
+            id: id_output,
+            pool,
+            height,
+            value,
+            address,
+        }
+    })
+    .fetch_all(connection)
+    .await?;
+
     let spends = sqlx::query(
         "SELECT id_note, pool, height, value FROM spends
         WHERE account = ? AND tx = ?",
@@ -503,16 +526,17 @@ pub async fn get_tx_details(
     .await?;
 
     let memos = sqlx::query(
-        "SELECT note, pool, memo_text FROM memos
+        "SELECT note, output, pool, memo_text FROM memos
         WHERE account = ? AND tx = ?",
     )
     .bind(account)
     .bind(tx.id)
     .map(|row: SqliteRow| {
-        let id: u32 = row.get(0);
-        let pool: u8 = row.get(1);
-        let memo: Option<String> = row.get(2);
-        TxMemo { id, pool, memo }
+        let note: Option<u32> = row.get(0);
+        let output: Option<u32> = row.get(1);
+        let pool: u8 = row.get(2);
+        let memo: Option<String> = row.get(3);
+        TxMemo { note, output, pool, memo }
     })
     .fetch_all(connection)
     .await?;
@@ -520,6 +544,7 @@ pub async fn get_tx_details(
     tx.notes = notes;
     tx.spends = spends;
     tx.memos = memos;
+    tx.outputs = outputs;
 
     Ok(tx)
 }
@@ -551,6 +576,7 @@ pub struct TxAccount {
     pub time: u32,
     pub notes: Vec<TxNote>,
     pub spends: Vec<TxSpend>,
+    pub outputs: Vec<TxOutput>,
     pub memos: Vec<TxMemo>,
 }
 
@@ -572,8 +598,18 @@ pub struct TxSpend {
 }
 
 #[derive(Default, Debug)]
-pub struct TxMemo {
+pub struct TxOutput {
     pub id: u32,
+    pub pool: u8,
+    pub height: u32,
+    pub value: u64,
+    pub address: String,
+}
+
+#[derive(Default, Debug)]
+pub struct TxMemo {
+    pub note: Option<u32>,
+    pub output: Option<u32>,
     pub pool: u8,
     pub memo: Option<String>,
 }
