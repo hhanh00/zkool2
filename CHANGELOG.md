@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.0...zkool-v3.0.1) (2025-06-03)
+
+
+### Bug Fixes
+
+* sync error reporting ([#264](https://github.com/hhanh00/zkool2/issues/264)) ([6e00299](https://github.com/hhanh00/zkool2/commit/6e0029911f31e5d9caadf085bfe264a54fd265b3))
+
 ## [3.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v2.9.0...zkool-v3.0.0) (2025-06-02)
 
 
