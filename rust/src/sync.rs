@@ -5,7 +5,7 @@ use crate::{
     api::sync::{transparent_sync, SyncProgress},
     db::{select_account_transparent, store_account_transparent_addr},
     lwd::{BlockId, BlockRange, CompactBlock, TransparentAddressBlockFilter, TreeState},
-    warp::{legacy::CommitmentTreeFrontier, sync::warp_sync, Witness},
+    warp::{legacy::CommitmentTreeFrontier, sync::{warp_sync, SyncError}, Witness},
     Client,
 };
 use anyhow::Result;
@@ -75,6 +75,7 @@ pub enum WarpSyncMessage {
     Checkpoint(Vec<u32>, u8, u32),
     Commit,
     Spend(UTXO),
+    Error(SyncError),
 }
 
 #[frb(dart_metadata = ("freezed"))]
@@ -254,6 +255,7 @@ pub async fn shielded_sync(
                         Ok(_) => {}
                         Err(e) => {
                             info!("ERROR HANDLING MESSAGE: {:?}", e);
+                            return Err(e);
                         }
                     }
                 }
@@ -267,7 +269,8 @@ pub async fn shielded_sync(
         let network = network.clone();
         let pool = pool.clone();
         tokio::spawn(async move {
-            warp_sync(
+            info!("Start sync");
+            if let Err(e) = warp_sync(
                 &network,
                 &pool,
                 start,
@@ -280,7 +283,12 @@ pub async fn shielded_sync(
                 tx_messages.clone(),
                 rx_cancel,
             )
-            .await
+            .await {
+                tracing::error!("Error during warp sync: {:?}", e);
+                let _ = tx_messages.send(WarpSyncMessage::Error(e)).await;
+            }
+
+            info!("Sync finished");
         });
 
         db_writer_task
@@ -409,6 +417,9 @@ async fn handle_message(
         }
         WarpSyncMessage::Commit => {
             // handled in the caller
+        }
+        WarpSyncMessage::Error(e) => {
+            return Err(e.into());
         }
     }
 

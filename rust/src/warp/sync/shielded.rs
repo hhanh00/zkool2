@@ -134,7 +134,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             })
             .fetch(connection);
             while let Some(utxo) = nfs.try_next().await? {
-                info!("UTXO: {:?}", utxo);
                 let mut key = account.to_be_bytes().to_vec();
                 key.extend_from_slice(&utxo.nullifier);
                 utxos.insert(key, utxo);
