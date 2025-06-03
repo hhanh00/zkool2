@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
 use anyhow::Result;
 use shielded::Synchronizer;
@@ -114,10 +114,21 @@ pub async fn warp_sync(
         .await
         .unwrap();
 
-    info!("Start sync");
+    let mut interval = tokio::time::interval(Duration::from_secs(60));
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut current_height = start_height;
+    let mut prev_current_height = 0;
 
     loop {
         tokio::select! {
+            _ = interval.tick() => {
+                info!("Syncing at height {}, {c} actions in buffer", current_height);
+                if prev_current_height == current_height {
+                    info!("Connection stalled. Aborting...");
+                    break;
+                }
+                prev_current_height = current_height;
+            }
             _ = rx_cancel.recv() => {
                 info!("Sync cancelled");
                 return Err(SyncError::Cancelled);
@@ -126,6 +137,7 @@ pub async fn warp_sync(
                 if let Some(block) = m? {
                     // info!("Syncing block {}: {c}", block.height);
                     let block_prev_hash = block.prev_hash.clone();
+                    current_height = block.height as u32;
                     if let Some(prev_hash) = prev_hash {
                         if prev_hash != block_prev_hash {
                             // we need to rewind the database to the previous checkpoint
@@ -133,6 +145,7 @@ pub async fn warp_sync(
                             for (account, _) in accounts.iter() {
                                 crate::sync::rewind_sync(connection, *account, start_height - 1).await?;
                             }
+                            info!("Reorganization detected at block {}", block.height);
                             return Err(SyncError::Reorg(block.height as u32));
                         }
                     }
@@ -162,6 +175,7 @@ pub async fn warp_sync(
                     }
                 }
                 else {
+                    info!("no more blocks to process");
                     break;
                 }
             }
@@ -170,7 +184,7 @@ pub async fn warp_sync(
     if !bs.is_empty() {
         flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
     }
-    info!("Sync finished");
 
+    info!("warp_sync completed");
     Ok(())
 }
