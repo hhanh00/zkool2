@@ -88,7 +88,6 @@ pub async fn run_mempool(
                         let tx = Transaction::read(&*txdata, consensus_branch_id)?;
                         let txid = tx.txid();
                         let tx_hash = txid.to_string();
-                        info!("Processing mempool transaction {}", tx_hash);
 
                         let tx_data = tx.into_data();
 
@@ -115,7 +114,6 @@ pub async fn run_mempool(
                         let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, txdata.len() as u32));
                     }
                     Ok(None) => {
-                        info!("No more transactions in mempool stream");
                         break;
                     }
                     Err(e) => {

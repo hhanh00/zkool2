@@ -10,7 +10,6 @@ async fn run_mempool(
     height: u32,
     cancel_token: CancellationToken,
 ) -> Result<()> {
-    tracing::info!("Starting mempool stream at height {}", height);
     let c = get_coin!();
     let connection = c.get_pool();
     let r = crate::mempool::run_mempool(
@@ -23,9 +22,7 @@ async fn run_mempool(
     )
     .await;
     match r {
-        Ok(_) => {
-            tracing::info!("Mempool stream finished successfully");
-        }
+        Ok(_) => {}
         Err(e) => {
             tracing::error!("Error running mempool: {}", e);
             return Err(e);

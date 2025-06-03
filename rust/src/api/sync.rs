@@ -163,6 +163,7 @@ pub async fn synchronize(
                 account_heights.insert(*account, end_height);
                 crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
             }
+            info!("Sync completed for height range {}-{}", start_height, end_height);
         }
 
         Ok::<_, anyhow::Error>(())

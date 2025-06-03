@@ -125,6 +125,7 @@ abstract class AppStoreBase with Store {
 
     final completer = Completer<void>();
     try {
+      logger.i("Starting Synchronization");
       showSnackbar("Starting Synchronization");
       syncInProgress = true;
       retrySyncTimer?.cancel();
@@ -157,6 +158,7 @@ abstract class AppStoreBase with Store {
         syncProgressSubscription = null;
         Future(loadAccounts);
         showSnackbar("Synchronization Completed");
+        logger.i("Synchronization Completed");
         completer.complete();
       });
     } on AnyhowException catch (e) {
@@ -183,8 +185,6 @@ abstract class AppStoreBase with Store {
       retryCount = 0;
     });
   }
-
-  Timer? autosyncTimer;
 
   void autoSync({bool now = false}) async {
     final interval = int.tryParse(syncInterval) ?? 0;

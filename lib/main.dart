@@ -6,7 +6,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 
-var logger = Logger();
+var logger = Logger(filter: ProductionFilter());
 
 const String appName = "zkool";
 
