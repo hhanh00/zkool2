@@ -423,12 +423,13 @@ async fn get_transparent_keys(
 }
 
 pub async fn reset_sync(connection: &SqlitePool, account: u32) -> Result<()> {
+    let mut connection = connection.acquire().await?;
     let birth_height = sqlx::query("SELECT birth FROM accounts WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| row.get::<u32, _>(0))
-        .fetch_one(connection)
+        .fetch_one(&mut *connection)
         .await?;
-    trim_sync_data(connection, account, birth_height - 1).await
+    trim_sync_data(&mut connection, account, birth_height - 1).await
 }
 
 pub async fn get_tx_details(
