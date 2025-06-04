@@ -80,17 +80,108 @@ pub async fn warp_sync(
         return Ok(());
     }
 
-    let mut bs = vec![];
-    let mut c = 0; // count of outputs & actions
+    let mut prev_hash = sqlx::query("SELECT hash FROM headers WHERE height = ?")
+        .bind(start_height - 1)
+        .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
+        .fetch_optional(connection)
+        .await
+        .unwrap();
 
-    async fn flush(
-        c: &mut usize,
-        bs: &mut Vec<CompactBlock>,
-        sap_dec: &mut SaplingSync,
-        orch_dec: &mut OrchardSync,
-        tx_decrypted: &Sender<WarpSyncMessage>,
-    ) -> Result<(), SyncError> {
-        info!("Processing {} blocks, {} outputs/actions", bs.len(), c);
+    // Having a separate task for downloading blocks allows us to
+    // parallelize the decryption of blocks with the downloading of new blocks.
+    let tx_decrypted2 = tx_decrypted.clone();
+    let account_ids = accounts.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+    let (tx_blocks, mut rx_blocks) = tokio::sync::mpsc::channel::<Vec<CompactBlock>>(2);
+    tokio::spawn(async move {
+        let mut bs = vec![];
+
+        let mut interval = tokio::time::interval(Duration::from_secs(60));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut current_height = start_height;
+        let mut prev_current_height = 0;
+
+        let mut c = 0; // count of outputs & actions
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    info!("Syncing at height {}", current_height);
+                    if prev_current_height == current_height {
+                        info!("Connection stalled. Aborting...");
+                        break;
+                    }
+                    prev_current_height = current_height;
+                }
+                _ = rx_cancel.recv() => {
+                    info!("Sync cancelled");
+                    return Err(SyncError::Cancelled);
+                }
+                m = blocks.message() => {
+                    if let Some(block) = m? {
+                        // info!("Syncing block {}: {c}", block.height);
+                        let block_prev_hash = block.prev_hash.clone();
+                        current_height = block.height as u32;
+                        if let Some(prev_hash) = prev_hash {
+                            if prev_hash != block_prev_hash {
+                                // This block does not continue the chain from the previous block we have
+                                // Since we think the server has a more recent chain, we rewind
+                                // to a point before the latest block we have, thus discarding the
+                                // fragment of our chain from the previous checkpoint
+                                // If that checkpoint is also no longer on the main chain,
+                                // the server will send us block that will not match again and we repeat the process
+                                // of trimming our chain little by little
+                                tx_decrypted2.send(WarpSyncMessage::Rewind(account_ids, current_height - 1)).await.unwrap();
+                                info!("Reorganization detected at block {}", block.height);
+                                return Err(SyncError::Reorg(block.height as u32));
+                            }
+                        }
+                        prev_hash = Some(block.hash.clone());
+
+                        let bheight = block.height as u32;
+                        if heights_without_time.remove(&bheight) {
+                            let bh = BlockHeader {
+                                height: bheight,
+                                hash: block.hash.clone(),
+                                time: block.time,
+                            };
+                            let _ = tx_decrypted2.send(WarpSyncMessage::BlockHeader(bh)).await;
+                        }
+
+                        for vtx in block.vtx.iter() {
+                            c += vtx.outputs.len();
+                            c += vtx.actions.len();
+                        }
+
+                        bs.push(block);
+
+                        if c >= actions_per_sync as usize {
+                            if !bs.is_empty() {
+                                tx_blocks.send(bs).await.unwrap();
+                                bs = vec![];
+                                c = 0;
+                            }
+                        }
+                    }
+                    else {
+                        info!("no more blocks to process");
+                        break;
+                    }
+                }
+            }
+        }
+        if !bs.is_empty() {
+            tx_blocks.send(bs).await.unwrap();
+        }
+
+        info!("warp_sync completed");
+        Ok(())
+    });
+
+    while let Some(bs) = rx_blocks.recv().await {
+        if bs.is_empty() {
+            continue;
+        }
+
+        info!("Processing {} blocks", bs.len());
         sap_dec.add(&bs).await?;
         orch_dec.add(&bs).await?;
         let lcb = bs.last().unwrap();
@@ -101,90 +192,7 @@ pub async fn warp_sync(
         };
         let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
         let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
-        bs.clear();
-        *c = 0;
-
-        Ok(())
     }
 
-    let mut prev_hash = sqlx::query("SELECT hash FROM headers WHERE height = ?")
-        .bind(start_height - 1)
-        .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
-        .fetch_optional(connection)
-        .await
-        .unwrap();
-
-    let mut interval = tokio::time::interval(Duration::from_secs(60));
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let mut current_height = start_height;
-    let mut prev_current_height = 0;
-
-    loop {
-        tokio::select! {
-            _ = interval.tick() => {
-                info!("Syncing at height {}, {c} actions in buffer", current_height);
-                if prev_current_height == current_height {
-                    info!("Connection stalled. Aborting...");
-                    break;
-                }
-                prev_current_height = current_height;
-            }
-            _ = rx_cancel.recv() => {
-                info!("Sync cancelled");
-                return Err(SyncError::Cancelled);
-            }
-            m = blocks.message() => {
-                if let Some(block) = m? {
-                    // info!("Syncing block {}: {c}", block.height);
-                    let block_prev_hash = block.prev_hash.clone();
-                    current_height = block.height as u32;
-                    if let Some(prev_hash) = prev_hash {
-                        if prev_hash != block_prev_hash {
-                            // we need to rewind the database to the previous checkpoint
-                            // and start syncing from there next time we get synchronize
-                            for (account, _) in accounts.iter() {
-                                crate::sync::rewind_sync(connection, *account, start_height - 1).await?;
-                            }
-                            info!("Reorganization detected at block {}", block.height);
-                            return Err(SyncError::Reorg(block.height as u32));
-                        }
-                    }
-                    prev_hash = Some(block.hash.clone());
-
-                    let bheight = block.height as u32;
-                    if heights_without_time.remove(&bheight) {
-                        let bh = BlockHeader {
-                            height: bheight,
-                            hash: block.hash.clone(),
-                            time: block.time,
-                        };
-                        let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
-                    }
-
-                    for vtx in block.vtx.iter() {
-                        c += vtx.outputs.len();
-                        c += vtx.actions.len();
-                    }
-
-                    bs.push(block);
-
-                    if c >= actions_per_sync as usize {
-                        if !bs.is_empty() {
-                            flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
-                        }
-                    }
-                }
-                else {
-                    info!("no more blocks to process");
-                    break;
-                }
-            }
-        }
-    }
-    if !bs.is_empty() {
-        flush(&mut c, &mut bs, &mut sap_dec, &mut orch_dec, &tx_decrypted).await?;
-    }
-
-    info!("warp_sync completed");
     Ok(())
 }
