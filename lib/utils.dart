@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,7 +33,9 @@ BigInt stringToZat(String s) {
 String timeToString(int time) {
   if (time == 0) return "N/A";
   final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
-  return timeago.format(date);
+  final dateString = DateFormat('yyyy-MM-dd').format(date);
+  final timeAgoStr = timeago.format(date);
+  return '$dateString ($timeAgoStr)';
 }
 
 String exactTimeToString(int time) {
