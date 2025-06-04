@@ -42,6 +42,7 @@ dependencies:
 
   fixed: ^5.3.3
   timeago: ^3.7.0
+  intl: ^0.20.2
 
   mobile_scanner: ^6.0.7
   qr_flutter: ^4.1.0
