@@ -11,7 +11,7 @@ use crate::{
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::{sqlite::SqliteRow, Sqlite};
+use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection};
 use sqlx::{Row, SqlitePool};
 use tokio::sync::{
     broadcast,
@@ -75,6 +75,7 @@ pub enum WarpSyncMessage {
     Checkpoint(Vec<u32>, u8, u32),
     Commit,
     Spend(UTXO),
+    Rewind(Vec<u32>, u32),
     Error(SyncError),
 }
 
@@ -418,6 +419,12 @@ async fn handle_message(
         WarpSyncMessage::Commit => {
             // handled in the caller
         }
+        WarpSyncMessage::Rewind(accounts, height) => {
+            info!("Rewinding to height: {}", height);
+            for account in accounts {
+                rewind_sync(&mut **db_tx, account, height).await?;
+            }
+        }
         WarpSyncMessage::Error(e) => {
             return Err(e.into());
         }
@@ -427,6 +434,7 @@ async fn handle_message(
 }
 
 pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]) -> Result<()> {
+    let mut connection = connection.acquire().await?;
     for account in accounts {
         let account_heights = sqlx::query(
             "SELECT account, MIN(height) FROM sync_heights
@@ -438,11 +446,11 @@ pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]
             let height: u32 = row.get(1);
             (account, height)
         })
-        .fetch_all(connection)
+        .fetch_all(&mut *connection)
         .await?;
 
         for (account, height) in account_heights {
-            trim_sync_data(connection, account, height).await?;
+            trim_sync_data(&mut *connection, account, height).await?;
         }
     }
 
@@ -452,7 +460,7 @@ pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]
 // remove synchronization data (notes, spends, transactions, witnesses) after the given height
 // keep the data at the given height
 // do not remove headers because they are used by multiple accounts
-pub async fn trim_sync_data(connection: &SqlitePool, account: u32, height: u32) -> Result<()> {
+pub async fn trim_sync_data(connection: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
     let mut db_tx = connection.begin().await?;
     sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
         .bind(height)
@@ -496,7 +504,7 @@ pub async fn trim_sync_data(connection: &SqlitePool, account: u32, height: u32) 
 
 // for each account, find the latest checkpoint before the given height
 // and trim the synchronization data to that height
-pub async fn rewind_sync(connection: &SqlitePool, account: u32, height: u32) -> Result<()> {
+pub async fn rewind_sync(connection: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
     let prev_height =
         sqlx::query("SELECT MAX(height) FROM witnesses WHERE height < ? AND account = ?")
             .bind(height)
@@ -505,11 +513,11 @@ pub async fn rewind_sync(connection: &SqlitePool, account: u32, height: u32) -> 
                 let height: Option<u32> = row.get(0);
                 height
             })
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
 
     if let Some(prev_height) = prev_height {
-        trim_sync_data(connection, account, prev_height).await?;
+        trim_sync_data(&mut *connection, account, prev_height).await?;
     }
 
     // then trim the headers because there are no accounts using them
