@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.2](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.1...zkool-v3.0.2) (2025-06-04)
+
+
+### Bug Fixes
+
+* parallel/concurrent donwload & trial decryption ([#266](https://github.com/hhanh00/zkool2/issues/266)) ([2102e16](https://github.com/hhanh00/zkool2/commit/2102e16fa71693337f90c2fc3d748c9802393182))
+
 ## [3.0.1](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.0...zkool-v3.0.1) (2025-06-03)
 
 
