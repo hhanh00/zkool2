@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.3](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.2...zkool-v3.0.3) (2025-06-04)
+
+
+### Bug Fixes
+
+* show date in YYYY-MM-DD too in tx and memo lists ([#268](https://github.com/hhanh00/zkool2/issues/268)) ([390995b](https://github.com/hhanh00/zkool2/commit/390995b4ecc6d53f30bbfde01de5e259375a8f38))
+
 ## [3.0.2](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.1...zkool-v3.0.2) (2025-06-04)
 
 
