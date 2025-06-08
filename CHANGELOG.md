@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.0.0...zkool-v4.0.1) (2025-06-08)
+
+
+### Bug Fixes
+
+* import/export of fee column ([#272](https://github.com/hhanh00/zkool2/issues/272)) ([0cea993](https://github.com/hhanh00/zkool2/commit/0cea993619ed4896a1c59edf03b801bf61708326))
+
 ## [4.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.3...zkool-v4.0.0) (2025-06-08)
 
 
