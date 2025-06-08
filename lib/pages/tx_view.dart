@@ -49,49 +49,49 @@ class TxViewState extends State<TxView> {
     return [
       ListTile(
           title: Text("Transaction ID"),
-          subtitle: Text(txIdToString(txd.txid))),
+          subtitle: SelectableText(txIdToString(txd.txid))),
       ListTile(
-          title: Text("Block Height"), subtitle: Text(txd.height.toString())),
+          title: Text("Block Height"), subtitle: SelectableText(txd.height.toString())),
       ListTile(
-          title: Text("Timestamp"), subtitle: Text(exactTimeToString(txd.time))),
+          title: Text("Timestamp"), subtitle: SelectableText(exactTimeToString(txd.time))),
       ListTile(
           title: Text("Amount Spent"),
-          subtitle: Text(zatToString(amountSpent))),
+          subtitle: SelectableText(zatToString(amountSpent))),
       ListTile(
           title: Text("Amount Received"),
-          subtitle: Text(zatToString(amountReceived))),
+          subtitle: SelectableText(zatToString(amountReceived))),
       ListTile(
           title: Text("Amount Transacted"),
-          subtitle: Text(zatToString(amountReceived - amountSpent))),
+          subtitle: SelectableText(zatToString(amountReceived - amountSpent))),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand((n) => [
-            ListTile(title: Text("Pool"), subtitle: Text(poolToString(n.pool))),
+            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(n.pool))),
             ListTile(
-                title: Text("Value"), subtitle: Text(zatToString(n.value))),
+                title: Text("Value"), subtitle: SelectableText(zatToString(n.value))),
             Divider(),
           ]),
       if (txd.notes.isNotEmpty) Text("Received Notes", style: t.titleSmall),
       ...txd.notes.expand((n) => [
-            ListTile(title: Text("Pool"), subtitle: Text(poolToString(n.pool))),
+            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(n.pool))),
             ListTile(
-                title: Text("Value"), subtitle: Text(zatToString(n.value))),
+                title: Text("Value"), subtitle: SelectableText(zatToString(n.value))),
             Divider()
           ]),
       if (txd.outputs.isNotEmpty) Text("Outputs", style: t.titleSmall),
       ...txd.outputs.expand((n) => [
-            ListTile(title: Text("Pool"), subtitle: Text(poolToString(n.pool))),
-            ListTile(title: Text("Address"), subtitle: Text(n.address)),
+            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(n.pool))),
+            ListTile(title: Text("Address"), subtitle: SelectableText(n.address)),
             ListTile(
-                title: Text("Value"), subtitle: Text(zatToString(n.value))),
+                title: Text("Value"), subtitle: SelectableText(zatToString(n.value))),
             Divider()
           ]),
       if (txd.memos.isNotEmpty) Text("Memos", style: t.titleSmall),
       ...txd.memos.expand((m) => [
-            ListTile(title: Text("Pool"), subtitle: Text(poolToString(m.pool))),
+            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(m.pool))),
             ListTile(
                 title: Text("Memo"),
-                subtitle: Text(m.memo ?? "<Binary Content>")),
+                subtitle: SelectableText(m.memo ?? "<Binary Content>")),
             Divider()
           ]),
     ];
