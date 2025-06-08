@@ -150,6 +150,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         details BOOL NOT NULL DEFAULT FALSE,
         tpe INTEGER,
         value INTEGER NOT NULL DEFAULT 0,
+        fee INTEGER,
         UNIQUE (account, txid))",
     )
     .execute(connection)
