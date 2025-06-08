@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.3...zkool-v4.0.0) (2025-06-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* add fee column to transactions table ([#270](https://github.com/hhanh00/zkool2/issues/270))
+
+### Features
+
+* add fee column to transactions table ([#270](https://github.com/hhanh00/zkool2/issues/270)) ([b2aae79](https://github.com/hhanh00/zkool2/commit/b2aae7988750ce1856a0b3c8ca3f8d6592383344))
+
+
+### Bug Fixes
+
+* incorrect labelling of tx in certain cases ([b2aae79](https://github.com/hhanh00/zkool2/commit/b2aae7988750ce1856a0b3c8ca3f8d6592383344))
+* make values of the tx details selectable ([b2aae79](https://github.com/hhanh00/zkool2/commit/b2aae7988750ce1856a0b3c8ca3f8d6592383344))
+
 ## [3.0.3](https://github.com/hhanh00/zkool2/compare/zkool-v3.0.2...zkool-v3.0.3) (2025-06-04)
 
 
