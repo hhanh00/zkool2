@@ -192,7 +192,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
     info!("Exporting transactions");
     // Get the transactions for the given account
     let mut transactions = sqlx::query(
-        "SELECT id_tx, txid, height, time, details, tpe, value FROM transactions WHERE account = ?",
+        "SELECT id_tx, txid, height, time, details, tpe, value, fee FROM transactions WHERE account = ?",
     )
     .bind(account)
     .map(|row: SqliteRow| {
@@ -203,6 +203,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
         let details: bool = row.get(4);
         let tpe: u8 = row.get(5);
         let value: i64 = row.get(6);
+        let fee: u64 = row.get(7);
 
         IOTransaction {
             id_tx,
@@ -212,6 +213,7 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
             details,
             tpe,
             value,
+            fee,
             ..Default::default()
         }
     })
@@ -491,7 +493,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
     for transaction in io_account.transactions.iter() {
         let r = sqlx::query(
             "INSERT INTO transactions
-            (account, txid, height, time, details, tpe, value) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (account, txid, height, time, details, tpe, value, fee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(&transaction.txid)
@@ -500,6 +502,7 @@ pub async fn import_account(connection: &SqlitePool, data: &[u8]) -> Result<()> 
         .bind(transaction.details)
         .bind(transaction.tpe)
         .bind(transaction.value)
+        .bind(transaction.fee as i64)
         .execute(connection)
         .await?;
         let new_id_tx = r.last_insert_rowid() as u32;
@@ -745,6 +748,7 @@ pub struct IOTransaction {
     pub details: bool,
     pub tpe: u8,
     pub value: i64,
+    pub fee: u64,
     pub notes: Vec<IONote>,
     pub spends: Vec<IOSpend>,
     pub outputs: Vec<IOOutput>,
