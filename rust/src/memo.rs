@@ -6,7 +6,9 @@ use tonic::Request;
 use tracing::info;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
-use zcash_primitives::transaction::{components::sapling::zip212_enforcement, fees::transparent::OutputView, Transaction};
+use zcash_primitives::transaction::{
+    components::sapling::zip212_enforcement, fees::transparent::OutputView, Transaction,
+};
 use zcash_protocol::{
     consensus::{BlockHeight, BranchId, Network},
     memo::Memo,
@@ -15,6 +17,7 @@ use zcash_protocol::{
 use crate::{
     account::{get_orchard_vk, get_sapling_vk},
     lwd::TxFilter,
+    pay::fee::FeeManager,
     Client,
 };
 
@@ -51,41 +54,37 @@ pub async fn fetch_tx_details(
 }
 
 async fn summarize_tx(connection: &SqlitePool, tx: u32) -> Result<(u8, i64)> {
-    let value = sqlx::query(
+    let (value, fee) = sqlx::query(
         "WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
-        SELECT SUM(value) FROM n WHERE n.tx = ?",
-    )
-    .bind(tx)
-    .map(|row: SqliteRow| row.get::<Option<i64>, _>(0))
-    .fetch_one(connection)
-    .await?
-    .unwrap_or_default();
+        SELECT SUM(n.value), t.fee FROM n JOIN transactions t ON t.id_tx = n.tx WHERE n.tx = ?")
+        .bind(tx)
+        .map(|row: SqliteRow| {
+            let value = row.get::<Option<i64>, _>(0).unwrap_or_default();
+            let fee = row.get::<Option<i64>, _>(1).unwrap_or_default();
+            (value, fee)
+        })
+        .fetch_one(connection)
+        .await?;
     if value > 0 {
         // receiving
         return Ok((1, value));
+    } else if value < -fee {
+        // sending
+        return Ok((2, value));
     } else {
-        let output_address = sqlx::query("SELECT address FROM outputs WHERE tx = ?")
+        // self transfer
+        let has_tspend = sqlx::query("SELECT 1 FROM spends WHERE tx = ? AND pool = 0")
             .bind(tx)
-            .map(|row: SqliteRow| row.get::<String, _>(0))
             .fetch_optional(connection)
-            .await?;
-        if output_address.is_some() {
-            return Ok((2, value));
-        } else {
-            // self transfer
-            let has_tspend = sqlx::query("SELECT 1 FROM spends WHERE tx = ? AND pool = 0")
-                .bind(tx)
-                .fetch_optional(connection)
-                .await?
-                .is_some();
-            let has_tnote = sqlx::query("SELECT 1 FROM notes WHERE tx = ? AND pool = 0")
-                .bind(tx)
-                .fetch_optional(connection)
-                .await?
-                .is_some();
-            let tpe: u8 = (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 });
-            return Ok((tpe, value));
-        }
+            .await?
+            .is_some();
+        let has_tnote = sqlx::query("SELECT 1 FROM notes WHERE tx = ? AND pool = 0")
+            .bind(tx)
+            .fetch_optional(connection)
+            .await?
+            .is_some();
+        let tpe: u8 = (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 });
+        return Ok((tpe, value));
     }
 }
 
@@ -120,17 +119,22 @@ pub async fn decrypt_memo(
             .fetch_one(connection)
             .await?;
 
+    let mut fee_manager = FeeManager::default();
     let svk = get_sapling_vk(connection, account).await?;
 
     let zip212_enforcement = zip212_enforcement(network, height.into());
     let domain = SaplingDomain::new(zip212_enforcement);
 
     if let Some(bundle) = tx_data.transparent_bundle() {
+        for _vin in bundle.vin.iter() {
+            fee_manager.add_input(0);
+        }
         for (vout, output) in bundle.vout.iter().enumerate() {
-            let address =
-                output.recipient_address().map(|addr| {
-                    addr.encode(network)
-                }).unwrap_or_default();
+            fee_manager.add_output(0);
+            let address = output
+                .recipient_address()
+                .map(|addr| addr.encode(network))
+                .unwrap_or_default();
             store_output(
                 connection,
                 account,
@@ -146,6 +150,13 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.sapling_bundle() {
+        for _spend in bundle.shielded_spends().iter() {
+            fee_manager.add_input(1);
+        }
+        for _output in bundle.shielded_outputs().iter() {
+            fee_manager.add_output(1);
+        }
+
         if let Some(svk) = svk.as_ref() {
             let pivk = PreparedIncomingViewingKey::new(&svk.fvk().vk.ivk());
             let ovk = &svk.fvk().ovk;
@@ -214,6 +225,11 @@ pub async fn decrypt_memo(
     let ovk = get_orchard_vk(connection, account).await?;
 
     if let Some(bundle) = tx_data.orchard_bundle() {
+        for _action in bundle.actions().iter() {
+            fee_manager.add_input(2);
+            fee_manager.add_output(2);
+        }
+
         if let Some(ovk) = ovk.as_ref() {
             let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
             let ovk = ovk.to_ovk(Scope::External);
@@ -281,6 +297,13 @@ pub async fn decrypt_memo(
             }
         }
     }
+
+    let fee = fee_manager.fee();
+    sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")
+        .bind(fee as i64)
+        .bind(id_tx)
+        .execute(connection)
+        .await?;
 
     Ok(())
 }
