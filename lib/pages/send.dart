@@ -58,7 +58,7 @@ class SendPageState extends State<SendPage> {
     final recipientTiles = recipients
         .map((r) => ListTile(
               title: Text(r.address),
-              subtitle: Text(zatToString(r.amount)),
+              subtitle: zatToText(r.amount),
               trailing: IconButton(
                   icon: Icon(Icons.delete),
                   onPressed: () {
