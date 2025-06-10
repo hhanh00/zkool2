@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:convert/convert.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +27,6 @@ final restoreID = GlobalKey();
 final keyID = GlobalKey();
 final passphraseID = GlobalKey();
 final accountIndexID = GlobalKey();
-final fingerprintID = GlobalKey();
 final birthID = GlobalKey();
 
 class NewAccountPage extends StatefulWidget {
@@ -56,9 +54,6 @@ class NewAccountPageState extends State<NewAccountPage> {
     ]);
     if (restore && isSeed) tutorialHelper(context, "tutNew2", [
       passphraseID, accountIndexID
-    ]);
-    if (restore && isFvk) tutorialHelper(context, "tutNew3", [
-      fingerprintID
     ]);
   }
 
@@ -184,14 +179,6 @@ class NewAccountPageState extends State<NewAccountPage> {
                         ],
                       )),
                     Gap(16),
-                    if (restore && isFvk)
-                    Showcase(key: fingerprintID, description: "The seed fingerprint is needed for cold wallet transactions. It is the 4-byte number displayed under the UFVK", child:
-                      FormBuilderTextField(
-                        name: "fingerprint",
-                        decoration:
-                            const InputDecoration(labelText: "Seed Fingerprint"),
-                        validator: (s) => (s == null || s.isEmpty) ? null : validHexString(s, 4),
-                      )),
                     if (restore)
                       Showcase(key: birthID, description: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height", child:
                       FormBuilderTextField(
@@ -220,7 +207,6 @@ class NewAccountPageState extends State<NewAccountPage> {
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
-      final String? fingerprint = formData?["fingerprint"];
       final bool? useInternal = formData?["useInternal"];
 
       final icon = iconBytes;
@@ -236,7 +222,6 @@ class NewAccountPageState extends State<NewAccountPage> {
         birth: birth != null
             ? int.parse(birth)
             : AppStoreBase.instance.currentHeight,
-        fingerprint: fingerprint != null ? Uint8List.fromList(hex.decode(fingerprint)) : null,
         useInternal: useInternal ?? false,
         internal: false,
       ));
