@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.0.1...zkool-v4.1.0) (2025-06-10)
+
+
+### Features
+
+* show digits after millis in smaller size and colorize received funds ([#276](https://github.com/hhanh00/zkool2/issues/276)) ([2f45b2a](https://github.com/hhanh00/zkool2/commit/2f45b2a2586ec50528e86fc93d4fe8ca6d966b00))
+
+
+### Bug Fixes
+
+* remove fingerprint input ([#274](https://github.com/hhanh00/zkool2/issues/274)) ([c09e560](https://github.com/hhanh00/zkool2/commit/c09e56094050083736391f21c9b9e088bcc1731d))
+
 ## [4.0.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.0.0...zkool-v4.0.1) (2025-06-08)
 
 
