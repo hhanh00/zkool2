@@ -216,7 +216,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           return ListTile(
             leading: Text("Input ${index + 1}"),
             trailing: input.amount != null
-                ? Text("Value: ${zatToString(input.amount!)}")
+                ? zatToText(input.amount!)
                 : null,
             subtitle: Text("Pool: ${poolToString(input.pool)}"),
           );
@@ -226,7 +226,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           return ListTile(
             leading: Text("Output ${index2 + 1}"),
             title: Text("Address: ${output.address}"),
-            trailing: Text("Value: ${zatToString(output.amount)}"),
+            trailing: zatToText(output.amount),
             subtitle: Text("Pool: ${poolToString(output.pool)}"),
           );
         }

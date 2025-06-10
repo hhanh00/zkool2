@@ -145,33 +145,29 @@ class AccountViewPageState extends State<AccountViewPage> {
                         Showcase(
                             key: tBalID,
                             description: "Balance in the Transparent Pool",
-                            child: SelectableText(
-                                "T: ${zatToString(b.field0[0])}")),
+                            child: zatToText(b.field0[0], prefix: "T: ")),
                         const Gap(8),
                         Showcase(
                             key: sBalID,
                             description: "Balance in the Sapling Pool",
-                            child: SelectableText(
-                                "S: ${zatToString(b.field0[1])}")),
+                            child: zatToText(b.field0[1], prefix: "S: ")),
                         const Gap(8),
                         Showcase(
                             key: oBalID,
                             description: "Balance in the Orchard Pool",
-                            child: SelectableText(
-                                "O: ${zatToString(b.field0[2])}")),
+                            child: zatToText(b.field0[2], prefix: "O: ")),
                       ]),
                     Gap(8),
                     if (unconfirmedAmount != null) ...[
-                      Text("U: ${zatToString(BigInt.from(unconfirmedAmount))}"),
+                      zatToText(BigInt.from(unconfirmedAmount), prefix: "Unconfirmed: "),
                       Gap(8),
                     ],
                     if (b != null)
                       Showcase(
                           key: balID,
                           description: "Balance across all pools",
-                          child: SelectableText(
-                              "\u2211: ${zatToString(b.field0[0] + b.field0[1] + b.field0[2])}",
-                              style: t.titleLarge)),
+                          child: zatToText(b.field0[0] + b.field0[1] + b.field0[2],
+                              style: t.titleLarge!)),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
                   ])),
@@ -498,6 +494,7 @@ extension AccountExtension on Account {
 }
 
 List<Widget> showTxHistory(List<Tx> transactions) {
+  final t = Theme.of(navigatorKey.currentContext!).textTheme;
   return [
     const Text("Transaction History"),
     const Gap(8),
@@ -512,7 +509,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
           leading: Text("${tx.height}"),
           title: Text(getTransactionType(tx.tpe)),
           subtitle: Text(timeToString(tx.time)),
-          trailing: Text(zatToString(BigInt.from(tx.value))),
+          trailing: zatToText(BigInt.from(tx.value), colored: true),
         );
 
         return (index == 0)
@@ -594,7 +591,7 @@ List<Widget> showNotes(List<TxNote> notes) {
           onTap: () => toggleLock(context, note.id, !note.locked),
           leading: Text("${note.height}"),
           title: Text(poolToString(note.pool)),
-          trailing: Text(zatToString(note.value)),
+          trailing: zatToText(note.value),
           textColor: note.locked ? t.disabledColor : null,
         );
       },

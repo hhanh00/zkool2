@@ -25,6 +25,24 @@ String zatToString(BigInt zat) {
   return z.toString();
 }
 
+SelectableText zatToText(BigInt zat, {
+    String prefix = "", TextStyle? style, bool colored = false}) {
+  style ??= Theme.of(navigatorKey.currentContext!).textTheme.bodyMedium!;
+  if (colored && zat > BigInt.zero) {
+    style = style.copyWith(color: Colors.green);
+  }
+  final s = zatToString(zat);
+  final minorUnits = s.substring(s.length - 5, s.length);
+  final majorUnits = s.substring(0, s.length - 5);
+  return SelectableText.rich(TextSpan(
+    children: [
+      TextSpan(text: prefix),
+      TextSpan(text: majorUnits, style: style),
+      TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+    ],
+  ));
+}
+
 BigInt stringToZat(String s) {
   final z = Fixed.parse(s, scale: 8);
   return z.minorUnits;
