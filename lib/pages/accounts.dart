@@ -194,7 +194,7 @@ class AccountListPage2State extends State<AccountListPage2> {
                             style: !account.enabled
                                 ? TextStyle(color: Colors.grey)
                                 : null),
-                        subtitle: Text(zatToString(account.balance),
+                        subtitle: zatToText(account.balance,
                             style: t.copyWith(fontWeight: FontWeight.w700)),
                         trailing: Observer(
                             builder: (context) => Text(
