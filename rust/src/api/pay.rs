@@ -4,11 +4,21 @@ use bincode::{config::legacy, Decode, Encode};
 use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
 use flutter_rust_bridge::frb;
 
+pub enum DustChangePolicy {
+    Discard,
+    SendToRecipient,
+}
+
+pub struct PaymentOptions {
+    pub src_pools: u8,
+    pub recipient_pays_fee: bool,
+    pub dust_change_policy: DustChangePolicy,
+}
+
 #[frb]
 pub async fn prepare(
-    src_pools: u8,
     recipients: &[Recipient],
-    recipient_pays_fee: bool,
+    options: PaymentOptions,
 ) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
@@ -21,9 +31,10 @@ pub async fn prepare(
         connection,
         &mut client,
         account,
-        src_pools,
+        options.src_pools,
         recipients,
-        recipient_pays_fee,
+        options.recipient_pays_fee,
+        options.dust_change_policy
     )
     .await
 }

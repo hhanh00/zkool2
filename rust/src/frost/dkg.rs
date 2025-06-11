@@ -477,6 +477,7 @@ pub async fn publish(
         ALL_POOLS,
         &recipients,
         false,
+        crate::api::pay::DustChangePolicy::Discard,
     )
     .await?;
     let pczt = sign_transaction(connection, account, &pczt).await?;
