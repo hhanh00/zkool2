@@ -50,16 +50,8 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutAccount0", [
-      tBalID,
-      sBalID,
-      oBalID,
-      balID,
-      logID,
-      sync1ID,
-      receiveID,
-      sendID
-    ]);
+    tutorialHelper(context, "tutAccount0",
+        [tBalID, sBalID, oBalID, balID, logID, sync1ID, receiveID, sendID]);
     if (AppStoreBase.instance.transactions.isNotEmpty)
       tutorialHelper(context, "tutAccount1", [
         txdID,
@@ -128,7 +120,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
                 return TabBarView(children: [
                   SingleChildScrollView(
-                    child: Column(children: [
+                      child: Column(children: [
                     Text("Height"),
                     Gap(8),
                     Observer(
@@ -139,34 +131,19 @@ class AccountViewPageState extends State<AccountViewPage> {
                     Gap(16),
                     Text("Balance"),
                     Gap(8),
-                    if (b != null)
-                      Row(mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                        Showcase(
-                            key: tBalID,
-                            description: "Balance in the Transparent Pool",
-                            child: zatToText(b.field0[0], prefix: "T: ")),
-                        const Gap(8),
-                        Showcase(
-                            key: sBalID,
-                            description: "Balance in the Sapling Pool",
-                            child: zatToText(b.field0[1], prefix: "S: ")),
-                        const Gap(8),
-                        Showcase(
-                            key: oBalID,
-                            description: "Balance in the Orchard Pool",
-                            child: zatToText(b.field0[2], prefix: "O: ")),
-                      ]),
+                    if (b != null) BalanceWidget(b, showcase: true),
                     Gap(8),
                     if (unconfirmedAmount != null) ...[
-                      zatToText(BigInt.from(unconfirmedAmount), prefix: "Unconfirmed: "),
+                      zatToText(BigInt.from(unconfirmedAmount),
+                          prefix: "Unconfirmed: "),
                       Gap(8),
                     ],
                     if (b != null)
                       Showcase(
                           key: balID,
                           description: "Balance across all pools",
-                          child: zatToText(b.field0[0] + b.field0[1] + b.field0[2],
+                          child: zatToText(
+                              b.field0[0] + b.field0[1] + b.field0[2],
                               style: t.titleLarge!)),
                     Gap(16),
                     ...showTxHistory(AppStoreBase.instance.transactions),
@@ -183,8 +160,8 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      await AppStoreBase.instance.startSynchronize([account.id],
-        int.parse(AppStoreBase.instance.actionsPerSync));
+      await AppStoreBase.instance.startSynchronize(
+          [account.id], int.parse(AppStoreBase.instance.actionsPerSync));
       refresh();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
@@ -493,8 +470,41 @@ extension AccountExtension on Account {
   }
 }
 
+class BalanceWidget extends StatelessWidget {
+  final PoolBalance balance;
+  final bool showcase;
+  final void Function(int)? onPoolSelected;
+  const BalanceWidget(this.balance,
+      {super.key, this.showcase = false, this.onPoolSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      maybeShowcase(showcase,
+          key: tBalID,
+          description: "Balance in the Transparent Pool",
+          child: zatToText(balance.field0[0], prefix: "T: ",
+              onTap: () => onPoolSelected?.call(0),
+              )),
+      const Gap(8),
+      maybeShowcase(showcase,
+          key: sBalID,
+          description: "Balance in the Sapling Pool",
+          child: zatToText(balance.field0[1], prefix: "S: ",
+            onTap: () => onPoolSelected?.call(1),
+            )),
+      const Gap(8),
+      maybeShowcase(showcase,
+          key: oBalID,
+          description: "Balance in the Orchard Pool",
+          child: zatToText(balance.field0[2], prefix: "O: ",
+            onTap: () => onPoolSelected?.call(2),
+            )),
+    ]);
+  }
+}
+
 List<Widget> showTxHistory(List<Tx> transactions) {
-  final t = Theme.of(navigatorKey.currentContext!).textTheme;
   return [
     const Text("Transaction History"),
     const Gap(8),
@@ -557,23 +567,25 @@ Uint8List trimTrailingZeros(Uint8List bytes) {
 }
 
 Widget showMemos(BuildContext context, List<Memo> memos) {
-  return
-    SearchableList(
+  return SearchableList(
       initialList: memos,
       itemBuilder: (memo) {
         return ListTile(
           onTap: () => gotoTransaction(context, memo.idTx),
           leading: Text("${memo.height}"),
-          title: SelectableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
+          title: SelectableText(
+              memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
           subtitle: Text(timeToString(memo.time)),
           trailing: Text(memo.idNote != null ? "In" : "Out"),
         );
       },
-      filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
+      filter: (query) => memos
+          .where((m) => query.isEmpty || (m.memo?.contains(query) == true))
+          .toList(),
       inputDecoration: InputDecoration(
         labelText: "Search Memos",
         fillColor: Colors.white,
-    ));
+      ));
 }
 
 List<Widget> showNotes(List<TxNote> notes) {
@@ -640,33 +652,42 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Viewing Keys'),
-        actions: [
-          if (seed != null) IconButton(
-              tooltip: "Show Seed Phrase",
-              onPressed: onShowSeed,
-              icon: Icon(Icons.key))
+        appBar: AppBar(title: Text('Viewing Keys'), actions: [
+          if (seed != null)
+            IconButton(
+                tooltip: "Show Seed Phrase",
+                onPressed: onShowSeed,
+                icon: Icon(Icons.key))
         ]),
         body: SingleChildScrollView(
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Column(children: [
                   if (showSeed && seed != null) ...[
-                    ListTile(title: Text("Mnemonic"), subtitle: SelectableText(seed!.mnemonic)),
-                    ListTile(title: Text("Passphrase"), subtitle: SelectableText(seed!.phrase)),
-                    ListTile(title: Text("Index"), subtitle: SelectableText(seed!.aindex.toString())),
+                    ListTile(
+                        title: Text("Mnemonic"),
+                        subtitle: SelectableText(seed!.mnemonic)),
+                    ListTile(
+                        title: Text("Passphrase"),
+                        subtitle: SelectableText(seed!.phrase)),
+                    ListTile(
+                        title: Text("Index"),
+                        subtitle: SelectableText(seed!.aindex.toString())),
                     Divider(),
                     Gap(8),
-                    ],
+                  ],
                   Center(child: PoolSelect(onChanged: onPoolChanged)),
                   Gap(32),
                   if (uvk != null) SelectableText(uvk!),
                   Gap(32),
-                  if (uvk != null) QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
+                  if (uvk != null)
+                    QrImageView(
+                        data: uvk!, size: 200, backgroundColor: Colors.white),
                   Gap(8),
                   if (fingerprint != null) SelectableText(fingerprint!),
                   Gap(16),
-                  Text("If the account does not include a pool, its receiver will be absent"),
+                  Text(
+                      "If the account does not include a pool, its receiver will be absent"),
                 ]))));
   }
 

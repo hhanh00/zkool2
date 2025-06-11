@@ -10,6 +10,7 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -27,6 +28,7 @@ final openTxID = GlobalKey();
 final addTxID = GlobalKey();
 final sendID2 = GlobalKey();
 final memoID = GlobalKey();
+final dustChangePolicyID = GlobalKey();
 
 class SendPage extends StatefulWidget {
   const SendPage({super.key});
@@ -42,6 +44,8 @@ class SendPageState extends State<SendPage> {
   String? memo;
   List<Recipient> recipients = [];
   bool supportsMemo = false;
+  PoolBalance? pbalance;
+  Addresses? addresses;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend0",
@@ -50,9 +54,24 @@ class SendPageState extends State<SendPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final b = await balance();
+      final a = await getAddresses();
+
+      setState(() {
+        pbalance = b;
+        addresses = a;
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     Future(tutorial);
 
+    final balance = pbalance;
     final address =
         formKey.currentState?.fields['address']?.value as String? ?? "";
     final recipientTiles = recipients
@@ -113,6 +132,8 @@ class SendPageState extends State<SendPage> {
                     key: formKey,
                     child: Column(children: [
                       ...recipientTiles,
+                      if (balance != null)
+                        BalanceWidget(balance, onPoolSelected: onPoolSelected),
                       Row(children: [
                         Expanded(
                             child: Showcase(
@@ -139,21 +160,22 @@ class SendPageState extends State<SendPage> {
                                 icon: Icon(Icons.qr_code_scanner))),
                       ]),
                       Row(children: [
-                        Expanded(child: Showcase(
-                            key: amountID,
-                            description: "Amount to send",
-                            child: FormBuilderTextField(
-                              name: "amount",
-                              decoration:
-                                  const InputDecoration(labelText: "Amount"),
-                              validator: FormBuilderValidators.compose([
-                                FormBuilderValidators.required(),
-                                validAmount
-                              ]),
-                              keyboardType: TextInputType.number,
-                              initialValue: amount,
-                              onChanged: (v) => setState(() => amount = v!),
-                            ))),
+                        Expanded(
+                            child: Showcase(
+                                key: amountID,
+                                description: "Amount to send",
+                                child: FormBuilderTextField(
+                                  name: "amount",
+                                  decoration: const InputDecoration(
+                                      labelText: "Amount"),
+                                  validator: FormBuilderValidators.compose([
+                                    FormBuilderValidators.required(),
+                                    validAmount
+                                  ]),
+                                  keyboardType: TextInputType.number,
+                                  initialValue: amount,
+                                  onChanged: (v) => setState(() => amount = v!),
+                                ))),
                         IconButton(
                             tooltip: "Set amount to entire balance",
                             onPressed: onMax,
@@ -252,6 +274,21 @@ class SendPageState extends State<SendPage> {
     }
     return null;
   }
+
+  void onPoolSelected(int pool) {
+    final a = addresses;
+    if (a == null) return;
+    switch (pool) {
+      case 0:
+        addressController.text = a.taddr ?? "";
+      case 1:
+        addressController.text = a.saddr ?? "";
+      case 2:
+        addressController.text = a.oaddr ?? "";
+      default:
+        logger.w("Unknown pool selected: $pool");
+    }
+  }
 }
 
 final sourceID = GlobalKey();
@@ -268,8 +305,10 @@ class Send2Page extends StatefulWidget {
 
 class Send2PageState extends State<Send2Page> {
   String? txId;
-  late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
+  late final hasTex =
+      widget.recipients.any((r) => isTexAddress(address: r.address));
   var recipientPaysFee = false;
+  var discardDustChange = true;
   final formKey = GlobalKey<FormBuilderState>();
 
   void tutorial() async {
@@ -317,7 +356,9 @@ class Send2PageState extends State<Send2Page> {
                               initialValue: hasTex ? 1 : 7,
                               builder: (field) => PoolSelect(
                                   initialValue: field.value!,
-                                  onChanged: hasTex ? null : (v) => field.didChange(v)),
+                                  onChanged: hasTex
+                                      ? null
+                                      : (v) => field.didChange(v)),
                             )))),
                 Showcase(
                     key: feeSourceID,
@@ -328,6 +369,16 @@ class Send2PageState extends State<Send2Page> {
                       title: Text("Recipient Pays Fee"),
                       initialValue: false,
                       onChanged: (v) => setState(() => recipientPaysFee = v!),
+                    )),
+                Showcase(
+                    key: dustChangePolicyID,
+                    description:
+                        "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
+                    child: FormBuilderSwitch(
+                      name: "dustChangePolicy",
+                      title: Text("Discard Dust Change"),
+                      initialValue: true,
+                      onChanged: (v) => setState(() => discardDustChange = v!),
                     )),
               ])),
         ),
@@ -344,10 +395,16 @@ class Send2PageState extends State<Send2Page> {
     final srcPools = form.fields['source pools']?.value ?? 7;
 
     try {
-      final pczt = await prepare(
+      final options = PaymentOptions(
           srcPools: srcPools,
-          recipients: widget.recipients,
-          recipientPaysFee: recipientPaysFee);
+          recipientPaysFee: recipientPaysFee,
+          dustChangePolicy: discardDustChange
+              ? DustChangePolicy.discard
+              : DustChangePolicy.sendToRecipient);
+      final pczt = await prepare(
+        recipients: widget.recipients,
+        options: options,
+      );
 
       GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
     } on AnyhowException catch (e) {

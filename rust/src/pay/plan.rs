@@ -52,7 +52,7 @@ use crate::{
         get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
         get_sapling_vk,
     },
-    api::pay::PcztPackage,
+    api::pay::{DustChangePolicy, PcztPackage},
     db::select_account_transparent,
     lwd::ChainSpec,
     pay::{
@@ -86,6 +86,7 @@ pub async fn plan_transaction(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
+    dust_change_policy: DustChangePolicy
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
@@ -331,10 +332,35 @@ pub async fn plan_transaction(
         pool_mask: PoolMask::from_pool(change_pool),
     };
 
-    let outputs = single
+    let mut outputs = single
         .iter()
-        .chain(double.iter())
-        .chain(std::iter::once(&change_recipient));
+        .chain(double.iter()).cloned().collect::<Vec<_>>();
+
+    if change >= COST_PER_ACTION {
+        outputs.push(change_recipient.clone());
+    }
+    else {
+        let fee = fee_manager.fee();
+        // if the change is less than the cost of an action, we shold not create it
+        fee_manager.remove_output(change_pool);
+        let updated_fee = fee_manager.fee();
+        let refund_fee = updated_fee - fee;
+        match dust_change_policy {
+            DustChangePolicy::Discard => {
+                info!("Discarding change of {} in pool {}", to_zec(change), change_pool);
+            }
+            DustChangePolicy::SendToRecipient => {
+                info!(
+                    "Sending change of {} in pool {} to the first recipient",
+                    to_zec(change),
+                    change_pool
+                );
+                if let Some(first) = outputs.first_mut() {
+                    first.recipient.amount += change + refund_fee;
+                }
+            }
+        }
+    }
 
     info!("Initializing Builder");
 
@@ -485,7 +511,7 @@ pub async fn plan_transaction(
     event!(Level::INFO, "Adding Outputs");
     let mut n_outputs: [usize; 3] = [0, 0, 0];
     let mut outs = vec![];
-    for r in outputs {
+    for r in outputs.iter() {
         let RecipientState {
             recipient,
             remaining,
@@ -502,7 +528,7 @@ pub async fn plan_transaction(
 
         let pool = pool_mask.to_best_pool().unwrap();
         let value = Zatoshis::from_u64(recipient.amount)?;
-        let memo = encode_memo(recipient)?.unwrap_or(MemoBytes::empty());
+        let memo = encode_memo(&recipient)?.unwrap_or(MemoBytes::empty());
 
         n_outputs[pool as usize] += 1;
         match pool {
@@ -564,15 +590,10 @@ pub async fn plan_transaction(
         })
         .unwrap();
 
-    let outputs = single
-        .iter()
-        .chain(double.iter())
-        .chain(std::iter::once(&change_recipient));
-
     let updater = updater
         .update_sapling_with(|mut u| {
             let mut i = 0;
-            for o in outputs {
+            for o in outputs.iter() {
                 let pool = o.pool_mask.to_best_pool().unwrap();
                 if pool != 1 {
                     continue;
@@ -589,15 +610,10 @@ pub async fn plan_transaction(
         })
         .unwrap();
 
-    let outputs = single
-        .iter()
-        .chain(double.iter())
-        .chain(std::iter::once(&change_recipient));
-
     let updater = updater
         .update_orchard_with(|mut u| {
             let mut i = 0;
-            for o in outputs {
+            for o in outputs.iter() {
                 let pool = o.pool_mask.to_best_pool().unwrap();
                 if pool != 2 {
                     continue;

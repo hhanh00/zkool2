@@ -1977,19 +1977,14 @@ fn wire__crate__api__pay__prepare_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_src_pools = <u8>::sse_decode(&mut deserializer);
             let api_recipients = <Vec<crate::pay::Recipient>>::sse_decode(&mut deserializer);
-            let api_recipient_pays_fee = <bool>::sse_decode(&mut deserializer);
+            let api_options = <crate::api::pay::PaymentOptions>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::pay::prepare(
-                            api_src_pools,
-                            &api_recipients,
-                            api_recipient_pays_fee,
-                        )
-                        .await?;
+                        let output_ok =
+                            crate::api::pay::prepare(&api_recipients, api_options).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3018,6 +3013,18 @@ impl SseDecode for crate::api::frost::DKGStatus {
     }
 }
 
+impl SseDecode for crate::api::pay::DustChangePolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::pay::DustChangePolicy::Discard,
+            1 => crate::api::pay::DustChangePolicy::SendToRecipient,
+            _ => unreachable!("Invalid variant for DustChangePolicy: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3048,6 +3055,13 @@ impl SseDecode for crate::api::frost::FrostSignParams {
             coordinator: var_coordinator,
             funding_account: var_fundingAccount,
         };
+    }
+}
+
+impl SseDecode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
     }
 }
 
@@ -3435,6 +3449,21 @@ impl SseDecode for Option<Vec<crate::pay::Recipient>> {
     }
 }
 
+impl SseDecode for crate::api::pay::PaymentOptions {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_srcPools = <u8>::sse_decode(deserializer);
+        let mut var_recipientPaysFee = <bool>::sse_decode(deserializer);
+        let mut var_dustChangePolicy =
+            <crate::api::pay::DustChangePolicy>::sse_decode(deserializer);
+        return crate::api::pay::PaymentOptions {
+            src_pools: var_srcPools,
+            recipient_pays_fee: var_recipientPaysFee,
+            dust_change_policy: var_dustChangePolicy,
+        };
+    }
+}
+
 impl SseDecode for crate::api::pay::PcztPackage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3784,13 +3813,6 @@ impl SseDecode for [usize; 3] {
     }
 }
 
-impl SseDecode for i32 {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
-    }
-}
-
 fn pde_ffi_dispatcher_primary_impl(
     func_id: i32,
     port: flutter_rust_bridge::for_generated::MessagePort,
@@ -4045,6 +4067,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::DKGStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::pay::DustChangePolicy {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Discard => 0.into_dart(),
+            Self::SendToRecipient => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::pay::DustChangePolicy
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pay::DustChangePolicy>
+    for crate::api::pay::DustChangePolicy
+{
+    fn into_into_dart(self) -> crate::api::pay::DustChangePolicy {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::account::FrostParams {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -4183,6 +4226,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::NewAccount>
     for crate::api::account::NewAccount
 {
     fn into_into_dart(self) -> crate::api::account::NewAccount {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::pay::PaymentOptions {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.src_pools.into_into_dart().into_dart(),
+            self.recipient_pays_fee.into_into_dart().into_dart(),
+            self.dust_change_policy.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::pay::PaymentOptions
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pay::PaymentOptions>
+    for crate::api::pay::PaymentOptions
+{
+    fn into_into_dart(self) -> crate::api::pay::PaymentOptions {
         self
     }
 }
@@ -4672,6 +4737,22 @@ impl SseEncode for crate::api::frost::DKGStatus {
     }
 }
 
+impl SseEncode for crate::api::pay::DustChangePolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::pay::DustChangePolicy::Discard => 0,
+                crate::api::pay::DustChangePolicy::SendToRecipient => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4693,6 +4774,13 @@ impl SseEncode for crate::api::frost::FrostSignParams {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u16>::sse_encode(self.coordinator, serializer);
         <u32>::sse_encode(self.funding_account, serializer);
+    }
+}
+
+impl SseEncode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
     }
 }
 
@@ -5010,6 +5098,15 @@ impl SseEncode for Option<Vec<crate::pay::Recipient>> {
     }
 }
 
+impl SseEncode for crate::api::pay::PaymentOptions {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.src_pools, serializer);
+        <bool>::sse_encode(self.recipient_pays_fee, serializer);
+        <crate::api::pay::DustChangePolicy>::sse_encode(self.dust_change_policy, serializer);
+    }
+}
+
 impl SseEncode for crate::api::pay::PcztPackage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -5269,13 +5366,6 @@ impl SseEncode for [usize; 3] {
             },
             serializer,
         );
-    }
-}
-
-impl SseEncode for i32 {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
     }
 }
 
