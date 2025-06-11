@@ -240,15 +240,7 @@ class MempoolPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Mempool"), actions: [
-        Observer(
-            builder: (context) => IconButton(
-                  icon: Icon(Icons.play_arrow),
-                  onPressed: AppStoreBase.instance.mempoolRunning
-                      ? null
-                      : runMempoolListener,
-                )),
-      ]),
+      appBar: AppBar(title: Text("Mempool")),
       body: Observer(builder: (context) {
         final mempool = AppStoreBase.instance.mempoolTxIds;
         return ListView.builder(
