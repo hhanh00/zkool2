@@ -95,6 +95,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NewAccount dco_decode_box_autoadd_new_account(dynamic raw);
 
   @protected
+  PaymentOptions dco_decode_box_autoadd_payment_options(dynamic raw);
+
+  @protected
   PcztPackage dco_decode_box_autoadd_pczt_package(dynamic raw);
 
   @protected
@@ -113,6 +116,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
+  DustChangePolicy dco_decode_dust_change_policy(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
@@ -120,6 +126,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostSignParams dco_decode_frost_sign_params(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
@@ -217,6 +226,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Recipient>? dco_decode_opt_list_recipient(dynamic raw);
+
+  @protected
+  PaymentOptions dco_decode_payment_options(dynamic raw);
 
   @protected
   PcztPackage dco_decode_pczt_package(dynamic raw);
@@ -357,6 +369,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NewAccount sse_decode_box_autoadd_new_account(SseDeserializer deserializer);
 
   @protected
+  PaymentOptions sse_decode_box_autoadd_payment_options(
+      SseDeserializer deserializer);
+
+  @protected
   PcztPackage sse_decode_box_autoadd_pczt_package(SseDeserializer deserializer);
 
   @protected
@@ -375,6 +391,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
 
   @protected
+  DustChangePolicy sse_decode_dust_change_policy(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
@@ -382,6 +401,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
@@ -482,6 +504,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient>? sse_decode_opt_list_recipient(SseDeserializer deserializer);
 
   @protected
+  PaymentOptions sse_decode_payment_options(SseDeserializer deserializer);
+
+  @protected
   PcztPackage sse_decode_pczt_package(SseDeserializer deserializer);
 
   @protected
@@ -555,9 +580,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray3 sse_decode_usize_array_3(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
 
@@ -627,6 +649,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       NewAccount self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_payment_options(
+      PaymentOptions self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_pczt_package(
       PcztPackage self, SseSerializer serializer);
 
@@ -646,6 +672,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_dust_change_policy(
+      DustChangePolicy self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
@@ -654,6 +684,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_frost_sign_params(
       FrostSignParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
@@ -764,6 +797,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Recipient>? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_payment_options(
+      PaymentOptions self, SseSerializer serializer);
+
+  @protected
   void sse_encode_pczt_package(PcztPackage self, SseSerializer serializer);
 
   @protected
@@ -835,9 +872,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
