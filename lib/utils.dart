@@ -36,15 +36,19 @@ Widget zatToText(BigInt zat,
   final s = zatToString(zat);
   final minorUnits = s.substring(s.length - 5, s.length);
   final majorUnits = s.substring(0, s.length - 5);
-  return SelectableText.rich(TextSpan(
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.baseline,
+    textBaseline: TextBaseline.alphabetic,
     children: [
-      WidgetSpan(child: GestureDetector(onTap: onTap, child: Text(prefix))),
+      InkWell(onTap: onTap, child: Text(prefix)),
+      SelectableText.rich(TextSpan(children: [
       TextSpan(text: majorUnits, style: style),
       TextSpan(
           text: minorUnits,
           style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-    ],
-  ));
+    ],))]
+  );
 }
 
 BigInt stringToZat(String s) {
