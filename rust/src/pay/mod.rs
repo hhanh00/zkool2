@@ -23,6 +23,7 @@ pub struct Recipient {
     pub memo_bytes: Option<Vec<u8>>,
 }
 
+#[derive(Clone, Debug, Default)]
 pub struct RecipientState {
     pub recipient: Recipient,
     pub remaining: u64,

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
@@ -56,15 +56,16 @@ pub async fn fetch_tx_details(
 async fn summarize_tx(connection: &SqlitePool, tx: u32) -> Result<(u8, i64)> {
     let (value, fee) = sqlx::query(
         "WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
-        SELECT SUM(n.value), t.fee FROM n JOIN transactions t ON t.id_tx = n.tx WHERE n.tx = ?")
-        .bind(tx)
-        .map(|row: SqliteRow| {
-            let value = row.get::<Option<i64>, _>(0).unwrap_or_default();
-            let fee = row.get::<Option<i64>, _>(1).unwrap_or_default();
-            (value, fee)
-        })
-        .fetch_one(connection)
-        .await?;
+        SELECT SUM(n.value), t.fee FROM n JOIN transactions t ON t.id_tx = n.tx WHERE n.tx = ?",
+    )
+    .bind(tx)
+    .map(|row: SqliteRow| {
+        let value = row.get::<Option<i64>, _>(0).unwrap_or_default();
+        let fee = row.get::<Option<i64>, _>(1).unwrap_or_default();
+        (value, fee)
+    })
+    .fetch_one(connection)
+    .await?;
     if value > 0 {
         // receiving
         return Ok((1, value));
@@ -117,7 +118,8 @@ pub async fn decrypt_memo(
             .bind(account)
             .bind(&txid)
             .fetch_one(connection)
-            .await?;
+            .await
+            .context("Failed to find transaction")?;
 
     let mut fee_manager = FeeManager::default();
     let svk = get_sapling_vk(connection, account).await?;
@@ -246,7 +248,8 @@ pub async fn decrypt_memo(
                             .bind(&cmx.to_bytes()[..])
                             .map(|row: SqliteRow| row.get::<u32, _>(0))
                             .fetch_one(connection)
-                            .await?;
+                            .await
+                            .context("Failed to find note")?;
 
                     process_memo(
                         connection,
@@ -396,7 +399,8 @@ async fn store_output(
             .bind(vout as u32)
             .map(|row: SqliteRow| row.get::<u32, _>(0))
             .fetch_one(connection)
-            .await?;
+            .await
+            .context("Failed to find output")?;
 
     Ok(id_output)
 }

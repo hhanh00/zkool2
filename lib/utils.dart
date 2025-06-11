@@ -25,8 +25,10 @@ String zatToString(BigInt zat) {
   return z.toString();
 }
 
-SelectableText zatToText(BigInt zat, {
-    String prefix = "", TextStyle? style, bool colored = false}) {
+Widget zatToText(BigInt zat,
+    {String prefix = "", TextStyle? style,
+    Function()? onTap,
+    bool colored = false}) {
   style ??= Theme.of(navigatorKey.currentContext!).textTheme.bodyMedium!;
   if (colored && zat > BigInt.zero) {
     style = style.copyWith(color: Colors.green);
@@ -36,9 +38,11 @@ SelectableText zatToText(BigInt zat, {
   final majorUnits = s.substring(0, s.length - 5);
   return SelectableText.rich(TextSpan(
     children: [
-      TextSpan(text: prefix),
+      WidgetSpan(child: GestureDetector(onTap: onTap, child: Text(prefix))),
       TextSpan(text: majorUnits, style: style),
-      TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+      TextSpan(
+          text: minorUnits,
+          style: style.copyWith(fontSize: style.fontSize! * 0.6)),
     ],
   ));
 }
@@ -257,3 +261,15 @@ Future<bool> authenticate({String? reason}) async {
     return true; // Assume authentication is successful
   }
 }
+
+Widget maybeShowcase(bool condition,
+        {required GlobalKey key,
+        required String description,
+        required Widget child}) =>
+    condition
+        ? Showcase(
+            key: key,
+            description: description,
+            child: child,
+          )
+        : child;

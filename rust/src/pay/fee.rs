@@ -17,6 +17,11 @@ impl FeeManager {
         self.num_outputs[pool as usize] += 1;
     }
 
+    // Remove an output
+    pub fn remove_output(&mut self, pool: u8) {
+        self.num_outputs[pool as usize] -= 1;
+    }
+
     // Return the current amount of fees
     pub fn fee(&self) -> u64 {
         let t = self.num_inputs[0].max(self.num_outputs[0]);
