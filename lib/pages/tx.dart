@@ -1,11 +1,14 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:convert/convert.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
@@ -215,9 +218,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           final input = txPlan.inputs[index];
           return ListTile(
             leading: Text("Input ${index + 1}"),
-            trailing: input.amount != null
-                ? zatToText(input.amount!)
-                : null,
+            trailing: input.amount != null ? zatToText(input.amount!) : null,
             subtitle: Text("Pool: ${poolToString(input.pool)}"),
           );
         } else {
@@ -240,11 +241,13 @@ class MempoolPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Mempool"), actions: [
-        Observer(builder: (context) => IconButton(
-          icon: Icon(Icons.play_arrow),
-          onPressed:
-              AppStoreBase.instance.mempoolRunning ? null : runMempoolListener,
-        )),
+        Observer(
+            builder: (context) => IconButton(
+                  icon: Icon(Icons.play_arrow),
+                  onPressed: AppStoreBase.instance.mempoolRunning
+                      ? null
+                      : runMempoolListener,
+                )),
       ]),
       body: Observer(builder: (context) {
         final mempool = AppStoreBase.instance.mempoolTxIds;
@@ -252,13 +255,37 @@ class MempoolPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final tx = mempool[index];
               return ListTile(
-                title: Text(tx.$1),
+                onTap: () => onMempoolTx(context, tx.$1),
+                title: SelectableText(tx.$1),
                 subtitle: Text(tx.$2),
                 trailing: Text(tx.$3.toString()),
               );
             },
             itemCount: mempool.length);
       }),
+    );
+  }
+
+  onMempoolTx(BuildContext context, String txId) async {
+    final mempoolTx = await getMempoolTx(txId: txId);
+    if (!context.mounted) return;
+    await GoRouter.of(context).push("/mempool_view", extra: mempoolTx);
+  }
+}
+
+class MempoolTxViewPage extends StatelessWidget {
+  final Uint8List rawTx;
+  const MempoolTxViewPage(this.rawTx, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Mempool Transaction")),
+      body: Padding(
+          padding: EdgeInsets.all(16),
+          child: SingleChildScrollView(child: SelectableText(
+            hex.encode(rawTx),
+          ))),
     );
   }
 }
