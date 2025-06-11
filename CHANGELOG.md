@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.1.0...zkool-v4.2.0) (2025-06-11)
+
+
+### Features
+
+* display raw mempool tx ([#277](https://github.com/hhanh00/zkool2/issues/277)) ([45aa645](https://github.com/hhanh00/zkool2/commit/45aa645f2a51a77a1937c6ce41558e1109847d18))
+* introduce dust change policy: send or discard ([#279](https://github.com/hhanh00/zkool2/issues/279)) ([14082d6](https://github.com/hhanh00/zkool2/commit/14082d687b5e4c70b84a222afed6909b8a481561))
+
+
+### Bug Fixes
+
+* pool balance display ([#280](https://github.com/hhanh00/zkool2/issues/280)) ([76f9d50](https://github.com/hhanh00/zkool2/commit/76f9d504a53b07a96c1a52b5b6c5d83f5a20cfb5))
+
 ## [4.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.0.1...zkool-v4.1.0) (2025-06-10)
 
 
