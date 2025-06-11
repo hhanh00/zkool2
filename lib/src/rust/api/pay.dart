@@ -13,13 +13,10 @@ part 'pay.freezed.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `borrow_decode`, `decode`, `encode`
 
 Future<PcztPackage> prepare(
-        {required int srcPools,
-        required List<Recipient> recipients,
-        required bool recipientPaysFee}) =>
-    RustLib.instance.api.crateApiPayPrepare(
-        srcPools: srcPools,
-        recipients: recipients,
-        recipientPaysFee: recipientPaysFee);
+        {required List<Recipient> recipients,
+        required PaymentOptions options}) =>
+    RustLib.instance.api
+        .crateApiPayPrepare(recipients: recipients, options: options);
 
 Future<PcztPackage> signTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt);
@@ -46,6 +43,37 @@ Future<String> send({required int height, required List<int> data}) =>
 
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);
+
+enum DustChangePolicy {
+  discard,
+  sendToRecipient,
+  ;
+}
+
+class PaymentOptions {
+  final int srcPools;
+  final bool recipientPaysFee;
+  final DustChangePolicy dustChangePolicy;
+
+  const PaymentOptions({
+    required this.srcPools,
+    required this.recipientPaysFee,
+    required this.dustChangePolicy,
+  });
+
+  @override
+  int get hashCode =>
+      srcPools.hashCode ^ recipientPaysFee.hashCode ^ dustChangePolicy.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PaymentOptions &&
+          runtimeType == other.runtimeType &&
+          srcPools == other.srcPools &&
+          recipientPaysFee == other.recipientPaysFee &&
+          dustChangePolicy == other.dustChangePolicy;
+}
 
 @freezed
 class PcztPackage with _$PcztPackage {
