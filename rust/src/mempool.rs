@@ -1,6 +1,6 @@
-use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
-use crate::lwd::{CompactOrchardAction, CompactSaplingOutput, Empty};
+use crate::lwd::{CompactOrchardAction, CompactSaplingOutput, Empty, TxFilter};
 use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
+use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::keys::Scope;
@@ -10,7 +10,10 @@ use tonic::Request;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
-use zcash_primitives::{legacy::TransparentAddress, transaction::{Authorized, Transaction, TransactionData}};
+use zcash_primitives::{
+    legacy::TransparentAddress,
+    transaction::{Authorized, Transaction, TransactionData},
+};
 use zcash_protocol::consensus::{BlockHeight, BranchId, Network};
 
 use crate::Client;
@@ -21,7 +24,7 @@ pub async fn run_mempool(
     connection: &SqlitePool,
     client: &mut Client,
     height: u32,
-    cancel_token: CancellationToken
+    cancel_token: CancellationToken,
 ) -> Result<()> {
     let transparent_accounts = sqlx::query(
         r#"SELECT a.id_account, a.name, ta.address FROM accounts a
@@ -282,4 +285,17 @@ pub async fn decode_raw_transaction(
     }
 
     Ok(notes)
+}
+
+pub async fn get_mempool_tx(client: &mut Client, tx_id: &str) -> Result<Vec<u8>> {
+    let mut tx_id = hex::decode(tx_id)?;
+    tx_id.reverse();
+    let tx = client
+        .get_transaction(Request::new(TxFilter {
+            hash: tx_id,
+            ..Default::default()
+        }))
+        .await?
+        .into_inner();
+    Ok(tx.data)
 }
