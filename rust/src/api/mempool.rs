@@ -69,3 +69,11 @@ impl Mempool {
         Ok(())
     }
 }
+
+#[frb]
+pub async fn get_mempool_tx(tx_id: &str) -> Result<Vec<u8>> {
+    let c = get_coin!();
+    let mut client = c.client().await?;
+    let tx = crate::mempool::get_mempool_tx(&mut client, tx_id).await?;
+    Ok(tx)
+}

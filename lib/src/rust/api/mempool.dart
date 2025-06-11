@@ -10,6 +10,9 @@ part 'mempool.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run_mempool`
 
+Future<Uint8List> getMempoolTx({required String txId}) =>
+    RustLib.instance.api.crateApiMempoolGetMempoolTx(txId: txId);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Mempool>>
 abstract class Mempool implements RustOpaqueInterface {
   Future<void> cancel();
