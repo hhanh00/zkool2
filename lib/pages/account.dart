@@ -538,7 +538,7 @@ String getTransactionType(int? tpe) {
   if (tpe == null) return "";
   switch (tpe) {
     case 0:
-      return "Shielded Self Transfer";
+      return "\u2194 Shielded Self Transfer";
     case 1:
       return "\u2295 Received";
     case 2:
@@ -548,7 +548,7 @@ String getTransactionType(int? tpe) {
     case 8:
       return "\u{1F6E1} Shielding";
     case 12:
-      return "Transparent Self Transfer";
+      return "\u2194 Transparent Self Transfer";
     default:
       return "Unknown";
   }
