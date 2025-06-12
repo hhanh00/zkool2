@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.3.0...zkool-v4.4.0) (2025-06-12)
+
+
+### Features
+
+* display distance from tip after account height ([#285](https://github.com/hhanh00/zkool2/issues/285)) ([1180c59](https://github.com/hhanh00/zkool2/commit/1180c59d9e55fd175c34adec40c8cacb424778ba))
+
+
+### Bug Fixes
+
+* change icon for spend/receive tx ([#283](https://github.com/hhanh00/zkool2/issues/283)) ([8844c31](https://github.com/hhanh00/zkool2/commit/8844c31e9b375fad2cb8d74accc5f23a8b117c1c))
+
 ## [4.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.2.0...zkool-v4.3.0) (2025-06-12)
 
 
