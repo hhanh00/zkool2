@@ -40,6 +40,7 @@ class AccountViewPage extends StatefulWidget {
 }
 
 class AccountViewPageState extends State<AccountViewPage> {
+  final appStore = AppStoreBase.instance;
   StreamSubscription<SyncProgress>? progressSubscription;
   PoolBalance? poolBalance;
 
@@ -52,7 +53,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   void tutorial() async {
     tutorialHelper(context, "tutAccount0",
         [tBalID, sBalID, oBalID, balID, logID, sync1ID, receiveID, sendID]);
-    if (AppStoreBase.instance.transactions.isNotEmpty)
+    if (appStore.transactions.isNotEmpty)
       tutorialHelper(context, "tutAccount1", [
         txdID,
       ]);
@@ -65,7 +66,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
     Future(tutorial);
 
-    final unconfirmedAmount = AppStoreBase.instance.mempoolAccounts[account.id];
+    final unconfirmedAmount = appStore.mempoolAccounts[account.id];
 
     return DefaultTabController(
         length: 3,
@@ -114,9 +115,10 @@ class AccountViewPageState extends State<AccountViewPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Observer(builder: (context) {
                 // make sure there is a dependency on transactions
-                AppStoreBase.instance.transactions.length;
-                AppStoreBase.instance.memos.length;
-                AppStoreBase.instance.notes.length;
+                appStore.transactions.length;
+                appStore.memos.length;
+                appStore.notes.length;
+
 
                 return TabBarView(children: [
                   SingleChildScrollView(
@@ -124,10 +126,19 @@ class AccountViewPageState extends State<AccountViewPage> {
                     Text("Height"),
                     Gap(8),
                     Observer(
-                        builder: (context) => Text(
-                            AppStoreBase.instance.heights[account.id]
-                                .toString(),
-                            style: t.bodyLarge)),
+                        builder: (context) {
+                          final currentHeight = appStore.currentHeight;
+                          final height = appStore.heights[account.id]!;
+                          return Text.rich(TextSpan(children: [
+                              TextSpan(
+                                  text: "$height",
+                                  style: t.bodyLarge),
+                              if (currentHeight - height > 0) TextSpan(
+                                text: " tip-${currentHeight - height}",
+                                style: t.labelSmall
+                              )
+                            ]));
+                    }),
                     Gap(16),
                     Text("Balance"),
                     Gap(8),
@@ -146,12 +157,12 @@ class AccountViewPageState extends State<AccountViewPage> {
                               b.field0[0] + b.field0[1] + b.field0[2],
                               style: t.titleLarge!)),
                     Gap(16),
-                    ...showTxHistory(AppStoreBase.instance.transactions),
+                    ...showTxHistory(appStore.transactions),
                   ])),
-                  showMemos(context, AppStoreBase.instance.memos),
+                  showMemos(context, appStore.memos),
                   SingleChildScrollView(
                       child: Column(children: [
-                    ...showNotes(AppStoreBase.instance.notes),
+                    ...showNotes(appStore.notes),
                   ])),
                 ]);
               }),
@@ -160,8 +171,8 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      await AppStoreBase.instance.startSynchronize(
-          [account.id], int.parse(AppStoreBase.instance.actionsPerSync));
+      await appStore
+          .startSynchronize([account.id], int.parse(appStore.actionsPerSync));
       refresh();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
@@ -178,18 +189,18 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void refresh() async {
     final b = await balance();
-    await AppStoreBase.instance.loadAccounts();
-    await AppStoreBase.instance.loadTxHistory();
-    await AppStoreBase.instance.loadMemos();
-    await AppStoreBase.instance.loadNotes();
-    await AppStoreBase.instance.loadOtherData();
+    await appStore.loadAccounts();
+    await appStore.loadTxHistory();
+    await appStore.loadMemos();
+    await appStore.loadNotes();
+    await appStore.loadOtherData();
     if (!mounted) return;
     setState(() {
       poolBalance = b;
     });
   }
 
-  Account get account => AppStoreBase.instance.selectedAccount!;
+  Account get account => appStore.selectedAccount!;
 }
 
 final nameID2 = GlobalKey();
@@ -211,6 +222,7 @@ class AccountEditPage extends StatefulWidget {
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
+  final appStore = AppStoreBase.instance;
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -354,7 +366,7 @@ class AccountEditPageState extends State<AccountEditPage> {
       await updateAccount(
           update: AccountUpdate(
               coin: accounts[0].coin, id: accounts[0].id, name: name));
-      await AppStoreBase.instance.loadAccounts();
+      await appStore.loadAccounts();
       setState(() {});
     }
   }
@@ -368,7 +380,7 @@ class AccountEditPageState extends State<AccountEditPage> {
       await updateAccount(
           update: AccountUpdate(
               coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
-      await AppStoreBase.instance.loadAccounts();
+      await appStore.loadAccounts();
       setState(() {});
     }
   }
@@ -381,7 +393,7 @@ class AccountEditPageState extends State<AccountEditPage> {
               coin: accounts[0].coin,
               id: accounts[0].id,
               birth: int.parse(birth)));
-      await AppStoreBase.instance.loadAccounts();
+      await appStore.loadAccounts();
       setState(() {});
     }
   }
@@ -394,7 +406,7 @@ class AccountEditPageState extends State<AccountEditPage> {
           update: AccountUpdate(
               coin: accounts[i].coin, id: accounts[i].id, enabled: v));
     }
-    await AppStoreBase.instance.loadAccounts();
+    await appStore.loadAccounts();
     setState(() {});
   }
 
@@ -406,7 +418,7 @@ class AccountEditPageState extends State<AccountEditPage> {
           update: AccountUpdate(
               coin: accounts[i].coin, id: accounts[i].id, hidden: v));
     }
-    await AppStoreBase.instance.loadAccounts();
+    await appStore.loadAccounts();
     setState(() {});
   }
 
@@ -436,7 +448,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
     final h = await getDbHeight();
-    AppStoreBase.instance.heights[account.id] = h;
+    appStore.heights[account.id] = h;
   }
 
   void onReset() async {
@@ -448,7 +460,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     );
     if (!confirmed) return;
     for (var account in accounts) await resetSync(id: account.id);
-    await AppStoreBase.instance.loadAccounts();
+    await appStore.loadAccounts();
   }
 }
 
@@ -483,23 +495,29 @@ class BalanceWidget extends StatelessWidget {
       maybeShowcase(showcase,
           key: tBalID,
           description: "Balance in the Transparent Pool",
-          child: zatToText(balance.field0[0], prefix: "T: ",
-              onTap: () => onPoolSelected?.call(0),
-              )),
+          child: zatToText(
+            balance.field0[0],
+            prefix: "T: ",
+            onTap: () => onPoolSelected?.call(0),
+          )),
       const Gap(8),
       maybeShowcase(showcase,
           key: sBalID,
           description: "Balance in the Sapling Pool",
-          child: zatToText(balance.field0[1], prefix: "S: ",
+          child: zatToText(
+            balance.field0[1],
+            prefix: "S: ",
             onTap: () => onPoolSelected?.call(1),
-            )),
+          )),
       const Gap(8),
       maybeShowcase(showcase,
           key: oBalID,
           description: "Balance in the Orchard Pool",
-          child: zatToText(balance.field0[2], prefix: "O: ",
+          child: zatToText(
+            balance.field0[2],
+            prefix: "O: ",
             onTap: () => onPoolSelected?.call(2),
-            )),
+          )),
     ]);
   }
 }
