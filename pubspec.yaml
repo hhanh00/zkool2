@@ -4,7 +4,7 @@ description: "Zkool"
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 4.2.0+53
+version: 4.3.0+54
 
 environment:
   sdk: ^3.6.1
