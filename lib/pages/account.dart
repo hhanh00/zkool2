@@ -540,9 +540,9 @@ String getTransactionType(int? tpe) {
     case 0:
       return "\u2194 Shielded Self Transfer";
     case 1:
-      return "\u2295 Received";
+      return "\u2795 Received";
     case 2:
-      return "\u2296 Spent";
+      return "\u2796 Spent";
     case 4:
       return "\u{1F513} Unshielding";
     case 8:
