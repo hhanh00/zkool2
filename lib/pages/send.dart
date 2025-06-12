@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
@@ -134,6 +135,20 @@ class SendPageState extends State<SendPage> {
                       ...recipientTiles,
                       if (balance != null)
                         BalanceWidget(balance, onPoolSelected: onPoolSelected),
+                      Gap(16),
+                      OverflowBar(spacing: 16, children: [
+                        if (addresses?.taddr != null)
+                          ElevatedButton.icon(
+                              onPressed: onUnshield,
+                              label: Text("Unshield All"),
+                              icon: Icon(Icons.lock_open)),
+                        if (addresses?.saddr != null ||
+                            addresses?.oaddr != null)
+                          ElevatedButton.icon(
+                              onPressed: onShield,
+                              label: Text("Shield All"),
+                              icon: Icon(Icons.shield)),
+                      ]),
                       Row(children: [
                         Expanded(
                             child: Showcase(
@@ -225,6 +240,50 @@ class SendPageState extends State<SendPage> {
         addressController.clear();
         formKey.currentState?.fields['amount']?.reset();
       });
+    }
+  }
+
+  void onShield() async {
+    try {
+      final options = PaymentOptions(
+          srcPools: 1, // Only the transparent pool (mask)
+          recipientPaysFee: true,
+          dustChangePolicy: DustChangePolicy.sendToRecipient);
+      final pczt = await prepare(
+        recipients: [
+          Recipient(
+              address: addresses?.oaddr ??
+                  addresses?.saddr ??
+                  "", // Shield to Orchard or Sapling address
+              amount: pbalance?.field0[0] ?? BigInt.zero)
+        ],
+        options: options,
+      );
+
+      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
+  }
+
+  void onUnshield() async {
+    try {
+      final options = PaymentOptions(
+          srcPools: 6, // Only the sapling and orchard pool (mask)
+          recipientPaysFee: true,
+          dustChangePolicy: DustChangePolicy.sendToRecipient);
+      final pczt = await prepare(
+        recipients: [
+          Recipient(
+              address: addresses?.taddr ?? "",
+              amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))
+        ],
+        options: options,
+      );
+
+      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
     }
   }
 
