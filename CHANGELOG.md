@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.2.0...zkool-v4.3.0) (2025-06-12)
+
+
+### Features
+
+* shield and unshield buttons ([8b56806](https://github.com/hhanh00/zkool2/commit/8b56806ef88f6ccbc12a4429eb53648434bd57ea))
+
+
+### Bug Fixes
+
+* remove unused button ([#281](https://github.com/hhanh00/zkool2/issues/281)) ([8b56806](https://github.com/hhanh00/zkool2/commit/8b56806ef88f6ccbc12a4429eb53648434bd57ea))
+
 ## [4.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.1.0...zkool-v4.2.0) (2025-06-11)
 
 
