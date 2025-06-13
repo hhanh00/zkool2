@@ -386,20 +386,29 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     }
     if is_valid_sapling_key(&network, &key) {
         init_account_sapling(pool, account, birth).await?;
-        if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
+        let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
             &key,
         ) {
             store_account_sapling_sk(pool, account, &xsk).await?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
             store_account_sapling_vk(pool, account, &xvk).await?;
+            let (di, _) = xvk.default_address();
+            di
         } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
             network.hrp_sapling_extended_full_viewing_key(),
             &key,
         ) {
             store_account_sapling_vk(pool, account, &xvk.to_diversifiable_full_viewing_key())
                 .await?;
+            let (di, _) = xvk.default_address();
+            di
         }
+        else {
+            return Err(anyhow!("Invalid Sapling Key"));
+        };
+        let dindex: u32 = di.try_into()?;
+        update_dindex(pool, account, dindex, true).await?;
     }
     if is_valid_ufvk(&network, &key) {
         let uvk =
