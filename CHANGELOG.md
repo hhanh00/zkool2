@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.4.0...zkool-v4.4.1) (2025-06-13)
+
+
+### Bug Fixes
+
+* invalid dindex when importing from sapling key ([#286](https://github.com/hhanh00/zkool2/issues/286)) ([8852f82](https://github.com/hhanh00/zkool2/commit/8852f823813b93e20f4846a0f45a77bf04c979d2))
+
 ## [4.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.3.0...zkool-v4.4.0) (2025-06-12)
 
 
