@@ -53,7 +53,9 @@ impl Coin {
             .is_none()
         {
             create_schema(&pool).await?;
-            crate::db::put_prop(&pool, "coin", "0").await?;
+            let testnet = db_filepath.contains("testnet");
+            let coin_value = if testnet { "1" } else { "0" };
+            crate::db::put_prop(&pool, "coin", coin_value).await?;
         }
 
         let (coin,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
