@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.4.1...zkool-v4.5.0) (2025-06-17)
+
+
+### Features
+
+* add support for testnet ([#289](https://github.com/hhanh00/zkool2/issues/289)) ([5535601](https://github.com/hhanh00/zkool2/commit/5535601127ccc16fae36aef9e62a307234e944ab))
+
 ## [4.4.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.4.0...zkool-v4.4.1) (2025-06-13)
 
 
