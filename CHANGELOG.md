@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.5.0...zkool-v4.5.1) (2025-06-18)
+
+
+### Bug Fixes
+
+* issue if the only sync point we have is reorged ([#291](https://github.com/hhanh00/zkool2/issues/291)) ([93d95e3](https://github.com/hhanh00/zkool2/commit/93d95e36a6dac549179b1d6502e44ec0611e961b))
+
 ## [4.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.4.1...zkool-v4.5.0) (2025-06-17)
 
 
