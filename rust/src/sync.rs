@@ -420,7 +420,7 @@ async fn handle_message(
             // handled in the caller
         }
         WarpSyncMessage::Rewind(accounts, height) => {
-            info!("Rewinding to height: {}", height);
+            info!("Discard height: {}", height);
             for account in accounts {
                 rewind_sync(&mut **db_tx, account, height).await?;
             }
@@ -518,6 +518,9 @@ pub async fn rewind_sync(connection: &mut SqliteConnection, account: u32, height
 
     if let Some(prev_height) = prev_height {
         trim_sync_data(&mut *connection, account, prev_height).await?;
+    }
+    else {
+        crate::account::reset_sync(&mut *connection, account).await?;
     }
 
     // then trim the headers because there are no accounts using them
