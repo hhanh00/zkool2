@@ -465,8 +465,9 @@ pub async fn generate_next_change_address() -> Result<Option<String>> {
 pub async fn reset_sync(id: u32) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
+    let mut connection = connection.acquire().await?;
 
-    crate::account::reset_sync(connection, id).await
+    crate::account::reset_sync(&mut connection, id).await
 }
 
 #[frb(dart_metadata = ("freezed"))]
