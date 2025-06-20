@@ -1,0 +1,13 @@
+display_name: Zkool
+
+icon: assets/logo.png
+
+keywords:
+  - Zcash
+
+generic_name: Zkool
+
+metainfo: linux/packaging/zkool.appdata.xml
+
+categories:
+  - Finance
