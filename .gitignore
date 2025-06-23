@@ -1,0 +1,13 @@
+.dart_tool/
+android/
+ios/
+linux/
+macos/
+web/
+windows/
+build/
+rust/
+rust_builder/
+.DS_Store
+.flutter-plugins
+.flutter-plugins-dependencies
