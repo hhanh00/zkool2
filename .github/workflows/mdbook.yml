@@ -1,0 +1,36 @@
+name: github pages
+
+on:
+  push:
+    branches:
+      - docs
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs
+
+      - name: Setup mdBook
+        uses: jontze/action-mdbook@v3
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          use-mermaid: true
+          use-toc: true
+          use-admonish: true
+          use-katex: true
+
+      - run: mdbook build
+        working-directory: ./docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/docs' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book

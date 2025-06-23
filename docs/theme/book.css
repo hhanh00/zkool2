@@ -1,0 +1,6 @@
+img {
+  max-width: min(90%, 400px) !important;
+  height: auto;
+  display: block;
+  margin: 0 auto; /* Center images */
+}
