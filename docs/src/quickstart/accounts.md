@@ -57,6 +57,24 @@ password** to your online banking.
 The author of this wallet will never ask you for your seed phrase[^5].
 ```
 
+## Recovery
+
+You need to have the account **seed phrase**[^6] (or one of the other
+supported secret/viewing key).
+
+In addition, knowing the block height when the account was created,
+**the birth height**
+helps since the app will skip downloading and processing blocks
+before this height.
+It greatly speeds up recovery because there were a very large
+number of transactions during the years 2022-2023.
+
+For more advanced recovery scenarios, check out the
+[Recovery](../advanced/recovery.md) section.
+
+After creating the account, you probably want to **synchronize**
+it to get the transaction history and the current balance.
+
 [^1]: Encryption is encouraged but not mandatory.
 Encryption is "at rest" on disk. At no point is
 the database decrypted. This protects the system
@@ -74,3 +92,4 @@ does not use cloud servers and never uploads any data**.
 [^4]: Use must check this option if you are recovering
 a Zashi account from seed phrase.
 [^5]: Except maybe for debugging on a small amount.
+[^6]: See the section on Keys.
