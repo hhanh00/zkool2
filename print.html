@@ -264,6 +264,19 @@ password</strong> to your online banking.</p>
 <p>The author of this wallet will never ask you for your seed phrase<sup class="footnote-reference" id="fr-5-1"><a href="#footnote-5">5</a></sup>.</p>
 </div>
 </div>
+<h2 id="recovery"><a class="header" href="#recovery">Recovery</a></h2>
+<p>You need to have the account <strong>seed phrase</strong><sup class="footnote-reference" id="fr-6-1"><a href="#footnote-6">6</a></sup> (or one of the other
+supported secret/viewing key).</p>
+<p>In addition, knowing the block height when the account was created,
+<strong>the birth height</strong>
+helps since the app will skip downloading and processing blocks
+before this height.
+It greatly speeds up recovery because there were a very large
+number of transactions during the years 2022-2023.</p>
+<p>For more advanced recovery scenarios, check out the
+<a href="quickstart/../advanced/recovery.html">Recovery</a> section.</p>
+<p>After creating the account, you probably want to <strong>synchronize</strong>
+it to get the transaction history and the current balance.</p>
 <hr>
 <ol class="footnote-definition"><li id="footnote-1">
 <p>Encryption is encouraged but not mandatory.
@@ -292,7 +305,11 @@ a Zashi account from seed phrase. <a href="#fr-4-1">↩</a></p>
 <li id="footnote-5">
 <p>Except maybe for debugging on a small amount. <a href="#fr-5-1">↩</a></p>
 </li>
-</ol>
+<li id="footnote-6">
+<p>See the section on Keys. <a href="#fr-6-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><h1 id="recovery-1"><a class="header" href="#recovery-1">Recovery</a></h1>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
