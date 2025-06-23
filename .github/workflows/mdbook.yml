@@ -17,9 +17,13 @@ jobs:
           ref: docs
 
       - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v2
+        uses: jontze/action-mdbook@v3
         with:
-          mdbook-version: 'latest'
+          token: ${{secrets.GITHUB_TOKEN}}
+          use-mermaid: true
+          use-toc: true
+          use-admonish: true
+          use-katex: true
 
       - run: mdbook build
         working-directory: ./docs
