@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.5.1...zkool-v4.5.2) (2025-06-25)
+
+
+### Bug Fixes
+
+* fee adjustment when no change output ([#294](https://github.com/hhanh00/zkool2/issues/294)) ([010502b](https://github.com/hhanh00/zkool2/commit/010502ba7f58e5f8b61bd3f947eb93ab5eb3519b))
+
 ## [4.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.5.0...zkool-v4.5.1) (2025-06-18)
 
 
