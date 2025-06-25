@@ -341,10 +341,11 @@ pub async fn plan_transaction(
     }
     else {
         let fee = fee_manager.fee();
-        // if the change is less than the cost of an action, we shold not create it
+        // if the change is less than the cost of an action, we should not create it
         fee_manager.remove_output(change_pool);
         let updated_fee = fee_manager.fee();
-        let refund_fee = updated_fee - fee;
+        assert!(updated_fee <= fee, "Fee should not increase: {} -> {}", fee, updated_fee);
+        let refund_fee = fee - updated_fee;
         match dust_change_policy {
             DustChangePolicy::Discard => {
                 info!("Discarding change of {} in pool {}", to_zec(change), change_pool);
