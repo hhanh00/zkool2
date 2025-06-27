@@ -13,6 +13,7 @@ import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
 import 'api/sync.dart';
+import 'coin.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -250,7 +251,8 @@ abstract class RustLibApi extends BaseApi {
 
   Stream<LogMessage> crateApiInitSetLogStream();
 
-  void crateApiNetworkSetLwd({required String lwd});
+  void crateApiNetworkSetLwd(
+      {required ServerType serverType, required String lwd});
 
   Future<PcztPackage> crateApiPaySignTransaction({required PcztPackage pczt});
 
@@ -2113,11 +2115,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  void crateApiNetworkSetLwd({required String lwd}) {
+  void crateApiNetworkSetLwd(
+      {required ServerType serverType, required String lwd}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_server_type(serverType, serializer);
           sse_encode_String(lwd, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 69)!;
         },
@@ -2126,7 +2130,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiNetworkSetLwdConstMeta,
-        argValues: [lwd],
+        argValues: [serverType, lwd],
         apiImpl: this,
       ),
     );
@@ -2134,7 +2138,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiNetworkSetLwdConstMeta => const TaskConstMeta(
         debugName: "set_lwd",
-        argNames: ["lwd"],
+        argNames: ["serverType", "lwd"],
       );
 
   @override
@@ -2954,6 +2958,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       phrase: dco_decode_String(arr[1]),
       aindex: dco_decode_u_32(arr[2]),
     );
+  }
+
+  @protected
+  ServerType dco_decode_server_type(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ServerType.values[raw as int];
   }
 
   @protected
@@ -3904,6 +3914,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ServerType sse_decode_server_type(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ServerType.values[inner];
+  }
+
+  @protected
   SigningStatus sse_decode_signing_status(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -4777,6 +4794,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.mnemonic, serializer);
     sse_encode_String(self.phrase, serializer);
     sse_encode_u_32(self.aindex, serializer);
+  }
+
+  @protected
+  void sse_encode_server_type(ServerType self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected

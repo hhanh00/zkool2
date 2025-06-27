@@ -178,8 +178,10 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         vout INTEGER NOT NULL,
         value INTEGER NOT NULL,
         address TEXT NOT NULL,
-        UNIQUE (tx, pool, vout))")
-        .execute(connection).await?;
+        UNIQUE (tx, pool, vout))",
+    )
+    .execute(connection)
+    .await?;
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS memos(

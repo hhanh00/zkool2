@@ -15,6 +15,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -35,6 +36,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   final formKey = GlobalKey<FormBuilderState>();
   String databaseName = AppStoreBase.instance.dbName;
   late String currentDatabaseName = databaseName;
+  bool isLightNode = AppStoreBase.instance.isLightNode;
   String lwd = AppStoreBase.instance.lwd;
   String syncInterval = AppStoreBase.instance.syncInterval;
   String actionsPerSync = AppStoreBase.instance.actionsPerSync;
@@ -115,6 +117,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                       initialValue: lwd,
                       onChanged: onChangedLWD,
                     )),
+                FormBuilderSwitch(name: "light", title: Text("Light Node"),
+                  initialValue: isLightNode,
+                  onChanged: onChangedIsLightNode,
+                ),
                 Showcase(
                     key: actionsID,
                     description: "Number actions per synchronization chunk",
@@ -196,9 +202,20 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     await putProp(key: "lwd", value: value);
     AppStoreBase.instance.lwd = value;
-    setLwd(lwd: value);
+    setLwd(lwd: value, serverType: AppStoreBase.instance.isLightNode ?
+        ServerType.lwd : ServerType.zebra);
     setState(() {
       lwd = value;
+    });
+  }
+
+  onChangedIsLightNode(bool? value) async {
+    if (value == null) return;
+    await putProp(key: "is_light_node", value: value.toString());
+    AppStoreBase.instance.isLightNode = value;
+    setLwd(lwd: lwd, serverType: value ? ServerType.lwd : ServerType.zebra);
+    setState(() {
+      isLightNode = value;
     });
   }
 

@@ -250,12 +250,12 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let c = get_coin!();
     let pool = c.get_pool();
     let network = c.network;
-    let min_height: u32 = network
+    let min_height: u32 = (network
         .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
         .unwrap()
-        .into();
+        + 1).into();
 
-    let birth = na.birth.unwrap_or(min_height);
+    let birth = na.birth.unwrap_or(min_height).max(min_height);
 
     let account = store_account_metadata(
         pool,
@@ -403,8 +403,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
                 .await?;
             let (di, _) = xvk.default_address();
             di
-        }
-        else {
+        } else {
             return Err(anyhow!("Invalid Sapling Key"));
         };
         let dindex: u32 = di.try_into()?;

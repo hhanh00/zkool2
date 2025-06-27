@@ -39,6 +39,7 @@ abstract class AppStoreBase with Store {
 
   String dbName = appName;
   String dbFilepath = "";
+  bool isLightNode = true;
   String lwd = "https://zec.rocks";
   String syncInterval = "30"; // in blocks
   String actionsPerSync = "10000";
@@ -81,6 +82,10 @@ abstract class AppStoreBase with Store {
 
   Future<void> loadSettings() async {
     lwd = await getProp(key: "lwd") ?? lwd;
+    final isLightNodeProp = await getProp(key: "is_light_node");
+    if (isLightNodeProp != null) {
+      isLightNode = isLightNodeProp == "true";
+    }
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
   }
