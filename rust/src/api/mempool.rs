@@ -47,8 +47,12 @@ impl Mempool {
     pub fn new() -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
-            .build().expect("Failed to create tokio runtime");
-        Mempool { runtime, cancel_token: None }
+            .build()
+            .expect("Failed to create tokio runtime");
+        Mempool {
+            runtime,
+            cancel_token: None,
+        }
     }
 
     pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, height: u32) -> Result<()> {
@@ -74,6 +78,9 @@ impl Mempool {
 pub async fn get_mempool_tx(tx_id: &str) -> Result<Vec<u8>> {
     let c = get_coin!();
     let mut client = c.client().await?;
-    let tx = crate::mempool::get_mempool_tx(&mut client, tx_id).await?;
-    Ok(tx)
+    let tx = crate::mempool::get_mempool_tx(&c.network, &mut client, tx_id).await?;
+    let mut tx_bytes = vec![];
+    tx.write(&mut tx_bytes)?;
+
+    Ok(tx_bytes)
 }

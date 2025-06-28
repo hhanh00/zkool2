@@ -2527,11 +2527,12 @@ fn wire__crate__api__network__set_lwd_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_server_type = <crate::coin::ServerType>::sse_decode(&mut deserializer);
             let api_lwd = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok = Result::<_, ()>::Ok({
-                    crate::api::network::set_lwd(&api_lwd);
+                    crate::api::network::set_lwd(api_server_type, &api_lwd);
                 })?;
                 Ok(output_ok)
             })())
@@ -3550,6 +3551,18 @@ impl SseDecode for crate::api::account::Seed {
     }
 }
 
+impl SseDecode for crate::coin::ServerType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::coin::ServerType::Lwd,
+            1 => crate::coin::ServerType::Zebra,
+            _ => unreachable!("Invalid variant for ServerType: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::frost::SigningStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4343,6 +4356,22 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Seed {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::account::Seed {}
 impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Seed> for crate::api::account::Seed {
     fn into_into_dart(self) -> crate::api::account::Seed {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::coin::ServerType {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Lwd => 0.into_dart(),
+            Self::Zebra => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::coin::ServerType {}
+impl flutter_rust_bridge::IntoIntoDart<crate::coin::ServerType> for crate::coin::ServerType {
+    fn into_into_dart(self) -> crate::coin::ServerType {
         self
     }
 }
@@ -5162,6 +5191,22 @@ impl SseEncode for crate::api::account::Seed {
         <String>::sse_encode(self.mnemonic, serializer);
         <String>::sse_encode(self.phrase, serializer);
         <u32>::sse_encode(self.aindex, serializer);
+    }
+}
+
+impl SseEncode for crate::coin::ServerType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::coin::ServerType::Lwd => 0,
+                crate::coin::ServerType::Zebra => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 

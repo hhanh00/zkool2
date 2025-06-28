@@ -1,12 +1,12 @@
-use crate::lwd::{CompactOrchardAction, CompactSaplingOutput, Empty, TxFilter};
+use crate::lwd::{CompactOrchardAction, CompactSaplingOutput};
 use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
 use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::keys::Scope;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
-use tonic::Request;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
@@ -14,7 +14,7 @@ use zcash_primitives::{
     legacy::TransparentAddress,
     transaction::{Authorized, Transaction, TransactionData},
 };
-use zcash_protocol::consensus::{BlockHeight, BranchId, Network};
+use zcash_protocol::consensus::Network;
 
 use crate::Client;
 
@@ -72,23 +72,17 @@ pub async fn run_mempool(
     .await
     .context("orchard_accounts")?;
 
-    let mut mempool_txs = client
-        .get_mempool_stream(Request::new(Empty {}))
-        .await?
-        .into_inner();
+    let mut mempool_txs = client.mempool_stream(network).await?;
 
-    let consensus_branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
     loop {
         tokio::select! {
             _ = cancel_token.cancelled() => {
                 info!("Mempool stream cancelled");
                 break;
             }
-            tx = mempool_txs.message() => {
-                match tx {
-                    Ok(Some(tx)) => {
-                        let txdata = tx.data;
-                        let tx = Transaction::read(&*txdata, consensus_branch_id)?;
+            r = mempool_txs.next() => {
+                match r {
+                    Some((_, tx, len)) => {
                         let txid = tx.txid();
                         let tx_hash = txid.to_string();
 
@@ -114,13 +108,9 @@ pub async fn run_mempool(
                             })
                             .collect::<Vec<_>>();
 
-                        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, txdata.len() as u32));
+                        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, len as u32));
                     }
-                    Ok(None) => {
-                        break;
-                    }
-                    Err(e) => {
-                        tracing::error!("Error receiving mempool transaction: {}", e);
+                    None => {
                         break;
                     }
                 }
@@ -287,15 +277,13 @@ pub async fn decode_raw_transaction(
     Ok(notes)
 }
 
-pub async fn get_mempool_tx(client: &mut Client, tx_id: &str) -> Result<Vec<u8>> {
+pub async fn get_mempool_tx(
+    network: &Network,
+    client: &mut Client,
+    tx_id: &str,
+) -> Result<Transaction> {
     let mut tx_id = hex::decode(tx_id)?;
     tx_id.reverse();
-    let tx = client
-        .get_transaction(Request::new(TxFilter {
-            hash: tx_id,
-            ..Default::default()
-        }))
-        .await?
-        .into_inner();
-    Ok(tx.data)
+    let (_, tx) = client.transaction(network, &tx_id).await?;
+    Ok(tx)
 }

@@ -2,21 +2,19 @@ use anyhow::{Context as _, Result};
 use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use tonic::Request;
 use tracing::info;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 use zcash_primitives::transaction::{
-    components::sapling::zip212_enforcement, fees::transparent::OutputView, Transaction,
+    components::sapling::zip212_enforcement, fees::transparent::OutputView,
 };
 use zcash_protocol::{
-    consensus::{BlockHeight, BranchId, Network},
+    consensus::Network,
     memo::Memo,
 };
 
 use crate::{
     account::{get_orchard_vk, get_sapling_vk},
-    lwd::TxFilter,
     pay::fee::FeeManager,
     Client,
 };
@@ -97,20 +95,8 @@ pub async fn decrypt_memo(
     txid: &[u8],
 ) -> Result<()> {
     info!("decrypt_memo {account} {}", hex::encode(txid));
-    let txid = txid.to_vec();
-    let raw_tx = client
-        .get_transaction(Request::new(TxFilter {
-            block: None,
-            index: 0,
-            hash: txid.clone(),
-        }))
-        .await?
-        .into_inner();
+    let (height, tx) = client.transaction(network, txid).await?;
 
-    let data = &*raw_tx.data;
-    let height = raw_tx.height as u32;
-    let branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
-    let tx = Transaction::read(data, branch_id)?;
     let tx_data = tx.into_data();
 
     let (id_tx,): (u32,) =

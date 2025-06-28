@@ -5,7 +5,7 @@ use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
 use thiserror::Error;
 use tokio::sync::{broadcast, mpsc::Sender};
-use tonic::Streaming;
+use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::info;
 use zcash_protocol::consensus::Network;
 
@@ -41,7 +41,7 @@ pub async fn warp_sync(
     connection: &SqlitePool,
     start_height: u32,
     accounts: &[(u32, bool)],
-    mut blocks: Streaming<CompactBlock>,
+    mut blocks: ReceiverStream<CompactBlock>,
     mut heights_without_time: HashSet<u32>,
     actions_per_sync: u32,
     sapling_state: &CommitmentTreeFrontier,
@@ -115,9 +115,8 @@ pub async fn warp_sync(
                     info!("Sync cancelled");
                     return Err(SyncError::Cancelled);
                 }
-                m = blocks.message() => {
-                    if let Some(block) = m? {
-                        // info!("Syncing block {}: {c}", block.height);
+                m = blocks.next() => {
+                    if let Some(block) = m {
                         let block_prev_hash = block.prev_hash.clone();
                         current_height = block.height as u32;
                         if let Some(prev_hash) = prev_hash {

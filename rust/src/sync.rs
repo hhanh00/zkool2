@@ -4,8 +4,12 @@ use crate::{
     account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
     api::sync::{transparent_sync, SyncProgress},
     db::{select_account_transparent, store_account_transparent_addr},
-    lwd::{BlockId, BlockRange, CompactBlock, TransparentAddressBlockFilter, TreeState},
-    warp::{legacy::CommitmentTreeFrontier, sync::{warp_sync, SyncError}, Witness},
+    lwd::CompactBlock,
+    warp::{
+        legacy::CommitmentTreeFrontier,
+        sync::{warp_sync, SyncError},
+        Witness,
+    },
     Client,
 };
 use anyhow::Result;
@@ -17,7 +21,8 @@ use tokio::sync::{
     broadcast,
     mpsc::{channel, Sender},
 };
-use tonic::{Request, Streaming};
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{Network, Parameters};
@@ -137,24 +142,12 @@ impl std::fmt::Debug for Note {
 }
 
 pub async fn get_compact_block_range(
+    network: &Network,
     client: &mut Client,
     start: u32,
     end: u32,
-) -> Result<Streaming<CompactBlock>> {
-    let req = || {
-        Request::new(BlockRange {
-            start: Some(BlockId {
-                height: start as u64,
-                hash: vec![],
-            }),
-            end: Some(BlockId {
-                height: end as u64,
-                hash: vec![],
-            }),
-            spam_filter_threshold: 0,
-        })
-    };
-    let blocks = client.get_block_range(req()).await?.into_inner();
+) -> Result<ReceiverStream<CompactBlock>> {
+    let blocks = client.block_range(network, start, end).await?;
     Ok(blocks)
 }
 
@@ -175,25 +168,12 @@ pub async fn get_tree_state(
         ));
     }
 
-    let tree_state = client
-        .get_tree_state(Request::new(BlockId {
-            height: height as u64,
-            hash: vec![],
-        }))
-        .await?
-        .into_inner();
+    let (sapling_tree, orchard_tree) = client.tree_state(height).await?;
 
-    let TreeState {
-        sapling_tree,
-        orchard_tree,
-        ..
-    } = tree_state;
-
-    fn decode_tree_state(s: &str) -> CommitmentTreeFrontier {
-        if s.is_empty() {
+    fn decode_tree_state(tree: &[u8]) -> CommitmentTreeFrontier {
+        if tree.is_empty() {
             CommitmentTreeFrontier::default()
         } else {
-            let tree = hex::decode(s).unwrap();
             CommitmentTreeFrontier::read(&*tree).unwrap()
         }
     }
@@ -220,7 +200,7 @@ pub async fn shielded_sync(
         let (s, o) = get_tree_state(network, client, start - 1).await?;
 
         info!("get compact block range");
-        let blocks = get_compact_block_range(client, start, end).await?;
+        let blocks = get_compact_block_range(network, client, start, end).await?;
         info!("got streaming blocks");
         let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
         let pool2 = pool.clone();
@@ -284,7 +264,8 @@ pub async fn shielded_sync(
                 tx_messages.clone(),
                 rx_cancel,
             )
-            .await {
+            .await
+            {
                 tracing::error!("Error during warp sync: {:?}", e);
                 let _ = tx_messages.send(WarpSyncMessage::Error(e)).await;
             }
@@ -460,7 +441,11 @@ pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]
 // remove synchronization data (notes, spends, transactions, witnesses) after the given height
 // keep the data at the given height
 // do not remove headers because they are used by multiple accounts
-pub async fn trim_sync_data(connection: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
+pub async fn trim_sync_data(
+    connection: &mut SqliteConnection,
+    account: u32,
+    height: u32,
+) -> Result<()> {
     let mut db_tx = connection.begin().await?;
     sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
         .bind(height)
@@ -504,7 +489,11 @@ pub async fn trim_sync_data(connection: &mut SqliteConnection, account: u32, hei
 
 // for each account, find the latest checkpoint before the given height
 // and trim the synchronization data to that height
-pub async fn rewind_sync(connection: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
+pub async fn rewind_sync(
+    connection: &mut SqliteConnection,
+    account: u32,
+    height: u32,
+) -> Result<()> {
     let prev_height =
         sqlx::query("SELECT MAX(height) FROM witnesses WHERE height < ? AND account = ?")
             .bind(height)
@@ -518,8 +507,7 @@ pub async fn rewind_sync(connection: &mut SqliteConnection, account: u32, height
 
     if let Some(prev_height) = prev_height {
         trim_sync_data(&mut *connection, account, prev_height).await?;
-    }
-    else {
+    } else {
         crate::account::reset_sync(&mut *connection, account).await?;
     }
 
@@ -588,23 +576,9 @@ pub async fn transparent_sweep(
                 let (pk, taddr) = derive_transparent_address(xvk, scope, dindex)?;
                 let taddr = taddr.encode(network);
                 let mut txids = client
-                    .get_taddress_txids(Request::new(TransparentAddressBlockFilter {
-                        address: taddr.clone(),
-                        range: Some(BlockRange {
-                            start: Some(BlockId {
-                                height: start_height as u64,
-                                hash: vec![],
-                            }),
-                            end: Some(BlockId {
-                                height: end_height as u64,
-                                hash: vec![],
-                            }),
-                            spam_filter_threshold: 0,
-                        }),
-                    }))
-                    .await?
-                    .into_inner();
-                if txids.message().await?.is_some() {
+                    .taddress_txs(network, &taddr, start_height, end_height)
+                    .await?;
+                if txids.next().await.is_some() {
                     let sk = if let Some(tsk) = tk.xsk.as_ref() {
                         let sk = derive_transparent_sk(tsk, scope, dindex)?;
                         Some(sk)

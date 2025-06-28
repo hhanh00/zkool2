@@ -30,11 +30,11 @@ pub async fn get_mailbox_account(
 
         // seed or empty string if not set
         let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
-        .bind(account)
-        .fetch_optional(connection)
-        .await?
-        .map(|row| row.0)
-        .unwrap_or_default();
+            .bind(account)
+            .fetch_optional(connection)
+            .await?
+            .map(|row| row.0)
+            .unwrap_or_default();
 
         let address = sqlx::query_as::<_, (Vec<u8>,)>(
             "SELECT data FROM dkg_packages WHERE account = ? AND round = 0
@@ -43,7 +43,8 @@ pub async fn get_mailbox_account(
         .bind(account)
         .bind(self_id)
         .fetch_optional(connection)
-        .await?.map(|a| String::from_utf8(a.0).expect("Failed to convert utf8"));
+        .await?
+        .map(|a| String::from_utf8(a.0).expect("Failed to convert utf8"));
         let mailbox_account = if !seed.is_empty() {
             sqlx::query_as::<_, (u32,)>("SELECT id_account FROM accounts WHERE seed = ?1")
                 .bind(&seed)
@@ -88,12 +89,14 @@ pub async fn get_mailbox_account(
                 .bind(ua)
                 .execute(connection)
                 .await?;
-                let seed = get_account_seed(mailbox_account).await?.expect("Seed should be set");
+                let seed = get_account_seed(mailbox_account)
+                    .await?
+                    .expect("Seed should be set");
                 sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
-                .bind(&seed.mnemonic)
-                .bind(account)
-                .execute(connection)
-                .await?;
+                    .bind(&seed.mnemonic)
+                    .bind(account)
+                    .execute(connection)
+                    .await?;
             }
             _ => unreachable!(),
         }
@@ -120,8 +123,10 @@ pub async fn get_coordinator_broadcast_account(
     .bind(account)
     .fetch_all(connection)
     .await?;
-    let addresses = addresses.into_iter().map(|row|
-        String::from_utf8(row.0).unwrap()).collect::<Vec<_>>();
+    let addresses = addresses
+        .into_iter()
+        .map(|row| String::from_utf8(row.0).unwrap())
+        .collect::<Vec<_>>();
 
     let mut state = blake2b_simd::Params::new()
         .hash_length(32)

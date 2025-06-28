@@ -536,7 +536,12 @@ pub async fn get_tx_details(
         let output: Option<u32> = row.get(1);
         let pool: u8 = row.get(2);
         let memo: Option<String> = row.get(3);
-        TxMemo { note, output, pool, memo }
+        TxMemo {
+            note,
+            output,
+            pool,
+            memo,
+        }
     })
     .fetch_all(connection)
     .await?;
