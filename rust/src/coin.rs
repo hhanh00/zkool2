@@ -8,6 +8,7 @@ use zcash_protocol::consensus::Network;
 
 use crate::db::create_schema;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
+use crate::zebra::ZebraClient;
 use crate::Client;
 
 #[macro_export]
@@ -33,11 +34,17 @@ pub struct Coin {
     pub network: Network,
     pub db_filepath: String,
     pub pool: Option<SqlitePool>,
-    pub lwd: String,
+    pub url: String,
+    pub server_type: ServerType,
 }
 
 impl Coin {
-    pub async fn new(lwd: &str, db_filepath: &str, password: Option<String>) -> Result<Coin> {
+    pub async fn new(
+        server_type: ServerType,
+        url: &str,
+        db_filepath: &str,
+        password: Option<String>,
+    ) -> Result<Coin> {
         // Create a connection pool
         let options = get_connect_options(db_filepath, password);
         let pool = SqlitePoolOptions::new()
@@ -75,7 +82,8 @@ impl Coin {
             network,
             db_filepath: db_filepath.to_string(),
             pool: Some(pool),
-            lwd: lwd.to_string(),
+            server_type,
+            url: url.to_string(),
         })
     }
 
@@ -83,19 +91,35 @@ impl Coin {
         self.pool.as_ref().unwrap()
     }
 
-    pub fn set_lwd(&mut self, lwd: &str) {
-        self.lwd = lwd.to_string();
+    pub fn set_url(&mut self, server_type: ServerType, url: &str) {
+        self.url = url.to_string();
+        self.server_type = server_type;
     }
 
     pub async fn client(&self) -> Result<Client> {
-        let mut channel = tonic::transport::Channel::from_shared(self.lwd.clone())?;
-        if self.lwd.starts_with("https") {
-            let tls = ClientTlsConfig::new().with_enabled_roots();
-            channel = channel.tls_config(tls)?;
+        match self.server_type {
+            ServerType::Lwd => {
+                let mut channel = tonic::transport::Channel::from_shared(self.url.clone())?;
+                if self.url.starts_with("https") {
+                    let tls = ClientTlsConfig::new().with_enabled_roots();
+                    channel = channel.tls_config(tls)?;
+                }
+                let client = CompactTxStreamerClient::connect(channel).await?;
+                Ok(Box::new(client))
+            }
+
+            ServerType::Zebra => {
+                let client = ZebraClient::new(&self.network, &self.url);
+                Ok(Box::new(client))
+            }
         }
-        let client = CompactTxStreamerClient::connect(channel).await?;
-        Ok(client)
     }
+}
+
+#[derive(Clone)]
+pub enum ServerType {
+    Lwd = 0,
+    Zebra = 1,
 }
 
 impl Default for Coin {
@@ -106,7 +130,8 @@ impl Default for Coin {
             network: Network::MainNetwork,
             db_filepath: String::new(),
             pool: None,
-            lwd: String::new(),
+            server_type: ServerType::Lwd,
+            url: String::new(),
         }
     }
 }

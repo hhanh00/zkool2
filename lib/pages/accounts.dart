@@ -13,6 +13,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
@@ -47,6 +48,7 @@ class AccountListPage extends StatelessWidget {
         if (password != null && password.isEmpty) password = null;
       }
 
+      final appStore = AppStoreBase.instance;
       while (true) {
         try {
           await openDatabase(dbFilepath: dbFilepath, password: password);
@@ -65,9 +67,13 @@ class AccountListPage extends StatelessWidget {
           }
         }
       }
-      await AppStoreBase.instance.loadSettings();
-      setLwd(lwd: AppStoreBase.instance.lwd);
-      AppStoreBase.instance.autoSync();
+      await appStore.loadSettings();
+      setLwd(
+        serverType: appStore.isLightNode
+            ? ServerType.lwd
+            : ServerType.zebra,
+        lwd: appStore.lwd);
+      appStore.autoSync();
       runMempoolListener();
     }
 
