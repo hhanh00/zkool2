@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use anyhow::{Context as _, Result};
 use bincode::{
@@ -8,7 +8,13 @@ use bincode::{
 use frost_rerandomized::{aggregate, sign, RandomizedParams};
 use futures::StreamExt as _;
 use halo2_proofs::pasta::Fq;
-use pczt::{roles::{low_level_signer::Signer, prover::Prover, spend_finalizer::SpendFinalizer, tx_extractor::TransactionExtractor}, Pczt};
+use pczt::{
+    roles::{
+        low_level_signer::Signer, prover::Prover, spend_finalizer::SpendFinalizer,
+        tx_extractor::TransactionExtractor,
+    },
+    Pczt,
+};
 use rand_core::OsRng;
 use reddsa::frost::redpallas::{
     frost::{
@@ -31,11 +37,19 @@ use zcash_protocol::{consensus::Network, memo::Memo};
 use crate::{
     api::{
         frost::{FrostSignParams, SigningStatus},
-        pay::PcztPackage, sync::SYNCING,
-    }, frb_generated::StreamSink, frost::{
+        pay::PcztPackage,
+        sync::SYNCING,
+    },
+    frb_generated::StreamSink,
+    frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::{delete_frost_state, get_dkg_params, publish},
-    }, pay::{plan::{ORCHARD_PK, SAPLING_PROVER}, send}, Client
+    },
+    pay::{
+        plan::{ORCHARD_PK, SAPLING_PROVER},
+        send,
+    },
+    Client,
 };
 
 use super::{FrostSigMessage, P};
@@ -143,7 +157,6 @@ pub async fn do_sign(
 
     info!("Processing commitments for account {}", account);
 
-
     let commitments_vec = loop {
         let commitments_vec = get_commitments(connection, account, &sighash, nsigs).await?;
         // does the commitment table have our commitments?
@@ -199,7 +212,9 @@ pub async fn do_sign(
         // the coordinator does not need to send a message to itself,
         //   (the commitments are already in the database)
         if dkg_params.id as u16 != params.coordinator {
-            status.add(SigningStatus::SendingCommitment).map_err(anyhow::Error::msg)?;
+            status
+                .add(SigningStatus::SendingCommitment)
+                .map_err(anyhow::Error::msg)?;
             let txid = publish(
                 network,
                 connection,
@@ -249,7 +264,9 @@ pub async fn do_sign(
         // we are not the coordinator, and we haven't received all the sigpackages
         if dkg_params.id as u16 != params.coordinator {
             info!("Waiting for sigpackages");
-            status.add(SigningStatus::WaitingForSigningPackage).map_err(anyhow::Error::msg)?;
+            status
+                .add(SigningStatus::WaitingForSigningPackage)
+                .map_err(anyhow::Error::msg)?;
             return Ok(());
         }
 
@@ -266,7 +283,9 @@ pub async fn do_sign(
                     c.len(),
                     dkg_params.t
                 );
-                status.add(SigningStatus::WaitingForCommitments).map_err(anyhow::Error::msg)?;
+                status
+                    .add(SigningStatus::WaitingForCommitments)
+                    .map_err(anyhow::Error::msg)?;
                 return Ok(());
             }
             // build the sigpackage for this input and store it
@@ -320,7 +339,9 @@ pub async fn do_sign(
         }
         // we send all the sigpackages in one zcash transaction
         // with one output/memo per input/signature needed
-        status.add(SigningStatus::SendingSigningPackage).map_err(anyhow::Error::msg)?;
+        status
+            .add(SigningStatus::SendingSigningPackage)
+            .map_err(anyhow::Error::msg)?;
         let txid = publish(
             network,
             connection,
@@ -381,7 +402,9 @@ pub async fn do_sign(
         }
 
         if dkg_params.id as u16 != params.coordinator {
-            status.add(SigningStatus::SendingSignatureShare).map_err(anyhow::Error::msg)?;
+            status
+                .add(SigningStatus::SendingSignatureShare)
+                .map_err(anyhow::Error::msg)?;
             let txid = publish(
                 network,
                 connection,
@@ -392,7 +415,9 @@ pub async fn do_sign(
             )
             .await?;
 
-            status.add(SigningStatus::SigningCompleted).map_err(anyhow::Error::msg)?;
+            status
+                .add(SigningStatus::SigningCompleted)
+                .map_err(anyhow::Error::msg)?;
             info!("Published sigshares transaction: {}", txid);
         }
         tx.commit().await?;
@@ -450,7 +475,9 @@ pub async fn do_sign(
                     sigshares.len(),
                     dkg_params.t
                 );
-                status.add(SigningStatus::WaitingForSignatureShares).map_err(anyhow::Error::msg)?;
+                status
+                    .add(SigningStatus::WaitingForSignatureShares)
+                    .map_err(anyhow::Error::msg)?;
                 return Ok(());
             }
             let randomized_params =
@@ -473,7 +500,9 @@ pub async fn do_sign(
         tx.commit().await?;
         info!("Signature completed");
 
-        status.add(SigningStatus::PreparingTransaction).map_err(anyhow::Error::msg)?;
+        status
+            .add(SigningStatus::PreparingTransaction)
+            .map_err(anyhow::Error::msg)?;
         let signer = Signer::new(pczt);
         let signer = signer
             .sign_orchard_with(|_pczt, bundle, _| {
@@ -506,15 +535,21 @@ pub async fn do_sign(
         let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
         let (svk, ovk) = sapling_prover.verifying_keys();
         let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
-        let tx = tx_extractor.extract().map_err(|e| anyhow::anyhow!("{:?}", e))?;
+        let tx = tx_extractor
+            .extract()
+            .map_err(|e| anyhow::anyhow!("{:?}", e))?;
         let mut tx_bytes = vec![];
         tx.write(&mut tx_bytes).unwrap();
         info!("Transaction Len: {}", tx_bytes.len());
 
-        status.add(SigningStatus::SendingTransaction).map_err(anyhow::Error::msg)?;
+        status
+            .add(SigningStatus::SendingTransaction)
+            .map_err(anyhow::Error::msg)?;
         let txid = send(client, height, &tx_bytes).await?;
         info!("Transaction sent: {}", txid);
-        status.add(SigningStatus::TransactionSent(txid)).map_err(anyhow::Error::msg)?;
+        status
+            .add(SigningStatus::TransactionSent(txid))
+            .map_err(anyhow::Error::msg)?;
     }
 
     delete_frost_state(connection).await?;
@@ -570,7 +605,8 @@ async fn get_coordinator_address(
     .bind(account)
     .bind(coordinator)
     .fetch_one(connection)
-    .await.with_context(|| format!("Failed getting coordinator address {account} {coordinator}"))?;
+    .await
+    .with_context(|| format!("Failed getting coordinator address {account} {coordinator}"))?;
     Ok(String::from_utf8(address).expect("Failed to convert utf8"))
 }
 
@@ -777,8 +813,9 @@ struct RandomizedSigPackage {
 }
 
 pub async fn is_signing_in_progress(connection: &SqlitePool) -> Result<bool> {
-    let exists = sqlx::query_as::<_, (bool, )>("SELECT TRUE FROM props WHERE key = 'frost_pczt'")
-    .fetch_optional(connection).await?;
+    let exists = sqlx::query_as::<_, (bool,)>("SELECT TRUE FROM props WHERE key = 'frost_pczt'")
+        .fetch_optional(connection)
+        .await?;
 
     Ok(exists.is_some())
 }

@@ -22,7 +22,6 @@ use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
-use tonic::Request;
 use tracing::{debug, event, info, span, Level};
 use zcash_address::ZcashAddress;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
@@ -54,7 +53,6 @@ use crate::{
     },
     api::pay::{DustChangePolicy, PcztPackage},
     db::select_account_transparent,
-    lwd::ChainSpec,
     pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
@@ -86,7 +84,7 @@ pub async fn plan_transaction(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
-    dust_change_policy: DustChangePolicy
+    dust_change_policy: DustChangePolicy,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
@@ -334,21 +332,31 @@ pub async fn plan_transaction(
 
     let mut outputs = single
         .iter()
-        .chain(double.iter()).cloned().collect::<Vec<_>>();
+        .chain(double.iter())
+        .cloned()
+        .collect::<Vec<_>>();
 
     if change >= COST_PER_ACTION {
         outputs.push(change_recipient.clone());
-    }
-    else {
+    } else {
         let fee = fee_manager.fee();
         // if the change is less than the cost of an action, we should not create it
         fee_manager.remove_output(change_pool);
         let updated_fee = fee_manager.fee();
-        assert!(updated_fee <= fee, "Fee should not increase: {} -> {}", fee, updated_fee);
+        assert!(
+            updated_fee <= fee,
+            "Fee should not increase: {} -> {}",
+            fee,
+            updated_fee
+        );
         let refund_fee = fee - updated_fee;
         match dust_change_policy {
             DustChangePolicy::Discard => {
-                info!("Discarding change of {} in pool {}", to_zec(change), change_pool);
+                info!(
+                    "Discarding change of {} in pool {}",
+                    to_zec(change),
+                    change_pool
+                );
             }
             DustChangePolicy::SendToRecipient => {
                 info!(
@@ -365,11 +373,7 @@ pub async fn plan_transaction(
 
     info!("Initializing Builder");
 
-    let current_height = client
-        .get_latest_block(Request::new(ChainSpec {}))
-        .await?
-        .into_inner()
-        .height as u32;
+    let current_height = client.latest_height().await?;
     let target_height = current_height + 100;
 
     let mut builder = Builder::new(

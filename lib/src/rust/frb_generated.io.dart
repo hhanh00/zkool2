@@ -13,6 +13,7 @@ import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
 import 'api/sync.dart';
+import 'coin.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -247,6 +248,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Seed dco_decode_seed(dynamic raw);
+
+  @protected
+  ServerType dco_decode_server_type(dynamic raw);
 
   @protected
   SigningStatus dco_decode_signing_status(dynamic raw);
@@ -524,6 +528,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Seed sse_decode_seed(SseDeserializer deserializer);
+
+  @protected
+  ServerType sse_decode_server_type(SseDeserializer deserializer);
 
   @protected
   SigningStatus sse_decode_signing_status(SseDeserializer deserializer);
@@ -818,6 +825,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_server_type(ServerType self, SseSerializer serializer);
 
   @protected
   void sse_encode_signing_status(SigningStatus self, SseSerializer serializer);

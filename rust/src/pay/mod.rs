@@ -1,9 +1,8 @@
-use crate::{api::pay::PcztPackage, lwd::RawTransaction, Client};
+use crate::{api::pay::PcztPackage, Client};
 
 use anyhow::Result;
 use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
-use tonic::Request;
 use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_protocol::consensus::Network;
@@ -183,18 +182,9 @@ pub struct TxPlanOut {
 
 pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<String> {
     let span = span!(Level::INFO, "transaction");
-    let rep = client
-        .send_transaction(Request::new(RawTransaction {
-            height: height as u64,
-            data: data.to_vec(),
-        }))
-        .await?
-        .into_inner();
-    if rep.error_code != 0 {
-        return Err(anyhow::anyhow!(rep.error_message));
-    }
+    let txid = client.post_transaction(height, data).await?;
     span.in_scope(|| {
-        info!("TXID: {}", rep.error_message);
+        info!("TXID: {}", txid);
     });
-    Ok(rep.error_message)
+    Ok(txid)
 }
