@@ -2,9 +2,12 @@ use anyhow::{Ok, Result};
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tonic::Request;
 
-use crate::{frb_generated::StreamSink, frost::{db::get_mailbox_account, dkg::get_dkg_params}, get_coin, lwd::ChainSpec};
+use crate::{
+    frb_generated::StreamSink,
+    frost::{db::get_mailbox_account, dkg::get_dkg_params},
+    get_coin,
+};
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
@@ -14,21 +17,19 @@ pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u
     let c = get_coin!();
     let connection = c.get_pool();
     let mut client = c.client().await?;
-    let height = client
-        .get_latest_block(Request::new(ChainSpec {}))
-        .await?
-        .into_inner()
-        .height as u32;
+    let height = client.latest_height().await?;
     let birth_height = height - 10000;
 
-    sqlx::query("INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, '', ?)")
-        .bind(funding_account)
-        .bind(id)
-        .bind(n)
-        .bind(t)
-        .bind(birth_height)
-        .execute(connection)
-        .await?;
+    sqlx::query(
+        "INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, '', ?)",
+    )
+    .bind(funding_account)
+    .bind(id)
+    .bind(n)
+    .bind(t)
+    .bind(birth_height)
+    .execute(connection)
+    .await?;
     sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_name', ?1)")
         .bind(name)
         .execute(connection)
@@ -56,9 +57,18 @@ pub async fn has_dkg_params() -> Result<bool> {
 pub async fn init_dkg() -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let account = get_funding_account(connection)
+        .await?
+        .expect("Funding account not set");
     let dkg_params = get_dkg_params(connection, account).await?;
-    get_mailbox_account(&c.network, connection, account, dkg_params.id, dkg_params.birth_height).await?;
+    get_mailbox_account(
+        &c.network,
+        connection,
+        account,
+        dkg_params.id,
+        dkg_params.birth_height,
+    )
+    .await?;
 
     Ok(())
 }
@@ -67,7 +77,9 @@ pub async fn init_dkg() -> Result<()> {
 pub async fn has_dkg_addresses() -> Result<bool> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let account = get_funding_account(connection)
+        .await?
+        .expect("Funding account not set");
     let dkg_params = get_dkg_params(connection, account).await?;
     let addresses = crate::frost::db::get_addresses(connection, account, dkg_params.n).await?;
     Ok(addresses.iter().all(|a| !a.is_empty()))
@@ -78,28 +90,20 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
     let mut client = c.client().await?;
-    let height = client
-        .get_latest_block(Request::new(ChainSpec {}))
+    let height = client.latest_height().await?;
+    let account = get_funding_account(connection)
         .await?
-        .into_inner()
-        .height as u32;
-    let account = get_funding_account(connection).await?.expect("Funding account not set");
+        .expect("Funding account not set");
 
-    crate::frost::dkg::do_dkg(
-        &c.network,
-        connection,
-        account,
-        &mut client,
-        height,
-        status,
-    )
-    .await
+    crate::frost::dkg::do_dkg(&c.network, connection, account, &mut client, height, status).await
 }
 
 pub async fn get_dkg_addresses() -> Result<Vec<String>> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let account = get_funding_account(connection)
+        .await?
+        .expect("Funding account not set");
     let n = get_dkg_params(connection, account).await?.n;
     let addresses = crate::frost::db::get_addresses(connection, account, n).await?;
     Ok(addresses)
@@ -108,10 +112,11 @@ pub async fn get_dkg_addresses() -> Result<Vec<String>> {
 pub async fn set_dkg_address(id: u16, address: &str) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
-    let account = get_funding_account(connection).await?.expect("Funding account not set");
+    let account = get_funding_account(connection)
+        .await?
+        .expect("Funding account not set");
 
-    crate::frost::dkg::set_dkg_address(connection, account, id, address)
-        .await
+    crate::frost::dkg::set_dkg_address(connection, account, id, address).await
 }
 
 #[frb]
@@ -123,11 +128,10 @@ pub async fn cancel_dkg() -> Result<()> {
 }
 
 async fn get_funding_account(connection: &SqlitePool) -> Result<Option<u32>> {
-    let rs =
-        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
-            .fetch_optional(connection)
-            .await?;
-    let account = rs.map(|(account, )| u32::from_str(&account).unwrap());
+    let rs = sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
+        .fetch_optional(connection)
+        .await?;
+    let account = rs.map(|(account,)| u32::from_str(&account).unwrap());
     Ok(account)
 }
 
@@ -177,11 +181,7 @@ pub async fn do_sign(status: StreamSink<SigningStatus>) -> Result<()> {
     let c = get_coin!();
     let connection = c.get_pool();
     let mut client = c.client().await?;
-    let height = client
-        .get_latest_block(Request::new(ChainSpec {}))
-        .await?
-        .into_inner()
-        .height as u32;
+    let height = client.latest_height().await?;
     crate::frost::sign::do_sign(
         &c.network,
         connection,

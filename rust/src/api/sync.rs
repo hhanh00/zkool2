@@ -8,8 +8,8 @@ use tokio::sync::{broadcast, Mutex};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
-use zcash_primitives::{legacy::TransparentAddress, transaction::Transaction as ZcashTransaction};
-use zcash_protocol::consensus::{BranchId, Network};
+use zcash_primitives::legacy::TransparentAddress;
+use zcash_protocol::consensus::Network;
 
 use crate::db::calculate_balance;
 use crate::sync::{prune_old_checkpoints, recover_from_partial_sync};
@@ -17,9 +17,9 @@ use crate::Client;
 use crate::{
     frb_generated::StreamSink,
     get_coin,
-    lwd::{BlockId, BlockRange, TransparentAddressBlockFilter},
     sync::shielded_sync,
 };
+// use tokio_stream::StreamExt as _;
 
 #[frb]
 pub async fn synchronize(
@@ -163,7 +163,10 @@ pub async fn synchronize(
                 account_heights.insert(*account, end_height);
                 crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
             }
-            info!("Sync completed for height range {}-{}", start_height, end_height);
+            info!(
+                "Sync completed for height range {}-{}",
+                start_height, end_height
+            );
         }
 
         Ok::<_, anyhow::Error>(())
@@ -221,26 +224,12 @@ pub(crate) async fn transparent_sync(
     Ok(for (account, address_row) in addresses.iter() {
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
         let mut txs = client
-            .get_taddress_txids(TransparentAddressBlockFilter {
-                address: address_row.1.clone(),
-                range: Some(BlockRange {
-                    start: Some(BlockId {
-                        height: start_height as u64,
-                        hash: vec![],
-                    }),
-                    end: Some(BlockId {
-                        height: end_height as u64,
-                        hash: vec![],
-                    }),
-                    spam_filter_threshold: 0,
-                }),
-            })
+            .taddress_txs(network,
+                &address_row.1,
+                start_height,
+                end_height)
             .await?
             .into_inner();
-
-        // Initialize variables for branch ID memoization
-        let mut last_height: Option<u32> = None;
-        let mut last_branch_id: Option<BranchId> = None;
 
         let mut db_tx = pool.begin().await?;
         loop {
@@ -249,25 +238,8 @@ pub(crate) async fn transparent_sync(
                     info!("Canceling sync");
                     anyhow::bail!("Sync canceled");
                 }
-                m = txs.message() => {
-                    if let Some(tx) = m? {
-                        // Determine the consensus branch ID based on the block height
-                        let height = tx.height as u32;
-
-                        // Use memoized branch ID if available for this height, otherwise compute it
-                        let consensus_branch_id = match last_height {
-                            Some(h) if h == height => last_branch_id.unwrap(),
-                            _ => {
-                                let branch_id = BranchId::for_height(&network, height.into());
-                                last_height = Some(height);
-                                last_branch_id = Some(branch_id);
-                                branch_id
-                            }
-                        };
-
-                        // Parse the transaction
-                        let transaction = ZcashTransaction::read(&*tx.data, consensus_branch_id)?;
-
+                m = txs.recv() => {
+                    if let Some((height, transaction, _)) = m {
                         let txid = transaction.txid().as_ref().to_vec();
                         // tx time is available in the block (not here)
                         sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")

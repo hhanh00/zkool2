@@ -16,10 +16,7 @@ pub struct PaymentOptions {
 }
 
 #[frb]
-pub async fn prepare(
-    recipients: &[Recipient],
-    options: PaymentOptions,
-) -> Result<PcztPackage> {
+pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
     let network = &c.network;
@@ -34,7 +31,7 @@ pub async fn prepare(
         options.src_pools,
         recipients,
         options.recipient_pays_fee,
-        options.dust_change_policy
+        options.dust_change_policy,
     )
     .await
 }

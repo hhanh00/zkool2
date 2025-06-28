@@ -276,33 +276,34 @@ pub async fn export_account(connection: &SqlitePool, account: u32) -> Result<Vec
             "SELECT id_output, o.account, o.height, o.pool, o.value, o.address,
             o.vout, memo_text, memo_bytes
             FROM outputs o
-            LEFT JOIN memos m ON o.id_output = m.output WHERE o.tx = ?")
-            .bind(tx.id_tx)
-            .map(|row: SqliteRow| {
-                let id_output: u32 = row.get(0);
-                let account: u32 = row.get(1);
-                let height: u32 = row.get(2);
-                let pool: u8 = row.get(3);
-                let value: u64 = row.get::<i64, _>(4) as u64;
-                let address: String = row.get(5);
-                let vout: u32 = row.get(6);
-                let memo_text: Option<String> = row.get(7);
-                let memo_bytes: Option<Vec<u8>> = row.get(8);
+            LEFT JOIN memos m ON o.id_output = m.output WHERE o.tx = ?",
+        )
+        .bind(tx.id_tx)
+        .map(|row: SqliteRow| {
+            let id_output: u32 = row.get(0);
+            let account: u32 = row.get(1);
+            let height: u32 = row.get(2);
+            let pool: u8 = row.get(3);
+            let value: u64 = row.get::<i64, _>(4) as u64;
+            let address: String = row.get(5);
+            let vout: u32 = row.get(6);
+            let memo_text: Option<String> = row.get(7);
+            let memo_bytes: Option<Vec<u8>> = row.get(8);
 
-                IOOutput {
-                    id_output,
-                    height,
-                    account,
-                    pool,
-                    value,
-                    address,
-                    vout,
-                    memo_text,
-                    memo_bytes,
-                }
-            })
-            .fetch_all(connection)
-            .await?;
+            IOOutput {
+                id_output,
+                height,
+                account,
+                pool,
+                value,
+                address,
+                vout,
+                memo_text,
+                memo_bytes,
+            }
+        })
+        .fetch_all(connection)
+        .await?;
         tx.outputs = outputs;
 
         // Get the spends for the given transaction

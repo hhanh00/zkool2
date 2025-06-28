@@ -1,24 +1,19 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
 use serde::Deserialize;
-use tonic::Request;
 
-use crate::lwd::ChainSpec;
+use crate::coin::ServerType;
 
 #[frb(sync)]
-pub fn set_lwd(lwd: &str) {
+pub fn set_lwd(server_type: ServerType, lwd: &str) {
     let mut coin = crate::coin::COIN.lock().unwrap();
-    coin.set_lwd(lwd);
+    coin.set_url(server_type, lwd);
 }
 
 pub async fn get_current_height() -> Result<u32> {
     let c = crate::get_coin!();
     let mut client = c.client().await?;
-    let height = client
-        .get_latest_block(Request::new(ChainSpec {}))
-        .await?
-        .into_inner()
-        .height;
+    let height = client.latest_height().await?;
     Ok(height as u32)
 }
 

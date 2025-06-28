@@ -3,11 +3,11 @@ use anyhow::Result;
 use flutter_rust_bridge::frb;
 
 pub async fn open_database(db_filepath: &str, password: Option<String>) -> Result<()> {
-    let lwd = {
+    let (server_type, lwd) = {
         let c = crate::coin::COIN.lock().unwrap();
-        c.lwd.clone()
+        (c.server_type.clone(), c.url.clone())
     };
-    let coin = Coin::new(&lwd, db_filepath, password).await?;
+    let coin = Coin::new(server_type, &lwd, db_filepath, password).await?;
     let mut c = crate::coin::COIN.lock().unwrap();
     *c = coin;
 
@@ -15,7 +15,12 @@ pub async fn open_database(db_filepath: &str, password: Option<String>) -> Resul
 }
 
 #[frb]
-pub async fn change_db_password(db_filepath: &str, tmp_dir: &str, old_password: &str, new_password: &str) -> Result<()> {
+pub async fn change_db_password(
+    db_filepath: &str,
+    tmp_dir: &str,
+    old_password: &str,
+    new_password: &str,
+) -> Result<()> {
     crate::db::change_db_password(db_filepath, tmp_dir, old_password, new_password).await
 }
 
