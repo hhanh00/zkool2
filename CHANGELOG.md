@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.5.2...zkool-v4.6.0) (2025-06-28)
+
+
+### Features
+
+* support for full node servers (zcashd, zebrad) ([#297](https://github.com/hhanh00/zkool2/issues/297)) ([4412d40](https://github.com/hhanh00/zkool2/commit/4412d404d1c20a57047236ee993dc6259a5dc93d))
+
 ## [4.5.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.5.1...zkool-v4.5.2) (2025-06-25)
 
 
