@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.0...zkool-v4.6.1) (2025-06-28)
+
+
+### Bug Fixes
+
+* ios build ([#299](https://github.com/hhanh00/zkool2/issues/299)) ([a42810e](https://github.com/hhanh00/zkool2/commit/a42810e232cbb41d18573906cc32a2275eba2544))
+
 ## [4.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.5.2...zkool-v4.6.0) (2025-06-28)
 
 
