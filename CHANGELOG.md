@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.1...zkool-v4.6.2) (2025-06-29)
+
+
+### Bug Fixes
+
+* name of server field on settings page ([#301](https://github.com/hhanh00/zkool2/issues/301)) ([927bb5a](https://github.com/hhanh00/zkool2/commit/927bb5a3ea8f70bc0539cb86519e86991609429b))
+
 ## [4.6.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.0...zkool-v4.6.1) (2025-06-28)
 
 
