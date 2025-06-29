@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.3...zkool-v4.6.4) (2025-06-29)
+
+
+### Bug Fixes
+
+* race condition at db creation ([#305](https://github.com/hhanh00/zkool2/issues/305)) ([8ec2515](https://github.com/hhanh00/zkool2/commit/8ec251545bcbada135f0d0a9cdadb8cd7bbba874))
+
 ## [4.6.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.2...zkool-v4.6.3) (2025-06-29)
 
 
