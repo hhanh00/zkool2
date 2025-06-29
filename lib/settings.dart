@@ -20,6 +20,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 final databaseID = GlobalKey();
+final lightnodeID = GlobalKey();
 final lwdID = GlobalKey();
 final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
@@ -58,7 +59,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
 
   void tutorial() async {
     tutorialHelper(context, "tutSettings0",
-        [databaseID, lwdID, actionsID, autosyncID, cancelID]);
+        [databaseID, lightnodeID, lwdID, actionsID, autosyncID, cancelID]);
   }
 
   @override
@@ -85,17 +86,18 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
             child: Column(
               children: [
                 Row(children: [
-                  Expanded(child: Showcase(
-                      key: databaseID,
-                      description:
-                          "Change the database file. This requires a RESTART after",
-                      child: FormBuilderTextField(
-                        name: "database_name",
-                        decoration:
-                            const InputDecoration(labelText: "Database Name"),
-                        initialValue: databaseName,
-                        onChanged: onChangedDatabaseName,
-                      ))),
+                  Expanded(
+                      child: Showcase(
+                          key: databaseID,
+                          description:
+                              "Change the database file. This requires a RESTART after",
+                          child: FormBuilderTextField(
+                            name: "database_name",
+                            decoration: const InputDecoration(
+                                labelText: "Database Name"),
+                            initialValue: databaseName,
+                            onChanged: onChangedDatabaseName,
+                          ))),
                   if (databaseName != currentDatabaseName) ...[
                     IconButton(
                         tooltip: "Delete Database",
@@ -108,19 +110,24 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                   ]
                 ]),
                 Showcase(
+                    key: lightnodeID,
+                    description: "Whether the server is a light node or not",
+                    child: FormBuilderSwitch(
+                      name: "light",
+                      title: Text("Light Node"),
+                      initialValue: isLightNode,
+                      onChanged: onChangedIsLightNode,
+                    )),
+                Showcase(
                     key: lwdID,
-                    description: "Lightwalletd server to connect to",
+                    description: "Node server to connect to",
                     child: FormBuilderTextField(
                       name: "lwd",
-                      decoration: const InputDecoration(
-                          labelText: "Lightwalletd Server"),
+                      decoration: InputDecoration(
+                          labelText: "${isLightNode ? 'Light' : 'Full'} Node Server"),
                       initialValue: lwd,
                       onChanged: onChangedLWD,
                     )),
-                FormBuilderSwitch(name: "light", title: Text("Light Node"),
-                  initialValue: isLightNode,
-                  onChanged: onChangedIsLightNode,
-                ),
                 Showcase(
                     key: actionsID,
                     description: "Number actions per synchronization chunk",
@@ -202,8 +209,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     await putProp(key: "lwd", value: value);
     AppStoreBase.instance.lwd = value;
-    setLwd(lwd: value, serverType: AppStoreBase.instance.isLightNode ?
-        ServerType.lwd : ServerType.zebra);
+    setLwd(
+        lwd: value,
+        serverType: AppStoreBase.instance.isLightNode
+            ? ServerType.lwd
+            : ServerType.zebra);
     setState(() {
       lwd = value;
     });
@@ -255,7 +265,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (!mounted) return;
     await showMessage(context, "Database $databaseName deleted");
     setState(() {
-      formKey.currentState!.fields["database_name"]!.didChange(currentDatabaseName);
+      formKey.currentState!.fields["database_name"]!
+          .didChange(currentDatabaseName);
       databaseName = currentDatabaseName;
       AppStoreBase.instance.dbName = databaseName;
     });
@@ -266,11 +277,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (res == null) return;
     final (oldPassword, newPassword) = res;
     try {
-    await changeDbPassword(
-        dbFilepath: await getFullDatabasePath(databaseName),
-        tmpDir: (await getTemporaryDirectory()).path,
-        oldPassword: oldPassword,
-        newPassword: newPassword);
+      await changeDbPassword(
+          dbFilepath: await getFullDatabasePath(databaseName),
+          tmpDir: (await getTemporaryDirectory()).path,
+          oldPassword: oldPassword,
+          newPassword: newPassword);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, "Failed to change database password: $e");
