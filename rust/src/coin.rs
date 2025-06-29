@@ -54,20 +54,21 @@ impl Coin {
             .connect_with(options)
             .await?;
 
+        let mut connection = pool.acquire().await?;
         if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='props'")
-            .fetch_optional(&pool)
+            .fetch_optional(&mut *connection)
             .await?
             .is_none()
         {
-            create_schema(&pool).await?;
+            create_schema(&mut *connection).await?;
             let testnet = db_filepath.contains("testnet");
             let coin_value = if testnet { "1" } else { "0" };
-            crate::db::put_prop(&pool, "coin", coin_value).await?;
+            crate::db::put_prop(&mut *connection, "coin", coin_value).await?;
         }
 
-        let (coin,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'coin'")
-            .fetch_one(&pool)
-            .await?;
+        let coin = crate::db::get_prop(&mut *connection, "coin")
+            .await?
+            .unwrap_or("0".to_string());
         let coin = coin.parse::<u8>()?;
 
         let network = match coin {
