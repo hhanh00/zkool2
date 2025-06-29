@@ -276,7 +276,6 @@ impl LwdServer for ZebraClient {
             .error_for_status()?
             .json::<Value>()
             .await?;
-        info!("Response from node: {:?}", rep);
         Ok(rep["result"].as_str().unwrap_or_default().to_string())
     }
 
@@ -358,7 +357,6 @@ impl LwdServer for ZebraClient {
             .error_for_status()?
             .json::<Value>()
             .await?;
-        info!("taddress_txs: Response from node: {:?}", rep);
         let txids = rep["result"]
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?;
@@ -409,7 +407,6 @@ impl LwdServer for ZebraClient {
             .error_for_status()?
             .json::<Value>()
             .await?;
-        info!("Response from node: {:?}", rep);
         let res = &rep["result"];
         let sapling_tree = res["sapling"]["commitments"]["finalState"]
             .as_str()
