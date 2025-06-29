@@ -7,10 +7,7 @@ use futures::Stream;
 use serde_json::{json, Value};
 use tracing::info;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
-use zcash_primitives::{
-    block::BlockHeader,
-    transaction::Transaction,
-};
+use zcash_primitives::{block::BlockHeader, transaction::Transaction};
 
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;
@@ -361,11 +358,12 @@ impl LwdServer for ZebraClient {
             .error_for_status()?
             .json::<Value>()
             .await?;
-        info!("Response from node: {:?}", rep);
+        info!("taddress_txs: Response from node: {:?}", rep);
         let txids = rep["result"]
             .as_array()
-            .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?
-            .iter()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?;
+        let txids = txids
+            .into_iter()
             .map(|txid| {
                 let txid_str = txid
                     .as_str()
@@ -379,9 +377,10 @@ impl LwdServer for ZebraClient {
         let (txs, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
         tokio::spawn(async move {
             for txid in txids.iter() {
-                let txid_hex = hex::decode(&txid).expect("Failed to decode txid hex");
+                let mut txid_hex = hex::decode(&txid).expect("Failed to decode txid hex");
+                txid_hex.reverse();
                 let (height, tx) = client.transaction(&network, &txid_hex).await?;
-                txs.send((height, tx, 0)).await.ok();
+                txs.send((height, tx, 0)).await?;
             }
 
             Ok::<_, anyhow::Error>(())
