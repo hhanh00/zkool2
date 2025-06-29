@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.2...zkool-v4.6.3) (2025-06-29)
+
+
+### Bug Fixes
+
+* taddress_txs for full node ([#303](https://github.com/hhanh00/zkool2/issues/303)) ([b68d687](https://github.com/hhanh00/zkool2/commit/b68d6875b67e411ed70dca01cb0f05b91e490a6b))
+
 ## [4.6.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.1...zkool-v4.6.2) (2025-06-29)
 
 
