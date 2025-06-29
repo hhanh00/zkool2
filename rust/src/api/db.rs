@@ -27,11 +27,13 @@ pub async fn change_db_password(
 #[frb]
 pub async fn get_prop(key: &str) -> Result<Option<String>> {
     let coin = get_coin!();
-    crate::db::get_prop(coin.get_pool(), key).await
+    let mut connection = coin.get_pool().acquire().await?;
+    crate::db::get_prop(&mut connection, key).await
 }
 
 #[frb]
 pub async fn put_prop(key: &str, value: &str) -> Result<()> {
     let coin = get_coin!();
-    crate::db::put_prop(coin.get_pool(), key, value).await
+    let mut connection = coin.get_pool().acquire().await?;
+    crate::db::put_prop(&mut connection, key, value).await
 }

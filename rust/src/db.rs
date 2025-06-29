@@ -14,13 +14,13 @@ use crate::account::TxNote;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 
-pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
+pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(
         key TEXT PRIMARY KEY,
         VALUE TEXT NOT NULL)",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -43,7 +43,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         internal BOOL NOT NULL DEFAULT FALSE
         )",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -52,7 +52,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         xsk BLOB,
         xvk BLOB)",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -66,7 +66,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         address TEXT NOT NULL,
         UNIQUE (account, scope, dindex))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -75,7 +75,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         xsk BLOB,
         xvk BLOB NOT NULL)",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -84,7 +84,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         xsk BLOB,
         xvk BLOB NOT NULL)",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -94,7 +94,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         height INTEGER NOT NULL,
         PRIMARY KEY (account, pool))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -103,7 +103,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         hash BLOB NOT NULL,
         time INTEGER NOT NULL)",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -125,7 +125,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         locked BOOL NOT NULL DEFAULT FALSE,
         UNIQUE(account, nullifier))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -137,7 +137,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         tx INTEGER NOT NULL,
         value INTEGER NOT NULL)",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -153,7 +153,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         fee INTEGER NOT NULL DEFAULT 0,
         UNIQUE (account, txid))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -165,7 +165,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         witness BLOB NOT NULL,
         UNIQUE (note, height))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -180,7 +180,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         address TEXT NOT NULL,
         UNIQUE (tx, pool, vout))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -197,7 +197,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         memo_bytes BLOB NOT NULL,
         UNIQUE (tx, pool, vout))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -210,7 +210,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         birth_height INTEGER NOT NULL
     )",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -224,7 +224,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         UNIQUE (account, public, round, from_id)
     )",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -240,7 +240,7 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         signature BLOB,
         UNIQUE (account, sighash, idx))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     sqlx::query(
@@ -254,13 +254,13 @@ pub async fn create_schema(connection: &SqlitePool) -> Result<()> {
         sigshare BLOB,
         UNIQUE (account, sighash, idx, from_id))",
     )
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
-pub async fn put_prop(connection: &SqlitePool, key: &str, value: &str) -> Result<()> {
+pub async fn put_prop(connection: &mut SqliteConnection, key: &str, value: &str) -> Result<()> {
     sqlx::query("INSERT OR REPLACE INTO props(key, value) VALUES (?, ?)")
         .bind(key)
         .bind(value)
@@ -270,7 +270,7 @@ pub async fn put_prop(connection: &SqlitePool, key: &str, value: &str) -> Result
     Ok(())
 }
 
-pub async fn get_prop(connection: &SqlitePool, key: &str) -> Result<Option<String>> {
+pub async fn get_prop(connection: &mut SqliteConnection, key: &str) -> Result<Option<String>> {
     let value: Option<(String,)> = sqlx::query_as("SELECT value FROM props WHERE key = ?")
         .bind(key)
         .fetch_optional(connection)
