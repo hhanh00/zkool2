@@ -4,7 +4,7 @@ use anyhow::Result;
 use bip32::{ChildNumber, ExtendedKeyAttrs, ExtendedPrivateKey, ExtendedPublicKey, Prefix};
 use bip39::Mnemonic;
 use secp256k1::{PublicKey, SecretKey};
-use sqlx::SqlitePool;
+use sqlx::SqliteConnection;
 use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
 use zcash_keys::{
     encoding::{decode_extended_full_viewing_key, decode_extended_spending_key},
@@ -19,7 +19,7 @@ use crate::{
 
 pub async fn get_account_ufvk(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     pools: u8,
 ) -> Result<String> {

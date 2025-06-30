@@ -15,8 +15,8 @@ use crate::{
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection};
-use sqlx::{Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection, SqlitePool};
+use sqlx::Row;
 use tokio::sync::{
     broadcast,
     mpsc::{channel, Sender},
@@ -203,8 +203,8 @@ pub async fn shielded_sync(
         let blocks = get_compact_block_range(network, client, start, end).await?;
         info!("got streaming blocks");
         let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
-        let pool2 = pool.clone();
 
+        let mut connection = pool.acquire().await?;
         // get the list of transaction heights for which the time is 0
         // because raw transactions do not have timestamp (it comes from the block header)
         let heights_without_time: HashSet<u32> = sqlx::query(
@@ -217,20 +217,21 @@ pub async fn shielded_sync(
             let height: u32 = row.get(0);
             height
         })
-        .fetch_all(&pool2)
+        .fetch_all(&mut *connection)
         .await?
         .into_iter()
         .collect();
 
+        let mut writer_connection = pool.acquire().await?;
         let db_writer_task = tokio::spawn(async move {
             info!("[db handler] starting");
-            let mut db_tx = pool2.begin().await?;
+            let mut db_tx = writer_connection.begin().await?;
             while let Some(msg) = rx_messages.recv().await {
                 //info!("Received message: {:?}", msg);
                 if let WarpSyncMessage::Commit = msg {
                     db_tx.commit().await.unwrap();
                     info!("Committing transaction");
-                    db_tx = pool2.begin().await.unwrap();
+                    db_tx = writer_connection.begin().await.unwrap();
                 } else {
                     match handle_message(&mut db_tx, msg, &tx_progress).await {
                         Ok(_) => {}
@@ -248,12 +249,11 @@ pub async fn shielded_sync(
         });
 
         let network = network.clone();
-        let pool = pool.clone();
         tokio::spawn(async move {
             info!("Start sync");
             if let Err(e) = warp_sync(
                 &network,
-                &pool,
+                &mut *connection,
                 start,
                 &accounts,
                 blocks,
@@ -414,8 +414,7 @@ async fn handle_message(
     Ok(())
 }
 
-pub async fn recover_from_partial_sync(connection: &SqlitePool, accounts: &[u32]) -> Result<()> {
-    let mut connection = connection.acquire().await?;
+pub async fn recover_from_partial_sync(connection: &mut SqliteConnection, accounts: &[u32]) -> Result<()> {
     for account in accounts {
         let account_heights = sqlx::query(
             "SELECT account, MIN(height) FROM sync_heights
@@ -521,7 +520,7 @@ pub async fn rewind_sync(
 }
 
 pub async fn prune_old_checkpoints(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     height: u32,
 ) -> Result<()> {
@@ -534,20 +533,20 @@ pub async fn prune_old_checkpoints(
                 let height: Option<u32> = row.get(0);
                 height
             })
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
     // delete all witnesses before the checkpoint height
     if let Some(checkpoint_height) = checkpoint_height {
         sqlx::query("DELETE FROM witnesses WHERE account = ? AND height < ?")
             .bind(account)
             .bind(checkpoint_height)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
     }
     Ok(())
 }
 
-pub async fn get_db_height(connection: &SqlitePool, account: u32) -> Result<u32> {
+pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
     let (height,): (u32,) =
         sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
             .bind(account)
@@ -558,7 +557,7 @@ pub async fn get_db_height(connection: &SqlitePool, account: u32) -> Result<u32>
 
 pub async fn transparent_sweep(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
     end_height: u32,

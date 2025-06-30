@@ -1,7 +1,8 @@
 use anyhow::{Context as _, Result};
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::SqliteConnection;
+use sqlx::{sqlite::SqliteRow, Row, Connection as _};
 use std::collections::HashMap;
 use tokio::sync::mpsc::channel;
 use tokio::sync::{broadcast, Mutex};
@@ -46,17 +47,17 @@ pub async fn synchronize(
 
     let c = get_coin!();
     let network = c.network;
-    let pool = c.get_pool();
+    let mut connection = c.get_connection().await?;
     let progress2 = progress.clone();
 
     let checkpoint_cutoff = current_height - checkpoint_age;
     for account in accounts.iter() {
-        prune_old_checkpoints(pool, *account, checkpoint_cutoff).await?;
+        prune_old_checkpoints(&mut *connection, *account, checkpoint_cutoff).await?;
     }
 
     let mut account_use_internal = HashMap::<u32, bool>::new();
     let res = async {
-        recover_from_partial_sync(pool, &accounts).await?;
+        recover_from_partial_sync(&mut *connection, &accounts).await?;
 
         // Get account heights
         let mut account_heights = HashMap::new();
@@ -67,7 +68,7 @@ pub async fn synchronize(
                 WHERE account = ?"#,
             )
             .bind(account)
-            .fetch_one(pool)
+            .fetch_one(&mut *connection)
             .await?;
             if let (Some(account), Some(height)) = r {
                 account_heights.insert(account, height + 1);
@@ -75,7 +76,7 @@ pub async fn synchronize(
                 let (use_internal,): (bool,) =
                     sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
                         .bind(account)
-                        .fetch_one(pool)
+                        .fetch_one(&mut *connection)
                         .await
                         .context("Fetch use_internal")?;
                 account_use_internal.insert(account, use_internal);
@@ -119,6 +120,7 @@ pub async fn synchronize(
                 continue;
             }
 
+            let pool = c.get_pool();
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
@@ -135,7 +137,7 @@ pub async fn synchronize(
                 .collect::<Vec<_>>();
             transparent_sync(
                 &network,
-                pool,
+                &mut *connection,
                 &mut client,
                 &account_ids,
                 start_height,
@@ -161,7 +163,7 @@ pub async fn synchronize(
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
-                crate::memo::fetch_tx_details(&network, pool, &mut client, *account).await?;
+                crate::memo::fetch_tx_details(&network, &mut *connection, &mut client, *account).await?;
             }
             info!(
                 "Sync completed for height range {}-{}",
@@ -190,7 +192,7 @@ pub async fn synchronize(
 
 pub(crate) async fn transparent_sync(
     network: &Network,
-    pool: &SqlitePool,
+    connection: &mut SqliteConnection,
     client: &mut Client,
     accounts: &[u32],
     start_height: u32,
@@ -214,7 +216,7 @@ pub(crate) async fn transparent_sync(
                 let address: String = row.get(1);
                 (id_taddress, address)
             })
-            .fetch(pool);
+            .fetch(&mut *connection);
 
         while let Some((id_taddress, address)) = rows.try_next().await? {
             // Add the address to the client
@@ -231,7 +233,7 @@ pub(crate) async fn transparent_sync(
             .await?
             .into_inner();
 
-        let mut db_tx = pool.begin().await?;
+        let mut db_tx = connection.begin().await?;
         loop {
             tokio::select! {
                 _ = rx_cancel.recv() => {
@@ -272,7 +274,7 @@ pub(crate) async fn transparent_sync(
                                     // note was found
                                     // add a spent entry
                                     sqlx::query(
-                                        "INSERT INTO spends (account, id_note, pool, tx, height, value)
+                                        "INSERT INTO spends (account, id_note, connection, tx, height, value)
                                 SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
                                 AND account = ? ON CONFLICT DO NOTHING",
                                     )
@@ -296,7 +298,7 @@ pub(crate) async fn transparent_sync(
                                         let mut nf = transaction.txid().as_ref().to_vec();
                                         nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                                        sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
+                                        sqlx::query("INSERT INTO notes (account, height, connection, tx, taddress, nullifier, value)
                                     SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
                                     AND account = ? ON CONFLICT DO NOTHING")
                                         .bind(account)
@@ -323,7 +325,7 @@ pub(crate) async fn transparent_sync(
             }
         }
 
-        sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND pool = 0")
+        sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND connection = 0")
             .bind(end_height)
             .bind(account)
             .execute(&mut *db_tx)
@@ -335,10 +337,10 @@ pub(crate) async fn transparent_sync(
 #[frb]
 pub async fn balance() -> Result<PoolBalance> {
     let c = get_coin!();
-    let pool = c.get_pool();
+    let mut connection = c.get_connection().await?;
     let account = c.account;
 
-    calculate_balance(pool, account).await
+    calculate_balance(&mut *connection, account).await
 }
 
 #[frb]
@@ -353,24 +355,23 @@ pub async fn cancel_sync() -> Result<()> {
 #[frb]
 pub async fn rewind_sync(height: u32) -> Result<()> {
     let c = get_coin!();
-    let connection = c.get_pool();
-    let mut connection = connection.acquire().await?;
-    crate::sync::rewind_sync(&mut connection, c.account, height).await
+    let mut connection = c.get_connection().await?;
+    crate::sync::rewind_sync(&mut *connection, c.account, height).await
 }
 
 #[frb]
 pub async fn get_db_height() -> Result<u32> {
     let c = get_coin!();
-    let connection = c.get_pool();
-    crate::sync::get_db_height(connection, c.account).await
+    let mut connection = c.get_connection().await?;
+    crate::sync::get_db_height(&mut *connection, c.account).await
 }
 
 #[frb]
 pub async fn get_tx_details() -> Result<()> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::memo::fetch_tx_details(&c.network, connection, &mut client, c.account).await?;
+    crate::memo::fetch_tx_details(&c.network, &mut *connection, &mut client, c.account).await?;
     Ok(())
 }
 
