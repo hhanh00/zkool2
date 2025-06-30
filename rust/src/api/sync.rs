@@ -274,7 +274,7 @@ pub(crate) async fn transparent_sync(
                                     // note was found
                                     // add a spent entry
                                     sqlx::query(
-                                        "INSERT INTO spends (account, id_note, connection, tx, height, value)
+                                        "INSERT INTO spends (account, id_note, pool, tx, height, value)
                                 SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
                                 AND account = ? ON CONFLICT DO NOTHING",
                                     )
@@ -298,7 +298,7 @@ pub(crate) async fn transparent_sync(
                                         let mut nf = transaction.txid().as_ref().to_vec();
                                         nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                                        sqlx::query("INSERT INTO notes (account, height, connection, tx, taddress, nullifier, value)
+                                        sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
                                     SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
                                     AND account = ? ON CONFLICT DO NOTHING")
                                         .bind(account)
@@ -325,7 +325,7 @@ pub(crate) async fn transparent_sync(
             }
         }
 
-        sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND connection = 0")
+        sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND pool = 0")
             .bind(end_height)
             .bind(account)
             .execute(&mut *db_tx)
