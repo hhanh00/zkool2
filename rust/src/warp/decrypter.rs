@@ -27,6 +27,7 @@ use zcash_note_encryption::{EphemeralKeyBytes, COMPACT_NOTE_SIZE};
 use zcash_primitives::transaction::components::sapling::zip212_enforcement;
 use zcash_protocol::consensus::Network;
 
+#[allow(clippy::too_many_arguments)]
 pub fn try_sapling_decrypt(
     network: &Network,
     account: u32,
@@ -59,12 +60,12 @@ pub fn try_sapling_decrypt(
         && plaintext_version_is_valid(zip212_enforcement, plaintext[0])
     {
         use zcash_note_encryption::Domain;
-        let pivk = sapling_crypto::keys::PreparedIncomingViewingKey::new(&ivk);
+        let pivk = sapling_crypto::keys::PreparedIncomingViewingKey::new(ivk);
         let d = SaplingDomain::new(zip212_enforcement);
         if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &plaintext)
         {
             let cmx = note.cmu();
-            if &cmx.to_bytes() == &*co.cmu {
+            if cmx.to_bytes() == *co.cmu {
                 let value = note.value().inner();
                 let dbn = Note {
                     pool: 1,
@@ -89,6 +90,7 @@ pub fn try_sapling_decrypt(
 
 const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
 
+#[allow(clippy::too_many_arguments)]
 pub fn try_orchard_decrypt(
     network: &Network,
     account: u32,
@@ -124,7 +126,7 @@ pub fn try_orchard_decrypt(
         && plaintext_version_is_valid(zip212_enforcement, plaintext[0])
     {
         use zcash_note_encryption::Domain;
-        let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ivk);
+        let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
         let rho = Rho::from_bytes(&ca.nullifier.clone().try_into().unwrap()).unwrap();
         let cca = CompactAction::from_parts(
             Nullifier::from_bytes(&rho.to_bytes()).unwrap(),
@@ -137,7 +139,7 @@ pub fn try_orchard_decrypt(
         {
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let value = note.value().inner();
-            if &cmx.to_bytes() == &*ca.cmx {
+            if cmx.to_bytes() == *ca.cmx {
                 let dbn = Note {
                     pool: 2,
                     account,

@@ -69,13 +69,11 @@ pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
     let zaddress: zcash_keys::address::Address =
         zaddress.convert_if_network(network.network_type()).unwrap();
 
-    let is_tex = match zaddress {
-        zcash_keys::address::Address::Tex(_) => true,
-        _ => false,
-    };
+    let is_tex = matches!(zaddress, zcash_keys::address::Address::Tex(_));
     Ok(is_tex)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn plan_transaction(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -442,8 +440,8 @@ pub async fn plan_transaction(
                         let n = u32::from_le_bytes(nf[32..36].try_into().unwrap());
                         let utxo = OutPoint::new(hash, n);
                         let pkh: [u8; 20] =
-                            Ripemd160::digest(&Sha256::digest(&pubkey.serialize())).into();
-                        let addr = TransparentAddress::PublicKeyHash(pkh.clone());
+                            Ripemd160::digest(Sha256::digest(pubkey.serialize())).into();
+                        let addr = TransparentAddress::PublicKeyHash(pkh);
                         let coin = TxOut {
                             value: Zatoshis::from_u64(*amount).unwrap(),
                             script_pubkey: addr.script(),
@@ -533,7 +531,7 @@ pub async fn plan_transaction(
 
         let pool = pool_mask.to_best_pool().unwrap();
         let value = Zatoshis::from_u64(recipient.amount)?;
-        let memo = encode_memo(&recipient)?.unwrap_or(MemoBytes::empty());
+        let memo = encode_memo(recipient)?.unwrap_or(MemoBytes::empty());
 
         n_outputs[pool as usize] += 1;
         match pool {
@@ -546,7 +544,7 @@ pub async fn plan_transaction(
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;
                 builder.add_sapling_output::<Infallible>(
-                    svk.as_ref().map(|svk| svk.ovk.clone()),
+                    svk.as_ref().map(|svk| svk.ovk),
                     to,
                     value,
                     memo,
@@ -580,8 +578,7 @@ pub async fn plan_transaction(
     let updater = Updater::new(pczt);
     let updater = updater
         .update_transparent_with(|mut u| {
-            for i in 0..n_spends[0] {
-                let (pubkey, scope, dindex) = tsk_dindex[i].clone();
+            for (i, (pubkey, scope, dindex)) in tsk_dindex.into_iter().enumerate() {
                 u.update_input_with(i, |mut u| {
                     let derivation_path = vec![scope, dindex];
                     let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
@@ -661,13 +658,13 @@ fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
     let text_memo = recipient
         .user_memo
         .as_ref()
-        .map(|s| Memo::from_str(&s))
+        .map(|s| Memo::from_str(s))
         .transpose()?
         .map(MemoBytes::from);
     let byte_memo = recipient
         .memo_bytes
         .as_ref()
-        .map(|mb| MemoBytes::from_bytes(&mb))
+        .map(|mb| MemoBytes::from_bytes(mb))
         .transpose()?;
     let memo = text_memo.or(byte_memo);
     Ok(memo)
@@ -700,9 +697,8 @@ pub async fn sign_transaction(
     let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
     let updater = updater
         .update_sapling_with(|mut u| {
-            for i in 0..n_spends[1] {
-                let bundle_index = sapling_indices[i];
-                u.update_spend_with(bundle_index, |mut u| {
+            for bundle_index in sapling_indices.iter() {
+                u.update_spend_with(*bundle_index, |mut u| {
                     u.set_proof_generation_key(pgk.clone().expect("proof_generation_key"))
                         .unwrap();
                     Ok(())
@@ -729,21 +725,19 @@ pub async fn sign_transaction(
         let sk = SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap();
         signer.sign_transparent(index, &sk).unwrap();
     }
-    for index in 0..n_spends[1] {
+    for (index, bundle_index) in sapling_indices.iter().enumerate() {
         debug!("signing sapling {index}");
-        let bundle_index = sapling_indices[index];
         let Some(sk) = ssk.as_ref().map(|sk| &sk.expsk.ask) else {
             return Err(Error::NoSigningKey.into());
         };
-        signer.sign_sapling(bundle_index, sk).unwrap();
+        signer.sign_sapling(*bundle_index, sk).unwrap();
     }
-    for index in 0..n_spends[2] {
+    for (index, bundle_index) in orchard_indices.iter().enumerate() {
         debug!("signing orchard {index}");
-        let bundle_index = orchard_indices[index];
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
-        signer.sign_orchard(bundle_index, osak).unwrap();
+        signer.sign_orchard(*bundle_index, osak).unwrap();
     }
     let pczt = signer.finish();
 
@@ -816,8 +810,8 @@ fn get_sapling_address(network: &Network, address: &str) -> Result<PaymentAddres
         return Ok(addr);
     }
     if let Ok(addr) = UnifiedAddress::decode(network, address) {
-        let addr = addr.sapling().unwrap().clone();
-        return Ok(addr);
+        let addr = addr.sapling().unwrap();
+        Ok(*addr)
     } else {
         anyhow::bail!("Invalid sapling address: {address}");
     }
@@ -825,15 +819,15 @@ fn get_sapling_address(network: &Network, address: &str) -> Result<PaymentAddres
 
 fn get_orchard_address(network: &Network, address: &str) -> Result<Address> {
     if let Ok(addr) = UnifiedAddress::decode(network, address) {
-        let addr = addr.orchard().unwrap().clone();
-        return Ok(addr);
+        let addr = addr.orchard().unwrap();
+        Ok(*addr)
     } else {
         anyhow::bail!("Invalid orchard address: {address}");
     }
 }
 
 fn fill_single_receivers(
-    input_pools: &mut Vec<Vec<InputNote>>,
+    input_pools: &mut [Vec<InputNote>],
     recipients: &mut [RecipientState],
     fee_manager: &mut FeeManager,
     recipient_pays_fee: bool,
@@ -969,7 +963,7 @@ pub async fn get_account_pool_mask(connection: &mut SqliteConnection, account: u
             .fetch_one(&mut *connection)
             .await?;
     let account_pool_mask = PoolMask(
-        (has_transparent as u8) << 0 | (has_sapling as u8) << 1 | (has_orchard as u8) << 2,
+        (has_transparent as u8) | (has_sapling as u8) << 1 | (has_orchard as u8) << 2,
     );
 
     Ok(account_pool_mask)

@@ -190,6 +190,7 @@ pub async fn synchronize(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn transparent_sync(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -223,7 +224,7 @@ pub(crate) async fn transparent_sync(
             addresses.push((*account, (id_taddress, address)));
         }
     }
-    Ok(for (account, address_row) in addresses.iter() {
+    for (account, address_row) in addresses.iter() {
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
         let mut txs = client
             .taddress_txs(network,
@@ -331,7 +332,9 @@ pub(crate) async fn transparent_sync(
             .execute(&mut *db_tx)
             .await?;
         db_tx.commit().await?;
-    })
+    }
+
+    Ok(())
 }
 
 #[frb]
