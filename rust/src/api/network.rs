@@ -28,11 +28,11 @@ pub async fn get_coingecko_price() -> Result<f64> {
 }
 
 #[derive(Deserialize)]
-struct USD {
+struct Usd {
     usd: f64,
 }
 
 #[derive(Deserialize)]
 struct ZcashUSD {
-    zcash: USD,
+    zcash: Usd,
 }

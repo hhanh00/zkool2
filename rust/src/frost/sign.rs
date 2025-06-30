@@ -25,7 +25,7 @@ use reddsa::frost::redpallas::{
     round1::commit,
     Identifier, Randomizer,
 };
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection, Connection as _};
+use sqlx::{sqlite::SqliteRow, Connection as _, Row, SqliteConnection};
 use tracing::info;
 use zcash_primitives::transaction::{
     sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
@@ -216,7 +216,7 @@ pub async fn do_sign(
                 .map_err(anyhow::Error::msg)?;
             let txid = publish(
                 network,
-                &mut *tx,
+                &mut tx,
                 params.funding_account,
                 client,
                 height,
@@ -293,7 +293,7 @@ pub async fn do_sign(
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
 
             // get the randomizer from the pczt
-            let action_index = pczt_pkg.orchard_indices[idx as usize];
+            let action_index = pczt_pkg.orchard_indices[idx];
             let signer = Signer::new(pczt.clone());
             let mut alpha = Fq::zero();
             signer
@@ -311,7 +311,7 @@ pub async fn do_sign(
                 "UPDATE frost_signatures SET sigpackage = ?1, randomizer = ?2 WHERE account = ?3 AND sighash = ?4 AND idx = ?5",
             )
             .bind(&sigpackage)
-            .bind(&randomizer.serialize())
+            .bind(randomizer.serialize())
             .bind(account)
             .bind(&sighash)
             .bind(idx as u32)
@@ -343,7 +343,7 @@ pub async fn do_sign(
             .map_err(anyhow::Error::msg)?;
         let txid = publish(
             network,
-            &mut *tx,
+            &mut tx,
             params.funding_account,
             client,
             height,
@@ -375,7 +375,7 @@ pub async fn do_sign(
         for (idx, ((signing_package, randomizer), nonces)) in
             sigpackages.iter().zip(nonces.iter()).enumerate()
         {
-            let signature_share = sign(&signing_package, nonces, &spkg, randomizer.clone())
+            let signature_share = sign(signing_package, nonces, &spkg, *randomizer)
                 .context("Failed to sign")?;
             let signature_share = signature_share.serialize();
 
@@ -406,7 +406,7 @@ pub async fn do_sign(
                 .map_err(anyhow::Error::msg)?;
             let txid = publish(
                 network,
-                &mut *tx,
+                &mut tx,
                 params.funding_account,
                 client,
                 height,
@@ -433,7 +433,7 @@ pub async fn do_sign(
         )
         .bind(account)
         .bind(&sighash)
-        .bind(idx as u32)
+        .bind(idx)
         .bind(dkg_params.id)
         .execute(&mut *connection)
         .await?;
@@ -462,7 +462,7 @@ pub async fn do_sign(
     // this is only done by the coordinator
     if dkg_params.id as u16 == params.coordinator {
         let mut tx = connection.begin().await?;
-        let sigsharess = get_all_sigshares(&mut *tx, account, &sighash, nsigs).await?;
+        let sigsharess = get_all_sigshares(&mut tx, account, &sighash, nsigs).await?;
         let mut signatures = vec![];
         for (idx, (sigshares, (sigpackage, randomizer))) in
             sigsharess.iter().zip(sigpackages.iter()).enumerate()
@@ -480,7 +480,7 @@ pub async fn do_sign(
                 return Ok(());
             }
             let randomized_params =
-                RandomizedParams::from_randomizer(ppkg.verifying_key(), randomizer.clone());
+                RandomizedParams::from_randomizer(ppkg.verifying_key(), *randomizer);
             let signature = aggregate(sigpackage, sigshares, &ppkg, &randomized_params)?;
             let signature = signature.serialize()?;
             let signature_bytes: [u8; 64] = signature.clone().try_into().unwrap();
@@ -506,7 +506,7 @@ pub async fn do_sign(
         let signer = signer
             .sign_orchard_with(|_pczt, bundle, _| {
                 for (idx, signature) in signatures.into_iter().enumerate() {
-                    let action_index = pczt_pkg.orchard_indices[idx as usize];
+                    let action_index = pczt_pkg.orchard_indices[idx];
                     let action = &mut bundle.actions_mut()[action_index];
                     action.spend_auth_sig(signature);
                     // How do we update the spend_auth_sig?
@@ -644,32 +644,26 @@ async fn process_memos(
         .map(|row: SqliteRow| {
             let memo_bytes: Vec<u8> = row.get(0);
             let memo = Memo::from_bytes(&memo_bytes);
-            if let Ok(memo) = memo {
-                match memo {
-                    Memo::Arbitrary(pkg_bytes) => {
-                        if pkg_bytes.len() < 4 || pkg_bytes[0..4] != *prefix {
-                            return None;
-                        }
-                        if let Ok((pkg, _)) = bincode::decode_from_slice::<FrostSigMessage, _>(
-                            &pkg_bytes[4..],
-                            config::legacy(),
-                        )
-                        .context("Failed to decode FrostMessage")
-                        {
-                            return Some(pkg);
-                        }
-                    }
-                    _ => (),
+            if let Ok(Memo::Arbitrary(pkg_bytes)) = memo {
+                if pkg_bytes.len() < 4 || pkg_bytes[0..4] != *prefix {
+                    return None;
+                }
+                if let Ok((pkg, _)) = bincode::decode_from_slice::<FrostSigMessage, _>(
+                    &pkg_bytes[4..],
+                    config::legacy(),
+                )
+                .context("Failed to decode FrostMessage")
+                {
+                    return Some(pkg);
                 }
             }
             None
         })
         .fetch_all(&mut *connection)
         .await?;
-    for pkg in pkgs {
-        if let Some(pkg) = pkg {
-            fn_store(connection, account, &pkg).await?;
-        }
+
+    for pkg in pkgs.into_iter().flatten() {
+        fn_store(connection, account, &pkg).await?;
     }
 
     Ok(())

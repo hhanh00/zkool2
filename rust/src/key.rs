@@ -50,7 +50,7 @@ pub async fn get_account_ufvk(
             }
         }),
     ];
-    let items = items.into_iter().filter_map(|x| x).collect::<Vec<Fvk>>();
+    let items = items.into_iter().flatten().collect::<Vec<Fvk>>();
 
     if items.is_empty() {
         return Err(anyhow::anyhow!("Viewing key has no receivers"));

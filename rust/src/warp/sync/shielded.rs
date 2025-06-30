@@ -37,6 +37,7 @@ pub trait ShieldedProtocol {
     fn extract_nf(i: &Self::Spend) -> Hash32;
     fn extract_cmx(o: &Self::Output) -> Hash32;
 
+    #[allow(clippy::too_many_arguments)]
     fn try_decrypt(
         network: &Network,
         account: u32,
@@ -65,6 +66,7 @@ pub struct Synchronizer<P: ShieldedProtocol> {
 }
 
 impl<P: ShieldedProtocol> Synchronizer<P> {
+    #[allow(clippy::too_many_arguments)]
     pub async fn new(
         network: Network,
         connection: &mut SqliteConnection,
@@ -149,7 +151,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             utxos,
             tree_state,
             tx_decrypted,
-            _data: PhantomData::<P>::default(),
+            _data: Default::default(),
         })
     }
 
@@ -162,7 +164,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             return Ok(());
         }
 
-        let network = self.network.clone();
+        let network = self.network;
         let outputs = blocks.into_par_iter().flat_map_iter(|b| {
             b.vtx.iter().enumerate().flat_map(move |(ivtx, vtx)| {
                 P::extract_outputs(vtx)
@@ -181,7 +183,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                         *account,
                         *scope,
                         ivk,
-                        height as u32,
+                        height,
                         ivtx as u32,
                         vout as u32,
                         o,
@@ -220,7 +222,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                                 account: dbn.account,
                                 height: cb.height as u32,
                                 time: cb.time,
-                                txid: tx.hash.clone().try_into().unwrap(),
+                                txid: (*tx.hash).into(),
                                 ..Transaction::default()
                             };
                             self.tx_decrypted
@@ -391,7 +393,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                                 account: utxo.account,
                                 height: cb.height as u32,
                                 time: cb.time,
-                                txid: vtx.hash.clone().try_into().unwrap(),
+                                txid: (*vtx.hash).into(),
                                 ..Transaction::default()
                             };
                             self.tx_decrypted
