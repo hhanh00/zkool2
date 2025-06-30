@@ -20,12 +20,12 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Resul
     let c = crate::get_coin!();
     let account = c.account;
     let network = &c.network;
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
     plan_transaction(
         network,
-        connection,
+        &mut *connection,
         &mut client,
         account,
         options.src_pools,
@@ -40,9 +40,9 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Resul
 pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    let tx = crate::pay::plan::sign_transaction(connection, account, pczt).await?;
+    let tx = crate::pay::plan::sign_transaction(&mut *connection, account, pczt).await?;
 
     Ok(tx)
 }

@@ -1,8 +1,9 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
+use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::SqlitePool;
+use sqlx::{Sqlite, SqlitePool};
 use tonic::transport::ClientTlsConfig;
 use zcash_protocol::consensus::Network;
 
@@ -89,7 +90,13 @@ impl Coin {
     }
 
     pub fn get_pool(&self) -> &SqlitePool {
-        self.pool.as_ref().unwrap()
+        let pool = self.pool.as_ref().expect("Connection pool not initialized");
+        pool
+    }
+
+    pub async fn get_connection(&self) -> Result<PoolConnection<Sqlite>, sqlx::Error> {
+        let pool = self.pool.as_ref().expect("Connection pool not initialized");
+        pool.acquire().await
     }
 
     pub fn set_url(&mut self, server_type: ServerType, url: &str) {

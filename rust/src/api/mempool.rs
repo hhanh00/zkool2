@@ -11,11 +11,11 @@ async fn run_mempool(
     cancel_token: CancellationToken,
 ) -> Result<()> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
     let r = crate::mempool::run_mempool(
         mempool_sink,
         &c.network,
-        &connection,
+        &mut *connection,
         &mut c.client().await?,
         height,
         cancel_token,
