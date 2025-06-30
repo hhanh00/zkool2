@@ -72,12 +72,12 @@ where
         let mut visitor =
             tracing_subscriber::fmt::format::DefaultFields::default().make_visitor(writer);
         event.record(&mut visitor);
-        let level: u8 = match event.metadata().level() {
-            &Level::ERROR => 4,
-            &Level::WARN => 3,
-            &Level::INFO => 2,
-            &Level::DEBUG => 1,
-            &Level::TRACE => 0,
+        let level: u8 = match *event.metadata().level() {
+            Level::ERROR => 4,
+            Level::WARN => 3,
+            Level::INFO => 2,
+            Level::DEBUG => 1,
+            Level::TRACE => 0,
         };
         let span = ctx.lookup_current().map(|s| s.name().to_string());
         let log = LogMessage {

@@ -50,6 +50,6 @@ impl FrostSigMessage {
 
 pub fn to_arb_memo(pk1: &[u8]) -> Vec<u8> {
     let mut memo_bytes = vec![0xFF];
-    memo_bytes.extend_from_slice(&pk1);
+    memo_bytes.extend_from_slice(pk1);
     memo_bytes
 }

@@ -36,6 +36,7 @@ pub enum SyncError {
 pub type SaplingSync = Synchronizer<shielded::sapling::SaplingProtocol>;
 pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn warp_sync(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -52,7 +53,7 @@ pub async fn warp_sync(
     let sap_hasher = SaplingHasher::default();
 
     let mut sap_dec = SaplingSync::new(
-        network.clone(),
+        *network,
         &mut *connection,
         1,
         start_height,
@@ -65,7 +66,7 @@ pub async fn warp_sync(
 
     let orch_hasher = OrchardHasher::default();
     let mut orch_dec = OrchardSync::new(
-        network.clone(),
+        *network,
         &mut *connection,
         2,
         start_height,
@@ -153,12 +154,10 @@ pub async fn warp_sync(
 
                         bs.push(block);
 
-                        if c >= actions_per_sync as usize {
-                            if !bs.is_empty() {
-                                tx_blocks.send(bs).await.unwrap();
-                                bs = vec![];
-                                c = 0;
-                            }
+                        if c >= actions_per_sync as usize && !bs.is_empty() {
+                            tx_blocks.send(bs).await.unwrap();
+                            bs = vec![];
+                            c = 0;
                         }
                     }
                     else {

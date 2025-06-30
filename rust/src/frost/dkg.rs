@@ -63,9 +63,7 @@ async fn get_spkg1(connection: &mut SqliteConnection, account: u32) -> Result<Op
     .bind(account)
     .map(|row: SqliteRow| {
         let data: Vec<u8> = row.get(0);
-        let spkg =
-            round1::SecretPackage::deserialize(&data).expect("Failed to decode SecretPackage");
-        spkg
+        round1::SecretPackage::deserialize(&data).expect("Failed to decode SecretPackage")
     })
     .fetch_optional(&mut *connection)
     .await?;
@@ -83,9 +81,7 @@ async fn get_spkg2(connection: &mut SqliteConnection, account: u32) -> Result<Op
     .bind(account)
     .map(|row: SqliteRow| {
         let data: Vec<u8> = row.get(0);
-        let spkg =
-            round2::SecretPackage::deserialize(&data).expect("Failed to decode SecretPackage");
-        spkg
+        round2::SecretPackage::deserialize(&data).expect("Failed to decode SecretPackage")
     })
     .fetch_optional(&mut *connection)
     .await?;
@@ -369,6 +365,7 @@ async fn dkg_finalize(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn publish_round1(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -402,7 +399,7 @@ async fn publish_round1(
         account,
         client,
         height,
-        &[(&broadcast_address, data)],
+        &[(broadcast_address, data)],
     )
     .await?;
     info!("Broadcasted transaction: {txid}");
@@ -410,6 +407,7 @@ async fn publish_round1(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn publish_round2(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -481,7 +479,7 @@ pub async fn publish(
     .await?;
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
-    let txid = crate::pay::send(client, height as u32, &txb).await?;
+    let txid = crate::pay::send(client, height, &txb).await?;
     Ok(txid)
 }
 
@@ -493,45 +491,39 @@ async fn process_memos(
     prefix: &[u8],
 ) -> Result<()> {
     info!("process_memos: {account} {mailbox_account}");
-    let pkgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
+    let msgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
         .bind(mailbox_account)
         .map(|row: SqliteRow| {
             let memo_bytes: Vec<u8> = row.get(0);
             let memo = Memo::from_bytes(&memo_bytes);
-            if let Ok(memo) = memo {
-                match memo {
-                    Memo::Arbitrary(pkg_bytes) => {
-                        if pkg_bytes.len() < 4 || pkg_bytes[0..4] != *prefix {
-                            return None;
-                        }
-                        if let Ok((pkg, _)) = bincode::decode_from_slice::<FrostMessage, _>(
-                            &pkg_bytes[4..],
-                            config::legacy(),
-                        )
-                        .context("Failed to decode DKGRound1Package")
-                        {
-                            return Some(pkg);
-                        }
-                    }
-                    _ => (),
+            if let Ok(Memo::Arbitrary(pkg_bytes)) = memo {
+                if pkg_bytes.len() < 4 || pkg_bytes[0..4] != *prefix {
+                    return None;
+                }
+                if let Ok((pkg, _)) = bincode::decode_from_slice::<FrostMessage, _>(
+                    &pkg_bytes[4..],
+                    config::legacy(),
+                )
+                .context("Failed to decode DKGRound1Package")
+                {
+                    return Some(pkg);
                 }
             }
             None
         })
         .fetch_all(&mut *connection).await?;
-    for pkg in pkgs {
-        if let Some(pkg) = pkg {
-            sqlx::query(
-                r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
-                VALUES (?, TRUE, ?, ?, ?) ON CONFLICT DO NOTHING"#,
-            )
-            .bind(account)
-            .bind(round)
-            .bind(pkg.from_id)
-            .bind(&pkg.data)
-            .execute(&mut *connection)
-            .await?;
-        }
+
+    for msg in msgs.into_iter().flatten() {
+        sqlx::query(
+            r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
+            VALUES (?, TRUE, ?, ?, ?) ON CONFLICT DO NOTHING"#,
+        )
+        .bind(account)
+        .bind(round)
+        .bind(msg.from_id)
+        .bind(&msg.data)
+        .execute(&mut *connection)
+        .await?;
     }
 
     Ok(())

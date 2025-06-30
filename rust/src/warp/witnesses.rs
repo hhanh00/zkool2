@@ -54,7 +54,7 @@ impl Witness {
                         empty
                     } else {
                         edge_used = true;
-                        edge.0[i as usize]
+                        edge.0[i]
                     };
                     h.combine(i as u8, &hash, &o)
                 }
