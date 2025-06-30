@@ -1,4 +1,4 @@
-use std::{collections::HashSet, u32};
+use std::collections::HashSet;
 
 use crate::{
     account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
@@ -174,7 +174,7 @@ pub async fn get_tree_state(
         if tree.is_empty() {
             CommitmentTreeFrontier::default()
         } else {
-            CommitmentTreeFrontier::read(&*tree).unwrap()
+            CommitmentTreeFrontier::read(tree).unwrap()
         }
     }
 
@@ -184,6 +184,7 @@ pub async fn get_tree_state(
     Ok((sapling, orchard))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn shielded_sync(
     network: &Network,
     pool: &SqlitePool,
@@ -248,12 +249,12 @@ pub async fn shielded_sync(
             Ok::<_, anyhow::Error>(())
         });
 
-        let network = network.clone();
+        let network = *network;
         tokio::spawn(async move {
             info!("Start sync");
             if let Err(e) = warp_sync(
                 &network,
-                &mut *connection,
+                &mut connection,
                 start,
                 &accounts,
                 blocks,
@@ -403,7 +404,7 @@ async fn handle_message(
         WarpSyncMessage::Rewind(accounts, height) => {
             info!("Discard height: {}", height);
             for account in accounts {
-                rewind_sync(&mut **db_tx, account, height).await?;
+                rewind_sync(db_tx, account, height).await?;
             }
         }
         WarpSyncMessage::Error(e) => {

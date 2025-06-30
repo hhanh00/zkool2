@@ -528,21 +528,21 @@ pub struct Tx {
 pub async fn remove_account(account_id: u32) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    crate::db::delete_account(&mut *connection, account_id).await?;
+    crate::db::delete_account(&mut connection, account_id).await?;
     Ok(())
 }
 
 pub async fn move_account(old_position: u32, new_position: u32) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    crate::db::reorder_account(&mut *connection, old_position, new_position).await?;
+    crate::db::reorder_account(&mut connection, old_position, new_position).await?;
     Ok(())
 }
 
 pub async fn list_tx_history() -> Result<Vec<Tx>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    let txs = crate::db::fetch_txs(&mut *connection, c.account).await?;
+    let txs = crate::db::fetch_txs(&mut connection, c.account).await?;
     Ok(txs)
 }
 

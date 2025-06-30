@@ -10,7 +10,7 @@ lazy_static! {
     pub static ref GENERATORS_EXP: Vec<ExtendedNielsPoint> = read_generators_bin();
 }
 
-pub const GENERATORS: &'static [u8] = include_bytes!("generators.bin");
+pub const GENERATORS: &[u8] = include_bytes!("generators.bin");
 
 #[inline(always)]
 fn accumulate_scalar(acc: &mut Fr, cur: &mut Fr, x: u8) {

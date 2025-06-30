@@ -50,7 +50,7 @@ pub fn derive_transparent_address(
         .derive_address_pubkey(sindex, NonHardenedChildIndex::from_index(dindex).unwrap())
         .unwrap()
         .serialize();
-    let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
+    let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(tpk)).into();
     let addr = TransparentAddress::PublicKeyHash(pkh);
     Ok((tpk.to_vec(), addr))
 }
@@ -224,7 +224,7 @@ pub async fn get_orchard_note(
         .map(|a| MerkleHashOrchard::from_bytes(a).unwrap())
         .collect::<Vec<_>>();
     let auth_path: [MerkleHashOrchard; MERKLE_DEPTH as usize] = auth_path.try_into().unwrap();
-    let merkle_path = orchard::tree::MerklePath::from_parts(witness.position as u32, auth_path);
+    let merkle_path = orchard::tree::MerklePath::from_parts(witness.position, auth_path);
 
     Ok((note, merkle_path))
 }
@@ -253,8 +253,7 @@ pub async fn get_account_full_address(
     .bind(account)
     .map(|row: SqliteRow| {
         let taddress: String = row.get(0);
-        let taddress = TransparentAddress::decode(network, &taddress).unwrap();
-        taddress
+        TransparentAddress::decode(network, &taddress).unwrap()
     })
     .fetch_optional(&mut *connection)
     .await?;
@@ -268,15 +267,14 @@ pub async fn get_account_full_address(
         let dindex: u32 = row.get(0);
         let xvk: Vec<u8> = row.get(1);
         let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
-        let saddress = if scope == 1 {
+        if scope == 1 {
             // we do not need to derive a diversified change address
             // since they are not exposed to the user
             let (_, pa) = fvk.change_address();
             pa
         } else {
             fvk.address(dindex.into()).unwrap()
-        };
-        saddress
+        }
     })
     .fetch_optional(&mut *connection)
     .await?;
@@ -295,8 +293,7 @@ pub async fn get_account_full_address(
         } else {
             orchard::keys::Scope::External
         };
-        let oaddress = fvk.address_at(dindex, scope);
-        oaddress
+        fvk.address_at(dindex, scope)
     })
     .fetch_optional(connection)
     .await?;

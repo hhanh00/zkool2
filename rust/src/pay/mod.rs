@@ -152,7 +152,7 @@ impl TxPlan {
                             .unwrap_or_default(),
                     });
                 }
-                let f: i64 = bundle.value_sum().clone().try_into().unwrap();
+                let f: i64 = (*bundle.value_sum()).try_into().unwrap();
                 fee += f;
                 Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
             })

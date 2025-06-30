@@ -101,30 +101,30 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>) -> Result<()> {
 pub async fn get_dkg_addresses() -> Result<Vec<String>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut *connection)
+    let account = get_funding_account(&mut connection)
         .await?
         .expect("Funding account not set");
-    let n = get_dkg_params(&mut *connection, account).await?.n;
-    let addresses = crate::frost::db::get_addresses(&mut *connection, account, n).await?;
+    let n = get_dkg_params(&mut connection, account).await?.n;
+    let addresses = crate::frost::db::get_addresses(&mut connection, account, n).await?;
     Ok(addresses)
 }
 
 pub async fn set_dkg_address(id: u16, address: &str) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut *connection)
+    let account = get_funding_account(&mut connection)
         .await?
         .expect("Funding account not set");
 
-    crate::frost::dkg::set_dkg_address(&mut *connection, account, id, address).await
+    crate::frost::dkg::set_dkg_address(&mut connection, account, id, address).await
 }
 
 #[frb]
 pub async fn cancel_dkg() -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut *connection).await?;
-    crate::frost::dkg::cancel_dkg(&mut *connection, account).await
+    let account = get_funding_account(&mut connection).await?;
+    crate::frost::dkg::cancel_dkg(&mut connection, account).await
 }
 
 async fn get_funding_account(connection: &mut SqliteConnection) -> Result<Option<u32>> {

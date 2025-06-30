@@ -7,7 +7,7 @@ impl Edge {
         for (depth, n) in self.0.iter().enumerate() {
             match n {
                 Some(n) => {
-                    hash = h.combine(depth as u8, &n, &hash);
+                    hash = h.combine(depth as u8, n, &hash);
                 }
                 None => {
                     hash = h.combine(depth as u8, &hash, &empty);
@@ -26,7 +26,7 @@ impl Edge {
             path.0[depth] = hash;
             match n {
                 Some(n) => {
-                    hash = h.combine(depth as u8, &n, &hash);
+                    hash = h.combine(depth as u8, n, &hash);
                 }
                 None => {
                     hash = h.combine(depth as u8, &hash, &empty);

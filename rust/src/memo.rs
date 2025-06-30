@@ -38,7 +38,7 @@ pub async fn fetch_tx_details(
             .await?;
 
     for (id_tx, txid) in txids.iter() {
-        decrypt_memo(network, connection, client, account, &txid).await?;
+        decrypt_memo(network, connection, client, account, txid).await?;
         let (tpe, value) = summarize_tx(connection, *id_tx).await?;
         sqlx::query("UPDATE transactions SET details = TRUE, tpe = ?, value = ? WHERE id_tx = ?")
             .bind(tpe)
@@ -66,10 +66,10 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
     .await?;
     if value > 0 {
         // receiving
-        return Ok((1, value));
+        Ok((1, value))
     } else if value < -fee {
         // sending
-        return Ok((2, value));
+        Ok((2, value))
     } else {
         // self transfer
         let has_tspend = sqlx::query("SELECT 1 FROM spends WHERE tx = ? AND pool = 0")
@@ -83,7 +83,7 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
             .await?
             .is_some();
         let tpe: u8 = (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 });
-        return Ok((tpe, value));
+        Ok((tpe, value))
     }
 }
 
@@ -102,7 +102,7 @@ pub async fn decrypt_memo(
     let (id_tx,): (u32,) =
         sqlx::query_as("SELECT id_tx FROM transactions WHERE account = ? AND txid = ?")
             .bind(account)
-            .bind(&txid)
+            .bind(txid)
             .fetch_one(&mut *connection)
             .await
             .context("Failed to find transaction")?;
@@ -297,6 +297,7 @@ pub async fn decrypt_memo(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn process_memo(
     connection: &mut SqliteConnection,
     account: u32,
@@ -309,7 +310,7 @@ async fn process_memo(
     memo_bytes: &[u8],
 ) -> Result<()> {
     info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
-    if let Ok(memo) = Memo::from_bytes(&memo_bytes) {
+    if let Ok(memo) = Memo::from_bytes(memo_bytes) {
         match memo {
             Memo::Empty => {}
             Memo::Text(text_memo) => {
@@ -323,11 +324,11 @@ async fn process_memo(
                 .bind(height)
                 .bind(id_tx)
                 .bind(pool)
-                .bind(vout as u32)
+                .bind(vout)
                 .bind(id_note)
                 .bind(id_output)
                 .bind(text)
-                .bind(&memo_bytes[..])
+                .bind(memo_bytes)
                 .execute(&mut *connection)
                 .await?;
             }
@@ -341,10 +342,10 @@ async fn process_memo(
                 .bind(height)
                 .bind(id_tx)
                 .bind(pool)
-                .bind(vout as u32)
+                .bind(vout)
                 .bind(id_note)
                 .bind(id_output)
-                .bind(&memo_bytes[..])
+                .bind(memo_bytes)
                 .execute(&mut *connection)
                 .await?;
             }
@@ -354,6 +355,7 @@ async fn process_memo(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn store_output(
     connection: &mut SqliteConnection,
     account: u32,
@@ -373,16 +375,16 @@ async fn store_output(
     .bind(height)
     .bind(id_tx)
     .bind(pool) // Sapling pool
-    .bind(vout as u32)
+    .bind(vout)
     .bind(value as i64)
-    .bind(&address)
+    .bind(address)
     .execute(&mut *connection)
     .await?;
     let id_output =
         sqlx::query("SELECT id_output FROM outputs WHERE tx = ? AND pool = ? AND vout = ?")
             .bind(id_tx)
             .bind(pool) // Sapling pool
-            .bind(vout as u32)
+            .bind(vout)
             .map(|row: SqliteRow| row.get::<u32, _>(0))
             .fetch_one(&mut *connection)
             .await
