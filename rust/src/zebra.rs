@@ -165,7 +165,7 @@ impl LwdServer for GRPCClient {
             }))
             .await?
             .into_inner();
-        let network = network.clone();
+        let network = *network;
         let (sender, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
         tokio::spawn(async move {
             while let Some(rtx) = txs.message().await? {
@@ -185,7 +185,7 @@ impl LwdServer for GRPCClient {
             .get_mempool_stream(Request::new(Empty {}))
             .await?
             .into_inner();
-        let network = network.clone();
+        let network = *network;
         let (sender, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
         tokio::spawn(async move {
             while let Some(rtx) = txs.message().await? {
@@ -318,10 +318,9 @@ impl LwdServer for ZebraClient {
     ) -> Result<Self::CompactBlockStream> {
         let (tx, rx) = tokio::sync::mpsc::channel::<CompactBlock>(10);
         let mut client = self.clone();
-        let network = network.clone();
+        let network = *network;
         tokio::spawn(async move {
             for height in start..=end {
-                let height = height as u32;
                 let cb = client.block(&network, height).await?;
                 tx.send(cb).await.ok();
             }
@@ -361,7 +360,7 @@ impl LwdServer for ZebraClient {
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?;
         let txids = txids
-            .into_iter()
+            .iter()
             .map(|txid| {
                 let txid_str = txid
                     .as_str()
@@ -371,11 +370,11 @@ impl LwdServer for ZebraClient {
             })
             .collect::<Result<Vec<_>, _>>()?;
         let mut client = self.clone();
-        let network = network.clone();
+        let network = *network;
         let (txs, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
         tokio::spawn(async move {
             for txid in txids.iter() {
-                let mut txid_hex = hex::decode(&txid).expect("Failed to decode txid hex");
+                let mut txid_hex = hex::decode(txid).expect("Failed to decode txid hex");
                 txid_hex.reverse();
                 let (height, tx) = client.transaction(&network, &txid_hex).await?;
                 txs.send((height, tx, 0)).await?;

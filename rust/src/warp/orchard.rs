@@ -31,12 +31,14 @@ impl OrchardHasher {
         let mut bit_offset = 0;
         let mut byte_offset = 0;
         for _ in 0..51 {
-            let mut v = if byte_offset < 31 {
-                left[byte_offset] as u16 | (left[byte_offset + 1] as u16) << 8
-            } else if byte_offset == 31 {
-                left[31] as u16 | (right[0] as u16) << 8
-            } else {
-                right[byte_offset - 32] as u16 | (right[byte_offset - 31] as u16) << 8
+            let mut v = match byte_offset.cmp(&31) {
+                std::cmp::Ordering::Less => {
+                    left[byte_offset] as u16 | (left[byte_offset + 1] as u16) << 8
+                }
+                std::cmp::Ordering::Equal => left[31] as u16 | (right[0] as u16) << 8,
+                std::cmp::Ordering::Greater => {
+                    right[byte_offset - 32] as u16 | (right[byte_offset - 31] as u16) << 8
+                }
             };
             v = v >> bit_offset & 0x03FF; // keep 10 bits
             let (s_x, s_y) = SINSEMILLA_S[v as usize];
