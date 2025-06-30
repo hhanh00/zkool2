@@ -1,7 +1,7 @@
 use anyhow::{Context as _, Result};
 use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
@@ -21,7 +21,7 @@ use crate::{
 
 pub async fn fetch_tx_details(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
 ) -> Result<()> {
@@ -34,7 +34,7 @@ pub async fn fetch_tx_details(
                 let txid: Vec<u8> = row.get(1);
                 (id_tx, txid)
             })
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
 
     for (id_tx, txid) in txids.iter() {
@@ -44,14 +44,14 @@ pub async fn fetch_tx_details(
             .bind(tpe)
             .bind(value)
             .bind(*id_tx)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
     }
 
     Ok(())
 }
 
-async fn summarize_tx(connection: &SqlitePool, tx: u32) -> Result<(u8, i64)> {
+async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8, i64)> {
     let (value, fee) = sqlx::query(
         "WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
         SELECT SUM(n.value), t.fee FROM n JOIN transactions t ON t.id_tx = n.tx WHERE n.tx = ?",
@@ -62,7 +62,7 @@ async fn summarize_tx(connection: &SqlitePool, tx: u32) -> Result<(u8, i64)> {
         let fee = row.get::<Option<i64>, _>(1).unwrap_or_default();
         (value, fee)
     })
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
     if value > 0 {
         // receiving
@@ -74,12 +74,12 @@ async fn summarize_tx(connection: &SqlitePool, tx: u32) -> Result<(u8, i64)> {
         // self transfer
         let has_tspend = sqlx::query("SELECT 1 FROM spends WHERE tx = ? AND pool = 0")
             .bind(tx)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?
             .is_some();
         let has_tnote = sqlx::query("SELECT 1 FROM notes WHERE tx = ? AND pool = 0")
             .bind(tx)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?
             .is_some();
         let tpe: u8 = (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 });
@@ -89,7 +89,7 @@ async fn summarize_tx(connection: &SqlitePool, tx: u32) -> Result<(u8, i64)> {
 
 pub async fn decrypt_memo(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
     txid: &[u8],
@@ -103,7 +103,7 @@ pub async fn decrypt_memo(
         sqlx::query_as("SELECT id_tx FROM transactions WHERE account = ? AND txid = ?")
             .bind(account)
             .bind(&txid)
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await
             .context("Failed to find transaction")?;
 
@@ -158,7 +158,7 @@ pub async fn decrypt_memo(
                             .bind(account)
                             .bind(cmx.as_slice())
                             .map(|row: SqliteRow| row.get::<u32, _>(0))
-                            .fetch_optional(connection)
+                            .fetch_optional(&mut *connection)
                             .await?;
 
                     process_memo(
@@ -233,7 +233,7 @@ pub async fn decrypt_memo(
                             .bind(account)
                             .bind(&cmx.to_bytes()[..])
                             .map(|row: SqliteRow| row.get::<u32, _>(0))
-                            .fetch_one(connection)
+                            .fetch_one(&mut *connection)
                             .await
                             .context("Failed to find note")?;
 
@@ -291,14 +291,14 @@ pub async fn decrypt_memo(
     sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")
         .bind(fee as i64)
         .bind(id_tx)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
 
     Ok(())
 }
 
 async fn process_memo(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     height: u32,
     id_tx: u32,
@@ -328,7 +328,7 @@ async fn process_memo(
                 .bind(id_output)
                 .bind(text)
                 .bind(&memo_bytes[..])
-                .execute(connection)
+                .execute(&mut *connection)
                 .await?;
             }
             Memo::Future(_) | Memo::Arbitrary(_) => {
@@ -345,7 +345,7 @@ async fn process_memo(
                 .bind(id_note)
                 .bind(id_output)
                 .bind(&memo_bytes[..])
-                .execute(connection)
+                .execute(&mut *connection)
                 .await?;
             }
         }
@@ -355,7 +355,7 @@ async fn process_memo(
 }
 
 async fn store_output(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     height: u32,
     id_tx: u32,
@@ -376,7 +376,7 @@ async fn store_output(
     .bind(vout as u32)
     .bind(value as i64)
     .bind(&address)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
     let id_output =
         sqlx::query("SELECT id_output FROM outputs WHERE tx = ? AND pool = ? AND vout = ?")
@@ -384,7 +384,7 @@ async fn store_output(
             .bind(pool) // Sapling pool
             .bind(vout as u32)
             .map(|row: SqliteRow| row.get::<u32, _>(0))
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await
             .context("Failed to find output")?;
 

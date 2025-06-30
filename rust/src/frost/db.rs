@@ -2,7 +2,7 @@ use anyhow::Result;
 use bip39::Mnemonic;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, Scope};
-use sqlx::SqlitePool;
+use sqlx::SqliteConnection;
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::consensus::Network;
@@ -17,7 +17,7 @@ use crate::{
 ///
 pub async fn get_mailbox_account(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     self_id: u16,
     birth_height: u32,
@@ -31,7 +31,7 @@ pub async fn get_mailbox_account(
         // seed or empty string if not set
         let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
             .bind(account)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?
             .map(|row| row.0)
             .unwrap_or_default();
@@ -42,13 +42,13 @@ pub async fn get_mailbox_account(
         )
         .bind(account)
         .bind(self_id)
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?
         .map(|a| String::from_utf8(a.0).expect("Failed to convert utf8"));
         let mailbox_account = if !seed.is_empty() {
             sqlx::query_as::<_, (u32,)>("SELECT id_account FROM accounts WHERE seed = ?1")
                 .bind(&seed)
-                .fetch_optional(connection)
+                .fetch_optional(&mut *connection)
                 .await?
         } else {
             None
@@ -74,7 +74,7 @@ pub async fn get_mailbox_account(
                     internal: true,
                 };
                 let mailbox_account = new_account(&na).await?;
-                let fvk = get_orchard_vk(connection, mailbox_account)
+                let fvk = get_orchard_vk(&mut *connection, mailbox_account)
                     .await?
                     .expect("Mailbox account should have orchard");
                 let address = fvk.address_at(0u64, Scope::External);
@@ -87,7 +87,7 @@ pub async fn get_mailbox_account(
                 .bind(account)
                 .bind(self_id)
                 .bind(ua)
-                .execute(connection)
+                .execute(&mut *connection)
                 .await?;
                 let seed = get_account_seed(mailbox_account)
                     .await?
@@ -95,7 +95,7 @@ pub async fn get_mailbox_account(
                 sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
                     .bind(&seed.mnemonic)
                     .bind(account)
-                    .execute(connection)
+                    .execute(&mut *connection)
                     .await?;
             }
             _ => unreachable!(),
@@ -112,7 +112,7 @@ pub async fn get_mailbox_account(
 ///
 pub async fn get_coordinator_broadcast_account(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     height: u32,
 ) -> Result<(u32, String)> {
@@ -121,7 +121,7 @@ pub async fn get_coordinator_broadcast_account(
         AND public = 1 ORDER BY from_id",
     )
     .bind(account)
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
     let addresses = addresses
         .into_iter()
@@ -147,7 +147,7 @@ pub async fn get_coordinator_broadcast_account(
             WHERE seed = ?1",
         )
         .bind(&seed)
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
 
         match r {
@@ -183,7 +183,7 @@ pub async fn get_coordinator_broadcast_account(
     Ok((account, broadcast_address))
 }
 
-pub async fn get_addresses(connection: &SqlitePool, account: u32, n: u8) -> Result<Vec<String>> {
+pub async fn get_addresses(connection: &mut SqliteConnection, account: u32, n: u8) -> Result<Vec<String>> {
     let mut addresses = vec![String::new(); n as usize];
     let mut rs = sqlx::query_as::<_, (u16, Vec<u8>)>(
         "SELECT from_id, data FROM dkg_packages WHERE account = ?1 AND round = 0

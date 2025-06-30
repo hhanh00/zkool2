@@ -5,7 +5,7 @@ use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;
 use rayon::prelude::*;
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, SqliteConnection};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
 use zcash_protocol::consensus::Network;
@@ -27,7 +27,7 @@ pub trait ShieldedProtocol {
     type Output: Sync;
 
     fn extract_ivk(
-        pool: &SqlitePool,
+        connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
     ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
@@ -67,7 +67,7 @@ pub struct Synchronizer<P: ShieldedProtocol> {
 impl<P: ShieldedProtocol> Synchronizer<P> {
     pub async fn new(
         network: Network,
-        connection: &SqlitePool,
+        connection: &mut SqliteConnection,
         pool: u8,
         height: u32,
         accounts: &[(u32, bool)],
@@ -77,11 +77,11 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
     ) -> Result<Self> {
         let mut keys = vec![];
         for (id, use_internal) in accounts.iter() {
-            if let Some((ivk, nk)) = P::extract_ivk(connection, *id, 0).await? {
+            if let Some((ivk, nk)) = P::extract_ivk(&mut *connection, *id, 0).await? {
                 keys.push((*id, 0u8, ivk, nk));
             }
             if *use_internal {
-                if let Some((ivk, nk)) = P::extract_ivk(connection, *id, 1).await? {
+                if let Some((ivk, nk)) = P::extract_ivk(&mut *connection, *id, 1).await? {
                     keys.push((*id, 1u8, ivk, nk));
                 }
             }
@@ -132,7 +132,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                     ..UTXO::default()
                 }
             })
-            .fetch(connection);
+            .fetch(&mut *connection);
             while let Some(utxo) = nfs.try_next().await? {
                 let mut key = account.to_be_bytes().to_vec();
                 key.extend_from_slice(&utxo.nullifier);
