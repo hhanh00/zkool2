@@ -15,7 +15,7 @@ async fn run_mempool(
     let r = crate::mempool::run_mempool(
         mempool_sink,
         &c.network,
-        &mut *connection,
+        &mut connection,
         &mut c.client().await?,
         height,
         cancel_token,

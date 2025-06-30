@@ -50,17 +50,17 @@ impl CommitmentTreeFrontier {
         let mut edge = [None; MERKLE_DEPTH as usize];
         let mut prev = self.left;
         let mut carry = self.right;
-        for i in 0..MERKLE_DEPTH as usize {
+        for (i, e) in edge.iter_mut().enumerate() {
             match (prev, carry) {
                 (_, None) => {
-                    edge[i] = prev;
+                    *e = prev;
                 }
                 (None, Some(_)) => {
-                    edge[i] = carry;
+                    *e = carry;
                     carry = None;
                 }
                 (Some(l), Some(r)) => {
-                    edge[i] = None;
+                    *e = None;
                     carry = Some(h.combine(i as u8, &l, &r));
                 }
             }

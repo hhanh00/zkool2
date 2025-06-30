@@ -546,7 +546,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
                 .bind(note.height)
                 .bind(new_id_tx)
                 .bind(note.pool)
-                .bind(vout as u32)
+                .bind(vout)
                 .bind(new_id_note)
                 .bind(&note.memo_text)
                 .bind(&note.memo_bytes)
@@ -581,7 +581,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
                 .bind(output.height)
                 .bind(new_id_tx)
                 .bind(output.pool)
-                .bind(output.vout as u32)
+                .bind(output.vout)
                 .bind(new_id_output) // Assuming output is linked to the note
                 .bind(&output.memo_text)
                 .bind(memo_bytes)
@@ -839,10 +839,7 @@ pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
 
 fn derive_encryption_key(passphrase: &str, salt: Option<Salt>) -> Result<(Salt, aead::SecretKey)> {
     let user_password = kdf::Password::from_slice(passphrase.as_bytes())?;
-    let salt = match salt {
-        Some(s) => s,
-        None => kdf::Salt::default(),
-    };
+    let salt = salt.unwrap_or_default();
     let derived_key = kdf::derive_key(&user_password, &salt, 3, 1 << 16, 32)?;
 
     Ok((salt, derived_key))

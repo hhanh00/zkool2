@@ -15,7 +15,7 @@ use crate::Client;
 #[macro_export]
 macro_rules! setup {
     ($account: expr) => {{
-        let mut coin = crate::coin::COIN.lock().unwrap();
+        let mut coin = $crate::coin::COIN.lock().unwrap();
         coin.account = $account;
     }};
 }
@@ -23,7 +23,7 @@ macro_rules! setup {
 #[macro_export]
 macro_rules! get_coin {
     () => {{
-        let c = crate::coin::COIN.lock().unwrap();
+        let c = $crate::coin::COIN.lock().unwrap();
         c.clone()
     }};
 }
@@ -61,13 +61,13 @@ impl Coin {
             .await?
             .is_none()
         {
-            create_schema(&mut *connection).await?;
+            create_schema(&mut connection).await?;
             let testnet = db_filepath.contains("testnet");
             let coin_value = if testnet { "1" } else { "0" };
-            crate::db::put_prop(&mut *connection, "coin", coin_value).await?;
+            crate::db::put_prop(&mut connection, "coin", coin_value).await?;
         }
 
-        let coin = crate::db::get_prop(&mut *connection, "coin")
+        let coin = crate::db::get_prop(&mut connection, "coin")
             .await?
             .unwrap_or("0".to_string());
         let coin = coin.parse::<u8>()?;
