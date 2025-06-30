@@ -21,7 +21,7 @@ use ripemd::Ripemd160;
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::{debug, event, info, span, Level};
 use zcash_address::ZcashAddress;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
@@ -78,7 +78,7 @@ pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
 
 pub async fn plan_transaction(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
     src_pools: u8,
@@ -115,13 +115,13 @@ pub async fn plan_transaction(
     let (use_internal,): (bool,) =
         sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
             .bind(account)
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
 
     let effective_src_pools = if has_tex {
         PoolMask::from_pool(0) // restrict to transparent pool
     } else {
-        crate::pay::plan::get_effective_src_pools(connection, account, src_pools).await?
+        crate::pay::plan::get_effective_src_pools(&mut *connection, account, src_pools).await?
     };
 
     let recipients = recipients.to_vec();
@@ -399,8 +399,8 @@ pub async fn plan_transaction(
 
     event!(Level::INFO, "Adding Inputs");
 
-    let ssk = get_sapling_sk(connection, account).await?;
-    let osk = get_orchard_sk(connection, account).await?;
+    let ssk = get_sapling_sk(&mut *connection, account).await?;
+    let osk = get_orchard_sk(&mut *connection, account).await?;
 
     let mut n_spends: [usize; 3] = [0, 0, 0];
     let mut inputs = vec![];
@@ -423,7 +423,7 @@ pub async fn plan_transaction(
                             WHERE id_note = ?",
                         )
                         .bind(*id)
-                        .fetch_one(connection)
+                        .fetch_one(&mut *connection)
                         .await?;
 
                         let nf: Vec<u8> = row.get(0);
@@ -502,7 +502,7 @@ pub async fn plan_transaction(
                 let (nf,): (Vec<u8>,) =
                     sqlx::query_as("SELECT nullifier FROM notes WHERE id_note = ?")
                         .bind(id)
-                        .fetch_one(connection)
+                        .fetch_one(&mut *connection)
                         .await?;
                 debug!(
                     "id: {id}, pool: {pool}, nullifier: {}, amount: {}",
@@ -674,7 +674,7 @@ fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
 }
 
 pub async fn sign_transaction(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     pczt: &PcztPackage,
 ) -> Result<PcztPackage> {
@@ -927,7 +927,7 @@ fn fill_single_receivers(
 }
 
 pub async fn get_effective_src_pools(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     src_pools: u8,
 ) -> Result<PoolMask> {
@@ -952,21 +952,21 @@ pub fn get_change_pool(src_pool_mask: PoolMask, dest_pool_mask: PoolMask) -> u8 
     src_pool_mask.to_best_pool().unwrap()
 }
 
-pub async fn get_account_pool_mask(connection: &SqlitePool, account: u32) -> Result<PoolMask> {
+pub async fn get_account_pool_mask(connection: &mut SqliteConnection, account: u32) -> Result<PoolMask> {
     let (has_transparent,): (bool,) =
         sqlx::query_as("SELECT EXISTS(SELECT 1 FROM transparent_accounts WHERE account = ?)")
             .bind(account)
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
     let (has_sapling,): (bool,) =
         sqlx::query_as("SELECT EXISTS(SELECT 1 FROM sapling_accounts WHERE account = ?)")
             .bind(account)
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
     let (has_orchard,): (bool,) =
         sqlx::query_as("SELECT EXISTS(SELECT 1 FROM orchard_accounts WHERE account = ?)")
             .bind(account)
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
     let account_pool_mask = PoolMask(
         (has_transparent as u8) << 0 | (has_sapling as u8) << 1 | (has_orchard as u8) << 2,
@@ -976,7 +976,7 @@ pub async fn get_account_pool_mask(connection: &SqlitePool, account: u32) -> Res
 }
 
 pub async fn fetch_unspent_notes_grouped_by_pool(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Vec<InputNote>> {
     let unspent_notes = sqlx::query(

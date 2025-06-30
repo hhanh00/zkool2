@@ -64,13 +64,15 @@ pub fn new_seed(phrase: &str) -> Result<String> {
 pub async fn get_account_ufvk(account: u32, pools: u8) -> Result<String> {
     let c = get_coin!();
     let network = c.network;
+    let mut connection = c.get_connection().await?;
 
-    let ufvk = crate::key::get_account_ufvk(&network, c.get_pool(), account, pools).await?;
+    let ufvk = crate::key::get_account_ufvk(&network, &mut connection, account, pools).await?;
     Ok(ufvk)
 }
 
 pub async fn get_account_seed(account: u32) -> Result<Option<Seed>> {
     let c = get_coin!();
+    let mut connection = c.get_connection().await?;
 
     let seed = sqlx::query("SELECT seed, passphrase, aindex FROM accounts WHERE id_account = ?")
         .bind(account)
@@ -85,7 +87,7 @@ pub async fn get_account_seed(account: u32) -> Result<Option<Seed>> {
                 aindex,
             })
         })
-        .fetch_one(c.get_pool())
+        .fetch_one(&mut *connection)
         .await?;
     Ok(seed)
 }
@@ -100,8 +102,9 @@ pub struct Seed {
 #[frb]
 pub async fn get_account_fingerprint(account: u32) -> Result<Option<String>> {
     let c = get_coin!();
+    let mut connection = c.get_connection().await?;
 
-    let fingerprint = crate::db::get_account_fingerprint(c.get_pool(), account).await?;
+    let fingerprint = crate::db::get_account_fingerprint(&mut *connection, account).await?;
     let fingerprint = fingerprint.as_ref().map(|fp| hex::encode(&fp[..4]));
     Ok(fingerprint)
 }
@@ -172,7 +175,8 @@ pub struct Receivers {
 #[frb]
 pub async fn list_accounts() -> Result<Vec<Account>> {
     let c = get_coin!();
-    let accounts = crate::db::list_accounts(c.get_pool(), c.coin).await?;
+    let mut connection = c.get_connection().await?;
+    let accounts = crate::db::list_accounts(&mut *connection, c.coin).await?;
 
     Ok(accounts)
 }
@@ -180,41 +184,41 @@ pub async fn list_accounts() -> Result<Vec<Account>> {
 #[frb]
 pub async fn update_account(update: &AccountUpdate) -> Result<()> {
     let c = get_coin!();
-    let pool = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
     if let Some(ref name) = update.name {
         sqlx::query("UPDATE accounts SET name = ? WHERE id_account = ?")
             .bind(name)
             .bind(update.id)
-            .execute(pool)
+            .execute(&mut *connection)
             .await?;
     }
     if let Some(ref icon) = update.icon {
         sqlx::query("UPDATE accounts SET icon = ? WHERE id_account = ?")
             .bind(icon)
             .bind(update.id)
-            .execute(pool)
+            .execute(&mut *connection)
             .await?;
     }
     if let Some(ref birth) = update.birth {
         sqlx::query("UPDATE accounts SET birth = ? WHERE id_account = ?")
             .bind(birth)
             .bind(update.id)
-            .execute(pool)
+            .execute(&mut *connection)
             .await?;
     }
     if let Some(ref enabled) = update.enabled {
         sqlx::query("UPDATE accounts SET enabled = ? WHERE id_account = ?")
             .bind(enabled)
             .bind(update.id)
-            .execute(pool)
+            .execute(&mut *connection)
             .await?;
     }
     if let Some(ref hidden) = update.hidden {
         sqlx::query("UPDATE accounts SET hidden = ? WHERE id_account = ?")
             .bind(hidden)
             .bind(update.id)
-            .execute(pool)
+            .execute(&mut *connection)
             .await?;
     }
 
@@ -224,9 +228,9 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
 #[frb]
 pub async fn delete_account(account: u32) -> Result<()> {
     let c = get_coin!();
-    let pool = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    crate::db::delete_account(pool, account).await?;
+    crate::db::delete_account(&mut *connection, account).await?;
 
     Ok(())
 }
@@ -234,9 +238,9 @@ pub async fn delete_account(account: u32) -> Result<()> {
 #[frb]
 pub async fn reorder_account(old_position: u32, new_position: u32) -> Result<()> {
     let c = get_coin!();
-    let pool = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    crate::db::reorder_account(pool, old_position, new_position).await
+    crate::db::reorder_account(&mut *connection, old_position, new_position).await
 }
 
 #[frb]
@@ -248,7 +252,7 @@ pub fn set_account(account: u32) -> Result<()> {
 #[frb]
 pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let c = get_coin!();
-    let pool = c.get_pool();
+    let mut connection = c.get_connection().await?;
     let network = c.network;
     let min_height: u32 = (network
         .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
@@ -258,7 +262,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let birth = na.birth.unwrap_or(min_height).max(min_height);
 
     let account = store_account_metadata(
-        pool,
+        &mut *connection,
         &na.name,
         &na.icon,
         &na.fingerprint,
@@ -282,7 +286,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let seed = seed_phrase.to_seed(&passphrase);
         let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
         store_account_seed(
-            pool,
+            &mut *connection,
             account,
             &key,
             &passphrase,
@@ -299,15 +303,15 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        init_account_transparent(pool, account, birth).await?;
+        init_account_transparent(&mut *connection, account, birth).await?;
         let tsk = usk.transparent();
-        store_account_transparent_sk(pool, account, tsk).await?;
+        store_account_transparent_sk(&mut *connection, account, tsk).await?;
         let tvk = &tsk.to_account_pubkey();
-        store_account_transparent_vk(pool, account, tvk).await?;
+        store_account_transparent_vk(&mut *connection, account, tvk).await?;
         let sk = derive_transparent_sk(&tsk, 0, dindex)?;
         let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
         store_account_transparent_addr(
-            pool,
+            &mut *connection,
             account,
             0,
             dindex,
@@ -317,31 +321,31 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         )
         .await?;
 
-        init_account_sapling(pool, account, birth).await?;
+        init_account_sapling(&mut *connection, account, birth).await?;
         let sxsk = usk.sapling();
-        store_account_sapling_sk(pool, account, sxsk).await?;
+        store_account_sapling_sk(&mut *connection, account, sxsk).await?;
         let sxvk = sxsk.to_diversifiable_full_viewing_key();
-        store_account_sapling_vk(pool, account, &sxvk).await?;
+        store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
 
-        init_account_orchard(pool, account, birth).await?;
+        init_account_orchard(&mut *connection, account, birth).await?;
         let oxsk = usk.orchard();
-        store_account_orchard_sk(pool, account, oxsk).await?;
+        store_account_orchard_sk(&mut *connection, account, oxsk).await?;
         let oxvk = FullViewingKey::from(oxsk);
-        store_account_orchard_vk(pool, account, &oxvk).await?;
+        store_account_orchard_vk(&mut *connection, account, &oxvk).await?;
 
-        update_dindex(pool, account, dindex, true).await?;
+        update_dindex(&mut *connection, account, dindex, true).await?;
     }
     if is_valid_transparent_key(&key) {
-        init_account_transparent(pool, account, birth).await?;
+        init_account_transparent(&mut *connection, account, birth).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
-            store_account_transparent_sk(pool, account, &xsk).await?;
+            store_account_transparent_sk(&mut *connection, account, &xsk).await?;
             let xvk = xsk.to_account_pubkey();
-            store_account_transparent_vk(pool, account, &xvk).await?;
+            store_account_transparent_vk(&mut *connection, account, &xvk).await?;
             let sk = derive_transparent_sk(&xsk, 0, 0)?;
             let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(
-                pool,
+                &mut *connection,
                 account,
                 0,
                 0,
@@ -355,10 +359,10 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             let mut buf = xvk.attrs().chain_code.to_vec();
             buf.extend_from_slice(&xvk.to_bytes());
             let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
-            store_account_transparent_vk(pool, account, &xvk).await?;
+            store_account_transparent_vk(&mut *connection, account, &xvk).await?;
             let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(
-                pool,
+                &mut *connection,
                 account,
                 0,
                 0,
@@ -373,7 +377,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
             let addr = TransparentAddress::PublicKeyHash(pkh.clone());
             store_account_transparent_addr(
-                pool,
+                &mut *connection,
                 account,
                 0,
                 0,
@@ -385,21 +389,21 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
     }
     if is_valid_sapling_key(&network, &key) {
-        init_account_sapling(pool, account, birth).await?;
+        init_account_sapling(&mut *connection, account, birth).await?;
         let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
             &key,
         ) {
-            store_account_sapling_sk(pool, account, &xsk).await?;
+            store_account_sapling_sk(&mut *connection, account, &xsk).await?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
-            store_account_sapling_vk(pool, account, &xvk).await?;
+            store_account_sapling_vk(&mut *connection, account, &xvk).await?;
             let (di, _) = xvk.default_address();
             di
         } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
             network.hrp_sapling_extended_full_viewing_key(),
             &key,
         ) {
-            store_account_sapling_vk(pool, account, &xvk.to_diversifiable_full_viewing_key())
+            store_account_sapling_vk(&mut *connection, account, &xvk.to_diversifiable_full_viewing_key())
                 .await?;
             let (di, _) = xvk.default_address();
             di
@@ -407,7 +411,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             return Err(anyhow!("Invalid Sapling Key"));
         };
         let dindex: u32 = di.try_into()?;
-        update_dindex(pool, account, dindex, true).await?;
+        update_dindex(&mut *connection, account, dindex, true).await?;
     }
     if is_valid_ufvk(&network, &key) {
         let uvk =
@@ -416,11 +420,11 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let dindex: u32 = di.try_into()?;
 
         if let Some(tvk) = uvk.transparent() {
-            init_account_transparent(pool, account, birth).await?;
-            store_account_transparent_vk(pool, account, tvk).await?;
+            init_account_transparent(&mut *connection, account, birth).await?;
+            store_account_transparent_vk(&mut *connection, account, tvk).await?;
             let (pk, address) = derive_transparent_address(tvk, 0, dindex)?;
             store_account_transparent_addr(
-                pool,
+                &mut *connection,
                 account,
                 0,
                 dindex,
@@ -431,14 +435,14 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             .await?;
         }
         if let Some(svk) = uvk.sapling() {
-            init_account_sapling(pool, account, birth).await?;
-            store_account_sapling_vk(pool, account, svk).await?;
+            init_account_sapling(&mut *connection, account, birth).await?;
+            store_account_sapling_vk(&mut *connection, account, svk).await?;
         }
         if let Some(ovk) = uvk.orchard() {
-            init_account_orchard(pool, account, birth).await?;
-            store_account_orchard_vk(pool, account, ovk).await?;
+            init_account_orchard(&mut *connection, account, birth).await?;
+            store_account_orchard_vk(&mut *connection, account, ovk).await?;
         }
-        update_dindex(pool, account, dindex, true).await?;
+        update_dindex(&mut *connection, account, dindex, true).await?;
     }
 
     Ok(account)
@@ -447,24 +451,23 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
 #[frb]
 pub async fn generate_next_dindex() -> Result<u32> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    crate::account::generate_next_dindex(&c.network, connection, c.account).await
+    crate::account::generate_next_dindex(&c.network, &mut *connection, c.account).await
 }
 
 #[frb]
 pub async fn generate_next_change_address() -> Result<Option<String>> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    crate::account::generate_next_change_address(&c.network, connection, c.account).await
+    crate::account::generate_next_change_address(&c.network, &mut *connection, c.account).await
 }
 
 #[frb]
 pub async fn reset_sync(id: u32) -> Result<()> {
     let c = get_coin!();
-    let connection = c.get_pool();
-    let mut connection = connection.acquire().await?;
+    let mut connection = c.get_connection().await?;
 
     crate::account::reset_sync(&mut connection, id).await
 }
@@ -524,19 +527,22 @@ pub struct Tx {
 
 pub async fn remove_account(account_id: u32) -> Result<()> {
     let c = get_coin!();
-    crate::db::delete_account(c.get_pool(), account_id).await?;
+    let mut connection = c.get_connection().await?;
+    crate::db::delete_account(&mut *connection, account_id).await?;
     Ok(())
 }
 
 pub async fn move_account(old_position: u32, new_position: u32) -> Result<()> {
     let c = get_coin!();
-    crate::db::reorder_account(c.get_pool(), old_position, new_position).await?;
+    let mut connection = c.get_connection().await?;
+    crate::db::reorder_account(&mut *connection, old_position, new_position).await?;
     Ok(())
 }
 
 pub async fn list_tx_history() -> Result<Vec<Tx>> {
     let c = get_coin!();
-    let txs = crate::db::fetch_txs(c.get_pool(), c.account).await?;
+    let mut connection = c.get_connection().await?;
+    let txs = crate::db::fetch_txs(&mut *connection, c.account).await?;
     Ok(txs)
 }
 
@@ -556,20 +562,21 @@ pub struct Memo {
 #[frb]
 pub async fn list_memos() -> Result<Vec<Memo>> {
     let c = get_coin!();
-    let memos = crate::db::fetch_memos(c.get_pool(), c.account).await?;
+    let mut connection = c.get_connection().await?;
+    let memos = crate::db::fetch_memos(&mut *connection, c.account).await?;
     Ok(memos)
 }
 
 #[frb]
 pub async fn get_addresses() -> Result<Addresses> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    let tkeys = crate::db::select_account_transparent(connection, c.account).await?;
-    let skeys = crate::db::select_account_sapling(connection, c.account).await?;
-    let okeys = crate::db::select_account_orchard(connection, c.account).await?;
+    let tkeys = crate::db::select_account_transparent(&mut *connection, c.account).await?;
+    let skeys = crate::db::select_account_sapling(&mut *connection, c.account).await?;
+    let okeys = crate::db::select_account_orchard(&mut *connection, c.account).await?;
 
-    let dindex = crate::db::get_account_dindex(connection, c.account).await?;
+    let dindex = crate::db::get_account_dindex(&mut *connection, c.account).await?;
 
     let taddr = tkeys
         .xvk
@@ -613,30 +620,34 @@ pub struct Addresses {
 #[frb]
 pub async fn get_tx_details(id_tx: u32) -> Result<TxAccount> {
     let c = get_coin!();
-    let tx = crate::account::get_tx_details(c.get_pool(), c.account, id_tx).await?;
+    let mut connection = c.get_connection().await?;
+    let tx = crate::account::get_tx_details(&mut *connection, c.account, id_tx).await?;
     Ok(tx)
 }
 
 #[frb]
 pub async fn list_notes() -> Result<Vec<TxNote>> {
     let c = get_coin!();
-    let notes = crate::db::get_notes(c.get_pool(), c.account).await?;
+    let mut connection = c.get_connection().await?;
+    let notes = crate::db::get_notes(&mut *connection, c.account).await?;
     Ok(notes)
 }
 
 #[frb]
 pub async fn lock_note(id: u32, locked: bool) -> Result<()> {
     let c = get_coin!();
-    crate::db::lock_note(c.get_pool(), c.account, id, locked).await?;
+    let mut connection = c.get_connection().await?;
+    crate::db::lock_note(&mut *connection, c.account, id, locked).await?;
     Ok(())
 }
 
 #[frb]
 pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<u32> {
     let c = get_coin!();
+    let mut connection = c.get_connection().await?;
     crate::sync::transparent_sweep(
         &c.network,
-        c.get_pool(),
+        &mut *connection,
         &mut c.client().await?,
         c.account,
         end_height,
@@ -648,9 +659,9 @@ pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<u32> {
 #[frb]
 pub async fn export_account(id: u32, passphrase: &str) -> Result<Vec<u8>> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    let data = crate::io::export_account(connection, id).await?;
+    let data = crate::io::export_account(&mut *connection, id).await?;
     let encrypted = encrypt(passphrase, &data)?;
     Ok(encrypted)
 }
@@ -658,17 +669,17 @@ pub async fn export_account(id: u32, passphrase: &str) -> Result<Vec<u8>> {
 #[frb]
 pub async fn import_account(passphrase: &str, data: &[u8]) -> Result<()> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
     let decrypted = decrypt(passphrase, data)?;
-    crate::io::import_account(connection, &decrypted).await?;
+    crate::io::import_account(&mut *connection, &decrypted).await?;
     Ok(())
 }
 
 #[frb]
 pub async fn print_keys(id: u32) -> Result<()> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
     let (seed, aindex) = sqlx::query(
         "SELECT name, seed, seed_fingerprint, aindex, dindex,
@@ -697,7 +708,7 @@ pub async fn print_keys(id: u32) -> Result<()> {
         );
         (seed, aindex)
     })
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
 
     sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
@@ -715,7 +726,7 @@ pub async fn print_keys(id: u32) -> Result<()> {
 
             info!("Transparent Account {}: {:?} - {}", id, &xsk, &xvk,);
         })
-        .fetch_all(connection)
+        .fetch_all(&mut *connection)
         .await?;
 
     let seed = seed.unwrap();
@@ -740,9 +751,9 @@ pub async fn print_keys(id: u32) -> Result<()> {
 #[frb]
 pub async fn get_account_frost_params() -> Result<Option<FrostParams>> {
     let c = get_coin!();
-    let connection = c.get_pool();
+    let mut connection = c.get_connection().await?;
 
-    crate::account::get_account_frost_params(connection, c.account).await
+    crate::account::get_account_frost_params(&mut *connection, c.account).await
 }
 
 #[frb(dart_metadata = ("freezed"))]

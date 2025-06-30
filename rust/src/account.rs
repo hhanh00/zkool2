@@ -12,7 +12,7 @@ use orchard::{
 use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use sha2::Sha256;
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::Network;
@@ -56,7 +56,7 @@ pub fn derive_transparent_address(
 }
 
 pub async fn get_sapling_sk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<ExtendedSpendingKey>> {
     let sk = sqlx::query("SELECT xsk FROM sapling_accounts WHERE account = ?")
@@ -72,7 +72,7 @@ pub async fn get_sapling_sk(
 }
 
 pub async fn get_sapling_vk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<DiversifiableFullViewingKey>> {
     let vk = sqlx::query("SELECT xvk FROM sapling_accounts WHERE account = ?")
@@ -81,14 +81,14 @@ pub async fn get_sapling_vk(
             let vk: Vec<u8> = row.get(0);
             DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap()
         })
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
 
     Ok(vk)
 }
 
 pub async fn get_sapling_note(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     id: u32,
     height: u32,
     fvk: &sapling_crypto::keys::FullViewingKey,
@@ -140,7 +140,7 @@ pub async fn get_sapling_note(
 }
 
 pub async fn get_orchard_sk(
-    connection: &sqlx::Pool<sqlx::Sqlite>,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<orchard::keys::SpendingKey>> {
     let sk = sqlx::query("SELECT xsk FROM orchard_accounts WHERE account = ?")
@@ -149,14 +149,14 @@ pub async fn get_orchard_sk(
             let sk: Option<Vec<u8>> = row.get(0);
             sk.map(|sk| orchard::keys::SpendingKey::from_bytes(sk.try_into().unwrap()).unwrap())
         })
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
 
     Ok(sk.flatten())
 }
 
 pub async fn get_orchard_vk(
-    connection: &sqlx::Pool<sqlx::Sqlite>,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<orchard::keys::FullViewingKey>> {
     let vk = sqlx::query("SELECT xvk FROM orchard_accounts WHERE account = ?")
@@ -165,14 +165,14 @@ pub async fn get_orchard_vk(
             let fvk: Vec<u8> = row.get(0);
             orchard::keys::FullViewingKey::read(&*fvk).unwrap()
         })
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
 
     Ok(vk)
 }
 
 pub async fn get_orchard_note(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     id: u32,
     height: u32,
     ovk: &orchard::keys::FullViewingKey,
@@ -229,7 +229,7 @@ pub async fn get_orchard_note(
     Ok((note, merkle_path))
 }
 
-pub async fn get_birth_height(connection: &SqlitePool, account: u32) -> Result<u32> {
+pub async fn get_birth_height(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
     let (birth,): (u32,) = sqlx::query_as("SELECT birth FROM accounts WHERE id_account = ?")
         .bind(account)
         .fetch_one(connection)
@@ -240,7 +240,7 @@ pub async fn get_birth_height(connection: &SqlitePool, account: u32) -> Result<u
 
 pub async fn get_account_full_address(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     scope: u8,
 ) -> Result<String> {
@@ -256,7 +256,7 @@ pub async fn get_account_full_address(
         let taddress = TransparentAddress::decode(network, &taddress).unwrap();
         taddress
     })
-    .fetch_optional(connection)
+    .fetch_optional(&mut *connection)
     .await?;
 
     let saddress = sqlx::query(
@@ -278,7 +278,7 @@ pub async fn get_account_full_address(
         };
         saddress
     })
-    .fetch_optional(connection)
+    .fetch_optional(&mut *connection)
     .await?;
 
     let oaddress = sqlx::query(
@@ -314,14 +314,14 @@ pub async fn get_account_full_address(
 
 pub async fn generate_next_dindex(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<u32> {
     let (mut dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
         .bind(account)
-        .fetch_one(connection)
+        .fetch_one(&mut *connection)
         .await?;
-    let svk = get_sapling_vk(connection, account).await?;
+    let svk = get_sapling_vk(&mut *connection, account).await?;
     if let Some(svk) = svk.as_ref() {
         dindex += 1;
         let (di, _) = svk.find_address(dindex.into()).unwrap();
@@ -334,7 +334,7 @@ pub async fn generate_next_dindex(
     sqlx::query("UPDATE accounts SET dindex = ? WHERE id_account = ?")
         .bind(dindex)
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
 
     let (xsk, xvk) = get_transparent_keys(connection, account).await?;
@@ -343,7 +343,7 @@ pub async fn generate_next_dindex(
         .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
     let (tpk, taddress) = derive_transparent_address(xvk.as_ref().unwrap(), 0, dindex)?;
     store_account_transparent_addr(
-        connection,
+        &mut *connection,
         account,
         0,
         dindex,
@@ -358,7 +358,7 @@ pub async fn generate_next_dindex(
 
 pub async fn generate_next_change_address(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<String>> {
     let dindex = sqlx::query(
@@ -366,7 +366,7 @@ pub async fn generate_next_change_address(
     )
     .bind(account)
     .map(|row: SqliteRow| row.get::<Option<u32>, _>(0))
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
 
     let (xsk, xvk) = get_transparent_keys(connection, account).await?;
@@ -384,7 +384,7 @@ pub async fn generate_next_change_address(
         let change_address = change_address.encode(network);
 
         store_account_transparent_addr(
-            connection,
+            &mut *connection,
             account,
             1,
             dindex,
@@ -401,7 +401,7 @@ pub async fn generate_next_change_address(
 }
 
 async fn get_transparent_keys(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<(Option<AccountPrivKey>, Option<AccountPubKey>)> {
     let tkeys = sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
@@ -413,7 +413,7 @@ async fn get_transparent_keys(
             let xvk = AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap();
             (xsk, xvk)
         })
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
     let (xsk, xvk) = match tkeys {
         Some((xsk, xvk)) => (xsk, Some(xvk)),
@@ -432,7 +432,7 @@ pub async fn reset_sync(connection: &mut SqliteConnection, account: u32) -> Resu
 }
 
 pub async fn get_tx_details(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     id_tx: u32,
 ) -> Result<TxAccount> {
@@ -455,7 +455,7 @@ pub async fn get_tx_details(
             ..Default::default()
         }
     })
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
 
     let notes = sqlx::query(
@@ -478,7 +478,7 @@ pub async fn get_tx_details(
             locked,
         }
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     let outputs = sqlx::query(
@@ -501,7 +501,7 @@ pub async fn get_tx_details(
             address,
         }
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     let spends = sqlx::query(
@@ -522,7 +522,7 @@ pub async fn get_tx_details(
             value: -value as u64,
         }
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     let memos = sqlx::query(
@@ -543,7 +543,7 @@ pub async fn get_tx_details(
             memo,
         }
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     tx.notes = notes;
@@ -555,7 +555,7 @@ pub async fn get_tx_details(
 }
 
 pub async fn get_account_frost_params(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<FrostParams>> {
     let frost = sqlx::query("SELECT id, n, t FROM dkg_params WHERE account = ?")
