@@ -6,14 +6,13 @@ use super::{
 };
 use anyhow::{Context, Result};
 use bincode::config;
-use futures::StreamExt as _;
 use orchard::keys::{FullViewingKey, Scope};
 use rand_core::OsRng;
 use reddsa::frost::redpallas::keys::{
     dkg::{self, round1, round2},
     EvenY,
 };
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::{consensus::Network, memo::Memo};
@@ -37,7 +36,7 @@ use crate::{
 };
 
 pub async fn set_dkg_address(
-    connection: &sqlx::Pool<sqlx::Sqlite>,
+    connection: &mut SqliteConnection,
     account: u32,
     id: u16,
     address: &str,
@@ -49,14 +48,14 @@ pub async fn set_dkg_address(
     .bind(account)
     .bind(id)
     .bind(address)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
     Ok(())
 }
 
 /// Get the round 1 secret package from the database
 ///
-async fn get_spkg1(connection: &SqlitePool, account: u32) -> Result<Option<round1::SecretPackage>> {
+async fn get_spkg1(connection: &mut SqliteConnection, account: u32) -> Result<Option<round1::SecretPackage>> {
     let spkg = sqlx::query(
         "SELECT data FROM dkg_packages WHERE
             account = ? AND public = 0 AND round = 1",
@@ -68,7 +67,7 @@ async fn get_spkg1(connection: &SqlitePool, account: u32) -> Result<Option<round
             round1::SecretPackage::deserialize(&data).expect("Failed to decode SecretPackage");
         spkg
     })
-    .fetch_optional(connection)
+    .fetch_optional(&mut *connection)
     .await?;
     info!("Secret package: {:?}", spkg);
     Ok(spkg)
@@ -76,7 +75,7 @@ async fn get_spkg1(connection: &SqlitePool, account: u32) -> Result<Option<round
 
 /// Get the round 2 secret package from the database
 ///
-async fn get_spkg2(connection: &SqlitePool, account: u32) -> Result<Option<round2::SecretPackage>> {
+async fn get_spkg2(connection: &mut SqliteConnection, account: u32) -> Result<Option<round2::SecretPackage>> {
     let spkg = sqlx::query(
         "SELECT data FROM dkg_packages WHERE
             account = ? AND public = 0 AND round = 2",
@@ -88,7 +87,7 @@ async fn get_spkg2(connection: &SqlitePool, account: u32) -> Result<Option<round
             round2::SecretPackage::deserialize(&data).expect("Failed to decode SecretPackage");
         spkg
     })
-    .fetch_optional(connection)
+    .fetch_optional(&mut *connection)
     .await?;
     info!("Secret package: {:?}", spkg);
     Ok(spkg)
@@ -96,7 +95,7 @@ async fn get_spkg2(connection: &SqlitePool, account: u32) -> Result<Option<round
 
 /// Get the round 1 public packages from the database
 /// and return them as a BTreeMap
-async fn get_ppkg1(connection: &SqlitePool, account: u32, self_id: u16) -> Result<PK1Map> {
+async fn get_ppkg1(connection: &mut SqliteConnection, account: u32, self_id: u16) -> Result<PK1Map> {
     let mut pkg1map: PK1Map = BTreeMap::new();
 
     let pkgs = sqlx::query(
@@ -111,7 +110,7 @@ async fn get_ppkg1(connection: &SqlitePool, account: u32, self_id: u16) -> Resul
         let pkg = round1::Package::deserialize(&data).expect("Failed to decode round1::Package");
         (id, pkg)
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     for (id, pkg) in pkgs {
@@ -124,7 +123,7 @@ async fn get_ppkg1(connection: &SqlitePool, account: u32, self_id: u16) -> Resul
 /// Get the round 2 public packages from the database
 /// Return them as a BTreeMap
 ///
-async fn get_ppkg2(connection: &SqlitePool, account: u32) -> Result<PK2Map> {
+async fn get_ppkg2(connection: &mut SqliteConnection, account: u32) -> Result<PK2Map> {
     let mut pkg2map: PK2Map = BTreeMap::new();
     let pkgs = sqlx::query(
         "SELECT from_id, data FROM dkg_packages WHERE
@@ -137,7 +136,7 @@ async fn get_ppkg2(connection: &SqlitePool, account: u32) -> Result<PK2Map> {
         let pkg = round2::Package::deserialize(&data).expect("Failed to decode round2::Package");
         (id, pkg)
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     for (id, pkg) in pkgs {
@@ -146,13 +145,13 @@ async fn get_ppkg2(connection: &SqlitePool, account: u32) -> Result<PK2Map> {
     Ok(pkg2map)
 }
 
-pub async fn have_all_addresses(connection: &SqlitePool, account: u32, n: u8) -> Result<bool> {
-    let addresses = get_addresses(connection, account, n).await?;
+pub async fn have_all_addresses(connection: &mut SqliteConnection, account: u32, n: u8) -> Result<bool> {
+    let addresses = get_addresses(&mut *connection, account, n).await?;
     let have_all_addresses = addresses.iter().all(|a| !a.is_empty());
     Ok(have_all_addresses)
 }
 
-pub async fn get_dkg_params(connection: &SqlitePool, account: u32) -> Result<DKGParams> {
+pub async fn get_dkg_params(connection: &mut SqliteConnection, account: u32) -> Result<DKGParams> {
     let dkg_params = sqlx::query("SELECT id, n, t, birth_height FROM dkg_params WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
@@ -167,7 +166,7 @@ pub async fn get_dkg_params(connection: &SqlitePool, account: u32) -> Result<DKG
                 birth_height,
             }
         })
-        .fetch_one(connection)
+        .fetch_one(&mut *connection)
         .await
         .context("Fetch id, n, t, ...")?;
 
@@ -176,7 +175,7 @@ pub async fn get_dkg_params(connection: &SqlitePool, account: u32) -> Result<DKG
 
 pub async fn do_dkg(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     client: &mut Client,
     height: u32,
@@ -278,7 +277,7 @@ pub async fn do_dkg(
     .bind(account)
     .bind(self_id)
     .bind(sk.serialize()?)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
     sqlx::query(
         "INSERT INTO dkg_packages(account, public, round, from_id, data)
@@ -287,7 +286,7 @@ pub async fn do_dkg(
     .bind(account)
     .bind(self_id)
     .bind(pk.serialize()?)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     // Build the shared key out of the public key and parts of the broadcast account
@@ -310,7 +309,7 @@ pub async fn do_dkg(
     info!("Shared address: {sua}");
 
     let (name,) = sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_name'")
-        .fetch_one(connection)
+        .fetch_one(&mut *connection)
         .await?;
     let frost_account =
         store_account_metadata(connection, &name, &None, &None, height, false, false).await?;
@@ -335,7 +334,7 @@ pub async fn do_dkg(
 }
 
 async fn dkg_finalize(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     frost_account: u32,
     mailbox_account: u32,
@@ -345,16 +344,16 @@ async fn dkg_finalize(
     sqlx::query("UPDATE dkg_params SET account = ?1 WHERE account = ?2")
         .bind(frost_account)
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     sqlx::query("UPDATE dkg_packages SET account = ?1 WHERE account = ?2")
         .bind(frost_account)
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     // Delete the dkg_* keys from the props table
     sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     let seed = get_account_seed(mailbox_account)
         .await?
@@ -363,7 +362,7 @@ async fn dkg_finalize(
     sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
         .bind(seed)
         .bind(frost_account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     delete_account(mailbox_account).await?;
     delete_account(broadcast_account).await?;
@@ -372,7 +371,7 @@ async fn dkg_finalize(
 
 async fn publish_round1(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     self_id: u16,
     client: &mut Client,
@@ -388,7 +387,7 @@ async fn publish_round1(
     .bind(account)
     .bind(self_id)
     .bind(spkg1.serialize()?)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     let message = FrostMessage {
@@ -413,7 +412,7 @@ async fn publish_round1(
 
 async fn publish_round2(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     self_id: u16,
     client: &mut Client,
@@ -429,7 +428,7 @@ async fn publish_round2(
     .bind(account)
     .bind(self_id)
     .bind(spkg2.serialize()?)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     let mut recipients = vec![];
@@ -453,7 +452,7 @@ async fn publish_round2(
 
 pub async fn publish(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     client: &mut Client,
     height: u32,
@@ -487,14 +486,14 @@ pub async fn publish(
 }
 
 async fn process_memos(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     mailbox_account: u32,
     round: u8,
     prefix: &[u8],
 ) -> Result<()> {
     info!("process_memos: {account} {mailbox_account}");
-    let mut pkgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
+    let pkgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
         .bind(mailbox_account)
         .map(|row: SqliteRow| {
             let memo_bytes: Vec<u8> = row.get(0);
@@ -519,9 +518,9 @@ async fn process_memos(
             }
             None
         })
-        .fetch(connection);
-    while let Some(pkg) = pkgs.next().await {
-        if let Some(pkg) = pkg? {
+        .fetch_all(&mut *connection).await?;
+    for pkg in pkgs {
+        if let Some(pkg) = pkg {
             sqlx::query(
                 r#"INSERT INTO dkg_packages(account, public, round, from_id, data)
                 VALUES (?, TRUE, ?, ?, ?) ON CONFLICT DO NOTHING"#,
@@ -530,7 +529,7 @@ async fn process_memos(
             .bind(round)
             .bind(pkg.from_id)
             .bind(&pkg.data)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
         }
     }
@@ -538,42 +537,42 @@ async fn process_memos(
     Ok(())
 }
 
-pub async fn cancel_dkg(connection: &SqlitePool, account: Option<u32>) -> Result<()> {
+pub async fn cancel_dkg(connection: &mut SqliteConnection, account: Option<u32>) -> Result<()> {
     if let Some(account) = account {
         sqlx::query("DELETE FROM dkg_packages WHERE account = ?")
             .bind(account)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
         sqlx::query("DELETE FROM dkg_params WHERE account = ?")
             .bind(account)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
         sqlx::query("DELETE FROM dkg_packages WHERE account = ?")
             .bind(account)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
     }
     sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
-    delete_frost_state(connection).await
+    delete_frost_state(&mut *connection).await
 }
 
-pub async fn delete_frost_state(connection: &SqlitePool) -> Result<()> {
+pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()> {
     info!("delete_frost_state");
     sqlx::query("DELETE FROM frost_signatures")
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     sqlx::query("DELETE FROM frost_commitments")
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'")
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     let frost_accounts = sqlx::query_as::<_, (u32,)>(
         "SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1",
     )
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
     for (frost_account,) in frost_accounts {
         delete_account(frost_account).await?;

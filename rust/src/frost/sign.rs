@@ -6,7 +6,6 @@ use bincode::{
     Decode, Encode,
 };
 use frost_rerandomized::{aggregate, sign, RandomizedParams};
-use futures::StreamExt as _;
 use halo2_proofs::pasta::Fq;
 use pczt::{
     roles::{
@@ -26,7 +25,7 @@ use reddsa::frost::redpallas::{
     round1::commit,
     Identifier, Randomizer,
 };
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection, Connection as _};
 use tracing::info;
 use zcash_primitives::transaction::{
     sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
@@ -61,14 +60,14 @@ const COMMITMENT_PREFIX: &[u8] = b"CMT5";
 const SIGPACKAGE_PREFIX: &[u8] = b"SPK4";
 const SIGSHARE_PREFIX: &[u8] = b"SSH2";
 
-pub async fn reset_sign(connection: &SqlitePool) -> Result<()> {
-    delete_frost_state(connection).await?;
+pub async fn reset_sign(connection: &mut SqliteConnection) -> Result<()> {
+    delete_frost_state(&mut *connection).await?;
 
     Ok(())
 }
 
 pub async fn init_sign(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     _account: u32,
     funding_account: u32,
     coordinator: u16,
@@ -77,7 +76,7 @@ pub async fn init_sign(
     let pczt = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?) ON CONFLICT DO NOTHING")
         .bind(&pczt)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     let params = FrostSignParams {
         coordinator,
@@ -88,20 +87,20 @@ pub async fn init_sign(
         "INSERT INTO props(key, value) VALUES ('frost_sign_params', ?) ON CONFLICT DO NOTHING",
     )
     .bind(&params)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
     Ok(())
 }
 
 pub async fn do_sign(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     client: &mut Client,
     height: u32,
     status: StreamSink<SigningStatus>,
 ) -> Result<()> {
-    let Some(pczt_pkg) = get_pczt(connection).await? else {
+    let Some(pczt_pkg) = get_pczt(&mut *connection).await? else {
         return Ok(()); // No signing in progress
     };
 
@@ -112,7 +111,7 @@ pub async fn do_sign(
     }
 
     let birth_height = height - 10000;
-    let params = get_sign_params(connection).await?;
+    let params = get_sign_params(&mut *connection).await?;
     let coordinator_address =
         get_coordinator_address(connection, account, params.coordinator).await?;
     let dkg_params = get_dkg_params(connection, account).await?;
@@ -139,14 +138,14 @@ pub async fn do_sign(
         account,
         mailbox_account,
         COMMITMENT_PREFIX,
-        async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
+        async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .bind(account)
                 .bind(pkg.sighash.as_slice())
                 .bind(pkg.idx)
                 .bind(pkg.from_id)
                 .bind(&pkg.data)
-                .execute(connection)
+                .execute(&mut *connection)
                 .await?;
             Ok(())
         },
@@ -166,7 +165,7 @@ pub async fn do_sign(
             .bind(account)
             .bind(&sighash)
             .bind(dkg_params.id)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?.is_some();
 
         if has_commitments {
@@ -217,7 +216,7 @@ pub async fn do_sign(
                 .map_err(anyhow::Error::msg)?;
             let txid = publish(
                 network,
-                connection,
+                &mut *tx,
                 params.funding_account,
                 client,
                 height,
@@ -240,7 +239,7 @@ pub async fn do_sign(
         account,
         broadcast_account,
         SIGPACKAGE_PREFIX,
-        async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
+        async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
             let randomized_sigpackage: RandomizedSigPackage =
                 bincode::decode_from_slice(&pkg.data, config::legacy()).unwrap().0;
             sqlx::query("UPDATE frost_signatures SET sigpackage = ?1, randomizer = ?2 WHERE account = ?3 AND sighash = ?4 AND idx = ?5")
@@ -249,7 +248,7 @@ pub async fn do_sign(
                 .bind(account)
                 .bind(pkg.sighash.as_slice())
                 .bind(pkg.idx)
-                .execute(connection)
+                .execute(&mut *connection)
                 .await?;
             Ok(())
         },
@@ -344,7 +343,7 @@ pub async fn do_sign(
             .map_err(anyhow::Error::msg)?;
         let txid = publish(
             network,
-            connection,
+            &mut *tx,
             params.funding_account,
             client,
             height,
@@ -407,7 +406,7 @@ pub async fn do_sign(
                 .map_err(anyhow::Error::msg)?;
             let txid = publish(
                 network,
-                connection,
+                &mut *tx,
                 params.funding_account,
                 client,
                 height,
@@ -436,7 +435,7 @@ pub async fn do_sign(
         .bind(&sighash)
         .bind(idx as u32)
         .bind(dkg_params.id)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     }
 
@@ -446,14 +445,14 @@ pub async fn do_sign(
         account,
         mailbox_account,
         SIGSHARE_PREFIX,
-        async move |connection: &SqlitePool, account, pkg: &FrostSigMessage| {
+        async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
             sqlx::query("UPDATE frost_commitments SET sigshare = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4 AND from_id = ?5")
                 .bind(&pkg.data)
                 .bind(account)
                 .bind(pkg.sighash.as_slice())
                 .bind(pkg.idx)
                 .bind(pkg.from_id)
-                .execute(connection)
+                .execute(&mut *connection)
                 .await?;
             Ok(())
         },
@@ -463,7 +462,7 @@ pub async fn do_sign(
     // this is only done by the coordinator
     if dkg_params.id as u16 == params.coordinator {
         let mut tx = connection.begin().await?;
-        let sigsharess = get_all_sigshares(connection, account, &sighash, nsigs).await?;
+        let sigsharess = get_all_sigshares(&mut *tx, account, &sighash, nsigs).await?;
         let mut signatures = vec![];
         for (idx, (sigshares, (sigpackage, randomizer))) in
             sigsharess.iter().zip(sigpackages.iter()).enumerate()
@@ -552,7 +551,7 @@ pub async fn do_sign(
             .map_err(anyhow::Error::msg)?;
     }
 
-    delete_frost_state(connection).await?;
+    delete_frost_state(&mut *connection).await?;
 
     Ok(())
 }
@@ -566,19 +565,19 @@ fn get_sighash(pczt: Pczt) -> Vec<u8> {
     sighash.to_vec()
 }
 
-async fn get_pczt(connection: &SqlitePool) -> Result<Option<PcztPackage>> {
+async fn get_pczt(connection: &mut SqliteConnection) -> Result<Option<PcztPackage>> {
     let pczt = sqlx::query("SELECT value FROM props WHERE key = 'frost_pczt'")
         .map(|row: SqliteRow| {
             let value: Vec<u8> = row.get(0);
             let pczt: PcztPackage = bincode::decode_from_slice(&value, legacy()).unwrap().0;
             pczt
         })
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
     Ok(pczt)
 }
 
-async fn get_sign_params(connection: &SqlitePool) -> Result<FrostSignParams> {
+async fn get_sign_params(connection: &mut SqliteConnection) -> Result<FrostSignParams> {
     let params = sqlx::query(
         "SELECT value FROM props WHERE
         key = 'frost_sign_params'",
@@ -588,13 +587,13 @@ async fn get_sign_params(connection: &SqlitePool) -> Result<FrostSignParams> {
         let frost: FrostSignParams = serde_json::from_str(&value).unwrap();
         frost
     })
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
     Ok(params)
 }
 
 async fn get_coordinator_address(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     coordinator: u16,
 ) -> Result<String> {
@@ -604,21 +603,21 @@ async fn get_coordinator_address(
     )
     .bind(account)
     .bind(coordinator)
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await
     .with_context(|| format!("Failed getting coordinator address {account} {coordinator}"))?;
     Ok(String::from_utf8(address).expect("Failed to convert utf8"))
 }
 
 async fn get_keys(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<(KeyPackage<P>, PublicKeyPackage<P>)> {
     let (data,) = sqlx::query_as::<_, (Vec<u8>,)>(
         "SELECT data FROM dkg_packages WHERE account = ? AND public = 0 AND round = 3",
     )
     .bind(account)
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
     let spkg = KeyPackage::<P>::deserialize(&data)?;
 
@@ -626,7 +625,7 @@ async fn get_keys(
         "SELECT data FROM dkg_packages WHERE account = ? AND public = 1 AND round = 3",
     )
     .bind(account)
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
     let ppkg = PublicKeyPackage::<P>::deserialize(&data)?;
 
@@ -634,13 +633,13 @@ async fn get_keys(
 }
 
 async fn process_memos(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     mailbox_account: u32,
     prefix: &[u8],
-    fn_store: impl AsyncFn(&SqlitePool, u32, &FrostSigMessage) -> Result<()>,
+    fn_store: impl AsyncFn(&mut SqliteConnection, u32, &FrostSigMessage) -> Result<()>,
 ) -> Result<()> {
-    let mut pkgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
+    let pkgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
         .bind(mailbox_account)
         .map(|row: SqliteRow| {
             let memo_bytes: Vec<u8> = row.get(0);
@@ -665,9 +664,10 @@ async fn process_memos(
             }
             None
         })
-        .fetch(connection);
-    while let Some(pkg) = pkgs.next().await {
-        if let Some(pkg) = pkg? {
+        .fetch_all(&mut *connection)
+        .await?;
+    for pkg in pkgs {
+        if let Some(pkg) = pkg {
             fn_store(connection, account, &pkg).await?;
         }
     }
@@ -676,7 +676,7 @@ async fn process_memos(
 }
 
 async fn get_nonces(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     sighash: &[u8],
 ) -> Result<Vec<SigningNonces<P>>> {
@@ -686,7 +686,7 @@ async fn get_nonces(
     )
     .bind(account)
     .bind(sighash)
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
     let nonces = rs
         .into_iter()
@@ -697,7 +697,7 @@ async fn get_nonces(
 }
 
 async fn get_commitments(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     sighash: &[u8],
     nsigs: u32,
@@ -716,7 +716,7 @@ async fn get_commitments(
             let commitment: Vec<u8> = row.get(1);
             (from_id, commitment)
         })
-        .fetch_all(connection)
+        .fetch_all(&mut *connection)
         .await?;
         info!(
             "Found {} commitments for sighash {}",
@@ -737,7 +737,7 @@ async fn get_commitments(
 }
 
 async fn get_sigpackages(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     sighash: &[u8],
 ) -> Result<Vec<(SigningPackage<P>, Randomizer)>> {
@@ -752,14 +752,14 @@ async fn get_sigpackages(
                 let randomizer = Randomizer::deserialize(&randomizer).unwrap();
                 (sigpackage, randomizer)
             })
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
 
     Ok(randomized_sigpackages)
 }
 
 async fn get_sigshares(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     sighash: &[u8],
 ) -> Result<Vec<SignatureShare<P>>> {
@@ -770,14 +770,14 @@ async fn get_sigshares(
             let sigshare: Vec<u8> = row.get(0);
             SignatureShare::<P>::deserialize(&sigshare).unwrap()
         })
-        .fetch_all(connection)
+        .fetch_all(&mut *connection)
         .await?;
 
     Ok(sigshares)
 }
 
 async fn get_all_sigshares(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     sighash: &[u8],
     nsigs: u32,
@@ -796,7 +796,7 @@ async fn get_all_sigshares(
                 let sigshare = SignatureShare::<P>::deserialize(&sigshare).unwrap();
                 (id, sigshare)
             })
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
         for (id, sigshare) in sigshares {
             map.insert(id, sigshare);
@@ -812,9 +812,9 @@ struct RandomizedSigPackage {
     randomizer: Vec<u8>,
 }
 
-pub async fn is_signing_in_progress(connection: &SqlitePool) -> Result<bool> {
+pub async fn is_signing_in_progress(connection: &mut SqliteConnection) -> Result<bool> {
     let exists = sqlx::query_as::<_, (bool,)>("SELECT TRUE FROM props WHERE key = 'frost_pczt'")
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
 
     Ok(exists.is_some())

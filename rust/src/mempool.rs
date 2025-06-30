@@ -4,7 +4,8 @@ use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::keys::Scope;
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::SqliteConnection;
+use sqlx::{sqlite::SqliteRow, Row};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 use tracing::info;
@@ -21,7 +22,7 @@ use crate::Client;
 pub async fn run_mempool(
     mempool_tx: StreamSink<MempoolMsg>,
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     client: &mut Client,
     height: u32,
     cancel_token: CancellationToken,
@@ -38,7 +39,7 @@ pub async fn run_mempool(
         let address = TransparentAddress::decode(network, &address).unwrap();
         (account, name, address)
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await
     .context("transparent_accounts")?;
 
@@ -53,7 +54,7 @@ pub async fn run_mempool(
         let fvk = sapling_crypto::keys::FullViewingKey::read(&*xvk).unwrap();
         (account, name, fvk)
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await
     .context("sapling_accounts")?;
 
@@ -68,7 +69,7 @@ pub async fn run_mempool(
         let fvk = orchard::keys::FullViewingKey::read(&*xvk).unwrap();
         (account, name, fvk)
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await
     .context("orchard_accounts")?;
 
@@ -129,7 +130,7 @@ pub struct MempoolNote {
 
 pub async fn decode_raw_transaction(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     height: u32,
     tkeys: &[(u32, String, TransparentAddress)],
     zkeys: &[(u32, String, sapling_crypto::keys::FullViewingKey)],
@@ -158,7 +159,7 @@ pub async fn decode_raw_transaction(
                     value: -value,
                 }
             })
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
             notes.extend(spent_amount);
         }
@@ -196,7 +197,7 @@ pub async fn decode_raw_transaction(
                     value: -value,
                 }
             })
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
             notes.extend(spent_amount);
         }
@@ -241,7 +242,7 @@ pub async fn decode_raw_transaction(
                     value: -value,
                 }
             })
-            .fetch_all(connection)
+            .fetch_all(&mut *connection)
             .await?;
             notes.extend(spent_amount);
 

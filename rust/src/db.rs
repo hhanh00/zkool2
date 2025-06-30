@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
 use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::{sqlite::SqliteRow, SqlitePool};
+use sqlx::sqlite::SqliteRow;
 use sqlx::{Connection as _, Row as _, SqliteConnection};
 use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
@@ -264,7 +264,7 @@ pub async fn put_prop(connection: &mut SqliteConnection, key: &str, value: &str)
     sqlx::query("INSERT OR REPLACE INTO props(key, value) VALUES (?, ?)")
         .bind(key)
         .bind(value)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
 
     Ok(())
@@ -273,14 +273,14 @@ pub async fn put_prop(connection: &mut SqliteConnection, key: &str, value: &str)
 pub async fn get_prop(connection: &mut SqliteConnection, key: &str) -> Result<Option<String>> {
     let value: Option<(String,)> = sqlx::query_as("SELECT value FROM props WHERE key = ?")
         .bind(key)
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?;
 
     Ok(value.map(|v| v.0))
 }
 
 pub async fn store_account_metadata(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     name: &str,
     icon: &Option<Vec<u8>>,
     fingerprint: &Option<Vec<u8>>,
@@ -289,7 +289,7 @@ pub async fn store_account_metadata(
     internal: bool,
 ) -> Result<u32> {
     let (last_position,): (u32,) = sqlx::query_as("SELECT MAX(position) FROM accounts")
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await?
         .unwrap_or_default();
 
@@ -308,14 +308,14 @@ pub async fn store_account_metadata(
     .bind(last_position + 1)
     .bind(use_internal)
     .bind(internal)
-    .fetch_one(connection)
+    .fetch_one(&mut *connection)
     .await?;
 
     Ok(id)
 }
 
 pub async fn store_synced_height(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     pool: u8,
     height: u32,
@@ -327,14 +327,14 @@ pub async fn store_synced_height(
     .bind(account)
     .bind(pool)
     .bind(height)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn store_account_seed(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     phrase: &str,
     passphrase: &str,
@@ -354,20 +354,20 @@ pub async fn store_account_seed(
     .bind(fingerprint)
     .bind(aindex)
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn init_account_transparent(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     birth: u32,
 ) -> Result<()> {
     sqlx::query("INSERT INTO transparent_accounts(account) VALUES (?)")
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     store_synced_height(connection, account, 0, birth - 1).await?;
 
@@ -375,7 +375,7 @@ pub async fn init_account_transparent(
 }
 
 pub async fn store_account_transparent_sk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     xsk: &AccountPrivKey,
 ) -> Result<()> {
@@ -385,14 +385,14 @@ pub async fn store_account_transparent_sk(
     )
     .bind(xsk.to_bytes())
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn store_account_transparent_vk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     xvk: &AccountPubKey,
 ) -> Result<()> {
@@ -402,14 +402,14 @@ pub async fn store_account_transparent_vk(
     )
     .bind(xvk.serialize())
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn store_account_transparent_addr(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     scope: u32,
     dindex: u32,
@@ -427,16 +427,16 @@ pub async fn store_account_transparent_addr(
     .bind(sk)
     .bind(pk)
     .bind(address)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(r.rows_affected() > 0)
 }
 
-pub async fn init_account_sapling(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
+pub async fn init_account_sapling(connection: &mut SqliteConnection, account: u32, birth: u32) -> Result<()> {
     sqlx::query("INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')")
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     store_synced_height(connection, account, 1, birth - 1).await?;
 
@@ -444,7 +444,7 @@ pub async fn init_account_sapling(connection: &SqlitePool, account: u32, birth: 
 }
 
 pub async fn store_account_sapling_sk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     xsk: &ExtendedSpendingKey,
 ) -> Result<()> {
@@ -454,14 +454,14 @@ pub async fn store_account_sapling_sk(
     )
     .bind(xsk.to_bytes().as_slice())
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn store_account_sapling_vk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     xvk: &DiversifiableFullViewingKey,
 ) -> Result<()> {
@@ -471,16 +471,16 @@ pub async fn store_account_sapling_vk(
     )
     .bind(xvk.to_bytes().as_slice())
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
-pub async fn init_account_orchard(connection: &SqlitePool, account: u32, birth: u32) -> Result<()> {
+pub async fn init_account_orchard(connection: &mut SqliteConnection, account: u32, birth: u32) -> Result<()> {
     sqlx::query("INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')")
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     store_synced_height(connection, account, 2, birth - 1).await?;
 
@@ -488,7 +488,7 @@ pub async fn init_account_orchard(connection: &SqlitePool, account: u32, birth: 
 }
 
 pub async fn store_account_orchard_sk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     xsk: &orchard::keys::SpendingKey,
 ) -> Result<()> {
@@ -498,14 +498,14 @@ pub async fn store_account_orchard_sk(
     )
     .bind(xsk.to_bytes().as_slice())
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn store_account_orchard_vk(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     xvk: &orchard::keys::FullViewingKey,
 ) -> Result<()> {
@@ -515,14 +515,14 @@ pub async fn store_account_orchard_vk(
     )
     .bind(xvk.to_bytes().as_slice())
     .bind(account)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
 
     Ok(())
 }
 
 pub async fn update_dindex(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
     dindex: u32,
     update_default: bool,
@@ -530,13 +530,13 @@ pub async fn update_dindex(
     sqlx::query("UPDATE accounts SET dindex = ? WHERE id_account = ?")
         .bind(dindex)
         .bind(account)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     if update_default {
         sqlx::query("UPDATE accounts SET def_dindex = ? WHERE id_account = ?")
             .bind(dindex)
             .bind(account)
-            .execute(connection)
+            .execute(&mut *connection)
             .await?;
     }
 
@@ -544,13 +544,13 @@ pub async fn update_dindex(
 }
 
 pub async fn select_account_transparent(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<TransparentKeys> {
     let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
         sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
             .bind(account)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?;
 
     let (xsk, xvk, taddress) = match r {
@@ -560,7 +560,7 @@ pub async fn select_account_transparent(
                 sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?")
                     .bind(account)
                     .map(|row: SqliteRow| row.get::<String, _>(0))
-                    .fetch_one(connection)
+                    .fetch_one(&mut *connection)
                     .await?;
             (None, None, Some(taddress))
         }
@@ -577,11 +577,11 @@ pub async fn select_account_transparent(
     Ok(keys)
 }
 
-pub async fn select_account_sapling(connection: &SqlitePool, account: u32) -> Result<SaplingKeys> {
+pub async fn select_account_sapling(connection: &mut SqliteConnection, account: u32) -> Result<SaplingKeys> {
     let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
         sqlx::query_as("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
             .bind(account)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?;
 
     let (xsk, xvk) = match r {
@@ -602,11 +602,11 @@ pub async fn select_account_sapling(connection: &SqlitePool, account: u32) -> Re
     Ok(keys)
 }
 
-pub async fn select_account_orchard(connection: &SqlitePool, account: u32) -> Result<OrchardKeys> {
+pub async fn select_account_orchard(connection: &mut SqliteConnection, account: u32) -> Result<OrchardKeys> {
     let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
         sqlx::query_as("SELECT xsk, xvk FROM orchard_accounts WHERE account = ?")
             .bind(account)
-            .fetch_optional(connection)
+            .fetch_optional(&mut *connection)
             .await?;
 
     let (xsk, xvk) = match r {
@@ -638,7 +638,7 @@ pub struct OrchardKeys {
     pub xvk: Option<FullViewingKey>,
 }
 
-pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Account>> {
+pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Result<Vec<Account>> {
     let mut rows = sqlx::query(
         "WITH sh AS (SELECT account, MIN(height) AS height FROM sync_heights GROUP BY account),
         unspent AS (SELECT a.*
@@ -670,7 +670,7 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
         height: row.get(11),
         balance: row.get::<i64, _>(12) as u64,
     })
-    .fetch(connection);
+    .fetch(&mut *connection);
 
     let mut accounts = vec![];
     while let Some(row) = rows.try_next().await? {
@@ -681,19 +681,19 @@ pub async fn list_accounts(connection: &SqlitePool, coin: u8) -> Result<Vec<Acco
 }
 
 pub async fn get_account_fingerprint(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<Vec<u8>>> {
     let (fingerprint,): (Option<Vec<u8>>,) =
         sqlx::query_as("SELECT seed_fingerprint FROM accounts WHERE id_account = ?")
             .bind(account)
-            .fetch_one(connection)
+            .fetch_one(&mut *connection)
             .await?;
 
     Ok(fingerprint)
 }
 
-pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()> {
+pub async fn delete_account(connection: &mut SqliteConnection, account: u32) -> Result<()> {
     let mut tx = connection.begin().await?;
 
     sqlx::query("DELETE FROM dkg_params WHERE account = ?")
@@ -767,7 +767,7 @@ pub async fn delete_account(connection: &SqlitePool, account: u32) -> Result<()>
 }
 
 pub async fn reorder_account(
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     old_position: u32,
     new_position: u32,
 ) -> Result<()> {
@@ -816,7 +816,7 @@ pub async fn reorder_account(
     Ok(())
 }
 
-pub async fn calculate_balance(pool: &SqlitePool, account: u32) -> Result<PoolBalance> {
+pub async fn calculate_balance(pool: &mut SqliteConnection, account: u32) -> Result<PoolBalance> {
     let mut balance = PoolBalance(vec![0, 0, 0]);
 
     let mut rows = sqlx::query("
@@ -832,7 +832,7 @@ pub async fn calculate_balance(pool: &SqlitePool, account: u32) -> Result<PoolBa
     Ok(balance)
 }
 
-pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>> {
+pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Result<Vec<Tx>> {
     // union notes and spends, then sum value by tx into v to get tx value
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
@@ -858,12 +858,12 @@ pub async fn fetch_txs(connection: &SqlitePool, account: u32) -> Result<Vec<Tx>>
             tpe,
         }
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
     Ok(transactions)
 }
 
-pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
+pub async fn fetch_memos(pool: &mut SqliteConnection, account: u32) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
         "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
         FROM memos m JOIN transactions t ON m.tx = t.id_tx
@@ -898,15 +898,15 @@ pub async fn fetch_memos(pool: &SqlitePool, account: u32) -> Result<Vec<Memo>> {
     Ok(memos)
 }
 
-pub async fn get_account_dindex(connection: &SqlitePool, account: u32) -> Result<u32> {
+pub async fn get_account_dindex(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
     let (dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
         .bind(account)
-        .fetch_one(connection)
+        .fetch_one(&mut *connection)
         .await?;
     Ok(dindex)
 }
 
-pub async fn get_notes(connection: &SqlitePool, account: u32) -> Result<Vec<TxNote>> {
+pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
     let notes = sqlx::query(
         "SELECT n.id_note, n.height, n.pool, n.value, n.locked
        FROM notes n LEFT JOIN spends s
@@ -929,18 +929,18 @@ pub async fn get_notes(connection: &SqlitePool, account: u32) -> Result<Vec<TxNo
             locked,
         }
     })
-    .fetch_all(connection)
+    .fetch_all(&mut *connection)
     .await?;
 
     Ok(notes)
 }
 
-pub async fn lock_note(connection: &SqlitePool, account: u32, id: u32, locked: bool) -> Result<()> {
+pub async fn lock_note(connection: &mut SqliteConnection, account: u32, id: u32, locked: bool) -> Result<()> {
     sqlx::query("UPDATE notes SET locked = ? WHERE account = ? AND id_note = ?")
         .bind(locked)
         .bind(account)
         .bind(id)
-        .execute(connection)
+        .execute(&mut *connection)
         .await?;
     Ok(())
 }

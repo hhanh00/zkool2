@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use anyhow::Result;
 use shielded::Synchronizer;
-use sqlx::{sqlite::SqliteRow, Row, SqlitePool};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use thiserror::Error;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
@@ -38,7 +38,7 @@ pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
 
 pub async fn warp_sync(
     network: &Network,
-    connection: &SqlitePool,
+    connection: &mut SqliteConnection,
     start_height: u32,
     accounts: &[(u32, bool)],
     mut blocks: ReceiverStream<CompactBlock>,
@@ -50,9 +50,10 @@ pub async fn warp_sync(
     mut rx_cancel: broadcast::Receiver<()>,
 ) -> Result<(), SyncError> {
     let sap_hasher = SaplingHasher::default();
+
     let mut sap_dec = SaplingSync::new(
         network.clone(),
-        connection,
+        &mut *connection,
         1,
         start_height,
         accounts,
@@ -65,7 +66,7 @@ pub async fn warp_sync(
     let orch_hasher = OrchardHasher::default();
     let mut orch_dec = OrchardSync::new(
         network.clone(),
-        connection,
+        &mut *connection,
         2,
         start_height,
         accounts,
@@ -83,7 +84,7 @@ pub async fn warp_sync(
     let mut prev_hash = sqlx::query("SELECT hash FROM headers WHERE height = ?")
         .bind(start_height - 1)
         .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
-        .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
         .await
         .unwrap();
 
