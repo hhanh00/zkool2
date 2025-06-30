@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.6.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.4...zkool-v4.6.5) (2025-06-30)
+
+
+### Bug Fixes
+
+* typos connection/pool ([#309](https://github.com/hhanh00/zkool2/issues/309)) ([d355827](https://github.com/hhanh00/zkool2/commit/d355827124bd57e272e551d75ad08652828f336b))
+* usage of SqlitePool -&gt; SqliteConnection ([#307](https://github.com/hhanh00/zkool2/issues/307)) ([976addc](https://github.com/hhanh00/zkool2/commit/976addc57c610cb735dda4ad4f6a4dab330376b7))
+
 ## [4.6.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.3...zkool-v4.6.4) (2025-06-29)
 
 
