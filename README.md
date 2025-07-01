@@ -23,8 +23,6 @@ Zkool is a multi-account wallet for Zcash.
 | View only accounts | By Unified Viewing Key (VK), Sapling Extended VK         |
 | Transparent VK     | Extended Keys (xpub, xprv), Private Key                  |
 | MultiSignature     | Distributed Key Gen, FROST Signatures                    |
-| Mempool            | Monitor incoming/outgoing transactions                   |
-| Servers            | Full Nodes & Light Nodes                                 |
 
 ### Addresses
 | Feature           |                                        |
