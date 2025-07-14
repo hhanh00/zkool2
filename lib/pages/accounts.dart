@@ -42,8 +42,7 @@ class AccountListPage extends StatelessWidget {
         if (dbName != appName) {
           // do not encrypt default database
           password = await inputPassword(navigatorKey.currentContext!,
-              title: "Enter New Database Password",
-              message: "Password CANNOT be changed later");
+              title: "Enter New Database Password");
         }
         if (password != null && password.isEmpty) password = null;
       }
@@ -180,7 +179,7 @@ class AccountListPage2State extends State<AccountListPage2> {
                     Showcase(key: mempoolID, description: "Show the transactions in the mempool", child:
                       ElevatedButton(onPressed: onMempool, child: Text("Mempool"))),
                     const Gap(8),
-                    if (price != null) Text("Price: $price USD"),
+                    if (price != null) ElevatedButton(onPressed: onPrice, child: Text("Price: $price USD")),
                     const Gap(8),
                   ],
               builder: (context, index, account, {selected, onSelectChanged}) {
@@ -289,20 +288,24 @@ class AccountListPage2State extends State<AccountListPage2> {
     }
   }
 
-  onOpen(BuildContext context, Account account) {
+  void onOpen(BuildContext context, Account account) {
     setAccount(account: account.id);
     AppStoreBase.instance.selectedAccount = account;
     GoRouter.of(context).push('/account', extra: account);
   }
 
-  onReorder(int oldIndex, int newIndex) async {
+  void onReorder(int oldIndex, int newIndex) async {
     await reorderAccount(
         oldPosition: accounts[oldIndex].position,
         newPosition: accounts[newIndex].position);
     await AppStoreBase.instance.loadAccounts();
   }
 
-  onSettings() {
+  void onSettings() {
     GoRouter.of(context).push('/settings');
+  }
+
+  void onPrice() {
+    GoRouter.of(context).push('/market');
   }
 }
