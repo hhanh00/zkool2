@@ -8,6 +8,7 @@ import 'package:zkool/pages/disclaimer.dart';
 import 'package:zkool/pages/dkg.dart';
 import 'package:zkool/pages/frost.dart';
 import 'package:zkool/pages/log.dart';
+import 'package:zkool/pages/market.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
@@ -78,6 +79,7 @@ final router = GoRouter(
           final args = state.extra as Map<String, dynamic>;
           return QRPage(text: args["text"], title: args["title"]);
         }),
+    GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
     GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
     GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
     GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
