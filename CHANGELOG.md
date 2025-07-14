@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.5...zkool-v4.7.0) (2025-07-14)
+
+
+### Features
+
+* market price chart using tradingview widget ([#312](https://github.com/hhanh00/zkool2/issues/312)) ([5a1286a](https://github.com/hhanh00/zkool2/commit/5a1286a38ed0749e7f442c2bbc4b3be5d1b6d77c))
+
 ## [4.6.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.4...zkool-v4.6.5) (2025-06-30)
 
 
