@@ -53,6 +53,7 @@ dependencies:
   package_info_plus: ^8.3.0
   easy_stepper: ^0.8.5+1
   searchable_listview: ^2.17.3
+  flutter_inappwebview: ^6.1.5
 
 dev_dependencies:
   flutter_test:
