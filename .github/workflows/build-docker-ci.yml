@@ -25,8 +25,8 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t ghcr.io/${{ github.repository_owner }}/zkool-ci-image:latest -f misc/ci.dockerfile .
+        docker build -t ghcr.io/${{ github.repository_owner }}/zkool-ci-image:0.0.1 -f misc/ci.dockerfile .
 
     - name: Push Docker image to GHCR
       run: |
-        docker push ghcr.io/${{ github.repository_owner }}/zkool-ci-image:latest
+        docker push ghcr.io/${{ github.repository_owner }}/zkool-ci-image:0.0.1
