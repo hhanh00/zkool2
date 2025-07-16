@@ -8,7 +8,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-24.04-arm
     container:
-      image: ghcr.io/${{ github.repository_owner }}/zkool-ci-image:latest
+      image: ghcr.io/${{ github.repository_owner }}/zkool-ci-image:0.0.1
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -20,9 +20,13 @@ jobs:
         run: |
           echo "/flutter/bin" >> $GITHUB_PATH
           echo "/root/.pub-cache/bin" >> $GITHUB_PATH
+          echo "/root/.cargo/bin" >> $GITHUB_PATH
       - name: Build
         run: |
+          cargo version
           fastforge package --platform=linux --targets=deb
+        env:
+          RUSTUP_HOME: /root/.rustup
       - name: Rename deb package
         id: package
         run: |
