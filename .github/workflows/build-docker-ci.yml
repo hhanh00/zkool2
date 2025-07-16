@@ -1,0 +1,32 @@
+name: Build with Docker
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read       # needed to checkout code
+  packages: write      # needed to push to GHCR
+  id-token: write      # for OIDC login (recommended)
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Docker image
+      run: |
+        docker build -t ghcr.io/${{ github.repository_owner }}/zkool-ci-image:latest -f misc/ci.dockerfile .
+
+    - name: Push Docker image to GHCR
+      run: |
+        docker push ghcr.io/${{ github.repository_owner }}/zkool-ci-image:latest
