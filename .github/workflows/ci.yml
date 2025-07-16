@@ -1,16 +1,12 @@
 name: ci
 
 on:
-  push:
-    tags:
-    - v*
   pull_request:
     branches:
     - main
   workflow_dispatch:
 
 jobs:
-
   release-please:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/release-please.yml
@@ -18,7 +14,7 @@ jobs:
 
   build:
     if: "!contains(github.head_ref, 'release-please--')"
-    uses: ./.github/workflows/build-linux.yml
+    uses: ./.github/workflows/build-ci.yml
     secrets: inherit
     permissions:
       contents: write
