@@ -31,11 +31,11 @@ class AccountListPage extends StatelessWidget {
   const AccountListPage({super.key});
 
   Future<List<Account>> loadAccounts() async {
-    if (!AppStoreBase.instance.loaded) {
-      final dbName = AppStoreBase.instance.dbName;
+    if (!appStore.loaded) {
+      final dbName = appStore.dbName;
       final dbFilepath = await getFullDatabasePath(dbName);
       logger.i('dbFilepath: $dbFilepath');
-      AppStoreBase.instance.dbFilepath = dbFilepath;
+      appStore.dbFilepath = dbFilepath;
 
       String? password;
       if (!File(dbFilepath).existsSync()) {
@@ -47,7 +47,6 @@ class AccountListPage extends StatelessWidget {
         if (password != null && password.isEmpty) password = null;
       }
 
-      final appStore = AppStoreBase.instance;
       while (true) {
         try {
           await openDatabase(dbFilepath: dbFilepath, password: password);
@@ -61,7 +60,7 @@ class AccountListPage extends StatelessWidget {
             // switch to default database
             await showException(navigatorKey.currentContext!,
                 "No password given. Switching to defaut database.");
-            AppStoreBase.instance.dbName = appName;
+            appStore.dbName = appName;
             return await loadAccounts();
           }
         }
@@ -76,8 +75,8 @@ class AccountListPage extends StatelessWidget {
       runMempoolListener();
     }
 
-    AppStoreBase.instance.loaded = true;
-    final accounts = await AppStoreBase.instance.loadAccounts();
+    appStore.loaded = true;
+    final accounts = await appStore.loadAccounts();
     return accounts;
   }
 
@@ -100,6 +99,8 @@ class AccountListPage extends StatelessWidget {
           return SizedBox.shrink();
         });
   }
+
+  AppStore get appStore => AppStoreBase.instance;
 }
 
 class AccountListPage2 extends StatefulWidget {
@@ -118,7 +119,7 @@ class AccountListPage2State extends State<AccountListPage2> {
   @override
   void initState() {
     super.initState();
-    if (!AppStoreBase.instance.disclaimerAccepted) {
+    if (!appStore.disclaimerAccepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         logger.i("Disclaimer not accepted");
         GoRouter.of(context).push("/disclaimer");
@@ -130,14 +131,14 @@ class AccountListPage2State extends State<AccountListPage2> {
   void didUpdateWidget(covariant AccountListPage2 oldWidget) {
     super.didUpdateWidget(oldWidget);
     for (var account in widget.accounts) {
-      AppStoreBase.instance.heights[account.id] = account.height;
+      appStore.heights[account.id] = account.height;
     }
   }
 
   void refreshHeight() async {
     try {
       final height = await getCurrentHeight();
-      AppStoreBase.instance.currentHeight = height;
+      appStore.currentHeight = height;
       final p = await getCoingeckoPrice();
       setState(() => price = p);
     } on AnyhowException catch (e) {
@@ -145,14 +146,14 @@ class AccountListPage2State extends State<AccountListPage2> {
     }
   }
 
-  List<Account> get accounts => AppStoreBase.instance.accounts
+  List<Account> get accounts => appStore.accounts
       .where((a) => !a.internal && (includeHidden || !a.hidden))
       .toList();
 
   void tutorial() async {
-    if (!AppStoreBase.instance.disclaimerAccepted) return;
+    if (!appStore.disclaimerAccepted) return;
     tutorialHelper(context, "tutMain0",
-        [newAccountId, settingsID, syncID, hideID, heightID, mempoolID]);
+        [newAccountId, settingsID, mempoolID, syncID, hideID, heightID]);
     if (accounts.isNotEmpty)
       tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
   }
@@ -164,7 +165,7 @@ class AccountListPage2State extends State<AccountListPage2> {
     return Observer(builder: (context) {
       final tt = Theme.of(context).textTheme;
       final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
-      AppStoreBase.instance.accounts;
+      appStore.accounts;
 
       return Showcase(
           key: accountListID,
@@ -182,10 +183,7 @@ class AccountListPage2State extends State<AccountListPage2> {
                             builder: (context) => ElevatedButton(
                                 onPressed: () => Future(refreshHeight),
                                 child: Text(
-                                    "Height: ${AppStoreBase.instance.currentHeight}")))),
-                    const Gap(8),
-                    Showcase(key: mempoolID, description: "Show the transactions in the mempool", child:
-                      ElevatedButton(onPressed: onMempool, child: Text("Mempool"))),
+                                    "Height: ${appStore.currentHeight}")))),
                     const Gap(8),
                     if (price != null) ElevatedButton(onPressed: onPrice, child: Text("Price: $price USD")),
                     const Gap(8),
@@ -211,7 +209,7 @@ class AccountListPage2State extends State<AccountListPage2> {
                             style: t.copyWith(fontWeight: FontWeight.w700)),
                         trailing: Observer(
                             builder: (context) => Text(
-                                  AppStoreBase.instance.heights[account.id]
+                                  appStore.heights[account.id]
                                       .toString(),
                                   textAlign: TextAlign.end,
                                 )),
@@ -233,7 +231,7 @@ class AccountListPage2State extends State<AccountListPage2> {
                   for (var a in accounts) {
                     await deleteAccount(account: a.id);
                   }
-                  await AppStoreBase.instance.loadAccounts();
+                  await appStore.loadAccounts();
                 }
               },
               isEqual: (a, b) => a.id == b.id,
@@ -244,6 +242,12 @@ class AccountListPage2State extends State<AccountListPage2> {
                     description: "Open Settings",
                     child: IconButton(
                         onPressed: onSettings, icon: Icon(Icons.settings))),
+                Showcase(
+                    key: mempoolID,
+                    description:
+                        "Show Mempool transactions",
+                    child:
+                        IconButton(onPressed: onMempool, icon: Icon(Icons.pending_actions))),
                 Showcase(
                     key: syncID,
                     description:
@@ -285,12 +289,12 @@ class AccountListPage2State extends State<AccountListPage2> {
         }
       } else {
         // no selection, use the enabled flag
-        for (var a in AppStoreBase.instance.accounts) {
+        for (var a in appStore.accounts) {
           if (a.enabled) accountIds.add(a.id);
         }
       }
-      await AppStoreBase.instance.startSynchronize(
-          accountIds, int.parse(AppStoreBase.instance.actionsPerSync));
+      await appStore.startSynchronize(
+          accountIds, int.parse(appStore.actionsPerSync));
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -298,7 +302,7 @@ class AccountListPage2State extends State<AccountListPage2> {
 
   void onOpen(BuildContext context, Account account) {
     setAccount(account: account.id);
-    AppStoreBase.instance.selectedAccount = account;
+    appStore.selectedAccount = account;
     GoRouter.of(context).push('/account', extra: account);
   }
 
@@ -306,7 +310,7 @@ class AccountListPage2State extends State<AccountListPage2> {
     await reorderAccount(
         oldPosition: accounts[oldIndex].position,
         newPosition: accounts[newIndex].position);
-    await AppStoreBase.instance.loadAccounts();
+    await appStore.loadAccounts();
   }
 
   void onSettings() {
@@ -316,4 +320,6 @@ class AccountListPage2State extends State<AccountListPage2> {
   void onPrice() {
     GoRouter.of(context).push('/market');
   }
+
+  AppStore get appStore => AppStoreBase.instance;
 }
