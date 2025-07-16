@@ -87,6 +87,14 @@ class AccountListPage extends StatelessWidget {
         future: loadAccounts(),
         initialData: [],
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Material(child: SingleChildScrollView(child: Center(
+              child: Text(
+                snapshot.error.toString(),
+                style: TextStyle(color: Colors.red),
+              ),
+            )));
+          }
           final data = snapshot.data;
           if (data != null) return AccountListPage2(snapshot.data!);
           return SizedBox.shrink();
