@@ -143,11 +143,16 @@ class SendPageState extends State<SendPage> {
                               label: Text("Unshield All"),
                               icon: Icon(Icons.lock_open)),
                         if (addresses?.saddr != null ||
-                            addresses?.oaddr != null)
+                            addresses?.oaddr != null) ...[
                           ElevatedButton.icon(
-                              onPressed: onShield,
+                              onPressed: () => onShield(true),
+                              label: Text("Shield One"),
+                              icon: Icon(Icons.shield_outlined)),
+                          ElevatedButton.icon(
+                              onPressed: () => onShield(false),
                               label: Text("Shield All"),
                               icon: Icon(Icons.shield)),
+                          ]
                       ]),
                       Row(children: [
                         Expanded(
@@ -243,11 +248,19 @@ class SendPageState extends State<SendPage> {
     }
   }
 
-  void onShield() async {
+  void onShield(bool smartTransparent) async {
+    if (!smartTransparent) {
+      final confirmed = await confirmDialog(
+          context,
+          title: 'Shield All Privacy Warning',
+          message: 'Shielding all your transparent funds may result in a transaction that links multiple t-addresses.\nPrefer using "Shield One".');
+      if (!confirmed) return;
+    }
     try {
       final options = PaymentOptions(
           srcPools: 1, // Only the transparent pool (mask)
           recipientPaysFee: true,
+          smartTransparent: smartTransparent,
           dustChangePolicy: DustChangePolicy.sendToRecipient);
       final pczt = await prepare(
         recipients: [
@@ -271,7 +284,8 @@ class SendPageState extends State<SendPage> {
       final options = PaymentOptions(
           srcPools: 6, // Only the sapling and orchard pool (mask)
           recipientPaysFee: true,
-          dustChangePolicy: DustChangePolicy.sendToRecipient);
+          dustChangePolicy: DustChangePolicy.sendToRecipient,
+          smartTransparent: false);
       final pczt = await prepare(
         recipients: [
           Recipient(
@@ -459,7 +473,8 @@ class Send2PageState extends State<Send2Page> {
           recipientPaysFee: recipientPaysFee,
           dustChangePolicy: discardDustChange
               ? DustChangePolicy.discard
-              : DustChangePolicy.sendToRecipient);
+              : DustChangePolicy.sendToRecipient,
+          smartTransparent: false);
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,

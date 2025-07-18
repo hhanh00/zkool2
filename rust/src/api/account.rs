@@ -275,7 +275,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let mut key = na.key.clone();
     if key.is_empty() {
         let mut entropy = [0u8; 32];
-        OsRng.try_fill_bytes(&mut entropy)?;
+        OsRng.fill_bytes(&mut entropy);
         let m = bip39::Mnemonic::from_entropy(&entropy)?;
         key = m.to_string();
     }

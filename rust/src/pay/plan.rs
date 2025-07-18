@@ -16,7 +16,7 @@ use pczt::{
     },
     Pczt,
 };
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore};
 use ripemd::Ripemd160;
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
@@ -82,6 +82,7 @@ pub async fn plan_transaction(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
+    smart_transparent: bool,
     dust_change_policy: DustChangePolicy,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
@@ -94,21 +95,6 @@ pub async fn plan_transaction(
         .any(|r| is_tex(network, &r.address).unwrap_or_default());
     info!("has_tex: {account} {has_tex}");
 
-    // make a payment uri
-    let payments = recipients
-        .iter()
-        .map(|r| {
-            let address = ZcashAddress::from_str(&r.address)?;
-            let amount = Zatoshis::const_from_u64(r.amount);
-            let memo = encode_memo(r)?;
-            Ok::<_, anyhow::Error>(
-                Payment::new(address, amount, memo, None, None, vec![]).expect("payment"),
-            )
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let puri = TransactionRequest::new(payments)?;
-    let puri = puri.to_uri();
-
     let mut can_sign = true;
     let (use_internal,): (bool,) =
         sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
@@ -116,7 +102,7 @@ pub async fn plan_transaction(
             .fetch_one(&mut *connection)
             .await?;
 
-    let effective_src_pools = if has_tex {
+    let effective_src_pools = if has_tex || smart_transparent {
         PoolMask::from_pool(0) // restrict to transparent pool
     } else {
         crate::pay::plan::get_effective_src_pools(&mut *connection, account, src_pools).await?
@@ -140,12 +126,47 @@ pub async fn plan_transaction(
     let mut fee_manager = FeeManager::default();
     fee_manager.add_output(change_pool);
 
+    let mut input_pools = vec![vec![]; 3];
+    let (inputs, recipients, recipient_pays_fee) = if smart_transparent {
+        // Restrict to using one transparent address per shielding
+        let notes = fetch_one_taddr_unspent_notes(connection, account).await?;
+        // override the amount to the maximum amount available
+        let max = notes.iter().map(|n| n.amount).sum::<u64>();
+        let recipient = Recipient {
+            amount: max,
+            ..recipients.first().cloned().unwrap_or_default()
+        };
+        (
+            notes,
+            vec![recipient],
+            true,
+        )
+    } else {
+        (
+            fetch_unspent_notes_grouped_by_pool(connection, account).await?,
+            recipients,
+            recipient_pays_fee,
+        )
+    };
+    // make a payment uri
+    let payments = recipients
+        .iter()
+        .map(|r| {
+            let address = ZcashAddress::from_str(&r.address)?;
+            let amount = Zatoshis::const_from_u64(r.amount);
+            let memo = encode_memo(r)?;
+            Ok::<_, anyhow::Error>(
+                Payment::new(address, amount, memo, None, None, vec![]).expect("payment"),
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let puri = TransactionRequest::new(payments)?;
+    let puri = puri.to_uri();
+
     let recipient_states = recipients
         .into_iter()
         .map(|r| RecipientState::new(r).unwrap())
         .collect::<Vec<_>>();
-    let mut input_pools = vec![vec![]; 3];
-    let inputs = fetch_unspent_notes_grouped_by_pool(connection, account).await?;
 
     debug!("Unspent notes:");
     for inp in inputs.iter() {
@@ -946,7 +967,10 @@ pub fn get_change_pool(src_pool_mask: PoolMask, dest_pool_mask: PoolMask) -> u8 
     src_pool_mask.to_best_pool().unwrap()
 }
 
-pub async fn get_account_pool_mask(connection: &mut SqliteConnection, account: u32) -> Result<PoolMask> {
+pub async fn get_account_pool_mask(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<PoolMask> {
     let (has_transparent,): (bool,) =
         sqlx::query_as("SELECT EXISTS(SELECT 1 FROM transparent_accounts WHERE account = ?)")
             .bind(account)
@@ -962,11 +986,59 @@ pub async fn get_account_pool_mask(connection: &mut SqliteConnection, account: u
             .bind(account)
             .fetch_one(&mut *connection)
             .await?;
-    let account_pool_mask = PoolMask(
-        (has_transparent as u8) | (has_sapling as u8) << 1 | (has_orchard as u8) << 2,
-    );
+    let account_pool_mask =
+        PoolMask((has_transparent as u8) | (has_sapling as u8) << 1 | (has_orchard as u8) << 2);
 
     Ok(account_pool_mask)
+}
+
+async fn fetch_one_taddr_unspent_notes(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<InputNote>> {
+    let notes = sqlx::query(
+        "SELECT a.id_note, a.value, a.taddress
+        FROM notes a
+        LEFT JOIN spends b ON a.id_note = b.id_note
+        WHERE b.id_note IS NULL AND a.account = ?
+        AND locked = 0
+        AND a.pool = 0
+        AND a.value >= 5000
+        ORDER BY taddress",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id: u32 = row.get(0);
+        let value: u64 = row.get(1);
+        let taddress: u32 = row.get(2);
+        (
+            taddress,
+            InputNote {
+                id,
+                amount: value,
+                remaining: value,
+                pool: 0, // transparent pool
+            },
+        )
+    })
+    .fetch_all(connection)
+    .await?;
+
+    let transparent_notes: Vec<Vec<_>> = notes
+        .into_iter()
+        .chunk_by(|item| item.0) // group by the transparent address
+        .into_iter()
+        .map(|group| group.1.map(|n| n.1).collect()) // collect each group of notes and discard the address
+        .collect(); // collect all groups into Vec<Vec<_>>
+
+    if !transparent_notes.is_empty() {
+        // pick a random group to shield
+        let random_note = OsRng.next_u32() as usize % transparent_notes.len();
+        let notes = &transparent_notes[random_note];
+        return Ok(notes.clone());
+    }
+
+    Ok(vec![])
 }
 
 pub async fn fetch_unspent_notes_grouped_by_pool(
