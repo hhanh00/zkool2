@@ -3455,11 +3455,13 @@ impl SseDecode for crate::api::pay::PaymentOptions {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_srcPools = <u8>::sse_decode(deserializer);
         let mut var_recipientPaysFee = <bool>::sse_decode(deserializer);
+        let mut var_smartTransparent = <bool>::sse_decode(deserializer);
         let mut var_dustChangePolicy =
             <crate::api::pay::DustChangePolicy>::sse_decode(deserializer);
         return crate::api::pay::PaymentOptions {
             src_pools: var_srcPools,
             recipient_pays_fee: var_recipientPaysFee,
+            smart_transparent: var_smartTransparent,
             dust_change_policy: var_dustChangePolicy,
         };
     }
@@ -4248,6 +4250,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PaymentOptions {
         [
             self.src_pools.into_into_dart().into_dart(),
             self.recipient_pays_fee.into_into_dart().into_dart(),
+            self.smart_transparent.into_into_dart().into_dart(),
             self.dust_change_policy.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -5132,6 +5135,7 @@ impl SseEncode for crate::api::pay::PaymentOptions {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u8>::sse_encode(self.src_pools, serializer);
         <bool>::sse_encode(self.recipient_pays_fee, serializer);
+        <bool>::sse_encode(self.smart_transparent, serializer);
         <crate::api::pay::DustChangePolicy>::sse_encode(self.dust_change_policy, serializer);
     }
 }

@@ -12,6 +12,7 @@ pub enum DustChangePolicy {
 pub struct PaymentOptions {
     pub src_pools: u8,
     pub recipient_pays_fee: bool,
+    pub smart_transparent: bool,
     pub dust_change_policy: DustChangePolicy,
 }
 
@@ -31,6 +32,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Resul
         options.src_pools,
         recipients,
         options.recipient_pays_fee,
+        options.smart_transparent,
         options.dust_change_policy,
     )
     .await
