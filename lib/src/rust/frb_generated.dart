@@ -2868,12 +2868,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PaymentOptions dco_decode_payment_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return PaymentOptions(
       srcPools: dco_decode_u_8(arr[0]),
       recipientPaysFee: dco_decode_bool(arr[1]),
-      dustChangePolicy: dco_decode_dust_change_policy(arr[2]),
+      smartTransparent: dco_decode_bool(arr[2]),
+      dustChangePolicy: dco_decode_dust_change_policy(arr[3]),
     );
   }
 
@@ -3835,10 +3836,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_srcPools = sse_decode_u_8(deserializer);
     var var_recipientPaysFee = sse_decode_bool(deserializer);
+    var var_smartTransparent = sse_decode_bool(deserializer);
     var var_dustChangePolicy = sse_decode_dust_change_policy(deserializer);
     return PaymentOptions(
         srcPools: var_srcPools,
         recipientPaysFee: var_recipientPaysFee,
+        smartTransparent: var_smartTransparent,
         dustChangePolicy: var_dustChangePolicy);
   }
 
@@ -4740,6 +4743,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_8(self.srcPools, serializer);
     sse_encode_bool(self.recipientPaysFee, serializer);
+    sse_encode_bool(self.smartTransparent, serializer);
     sse_encode_dust_change_policy(self.dustChangePolicy, serializer);
   }
 
