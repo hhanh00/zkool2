@@ -53,17 +53,22 @@ enum DustChangePolicy {
 class PaymentOptions {
   final int srcPools;
   final bool recipientPaysFee;
+  final bool smartTransparent;
   final DustChangePolicy dustChangePolicy;
 
   const PaymentOptions({
     required this.srcPools,
     required this.recipientPaysFee,
+    required this.smartTransparent,
     required this.dustChangePolicy,
   });
 
   @override
   int get hashCode =>
-      srcPools.hashCode ^ recipientPaysFee.hashCode ^ dustChangePolicy.hashCode;
+      srcPools.hashCode ^
+      recipientPaysFee.hashCode ^
+      smartTransparent.hashCode ^
+      dustChangePolicy.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -72,6 +77,7 @@ class PaymentOptions {
           runtimeType == other.runtimeType &&
           srcPools == other.srcPools &&
           recipientPaysFee == other.recipientPaysFee &&
+          smartTransparent == other.smartTransparent &&
           dustChangePolicy == other.dustChangePolicy;
 }
 

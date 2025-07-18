@@ -7,7 +7,7 @@ import '../coin.dart';
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `USD`, `ZcashUSD`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Usd`, `ZcashUSD`
 
 void setLwd({required ServerType serverType, required String lwd}) =>
     RustLib.instance.api
