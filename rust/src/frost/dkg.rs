@@ -474,6 +474,7 @@ pub async fn publish(
         ALL_POOLS,
         &recipients,
         false,
+        false,
         crate::api::pay::DustChangePolicy::Discard,
     )
     .await?;
