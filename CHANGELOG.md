@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.7.0...zkool-v4.8.0) (2025-07-18)
+
+
+### Features
+
+* shield one taddress at a time ([#319](https://github.com/hhanh00/zkool2/issues/319)) ([70d7005](https://github.com/hhanh00/zkool2/commit/70d700568f305b68c2d8cd49c1004999d39a5697))
+
+
+### Bug Fixes
+
+* move mempool button to appbar ([#318](https://github.com/hhanh00/zkool2/issues/318)) ([90487bf](https://github.com/hhanh00/zkool2/commit/90487bf91c00d2b7ea1010ac3c297275bd0b8b59))
+* show error message if app fails to load ([#314](https://github.com/hhanh00/zkool2/issues/314)) ([b05e979](https://github.com/hhanh00/zkool2/commit/b05e979df04752b9d56f92ae0ab8f4a423741192))
+
 ## [4.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.6.5...zkool-v4.7.0) (2025-07-14)
 
 
