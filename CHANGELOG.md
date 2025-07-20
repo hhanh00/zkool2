@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.0...zkool-v4.9.1) (2025-07-20)
+
+
+### Bug Fixes
+
+* fetch_transparent_address_tx_count ([#322](https://github.com/hhanh00/zkool2/issues/322)) ([43274b3](https://github.com/hhanh00/zkool2/commit/43274b39e048e7c9b09f17b7556a56d2ad9f5ce5))
+
 ## [4.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.8.0...zkool-v4.9.0) (2025-07-20)
 
 
