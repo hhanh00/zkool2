@@ -140,7 +140,7 @@ abstract class AppStoreBase with Store {
           accounts: accounts,
           currentHeight: currentHeight,
           actionsPerSync: actionsPerSync,
-          transparentLimit: 10, // scan the last 10 known transparent addresses
+          transparentLimit: 100, // scan the last 100 known transparent addresses
           checkpointAge: 200); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
       syncProgressSubscription = progress.listen((p) {
