@@ -169,6 +169,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
+  List<TAddressTxCount> dco_decode_list_t_address_tx_count(dynamic raw);
+
+  @protected
   List<Tx> dco_decode_list_tx(dynamic raw);
 
   @protected
@@ -257,6 +260,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SyncProgress dco_decode_sync_progress(dynamic raw);
+
+  @protected
+  TAddressTxCount dco_decode_t_address_tx_count(dynamic raw);
 
   @protected
   Tx dco_decode_tx(dynamic raw);
@@ -447,6 +453,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<TAddressTxCount> sse_decode_list_t_address_tx_count(
+      SseDeserializer deserializer);
+
+  @protected
   List<Tx> sse_decode_list_tx(SseDeserializer deserializer);
 
   @protected
@@ -537,6 +547,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SyncProgress sse_decode_sync_progress(SseDeserializer deserializer);
+
+  @protected
+  TAddressTxCount sse_decode_t_address_tx_count(SseDeserializer deserializer);
 
   @protected
   Tx sse_decode_tx(SseDeserializer deserializer);
@@ -739,6 +752,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<(int, String, PlatformInt64)> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_t_address_tx_count(
+      List<TAddressTxCount> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_tx(List<Tx> self, SseSerializer serializer);
 
   @protected
@@ -834,6 +851,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_t_address_tx_count(
+      TAddressTxCount self, SseSerializer serializer);
 
   @protected
   void sse_encode_tx(Tx self, SseSerializer serializer);
