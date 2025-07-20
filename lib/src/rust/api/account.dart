@@ -83,6 +83,9 @@ Future<List<TxNote>> listNotes() =>
 Future<void> lockNote({required int id, required bool locked}) =>
     RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked);
 
+Future<List<TAddressTxCount>> fetchTransparentAddressTxCount() =>
+    RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount();
+
 Future<int> transparentSweep({required int endHeight, required int gapLimit}) =>
     RustLib.instance.api.crateApiAccountTransparentSweep(
         endHeight: endHeight, gapLimit: gapLimit);
@@ -238,6 +241,41 @@ class Seed with _$Seed {
     required String phrase,
     required int aindex,
   }) = _Seed;
+}
+
+class TAddressTxCount {
+  final String address;
+  final int scope;
+  final int dindex;
+  final BigInt amount;
+  final int txCount;
+
+  const TAddressTxCount({
+    required this.address,
+    required this.scope,
+    required this.dindex,
+    required this.amount,
+    required this.txCount,
+  });
+
+  @override
+  int get hashCode =>
+      address.hashCode ^
+      scope.hashCode ^
+      dindex.hashCode ^
+      amount.hashCode ^
+      txCount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TAddressTxCount &&
+          runtimeType == other.runtimeType &&
+          address == other.address &&
+          scope == other.scope &&
+          dindex == other.dindex &&
+          amount == other.amount &&
+          txCount == other.txCount;
 }
 
 @freezed
