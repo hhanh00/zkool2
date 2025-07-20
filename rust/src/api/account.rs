@@ -525,6 +525,14 @@ pub struct Tx {
     pub tpe: Option<u8>,
 }
 
+pub struct TAddressTxCount {
+    pub address: String,
+    pub scope: u8,
+    pub dindex: u32,
+    pub amount: u64,
+    pub tx_count: u32,
+}
+
 pub async fn remove_account(account_id: u32) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -639,6 +647,16 @@ pub async fn lock_note(id: u32, locked: bool) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::lock_note(&mut *connection, c.account, id, locked).await?;
     Ok(())
+}
+
+#[frb]
+pub async fn fetch_transparent_address_tx_count() -> Result<Vec<TAddressTxCount>> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::db::fetch_transparent_address_tx_count(
+        &mut *connection,
+        c.account,
+    ).await
 }
 
 #[frb]

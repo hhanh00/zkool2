@@ -5,6 +5,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/utils.dart';
 
+final viewID = GlobalKey();
 final sweepID = GlobalKey();
 final deriveID = GlobalKey();
 final qrID = GlobalKey();
@@ -30,7 +31,7 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutReceive0", [sweepID, deriveID, qrID]);
+    tutorialHelper(context, "tutReceive0", [viewID, sweepID, deriveID, qrID]);
   }
 
   @override
@@ -42,6 +43,11 @@ class ReceivePageState extends State<ReceivePage> {
         appBar: AppBar(
           title: Text("Receive Funds"),
           actions: [
+            Showcase(key: viewID, description: "View Transparent Addresses", child:
+            IconButton(
+                tooltip: "Transparent Addresses",
+                onPressed: onViewTransparentAddresses,
+                icon: Icon(Icons.visibility))),
             Showcase(key: sweepID, description: "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync", child:
             IconButton(
                 tooltip: "Sweep",
@@ -113,10 +119,40 @@ class ReceivePageState extends State<ReceivePage> {
     GoRouter.of(context).push("/qr", extra: {"title": title, "text": text});
   }
 
+  void onViewTransparentAddresses() async {
+    final txCounts = await fetchTransparentAddressTxCount();
+    if (!mounted) return;
+    await GoRouter.of(context).push("/transparent_addresses", extra: txCounts);
+  }
+
   void onSweep() async {
     showSnackbar("Starting sweep");
     final endHeight = await getCurrentHeight();
     final nAdded = await transparentSweep(endHeight: endHeight, gapLimit: 40);
     showSnackbar("Sweep complete. $nAdded new addresses added");
+  }
+}
+
+class TransparentAddressesPage extends StatelessWidget {
+  final List<TAddressTxCount> txCounts;
+
+  const TransparentAddressesPage({super.key, required this.txCounts});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Transparent Addresses")),
+      body: ListView.builder(
+        itemCount: txCounts.length,
+        itemBuilder: (context, index) {
+          final txCount = txCounts[index];
+          final scope = txCount.scope == 0 ? "External" : "Change";
+          return ListTile(
+            title: SelectableText(txCount.address),
+            subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}"),
+            trailing: Text(zatToString(txCount.amount)));
+        },
+      ),
+    );
   }
 }
