@@ -34,12 +34,16 @@
 ## Receive Page
 - Search Button to Scan for related Transparent Addresses
 - Tap New Diversified to get a new set of addresses (including Transparent)
+- Show transparent address pool and usage
 
 ## Send Page
 - Use buttons to Shield/Unshield all to/from Orchard
+- Shield One restricts to using *one* transparent address to prevent
+linkability
 - Or, Enter or Scan Address
 - Enter Amount or Tap Max amount
 - Or Load an previous Transaction
+- Load and Sign a transaction for Cold Wallet use case
 - If FROST account, tap to FROST button start a multiparty signature
 - Tap Add to add as a recipient to current transaction
 - Tap Next to finish listing recipients and continue

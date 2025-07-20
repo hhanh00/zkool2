@@ -55,6 +55,10 @@ final router = GoRouter(
       builder: (context, state) => ReceivePage(),
     ),
     GoRoute(
+      path: '/transparent_addresses',
+      builder: (context, state) => TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>),
+    ),
+    GoRoute(
       path: '/send',
       builder: (context, state) => SendPage(),
     ),

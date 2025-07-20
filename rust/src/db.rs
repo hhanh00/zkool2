@@ -11,6 +11,7 @@ use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::account::TxNote;
+use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 
@@ -946,7 +947,41 @@ pub async fn lock_note(connection: &mut SqliteConnection, account: u32, id: u32,
     Ok(())
 }
 
-// #[frb]
+pub async fn fetch_transparent_address_tx_count(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<TAddressTxCount>> {
+    let rows = sqlx::query(
+        "WITH n AS (
+        SELECT n.value + coalesce(s.value, 0) AS amount, n.account, n.tx, n.taddress FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
+        WHERE n.pool = 0)
+        SELECT ta.address, ta.scope, ta.dindex, SUM(amount) AS amount, COUNT(tx) AS count_tx FROM transparent_address_accounts ta
+        LEFT JOIN n ON ta.account = n.account AND  ta.id_taddress = taddress
+        WHERE ta.account = ?
+        GROUP BY taddress
+        ORDER BY ta.scope, ta.dindex",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let address: String = row.get(0);
+        let scope: u8 = row.get(1);
+        let dindex: u32 = row.get(2);
+        let amount: u64 = row.get(3);
+        let tx_count: u32 = row.get(4);
+        TAddressTxCount {
+            address,
+            scope,
+            dindex,
+            amount,
+            tx_count,
+        }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+
+    Ok(rows)
+}
+
 pub async fn change_db_password(
     db_filepath: &str,
     tmp_dir: &str,
