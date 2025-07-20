@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.8.0...zkool-v4.9.0) (2025-07-20)
+
+
+### Features
+
+* show transparent address pool and usage ([#320](https://github.com/hhanh00/zkool2/issues/320)) ([13dff31](https://github.com/hhanh00/zkool2/commit/13dff3144321e43724dad0d2532544f4da287ce5))
+
 ## [4.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.7.0...zkool-v4.8.0) (2025-07-18)
 
 
