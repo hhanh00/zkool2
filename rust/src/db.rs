@@ -953,11 +953,10 @@ pub async fn fetch_transparent_address_tx_count(
 ) -> Result<Vec<TAddressTxCount>> {
     let rows = sqlx::query(
         "WITH n AS (
-        SELECT n.value + coalesce(s.value, 0) AS amount, n.account, n.tx, n.taddress FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
-        WHERE n.pool = 0)
-        SELECT ta.address, ta.scope, ta.dindex, SUM(amount) AS amount, COUNT(tx) AS count_tx FROM transparent_address_accounts ta
-        LEFT JOIN n ON ta.account = n.account AND  ta.id_taddress = taddress
-        WHERE ta.account = ?
+        SELECT account, tx, value, taddress FROM notes n WHERE n.pool = 0 UNION ALL
+        SELECT n.account, s.tx, s.value, n.taddress FROM spends s JOIN notes n ON s.id_note = n.id_note AND s.account = n.account WHERE s.pool = 0)
+        SELECT address, scope, dindex, SUM(value), COUNT(tx) FROM n JOIN transparent_address_accounts ta ON ta.id_taddress = taddress
+        WHERE n.account = ?
         GROUP BY taddress
         ORDER BY ta.scope, ta.dindex",
     )
