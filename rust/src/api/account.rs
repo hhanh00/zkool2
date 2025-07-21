@@ -531,6 +531,7 @@ pub struct TAddressTxCount {
     pub dindex: u32,
     pub amount: u64,
     pub tx_count: u32,
+    pub time: u32,
 }
 
 pub async fn remove_account(account_id: u32) -> Result<()> {
