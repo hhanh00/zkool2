@@ -149,7 +149,7 @@ class TransparentAddressesPage extends StatelessWidget {
           final scope = txCount.scope == 0 ? "External" : "Change";
           return ListTile(
             title: SelectableText(txCount.address),
-            subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}"),
+            subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}, Last Used: ${timeToString(txCount.time)}"),
             trailing: Text(zatToString(txCount.amount)));
         },
       ),

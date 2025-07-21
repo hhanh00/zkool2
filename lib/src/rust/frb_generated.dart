@@ -3049,14 +3049,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TAddressTxCount dco_decode_t_address_tx_count(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return TAddressTxCount(
       address: dco_decode_String(arr[0]),
       scope: dco_decode_u_8(arr[1]),
       dindex: dco_decode_u_32(arr[2]),
       amount: dco_decode_u_64(arr[3]),
       txCount: dco_decode_u_32(arr[4]),
+      time: dco_decode_u_32(arr[5]),
     );
   }
 
@@ -4034,12 +4035,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_dindex = sse_decode_u_32(deserializer);
     var var_amount = sse_decode_u_64(deserializer);
     var var_txCount = sse_decode_u_32(deserializer);
+    var var_time = sse_decode_u_32(deserializer);
     return TAddressTxCount(
         address: var_address,
         scope: var_scope,
         dindex: var_dindex,
         amount: var_amount,
-        txCount: var_txCount);
+        txCount: var_txCount,
+        time: var_time);
   }
 
   @protected
@@ -4939,6 +4942,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.dindex, serializer);
     sse_encode_u_64(self.amount, serializer);
     sse_encode_u_32(self.txCount, serializer);
+    sse_encode_u_32(self.time, serializer);
   }
 
   @protected

@@ -249,6 +249,7 @@ class TAddressTxCount {
   final int dindex;
   final BigInt amount;
   final int txCount;
+  final int time;
 
   const TAddressTxCount({
     required this.address,
@@ -256,6 +257,7 @@ class TAddressTxCount {
     required this.dindex,
     required this.amount,
     required this.txCount,
+    required this.time,
   });
 
   @override
@@ -264,7 +266,8 @@ class TAddressTxCount {
       scope.hashCode ^
       dindex.hashCode ^
       amount.hashCode ^
-      txCount.hashCode;
+      txCount.hashCode ^
+      time.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -275,7 +278,8 @@ class TAddressTxCount {
           scope == other.scope &&
           dindex == other.dindex &&
           amount == other.amount &&
-          txCount == other.txCount;
+          txCount == other.txCount &&
+          time == other.time;
 }
 
 @freezed
