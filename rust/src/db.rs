@@ -955,7 +955,9 @@ pub async fn fetch_transparent_address_tx_count(
         "WITH n AS (
         SELECT account, tx, value, taddress FROM notes n WHERE n.pool = 0 UNION ALL
         SELECT n.account, s.tx, s.value, n.taddress FROM spends s JOIN notes n ON s.id_note = n.id_note AND s.account = n.account WHERE s.pool = 0)
-        SELECT address, scope, dindex, SUM(value), COUNT(tx) FROM n JOIN transparent_address_accounts ta ON ta.id_taddress = taddress
+        SELECT address, scope, dindex, SUM(n.value), COUNT(tx), MAX(t.time) FROM n
+        JOIN transparent_address_accounts ta ON ta.id_taddress = taddress
+        JOIN transactions t ON t.id_tx = n.tx
         WHERE n.account = ?
         GROUP BY taddress
         ORDER BY ta.scope, ta.dindex",
@@ -967,12 +969,14 @@ pub async fn fetch_transparent_address_tx_count(
         let dindex: u32 = row.get(2);
         let amount: u64 = row.get(3);
         let tx_count: u32 = row.get(4);
+        let time: u32 = row.get(5);
         TAddressTxCount {
             address,
             scope,
             dindex,
             amount,
             tx_count,
+            time,
         }
     })
     .fetch_all(&mut *connection)
