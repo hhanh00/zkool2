@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.1...zkool-v4.9.2) (2025-07-21)
+
+
+### Bug Fixes
+
+* add last time used to transparent addresses ([#324](https://github.com/hhanh00/zkool2/issues/324)) ([2c251e8](https://github.com/hhanh00/zkool2/commit/2c251e80906f6753e9d1c222891d78fd927b4ce1))
+
 ## [4.9.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.0...zkool-v4.9.1) (2025-07-20)
 
 
