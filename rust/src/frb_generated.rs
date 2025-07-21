@@ -3678,12 +3678,14 @@ impl SseDecode for crate::api::account::TAddressTxCount {
         let mut var_dindex = <u32>::sse_decode(deserializer);
         let mut var_amount = <u64>::sse_decode(deserializer);
         let mut var_txCount = <u32>::sse_decode(deserializer);
+        let mut var_time = <u32>::sse_decode(deserializer);
         return crate::api::account::TAddressTxCount {
             address: var_address,
             scope: var_scope,
             dindex: var_dindex,
             amount: var_amount,
             tx_count: var_txCount,
+            time: var_time,
         };
     }
 }
@@ -4519,6 +4521,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TAddressTxCount {
             self.dindex.into_into_dart().into_dart(),
             self.amount.into_into_dart().into_dart(),
             self.tx_count.into_into_dart().into_dart(),
+            self.time.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5380,6 +5383,7 @@ impl SseEncode for crate::api::account::TAddressTxCount {
         <u32>::sse_encode(self.dindex, serializer);
         <u64>::sse_encode(self.amount, serializer);
         <u32>::sse_encode(self.tx_count, serializer);
+        <u32>::sse_encode(self.time, serializer);
     }
 }
 
