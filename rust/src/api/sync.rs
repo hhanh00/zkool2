@@ -13,7 +13,7 @@ use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::Network;
 
 use crate::db::calculate_balance;
-use crate::sync::{prune_old_checkpoints, recover_from_partial_sync};
+use crate::sync::{get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync};
 use crate::Client;
 use crate::{
     frb_generated::StreamSink,
@@ -159,6 +159,20 @@ pub async fn synchronize(
                 tx_cancel.subscribe(),
             )
             .await?;
+
+            let heights_without_time =
+                get_heights_without_time(&mut *connection, start_height, end_height).await?;
+            for h in heights_without_time {
+                let block = client
+                    .block(&network, h)
+                    .await?;
+                let time = block.time;
+                sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0")
+                    .bind(time)
+                    .bind(h)
+                    .execute(&mut *connection)
+                    .await?;
+            }
 
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
