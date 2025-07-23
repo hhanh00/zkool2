@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.2...zkool-v4.9.3) (2025-07-23)
+
+
+### Bug Fixes
+
+* missing tx time for transparent only accounts ([#326](https://github.com/hhanh00/zkool2/issues/326)) ([f942eed](https://github.com/hhanh00/zkool2/commit/f942eed4fb469eab06a619b119f50096143e43df))
+
 ## [4.9.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.1...zkool-v4.9.2) (2025-07-21)
 
 
