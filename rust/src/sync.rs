@@ -15,8 +15,8 @@ use crate::{
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection, SqlitePool};
 use sqlx::Row;
+use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection, SqlitePool};
 use tokio::sync::{
     broadcast,
     mpsc::{channel, Sender},
@@ -208,20 +208,7 @@ pub async fn shielded_sync(
         let mut connection = pool.acquire().await?;
         // get the list of transaction heights for which the time is 0
         // because raw transactions do not have timestamp (it comes from the block header)
-        let heights_without_time: HashSet<u32> = sqlx::query(
-            "SELECT DISTINCT height FROM transactions WHERE time = 0
-        AND height >= ? AND height <= ?",
-        )
-        .bind(start)
-        .bind(end)
-        .map(|row: SqliteRow| {
-            let height: u32 = row.get(0);
-            height
-        })
-        .fetch_all(&mut *connection)
-        .await?
-        .into_iter()
-        .collect();
+        let heights_without_time = get_heights_without_time(&mut connection, start, end).await?;
 
         let mut writer_connection = pool.acquire().await?;
         let db_writer_task = tokio::spawn(async move {
@@ -415,7 +402,10 @@ async fn handle_message(
     Ok(())
 }
 
-pub async fn recover_from_partial_sync(connection: &mut SqliteConnection, accounts: &[u32]) -> Result<()> {
+pub async fn recover_from_partial_sync(
+    connection: &mut SqliteConnection,
+    accounts: &[u32],
+) -> Result<()> {
     for account in accounts {
         let account_heights = sqlx::query(
             "SELECT account, MIN(height) FROM sync_heights
@@ -617,4 +607,27 @@ pub async fn transparent_sweep(
         .await?;
     }
     Ok(n_added)
+}
+
+pub async fn get_heights_without_time(
+    connection: &mut SqliteConnection,
+    start: u32,
+    end: u32,
+) -> Result<HashSet<u32>> {
+    let heights_without_time: HashSet<u32> = sqlx::query(
+        "SELECT DISTINCT height FROM transactions WHERE time = 0
+        AND height >= ? AND height <= ?",
+    )
+    .bind(start)
+    .bind(end)
+    .map(|row: SqliteRow| {
+        let height: u32 = row.get(0);
+        height
+    })
+    .fetch_all(&mut *connection)
+    .await?
+    .into_iter()
+    .collect();
+
+    Ok(heights_without_time)
 }
