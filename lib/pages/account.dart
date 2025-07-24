@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
@@ -119,51 +120,52 @@ class AccountViewPageState extends State<AccountViewPage> {
                 appStore.memos.length;
                 appStore.notes.length;
 
-
                 return TabBarView(children: [
-                  SingleChildScrollView(
-                      child: Column(children: [
-                    Text("Height"),
-                    Gap(8),
-                    Observer(
-                        builder: (context) {
-                          final currentHeight = appStore.currentHeight;
-                          final height = appStore.heights[account.id]!;
-                          return Text.rich(TextSpan(children: [
-                              TextSpan(
-                                  text: "$height",
-                                  style: t.bodyLarge),
-                              if (currentHeight - height > 0) TextSpan(
-                                text: " tip-${currentHeight - height}",
-                                style: t.labelSmall
-                              )
-                            ]));
-                    }),
-                    Gap(16),
-                    Text("Balance"),
-                    Gap(8),
-                    if (b != null) BalanceWidget(b, showcase: true),
-                    Gap(8),
-                    if (unconfirmedAmount != null) ...[
-                      zatToText(BigInt.from(unconfirmedAmount),
-                          prefix: "Unconfirmed: "),
-                      Gap(8),
-                    ],
-                    if (b != null)
-                      Showcase(
-                          key: balID,
-                          description: "Balance across all pools",
-                          child: zatToText(
-                              b.field0[0] + b.field0[1] + b.field0[2],
-                              style: t.titleLarge!)),
-                    Gap(16),
+                  CustomScrollView(
+                      slivers: [
+                        PinnedHeaderSliver(
+                          child: Container(
+                            color: Theme.of(context).colorScheme.surface,
+                            child: Column(children: [
+                            Text("Height"),
+                            Gap(8),
+                            Observer(
+                                builder: (context) {
+                                  final currentHeight = appStore.currentHeight;
+                                  final height = appStore.heights[account.id]!;
+                                  return Text.rich(TextSpan(children: [
+                                      TextSpan(
+                                          text: "$height",
+                                          style: t.bodyLarge),
+                                      if (currentHeight - height > 0) TextSpan(
+                                        text: " tip-${currentHeight - height}",
+                                        style: t.labelSmall
+                                      )
+                                    ]));
+                            }),
+                            Gap(16),
+                            Text("Balance"),
+                            Gap(8),
+                            if (b != null) BalanceWidget(b, showcase: true),
+                            Gap(8),
+                            if (unconfirmedAmount != null) ...[
+                              zatToText(BigInt.from(unconfirmedAmount),
+                                  prefix: "Unconfirmed: "),
+                              Gap(8),
+                            ],
+                            if (b != null) ...[
+                              Showcase(
+                                  key: balID,
+                                  description: "Balance across all pools",
+                                  child: zatToText(
+                                      b.field0[0] + b.field0[1] + b.field0[2],
+                                      style: t.titleLarge!)),
+                              Gap(8)],
+                            ]))),
                     ...showTxHistory(appStore.transactions),
-                  ])),
+                  ]),
                   showMemos(context, appStore.memos),
-                  SingleChildScrollView(
-                      child: Column(children: [
-                    ...showNotes(appStore.notes),
-                  ])),
+                  showNotes(appStore.notes),
                 ]);
               }),
             )));
@@ -524,11 +526,11 @@ class BalanceWidget extends StatelessWidget {
 
 List<Widget> showTxHistory(List<Tx> transactions) {
   return [
+    SliverToBoxAdapter(
+      child: Column(children: [
     const Text("Transaction History"),
-    const Gap(8),
-    ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    const Gap(8)],)),
+    SliverFixedExtentList.builder(
       itemCount: transactions.length,
       itemBuilder: (context, index) {
         final tx = transactions[index];
@@ -548,6 +550,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
               )
             : tile;
       },
+      itemExtent: 64,
     ),
   ];
 }
@@ -606,12 +609,10 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
       ));
 }
 
-List<Widget> showNotes(List<TxNote> notes) {
+Widget showNotes(List<TxNote> notes) {
   final t = Theme.of(navigatorKey.currentContext!);
-  return [
+  return
     ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
       itemCount: notes.length,
       itemBuilder: (context, index) {
         final note = notes[index];
@@ -625,8 +626,7 @@ List<Widget> showNotes(List<TxNote> notes) {
           textColor: note.locked ? t.disabledColor : null,
         );
       },
-    ),
-  ];
+    );
 }
 
 void toggleLock(BuildContext context, int id, bool locked) async {
