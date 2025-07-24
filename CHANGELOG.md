@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.3...zkool-v4.9.4) (2025-07-24)
+
+
+### Bug Fixes
+
+* missing decimal point on keyboard input for amount ([#328](https://github.com/hhanh00/zkool2/issues/328)) ([bfddfe6](https://github.com/hhanh00/zkool2/commit/bfddfe63d412aa6ae079bd2a3a437c566581d012))
+
 ## [4.9.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.2...zkool-v4.9.3) (2025-07-23)
 
 
