@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.4...zkool-v4.9.5) (2025-07-24)
+
+
+### Bug Fixes
+
+* lazy loading of tx history to listview ([#330](https://github.com/hhanh00/zkool2/issues/330)) ([99c9b46](https://github.com/hhanh00/zkool2/commit/99c9b460fc9f23685f4c97903e58e9ee8add3261))
+
 ## [4.9.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.3...zkool-v4.9.4) (2025-07-24)
 
 
