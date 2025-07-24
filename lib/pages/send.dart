@@ -138,19 +138,19 @@ class SendPageState extends State<SendPage> {
                       Gap(16),
                       OverflowBar(spacing: 16, children: [
                         if (addresses?.taddr != null)
-                          ElevatedButton.icon(
+                          IconButton(
                               onPressed: onUnshield,
-                              label: Text("Unshield All"),
+                              tooltip: "Unshield All",
                               icon: Icon(Icons.lock_open)),
                         if (addresses?.saddr != null ||
                             addresses?.oaddr != null) ...[
-                          ElevatedButton.icon(
+                          IconButton(
                               onPressed: () => onShield(true),
-                              label: Text("Shield One"),
+                              tooltip: "Shield One",
                               icon: Icon(Icons.shield_outlined)),
-                          ElevatedButton.icon(
+                          IconButton(
                               onPressed: () => onShield(false),
-                              label: Text("Shield All"),
+                              tooltip: "Shield All",
                               icon: Icon(Icons.shield)),
                           ]
                       ]),
