@@ -192,7 +192,7 @@ class SendPageState extends State<SendPage> {
                                     FormBuilderValidators.required(),
                                     validAmount
                                   ]),
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                                   initialValue: amount,
                                   onChanged: (v) => setState(() => amount = v!),
                                 ))),
