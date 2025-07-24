@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.6](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.5...zkool-v4.9.6) (2025-07-24)
+
+
+### Bug Fixes
+
+* icon for shield/unshield buttons ([#332](https://github.com/hhanh00/zkool2/issues/332)) ([bf5a6ac](https://github.com/hhanh00/zkool2/commit/bf5a6acc3bf85c903d9a610389be51b9280d3222))
+
 ## [4.9.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.4...zkool-v4.9.5) (2025-07-24)
 
 
