@@ -23,3 +23,6 @@ bool isValidTransparentAddress({required String address}) =>
 
 bool isTexAddress({required String address}) =>
     RustLib.instance.api.crateApiKeyIsTexAddress(address: address);
+
+int getKeyPools({required String key}) =>
+    RustLib.instance.api.crateApiKeyGetKeyPools(key: key);
