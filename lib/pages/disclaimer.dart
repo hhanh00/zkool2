@@ -86,7 +86,7 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
   void onContinue() async {
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("disclaimer_accepted", true);
-    AppStoreBase.instance.disclaimerAccepted = true;
+    appStore.disclaimerAccepted = true;
     if (!mounted) return;
     GoRouter.of(context).pop();
   }

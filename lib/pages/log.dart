@@ -13,7 +13,7 @@ class LogviewPageState extends State<LogviewPage> {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (context) {
-      AppStoreBase.instance.log;
+      appStore.log;
 
       return Scaffold(
         appBar: AppBar(
@@ -23,10 +23,10 @@ class LogviewPageState extends State<LogviewPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: ListView.builder(
               itemBuilder: (context, index) {
-                final logEntry = AppStoreBase.instance.log[index];
+                final logEntry = appStore.log[index];
                 return Text(logEntry);
               },
-              itemCount: AppStoreBase.instance.log.length,
+              itemCount: appStore.log.length,
             )),
       );
     });

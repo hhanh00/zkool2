@@ -16,6 +16,7 @@ import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/pay.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
@@ -59,7 +60,7 @@ class SendPageState extends State<SendPage> {
     super.initState();
     Future(() async {
       final b = await balance();
-      final a = await getAddresses();
+      final a = await getAddresses(uaPools: appStore.pools);
 
       setState(() {
         pbalance = b;
@@ -426,8 +427,9 @@ class Send2PageState extends State<Send2Page> {
                             alignment: Alignment.centerRight,
                             child: FormBuilderField<int>(
                               name: "source pools",
-                              initialValue: hasTex ? 1 : 7,
+                              initialValue: hasTex ? 1 : appStore.pools,
                               builder: (field) => PoolSelect(
+                                  enabled: appStore.pools,
                                   initialValue: field.value!,
                                   onChanged: hasTex
                                       ? null

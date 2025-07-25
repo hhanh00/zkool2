@@ -48,7 +48,7 @@ class DKGPage1 extends StatefulWidget {
 
 class DKGPage1State extends State<DKGPage1> {
   final formKey = GlobalKey<FormBuilderState>();
-  late final accounts = AppStoreBase.instance.accounts.where((e) => !e.hidden);
+  late final accounts = appStore.accounts.where((e) => !e.hidden);
 
   @override
   void initState() {
@@ -308,12 +308,12 @@ class DKGPage3State extends State<DKGPage3> {
     final h = await getCurrentHeight();
     if (currentHeight != null && currentHeight == h) return;
     currentHeight = h;
-    final accounts = AppStoreBase.instance.accounts
+    final accounts = appStore.accounts
         .where((e) => e.enabled)
         .map((e) => e.id)
         .toList();
-    await AppStoreBase.instance.startSynchronize(
-        accounts, int.parse(AppStoreBase.instance.actionsPerSync));
+    await appStore.startSynchronize(
+        accounts, int.parse(appStore.actionsPerSync));
 
     final status = doDkg();
     status.listen((s) {
