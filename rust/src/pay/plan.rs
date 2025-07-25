@@ -364,9 +364,7 @@ pub async fn plan_transaction(
         let updated_fee = fee_manager.fee();
         assert!(
             updated_fee <= fee,
-            "Fee should not increase: {} -> {}",
-            fee,
-            updated_fee
+            "Fee should not increase: {fee} -> {updated_fee}"
         );
         let refund_fee = fee - updated_fee;
         match dust_change_policy {

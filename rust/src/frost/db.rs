@@ -70,6 +70,7 @@ pub async fn get_mailbox_account(
                     fingerprint: None,
                     aindex: 0,
                     birth: Some(birth_height),
+                    pools: None,
                     use_internal: false,
                     internal: true,
                 };
@@ -162,6 +163,7 @@ pub async fn get_coordinator_broadcast_account(
                     fingerprint: None,
                     aindex: 0,
                     birth: Some(height),
+                    pools: None,
                     use_internal: false,
                     internal: true,
                 };
