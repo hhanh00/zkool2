@@ -1,5 +1,6 @@
+use anyhow::Result;
 use flutter_rust_bridge::frb;
-use zcash_keys::encoding::AddressCodec as _;
+use zcash_keys::{encoding::AddressCodec as _, keys::UnifiedFullViewingKey};
 use zcash_primitives::legacy::TransparentAddress;
 
 use crate::{
@@ -65,4 +66,33 @@ pub fn is_tex_address(address: &str) -> bool {
         _ => false,
     };
     is_tex
+}
+
+#[frb(sync)]
+pub fn get_key_pools(key: &str) -> Result<u8> {
+    let c = get_coin!();
+    let network = &c.network;
+
+    if crate::key::is_valid_phrase(key) {
+        return Ok(7);
+    }
+
+    if is_valid_transparent_key(key) {
+        return Ok(1);
+    }
+
+    if is_valid_sapling_key(network, key) {
+        return Ok(2);
+    }
+
+    if crate::key::is_valid_ufvk(network, key) {
+        let mut pools = 0;
+        let ufvk = UnifiedFullViewingKey::decode(network, key).map_err(|_| anyhow::anyhow!("Invalid UFVK"))?;
+        if ufvk.transparent().is_some() { pools |= 1; }
+        if ufvk.sapling().is_some() { pools |= 2; }
+        if ufvk.orchard().is_some() { pools |= 4; }
+        return Ok(pools);
+    }
+
+    Ok(0)
 }

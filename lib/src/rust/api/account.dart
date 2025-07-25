@@ -202,6 +202,7 @@ class NewAccount with _$NewAccount {
     Uint8List? fingerprint,
     required int aindex,
     int? birth,
+    int? pools,
     required bool useInternal,
     required bool internal,
   }) = _NewAccount;
