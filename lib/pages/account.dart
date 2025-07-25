@@ -40,7 +40,6 @@ class AccountViewPage extends StatefulWidget {
 }
 
 class AccountViewPageState extends State<AccountViewPage> {
-  final appStore = AppStoreBase.instance;
   StreamSubscription<SyncProgress>? progressSubscription;
   PoolBalance? poolBalance;
 
@@ -223,7 +222,6 @@ class AccountEditPage extends StatefulWidget {
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
-  final appStore = AppStoreBase.instance;
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -630,7 +628,7 @@ Widget showNotes(List<TxNote> notes) {
 
 void toggleLock(BuildContext context, int id, bool locked) async {
   await lockNote(id: id, locked: locked);
-  await AppStoreBase.instance.loadNotes();
+  await appStore.loadNotes();
 }
 
 void onOpenLog(BuildContext context) async {
@@ -653,6 +651,7 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   String? uvk;
   String? fingerprint;
   Seed? seed;
+  int accountPools = 7; // default to all pools
   bool showSeed = false;
 
   @override
@@ -661,6 +660,7 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
     Future(() async {
       fingerprint = await getAccountFingerprint(account: widget.account);
       seed = await getAccountSeed(account: widget.account);
+      accountPools = await getAccountPools(account: widget.account);
       setState(() {});
     });
     Future(() => onPoolChanged(pools));
@@ -693,7 +693,7 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
                     Divider(),
                     Gap(8),
                   ],
-                  Center(child: PoolSelect(onChanged: onPoolChanged)),
+                  Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
                   Gap(32),
                   if (uvk != null) SelectableText(uvk!),
                   Gap(32),

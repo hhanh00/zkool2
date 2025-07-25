@@ -209,8 +209,9 @@ class NewAccountPageState extends State<NewAccountPage> {
                                 alignment: Alignment.centerRight,
                                 child: FormBuilderField<int>(
                                   name: "pools",
-                                  initialValue: pools,
+                                  initialValue: appStore.pools,
                                   builder: (field) => PoolSelect(
+                                      enabled: appStore.pools,
                                       initialValue: field.value!,
                                       onChanged: (v) => field.didChange(v)),
                                 )))),
@@ -246,7 +247,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         aindex: int.parse(aindex ?? "0"),
         birth: birth != null
             ? int.parse(birth)
-            : AppStoreBase.instance.currentHeight,
+            : appStore.currentHeight,
         pools: pools,
         useInternal: useInternal ?? false,
         internal: false,
@@ -256,7 +257,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       if (mounted && key.isEmpty) {
         await showSeed(context, seed!.mnemonic);
       }
-      await AppStoreBase.instance.loadAccounts();
+      await appStore.loadAccounts();
       if (mounted) GoRouter.of(context).pop();
     }
   }
@@ -286,7 +287,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         await importAccount(passphrase: password, data: encrypted);
         if (mounted)
           await showMessage(context, "Account imported successfully");
-        await AppStoreBase.instance.loadAccounts();
+        await appStore.loadAccounts();
       }
     } on AnyhowException catch (e) {
       logger.e(e);

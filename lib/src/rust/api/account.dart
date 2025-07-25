@@ -12,6 +12,9 @@ part 'account.freezed.dart';
 String newSeed({required String phrase}) =>
     RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
 
+Future<int> getAccountPools({required int account}) =>
+    RustLib.instance.api.crateApiAccountGetAccountPools(account: account);
+
 Future<String> getAccountUfvk({required int account, required int pools}) =>
     RustLib.instance.api
         .crateApiAccountGetAccountUfvk(account: account, pools: pools);
@@ -71,8 +74,8 @@ Future<List<Tx>> listTxHistory() =>
 Future<List<Memo>> listMemos() =>
     RustLib.instance.api.crateApiAccountListMemos();
 
-Future<Addresses> getAddresses() =>
-    RustLib.instance.api.crateApiAccountGetAddresses();
+Future<Addresses> getAddresses({required int uaPools}) =>
+    RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools);
 
 Future<TxAccount> getTxDetails({required int idTx}) =>
     RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx);

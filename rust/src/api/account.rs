@@ -62,6 +62,28 @@ pub fn new_seed(phrase: &str) -> Result<String> {
 }
 
 #[frb]
+pub async fn get_account_pools(account: u32) -> Result<u8> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    let tkeys = crate::db::select_account_transparent(&mut *connection, account).await?;
+    let skeys = crate::db::select_account_sapling(&mut *connection, account).await?;
+    let okeys = crate::db::select_account_orchard(&mut *connection, account).await?;
+
+    let mut pools = 0;
+    if tkeys.xvk.is_some() {
+        pools |= 1;
+    }
+    if skeys.xvk.is_some() {
+        pools |= 2;
+    }
+    if okeys.xvk.is_some() {
+        pools |= 4;
+    }
+    Ok(pools)
+}
+
+#[frb]
 pub async fn get_account_ufvk(account: u32, pools: u8) -> Result<String> {
     let c = get_coin!();
     let network = c.network;
@@ -601,7 +623,7 @@ pub async fn list_memos() -> Result<Vec<Memo>> {
 }
 
 #[frb]
-pub async fn get_addresses() -> Result<Addresses> {
+pub async fn get_addresses(ua_pools: u8) -> Result<Addresses> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
@@ -628,7 +650,11 @@ pub async fn get_addresses() -> Result<Addresses> {
 
     let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None);
 
-    let ua = UnifiedAddress::from_receivers(oaddr, saddr, taddr);
+    let ua = UnifiedAddress::from_receivers(
+        if ua_pools & 4 != 0 { oaddr } else { None },
+        if ua_pools & 2 != 0 { saddr } else { None },
+        if ua_pools & 1 != 0 { taddr } else { None },
+    );
 
     // final fallback if we have a transparent address from a BIP 38 secret key
     let taddr = taddr.map(|x| x.encode(&c.network)).or(tkeys.address);
