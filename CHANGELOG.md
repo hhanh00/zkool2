@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.6...zkool-v4.10.0) (2025-07-25)
+
+
+### Features
+
+* select account pools when restoring from key ([#334](https://github.com/hhanh00/zkool2/issues/334)) ([cf5a4c9](https://github.com/hhanh00/zkool2/commit/cf5a4c9acd7292c5c91d5785324a42439b0c558c))
+
 ## [4.9.6](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.5...zkool-v4.9.6) (2025-07-24)
 
 
