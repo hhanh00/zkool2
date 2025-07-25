@@ -335,20 +335,22 @@ pub async fn generate_next_dindex(
         .await?;
 
     let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-    let sk = xsk
-        .as_ref()
-        .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
-    let (tpk, taddress) = derive_transparent_address(xvk.as_ref().unwrap(), 0, dindex)?;
-    store_account_transparent_addr(
-        &mut *connection,
-        account,
-        0,
-        dindex,
-        sk,
-        &tpk,
-        &taddress.encode(network),
-    )
-    .await?;
+    if let Some(xvk) = xvk.as_ref() {
+        let sk = xsk
+            .as_ref()
+            .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
+        let (tpk, taddress) = derive_transparent_address(xvk, 0, dindex)?;
+        store_account_transparent_addr(
+            &mut *connection,
+            account,
+            0,
+            dindex,
+            sk,
+            &tpk,
+            &taddress.encode(network),
+        )
+        .await?;
+    }
 
     Ok(dindex)
 }
