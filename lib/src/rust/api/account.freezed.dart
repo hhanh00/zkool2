@@ -1135,6 +1135,7 @@ mixin _$NewAccount {
   Uint8List? get fingerprint => throw _privateConstructorUsedError;
   int get aindex => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
+  int? get pools => throw _privateConstructorUsedError;
   bool get useInternal => throw _privateConstructorUsedError;
   bool get internal => throw _privateConstructorUsedError;
 
@@ -1160,6 +1161,7 @@ abstract class $NewAccountCopyWith<$Res> {
       Uint8List? fingerprint,
       int aindex,
       int? birth,
+      int? pools,
       bool useInternal,
       bool internal});
 }
@@ -1187,6 +1189,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? fingerprint = freezed,
     Object? aindex = null,
     Object? birth = freezed,
+    Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
   }) {
@@ -1223,6 +1226,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      pools: freezed == pools
+          ? _value.pools
+          : pools // ignore: cast_nullable_to_non_nullable
+              as int?,
       useInternal: null == useInternal
           ? _value.useInternal
           : useInternal // ignore: cast_nullable_to_non_nullable
@@ -1252,6 +1259,7 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       Uint8List? fingerprint,
       int aindex,
       int? birth,
+      int? pools,
       bool useInternal,
       bool internal});
 }
@@ -1277,6 +1285,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? fingerprint = freezed,
     Object? aindex = null,
     Object? birth = freezed,
+    Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
   }) {
@@ -1313,6 +1322,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      pools: freezed == pools
+          ? _value.pools
+          : pools // ignore: cast_nullable_to_non_nullable
+              as int?,
       useInternal: null == useInternal
           ? _value.useInternal
           : useInternal // ignore: cast_nullable_to_non_nullable
@@ -1337,6 +1350,7 @@ class _$NewAccountImpl implements _NewAccount {
       this.fingerprint,
       required this.aindex,
       this.birth,
+      this.pools,
       required this.useInternal,
       required this.internal});
 
@@ -1357,13 +1371,15 @@ class _$NewAccountImpl implements _NewAccount {
   @override
   final int? birth;
   @override
+  final int? pools;
+  @override
   final bool useInternal;
   @override
   final bool internal;
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, useInternal: $useInternal, internal: $internal)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, pools: $pools, useInternal: $useInternal, internal: $internal)';
   }
 
   @override
@@ -1381,6 +1397,7 @@ class _$NewAccountImpl implements _NewAccount {
                 .equals(other.fingerprint, fingerprint) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.birth, birth) || other.birth == birth) &&
+            (identical(other.pools, pools) || other.pools == pools) &&
             (identical(other.useInternal, useInternal) ||
                 other.useInternal == useInternal) &&
             (identical(other.internal, internal) ||
@@ -1398,6 +1415,7 @@ class _$NewAccountImpl implements _NewAccount {
       const DeepCollectionEquality().hash(fingerprint),
       aindex,
       birth,
+      pools,
       useInternal,
       internal);
 
@@ -1420,6 +1438,7 @@ abstract class _NewAccount implements NewAccount {
       final Uint8List? fingerprint,
       required final int aindex,
       final int? birth,
+      final int? pools,
       required final bool useInternal,
       required final bool internal}) = _$NewAccountImpl;
 
@@ -1439,6 +1458,8 @@ abstract class _NewAccount implements NewAccount {
   int get aindex;
   @override
   int? get birth;
+  @override
+  int? get pools;
   @override
   bool get useInternal;
   @override

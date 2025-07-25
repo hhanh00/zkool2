@@ -15,6 +15,7 @@ import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/widgets/pool_select.dart';
 
 final dkgID = GlobalKey();
 final importID = GlobalKey();
@@ -28,6 +29,7 @@ final keyID = GlobalKey();
 final passphraseID = GlobalKey();
 final accountIndexID = GlobalKey();
 final birthID = GlobalKey();
+final accountPoolsID = GlobalKey();
 
 class NewAccountPage extends StatefulWidget {
   const NewAccountPage({super.key});
@@ -46,15 +48,11 @@ class NewAccountPageState extends State<NewAccountPage> {
   final formKey = GlobalKey<FormBuilderState>();
 
   void tutorial() async {
-    tutorialHelper(context, "tutNew0", [
-      nameID, iconID, internalID, restoreID, dkgID, importID, saveID
-    ]);
-    if (restore) tutorialHelper(context, "tutNew1", [
-      keyID, birthID
-    ]);
-    if (restore && isSeed) tutorialHelper(context, "tutNew2", [
-      passphraseID, accountIndexID
-    ]);
+    tutorialHelper(context, "tutNew0",
+        [nameID, iconID, internalID, restoreID, dkgID, importID, saveID]);
+    if (restore) tutorialHelper(context, "tutNew1", [keyID, birthID, accountPoolsID]);
+    if (restore && isSeed)
+      tutorialHelper(context, "tutNew2", [passphraseID, accountIndexID]);
   }
 
   @override
@@ -64,15 +62,16 @@ class NewAccountPageState extends State<NewAccountPage> {
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
     isFvk = isValidFvk(fvk: key);
+    final pools = getKeyPools(key: key);
 
     return Scaffold(
         appBar: AppBar(
           title: const Text("New Account"),
-
           actions: [
-            Showcase(key: dkgID, description: "Start Distributed Key Generation",
-            child: IconButton(
-              onPressed: onFrost, icon: Icon(Icons.group))),
+            Showcase(
+                key: dkgID,
+                description: "Start Distributed Key Generation",
+                child: IconButton(onPressed: onFrost, icon: Icon(Icons.group))),
             Showcase(
                 key: importID,
                 description: "Import an account from file",
@@ -160,36 +159,61 @@ class NewAccountPageState extends State<NewAccountPage> {
                           )),
                     Gap(16),
                     if (restore && isSeed)
-                    Showcase(key: passphraseID, description: "An optional extra word/phrase added to the seed phrase (like in Trezor)", child:
-                      FormBuilderTextField(
-                        name: "passphrase",
-                        decoration: const InputDecoration(
-                            labelText: "Extra Passphrase (optional)"),
-                      )),
+                      Showcase(
+                          key: passphraseID,
+                          description:
+                              "An optional extra word/phrase added to the seed phrase (like in Trezor)",
+                          child: FormBuilderTextField(
+                            name: "passphrase",
+                            decoration: const InputDecoration(
+                                labelText: "Extra Passphrase (optional)"),
+                          )),
                     Gap(16),
                     if (restore && isSeed)
-                    Showcase(key: accountIndexID, description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed", child:
-                      FormBuilderTextField(
-                        name: "aindex",
-                        decoration:
-                            const InputDecoration(labelText: "Account Index"),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                      )),
+                      Showcase(
+                          key: accountIndexID,
+                          description:
+                              "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
+                          child: FormBuilderTextField(
+                            name: "aindex",
+                            decoration: const InputDecoration(
+                                labelText: "Account Index"),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                          )),
                     Gap(16),
                     if (restore)
-                      Showcase(key: birthID, description: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height", child:
-                      FormBuilderTextField(
-                        name: "birth",
-                        decoration:
-                            const InputDecoration(labelText: "Birth Height"),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                      )),
+                      Showcase(
+                          key: birthID,
+                          description:
+                              "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height",
+                          child: FormBuilderTextField(
+                            name: "birth",
+                            decoration: const InputDecoration(
+                                labelText: "Birth Height"),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                          )),
+                    if (restore && pools != 0) Showcase(
+                        key: accountPoolsID,
+                        description:
+                            "Pools this account can receive funds",
+                        child: InputDecorator(
+                            decoration:
+                                InputDecoration(labelText: "Pools"),
+                            child: Align(
+                                alignment: Alignment.centerRight,
+                                child: FormBuilderField<int>(
+                                  name: "pools",
+                                  initialValue: pools,
+                                  builder: (field) => PoolSelect(
+                                      initialValue: field.value!,
+                                      onChanged: (v) => field.didChange(v)),
+                                )))),
                   ],
                 ),
               ),
@@ -208,6 +232,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
       final bool? useInternal = formData?["useInternal"];
+      final int? pools = formData!["pools"];
 
       final icon = iconBytes;
 
@@ -222,6 +247,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         birth: birth != null
             ? int.parse(birth)
             : AppStoreBase.instance.currentHeight,
+        pools: pools,
         useInternal: useInternal ?? false,
         internal: false,
       ));

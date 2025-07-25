@@ -39,6 +39,7 @@ use crate::{
     get_coin,
     io::{decrypt, encrypt},
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    pay::pool::ALL_POOLS,
     setup,
 };
 
@@ -257,7 +258,8 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let min_height: u32 = (network
         .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
         .unwrap()
-        + 1).into();
+        + 1)
+    .into();
 
     let birth = na.birth.unwrap_or(min_height).max(min_height);
 
@@ -279,6 +281,8 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let m = bip39::Mnemonic::from_entropy(&entropy)?;
         key = m.to_string();
     }
+
+    let pools = na.pools.unwrap_or(ALL_POOLS);
 
     if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
@@ -303,35 +307,41 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        init_account_transparent(&mut *connection, account, birth).await?;
-        let tsk = usk.transparent();
-        store_account_transparent_sk(&mut *connection, account, tsk).await?;
-        let tvk = &tsk.to_account_pubkey();
-        store_account_transparent_vk(&mut *connection, account, tvk).await?;
-        let sk = derive_transparent_sk(&tsk, 0, dindex)?;
-        let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
-        store_account_transparent_addr(
-            &mut *connection,
-            account,
-            0,
-            dindex,
-            Some(sk),
-            &pk,
-            &taddr.encode(&c.network),
-        )
-        .await?;
+        if pools & 1 != 0 {
+            init_account_transparent(&mut *connection, account, birth).await?;
+            let tsk = usk.transparent();
+            store_account_transparent_sk(&mut *connection, account, tsk).await?;
+            let tvk = &tsk.to_account_pubkey();
+            store_account_transparent_vk(&mut *connection, account, tvk).await?;
+            let sk = derive_transparent_sk(&tsk, 0, dindex)?;
+            let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
+            store_account_transparent_addr(
+                &mut *connection,
+                account,
+                0,
+                dindex,
+                Some(sk),
+                &pk,
+                &taddr.encode(&c.network),
+            )
+            .await?;
+        }
 
-        init_account_sapling(&mut *connection, account, birth).await?;
-        let sxsk = usk.sapling();
-        store_account_sapling_sk(&mut *connection, account, sxsk).await?;
-        let sxvk = sxsk.to_diversifiable_full_viewing_key();
-        store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
+        if pools & 2 != 0 {
+            init_account_sapling(&mut *connection, account, birth).await?;
+            let sxsk = usk.sapling();
+            store_account_sapling_sk(&mut *connection, account, sxsk).await?;
+            let sxvk = sxsk.to_diversifiable_full_viewing_key();
+            store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
+        }
 
-        init_account_orchard(&mut *connection, account, birth).await?;
-        let oxsk = usk.orchard();
-        store_account_orchard_sk(&mut *connection, account, oxsk).await?;
-        let oxvk = FullViewingKey::from(oxsk);
-        store_account_orchard_vk(&mut *connection, account, &oxvk).await?;
+        if pools & 4 != 0 {
+            init_account_orchard(&mut *connection, account, birth).await?;
+            let oxsk = usk.orchard();
+            store_account_orchard_sk(&mut *connection, account, oxsk).await?;
+            let oxvk = FullViewingKey::from(oxsk);
+            store_account_orchard_vk(&mut *connection, account, &oxvk).await?;
+        }
 
         update_dindex(&mut *connection, account, dindex, true).await?;
     }
@@ -403,8 +413,12 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             network.hrp_sapling_extended_full_viewing_key(),
             &key,
         ) {
-            store_account_sapling_vk(&mut *connection, account, &xvk.to_diversifiable_full_viewing_key())
-                .await?;
+            store_account_sapling_vk(
+                &mut *connection,
+                account,
+                &xvk.to_diversifiable_full_viewing_key(),
+            )
+            .await?;
             let (di, _) = xvk.default_address();
             di
         } else {
@@ -419,28 +433,37 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        if let Some(tvk) = uvk.transparent() {
-            init_account_transparent(&mut *connection, account, birth).await?;
-            store_account_transparent_vk(&mut *connection, account, tvk).await?;
-            let (pk, address) = derive_transparent_address(tvk, 0, dindex)?;
-            store_account_transparent_addr(
-                &mut *connection,
-                account,
-                0,
-                dindex,
-                None,
-                &pk,
-                &address.encode(&network),
-            )
-            .await?;
+        match uvk.transparent() {
+            Some(tvk) if pools & 1 != 0 => {
+                init_account_transparent(&mut *connection, account, birth).await?;
+                store_account_transparent_vk(&mut *connection, account, tvk).await?;
+                let (pk, address) = derive_transparent_address(tvk, 0, dindex)?;
+                store_account_transparent_addr(
+                    &mut *connection,
+                    account,
+                    0,
+                    dindex,
+                    None,
+                    &pk,
+                    &address.encode(&network),
+                )
+                .await?;
+            }
+            _ => {}
         }
-        if let Some(svk) = uvk.sapling() {
-            init_account_sapling(&mut *connection, account, birth).await?;
-            store_account_sapling_vk(&mut *connection, account, svk).await?;
+        match uvk.sapling() {
+            Some(sxvk) if pools & 2 != 0 => {
+                init_account_sapling(&mut *connection, account, birth).await?;
+                store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
+            }
+            _ => {}
         }
-        if let Some(ovk) = uvk.orchard() {
-            init_account_orchard(&mut *connection, account, birth).await?;
-            store_account_orchard_vk(&mut *connection, account, ovk).await?;
+        match uvk.orchard() {
+            Some(ovk) if pools & 4 != 0 => {
+                init_account_orchard(&mut *connection, account, birth).await?;
+                store_account_orchard_vk(&mut *connection, account, &ovk).await?;
+            }
+            _ => {}
         }
         update_dindex(&mut *connection, account, dindex, true).await?;
     }
@@ -511,6 +534,7 @@ pub struct NewAccount {
     pub fingerprint: Option<Vec<u8>>,
     pub aindex: u32,
     pub birth: Option<u32>,
+    pub pools: Option<u8>,
     pub use_internal: bool,
     pub internal: bool,
 }
@@ -654,10 +678,7 @@ pub async fn lock_note(id: u32, locked: bool) -> Result<()> {
 pub async fn fetch_transparent_address_tx_count() -> Result<Vec<TAddressTxCount>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    crate::db::fetch_transparent_address_tx_count(
-        &mut *connection,
-        c.account,
-    ).await
+    crate::db::fetch_transparent_address_tx_count(&mut *connection, c.account).await
 }
 
 #[frb]

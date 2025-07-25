@@ -504,5 +504,5 @@ pub fn read_compact_u32<R: Read>(mut reader: R) -> u32 {
     if tpe == 0xFE {
         return reader.read_u32::<LE>().unwrap();
     }
-    panic!("Invalid compact u32 type: {}", tpe); // 4 bytes should not never be needed
+    panic!("Invalid compact u32 type: {tpe}"); // 4 bytes should not never be needed
 }
