@@ -99,8 +99,6 @@ class AccountListPage extends StatelessWidget {
           return SizedBox.shrink();
         });
   }
-
-  AppStore get appStore => AppStoreBase.instance;
 }
 
 class AccountListPage2 extends StatefulWidget {
@@ -320,6 +318,4 @@ class AccountListPage2State extends State<AccountListPage2> {
   void onPrice() {
     GoRouter.of(context).push('/market');
   }
-
-  AppStore get appStore => AppStoreBase.instance;
 }

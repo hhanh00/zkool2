@@ -19,6 +19,8 @@ import 'package:zkool/utils.dart';
 
 part 'store.g.dart';
 
+AppStore get appStore => AppStoreBase.instance;
+
 class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
@@ -27,6 +29,8 @@ abstract class AppStoreBase with Store {
   Account? selectedAccount;
   @observable
   List<Account> accounts = [];
+  @observable
+  int pools = 7;
   @observable
   List<Tx> transactions = [];
   @observable
@@ -100,6 +104,7 @@ abstract class AppStoreBase with Store {
   }
 
   Future<void> loadOtherData() async {
+    pools = await getAccountPools(account: selectedAccount!.id);
     frostParams = await getAccountFrostParams();
   }
 
@@ -185,7 +190,7 @@ abstract class AppStoreBase with Store {
     retrySyncTimer = Timer(Duration(seconds: delay), () async {
       await startSynchronize(
         accounts,
-        int.parse(AppStoreBase.instance.actionsPerSync),
+        int.parse(appStore.actionsPerSync),
       );
       retryCount = 0;
     });
@@ -224,7 +229,7 @@ abstract class AppStoreBase with Store {
     }
     if (accountsToSync.isNotEmpty) {
       await startSynchronize(
-          accountsToSync, int.parse(AppStoreBase.instance.actionsPerSync));
+          accountsToSync, int.parse(appStore.actionsPerSync));
     }
   }
 
@@ -232,10 +237,9 @@ abstract class AppStoreBase with Store {
 }
 
 void runMempoolListener() async {
-  final mp = AppStoreBase.instance.mempool;
+  final mp = appStore.mempool;
   while (true) {
     try {
-      final appStore = AppStoreBase.instance;
       runInAction(() => appStore.mempoolRunning = true);
       appStore.mempoolAccounts.clear();
       appStore.mempoolTxIds.clear();
@@ -271,6 +275,5 @@ void runMempoolListener() async {
 }
 
 void cancelMempoolListener() async {
-  final appStore = AppStoreBase.instance;
   await appStore.mempool.cancel();
 }
