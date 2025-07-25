@@ -20,8 +20,8 @@ pub fn parse_payment_uri(uri: &str) -> Result<Vec<Recipient>> {
     let uri = TransactionRequest::from_uri(uri)?;
     let recipients: Result<Vec<_>> = uri
         .payments()
-        .iter()
-        .map(|(_, payment)| {
+        .values()
+        .map(|payment| {
             let address = payment.recipient_address().to_string();
             let amount = payment.amount().into_u64();
             let memo = payment.memo();

@@ -996,7 +996,7 @@ pub async fn change_db_password(
         options = options.pragma("key", old_password.to_string());
     }
 
-    let tmp_db_filepath = format!("{}/__tmp.db", tmp_dir);
+    let tmp_db_filepath = format!("{tmp_dir}/__tmp.db");
     File::create(&tmp_db_filepath)?;
 
     {
