@@ -14,7 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await RustLib.init();
-  await AppStoreBase.instance.init();
+  await appStore.init();
 
   runApp(LifecycleWatcher(
       child: ToastificationWrapper(

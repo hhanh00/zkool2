@@ -57,7 +57,7 @@ class TxPageState extends State<TxPage> {
     Future(tutorial);
 
     final canSend = txPlan.canSign && canBroadcast;
-    final hasFrost = AppStoreBase.instance.frostParams != null;
+    final hasFrost = appStore.frostParams != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -242,7 +242,7 @@ class MempoolPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text("Mempool")),
       body: Observer(builder: (context) {
-        final mempool = AppStoreBase.instance.mempoolTxIds;
+        final mempool = appStore.mempoolTxIds;
         return ListView.builder(
             itemBuilder: (context, index) {
               final tx = mempool[index];

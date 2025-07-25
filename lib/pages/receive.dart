@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/pool_select.dart';
 
 final viewID = GlobalKey();
 final sweepID = GlobalKey();
@@ -19,13 +22,14 @@ class ReceivePage extends StatefulWidget {
 
 class ReceivePageState extends State<ReceivePage> {
   Addresses? addresses;
+  int uaPools = appStore.pools & 6; // Exclude transparent pool
 
   @override
   void initState() {
     super.initState();
 
     Future(() async {
-      addresses = await getAddresses();
+      addresses = await getAddresses(uaPools: uaPools);
       setState(() {});
     });
   }
@@ -66,7 +70,14 @@ class ReceivePageState extends State<ReceivePage> {
                 child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
                     child: Column(children: [
+                      if (addresses.saddr != null ||
+                          addresses.oaddr != null)
+                        PoolSelect(enabled: appStore.pools,
+                          initialValue: uaPools,
+                          onChanged: onChangedUAPools),
                       if (addresses.ua != null)
+                        ...[
+                        Gap(8),
                         ListTile(
                           title: Text("Unified Address"),
                           subtitle: SelectableText(addresses.ua!),
@@ -76,6 +87,7 @@ class ReceivePageState extends State<ReceivePage> {
                             onPressed: () => onShowQR("Unified Address", addresses.ua!),
                           )),
                         ),
+                        ],
                       if (addresses.oaddr != null)
                         ListTile(
                           title: Text("Orchard only Address"),
@@ -106,12 +118,17 @@ class ReceivePageState extends State<ReceivePage> {
                     ]))));
   }
 
+  void onChangedUAPools(int pools) async {
+    uaPools = pools;
+    addresses = await getAddresses(uaPools: uaPools);
+    setState(() {});
+  }
+
   void onGenerateAddress() async {
     final confirmed = await confirmDialog(context, title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
     if (!confirmed) return;
     await generateNextDindex();
-    addresses = await getAddresses();
-
+    addresses = await getAddresses(uaPools: uaPools);
     setState(() {});
   }
 
