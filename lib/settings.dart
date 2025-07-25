@@ -35,12 +35,12 @@ class SettingsPage extends StatefulWidget {
 
 class SettingsPageState extends State<SettingsPage> with RouteAware {
   final formKey = GlobalKey<FormBuilderState>();
-  String databaseName = AppStoreBase.instance.dbName;
+  String databaseName = appStore.dbName;
   late String currentDatabaseName = databaseName;
-  bool isLightNode = AppStoreBase.instance.isLightNode;
-  String lwd = AppStoreBase.instance.lwd;
-  String syncInterval = AppStoreBase.instance.syncInterval;
-  String actionsPerSync = AppStoreBase.instance.actionsPerSync;
+  bool isLightNode = appStore.isLightNode;
+  String lwd = appStore.lwd;
+  String syncInterval = appStore.syncInterval;
+  String actionsPerSync = appStore.actionsPerSync;
 
   @override
   void didChangeDependencies() {
@@ -54,7 +54,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   @override
   void didPop() {
     super.didPop();
-    AppStoreBase.instance.autoSync();
+    appStore.autoSync();
   }
 
   void tutorial() async {
@@ -172,11 +172,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                   ],
                 ),
                 Gap(16),
-                SelectableText(AppStoreBase.instance.dbFilepath,
+                SelectableText(appStore.dbFilepath,
                     style: t.bodySmall),
                 Gap(8),
-                if (AppStoreBase.instance.versionString != null)
-                  Text(AppStoreBase.instance.versionString!)
+                if (appStore.versionString != null)
+                  Text(appStore.versionString!)
               ],
             ),
           ),
@@ -199,7 +199,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     final prefs = SharedPreferencesAsync();
     await prefs.setString("database", value);
-    AppStoreBase.instance.dbName = value;
+    appStore.dbName = value;
     setState(() {
       databaseName = value;
     });
@@ -208,10 +208,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   void onChangedLWD(String? value) async {
     if (value == null) return;
     await putProp(key: "lwd", value: value);
-    AppStoreBase.instance.lwd = value;
+    appStore.lwd = value;
     setLwd(
         lwd: value,
-        serverType: AppStoreBase.instance.isLightNode
+        serverType: appStore.isLightNode
             ? ServerType.lwd
             : ServerType.zebra);
     setState(() {
@@ -222,7 +222,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   onChangedIsLightNode(bool? value) async {
     if (value == null) return;
     await putProp(key: "is_light_node", value: value.toString());
-    AppStoreBase.instance.isLightNode = value;
+    appStore.isLightNode = value;
     setLwd(lwd: lwd, serverType: value ? ServerType.lwd : ServerType.zebra);
     setState(() {
       isLightNode = value;
@@ -235,7 +235,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       return;
     }
     await putProp(key: "actions_per_sync", value: value);
-    AppStoreBase.instance.actionsPerSync = value;
+    appStore.actionsPerSync = value;
     setState(() {
       actionsPerSync = value;
     });
@@ -247,7 +247,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       return;
     }
     await putProp(key: "sync_interval", value: value);
-    AppStoreBase.instance.syncInterval = value;
+    appStore.syncInterval = value;
     setState(() {
       syncInterval = value;
     });
@@ -268,7 +268,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       formKey.currentState!.fields["database_name"]!
           .didChange(currentDatabaseName);
       databaseName = currentDatabaseName;
-      AppStoreBase.instance.dbName = databaseName;
+      appStore.dbName = databaseName;
     });
   }
 

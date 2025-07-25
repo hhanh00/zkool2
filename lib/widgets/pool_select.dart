@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
 class PoolSelect extends StatefulWidget {
+  final int enabled;
   final int initialValue;
   final void Function(int v)? onChanged;
-  const PoolSelect({super.key, this.initialValue = 7, required this.onChanged});
+  const PoolSelect({super.key,
+    required this.enabled,
+    required this.initialValue,
+    required this.onChanged});
 
   @override
   State<PoolSelect> createState() => _PoolSelectState();
@@ -39,18 +43,21 @@ class _PoolSelectState extends State<PoolSelect> {
       ),
       multiSelectionEnabled: true,
       showSelectedIcon: false,
-      segments: const <ButtonSegment<Pool>>[
+      segments: <ButtonSegment<Pool>>[
         ButtonSegment<Pool>(
           value: Pool.transparent,
           label: Text('Transparent'),
+          enabled: widget.enabled & 1 != 0,
         ),
         ButtonSegment<Pool>(
           value: Pool.sapling,
           label: Text('Sapling'),
+          enabled: widget.enabled & 2 != 0,
         ),
         ButtonSegment<Pool>(
           value: Pool.orchard,
           label: Text('Orchard'),
+          enabled: widget.enabled & 4 != 0,
         ),
       ],
       selected: pools,

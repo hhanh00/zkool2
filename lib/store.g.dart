@@ -41,6 +41,21 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$poolsAtom = Atom(name: 'AppStoreBase.pools', context: context);
+
+  @override
+  int get pools {
+    _$poolsAtom.reportRead();
+    return super.pools;
+  }
+
+  @override
+  set pools(int value) {
+    _$poolsAtom.reportWrite(value, super.pools, () {
+      super.pools = value;
+    });
+  }
+
   late final _$transactionsAtom =
       Atom(name: 'AppStoreBase.transactions', context: context);
 
@@ -148,6 +163,7 @@ mixin _$AppStore on AppStoreBase, Store {
     return '''
 selectedAccount: ${selectedAccount},
 accounts: ${accounts},
+pools: ${pools},
 transactions: ${transactions},
 memos: ${memos},
 notes: ${notes},

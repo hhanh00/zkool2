@@ -49,8 +49,8 @@ Widget buildFrostPage(BuildContext context,
 
 class FrostPage1State extends State<FrostPage1> {
   final formKey = GlobalKey<FormBuilderState>();
-  final frostParams = AppStoreBase.instance.frostParams!;
-  late final accounts = AppStoreBase.instance.accounts.where((e) => !e.hidden);
+  final frostParams = appStore.frostParams!;
+  late final accounts = appStore.accounts.where((e) => !e.hidden);
 
   @override
   void initState() {
@@ -188,12 +188,12 @@ class FrostPage2State extends State<FrostPage2> {
     final h = await getCurrentHeight();
     if (currentHeight != null && currentHeight == h) return;
     currentHeight = h;
-    final accounts = AppStoreBase.instance.accounts
+    final accounts = appStore.accounts
         .where((e) => e.enabled)
         .map((e) => e.id)
         .toList();
-    await AppStoreBase.instance.startSynchronize(
-        accounts, int.parse(AppStoreBase.instance.actionsPerSync));
+    await appStore.startSynchronize(
+        accounts, int.parse(appStore.actionsPerSync));
 
     final status = doSign();
     status.listen((s) {
