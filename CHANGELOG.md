@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.10.0...zkool-v4.11.0) (2025-07-26)
+
+
+### Features
+
+* select pools of receiving ua ([#338](https://github.com/hhanh00/zkool2/issues/338)) ([a09c540](https://github.com/hhanh00/zkool2/commit/a09c540a72200ff3f6b8fa70af126ca7b9ace316))
+
+
+### Bug Fixes
+
+* new diversified address without transparent receiver ([#336](https://github.com/hhanh00/zkool2/issues/336)) ([ab94c56](https://github.com/hhanh00/zkool2/commit/ab94c56fca1dbeb65fd5547dfed5a5fd10738797))
+* pool selection during restore ([#339](https://github.com/hhanh00/zkool2/issues/339)) ([2e82e14](https://github.com/hhanh00/zkool2/commit/2e82e14174811c978c61bf5d3fd2ad94723176f3))
+
 ## [4.10.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.9.6...zkool-v4.10.0) (2025-07-25)
 
 
