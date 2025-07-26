@@ -62,7 +62,7 @@ class NewAccountPageState extends State<NewAccountPage> {
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
     isFvk = isValidFvk(fvk: key);
-    final pools = getKeyPools(key: key);
+    final keyPools = getKeyPools(key: key);
 
     return Scaffold(
         appBar: AppBar(
@@ -198,7 +198,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                               FilteringTextInputFormatter.digitsOnly
                             ],
                           )),
-                    if (restore && pools != 0) Showcase(
+                    if (restore && keyPools != 0) Showcase(
                         key: accountPoolsID,
                         description:
                             "Pools this account can receive funds",
@@ -209,9 +209,9 @@ class NewAccountPageState extends State<NewAccountPage> {
                                 alignment: Alignment.centerRight,
                                 child: FormBuilderField<int>(
                                   name: "pools",
-                                  initialValue: appStore.pools,
+                                  initialValue: keyPools,
                                   builder: (field) => PoolSelect(
-                                      enabled: appStore.pools,
+                                      enabled: keyPools,
                                       initialValue: field.value!,
                                       onChanged: (v) => field.didChange(v)),
                                 )))),
