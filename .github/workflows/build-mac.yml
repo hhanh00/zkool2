@@ -47,8 +47,7 @@ jobs:
         env:
           APPNAME: zkool
           KEYCHAIN_PWD: azB27DoYCFe5kzd3
-          APPLE_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.JKS_PASSWORD }}
           APPLE_CERTIFICATE_NAME: ${{ secrets.MACOS_CERTIFICATE_NAME }}
           APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PWD }}

@@ -48,3 +48,8 @@ app.*.map.json
 *-workspace
 prepare-pr.sh
 docs/
+
+ios/build/
+
+*.sh
+.env
