@@ -46,9 +46,7 @@ jobs:
         run: ./misc/codesign-ios.sh
         env:
           KEYCHAIN_PWD: azB27DoYCFe5kzd3
-          APPLE_DEV_CERT: ${{ secrets.APPLE_DEV_CERT }}
-          APPLE_DEV_CERT_PWD: ${{ secrets.APPLE_DEV_CERT_PWD }}
-          IOS_PROVISION: ${{ secrets.IOS_PROVISION }}
+          APPLE_DEV_CERT_PWD: ${{ secrets.JKS_PASSWORD }}
       - name: Build
         run: |
           xcode-project use-profiles
