@@ -53,3 +53,4 @@ ios/build/
 
 *.sh
 .env
+/certs/
