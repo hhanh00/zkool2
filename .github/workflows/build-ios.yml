@@ -42,11 +42,19 @@ jobs:
           python-version: '3.11'
       - name: Install codemagic
         run: pip3 install codemagic-cli-tools
+      - name: Decrypt certs
+        run: |
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/apple.distrib.p12.enc -out /tmp/apple.distrib.p12 -pass pass:$JKS_PASSWORD
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/ios.mobileprovision.enc -out /tmp/ios.mobileprovision -pass pass:$JKS_PASSWORD
+          mkdir -p $HOME/Library/MobileDevice/Provisioning\ Profiles
+          cp /tmp/ios.mobileprovision $HOME/Library/MobileDevice/Provisioning\ Profiles/
+        env:
+          JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
       - name: Install Codesign certs
-        run: ./misc/codesign-ios.sh
+        run: ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/apple.distrib.p12 $APPLE_DISTRIB_PASSWORD
         env:
           KEYCHAIN_PWD: azB27DoYCFe5kzd3
-          APPLE_DEV_CERT_PWD: ${{ secrets.JKS_PASSWORD }}
+          APPLE_DISTRIB_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
       - name: Build
         run: |
           xcode-project use-profiles
