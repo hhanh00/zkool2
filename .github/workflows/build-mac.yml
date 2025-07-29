@@ -16,9 +16,6 @@ env:
 jobs:
   build-macos:
     runs-on: macos-latest
-    env:
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
     steps:
       - uses: chrisdickinson/setup-yq@latest
         with:
@@ -40,14 +37,22 @@ jobs:
         run: |
           RELEASE_VERSION=$(yq '.version' pubspec.yaml)
           echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+      - name: Decrypt certs
+        run: |
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/macos.cert.enc -out /tmp/cert.p12 -pass pass:$JKS_PASSWORD
+        env:
+          JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
+      - name: Install Codesign certs
+        run: ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/cert.p12 $APPLE_CERTIFICATE_PASSWORD
+        env:
+          KEYCHAIN_PWD: azB27DoYCFe5kzd3
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
       - name: Build
         run: flutter build macos
       - name: Codesign
         run: ./misc/codesign-notarize.sh
         env:
           APPNAME: zkool
-          KEYCHAIN_PWD: azB27DoYCFe5kzd3
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.JKS_PASSWORD }}
           APPLE_CERTIFICATE_NAME: ${{ secrets.MACOS_CERTIFICATE_NAME }}
           APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PWD }}
