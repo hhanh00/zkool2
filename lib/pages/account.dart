@@ -525,7 +525,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
   return [
     SliverToBoxAdapter(
       child: Column(children: [
-    const Text("Transaction History"),
+    Text("Transaction History (${transactions.length} txs)"),
     const Gap(8)],)),
     SliverFixedExtentList.builder(
       itemCount: transactions.length,
