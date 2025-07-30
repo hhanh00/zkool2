@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.11.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.11.0...zkool-v4.11.1) (2025-07-30)
+
+
+### Bug Fixes
+
+* add count of txs ([#342](https://github.com/hhanh00/zkool2/issues/342)) ([618b445](https://github.com/hhanh00/zkool2/commit/618b44514c9c9ea71379a4e84fa7d0e4243b8d34))
+
 ## [4.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.10.0...zkool-v4.11.0) (2025-07-26)
 
 
