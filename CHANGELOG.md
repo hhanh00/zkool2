@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.11.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.11.1...zkool-v4.11.2) (2025-07-30)
+
+
+### Bug Fixes
+
+* macos notarization ([#344](https://github.com/hhanh00/zkool2/issues/344)) ([38d8dab](https://github.com/hhanh00/zkool2/commit/38d8dab5ee42718150c34a8c96ec5ca29f8c839e))
+
 ## [4.11.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.11.0...zkool-v4.11.1) (2025-07-30)
 
 
