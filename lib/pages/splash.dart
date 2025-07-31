@@ -37,16 +37,20 @@ class SplashPageState extends State<SplashPage> {
               ));
             }
             if (snapshot.hasData) {
-              final data = snapshot.data;
-              if (data != null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final account = appStore.selectedAccount;
-                  if (account != null) {
-                    selectAccount(account);
-                    GoRouter.of(context).go("/account", extra: account);
-                  } else
-                    GoRouter.of(context).go("/");
-                });
+              if (!appStore.disclaimerAccepted) {
+                GoRouter.of(context).go("/disclaimer");
+              } else {
+                final data = snapshot.data;
+                if (data != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final account = appStore.selectedAccount;
+                    if (account != null) {
+                      selectAccount(account);
+                      GoRouter.of(context).go("/account", extra: account);
+                    } else
+                      GoRouter.of(context).go("/");
+                  });
+                }
               }
             }
             return Center(child: Image.asset("misc/icon.png", scale: 4.0));
@@ -97,8 +101,7 @@ Future<List<Account>> loadAccounts() async {
     final account = accountId != null
         ? appStore.accounts.firstWhereOrNull((a) => a.id == accountId)
         : null;
-    if (account != null)
-      selectAccount(account);
+    if (account != null) selectAccount(account);
 
     await appStore.loadSettings();
     setLwd(
