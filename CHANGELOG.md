@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.11.2...zkool-v4.12.0) (2025-07-31)
+
+
+### Features
+
+* save current account and resume from it ([#347](https://github.com/hhanh00/zkool2/issues/347)) ([6aa0719](https://github.com/hhanh00/zkool2/commit/6aa0719eec0591e48e7bcfe2638ae44f08702728))
+
+
+### Bug Fixes
+
+* disclaimer and account preloading ([#349](https://github.com/hhanh00/zkool2/issues/349)) ([301b575](https://github.com/hhanh00/zkool2/commit/301b575be598fe1c244e05863aad4fe7d5930766))
+
 ## [4.11.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.11.1...zkool-v4.11.2) (2025-07-30)
 
 
