@@ -277,3 +277,19 @@ void runMempoolListener() async {
 void cancelMempoolListener() async {
   await appStore.mempool.cancel();
 }
+
+void selectAccount(Account? account) async {
+  if (account != null) {
+    await putProp(key: "selected_account", value: account.id.toString());
+    appStore.selectedAccount = account;
+  }
+  else {
+    await putProp(key: "selected_account", value: "");
+  }
+}
+
+Future<int?> getSelectedAccount() async {
+  final s = await getProp(key: "selected_account");
+  if (s == null || s == "") return null;
+  return int.parse(s);
+}
