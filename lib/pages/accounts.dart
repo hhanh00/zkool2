@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -9,11 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
-import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
-import 'package:zkool/src/rust/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
@@ -27,89 +23,15 @@ final hideID = GlobalKey();
 final accountListID = GlobalKey();
 final avatarID = GlobalKey();
 
-class AccountListPage extends StatelessWidget {
-  const AccountListPage({super.key});
-
-  Future<List<Account>> loadAccounts() async {
-    if (!appStore.loaded) {
-      final dbName = appStore.dbName;
-      final dbFilepath = await getFullDatabasePath(dbName);
-      logger.i('dbFilepath: $dbFilepath');
-      appStore.dbFilepath = dbFilepath;
-
-      String? password;
-      if (!File(dbFilepath).existsSync()) {
-        if (dbName != appName) {
-          // do not encrypt default database
-          password = await inputPassword(navigatorKey.currentContext!,
-              title: "Enter New Database Password");
-        }
-        if (password != null && password.isEmpty) password = null;
-      }
-
-      while (true) {
-        try {
-          await openDatabase(dbFilepath: dbFilepath, password: password);
-          break;
-        } catch (_) {
-          password = await inputPassword(
-            navigatorKey.currentContext!,
-            title: "Enter Database Password for $dbName",
-          );
-          if (password == null) {
-            // switch to default database
-            await showException(navigatorKey.currentContext!,
-                "No password given. Switching to defaut database.");
-            appStore.dbName = appName;
-            return await loadAccounts();
-          }
-        }
-      }
-      await appStore.loadSettings();
-      setLwd(
-        serverType: appStore.isLightNode
-            ? ServerType.lwd
-            : ServerType.zebra,
-        lwd: appStore.lwd);
-      appStore.autoSync();
-      runMempoolListener();
-    }
-
-    appStore.loaded = true;
-    final accounts = await appStore.loadAccounts();
-    return accounts;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<Account>>(
-        future: loadAccounts(),
-        initialData: [],
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Material(child: SingleChildScrollView(child: Center(
-              child: Text(
-                snapshot.error.toString(),
-                style: TextStyle(color: Colors.red),
-              ),
-            )));
-          }
-          final data = snapshot.data;
-          if (data != null) return AccountListPage2(snapshot.data!);
-          return SizedBox.shrink();
-        });
-  }
-}
-
-class AccountListPage2 extends StatefulWidget {
+class AccountListPage extends StatefulWidget {
   final List<Account> accounts;
-  const AccountListPage2(this.accounts, {super.key});
+  const AccountListPage(this.accounts, {super.key});
 
   @override
-  State<AccountListPage2> createState() => AccountListPage2State();
+  State<AccountListPage> createState() => AccountListPageState();
 }
 
-class AccountListPage2State extends State<AccountListPage2> {
+class AccountListPageState extends State<AccountListPage> {
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
   double? price;
@@ -126,7 +48,7 @@ class AccountListPage2State extends State<AccountListPage2> {
   }
 
   @override
-  void didUpdateWidget(covariant AccountListPage2 oldWidget) {
+  void didUpdateWidget(covariant AccountListPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     for (var account in widget.accounts) {
       appStore.heights[account.id] = account.height;

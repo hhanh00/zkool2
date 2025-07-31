@@ -12,6 +12,7 @@ import 'package:zkool/pages/market.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
+import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/settings.dart';
@@ -24,13 +25,13 @@ final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 final router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/splash',
   observers: [routeObserver],
   navigatorKey: navigatorKey,
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => AccountListPage(),
+      builder: (context, state) => AccountListPage(state.extra as List<Account>),
       routes: [
         GoRoute(
           path: 'account',
@@ -83,6 +84,7 @@ final router = GoRouter(
           final args = state.extra as Map<String, dynamic>;
           return QRPage(text: args["text"], title: args["title"]);
         }),
+    GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
     GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
     GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
     GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
