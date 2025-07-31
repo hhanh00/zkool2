@@ -38,7 +38,7 @@ class SplashPageState extends State<SplashPage> {
             }
             if (snapshot.hasData) {
               if (!appStore.disclaimerAccepted) {
-                GoRouter.of(context).go("/disclaimer");
+                WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/disclaimer"));
               } else {
                 final data = snapshot.data;
                 if (data != null) {
