@@ -31,7 +31,7 @@ final router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => AccountListPage(state.extra as List<Account>),
+      builder: (context, state) => AccountListPage(),
       routes: [
         GoRoute(
           path: 'account',
