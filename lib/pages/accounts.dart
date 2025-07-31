@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
@@ -24,14 +25,13 @@ final accountListID = GlobalKey();
 final avatarID = GlobalKey();
 
 class AccountListPage extends StatefulWidget {
-  final List<Account> accounts;
-  const AccountListPage(this.accounts, {super.key});
+  const AccountListPage({super.key});
 
   @override
   State<AccountListPage> createState() => AccountListPageState();
 }
 
-class AccountListPageState extends State<AccountListPage> {
+class AccountListPageState extends State<AccountListPage> with RouteAware {
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
   double? price;
@@ -48,11 +48,21 @@ class AccountListPageState extends State<AccountListPage> {
   }
 
   @override
-  void didUpdateWidget(covariant AccountListPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    for (var account in widget.accounts) {
-      appStore.heights[account.id] = account.height;
-    }
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    selectAccount(null);
+    super.didPopNext();
   }
 
   void refreshHeight() async {
@@ -138,7 +148,6 @@ class AccountListPageState extends State<AccountListPage> {
                     ));
               },
               title: "Account List",
-              onCreate: () => widget.accounts,
               createBuilder: (context) =>
                   GoRouter.of(context).push("/account/new"),
               editBuilder: (context, a) =>
@@ -222,7 +231,8 @@ class AccountListPageState extends State<AccountListPage> {
 
   void onOpen(BuildContext context, Account account) {
     setAccount(account: account.id);
-    appStore.selectedAccount = account;
+    selectAccount(account);
+
     GoRouter.of(context).push('/account', extra: account);
   }
 
