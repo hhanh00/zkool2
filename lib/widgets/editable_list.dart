@@ -12,7 +12,6 @@ class EditableList<T extends Object> extends StatefulWidget {
   final String title;
   final List<T> items;
   final List<Widget> Function(BuildContext) headerBuilder;
-  final FutureOr<void> Function()? onCreate;
   final FutureOr<void> Function(BuildContext) createBuilder;
   final FutureOr<void> Function(BuildContext, List<T>) editBuilder;
   final FutureOr<void> Function(BuildContext, List<T>) deleteBuilder;
@@ -32,7 +31,6 @@ class EditableList<T extends Object> extends StatefulWidget {
     required this.items,
     required this.builder,
     required this.title,
-    this.onCreate,
     required this.headerBuilder,
     required this.createBuilder,
     required this.editBuilder,
@@ -47,14 +45,13 @@ class EditableList<T extends Object> extends StatefulWidget {
 }
 
 class EditableListState<T extends Object> extends State<EditableList<T>> {
-  List<bool> selected = [];
-  late List<T> items = [];
+  late List<T> items = widget.items;
+  late List<bool> selected = List.generate(widget.items.length, (_) => false);
   ReactionDisposer? reaction;
 
   @override
   void initState() {
     super.initState();
-    widget.onCreate?.call();
   }
 
   @override
