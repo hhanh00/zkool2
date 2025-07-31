@@ -280,6 +280,7 @@ void cancelMempoolListener() async {
 
 void selectAccount(Account? account) async {
   if (account != null) {
+    await setAccount(account: account.id);
     await putProp(key: "selected_account", value: account.id.toString());
     appStore.selectedAccount = account;
   }

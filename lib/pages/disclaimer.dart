@@ -88,6 +88,6 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
     await prefs.setBool("disclaimer_accepted", true);
     appStore.disclaimerAccepted = true;
     if (!mounted) return;
-    GoRouter.of(context).pop();
+    GoRouter.of(context).go("/");
   }
 }
