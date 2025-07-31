@@ -230,7 +230,6 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   }
 
   void onOpen(BuildContext context, Account account) {
-    setAccount(account: account.id);
     selectAccount(account);
 
     GoRouter.of(context).push('/account', extra: account);
