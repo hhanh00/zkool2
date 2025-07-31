@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
@@ -35,10 +36,18 @@ class SplashPageState extends State<SplashPage> {
                 ),
               ));
             }
-            final data = snapshot.data;
-            if (data != null) {
-              WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => GoRouter.of(context).go("/", extra: data));
+            if (snapshot.hasData) {
+              final data = snapshot.data;
+              if (data != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final account = appStore.selectedAccount;
+                  if (account != null) {
+                    selectAccount(account);
+                    GoRouter.of(context).go("/account", extra: account);
+                  } else
+                    GoRouter.of(context).go("/");
+                });
+              }
             }
             return Center(child: Image.asset("misc/icon.png", scale: 4.0));
           }
@@ -83,6 +92,14 @@ Future<List<Account>> loadAccounts() async {
         }
       }
     }
+    await appStore.loadAccounts();
+    final accountId = await getSelectedAccount();
+    final account = accountId != null
+        ? appStore.accounts.firstWhereOrNull((a) => a.id == accountId)
+        : null;
+    if (account != null)
+      selectAccount(account);
+
     await appStore.loadSettings();
     setLwd(
         serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra,
@@ -92,6 +109,5 @@ Future<List<Account>> loadAccounts() async {
   }
 
   appStore.loaded = true;
-  final accounts = await appStore.loadAccounts();
-  return accounts;
+  return appStore.accounts;
 }
