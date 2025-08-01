@@ -25,6 +25,7 @@ final lwdID = GlobalKey();
 final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
+final pinLockID = GlobalKey();
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -38,6 +39,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   String databaseName = appStore.dbName;
   late String currentDatabaseName = databaseName;
   bool isLightNode = appStore.isLightNode;
+  bool pinLock = appStore.pinLock;
   String lwd = appStore.lwd;
   String syncInterval = appStore.syncInterval;
   String actionsPerSync = appStore.actionsPerSync;
@@ -58,8 +60,15 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutSettings0",
-        [databaseID, lightnodeID, lwdID, actionsID, autosyncID, cancelID]);
+    tutorialHelper(context, "tutSettings0", [
+      databaseID,
+      lightnodeID,
+      lwdID,
+      actionsID,
+      autosyncID,
+      cancelID,
+      pinLockID
+    ]);
   }
 
   @override
@@ -124,7 +133,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                     child: FormBuilderTextField(
                       name: "lwd",
                       decoration: InputDecoration(
-                          labelText: "${isLightNode ? 'Light' : 'Full'} Node Server"),
+                          labelText:
+                              "${isLightNode ? 'Light' : 'Full'} Node Server"),
                       initialValue: lwd,
                       onChanged: onChangedLWD,
                     )),
@@ -168,12 +178,20 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                         child: IconButton(
                             tooltip: "Cancel Sync",
                             onPressed: onCancelSync,
-                            icon: Icon(Icons.cancel)))
+                            icon: Icon(Icons.cancel))),
                   ],
                 ),
+                Gap(8),
+                Showcase(
+                    key: pinLockID,
+                    description: "Ask for device pin when app opens",
+                    child: FormBuilderSwitch(
+                        name: "pin_lock",
+                        title: Text("Pin Lock"),
+                        initialValue: pinLock,
+                        onChanged: onPinLockChanged)),
                 Gap(16),
-                SelectableText(appStore.dbFilepath,
-                    style: t.bodySmall),
+                SelectableText(appStore.dbFilepath, style: t.bodySmall),
                 Gap(8),
                 if (appStore.versionString != null)
                   Text(appStore.versionString!)
@@ -211,9 +229,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     appStore.lwd = value;
     setLwd(
         lwd: value,
-        serverType: appStore.isLightNode
-            ? ServerType.lwd
-            : ServerType.zebra);
+        serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra);
     setState(() {
       lwd = value;
     });
@@ -226,6 +242,16 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     setLwd(lwd: lwd, serverType: value ? ServerType.lwd : ServerType.zebra);
     setState(() {
       isLightNode = value;
+    });
+  }
+
+  onPinLockChanged(bool? value) async {
+    if (value == null) return;
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool("pin_lock", value);
+    appStore.pinLock = value;
+    setState(() {
+      pinLock = value;
     });
   }
 
