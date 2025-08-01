@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.13.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.12.0...zkool-v4.13.0) (2025-08-01)
+
+
+### Features
+
+* lock the app with the device auth ([#350](https://github.com/hhanh00/zkool2/issues/350)) ([6c564f8](https://github.com/hhanh00/zkool2/commit/6c564f86c73a4263dcee274dfbdbb0beef38b3ae))
+
 ## [4.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.11.2...zkool-v4.12.0) (2025-07-31)
 
 
