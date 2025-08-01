@@ -49,6 +49,7 @@ abstract class AppStoreBase with Store {
   String actionsPerSync = "10000";
   bool disclaimerAccepted = false;
   String? versionString;
+  bool pinLock = true;
 
   ObservableList<String> log = ObservableList.of([]);
   @observable
@@ -84,12 +85,16 @@ abstract class AppStoreBase with Store {
     });
   }
 
+  // Only settings from SharedPreferences
+  // This is called before getting the database
+  Future<void> loadAppSettings() async {
+    final prefs = SharedPreferencesAsync();
+    isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
+    pinLock = await prefs.getBool("pin_lock") ?? pinLock;
+  }
+
   Future<void> loadSettings() async {
     lwd = await getProp(key: "lwd") ?? lwd;
-    final isLightNodeProp = await getProp(key: "is_light_node");
-    if (isLightNodeProp != null) {
-      isLightNode = isLightNodeProp == "true";
-    }
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
   }
