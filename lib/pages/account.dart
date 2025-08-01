@@ -12,7 +12,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
@@ -66,13 +65,14 @@ class AccountViewPageState extends State<AccountViewPage> {
 
     Future(tutorial);
 
-    final unconfirmedAmount = appStore.mempoolAccounts[account.id];
+    if (account == null) return SizedBox.shrink();
+    final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
 
     return DefaultTabController(
         length: 3,
         child: Scaffold(
             appBar: AppBar(
-              title: Text(account.name),
+              title: Text(account!.name),
               actions: [
                 Showcase(
                     key: logID,
@@ -131,7 +131,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                             Observer(
                                 builder: (context) {
                                   final currentHeight = appStore.currentHeight;
-                                  final height = appStore.heights[account.id]!;
+                                  final height = appStore.heights[account!.id]!;
                                   return Text.rich(TextSpan(children: [
                                       TextSpan(
                                           text: "$height",
@@ -173,7 +173,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onSync() async {
     try {
       await appStore
-          .startSynchronize([account.id], int.parse(appStore.actionsPerSync));
+          .startSynchronize([account!.id], int.parse(appStore.actionsPerSync));
       refresh();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
@@ -200,7 +200,7 @@ class AccountViewPageState extends State<AccountViewPage> {
     setState(() {});
   }
 
-  Account get account => appStore.selectedAccount!;
+  Account? get account => appStore.selectedAccount;
 }
 
 final nameID2 = GlobalKey();
