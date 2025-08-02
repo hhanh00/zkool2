@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
@@ -114,10 +115,7 @@ class AccountViewPageState extends State<AccountViewPage> {
             body: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Observer(builder: (context) {
-                // make sure there is a dependency on transactions
-                appStore.transactions.length;
-                appStore.memos.length;
-                appStore.notes.length;
+                appStore.seqno;
 
                 return TabBarView(children: [
                   CustomScrollView(
@@ -180,6 +178,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void refresh() async {
+    logger.i("Refresh account data");
     final b = await balance();
     await appStore.loadAccounts();
     await appStore.loadTxHistory();
