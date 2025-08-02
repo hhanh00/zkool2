@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.1...zkool-v4.14.2) (2025-08-02)
+
+
+### Bug Fixes
+
+* account refresh UI (again) ([#357](https://github.com/hhanh00/zkool2/issues/357)) ([674948c](https://github.com/hhanh00/zkool2/commit/674948cc1261939df12e87993c9750984c06ee42))
+
 ## [4.14.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.0...zkool-v4.14.1) (2025-08-02)
 
 
