@@ -65,6 +65,53 @@ mixin _$ObservableHeight on ObservableHeightBase, Store {
     });
   }
 
+  late final _$ObservableHeightBaseActionController =
+      ActionController(name: 'ObservableHeightBase', context: context);
+
+  @override
+  void init(int h) {
+    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
+        name: 'ObservableHeightBase.init');
+    try {
+      return super.init(h);
+    } finally {
+      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void begin(int endHeight) {
+    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
+        name: 'ObservableHeightBase.begin');
+    try {
+      return super.begin(endHeight);
+    } finally {
+      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void set(int h) {
+    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
+        name: 'ObservableHeightBase.set');
+    try {
+      return super.set(h);
+    } finally {
+      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void done(int endHeight) {
+    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
+        name: 'ObservableHeightBase.done');
+    try {
+      return super.done(endHeight);
+    } finally {
+      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
   @override
   String toString() {
     return '''
@@ -121,6 +168,21 @@ mixin _$AppStore on AppStoreBase, Store {
   set pools(int value) {
     _$poolsAtom.reportWrite(value, super.pools, () {
       super.pools = value;
+    });
+  }
+
+  late final _$seqnoAtom = Atom(name: 'AppStoreBase.seqno', context: context);
+
+  @override
+  int get seqno {
+    _$seqnoAtom.reportRead();
+    return super.seqno;
+  }
+
+  @override
+  set seqno(int value) {
+    _$seqnoAtom.reportWrite(value, super.seqno, () {
+      super.seqno = value;
     });
   }
 
@@ -226,12 +288,27 @@ mixin _$AppStore on AppStoreBase, Store {
     return _$loadNotesAsyncAction.run(() => super.loadNotes());
   }
 
+  late final _$AppStoreBaseActionController =
+      ActionController(name: 'AppStoreBase', context: context);
+
+  @override
+  void incSeqno() {
+    final _$actionInfo = _$AppStoreBaseActionController.startAction(
+        name: 'AppStoreBase.incSeqno');
+    try {
+      return super.incSeqno();
+    } finally {
+      _$AppStoreBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
   @override
   String toString() {
     return '''
 selectedAccount: ${selectedAccount},
 accounts: ${accounts},
 pools: ${pools},
+seqno: ${seqno},
 transactions: ${transactions},
 memos: ${memos},
 notes: ${notes},
