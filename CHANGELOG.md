@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.13.0...zkool-v4.14.0) (2025-08-02)
+
+
+### Features
+
+* show progress bars when synchronizing ([#353](https://github.com/hhanh00/zkool2/issues/353)) ([96565a1](https://github.com/hhanh00/zkool2/commit/96565a1d67c302790a0944ee85793954be8cff7b))
+
 ## [4.13.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.12.0...zkool-v4.13.0) (2025-08-01)
 
 
