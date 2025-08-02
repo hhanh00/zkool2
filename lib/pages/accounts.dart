@@ -115,7 +115,9 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                                 child: Text(
                                     "Height: ${appStore.currentHeight}")))),
                     const Gap(8),
-                    if (price != null) ElevatedButton(onPressed: onPrice, child: Text("Price: $price USD")),
+                    if (price != null)
+                      ElevatedButton(
+                          onPressed: onPrice, child: Text("Price: $price USD")),
                     const Gap(8),
                   ],
               builder: (context, index, account, {selected, onSelectChanged}) {
@@ -137,12 +139,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                                 : null),
                         subtitle: zatToText(account.balance,
                             style: t.copyWith(fontWeight: FontWeight.w700)),
-                        trailing: Observer(
-                            builder: (context) => Text(
-                                  appStore.heights[account.id]
-                                      .toString(),
-                                  textAlign: TextAlign.end,
-                                )),
+                        trailing: Observer(builder: (context) {
+                          final h = appStore.heights[account.id];
+                          return h!.build(context);
+                        }),
                       ),
                       onTap: () => onOpen(context, account),
                     ));
@@ -173,10 +173,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                         onPressed: onSettings, icon: Icon(Icons.settings))),
                 Showcase(
                     key: mempoolID,
-                    description:
-                        "Show Mempool transactions",
-                    child:
-                        IconButton(onPressed: onMempool, icon: Icon(Icons.pending_actions))),
+                    description: "Show Mempool transactions",
+                    child: IconButton(
+                        onPressed: onMempool,
+                        icon: Icon(Icons.pending_actions))),
                 Showcase(
                     key: syncID,
                     description:
