@@ -58,20 +58,52 @@ abstract class ObservableHeightBase with Store {
   }
 
   Widget build(BuildContext context) {
-    return Text(
-      height.toString(),
-      textAlign: TextAlign.end,
+    return ProgressWidget(
+      height: this,
+      width: 80,
+      child: Text(height.toString())
     );
   }
 
   Widget buildHero(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final currentHeight = appStore.currentHeight;
-    return Text.rich(TextSpan(children: [
-      TextSpan(text: "$height", style: t.bodyLarge),
-      if (currentHeight - height > 0)
-        TextSpan(text: " tip-${currentHeight - height}", style: t.labelSmall)
-    ]));
+    return ProgressWidget(
+      height: this,
+      child: Text.rich(TextSpan(children: [
+            TextSpan(text: "$height", style: t.bodyLarge),
+            if (currentHeight - height > 0)
+              TextSpan(
+                  text: " tip-${currentHeight - height}",
+                  style: t.labelSmall)
+          ]))
+    );
+  }
+}
+
+class ProgressWidget extends StatelessWidget {
+  final ObservableHeightBase height;
+  final double? width;
+  final Widget child;
+  const ProgressWidget({super.key, required this.height, this.width,
+    required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final p = height.progress;
+
+    return SizedBox(
+        width: width,
+        height: 40,
+        child: Stack(children: [
+          if (height.range != 0)
+            SizedBox.expand(
+                child: LinearProgressIndicator(
+                    color: t.colorScheme.primary.withAlpha(128), value: p)),
+          Center(
+              child: child)
+        ]));
   }
 }
 
@@ -204,7 +236,7 @@ abstract class AppStoreBase with Store {
       final currentHeight = await getCurrentHeight();
 
       for (var a in accounts) {
-        heights[a]?.begin(currentHeight);
+        heights[a]!.begin(currentHeight);
       }
 
       final progress = synchronize(
@@ -219,8 +251,9 @@ abstract class AppStoreBase with Store {
         retryCount = 0;
         runInAction(() {
           for (var a in accounts) {
-            heights[a]
-                ?.set(p.height); // propagate progress to all account streams
+            if (p.height > heights[a]!.height)
+              heights[a]!
+                  .set(p.height); // propagate progress to all account streams
           }
         });
       }, onError: (e) {
