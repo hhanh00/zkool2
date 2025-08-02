@@ -229,10 +229,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
     }
   }
 
-  void onOpen(BuildContext context, Account account) {
-    selectAccount(account);
-
-    GoRouter.of(context).push('/account', extra: account);
+  void onOpen(BuildContext context, Account account) async {
+    await selectAccount(account);
+    if (!context.mounted) return;
+    await GoRouter.of(context).push('/account', extra: account);
   }
 
   void onReorder(int oldIndex, int newIndex) async {

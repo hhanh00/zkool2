@@ -42,10 +42,10 @@ class SplashPageState extends State<SplashPage> {
               } else {
                 final data = snapshot.data;
                 if (data != null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) async {
                     final account = appStore.selectedAccount;
                     if (account != null) {
-                      selectAccount(account);
+                      await selectAccount(account);
                       GoRouter.of(context).go("/account", extra: account);
                     } else
                       GoRouter.of(context).go("/");
@@ -101,7 +101,7 @@ Future<List<Account>> loadAccounts() async {
     final account = accountId != null
         ? appStore.accounts.firstWhereOrNull((a) => a.id == accountId)
         : null;
-    if (account != null) selectAccount(account);
+    if (account != null) await selectAccount(account);
 
     await appStore.loadSettings();
     setLwd(
