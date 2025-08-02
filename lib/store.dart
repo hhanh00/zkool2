@@ -398,7 +398,7 @@ void cancelMempoolListener() async {
   await appStore.mempool.cancel();
 }
 
-void selectAccount(Account? account) async {
+Future<void> selectAccount(Account? account) async {
   if (account != null) {
     await setAccount(account: account.id);
     await putProp(key: "selected_account", value: account.id.toString());
