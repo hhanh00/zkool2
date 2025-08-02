@@ -130,17 +130,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                             Gap(8),
                             Observer(
                                 builder: (context) {
-                                  final currentHeight = appStore.currentHeight;
                                   final height = appStore.heights[account!.id]!;
-                                  return Text.rich(TextSpan(children: [
-                                      TextSpan(
-                                          text: "$height",
-                                          style: t.bodyLarge),
-                                      if (currentHeight - height > 0) TextSpan(
-                                        text: " tip-${currentHeight - height}",
-                                        style: t.labelSmall
-                                      )
-                                    ]));
+                                  return height.buildHero(context);
                             }),
                             Gap(16),
                             Text("Balance"),
@@ -447,7 +438,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight - 60);
     final h = await getDbHeight();
-    appStore.heights[account.id] = h;
+    appStore.heights[account.id]?.init(h);
   }
 
   void onReset() async {
