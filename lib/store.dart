@@ -59,25 +59,20 @@ abstract class ObservableHeightBase with Store {
 
   Widget build(BuildContext context) {
     return ProgressWidget(
-      height: this,
-      width: 80,
-      child: Text(height.toString())
-    );
+        height: this, width: 80, child: Text(height.toString()));
   }
 
   Widget buildHero(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final currentHeight = appStore.currentHeight;
     return ProgressWidget(
-      height: this,
-      child: Text.rich(TextSpan(children: [
-            TextSpan(text: "$height", style: t.bodyLarge),
-            if (currentHeight - height > 0)
-              TextSpan(
-                  text: " tip-${currentHeight - height}",
-                  style: t.labelSmall)
-          ]))
-    );
+        height: this,
+        child: Text.rich(TextSpan(children: [
+          TextSpan(text: "$height", style: t.bodyLarge),
+          if (currentHeight - height > 0)
+            TextSpan(
+                text: " tip-${currentHeight - height}", style: t.labelSmall)
+        ])));
   }
 }
 
@@ -85,8 +80,8 @@ class ProgressWidget extends StatelessWidget {
   final ObservableHeightBase height;
   final double? width;
   final Widget child;
-  const ProgressWidget({super.key, required this.height, this.width,
-    required this.child});
+  const ProgressWidget(
+      {super.key, required this.height, this.width, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +96,7 @@ class ProgressWidget extends StatelessWidget {
             SizedBox.expand(
                 child: LinearProgressIndicator(
                     color: t.colorScheme.primary.withAlpha(128), value: p)),
-          Center(
-              child: child)
+          Center(child: child)
         ]));
   }
 }
@@ -119,6 +113,8 @@ abstract class AppStoreBase with Store {
   int pools = 7;
   @observable
   int seqno = 0;
+  @observable
+  PoolBalance? poolBalance;
   @observable
   List<Tx> transactions = [];
   @observable
@@ -199,6 +195,7 @@ abstract class AppStoreBase with Store {
   }
 
   Future<void> loadOtherData() async {
+    poolBalance = await balance();
     pools = await getAccountPools(account: selectedAccount!.id);
     frostParams = await getAccountFrostParams();
   }
@@ -216,6 +213,19 @@ abstract class AppStoreBase with Store {
   @action
   Future<void> loadNotes() async {
     notes = await listNotes();
+  }
+
+  @action
+  Future<void> refresh() async {
+    logger.i("Refresh account data");
+    await appStore.loadAccounts();
+    if (selectedAccount != null) {
+      await appStore.loadTxHistory();
+      await appStore.loadMemos();
+      await appStore.loadNotes();
+      await appStore.loadOtherData();
+    }
+    incSeqno();
   }
 
   @action
@@ -274,10 +284,12 @@ abstract class AppStoreBase with Store {
         syncInProgress = false;
         syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
-        Future(loadAccounts);
-        showSnackbar("Synchronization Completed");
-        logger.i("Synchronization Completed");
-        completer.complete();
+        Timer.run(() async {
+          await refresh();
+          showSnackbar("Synchronization Completed");
+          logger.i("Synchronization Completed");
+          completer.complete();
+        });
       });
     } on AnyhowException catch (e) {
       retry(accounts, e);
