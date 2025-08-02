@@ -21,6 +21,60 @@ part 'store.g.dart';
 
 AppStore get appStore => AppStoreBase.instance;
 
+class ObservableHeight = ObservableHeightBase with _$ObservableHeight;
+
+abstract class ObservableHeightBase with Store {
+  @observable
+  int height = 0;
+  @observable
+  int start = 0;
+  @observable
+  int range = 0;
+
+  @computed
+  double get progress => range > 0 ? (height - start) / range : 0.0;
+
+  @action
+  void init(int h) {
+    height = h;
+    start = h;
+    range = 0;
+  }
+
+  @action
+  void begin(int endHeight) {
+    range = endHeight - start;
+  }
+
+  @action
+  void set(int h) {
+    height = h;
+  }
+
+  @action
+  void done(int endHeight) {
+    height = endHeight;
+    range = 0;
+  }
+
+  Widget build(BuildContext context) {
+    return Text(
+      height.toString(),
+      textAlign: TextAlign.end,
+    );
+  }
+
+  Widget buildHero(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final currentHeight = appStore.currentHeight;
+    return Text.rich(TextSpan(children: [
+      TextSpan(text: "$height", style: t.bodyLarge),
+      if (currentHeight - height > 0)
+        TextSpan(text: " tip-${currentHeight - height}", style: t.labelSmall)
+    ]));
+  }
+}
+
 class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
@@ -37,7 +91,7 @@ abstract class AppStoreBase with Store {
   List<Memo> memos = [];
   @observable
   List<TxNote> notes = [];
-  ObservableMap<int, int> heights = ObservableMap.of({});
+  Map<int, ObservableHeight> heights = {};
   @observable
   int currentHeight = 0;
 
@@ -103,7 +157,9 @@ abstract class AppStoreBase with Store {
     final as = await listAccounts();
     accounts = as;
     for (var a in as) {
-      heights[a.id] = a.height;
+      final h = ObservableHeight();
+      h.init(a.height);
+      heights[a.id] = h;
     }
     return as;
   }
@@ -146,18 +202,25 @@ abstract class AppStoreBase with Store {
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
       final currentHeight = await getCurrentHeight();
+
+      for (var a in accounts) {
+        heights[a]?.begin(currentHeight);
+      }
+
       final progress = synchronize(
           accounts: accounts,
           currentHeight: currentHeight,
           actionsPerSync: actionsPerSync,
-          transparentLimit: 100, // scan the last 100 known transparent addresses
+          transparentLimit:
+              100, // scan the last 100 known transparent addresses
           checkpointAge: 200); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
       syncProgressSubscription = progress.listen((p) {
         retryCount = 0;
         runInAction(() {
           for (var a in accounts) {
-            heights[a] = p.height; // propagate progress to all account streams
+            heights[a]
+                ?.set(p.height); // propagate progress to all account streams
           }
         });
       }, onError: (e) {
@@ -165,7 +228,7 @@ abstract class AppStoreBase with Store {
       }, onDone: () {
         runInAction(() {
           for (var a in accounts) {
-            heights[a] = currentHeight;
+            heights[a]?.done(currentHeight);
           }
         });
         syncInProgress = false;
@@ -225,7 +288,7 @@ abstract class AppStoreBase with Store {
     List<int> accountsToSync = [];
     for (var account in accounts) {
       if (account.enabled) {
-        final height = heights[account.id] ?? 0;
+        final height = heights[account.id]?.height ?? 0;
         if (now || currentHeight - height >= int.parse(syncInterval)) {
           logger.i("Sync needed for ${account.name}");
           accountsToSync.add(account.id);
@@ -288,8 +351,7 @@ void selectAccount(Account? account) async {
     await setAccount(account: account.id);
     await putProp(key: "selected_account", value: account.id.toString());
     appStore.selectedAccount = account;
-  }
-  else {
+  } else {
     await putProp(key: "selected_account", value: "");
   }
 }
