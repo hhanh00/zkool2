@@ -118,6 +118,8 @@ abstract class AppStoreBase with Store {
   @observable
   int pools = 7;
   @observable
+  int seqno = 0;
+  @observable
   List<Tx> transactions = [];
   @observable
   List<Memo> memos = [];
@@ -214,6 +216,11 @@ abstract class AppStoreBase with Store {
   @action
   Future<void> loadNotes() async {
     notes = await listNotes();
+  }
+
+  @action
+  void incSeqno() {
+    seqno += 1;
   }
 
   bool syncInProgress = false;
