@@ -12,7 +12,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
@@ -42,12 +41,11 @@ class AccountViewPage extends StatefulWidget {
 
 class AccountViewPageState extends State<AccountViewPage> {
   StreamSubscription<SyncProgress>? progressSubscription;
-  PoolBalance? poolBalance;
 
   @override
   void initState() {
     super.initState();
-    Future(refresh);
+    Future(appStore.refresh);
   }
 
   void tutorial() async {
@@ -62,7 +60,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final b = poolBalance;
 
     Future(tutorial);
 
@@ -116,6 +113,7 @@ class AccountViewPageState extends State<AccountViewPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Observer(builder: (context) {
                 appStore.seqno;
+                final b = appStore.poolBalance;
 
                 return TabBarView(children: [
                   CustomScrollView(
@@ -163,7 +161,6 @@ class AccountViewPageState extends State<AccountViewPage> {
     try {
       await appStore
           .startSynchronize([account!.id], int.parse(appStore.actionsPerSync));
-      refresh();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -175,19 +172,6 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSend() async {
     await GoRouter.of(context).push("/send");
-  }
-
-  void refresh() async {
-    logger.i("Refresh account data");
-    final b = await balance();
-    await appStore.loadAccounts();
-    await appStore.loadTxHistory();
-    await appStore.loadMemos();
-    await appStore.loadNotes();
-    await appStore.loadOtherData();
-    poolBalance = b;
-    if (!mounted) return;
-    setState(() {});
   }
 
   Account? get account => appStore.selectedAccount;
