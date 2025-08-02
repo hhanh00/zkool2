@@ -8,6 +8,74 @@ part of 'store.dart';
 
 // ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
 
+mixin _$ObservableHeight on ObservableHeightBase, Store {
+  Computed<double>? _$progressComputed;
+
+  @override
+  double get progress =>
+      (_$progressComputed ??= Computed<double>(() => super.progress,
+              name: 'ObservableHeightBase.progress'))
+          .value;
+
+  late final _$heightAtom =
+      Atom(name: 'ObservableHeightBase.height', context: context);
+
+  @override
+  int get height {
+    _$heightAtom.reportRead();
+    return super.height;
+  }
+
+  @override
+  set height(int value) {
+    _$heightAtom.reportWrite(value, super.height, () {
+      super.height = value;
+    });
+  }
+
+  late final _$startAtom =
+      Atom(name: 'ObservableHeightBase.start', context: context);
+
+  @override
+  int get start {
+    _$startAtom.reportRead();
+    return super.start;
+  }
+
+  @override
+  set start(int value) {
+    _$startAtom.reportWrite(value, super.start, () {
+      super.start = value;
+    });
+  }
+
+  late final _$rangeAtom =
+      Atom(name: 'ObservableHeightBase.range', context: context);
+
+  @override
+  int get range {
+    _$rangeAtom.reportRead();
+    return super.range;
+  }
+
+  @override
+  set range(int value) {
+    _$rangeAtom.reportWrite(value, super.range, () {
+      super.range = value;
+    });
+  }
+
+  @override
+  String toString() {
+    return '''
+height: ${height},
+start: ${start},
+range: ${range},
+progress: ${progress}
+    ''';
+  }
+}
+
 mixin _$AppStore on AppStoreBase, Store {
   late final _$selectedAccountAtom =
       Atom(name: 'AppStoreBase.selectedAccount', context: context);
