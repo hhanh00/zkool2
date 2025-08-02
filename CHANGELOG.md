@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.2...zkool-v4.14.3) (2025-08-02)
+
+
+### Bug Fixes
+
+* blank screen due to race condition ([#359](https://github.com/hhanh00/zkool2/issues/359)) ([9286eaf](https://github.com/hhanh00/zkool2/commit/9286eaf338c3d9cff10515c4040a0939110578e4))
+
 ## [4.14.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.1...zkool-v4.14.2) (2025-08-02)
 
 
