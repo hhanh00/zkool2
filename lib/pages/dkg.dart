@@ -360,7 +360,7 @@ class DKGPage3State extends State<DKGPage3> {
     return buildDKGPage(context,
         index: index,
         finished: finished,
-        child: SelectableText(message, style: t.bodyLarge));
+        child: CopyableText(message, style: t.bodyLarge));
   }
 }
 

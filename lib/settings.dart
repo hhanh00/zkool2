@@ -191,7 +191,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                         initialValue: pinLock,
                         onChanged: onPinLockChanged)),
                 Gap(16),
-                SelectableText(appStore.dbFilepath, style: t.bodySmall),
+                CopyableText(appStore.dbFilepath, style: t.bodySmall),
                 Gap(8),
                 if (appStore.versionString != null)
                   Text(appStore.versionString!)

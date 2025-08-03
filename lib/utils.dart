@@ -40,13 +40,13 @@ Widget zatToText(BigInt zat,
     crossAxisAlignment: CrossAxisAlignment.baseline,
     textBaseline: TextBaseline.alphabetic,
     children: [
-      InkWell(onTap: onTap, child: Text(prefix)),
+      InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
       SelectableText.rich(TextSpan(children: [
       TextSpan(text: majorUnits, style: style),
       TextSpan(
           text: minorUnits,
           style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-    ],))]
+    ]))]
   );
 }
 
@@ -121,7 +121,7 @@ Future<void> showSeed(BuildContext context, String message) async {
       Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS",
           style: t.headlineSmall),
       Gap(16),
-      SelectableText(
+      CopyableText(
         message,
         textAlign: TextAlign.center,
       ),
@@ -276,3 +276,26 @@ Widget maybeShowcase(bool condition,
             child: child,
           )
         : child;
+
+void copyToClipboard(String text) {
+  Clipboard.setData(ClipboardData(text: text));
+  showSnackbar('Copied to clipboard');
+}
+
+class CopyableText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+
+  const CopyableText(this.text, {super.key, this.style, this.textAlign});
+
+  @override
+  Widget build(BuildContext context) {
+    return SelectableText(
+      text,
+      style: style,
+      textAlign: textAlign,
+      onTap: () => copyToClipboard(text),
+    );
+  }
+}
