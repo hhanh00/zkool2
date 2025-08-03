@@ -80,7 +80,7 @@ class ReceivePageState extends State<ReceivePage> {
                         Gap(8),
                         ListTile(
                           title: Text("Unified Address"),
-                          subtitle: SelectableText(addresses.ua!),
+                          subtitle: CopyableText(addresses.ua!),
                           trailing: Showcase(key: qrID, description: "Show address as a QR Code", child:
                           IconButton(
                             icon: Icon(Icons.qr_code),
@@ -91,7 +91,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.oaddr != null)
                         ListTile(
                           title: Text("Orchard only Address"),
-                          subtitle: SelectableText(addresses.oaddr!),
+                          subtitle: CopyableText(addresses.oaddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () => onShowQR("Orchard", addresses.oaddr!),
@@ -100,7 +100,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.saddr != null)
                         ListTile(
                           title: Text("Sapling Address"),
-                          subtitle: SelectableText(addresses.saddr!),
+                          subtitle: CopyableText(addresses.saddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () => onShowQR("Sapling", addresses.saddr!),
@@ -109,7 +109,7 @@ class ReceivePageState extends State<ReceivePage> {
                       if (addresses.taddr != null)
                         ListTile(
                           title: Text("Transparent Address"),
-                          subtitle: SelectableText(addresses.taddr!),
+                          subtitle: CopyableText(addresses.taddr!),
                           trailing: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () => onShowQR("Transparent", addresses.taddr!),
@@ -165,7 +165,7 @@ class TransparentAddressesPage extends StatelessWidget {
           final txCount = txCounts[index];
           final scope = txCount.scope == 0 ? "External" : "Change";
           return ListTile(
-            title: SelectableText(txCount.address),
+            title: CopyableText(txCount.address),
             subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}, Last Used: ${timeToString(txCount.time)}"),
             trailing: Text(zatToString(txCount.amount)));
         },
