@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.4...zkool-v4.14.5) (2025-08-03)
+
+
+### Bug Fixes
+
+* database encryption + pinlock ([#363](https://github.com/hhanh00/zkool2/issues/363)) ([1ebeb63](https://github.com/hhanh00/zkool2/commit/1ebeb6345f9c191c7aaf1592f1e14ea21bb87076))
+
 ## [4.14.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.3...zkool-v4.14.4) (2025-08-03)
 
 
