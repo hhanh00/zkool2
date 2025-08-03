@@ -22,9 +22,8 @@ class SplashPage extends StatefulWidget {
 class SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Account>>(
-        future: loadAccounts(),
-        initialData: [],
+    return FutureBuilder<bool>(
+        future: loadAccounts(context),
         builder: (context, snapshot) {
           Widget body() {
             if (snapshot.hasError) {
@@ -40,17 +39,14 @@ class SplashPageState extends State<SplashPage> {
               if (!appStore.disclaimerAccepted) {
                 WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/disclaimer"));
               } else {
-                final data = snapshot.data;
-                if (data != null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) async {
-                    final account = appStore.selectedAccount;
-                    if (account != null) {
-                      await selectAccount(account);
-                      GoRouter.of(context).go("/account", extra: account);
-                    } else
-                      GoRouter.of(context).go("/");
-                  });
-                }
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  final account = appStore.selectedAccount;
+                  if (account != null) {
+                    await selectAccount(account);
+                    GoRouter.of(context).go("/account", extra: account);
+                  } else
+                    GoRouter.of(context).go("/");
+                });
               }
             }
             return Center(child: Image.asset("misc/icon.png", scale: 4.0));
@@ -61,7 +57,7 @@ class SplashPageState extends State<SplashPage> {
   }
 }
 
-Future<List<Account>> loadAccounts() async {
+Future<bool> loadAccounts(BuildContext context) async {
   if (!appStore.loaded) {
     final dbName = appStore.dbName;
     final dbFilepath = await getFullDatabasePath(dbName);
@@ -72,7 +68,7 @@ Future<List<Account>> loadAccounts() async {
     if (!File(dbFilepath).existsSync()) {
       if (dbName != appName) {
         // do not encrypt default database
-        password = await inputPassword(navigatorKey.currentContext!,
+        password = await inputPassword(context,
             title: "Enter New Database Password");
       }
       if (password != null && password.isEmpty) password = null;
@@ -84,7 +80,7 @@ Future<List<Account>> loadAccounts() async {
         break;
       } catch (_) {
         password = await inputPassword(
-          navigatorKey.currentContext!,
+          context,
           title: "Enter Database Password for $dbName",
         );
         if (password == null) {
@@ -92,7 +88,8 @@ Future<List<Account>> loadAccounts() async {
           await showException(navigatorKey.currentContext!,
               "No password given. Switching to defaut database.");
           appStore.dbName = appName;
-          return await loadAccounts();
+          if (context.mounted)
+            await loadAccounts(context);
         }
       }
     }
@@ -112,5 +109,5 @@ Future<List<Account>> loadAccounts() async {
   }
 
   appStore.loaded = true;
-  return appStore.accounts;
+  return true;
 }
