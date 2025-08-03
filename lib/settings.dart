@@ -39,7 +39,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   String databaseName = appStore.dbName;
   late String currentDatabaseName = databaseName;
   bool isLightNode = appStore.isLightNode;
-  bool pinLock = appStore.pinLock;
+  bool needPin = appStore.needPin;
   String lwd = appStore.lwd;
   String syncInterval = appStore.syncInterval;
   String actionsPerSync = appStore.actionsPerSync;
@@ -188,7 +188,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                     child: FormBuilderSwitch(
                         name: "pin_lock",
                         title: Text("Pin Lock"),
-                        initialValue: pinLock,
+                        initialValue: needPin,
                         onChanged: onPinLockChanged)),
                 Gap(16),
                 CopyableText(appStore.dbFilepath, style: t.bodySmall),
@@ -249,9 +249,9 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("pin_lock", value);
-    appStore.pinLock = value;
+    appStore.needPin = value;
     setState(() {
-      pinLock = value;
+      needPin = value;
     });
   }
 
