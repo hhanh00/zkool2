@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.3...zkool-v4.14.4) (2025-08-03)
+
+
+### Bug Fixes
+
+* workaround for bug in SelectableText on iOS ([#361](https://github.com/hhanh00/zkool2/issues/361)) ([b8043b5](https://github.com/hhanh00/zkool2/commit/b8043b53a866e9907cd69dd2102567824c63f7e0))
+
 ## [4.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.2...zkool-v4.14.3) (2025-08-02)
 
 
