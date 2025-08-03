@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:mobx/mobx.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
@@ -18,77 +19,47 @@ Future<void> main() async {
   await appStore.init();
   await appStore.loadAppSettings();
 
-  runApp(LifecycleWatcher(
-      child: ToastificationWrapper(
+  final appWatcher = LifecycleWatcher();
+  appWatcher.init();
+
+  runApp(ToastificationWrapper(
           child: ShowCaseWidget(
               globalTooltipActions: [
-            const TooltipActionButton(
-                type: TooltipDefaultActionType.skip,
-                textStyle: TextStyle(color: Colors.red),
-                backgroundColor: Colors.transparent),
-            const TooltipActionButton(
-                type: TooltipDefaultActionType.next,
-                backgroundColor: Colors.transparent),
-          ],
+        const TooltipActionButton(
+            type: TooltipDefaultActionType.skip,
+            textStyle: TextStyle(color: Colors.red),
+            backgroundColor: Colors.transparent),
+        const TooltipActionButton(
+            type: TooltipDefaultActionType.next,
+            backgroundColor: Colors.transparent),
+      ],
               builder: (context) => MaterialApp.router(
                   routerConfig: router,
                   themeMode: ThemeMode.system,
                   theme: ThemeData.light(),
                   darkTheme: ThemeData.dark(),
-                  debugShowCheckedModeBanner: false)))));
+                  debugShowCheckedModeBanner: false))));
 }
 
-class LifecycleWatcher extends StatefulWidget {
-  final Widget child;
-  const LifecycleWatcher({super.key, required this.child});
-
-  @override
-  State<LifecycleWatcher> createState() => LifecycleWatcherState();
-}
-
-class LifecycleWatcherState extends State<LifecycleWatcher>
-    with WidgetsBindingObserver {
-  DateTime? unlocked;
-
-  @override
-  void initState() {
-    super.initState();
+class LifecycleWatcher with WidgetsBindingObserver {
+  void init() {
     WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final needPin = appStore.pinLock;
-    if (needPin && (unlocked == null ||
-        DateTime.now().difference(unlocked!).inSeconds >= 5)) {
-      return MaterialApp(
-          home: PinLock(
-              onUnlock: () => setState(() => unlocked = DateTime.now())));
-    }
-    return widget.child;
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       cancelMempoolListener();
-      setState(() {});
+      if (appStore.unlocked != null &&  DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
+        runInAction(() => appStore.unlocked = null);
+      }
     }
   }
 }
 
 class PinLock extends StatefulWidget {
-  final void Function() onUnlock;
-
   const PinLock({
     super.key,
-    required this.onUnlock,
   });
 
   @override
@@ -109,12 +80,17 @@ class PinLockState extends State<PinLock> {
         body: Center(
             child: IconButton(
           onPressed: onUnlock,
-          icon: Icon(Icons.lock, size: 200,),
+          icon: Icon(
+            Icons.lock,
+            size: 200,
+          ),
         )));
   }
 
   void onUnlock() async {
     final authenticated = await authenticate(reason: "Unlock the App");
-    if (authenticated) widget.onUnlock();
+    if (authenticated) {
+      runInAction(() => appStore.unlocked = DateTime.now());
+    }
   }
 }
