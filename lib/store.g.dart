@@ -186,6 +186,22 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$poolBalanceAtom =
+      Atom(name: 'AppStoreBase.poolBalance', context: context);
+
+  @override
+  PoolBalance? get poolBalance {
+    _$poolBalanceAtom.reportRead();
+    return super.poolBalance;
+  }
+
+  @override
+  set poolBalance(PoolBalance? value) {
+    _$poolBalanceAtom.reportWrite(value, super.poolBalance, () {
+      super.poolBalance = value;
+    });
+  }
+
   late final _$transactionsAtom =
       Atom(name: 'AppStoreBase.transactions', context: context);
 
@@ -248,6 +264,38 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$needPinAtom =
+      Atom(name: 'AppStoreBase.needPin', context: context);
+
+  @override
+  bool get needPin {
+    _$needPinAtom.reportRead();
+    return super.needPin;
+  }
+
+  @override
+  set needPin(bool value) {
+    _$needPinAtom.reportWrite(value, super.needPin, () {
+      super.needPin = value;
+    });
+  }
+
+  late final _$unlockedAtom =
+      Atom(name: 'AppStoreBase.unlocked', context: context);
+
+  @override
+  DateTime? get unlocked {
+    _$unlockedAtom.reportRead();
+    return super.unlocked;
+  }
+
+  @override
+  set unlocked(DateTime? value) {
+    _$unlockedAtom.reportWrite(value, super.unlocked, () {
+      super.unlocked = value;
+    });
+  }
+
   late final _$mempoolRunningAtom =
       Atom(name: 'AppStoreBase.mempoolRunning', context: context);
 
@@ -288,6 +336,14 @@ mixin _$AppStore on AppStoreBase, Store {
     return _$loadNotesAsyncAction.run(() => super.loadNotes());
   }
 
+  late final _$refreshAsyncAction =
+      AsyncAction('AppStoreBase.refresh', context: context);
+
+  @override
+  Future<void> refresh() {
+    return _$refreshAsyncAction.run(() => super.refresh());
+  }
+
   late final _$AppStoreBaseActionController =
       ActionController(name: 'AppStoreBase', context: context);
 
@@ -309,10 +365,13 @@ selectedAccount: ${selectedAccount},
 accounts: ${accounts},
 pools: ${pools},
 seqno: ${seqno},
+poolBalance: ${poolBalance},
 transactions: ${transactions},
 memos: ${memos},
 notes: ${notes},
 currentHeight: ${currentHeight},
+needPin: ${needPin},
+unlocked: ${unlocked},
 mempoolRunning: ${mempoolRunning}
     ''';
   }

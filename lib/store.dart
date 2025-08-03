@@ -133,7 +133,8 @@ abstract class AppStoreBase with Store {
   String actionsPerSync = "10000";
   bool disclaimerAccepted = false;
   String? versionString;
-  bool pinLock = true;
+  @observable bool needPin = true;
+  @observable DateTime? unlocked;
 
   ObservableList<String> log = ObservableList.of([]);
   @observable
@@ -174,7 +175,7 @@ abstract class AppStoreBase with Store {
   Future<void> loadAppSettings() async {
     final prefs = SharedPreferencesAsync();
     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
-    pinLock = await prefs.getBool("pin_lock") ?? pinLock;
+    needPin = await prefs.getBool("pin_lock") ?? needPin;
   }
 
   Future<void> loadSettings() async {
