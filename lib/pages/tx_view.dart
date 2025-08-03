@@ -49,11 +49,11 @@ class TxViewState extends State<TxView> {
     return [
       ListTile(
           title: Text("Transaction ID"),
-          subtitle: SelectableText(txIdToString(txd.txid))),
+          subtitle: CopyableText(txIdToString(txd.txid))),
       ListTile(
-          title: Text("Block Height"), subtitle: SelectableText(txd.height.toString())),
+          title: Text("Block Height"), subtitle: CopyableText(txd.height.toString())),
       ListTile(
-          title: Text("Timestamp"), subtitle: SelectableText(exactTimeToString(txd.time))),
+          title: Text("Timestamp"), subtitle: CopyableText(exactTimeToString(txd.time))),
       ListTile(
           title: Text("Amount Spent"),
           subtitle: zatToText(amountSpent)),
@@ -66,32 +66,32 @@ class TxViewState extends State<TxView> {
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand((n) => [
-            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(n.pool))),
+            ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(
                 title: Text("Value"), subtitle: zatToText(n.value)),
             Divider(),
           ]),
       if (txd.notes.isNotEmpty) Text("Received Notes", style: t.titleSmall),
       ...txd.notes.expand((n) => [
-            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(n.pool))),
+            ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(
                 title: Text("Value"), subtitle: zatToText(n.value)),
             Divider()
           ]),
       if (txd.outputs.isNotEmpty) Text("Outputs", style: t.titleSmall),
       ...txd.outputs.expand((n) => [
-            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(n.pool))),
-            ListTile(title: Text("Address"), subtitle: SelectableText(n.address)),
+            ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
+            ListTile(title: Text("Address"), subtitle: CopyableText(n.address)),
             ListTile(
                 title: Text("Value"), subtitle: zatToText(n.value)),
             Divider()
           ]),
       if (txd.memos.isNotEmpty) Text("Memos", style: t.titleSmall),
       ...txd.memos.expand((m) => [
-            ListTile(title: Text("Pool"), subtitle: SelectableText(poolToString(m.pool))),
+            ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(m.pool))),
             ListTile(
                 title: Text("Memo"),
-                subtitle: SelectableText(m.memo ?? "<Binary Content>")),
+                subtitle: CopyableText(m.memo ?? "<Binary Content>")),
             Divider()
           ]),
     ];

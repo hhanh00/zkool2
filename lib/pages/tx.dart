@@ -106,7 +106,7 @@ class TxPageState extends State<TxPage> {
               Showcase(
                   key: txID,
                   description: "Transaction ID",
-                  child: SelectableText("Transaction ID: ${txId!}")),
+                  child: CopyableText("Transaction ID: ${txId!}")),
           ]),
         )),
         showTxPlan(context, txPlan),
@@ -248,7 +248,7 @@ class MempoolPage extends StatelessWidget {
               final tx = mempool[index];
               return ListTile(
                 onTap: () => onMempoolTx(context, tx.$1),
-                title: SelectableText(tx.$1),
+                title: CopyableText(tx.$1),
                 subtitle: Text(tx.$2),
                 trailing: Text(tx.$3.toString()),
               );
@@ -275,7 +275,7 @@ class MempoolTxViewPage extends StatelessWidget {
       appBar: AppBar(title: Text("Mempool Transaction")),
       body: Padding(
           padding: EdgeInsets.all(16),
-          child: SingleChildScrollView(child: SelectableText(
+          child: SingleChildScrollView(child: CopyableText(
             hex.encode(rawTx),
           ))),
     );

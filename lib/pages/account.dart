@@ -565,7 +565,7 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
         return ListTile(
           onTap: () => gotoTransaction(context, memo.idTx),
           leading: Text("${memo.height}"),
-          title: SelectableText(
+          title: CopyableText(
               memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
           subtitle: Text(timeToString(memo.time)),
           trailing: Text(memo.idNote != null ? "In" : "Out"),
@@ -657,25 +657,25 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
                   if (showSeed && seed != null) ...[
                     ListTile(
                         title: Text("Mnemonic"),
-                        subtitle: SelectableText(seed!.mnemonic)),
+                        subtitle: CopyableText(seed!.mnemonic)),
                     ListTile(
                         title: Text("Passphrase"),
-                        subtitle: SelectableText(seed!.phrase)),
+                        subtitle: CopyableText(seed!.phrase)),
                     ListTile(
                         title: Text("Index"),
-                        subtitle: SelectableText(seed!.aindex.toString())),
+                        subtitle: CopyableText(seed!.aindex.toString())),
                     Divider(),
                     Gap(8),
                   ],
                   Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
                   Gap(32),
-                  if (uvk != null) SelectableText(uvk!),
+                  if (uvk != null) CopyableText(uvk!),
                   Gap(32),
                   if (uvk != null)
                     QrImageView(
                         data: uvk!, size: 200, backgroundColor: Colors.white),
                   Gap(8),
-                  if (fingerprint != null) SelectableText(fingerprint!),
+                  if (fingerprint != null) CopyableText(fingerprint!),
                   Gap(16),
                   Text(
                       "If the account does not include a pool, its receiver will be absent"),
