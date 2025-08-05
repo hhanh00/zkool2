@@ -50,7 +50,7 @@ impl FeeManager {
         } else {
             0
         };
-        let f = t + s + o;
+        let f = (t + s + o).max(2); // minimum 2 logical actions (due to grace? actions)
         f as u64 * COST_PER_ACTION
     }
 
