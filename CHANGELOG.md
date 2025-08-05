@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.6](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.5...zkool-v4.14.6) (2025-08-05)
+
+
+### Bug Fixes
+
+* fee does not take min action cost into consideration ([#365](https://github.com/hhanh00/zkool2/issues/365)) ([9c26e2c](https://github.com/hhanh00/zkool2/commit/9c26e2cfa718686fbc0a49df1490b5e94fb426ca))
+
 ## [4.14.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.4...zkool-v4.14.5) (2025-08-03)
 
 
