@@ -5,9 +5,7 @@ use anyhow::{anyhow, Result};
 use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
-    circuit::ProvingKey,
-    keys::{Scope, SpendAuthorizingKey},
-    Address,
+    circuit::ProvingKey, keys::{Scope, SpendAuthorizingKey}, note::ExtractedNoteCommitment, Address
 };
 use pczt::{
     roles::{
@@ -262,7 +260,7 @@ pub async fn plan_transaction(
     // Now we have pick the inputs and paid the fee if the sender
     // should be paying it
 
-    debug!("Fee {}", &fee_manager);
+    info!("Fee {}", &fee_manager);
     let fee = fee_manager.fee();
 
     if recipient_pays_fee {
@@ -316,7 +314,7 @@ pub async fn plan_transaction(
         );
     }
 
-    debug!(
+    info!(
         "change: {}, pool: {change_pool}, fee: {}",
         to_zec(change),
         to_zec(fee)
@@ -368,17 +366,18 @@ pub async fn plan_transaction(
         );
         let refund_fee = fee - updated_fee;
         match dust_change_policy {
-            DustChangePolicy::Discard => {
+            DustChangePolicy::Discard if !recipient_pays_fee => {
                 info!(
-                    "Discarding change of {} in pool {}",
+                    "Discarding change of {} in pool {}. Prev fee {}, current fee {}",
                     to_zec(change),
-                    change_pool
+                    change_pool,
+                    fee, updated_fee
                 );
             }
-            DustChangePolicy::SendToRecipient => {
+            _ => {
                 info!(
-                    "Sending change of {} in pool {} to the first recipient",
-                    to_zec(change),
+                    "Sending {} in pool {} to the first recipient",
+                    to_zec(change + refund_fee),
                     change_pool
                 );
                 if let Some(first) = outputs.first_mut() {
@@ -466,6 +465,7 @@ pub async fn plan_transaction(
                             script_pubkey: addr.script(),
                         };
 
+                        info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder
                             .add_transparent_input(pubkey, utxo, coin)
                             .map_err(|e| anyhow!(e))?;
@@ -486,6 +486,7 @@ pub async fn plan_transaction(
                             can_sign = false;
                         }
 
+                        info!("Adding sapling input {}", hex::encode(note.cmu().to_bytes()));
                         builder.add_sapling_spend::<Infallible>(
                             svk.unwrap().clone(),
                             note,
@@ -507,6 +508,7 @@ pub async fn plan_transaction(
                             can_sign = false;
                         }
 
+                        info!("Adding orchard input {}", hex::encode(ExtractedNoteCommitment::from(note.commitment()).to_bytes()));
                         builder.add_orchard_spend::<Infallible>(
                             ovk.clone().unwrap(),
                             note,
@@ -556,12 +558,14 @@ pub async fn plan_transaction(
         match pool {
             0 => {
                 let to = get_transparent_address(network, &recipient.address)?;
+                info!("Adding transparent output {} {}", &recipient.address, to_zec(value.into()));
                 builder
                     .add_transparent_output(&to, value)
                     .map_err(|e| anyhow!(e))?;
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;
+                info!("Adding sapling output {} {}", &recipient.address, to_zec(value.into()));
                 builder.add_sapling_output::<Infallible>(
                     svk.as_ref().map(|svk| svk.ovk),
                     to,
@@ -571,6 +575,7 @@ pub async fn plan_transaction(
             }
             2 => {
                 let to = get_orchard_address(network, &recipient.address)?;
+                info!("Adding orchard output {} {}", &recipient.address, to_zec(value.into()));
                 builder.add_orchard_output::<Infallible>(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,

@@ -63,7 +63,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
     Future(tutorial);
 
-    if (account == null) return SizedBox.shrink();
+    assert (account != null);
     final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
 
     return DefaultTabController(
@@ -530,7 +530,7 @@ String getTransactionType(int? tpe) {
   if (tpe == null) return "";
   switch (tpe) {
     case 0:
-      return "\u2194 Shielded Self Transfer";
+      return "\u2194 Self Tx";
     case 1:
       return "\u2795 Received";
     case 2:
@@ -540,7 +540,7 @@ String getTransactionType(int? tpe) {
     case 8:
       return "\u{1F6E1} Shielding";
     case 12:
-      return "\u2194 Transparent Self Transfer";
+      return "\u{1F310} \u2194 T. Self Tx";
     default:
       return "Unknown";
   }
