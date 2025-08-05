@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.14.7](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.6...zkool-v4.14.7) (2025-08-05)
+
+
+### Bug Fixes
+
+* issue with authenticated being requested multiple times ([#367](https://github.com/hhanh00/zkool2/issues/367)) ([24a05db](https://github.com/hhanh00/zkool2/commit/24a05dbc7fcc9ca6c2d5921ba82ce52e869ce150))
+
 ## [4.14.6](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.5...zkool-v4.14.6) (2025-08-05)
 
 
