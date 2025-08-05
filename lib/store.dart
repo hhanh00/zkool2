@@ -218,7 +218,6 @@ abstract class AppStoreBase with Store {
 
   @action
   Future<void> refresh() async {
-    logger.i("Refresh account data");
     await appStore.loadAccounts();
     if (selectedAccount != null) {
       await appStore.loadTxHistory();
