@@ -9,12 +9,14 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
+import 'package:mobx/mobx.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:local_auth/local_auth.dart';
 import 'package:zkool/router.dart';
+import 'package:zkool/store.dart';
 
 String initials(String name) =>
     name.substring(0, min(2, name.length)).toUpperCase();
@@ -249,6 +251,8 @@ Future<bool> authenticate({String? reason}) async {
     final didAuthenticate = await auth.authenticate(
         localizedReason: reason ?? "Authenticate to continue",
         options: const AuthenticationOptions(useErrorDialogs: false));
+    if (didAuthenticate)
+      runInAction(() => appStore.unlocked = DateTime.now());
     return didAuthenticate;
   } on PlatformException catch (e) {
     switch (e.code) {
