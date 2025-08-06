@@ -38,7 +38,7 @@ zcash_keys = {version = "0.8", features = ["sapling", "orchard", "transparent-in
 zcash_note_encryption = "0.4"
 zcash_primitives = {version = "0.22", features = ["transparent-inputs"]}
 zcash_proofs = {version = "0.22", features = ["bundled-prover"]}
-zcash_protocol = "0.5"
+zcash_protocol = {version = "0.5", features = ["local-consensus"]}
 zcash_transparent = {version = "0.2.3", features = ["transparent-inputs"]}
 zip321 = "0.3"
 reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}

@@ -25,7 +25,7 @@ use sapling_crypto::{
 };
 use zcash_note_encryption::{EphemeralKeyBytes, COMPACT_NOTE_SIZE};
 use zcash_primitives::transaction::components::sapling::zip212_enforcement;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_sapling_decrypt(

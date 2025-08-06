@@ -7,7 +7,7 @@ use thiserror::Error;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::info;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 use crate::{
     lwd::CompactBlock,

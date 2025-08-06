@@ -15,7 +15,7 @@ use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };

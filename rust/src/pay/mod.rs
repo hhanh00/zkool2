@@ -5,7 +5,7 @@ use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
 use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 pub mod error;
 pub mod fee;

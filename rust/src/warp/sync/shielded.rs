@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use sqlx::{Row, SqliteConnection};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 use crate::lwd::{CompactBlock, CompactTx};
 use crate::sync::{Note, Transaction, WarpSyncMessage, UTXO};
