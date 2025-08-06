@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.15.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.7...zkool-v4.15.0) (2025-08-06)
+
+
+### Features
+
+* support for regtest ([#369](https://github.com/hhanh00/zkool2/issues/369)) ([74b8168](https://github.com/hhanh00/zkool2/commit/74b81682bbb9c91f31fd1054e1ef9fbaa6a6b06f))
+
+
+### Bug Fixes
+
+* regtest send/receive ([#371](https://github.com/hhanh00/zkool2/issues/371)) ([f8bc3f6](https://github.com/hhanh00/zkool2/commit/f8bc3f66b43a102f337427888905b9ab457db7ce))
+
 ## [4.14.7](https://github.com/hhanh00/zkool2/compare/zkool-v4.14.6...zkool-v4.14.7) (2025-08-05)
 
 
