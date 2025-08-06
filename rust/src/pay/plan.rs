@@ -32,7 +32,7 @@ use zcash_primitives::{
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
-    consensus::{BlockHeight, Parameters},
+    consensus::{BlockHeight, NetworkType, Parameters, ZIP212_GRACE_PERIOD},
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
@@ -385,7 +385,12 @@ pub async fn plan_transaction(
     info!("Initializing Builder");
 
     let current_height = client.latest_height().await?;
-    let target_height = current_height + 100;
+    let target_height = current_height + 100 +
+        // on regtest, add ZIP212_GRACE_PERIOD to make sure
+        // ZIP-212 is enforced
+        if network.network_type() == NetworkType::Regtest {
+            ZIP212_GRACE_PERIOD
+        } else { 0 };
 
     let mut builder = Builder::new(
         network,
