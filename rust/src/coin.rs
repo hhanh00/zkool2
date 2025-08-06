@@ -5,7 +5,8 @@ use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Sqlite, SqlitePool};
 use tonic::transport::ClientTlsConfig;
-use zcash_protocol::consensus::Network;
+use zcash_protocol::consensus::{BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters};
+use zcash_protocol::local_consensus::LocalNetwork;
 
 use crate::db::create_schema;
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
@@ -62,8 +63,8 @@ impl Coin {
             .is_none()
         {
             create_schema(&mut connection).await?;
-            let testnet = db_filepath.contains("testnet");
-            let coin_value = if testnet { "1" } else { "0" };
+            let regtest = db_filepath.contains("regtest");
+            let coin_value = if regtest { "1" } else { "0" };
             crate::db::put_prop(&mut connection, "coin", coin_value).await?;
         }
 
@@ -73,9 +74,9 @@ impl Coin {
         let coin = coin.parse::<u8>()?;
 
         let network = match coin {
-            0 => Network::MainNetwork,
-            1 => Network::TestNetwork,
-            _ => Network::MainNetwork,
+            0 => Network::Main,
+            1 => *REGTEST,
+            _ => Network::Main,
         };
 
         Ok(Coin {
@@ -135,7 +136,7 @@ impl Default for Coin {
         Coin {
             coin: 0,
             account: 0,
-            network: Network::MainNetwork,
+            network: Network::Main,
             db_filepath: String::new(),
             pool: None,
             server_type: ServerType::Lwd,
@@ -155,6 +156,44 @@ fn get_connect_options(db_filepath: &str, password: Option<String>) -> SqliteCon
     options
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum Network {
+    Main,
+    Regtest(LocalNetwork),
+}
+
+impl Parameters for Network {
+    fn network_type(&self) -> NetworkType {
+        match self {
+            Network::Main => MainNetwork.network_type(),
+            Network::Regtest(n) => n.network_type(),
+        }
+    }
+
+    fn activation_height(
+        &self,
+        nu: NetworkUpgrade,
+    ) -> Option<zcash_protocol::consensus::BlockHeight> {
+        match self {
+            Network::Main => MainNetwork.activation_height(nu),
+            Network::Regtest(n) => n.activation_height(nu),
+        }
+    }
+}
+
+pub fn _regtest() -> LocalNetwork {
+    LocalNetwork {
+        overwinter: Some(BlockHeight::from_u32(1)),
+        sapling: Some(BlockHeight::from_u32(1)),
+        blossom: Some(BlockHeight::from_u32(1)),
+        heartwood: Some(BlockHeight::from_u32(1)),
+        canopy: Some(BlockHeight::from_u32(1)),
+        nu5: Some(BlockHeight::from_u32(1)),
+        nu6: None,
+    }
+}
+
 lazy_static::lazy_static! {
     pub static ref COIN: Mutex<Coin> = Mutex::new(Coin::default());
+    pub static ref REGTEST: Network = Network::Regtest(_regtest());
 }

@@ -32,7 +32,7 @@ use zcash_primitives::{
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
-    consensus::{BlockHeight, Network, Parameters},
+    consensus::{BlockHeight, Parameters},
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
@@ -48,18 +48,13 @@ use crate::{
         derive_transparent_sk, generate_next_change_address, get_account_full_address,
         get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
         get_sapling_vk,
-    },
-    api::pay::{DustChangePolicy, PcztPackage},
-    db::select_account_transparent,
-    pay::{
+    }, api::pay::{DustChangePolicy, PcztPackage}, coin::Network, db::select_account_transparent, pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlanIn, TxPlanOut,
-    },
-    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
-    Client,
+    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
 };
 
 pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
