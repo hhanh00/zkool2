@@ -10,7 +10,7 @@ use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
 use zcash_primitives::legacy::TransparentAddress;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 use crate::db::calculate_balance;
 use crate::sync::{get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync};
@@ -50,7 +50,7 @@ pub async fn synchronize(
     let mut connection = c.get_connection().await?;
     let progress2 = progress.clone();
 
-    let checkpoint_cutoff = current_height - checkpoint_age;
+    let checkpoint_cutoff = current_height.saturating_sub(checkpoint_age);
     for account in accounts.iter() {
         prune_old_checkpoints(&mut *connection, *account, checkpoint_cutoff).await?;
     }

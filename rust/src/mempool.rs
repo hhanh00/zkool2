@@ -15,7 +15,7 @@ use zcash_primitives::{
     legacy::TransparentAddress,
     transaction::{Authorized, Transaction, TransactionData},
 };
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 use crate::Client;
 

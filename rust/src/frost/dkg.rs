@@ -15,24 +15,18 @@ use reddsa::frost::redpallas::keys::{
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
-use zcash_protocol::{consensus::Network, memo::Memo};
+use zcash_protocol::memo::Memo;
 
 use crate::{
-    account::get_orchard_vk,
-    api::{
+    account::get_orchard_vk, api::{
         account::{delete_account, get_account_seed},
         frost::{DKGParams, DKGStatus},
         sync::SYNCING,
-    },
-    db::{init_account_orchard, store_account_metadata, store_account_orchard_vk},
-    frb_generated::StreamSink,
-    frost::FrostMessage,
-    pay::{
+    }, coin::Network, db::{init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
         pool::ALL_POOLS,
         Recipient,
-    },
-    Client,
+    }, Client
 };
 
 pub async fn set_dkg_address(

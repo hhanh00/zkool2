@@ -5,7 +5,7 @@ use orchard::keys::{FullViewingKey, Scope};
 use sqlx::SqliteConnection;
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 use crate::{
     account::get_orchard_vk,

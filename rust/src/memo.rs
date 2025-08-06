@@ -8,15 +8,10 @@ use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 use zcash_primitives::transaction::{
     components::sapling::zip212_enforcement, fees::transparent::OutputView,
 };
-use zcash_protocol::{
-    consensus::Network,
-    memo::Memo,
-};
+use zcash_protocol::memo::Memo;
 
 use crate::{
-    account::{get_orchard_vk, get_sapling_vk},
-    pay::fee::FeeManager,
-    Client,
+    account::{get_orchard_vk, get_sapling_vk}, coin::Network, pay::fee::FeeManager, Client
 };
 
 pub async fn fetch_tx_details(
