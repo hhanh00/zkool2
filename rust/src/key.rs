@@ -10,7 +10,8 @@ use zcash_keys::{
     encoding::{decode_extended_full_viewing_key, decode_extended_spending_key},
     keys::UnifiedFullViewingKey,
 };
-use zcash_protocol::consensus::{Network, NetworkConstants as _};
+use zcash_protocol::consensus::{NetworkConstants as _};
+use crate::coin::Network;
 
 use crate::{
     bip38,

@@ -1,16 +1,11 @@
 use std::collections::HashSet;
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
-    api::sync::{transparent_sync, SyncProgress},
-    db::{select_account_transparent, store_account_transparent_addr},
-    lwd::CompactBlock,
-    warp::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::{transparent_sync, SyncProgress}, coin::Network, db::{select_account_transparent, store_account_transparent_addr}, lwd::CompactBlock, warp::{
         legacy::CommitmentTreeFrontier,
         sync::{warp_sync, SyncError},
         Witness,
-    },
-    Client,
+    }, Client
 };
 use anyhow::Result;
 use bincode::config;
@@ -25,7 +20,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
-use zcash_protocol::consensus::{Network, Parameters};
+use zcash_protocol::consensus::Parameters;
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]

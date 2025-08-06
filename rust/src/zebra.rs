@@ -12,9 +12,9 @@ use zcash_primitives::{block::BlockHeader, transaction::Transaction};
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{async_trait, Request};
-use zcash_protocol::consensus::{BlockHeight, BranchId, Network};
+use zcash_protocol::consensus::{BlockHeight, BranchId};
 
-use crate::{lwd::*, GRPCClient};
+use crate::{coin::Network, lwd::*, GRPCClient};
 
 #[derive(Clone)]
 pub struct ZebraClient {

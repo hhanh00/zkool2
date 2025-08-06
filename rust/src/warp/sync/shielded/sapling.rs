@@ -2,7 +2,7 @@ use anyhow::Result;
 use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqliteConnection;
 use zcash_primitives::zip32::Scope;
-use zcash_protocol::consensus::Network;
+use crate::coin::Network;
 
 use crate::{
     lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx},

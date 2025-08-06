@@ -31,24 +31,20 @@ use zcash_primitives::transaction::{
     sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
 };
 use zcash_proofs::prover::LocalTxProver;
-use zcash_protocol::{consensus::Network, memo::Memo};
+use zcash_protocol::memo::Memo;
 
 use crate::{
     api::{
         frost::{FrostSignParams, SigningStatus},
         pay::PcztPackage,
         sync::SYNCING,
-    },
-    frb_generated::StreamSink,
-    frost::{
+    }, coin::Network, frb_generated::StreamSink, frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::{delete_frost_state, get_dkg_params, publish},
-    },
-    pay::{
+    }, pay::{
         plan::{ORCHARD_PK, SAPLING_PROVER},
         send,
-    },
-    Client,
+    }, Client
 };
 
 use super::{FrostSigMessage, P};
