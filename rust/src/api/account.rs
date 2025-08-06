@@ -23,24 +23,17 @@ use zcash_primitives::{
     legacy::TransparentAddress,
     zip32::{fingerprint::SeedFingerprint, AccountId},
 };
-use zcash_protocol::consensus::{Network, NetworkConstants};
+use zcash_protocol::consensus::NetworkConstants;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote},
-    bip38,
-    db::{
+    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote}, bip38, coin::Network, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
         update_dindex,
-    },
-    get_coin,
-    io::{decrypt, encrypt},
-    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    pay::pool::ALL_POOLS,
-    setup,
+    }, get_coin, io::{decrypt, encrypt}, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, pay::pool::ALL_POOLS, setup
 };
 
 #[frb(sync)]
@@ -48,15 +41,15 @@ pub fn new_seed(phrase: &str) -> Result<String> {
     let seed_phrase = bip39::Mnemonic::from_str(phrase)?;
     let seed = seed_phrase.to_seed("");
 
-    let usk = UnifiedSpendingKey::from_seed(&Network::MainNetwork, &seed, AccountId::ZERO)?;
+    let usk = UnifiedSpendingKey::from_seed(&Network::Main, &seed, AccountId::ZERO)?;
     let uvk = usk.to_unified_full_viewing_key();
     let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
     info!("initial di: {}", u64::try_from(di).unwrap());
     if let Some(pa) = ua.sapling() {
-        return Ok(pa.encode(&Network::MainNetwork));
+        return Ok(pa.encode(&Network::Main));
     }
 
-    let address = ua.encode(&Network::MainNetwork);
+    let address = ua.encode(&Network::Main);
 
     Ok(address)
 }
