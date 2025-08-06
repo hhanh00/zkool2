@@ -189,7 +189,7 @@ pub fn _regtest() -> LocalNetwork {
         heartwood: Some(BlockHeight::from_u32(1)),
         canopy: Some(BlockHeight::from_u32(1)),
         nu5: Some(BlockHeight::from_u32(1)),
-        nu6: None,
+        nu6: Some(BlockHeight::from_u32(1)),
     }
 }
 
