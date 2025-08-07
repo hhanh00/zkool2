@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.16.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.15.1...zkool-v4.16.0) (2025-08-07)
+
+
+### Features
+
+* offline mode ([#375](https://github.com/hhanh00/zkool2/issues/375)) ([ecca14d](https://github.com/hhanh00/zkool2/commit/ecca14da2b22a8c009cbe564a328aed2df4df6a1))
+
 ## [4.15.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.15.0...zkool-v4.15.1) (2025-08-07)
 
 
