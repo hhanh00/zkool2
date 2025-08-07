@@ -43,7 +43,7 @@ class TxPageState extends State<TxPage> {
     super.initState();
     Future(() async {
       final state = await (Connectivity().checkConnectivity());
-      if (!state.contains(ConnectivityResult.none)) {
+      if (!appStore.offline && !state.contains(ConnectivityResult.none)) {
         canBroadcast = true;
       }
       setState(() {});

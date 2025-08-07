@@ -66,6 +66,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   }
 
   void refreshHeight() async {
+    if (appStore.checkOffline()) return;
     try {
       final height = await getCurrentHeight();
       appStore.currentHeight = height;
