@@ -296,6 +296,22 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$offlineAtom =
+      Atom(name: 'AppStoreBase.offline', context: context);
+
+  @override
+  bool get offline {
+    _$offlineAtom.reportRead();
+    return super.offline;
+  }
+
+  @override
+  set offline(bool value) {
+    _$offlineAtom.reportWrite(value, super.offline, () {
+      super.offline = value;
+    });
+  }
+
   late final _$mempoolRunningAtom =
       Atom(name: 'AppStoreBase.mempoolRunning', context: context);
 
@@ -372,6 +388,7 @@ notes: ${notes},
 currentHeight: ${currentHeight},
 needPin: ${needPin},
 unlocked: ${unlocked},
+offline: ${offline},
 mempoolRunning: ${mempoolRunning}
     ''';
   }
