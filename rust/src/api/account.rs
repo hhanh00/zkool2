@@ -27,7 +27,7 @@ use zcash_protocol::consensus::NetworkConstants;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote}, bip38, coin::Network, db::{
+    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote}, bip38, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
