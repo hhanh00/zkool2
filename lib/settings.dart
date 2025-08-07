@@ -26,6 +26,7 @@ final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
 final pinLockID = GlobalKey();
+final offlineID = GlobalKey();
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -40,6 +41,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   late String currentDatabaseName = databaseName;
   bool isLightNode = appStore.isLightNode;
   bool needPin = appStore.needPin;
+  bool offline = appStore.offline;
   String lwd = appStore.lwd;
   String syncInterval = appStore.syncInterval;
   String actionsPerSync = appStore.actionsPerSync;
@@ -67,7 +69,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       actionsID,
       autosyncID,
       cancelID,
-      pinLockID
+      pinLockID,
+      offlineID
     ]);
   }
 
@@ -190,6 +193,15 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                         title: Text("Pin Lock"),
                         initialValue: needPin,
                         onChanged: onPinLockChanged)),
+                Gap(8),
+                Showcase(
+                    key: offlineID,
+                    description: "Toggle offline mode",
+                    child: FormBuilderSwitch(
+                        name: "offline",
+                        title: Text("Offline"),
+                        initialValue: offline,
+                        onChanged: onOfflineChanged)),
                 Gap(16),
                 CopyableText(appStore.dbFilepath, style: t.bodySmall),
                 Gap(8),
@@ -252,6 +264,16 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     appStore.needPin = value;
     setState(() {
       needPin = value;
+    });
+  }
+
+  onOfflineChanged(bool? value) async {
+    if (value == null) return;
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool("offline", value);
+    appStore.offline = value;
+    setState(() {
+      offline = value;
     });
   }
 

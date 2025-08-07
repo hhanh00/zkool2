@@ -135,6 +135,7 @@ abstract class AppStoreBase with Store {
   String? versionString;
   @observable bool needPin = true;
   @observable DateTime? unlocked;
+  @observable bool offline = false;
 
   ObservableList<String> log = ObservableList.of([]);
   @observable
@@ -176,6 +177,7 @@ abstract class AppStoreBase with Store {
     final prefs = SharedPreferencesAsync();
     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
     needPin = await prefs.getBool("pin_lock") ?? needPin;
+    offline = await prefs.getBool("offline") ?? offline;
   }
 
   Future<void> loadSettings() async {
@@ -242,6 +244,8 @@ abstract class AppStoreBase with Store {
     if (syncInProgress) {
       return;
     }
+
+    if (appStore.checkOffline()) return;
 
     final completer = Completer<void>();
     try {
@@ -319,7 +323,7 @@ abstract class AppStoreBase with Store {
   void autoSync({bool now = false}) async {
     final interval = int.tryParse(syncInterval) ?? 0;
 
-    if (interval <= 0) {
+    if (appStore.offline || interval <= 0) {
       return;
     }
     try {
@@ -353,12 +357,21 @@ abstract class AppStoreBase with Store {
     }
   }
 
+  bool checkOffline() {
+    if (offline) {
+      showSnackbar("Zkool is in Offline mode");
+      return true;
+    }
+    return false;
+  }
+
   static AppStore instance = AppStore();
 }
 
 void runMempoolListener() async {
   final mp = appStore.mempool;
   while (true) {
+    if (appStore.offline) return;
     try {
       runInAction(() => appStore.mempoolRunning = true);
       appStore.mempoolAccounts.clear();
