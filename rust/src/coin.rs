@@ -5,7 +5,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Sqlite, SqlitePool};
 use tonic::transport::ClientTlsConfig;
-use zcash_protocol::consensus::{BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters};
+use zcash_protocol::consensus::{BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters, TestNetwork};
 use zcash_protocol::local_consensus::LocalNetwork;
 
 use crate::db::create_schema;
@@ -63,8 +63,11 @@ impl Coin {
             .is_none()
         {
             create_schema(&mut connection).await?;
+            let testnet = db_filepath.contains("testnet");
             let regtest = db_filepath.contains("regtest");
-            let coin_value = if regtest { "1" } else { "0" };
+            let coin_value =
+                if testnet { "1 "}
+                else if regtest { "2" } else { "0" };
             crate::db::put_prop(&mut connection, "coin", coin_value).await?;
         }
 
@@ -75,7 +78,8 @@ impl Coin {
 
         let network = match coin {
             0 => Network::Main,
-            1 => *REGTEST,
+            1 => Network::Test,
+            2 => *REGTEST,
             _ => Network::Main,
         };
 
@@ -159,6 +163,7 @@ fn get_connect_options(db_filepath: &str, password: Option<String>) -> SqliteCon
 #[derive(Copy, Clone, Debug)]
 pub enum Network {
     Main,
+    Test,
     Regtest(LocalNetwork),
 }
 
@@ -166,6 +171,7 @@ impl Parameters for Network {
     fn network_type(&self) -> NetworkType {
         match self {
             Network::Main => MainNetwork.network_type(),
+            Network::Test => TestNetwork.network_type(),
             Network::Regtest(n) => n.network_type(),
         }
     }
@@ -176,6 +182,7 @@ impl Parameters for Network {
     ) -> Option<zcash_protocol::consensus::BlockHeight> {
         match self {
             Network::Main => MainNetwork.activation_height(nu),
+            Network::Test => TestNetwork.activation_height(nu),
             Network::Regtest(n) => n.activation_height(nu),
         }
     }
