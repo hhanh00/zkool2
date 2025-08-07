@@ -9,9 +9,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'account.freezed.dart';
 
-String newSeed({required String phrase}) =>
-    RustLib.instance.api.crateApiAccountNewSeed(phrase: phrase);
-
 Future<int> getAccountPools({required int account}) =>
     RustLib.instance.api.crateApiAccountGetAccountPools(account: account);
 
