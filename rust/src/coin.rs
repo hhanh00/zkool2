@@ -1,7 +1,8 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
-use arti_client::{TorClient, TorClientConfig};
+use arti_client::config::TorClientConfigBuilder;
+use arti_client::TorClient;
 use tor_rtcompat::PreferredRuntime;
 use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
@@ -149,8 +150,9 @@ impl Coin {
     }
 }
 
-async fn build_tor() -> anyhow::Result<TorClient<PreferredRuntime>> {
-    let config = TorClientConfig::default();
+async fn build_tor(directory: &str) -> anyhow::Result<TorClient<PreferredRuntime>> {
+    let config = TorClientConfigBuilder::from_directories(
+        directory, directory).build()?;
     let tor_client = TorClient::create_bootstrapped(config).await?;
     Ok(tor_client)
 }
@@ -261,8 +263,8 @@ pub fn _regtest() -> LocalNetwork {
     }
 }
 
-pub async fn init_tor() -> Result<()> {
-    let tor_client = build_tor().await?;
+pub async fn init_tor(directory: &str) -> Result<()> {
+    let tor_client = build_tor(directory).await?;
     let mut t = TOR.lock().await;
     *t = Some(tor_client);
     Ok(())
