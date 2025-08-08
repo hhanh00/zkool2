@@ -103,6 +103,7 @@ Future<bool> loadAccounts(BuildContext context) async {
     setLwd(
         serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra,
         lwd: appStore.lwd);
+    setUseTor(useTor: appStore.useTor);
     appStore.autoSync();
     runMempoolListener();
   }
