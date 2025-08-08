@@ -136,6 +136,7 @@ abstract class AppStoreBase with Store {
   @observable bool needPin = true;
   @observable DateTime? unlocked;
   @observable bool offline = false;
+  bool useTor = false;
 
   ObservableList<String> log = ObservableList.of([]);
   @observable
@@ -178,6 +179,7 @@ abstract class AppStoreBase with Store {
     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
     needPin = await prefs.getBool("pin_lock") ?? needPin;
     offline = await prefs.getBool("offline") ?? offline;
+    useTor = await prefs.getBool("use_tor") ?? useTor;
   }
 
   Future<void> loadSettings() async {

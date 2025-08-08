@@ -4,10 +4,21 @@ use serde::Deserialize;
 
 use crate::coin::ServerType;
 
+#[frb]
+pub async fn init_tor() -> Result<()> {
+    crate::coin::init_tor().await
+}
+
 #[frb(sync)]
 pub fn set_lwd(server_type: ServerType, lwd: &str) {
     let mut coin = crate::coin::COIN.lock().unwrap();
     coin.set_url(server_type, lwd);
+}
+
+#[frb(sync)]
+pub fn set_use_tor(use_tor: bool){
+    let mut coin = crate::coin::COIN.lock().unwrap();
+    coin.set_use_tor(use_tor);
 }
 
 pub async fn get_current_height() -> Result<u32> {

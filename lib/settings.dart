@@ -22,6 +22,7 @@ import 'package:zkool/utils.dart';
 final databaseID = GlobalKey();
 final lightnodeID = GlobalKey();
 final lwdID = GlobalKey();
+final torID = GlobalKey();
 final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
@@ -40,6 +41,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   String databaseName = appStore.dbName;
   late String currentDatabaseName = databaseName;
   bool isLightNode = appStore.isLightNode;
+  bool useTor = appStore.useTor;
   bool needPin = appStore.needPin;
   bool offline = appStore.offline;
   String lwd = appStore.lwd;
@@ -66,6 +68,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       databaseID,
       lightnodeID,
       lwdID,
+      torID,
       actionsID,
       autosyncID,
       cancelID,
@@ -140,6 +143,15 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                               "${isLightNode ? 'Light' : 'Full'} Node Server"),
                       initialValue: lwd,
                       onChanged: onChangedLWD,
+                    )),
+                if (isLightNode) Showcase(
+                    key: torID,
+                    description: "Use TOR to connect to lightwallet server. Need App Restart",
+                    child: FormBuilderSwitch(
+                      name: "tor",
+                      title: Text("Use TOR"),
+                      initialValue: useTor,
+                      onChanged: onChangedUseTOR,
                     )),
                 Showcase(
                     key: actionsID,
@@ -254,6 +266,17 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     setLwd(lwd: lwd, serverType: value ? ServerType.lwd : ServerType.zebra);
     setState(() {
       isLightNode = value;
+    });
+  }
+
+  onChangedUseTOR(bool? value) async {
+    if (value == null) return;
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool("use_tor", value);
+    appStore.useTor = value;
+    setUseTor(useTor: value);
+    setState(() {
+      useTor = value;
     });
   }
 
