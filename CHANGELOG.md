@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.16.1...zkool-v4.17.0) (2025-08-08)
+
+
+### Features
+
+* add support for TOR connection ([#379](https://github.com/hhanh00/zkool2/issues/379)) ([20c588b](https://github.com/hhanh00/zkool2/commit/20c588b19d75f961911b913d9b68ead2537b077f))
+
+
+### Bug Fixes
+
+* pass tor cache dirs ([#381](https://github.com/hhanh00/zkool2/issues/381)) ([13623c1](https://github.com/hhanh00/zkool2/commit/13623c1d6595535703ad5b239191fd60e49b8d42))
+
 ## [4.16.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.16.0...zkool-v4.16.1) (2025-08-08)
 
 
