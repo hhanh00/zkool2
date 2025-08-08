@@ -29,6 +29,11 @@ reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
 serde = "1.0"
 serde_json = "1.0"
 
+arti-client = {version = "0.31", features = ["tokio", "native-tls", "onion-service-client"]}
+tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
+hyper-util = {version = "0.1", features = ["tokio"]}
+tower = "0.5"
+
 group = "0.13"
 orchard = {version = "0.11", features = ["unstable-frost"]}
 rayon = "1.10"
@@ -73,7 +78,7 @@ tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt", "json"]}
 flate2 = "1.1"
 orion = "0.17"
 
-libsqlite3-sys = { version = "0.28", features = ["bundled-sqlcipher-vendored-openssl"] }
+libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"] }
 
 [lints.rust]
 unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}

@@ -9,9 +9,14 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Usd`, `ZcashUSD`
 
+Future<void> initTor() => RustLib.instance.api.crateApiNetworkInitTor();
+
 void setLwd({required ServerType serverType, required String lwd}) =>
     RustLib.instance.api
         .crateApiNetworkSetLwd(serverType: serverType, lwd: lwd);
+
+void setUseTor({required bool useTor}) =>
+    RustLib.instance.api.crateApiNetworkSetUseTor(useTor: useTor);
 
 Future<int> getCurrentHeight() =>
     RustLib.instance.api.crateApiNetworkGetCurrentHeight();

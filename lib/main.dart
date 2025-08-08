@@ -4,6 +4,7 @@ import 'package:mobx/mobx.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
+import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -18,6 +19,8 @@ Future<void> main() async {
   await RustLib.init();
   await appStore.init();
   await appStore.loadAppSettings();
+  if (appStore.useTor)
+    await initTor();
 
   final appWatcher = LifecycleWatcher();
   appWatcher.init();
