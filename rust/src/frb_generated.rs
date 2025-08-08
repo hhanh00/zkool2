@@ -1477,11 +1477,12 @@ fn wire__crate__api__network__init_tor_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_directory = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::network::init_tor().await?;
+                        let output_ok = crate::api::network::init_tor(api_directory).await?;
                         Ok(output_ok)
                     })()
                     .await,
