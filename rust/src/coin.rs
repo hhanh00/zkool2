@@ -1,10 +1,14 @@
 use std::sync::Mutex;
 
 use anyhow::Result;
+use arti_client::{TorClient, TorClientConfig};
+use tor_rtcompat::PreferredRuntime;
+use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Sqlite, SqlitePool};
-use tonic::transport::ClientTlsConfig;
+use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Uri};
+use tower::service_fn;
 use zcash_protocol::consensus::{BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters, TestNetwork};
 use zcash_protocol::local_consensus::LocalNetwork;
 
@@ -38,12 +42,14 @@ pub struct Coin {
     pub pool: Option<SqlitePool>,
     pub url: String,
     pub server_type: ServerType,
+    pub use_tor: bool,
 }
 
 impl Coin {
     pub async fn new(
         server_type: ServerType,
         url: &str,
+        use_tor: bool,
         db_filepath: &str,
         password: Option<String>,
     ) -> Result<Coin> {
@@ -91,6 +97,7 @@ impl Coin {
             pool: Some(pool),
             server_type,
             url: url.to_string(),
+            use_tor,
         })
     }
 
@@ -109,9 +116,20 @@ impl Coin {
         self.server_type = server_type;
     }
 
+    pub fn set_use_tor(&mut self, use_tor: bool) {
+        self.use_tor = use_tor;
+    }
+
     pub async fn client(&self) -> Result<Client> {
         match self.server_type {
-            ServerType::Lwd => {
+            ServerType::Lwd if self.use_tor => {
+                let channel = connect_over_tor(&self.url).await?;
+
+                let client = CompactTxStreamerClient::new(channel);
+                Ok(Box::new(client))
+            }
+
+            ServerType::Lwd if !self.use_tor => {
                 let mut channel = tonic::transport::Channel::from_shared(self.url.clone())?;
                 if self.url.starts_with("https") {
                     let tls = ClientTlsConfig::new().with_enabled_roots();
@@ -125,8 +143,50 @@ impl Coin {
                 let client = ZebraClient::new(&self.network, &self.url);
                 Ok(Box::new(client))
             }
+
+            _ => { todo!() }
         }
     }
+}
+
+async fn build_tor() -> anyhow::Result<TorClient<PreferredRuntime>> {
+    let config = TorClientConfig::default();
+    let tor_client = TorClient::create_bootstrapped(config).await?;
+    Ok(tor_client)
+}
+
+async fn connect_over_tor(
+    url: &str
+) -> anyhow::Result<Channel> {
+    let uri = url.parse::<Uri>()?;
+
+    let host = uri.host().ok_or_else(|| anyhow::anyhow!("no host"))?.to_string();
+    let port = uri.port_u16().unwrap_or_else(|| if uri.scheme_str() == Some("https") { 443 } else { 80 });
+
+    tracing::info!("Connecting over TOR to {host} at {port}");
+    let connector = service_fn(move |_dst| {
+        let host = host.clone();
+        async move {
+            let tor_client = TOR.lock().await;
+            let tor_client = tor_client.as_ref().unwrap();
+            let stream = tor_client
+                .connect((host.as_str(), port))
+                .await
+                .map_err(std::io::Error::other)?;
+            // Convert to a type that implements hyper::rt::Read + Write
+            let compat_stream = TokioIo::new(stream);
+            Ok::<_, std::io::Error>(compat_stream)
+        }
+    });
+
+    let mut endpoint = Endpoint::from_shared(url.to_string())?;
+    if url.starts_with("https") {
+        tracing::info!("Using TLS");
+        let tls = ClientTlsConfig::new().with_enabled_roots();
+        endpoint = endpoint.tls_config(tls)?;
+    }
+
+    Ok(endpoint.connect_with_connector(connector).await?)
 }
 
 #[derive(Clone)]
@@ -145,6 +205,7 @@ impl Default for Coin {
             pool: None,
             server_type: ServerType::Lwd,
             url: String::new(),
+            use_tor: false,
         }
     }
 }
@@ -200,7 +261,16 @@ pub fn _regtest() -> LocalNetwork {
     }
 }
 
+pub async fn init_tor() -> Result<()> {
+    let tor_client = build_tor().await?;
+    let mut t = TOR.lock().await;
+    *t = Some(tor_client);
+    Ok(())
+}
+
 lazy_static::lazy_static! {
     pub static ref COIN: Mutex<Coin> = Mutex::new(Coin::default());
+    pub static ref TOR: tokio::sync::Mutex<Option<TorClient<PreferredRuntime>>> = tokio::sync::Mutex::new(None);
+
     pub static ref REGTEST: Network = Network::Regtest(_regtest());
 }
