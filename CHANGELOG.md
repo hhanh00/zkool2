@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.16.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.16.0...zkool-v4.16.1) (2025-08-08)
+
+
+### Bug Fixes
+
+* add zip package to windows release ([#377](https://github.com/hhanh00/zkool2/issues/377)) ([5557585](https://github.com/hhanh00/zkool2/commit/55575857e1bd9edcd87635e9775dfa4940228c30))
+
 ## [4.16.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.15.1...zkool-v4.16.0) (2025-08-07)
 
 
