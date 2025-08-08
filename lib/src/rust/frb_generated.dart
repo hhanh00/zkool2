@@ -180,7 +180,7 @@ abstract class RustLibApi extends BaseApi {
       required int fundingAccount,
       required PcztPackage pczt});
 
-  Future<void> crateApiNetworkInitTor();
+  Future<void> crateApiNetworkInitTor({required String directory});
 
   Future<bool> crateApiFrostIsSigningInProgress();
 
@@ -1328,11 +1328,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiNetworkInitTor() {
+  Future<void> crateApiNetworkInitTor({required String directory}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(directory, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 39, port: port_);
         },
@@ -1341,7 +1342,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiNetworkInitTorConstMeta,
-        argValues: [],
+        argValues: [directory],
         apiImpl: this,
       ),
     );
@@ -1349,7 +1350,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiNetworkInitTorConstMeta => const TaskConstMeta(
         debugName: "init_tor",
-        argNames: [],
+        argNames: ["directory"],
       );
 
   @override

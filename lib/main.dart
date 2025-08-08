@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobx/mobx.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
@@ -19,8 +20,9 @@ Future<void> main() async {
   await RustLib.init();
   await appStore.init();
   await appStore.loadAppSettings();
+  final torDir = await getApplicationDocumentsDirectory();
   if (appStore.useTor)
-    await initTor();
+    await initTor(directory: torDir.path);
 
   final appWatcher = LifecycleWatcher();
   appWatcher.init();

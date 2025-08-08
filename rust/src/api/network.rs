@@ -5,8 +5,8 @@ use serde::Deserialize;
 use crate::coin::ServerType;
 
 #[frb]
-pub async fn init_tor() -> Result<()> {
-    crate::coin::init_tor().await
+pub async fn init_tor(directory: String) -> Result<()> {
+    crate::coin::init_tor(&directory).await
 }
 
 #[frb(sync)]
