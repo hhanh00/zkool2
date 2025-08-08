@@ -54,3 +54,4 @@ ios/build/
 *.sh
 .env
 /certs/
+node_modules/
