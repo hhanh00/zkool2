@@ -27,14 +27,17 @@ jobs:
           dart pub global activate fastforge
       - name: Build
         run: |
-          fastforge package --platform=windows --targets=exe
+          fastforge package --platform=windows --targets=exe,zip
       - name: Indentify package
         id: package
         shell: bash
         run: |
           PKG_PATH=$(find dist/ -type f -name '*.exe' | head -n 1)
+          ZIP_PATH=$(find dist/ -type f -name '*.zip' | head -n 1)
           echo "Found package: $PKG_PATH"
+          echo "Found zip: $ZIP_PATH"
           echo "PKG_PATH=$PKG_PATH" >> $GITHUB_OUTPUT
+          echo "ZIP_PATH=$ZIP_PATH" >> $GITHUB_OUTPUT
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -43,6 +46,8 @@ jobs:
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.package.outputs.PKG_PATH }}
+          files: |
+            ${{ steps.package.outputs.PKG_PATH }}
+            ${{ steps.package.outputs.ZIP_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
