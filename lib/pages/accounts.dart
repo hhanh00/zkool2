@@ -243,8 +243,11 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
     await appStore.loadAccounts();
   }
 
-  void onSettings() {
-    GoRouter.of(context).push('/settings');
+  void onSettings() async {
+    final authenticated = await authenticate(reason: "Open Settings");
+    if (!mounted) return;
+    if (authenticated)
+      await GoRouter.of(context).push('/settings');
   }
 
   void onPrice() {
