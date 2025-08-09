@@ -21,7 +21,6 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
 final logID = GlobalKey();
@@ -402,12 +401,10 @@ class AccountEditPageState extends State<AccountEditPage> {
         title: "Export Account", message: "File Password");
     if (password != null) {
       final res = await exportAccount(id: account.id, passphrase: password);
-      appWatcher.temporaryDisableLock();
-      await FilePicker.platform.saveFile(
-        dialogTitle: 'Please select an output file for the encrypted account:',
-        fileName: '${account.name}.bin',
-        bytes: res,
-      );
+      await appWatcher.saveFile(
+        title: "Please select an output file for the encrypted account:",
+        fileName: "${account.name}.bin",
+        data: res);
     }
   }
 

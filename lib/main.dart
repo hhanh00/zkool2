@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobx/mobx.dart';
@@ -22,14 +26,13 @@ Future<void> main() async {
   await appStore.init();
   await appStore.loadAppSettings();
   final torDir = await getApplicationDocumentsDirectory();
-  if (appStore.useTor)
-    await initTor(directory: torDir.path);
+  if (appStore.useTor) await initTor(directory: torDir.path);
 
   appWatcher.init();
 
   runApp(ToastificationWrapper(
-          child: ShowCaseWidget(
-              globalTooltipActions: [
+      child: ShowCaseWidget(
+          globalTooltipActions: [
         const TooltipActionButton(
             type: TooltipDefaultActionType.skip,
             textStyle: TextStyle(color: Colors.red),
@@ -38,12 +41,12 @@ Future<void> main() async {
             type: TooltipDefaultActionType.next,
             backgroundColor: Colors.transparent),
       ],
-              builder: (context) => MaterialApp.router(
-                  routerConfig: router,
-                  themeMode: ThemeMode.system,
-                  theme: ThemeData.light(),
-                  darkTheme: ThemeData.dark(),
-                  debugShowCheckedModeBanner: false))));
+          builder: (context) => MaterialApp.router(
+              routerConfig: router,
+              themeMode: ThemeMode.system,
+              theme: ThemeData.light(),
+              darkTheme: ThemeData.dark(),
+              debugShowCheckedModeBanner: false))));
 }
 
 class LifecycleWatcher with WidgetsBindingObserver {
@@ -69,10 +72,35 @@ class LifecycleWatcher with WidgetsBindingObserver {
         return;
       }
 
-      if (appStore.unlocked != null &&  DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
+      if (appStore.unlocked != null &&
+          DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
         lockApp();
       }
     }
+  }
+
+  Future<Uint8List?> openFile({String? title}) async {
+    temporaryDisableLock();
+    final files = await FilePicker.platform.pickFiles(
+      dialogTitle: title,
+    );
+    if (files != null) {
+      final file = files.files.first;
+      final encryptedFile = File(file.path!);
+      final data = encryptedFile.readAsBytesSync();
+      return data;
+    }
+    return null;
+  }
+
+  Future<String?> saveFile(
+      {String? title, String? fileName, required Uint8List data}) async {
+    temporaryDisableLock();
+    return await FilePicker.platform.saveFile(
+      dialogTitle: title,
+      fileName: fileName,
+      bytes: data,
+    );
   }
 }
 
