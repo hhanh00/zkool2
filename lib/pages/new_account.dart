@@ -77,7 +77,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                 key: importID,
                 description: "Import an account from file",
                 child: IconButton(
-                    onPressed: onImport, icon: Icon(Icons.file_download))),
+                    onPressed: onImport, icon: Icon(Icons.file_open))),
             Showcase(
                 key: saveID,
                 description: "Save",
@@ -288,6 +288,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
   onImport() async {
     try {
+      appWatcher.temporaryDisableLock();
       final files = await FilePicker.platform.pickFiles(
         dialogTitle: 'Please select an encrypted account file for import',
       );
