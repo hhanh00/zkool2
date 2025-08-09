@@ -261,7 +261,7 @@ Future<bool> authenticate({String? reason}) async {
       case auth_error.notEnrolled:
         return true; // no fingerprint enrolled
       default:
-        showSnackbar("Authentication denied: ${e.code}");
+        showSnackbar("Authentication denied: ${e.code} - ${e.message}");
         return false;
     }
   } on MissingPluginException {
