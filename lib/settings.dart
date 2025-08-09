@@ -346,8 +346,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   void onSaveDatabase() async {
     final db = await getDatabaseFile();
     final data = await db.readAsBytes();
-    await appWatcher.saveFile(title: "Save Database",
+    final res = await appWatcher.saveFile(title: "Save Database",
       fileName: "$databaseName.db", data: data);
+    if (!mounted) return;
+    if (res != null)
+      await showMessage(context, "Database saved");
   }
 
   void onOpenDatabase() async {
@@ -355,6 +358,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (data != null) {
       final db = await getDatabaseFile();
       await db.writeAsBytes(data);
+      if (!mounted) return;
+      await showMessage(context, "Database restored");
     }
   }
 
