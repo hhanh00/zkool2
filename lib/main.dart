@@ -47,16 +47,30 @@ Future<void> main() async {
 }
 
 class LifecycleWatcher with WidgetsBindingObserver {
+  bool disabled = false;
+
   void init() {
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  // Disables the pin lock on the next resume
+  // Used when the app opens a platform dialog (open/save file)
+  // to prevent asking for the pin when the dialog closes
+  void temporaryDisableLock() {
+    disabled = true;
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       cancelMempoolListener();
+      if (disabled) {
+        disabled = false;
+        return;
+      }
+
       if (appStore.unlocked != null &&  DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
-        runInAction(() => appStore.unlocked = null);
+        lockApp();
       }
     }
   }
