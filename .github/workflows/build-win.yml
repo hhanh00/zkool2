@@ -41,7 +41,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ steps.package.outputs.PKG_PATH }}
+          path: ${{ steps.package.outputs.ZIP_PATH }}
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
