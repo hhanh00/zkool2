@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bubble/bubble.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,7 +64,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
     Future(tutorial);
 
-    assert (account != null);
+    assert(account != null);
     final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
 
     return DefaultTabController(
@@ -116,37 +117,36 @@ class AccountViewPageState extends State<AccountViewPage> {
                 final b = appStore.poolBalance;
 
                 return TabBarView(children: [
-                  CustomScrollView(
-                      slivers: [
-                        PinnedHeaderSliver(
-                          child: Container(
+                  CustomScrollView(slivers: [
+                    PinnedHeaderSliver(
+                        child: Container(
                             color: Theme.of(context).colorScheme.surface,
                             child: Column(children: [
-                            Text("Height"),
-                            Gap(8),
-                            Observer(
-                                builder: (context) {
-                                  final height = appStore.heights[account!.id]!;
-                                  return height.buildHero(context);
-                            }),
-                            Gap(16),
-                            Text("Balance"),
-                            Gap(8),
-                            if (b != null) BalanceWidget(b, showcase: true),
-                            Gap(8),
-                            if (unconfirmedAmount != null) ...[
-                              zatToText(BigInt.from(unconfirmedAmount),
-                                  prefix: "Unconfirmed: "),
+                              Text("Height"),
                               Gap(8),
-                            ],
-                            if (b != null) ...[
-                              Showcase(
-                                  key: balID,
-                                  description: "Balance across all pools",
-                                  child: zatToText(
-                                      b.field0[0] + b.field0[1] + b.field0[2],
-                                      style: t.titleLarge!)),
-                              Gap(8)],
+                              Observer(builder: (context) {
+                                final height = appStore.heights[account!.id]!;
+                                return height.buildHero(context);
+                              }),
+                              Gap(16),
+                              Text("Balance"),
+                              Gap(8),
+                              if (b != null) BalanceWidget(b, showcase: true),
+                              Gap(8),
+                              if (unconfirmedAmount != null) ...[
+                                zatToText(BigInt.from(unconfirmedAmount),
+                                    prefix: "Unconfirmed: "),
+                                Gap(8),
+                              ],
+                              if (b != null) ...[
+                                Showcase(
+                                    key: balID,
+                                    description: "Balance across all pools",
+                                    child: zatToText(
+                                        b.field0[0] + b.field0[1] + b.field0[2],
+                                        style: t.titleLarge!)),
+                                Gap(8)
+                              ],
                             ]))),
                     ...showTxHistory(appStore.transactions),
                   ]),
@@ -498,9 +498,12 @@ class BalanceWidget extends StatelessWidget {
 List<Widget> showTxHistory(List<Tx> transactions) {
   return [
     SliverToBoxAdapter(
-      child: Column(children: [
-    Text("Transaction History (${transactions.length} txs)"),
-    const Gap(8)],)),
+        child: Column(
+      children: [
+        Text("Transaction History (${transactions.length} txs)"),
+        const Gap(8)
+      ],
+    )),
     SliverFixedExtentList.builder(
       itemCount: transactions.length,
       itemBuilder: (context, index) {
@@ -561,16 +564,7 @@ Uint8List trimTrailingZeros(Uint8List bytes) {
 Widget showMemos(BuildContext context, List<Memo> memos) {
   return SearchableList(
       initialList: memos,
-      itemBuilder: (memo) {
-        return ListTile(
-          onTap: () => gotoTransaction(context, memo.idTx),
-          leading: Text("${memo.height}"),
-          title: CopyableText(
-              memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
-          subtitle: Text(timeToString(memo.time)),
-          trailing: Text(memo.idNote != null ? "In" : "Out"),
-        );
-      },
+      itemBuilder: (memo) => MemoWidget(memo),
       filter: (query) => memos
           .where((m) => query.isEmpty || (m.memo?.contains(query) == true))
           .toList(),
@@ -582,22 +576,21 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
 
 Widget showNotes(List<TxNote> notes) {
   final t = Theme.of(navigatorKey.currentContext!);
-  return
-    ListView.builder(
-      itemCount: notes.length,
-      itemBuilder: (context, index) {
-        final note = notes[index];
+  return ListView.builder(
+    itemCount: notes.length,
+    itemBuilder: (context, index) {
+      final note = notes[index];
 
-        return ListTile(
-          key: ValueKey(note.id),
-          onTap: () => toggleLock(context, note.id, !note.locked),
-          leading: Text("${note.height}"),
-          title: Text(poolToString(note.pool)),
-          trailing: zatToText(note.value),
-          textColor: note.locked ? t.disabledColor : null,
-        );
-      },
-    );
+      return ListTile(
+        key: ValueKey(note.id),
+        onTap: () => toggleLock(context, note.id, !note.locked),
+        leading: Text("${note.height}"),
+        title: Text(poolToString(note.pool)),
+        trailing: zatToText(note.value),
+        textColor: note.locked ? t.disabledColor : null,
+      );
+    },
+  );
 }
 
 void toggleLock(BuildContext context, int id, bool locked) async {
@@ -607,6 +600,34 @@ void toggleLock(BuildContext context, int id, bool locked) async {
 
 void onOpenLog(BuildContext context) async {
   await GoRouter.of(context).push("/log");
+}
+
+class MemoWidget extends StatelessWidget {
+  final Memo memo;
+  const MemoWidget(this.memo, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+    final incoming = memo.idNote != null;
+
+    return GestureDetector(
+      onTap: () => gotoTransaction(context, memo.idTx),
+      child: Padding(padding: EdgeInsetsGeometry.symmetric(vertical: 4),
+        child: Bubble(
+        nip: incoming ? BubbleNip.leftTop : BubbleNip.rightTop,
+        color: incoming ? cs.surface : cs.secondaryContainer,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Align(
+              alignment: Alignment.centerRight,
+              child: Text(timeToString(memo.time),
+                  style: t.textTheme.labelMedium)),
+          Gap(8),
+          CopyableText(
+              memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
+        ]))));
+  }
 }
 
 class ViewingKeysPage extends StatefulWidget {
@@ -667,7 +688,11 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
                     Divider(),
                     Gap(8),
                   ],
-                  Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
+                  Center(
+                      child: PoolSelect(
+                          enabled: accountPools,
+                          initialValue: accountPools,
+                          onChanged: onPoolChanged)),
                   Gap(32),
                   if (uvk != null) CopyableText(uvk!),
                   Gap(32),
