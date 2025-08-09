@@ -1,6 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:convert/convert.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -155,12 +154,11 @@ class TxPageState extends State<TxPage> {
       }
       final pcztData = await packTransaction(pczt: pczt);
       final prefix = txPlan.canSign ? "signed" : "unsigned";
-      appWatcher.temporaryDisableLock();
-      await FilePicker.platform.saveFile(
-        dialogTitle:
-            'Please select an output file for the unsigned transaction',
-        fileName: '$prefix-tx.bin',
-        bytes: pcztData,
+      await appWatcher.saveFile(
+        title:
+            "Please select an output file for the unsigned transaction",
+        fileName: "$prefix-tx.bin",
+        data: pcztData,
       );
     } on AnyhowException catch (e) {
       if (!mounted) return;
