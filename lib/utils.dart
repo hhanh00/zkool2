@@ -303,3 +303,7 @@ class CopyableText extends StatelessWidget {
     );
   }
 }
+
+void lockApp() {
+  runInAction(() => appStore.unlocked = null);
+}
