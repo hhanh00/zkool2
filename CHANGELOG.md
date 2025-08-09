@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.18.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.17.0...zkool-v4.18.0) (2025-08-09)
+
+
+### Features
+
+* add generate seed button in restore account section ([#382](https://github.com/hhanh00/zkool2/issues/382)) ([853a642](https://github.com/hhanh00/zkool2/commit/853a6426a64d1067dda5077245817f47195c4728))
+* open/save database file ([#387](https://github.com/hhanh00/zkool2/issues/387)) ([cf5b421](https://github.com/hhanh00/zkool2/commit/cf5b421d5b941294457f7376665e750898d96671))
+* show memos as speech bubbles ([#384](https://github.com/hhanh00/zkool2/issues/384)) ([756c854](https://github.com/hhanh00/zkool2/commit/756c854c0dfff9dd6355dbccc2aec4766435baa2))
+
+
+### Bug Fixes
+
+* add confirmation messages after successful open/save database ([#388](https://github.com/hhanh00/zkool2/issues/388)) ([7bc4976](https://github.com/hhanh00/zkool2/commit/7bc497603ef0f803e22a03c17fdcf67cbe91deb1))
+* call disableLock before modal dialogs ([#386](https://github.com/hhanh00/zkool2/issues/386)) ([f31818d](https://github.com/hhanh00/zkool2/commit/f31818d3bbf50d654c397bbd454e2656b09b30b4))
+* import/save account when pinlock active ([#385](https://github.com/hhanh00/zkool2/issues/385)) ([975c465](https://github.com/hhanh00/zkool2/commit/975c465799c4b9b6363c5ea1e19ee9b42f82f054))
+
 ## [4.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.16.1...zkool-v4.17.0) (2025-08-08)
 
 
