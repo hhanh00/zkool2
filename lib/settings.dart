@@ -126,6 +126,14 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                         tooltip: "Change Database Password",
                         onPressed: onChangePassword,
                         icon: Icon(Icons.lock_reset)),
+                    IconButton(
+                        tooltip: "Save Database",
+                        onPressed: () {},
+                        icon: Icon(Icons.save)),
+                    IconButton(
+                        tooltip: "Load Database",
+                        onPressed: () {},
+                        icon: Icon(Icons.file_open)),
                   ]
                 ]),
                 Showcase(

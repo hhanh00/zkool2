@@ -10,7 +10,8 @@ import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-var logger = Logger(filter: ProductionFilter());
+final logger = Logger(filter: ProductionFilter());
+final appWatcher = LifecycleWatcher();
 
 const String appName = "zkool";
 
@@ -24,7 +25,6 @@ Future<void> main() async {
   if (appStore.useTor)
     await initTor(directory: torDir.path);
 
-  final appWatcher = LifecycleWatcher();
   appWatcher.init();
 
   runApp(ToastificationWrapper(
