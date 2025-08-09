@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.18.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.18.0...zkool-v4.18.1) (2025-08-09)
+
+
+### Bug Fixes
+
+* add authentication to Settings page ([#392](https://github.com/hhanh00/zkool2/issues/392)) ([891bcbc](https://github.com/hhanh00/zkool2/commit/891bcbc1a614c207ff4be588eabfd046dd6f3790))
+* put zip file in windows build artifact ([#391](https://github.com/hhanh00/zkool2/issues/391)) ([024dbe7](https://github.com/hhanh00/zkool2/commit/024dbe7106edca257e0848f262608629fdc69041))
+* show authentication error message ([#389](https://github.com/hhanh00/zkool2/issues/389)) ([8b7ce52](https://github.com/hhanh00/zkool2/commit/8b7ce522bf257d9105be3993916305399f011a5f))
+
 ## [4.18.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.17.0...zkool-v4.18.0) (2025-08-09)
 
 
