@@ -26,6 +26,7 @@ final internalID = GlobalKey();
 final restoreID = GlobalKey();
 
 final keyID = GlobalKey();
+final generateID = GlobalKey();
 final passphraseID = GlobalKey();
 final accountIndexID = GlobalKey();
 final birthID = GlobalKey();
@@ -50,7 +51,7 @@ class NewAccountPageState extends State<NewAccountPage> {
   void tutorial() async {
     tutorialHelper(context, "tutNew0",
         [nameID, iconID, internalID, restoreID, dkgID, importID, saveID]);
-    if (restore) tutorialHelper(context, "tutNew1", [keyID, birthID, accountPoolsID]);
+    if (restore) tutorialHelper(context, "tutNew1", [keyID, generateID, birthID, accountPoolsID]);
     if (restore && isSeed)
       tutorialHelper(context, "tutNew2", [passphraseID, accountIndexID]);
   }
@@ -144,7 +145,8 @@ class NewAccountPageState extends State<NewAccountPage> {
                                 setState(() => restore = v ?? false))),
                     Gap(16),
                     if (restore)
-                      Showcase(
+                    Row(children: [
+                      Expanded(child: Showcase(
                           key: keyID,
                           description:
                               "Seed phrase (12, 18, 21, 24 words), a Sapling secret key, a viewing key, a unified viewing key, a xpub/xprv transparent key or a BIP-38 key (starting with K or L)",
@@ -156,7 +158,15 @@ class NewAccountPageState extends State<NewAccountPage> {
                             validator: (s) => validKey(s, restore: restore),
                             initialValue: key,
                             onChanged: (v) => setState(() => key = v!),
-                          )),
+                          ))),
+                      Gap(8),
+                      Showcase(
+                        key: generateID,
+                        description:
+                            "Generate a new Seed Phrase",
+                        child: IconButton.outlined(onPressed: onGenerate, icon: Icon(Icons.refresh),
+                        ))
+                    ]),
                     Gap(16),
                     if (restore && isSeed)
                       Showcase(
@@ -222,6 +232,11 @@ class NewAccountPageState extends State<NewAccountPage> {
   }
 
   void onFrost() => GoRouter.of(context).push("/dkg1");
+
+  void onGenerate() async {
+    final seed = generateSeed();
+    formKey.currentState!.fields["key"]!.didChange(seed);
+  }
 
   void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
