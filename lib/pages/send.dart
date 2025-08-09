@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -218,14 +215,9 @@ class SendPageState extends State<SendPage> {
   }
 
   void onLoad() async {
-    appWatcher.temporaryDisableLock();
-    final files = await FilePicker.platform.pickFiles(
-      dialogTitle: 'Please select a transaction to sign',
-    );
-    if (files == null) return;
-    final file = File(files.files.first.path!);
-    final bytes = await file.readAsBytes();
-    final pczt = await unpackTransaction(bytes: bytes);
+    final data = await appWatcher.openFile(title: "Please select a transaction to sign");
+    if (data == null) return;
+    final pczt = await unpackTransaction(bytes: data);
     if (!mounted) return;
     GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
   }
