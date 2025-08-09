@@ -218,6 +218,7 @@ class SendPageState extends State<SendPage> {
   }
 
   void onLoad() async {
+    appWatcher.temporaryDisableLock();
     final files = await FilePicker.platform.pickFiles(
       dialogTitle: 'Please select a transaction to sign',
     );

@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
@@ -243,7 +244,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                 child: IconButton(
                     tooltip: "Export Account",
                     onPressed: onExport,
-                    icon: Icon(Icons.input))),
+                    icon: Icon(Icons.save))),
             Showcase(
                 key: rewindID,
                 description: "Rewind back a few blocks",
@@ -401,6 +402,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         title: "Export Account", message: "File Password");
     if (password != null) {
       final res = await exportAccount(id: account.id, passphrase: password);
+      appWatcher.temporaryDisableLock();
       await FilePicker.platform.saveFile(
         dialogTitle: 'Please select an output file for the encrypted account:',
         fileName: '${account.name}.bin',
