@@ -88,6 +88,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
         title: Text("Settings"),
         actions: [
           IconButton(
+              tooltip: "Lock",
+              onPressed: lockApp,
+              icon: Icon(Icons.lock)),
+          IconButton(
               tooltip: "Show Tutorials again",
               onPressed: resetTutorial,
               icon: Icon(Icons.school))
