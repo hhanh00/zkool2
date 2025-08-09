@@ -5,7 +5,6 @@ use bip32::{ExtendedPrivateKey, ExtendedPublicKey, Prefix, PrivateKey};
 use bip39::Mnemonic;
 use flutter_rust_bridge::frb;
 use orchard::keys::{FullViewingKey, Scope};
-use rand_core::{OsRng, RngCore as _};
 use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
@@ -27,7 +26,7 @@ use zcash_protocol::consensus::NetworkConstants;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote}, bip38, db::{
+    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote}, api::key::generate_seed, bip38, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
@@ -273,10 +272,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
 
     let mut key = na.key.clone();
     if key.is_empty() {
-        let mut entropy = [0u8; 32];
-        OsRng.fill_bytes(&mut entropy);
-        let m = bip39::Mnemonic::from_entropy(&entropy)?;
-        key = m.to_string();
+        key = generate_seed()?;
     }
 
     let pools = na.pools.unwrap_or(ALL_POOLS);

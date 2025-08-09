@@ -1,5 +1,6 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
+use rand_core::{OsRng, RngCore as _};
 use zcash_keys::{encoding::AddressCodec as _, keys::UnifiedFullViewingKey};
 use zcash_primitives::legacy::TransparentAddress;
 
@@ -7,6 +8,14 @@ use crate::{
     get_coin,
     key::{is_valid_sapling_key, is_valid_transparent_key},
 };
+
+#[frb(sync)]
+pub fn generate_seed() -> Result<String> {
+    let mut entropy = [0u8; 32];
+    OsRng.fill_bytes(&mut entropy);
+    let m = bip39::Mnemonic::from_entropy(&entropy)?;
+    Ok(m.to_string())
+}
 
 #[frb(sync)]
 pub fn is_valid_phrase(phrase: &str) -> bool {
