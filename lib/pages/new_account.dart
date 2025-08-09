@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -288,19 +285,13 @@ class NewAccountPageState extends State<NewAccountPage> {
 
   onImport() async {
     try {
-      appWatcher.temporaryDisableLock();
-      final files = await FilePicker.platform.pickFiles(
-        dialogTitle: 'Please select an encrypted account file for import',
-      );
-      if (files == null) return;
+      final data = await appWatcher.openFile(title: "Please select an encrypted account file for import");
+      if (data == null) return;
       if (!mounted) return;
-      final file = files.files.first;
       final password = await inputPassword(context,
           title: "Import File", message: "File Password");
       if (password != null) {
-        final encryptedFile = File(file.path!);
-        final encrypted = encryptedFile.readAsBytesSync();
-        await importAccount(passphrase: password, data: encrypted);
+        await importAccount(passphrase: password, data: data);
         if (mounted)
           await showMessage(context, "Account imported successfully");
         await appStore.loadAccounts();

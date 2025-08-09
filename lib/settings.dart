@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -128,11 +129,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                         icon: Icon(Icons.lock_reset)),
                     IconButton(
                         tooltip: "Save Database",
-                        onPressed: () {},
+                        onPressed: onSaveDatabase,
                         icon: Icon(Icons.save)),
                     IconButton(
                         tooltip: "Load Database",
-                        onPressed: () {},
+                        onPressed: onOpenDatabase,
                         icon: Icon(Icons.file_open)),
                   ]
                 ]),
@@ -336,15 +337,35 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     });
   }
 
+  Future<File> getDatabaseFile() async {
+      final dbDir = await getApplicationDocumentsDirectory();
+    final dbFilepath = '${dbDir.path}/$databaseName.db';
+    return File(dbFilepath);
+  }
+
+  void onSaveDatabase() async {
+    final db = await getDatabaseFile();
+    final data = await db.readAsBytes();
+    await appWatcher.saveFile(title: "Save Database",
+      fileName: "$databaseName.db", data: data);
+  }
+
+  void onOpenDatabase() async {
+    final data = await appWatcher.openFile(title: "Open Database");
+    if (data != null) {
+      final db = await getDatabaseFile();
+      await db.writeAsBytes(data);
+    }
+  }
+
   void onDeleteDatabase() async {
     final confirmed = await confirmDialog(context,
         title: "Delete Database",
         message:
             "Do you really want to delete the database $databaseName? This will remove all your data and cannot be undone!");
     if (!confirmed) return;
-    final dbDir = await getApplicationDocumentsDirectory();
-    final dbFilepath = '${dbDir.path}/$databaseName.db';
-    await File(dbFilepath).delete();
+    final db = await getDatabaseFile();
+    await db.delete();
     if (!mounted) return;
     await showMessage(context, "Database $databaseName deleted");
     setState(() {
