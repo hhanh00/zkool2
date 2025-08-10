@@ -9,28 +9,21 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: docs
-
-      - name: Setup mdBook
-        uses: jontze/action-mdbook@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          token: ${{secrets.GITHUB_TOKEN}}
-          use-mermaid: true
-          use-toc: true
-          use-admonish: true
-          use-katex: true
-
-      - run: mdbook build
-        working-directory: ./docs
-
+          version: latest
+          run_install: true
+      - name: Build docs
+        run: |
+          pnpm docs:build
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.ref == 'refs/heads/docs' }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/book
+          publish_dir: ./docs/.vuepress/dist

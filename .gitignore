@@ -11,3 +11,7 @@ rust_builder/
 .DS_Store
 .flutter-plugins
 .flutter-plugins-dependencies
+docs/.vuepress/.cache
+docs/.vuepress/.temp
+docs/.vuepress/dist
+node_modules/

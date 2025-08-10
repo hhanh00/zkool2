@@ -1,0 +1,59 @@
+---
+title: Overview
+---
+# Protocol
+    - Concepts
+        - State/Consensus
+        - Centralized, Decentralized
+        - Public/Private
+        - Pools/Transaction
+        - Local/Global State
+    - Mining Consensus Rules
+        - Fee
+        - Dev Fund/Lockbox
+        - Shielding/Maturity
+    - Tx Consensus Rules
+        - Inputs
+            - Reference to Prev Outputs
+            - Single Spend
+            - Signature
+        - Outputs
+            - Address, Amount
+        - Net Value
+    - Privacy
+        - Commitments/Nullifiers
+        - ZKP (CT Witnesses)
+        - PK Randomization
+        - Binding Signature
+# Keys
+    - Public/Private/Hash Keys
+    - Shielded Keys
+        - Spend Authorization Key
+        - Nullifier Key
+        - Diversifier Key
+        - Incoming Viewing Key
+        - Outgoing Viewing Key
+        - Full Viewing Key
+        - Spending Key
+        - Seed Phrase + Account Derivation Path
+    - Transparent Keys
+        - Key + Chain Code
+        - Seed Phrase + Account & Address Derivation Path
+# Transaction
+    - Data Model
+    - Secure Signing
+        - Cold Storage
+        - Hardware Wallets
+    - Multi Signature (FROST)
+# Privacy Considerations
+    - Transaction Privacy
+        - Permanent Blockchain Record
+            - Block Height
+            - Anchor Height
+            - Transparent Data
+            - Shielded Net Amounts
+        - Transient Data
+            - Source IP
+            - Time
+    - Full/Light Servers
+    - Mitigations
