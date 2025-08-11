@@ -3,14 +3,16 @@ use std::sync::Mutex;
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
 use arti_client::TorClient;
-use tor_rtcompat::PreferredRuntime;
 use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Sqlite, SqlitePool};
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Uri};
+use tor_rtcompat::PreferredRuntime;
 use tower::service_fn;
-use zcash_protocol::consensus::{BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters, TestNetwork};
+use zcash_protocol::consensus::{
+    BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters, TestNetwork,
+};
 use zcash_protocol::local_consensus::LocalNetwork;
 
 use crate::db::create_schema;
@@ -72,9 +74,13 @@ impl Coin {
             create_schema(&mut connection).await?;
             let testnet = db_filepath.contains("testnet");
             let regtest = db_filepath.contains("regtest");
-            let coin_value =
-                if testnet { "1 "}
-                else if regtest { "2" } else { "0" };
+            let coin_value = if testnet {
+                "1 "
+            } else if regtest {
+                "2"
+            } else {
+                "0"
+            };
             crate::db::put_prop(&mut connection, "coin", coin_value).await?;
         }
 
@@ -145,39 +151,49 @@ impl Coin {
                 Ok(Box::new(client))
             }
 
-            _ => { todo!() }
+            _ => {
+                todo!()
+            }
         }
     }
 }
 
 async fn build_tor(directory: &str) -> anyhow::Result<TorClient<PreferredRuntime>> {
-    let config = TorClientConfigBuilder::from_directories(
-        directory, directory).build()?;
+    let config = TorClientConfigBuilder::from_directories(directory, directory).build()?;
     let tor_client = TorClient::create_bootstrapped(config).await?;
     Ok(tor_client)
 }
 
-async fn connect_over_tor(
-    url: &str
-) -> anyhow::Result<Channel> {
+async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
     let uri = url.parse::<Uri>()?;
 
-    let host = uri.host().ok_or_else(|| anyhow::anyhow!("no host"))?.to_string();
-    let port = uri.port_u16().unwrap_or_else(|| if uri.scheme_str() == Some("https") { 443 } else { 80 });
+    let host = uri
+        .host()
+        .ok_or_else(|| anyhow::anyhow!("no host"))?
+        .to_string();
+    let port = uri.port_u16().unwrap_or_else(|| {
+        if uri.scheme_str() == Some("https") {
+            443
+        } else {
+            80
+        }
+    });
 
     tracing::info!("Connecting over TOR to {host} at {port}");
     let connector = service_fn(move |_dst| {
         let host = host.clone();
         async move {
             let tor_client = TOR.lock().await;
-            let tor_client = tor_client.as_ref().unwrap();
+            let tor_client = tor_client
+                .as_ref()
+                .ok_or(anyhow::anyhow!("TOR Client not started. App needs restart"))?;
             let stream = tor_client
                 .connect((host.as_str(), port))
                 .await
                 .map_err(std::io::Error::other)?;
             // Convert to a type that implements hyper::rt::Read + Write
             let compat_stream = TokioIo::new(stream);
-            Ok::<_, std::io::Error>(compat_stream)
+            Ok::<_, anyhow::Error>(compat_stream)
         }
     });
 
@@ -264,9 +280,11 @@ pub fn _regtest() -> LocalNetwork {
 }
 
 pub async fn init_tor(directory: &str) -> Result<()> {
-    let tor_client = build_tor(directory).await?;
     let mut t = TOR.lock().await;
-    *t = Some(tor_client);
+    if t.is_none() {
+        let tor_client = build_tor(directory).await?;
+        *t = Some(tor_client);
+    }
     Ok(())
 }
 
