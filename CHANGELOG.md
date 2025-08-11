@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.18.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.18.1...zkool-v4.18.2) (2025-08-11)
+
+
+### Bug Fixes
+
+* switching useTOR in settings page ([#393](https://github.com/hhanh00/zkool2/issues/393)) ([6301def](https://github.com/hhanh00/zkool2/commit/6301def364785a7c7176b261b18498228af26dd2))
+
 ## [4.18.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.18.0...zkool-v4.18.1) (2025-08-09)
 
 
