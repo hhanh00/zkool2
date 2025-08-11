@@ -1,3 +1,5 @@
+use std::fs;
+
 use crate::{coin::Coin, get_coin};
 use anyhow::Result;
 use flutter_rust_bridge::frb;
@@ -36,4 +38,26 @@ pub async fn put_prop(key: &str, value: &str) -> Result<()> {
     let coin = get_coin!();
     let mut connection = coin.get_connection().await?;
     crate::db::put_prop(&mut connection, key, value).await
+}
+
+#[frb]
+pub async fn list_db_names(dir: &str, db_name: &str) -> Result<Vec<String>> {
+    let entries = fs::read_dir(dir)?;
+    let mut db_names = vec![];
+
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                let name = path.file_stem().unwrap().display().to_string();
+                if ext == "db" && db_name != name {
+                    db_names.push(name);
+                }
+            }
+        }
+    }
+
+    Ok(db_names)
 }

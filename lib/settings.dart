@@ -1,17 +1,13 @@
-import 'dart:io';
-
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -116,24 +112,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                             initialValue: databaseName,
                             onChanged: onChangedDatabaseName,
                           ))),
-                  if (databaseName != currentDatabaseName) ...[
-                    IconButton(
-                        tooltip: "Delete Database",
-                        onPressed: onDeleteDatabase,
-                        icon: Icon(Icons.delete)),
-                    IconButton(
-                        tooltip: "Change Database Password",
-                        onPressed: onChangePassword,
-                        icon: Icon(Icons.lock_reset)),
-                    IconButton(
-                        tooltip: "Save Database",
-                        onPressed: onSaveDatabase,
-                        icon: Icon(Icons.save)),
-                    IconButton(
-                        tooltip: "Load Database",
-                        onPressed: onOpenDatabase,
-                        icon: Icon(Icons.file_open)),
-                  ]
+                  IconButton(
+                      tooltip: "Database Manager",
+                      onPressed: onDatabaseManager,
+                      icon: Icon(Icons.folder)),
                 ]),
                 Showcase(
                     key: lightnodeID,
@@ -341,66 +323,14 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     });
   }
 
-  Future<File> getDatabaseFile() async {
-    final dbDir = await getApplicationDocumentsDirectory();
-    final dbFilepath = '${dbDir.path}/$databaseName.db';
-    return File(dbFilepath);
-  }
-
-  void onSaveDatabase() async {
-    final db = await getDatabaseFile();
-    final data = await db.readAsBytes();
-    final res = await appWatcher.saveFile(
-        title: "Save Database", fileName: "$databaseName.db", data: data);
-    if (!mounted) return;
-    if (res != null) await showMessage(context, "Database saved");
-  }
-
-  void onOpenDatabase() async {
-    final data = await appWatcher.openFile(title: "Open Database");
-    if (data != null) {
-      final db = await getDatabaseFile();
-      await db.writeAsBytes(data);
-      if (!mounted) return;
-      await showMessage(context, "Database restored");
+  void onDatabaseManager() async {
+    final dbName = await GoRouter.of(context).push<String>("/database_manager");
+    if (dbName != null) {
+      formKey.currentState!.fields["database_name"]!.didChange(dbName);
+      await showMessage(context,
+        title: "Restart Required",
+        "Restart the App for the database change to take effect");
     }
-  }
-
-  void onDeleteDatabase() async {
-    final confirmed = await confirmDialog(context,
-        title: "Delete Database",
-        message:
-            "Do you really want to delete the database $databaseName? This will remove all your data and cannot be undone!");
-    if (!confirmed) return;
-    final db = await getDatabaseFile();
-    await db.delete();
-    if (!mounted) return;
-    await showMessage(context, "Database $databaseName deleted");
-    setState(() {
-      formKey.currentState!.fields["database_name"]!
-          .didChange(currentDatabaseName);
-      databaseName = currentDatabaseName;
-      appStore.dbName = databaseName;
-    });
-  }
-
-  void onChangePassword() async {
-    final res = await showChangeDbPassword(context, databaseName: databaseName);
-    if (res == null) return;
-    final (oldPassword, newPassword) = res;
-    try {
-      await changeDbPassword(
-          dbFilepath: await getFullDatabasePath(databaseName),
-          tmpDir: (await getTemporaryDirectory()).path,
-          oldPassword: oldPassword,
-          newPassword: newPassword);
-    } on AnyhowException catch (e) {
-      if (!mounted) return;
-      await showException(context, "Failed to change database password: $e");
-      return;
-    }
-    if (!mounted) return;
-    await showMessage(context, "Database password changed successfully");
   }
 }
 
