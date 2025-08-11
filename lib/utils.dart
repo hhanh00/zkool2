@@ -4,7 +4,6 @@ import 'package:convert/convert.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -27,7 +26,8 @@ String zatToString(BigInt zat) {
 }
 
 Widget zatToText(BigInt zat,
-    {String prefix = "", TextStyle? style,
+    {String prefix = "",
+    TextStyle? style,
     Function()? onTap,
     bool colored = false}) {
   style ??= Theme.of(navigatorKey.currentContext!).textTheme.bodyMedium!;
@@ -38,18 +38,18 @@ Widget zatToText(BigInt zat,
   final minorUnits = s.substring(s.length - 5, s.length);
   final majorUnits = s.substring(0, s.length - 5);
   return Row(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.baseline,
-    textBaseline: TextBaseline.alphabetic,
-    children: [
-      InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
-      SelectableText.rich(TextSpan(children: [
-      TextSpan(text: majorUnits, style: style),
-      TextSpan(
-          text: minorUnits,
-          style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-    ]))]
-  );
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
+        SelectableText.rich(TextSpan(children: [
+          TextSpan(text: majorUnits, style: style),
+          TextSpan(
+              text: minorUnits,
+              style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+        ]))
+      ]);
 }
 
 BigInt stringToZat(String s) {
@@ -169,25 +169,23 @@ Future<bool> confirmDialog(BuildContext context,
 }
 
 Future<String?> inputPassword(BuildContext context,
-    {required String title, String? message}) async {
+    {required String title, String? btnCancelText, String? message}) async {
   final password = TextEditingController();
   bool confirmed = await AwesomeDialog(
         context: context,
         dialogType: DialogType.question,
         animType: AnimType.rightSlide,
-        title: title,
-        body: FormBuilder(
-            child: Column(children: [
+        body: Column(children: [
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           Gap(8),
-          FormBuilderTextField(
-            name: 'password',
+          TextField(
             decoration:
                 InputDecoration(labelText: 'Password', hintText: message),
             obscureText: true,
             controller: password,
           )
-        ])),
+        ]),
+        btnCancelText: btnCancelText,
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
         onDismissCallback: (type) {
@@ -207,6 +205,43 @@ Future<String?> inputPassword(BuildContext context,
       false;
   if (confirmed) {
     final p = password.text;
+    return p;
+  }
+  return null;
+}
+
+Future<String?> inputText(BuildContext context, {required String title}) async {
+  final controller = TextEditingController();
+  bool confirmed = await AwesomeDialog(
+        context: context,
+        dialogType: DialogType.question,
+        animType: AnimType.rightSlide,
+        body: Column(children: [
+          Text(title, style: Theme.of(context).textTheme.headlineSmall),
+          Gap(8),
+          TextField(
+            controller: controller,
+          )
+        ]),
+        btnCancelOnPress: () {},
+        btnOkOnPress: () {},
+        onDismissCallback: (type) {
+          final res = (() {
+            switch (type) {
+              case DismissType.btnOk:
+                return true;
+              default:
+                return false;
+            }
+          })();
+          GoRouter.of(context).pop(res);
+        },
+        dismissOnTouchOutside: false,
+        autoDismiss: false,
+      ).show() ??
+      false;
+  if (confirmed) {
+    final p = controller.text;
     return p;
   }
   return null;
@@ -251,8 +286,7 @@ Future<bool> authenticate({String? reason}) async {
     final didAuthenticate = await auth.authenticate(
         localizedReason: reason ?? "Authenticate to continue",
         options: const AuthenticationOptions(useErrorDialogs: false));
-    if (didAuthenticate)
-      runInAction(() => appStore.unlocked = DateTime.now());
+    if (didAuthenticate) runInAction(() => appStore.unlocked = DateTime.now());
     return didAuthenticate;
   } on PlatformException catch (e) {
     switch (e.code) {
