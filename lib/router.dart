@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
+import 'package:zkool/pages/db.dart';
 import 'package:zkool/pages/disclaimer.dart';
 import 'package:zkool/pages/dkg.dart';
 import 'package:zkool/pages/frost.dart';
@@ -110,6 +111,9 @@ final router = GoRouter(
     GoRoute(
         path: '/settings',
         builder: (context, state) => SettingsPage()), // Authenticated by caller
+    GoRoute(
+      path: '/database_manager',
+      builder: (context, state) => DatabaseManagerPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
   ],
 );
