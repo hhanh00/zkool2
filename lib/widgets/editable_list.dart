@@ -11,7 +11,7 @@ final newAccountId = GlobalKey();
 class EditableList<T extends Object> extends StatefulWidget {
   final String title;
   final List<T> items;
-  final List<Widget> Function(BuildContext) headerBuilder;
+  final List<Widget> Function(BuildContext)? headerBuilder;
   final FutureOr<void> Function(BuildContext) createBuilder;
   final FutureOr<void> Function(BuildContext, List<T>) editBuilder;
   final FutureOr<void> Function(BuildContext, List<T>) deleteBuilder;
@@ -23,7 +23,7 @@ class EditableList<T extends Object> extends StatefulWidget {
     void Function(bool?)? onSelectChanged,
   }) builder;
   final bool Function(T a, T b) isEqual;
-  final void Function(int a, int b) onReorder;
+  final void Function(int a, int b)? onReorder;
   final List<Widget>? buttons;
 
   const EditableList({
@@ -31,12 +31,12 @@ class EditableList<T extends Object> extends StatefulWidget {
     required this.items,
     required this.builder,
     required this.title,
-    required this.headerBuilder,
+    this.headerBuilder,
     required this.createBuilder,
     required this.editBuilder,
     required this.deleteBuilder,
     required this.isEqual,
-    required this.onReorder,
+    this.onReorder,
     this.buttons
   });
 
@@ -91,7 +91,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(children: [
-          ...widget.headerBuilder(context),
+          ...?widget.headerBuilder?.call(context),
           Expanded(child: AnimatedReorderableListView<T>(
           buildDefaultDragHandles: false,
           items: items,
@@ -103,7 +103,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
                       })),
           isSameItem: (T a, T b) => widget.isEqual(a, b),
           onReorder: (int oldIndex, int newIndex) {
-            widget.onReorder(oldIndex, newIndex);
+            widget.onReorder?.call(oldIndex, newIndex);
             setState(() {
               final T v = items.removeAt(oldIndex);
               items.insert(newIndex, v);

@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/db.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/coin.dart';
@@ -79,7 +80,9 @@ Future<bool> loadAccounts(BuildContext context) async {
             btnCancelText: "Change Database");
         if (password == null) {
           final dbName = await inputText(context, title: "Database Name");
-          if (dbName != null) appStore.dbName = dbName;
+          if (dbName != null) {
+            await selectDatabase(dbName);
+          }
         }
       }
     }
