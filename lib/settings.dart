@@ -89,9 +89,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
         title: Text("Settings"),
         actions: [
           IconButton(
-              tooltip: "Lock",
-              onPressed: lockApp,
-              icon: Icon(Icons.lock)),
+              tooltip: "Lock", onPressed: lockApp, icon: Icon(Icons.lock)),
           IconButton(
               tooltip: "Show Tutorials again",
               onPressed: resetTutorial,
@@ -157,15 +155,17 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                       initialValue: lwd,
                       onChanged: onChangedLWD,
                     )),
-                if (isLightNode) Showcase(
-                    key: torID,
-                    description: "Use TOR to connect to lightwallet server. Need App Restart",
-                    child: FormBuilderSwitch(
-                      name: "tor",
-                      title: Text("Use TOR"),
-                      initialValue: useTor,
-                      onChanged: onChangedUseTOR,
-                    )),
+                if (isLightNode)
+                  Showcase(
+                      key: torID,
+                      description:
+                          "Use TOR to connect to lightwallet server. Need App Restart",
+                      child: FormBuilderSwitch(
+                        name: "tor",
+                        title: Text("Use TOR"),
+                        initialValue: useTor,
+                        onChanged: onChangedUseTOR,
+                      )),
                 Showcase(
                     key: actionsID,
                     description: "Number actions per synchronization chunk",
@@ -288,6 +288,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     await prefs.setBool("use_tor", value);
     appStore.useTor = value;
     setUseTor(useTor: value);
+    if (useTor) {
+      final torDir = await getApplicationDocumentsDirectory();
+      await initTor(directory: torDir.path);
+    }
     setState(() {
       useTor = value;
     });
@@ -338,7 +342,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   Future<File> getDatabaseFile() async {
-      final dbDir = await getApplicationDocumentsDirectory();
+    final dbDir = await getApplicationDocumentsDirectory();
     final dbFilepath = '${dbDir.path}/$databaseName.db';
     return File(dbFilepath);
   }
@@ -346,11 +350,10 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   void onSaveDatabase() async {
     final db = await getDatabaseFile();
     final data = await db.readAsBytes();
-    final res = await appWatcher.saveFile(title: "Save Database",
-      fileName: "$databaseName.db", data: data);
+    final res = await appWatcher.saveFile(
+        title: "Save Database", fileName: "$databaseName.db", data: data);
     if (!mounted) return;
-    if (res != null)
-      await showMessage(context, "Database saved");
+    if (res != null) await showMessage(context, "Database saved");
   }
 
   void onOpenDatabase() async {

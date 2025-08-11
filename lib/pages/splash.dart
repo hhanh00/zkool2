@@ -4,7 +4,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/coin.dart';
@@ -36,7 +35,8 @@ class SplashPageState extends State<SplashPage> {
             }
             if (snapshot.hasData) {
               if (!appStore.disclaimerAccepted) {
-                WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/disclaimer"));
+                WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => GoRouter.of(context).go("/disclaimer"));
               } else {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
                   final account = appStore.selectedAccount;
@@ -58,37 +58,28 @@ class SplashPageState extends State<SplashPage> {
 
 Future<bool> loadAccounts(BuildContext context) async {
   if (!appStore.loaded) {
-    final dbName = appStore.dbName;
-    final dbFilepath = await getFullDatabasePath(dbName);
-    logger.i('dbFilepath: $dbFilepath');
-    appStore.dbFilepath = dbFilepath;
-
     String? password;
-    if (!File(dbFilepath).existsSync()) {
-      if (dbName != appName) {
-        // do not encrypt default database
-        password = await inputPassword(context,
-            title: "Enter New Database Password");
-      }
-      if (password != null && password.isEmpty) password = null;
-    }
-
     while (true) {
+      final dbName = appStore.dbName;
+      final dbFilepath = await getFullDatabasePath(dbName);
+      logger.i('dbFilepath: $dbFilepath');
+      appStore.dbFilepath = dbFilepath;
       try {
+        if (!File(dbFilepath).existsSync()) {
+          password = await inputPassword(context,
+              title: "Enter New Database Password");
+          if (password != null && password.isEmpty) password = null;
+        }
+
         await openDatabase(dbFilepath: dbFilepath, password: password);
         break;
       } catch (_) {
-        password = await inputPassword(
-          context,
-          title: "Enter Database Password for $dbName",
-        );
+        password = await inputPassword(context,
+            title: "Enter Database Password for $dbName",
+            btnCancelText: "Change Database");
         if (password == null) {
-          // switch to default database
-          await showException(navigatorKey.currentContext!,
-              "No password given. Switching to defaut database.");
-          appStore.dbName = appName;
-          if (context.mounted)
-            await loadAccounts(context);
+          final dbName = await inputText(context, title: "Database Name");
+          if (dbName != null) appStore.dbName = dbName;
         }
       }
     }
