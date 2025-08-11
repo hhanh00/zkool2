@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.19.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.18.2...zkool-v4.19.0) (2025-08-11)
+
+
+### Features
+
+* database manager ([#395](https://github.com/hhanh00/zkool2/issues/395)) ([1ae9a14](https://github.com/hhanh00/zkool2/commit/1ae9a1476da14c86f1c56395c4bf0917d4c09f2d))
+
 ## [4.18.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.18.1...zkool-v4.18.2) (2025-08-11)
 
 
