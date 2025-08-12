@@ -16,7 +16,6 @@ import 'package:zkool/src/rust/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-final databaseID = GlobalKey();
 final lightnodeID = GlobalKey();
 final lwdID = GlobalKey();
 final torID = GlobalKey();
@@ -62,7 +61,6 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
 
   void tutorial() async {
     tutorialHelper(context, "tutSettings0", [
-      databaseID,
       lightnodeID,
       lwdID,
       torID,
@@ -89,7 +87,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
           IconButton(
               tooltip: "Show Tutorials again",
               onPressed: resetTutorial,
-              icon: Icon(Icons.school))
+              icon: Icon(Icons.school)),
+          IconButton(
+              tooltip: "Database Manager",
+              onPressed: onDatabaseManager,
+              icon: Icon(Icons.folder)),
         ],
       ),
       body: SingleChildScrollView(
@@ -99,24 +101,6 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                Row(children: [
-                  Expanded(
-                      child: Showcase(
-                          key: databaseID,
-                          description:
-                              "Change the database file. This requires a RESTART after",
-                          child: FormBuilderTextField(
-                            name: "database_name",
-                            decoration: const InputDecoration(
-                                labelText: "Database Name"),
-                            initialValue: databaseName,
-                            onChanged: onChangedDatabaseName,
-                          ))),
-                  IconButton(
-                      tooltip: "Database Manager",
-                      onPressed: onDatabaseManager,
-                      icon: Icon(Icons.folder)),
-                ]),
                 Showcase(
                     key: lightnodeID,
                     description: "Whether the server is a light node or not",
@@ -324,12 +308,12 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   void onDatabaseManager() async {
-    final dbName = await GoRouter.of(context).push<String>("/database_manager");
-    if (dbName != null) {
-      formKey.currentState!.fields["database_name"]!.didChange(dbName);
-      await showMessage(context,
-        title: "Restart Required",
-        "Restart the App for the database change to take effect");
+    final confirmed = await confirmDialog(context, title: "Database Manager",
+      message: "The Database Manager will open when you restart the app. Do you want to schedule it now?");
+    if (confirmed) {
+      final prefs = SharedPreferencesAsync();
+      await prefs.setBool("recovery", true);
+      await showMessage(context, "Restart the app to enter the database manager.");
     }
   }
 }
