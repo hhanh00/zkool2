@@ -32,10 +32,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
 
   Future<void> refresh() async {
     final dbDir = await getApplicationDocumentsDirectory();
-    dbNames = (await listDbNames(dir: dbDir.path, dbName: appStore.dbName))
-        .sorted()
-        .map((n) => (n, false))
-        .toList();
+    dbNames = (await listDbNames(dir: dbDir.path)).sorted().map((n) => (n, false)).toList();
     setState(() {});
   }
 
@@ -47,21 +44,13 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
           actions: [
             IconButton(onPressed: onNewDatabase, icon: Icon(Icons.add)),
             if (hasSingleSelection) ...[
-              IconButton(
-                  tooltip: "Load Database",
-                  onPressed: onOpenDatabase,
-                  icon: Icon(Icons.file_open)),
-              IconButton(
-                  tooltip: "Save Database",
-                  onPressed: onSaveDatabase,
-                  icon: Icon(Icons.save)),
+              IconButton(tooltip: "Load Database", onPressed: onOpenDatabase, icon: Icon(Icons.file_open)),
+              IconButton(tooltip: "Save Database", onPressed: onSaveDatabase, icon: Icon(Icons.save)),
               IconButton(onPressed: onChangeName, icon: Icon(Icons.edit)),
-              IconButton(
-                  onPressed: onChangePassword, icon: Icon(Icons.password))
+              IconButton(onPressed: onChangePassword, icon: Icon(Icons.password))
             ],
-            if (hasSelection)
-              IconButton(
-                  onPressed: onDeleteDatabases, icon: Icon(Icons.delete)),
+            if (hasSelection) IconButton(onPressed: onDeleteDatabases, icon: Icon(Icons.delete)),
+            IconButton(onPressed: onOK, icon: Icon(Icons.check)),
           ],
         ),
         body: ListView.builder(
@@ -99,8 +88,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
           dialogType: DialogType.question,
           animType: AnimType.rightSlide,
           body: Column(children: [
-            Text("Create New Database",
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text("Create New Database", style: Theme.of(context).textTheme.headlineSmall),
             Gap(8),
             TextField(
               decoration: InputDecoration(labelText: 'Name'),
@@ -142,8 +130,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
     final databaseName = selection.first;
     final db = File(await getFullDatabasePath(databaseName));
     final data = await db.readAsBytes();
-    final res = await appWatcher.saveFile(
-        title: "Save Database", fileName: "$databaseName.db", data: data);
+    final res = await appWatcher.saveFile(title: "Save Database", fileName: "$databaseName.db", data: data);
     if (!mounted) return;
     if (res != null) await showMessage(context, "Database saved");
   }
@@ -154,9 +141,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
     if (data == null) return;
     if (!mounted) return;
     final confirmed = await confirmDialog(context,
-        title: "Restore Database",
-        message:
-            "Are you sure you want to restore the database? This file erase the contents of the selected database");
+        title: "Restore Database", message: "Are you sure you want to restore the database? This file erase the contents of the selected database");
     if (!confirmed) return;
     final db = File(await getFullDatabasePath(databaseName));
     await db.writeAsBytes(data);
@@ -166,9 +151,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
 
   Future<void> onDeleteDatabases() async {
     final confirmed = await confirmDialog(context,
-        title: "Delete Databases",
-        message:
-            "Do you really want to delete the selected databases? This will remove all your data and cannot be undone!");
+        title: "Delete Databases", message: "Do you really want to delete the selected databases? This will remove all your data and cannot be undone!");
     if (!confirmed) return;
 
     for (var dbName in selection) {
@@ -188,8 +171,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
           dialogType: DialogType.question,
           animType: AnimType.rightSlide,
           body: Column(children: [
-            Text("Change Database Name",
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text("Change Database Name", style: Theme.of(context).textTheme.headlineSmall),
             Gap(8),
             TextField(
               decoration: InputDecoration(labelText: 'Name'),
@@ -245,6 +227,12 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
     }
     if (!mounted) return;
     await showMessage(context, "Database password changed successfully");
+  }
+
+  void onOK() async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.remove("recovery");
+    await showMessage(context, "Restart the app to exit the database manager.");
   }
 }
 
