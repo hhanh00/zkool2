@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.20.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.19.0...zkool-v4.20.0) (2025-08-12)
+
+
+### Features
+
+* editable multipay tx ([#397](https://github.com/hhanh00/zkool2/issues/397)) ([54cb67a](https://github.com/hhanh00/zkool2/commit/54cb67a626349095dc6ad9db5264642766553a68))
+
+
+### Bug Fixes
+
+* manual pinlock ([#399](https://github.com/hhanh00/zkool2/issues/399)) ([bd7ec6c](https://github.com/hhanh00/zkool2/commit/bd7ec6cc0d8b1027a633a3907a515b8fa7dbdcfc))
+
 ## [4.19.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.18.2...zkool-v4.19.0) (2025-08-11)
 
 
