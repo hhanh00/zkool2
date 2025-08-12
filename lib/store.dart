@@ -133,7 +133,7 @@ abstract class AppStoreBase with Store {
   String actionsPerSync = "10000";
   bool disclaimerAccepted = false;
   String? versionString;
-  bool needPin = true;
+  @observable bool needPin = true;
   @observable DateTime? unlocked;
   @observable bool offline = false;
   bool useTor = false;
