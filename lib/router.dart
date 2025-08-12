@@ -26,27 +26,22 @@ import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
-final RouteObserver<ModalRoute<void>> routeObserver =
-    RouteObserver<ModalRoute<void>>();
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 final router = GoRouter(
   initialLocation: '/splash',
   observers: [routeObserver],
   navigatorKey: navigatorKey,
   routes: [
-    GoRoute(
-        path: '/',
-        builder: (context, state) => pinLock(AccountListPage()),
-        routes: [
-          GoRoute(
-            path: 'account',
-            builder: (context, state) => pinLock(AccountViewPage()),
-          ),
-        ]),
+    GoRoute(path: '/', builder: (context, state) => pinLock(AccountListPage()), routes: [
+      GoRoute(
+        path: 'account',
+        builder: (context, state) => pinLock(AccountViewPage()),
+      ),
+    ]),
     GoRoute(
       path: '/account/edit',
-      builder: (context, state) =>
-          pinLock(AccountEditPage(state.extra as List<Account>)),
+      builder: (context, state) => pinLock(AccountEditPage(state.extra as List<Account>)),
     ),
     GoRoute(
       path: '/account/new',
@@ -62,8 +57,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/transparent_addresses',
-      builder: (context, state) => pinLock(TransparentAddressesPage(
-          txCounts: state.extra as List<TAddressTxCount>)),
+      builder: (context, state) => pinLock(TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>)),
     ),
     GoRoute(
       path: '/send',
@@ -71,20 +65,12 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/send2',
-      builder: (context, state) =>
-          pinLock(Send2Page(state.extra as List<Recipient>)),
+      builder: (context, state) => pinLock(Send2Page(state.extra as List<Recipient>)),
     ),
-    GoRoute(
-        path: '/tx',
-        builder: (context, state) =>
-            pinLock(TxPage(state.extra as PcztPackage))),
-    GoRoute(
-        path: '/tx_view',
-        builder: (context, state) => pinLock(TxView(state.extra as int))),
+    GoRoute(path: '/tx', builder: (context, state) => pinLock(TxPage(state.extra as PcztPackage))),
+    GoRoute(path: '/tx_view', builder: (context, state) => pinLock(TxView(state.extra as int))),
     GoRoute(path: '/log', builder: (context, state) => pinLock(LogviewPage())),
-    GoRoute(
-        path: '/scanner',
-        builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
+    GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
     GoRoute(
         path: '/qr',
         builder: (context, state) {
@@ -94,29 +80,20 @@ final router = GoRouter(
     GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
     GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
     GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
-    GoRoute(
-        path: '/mempool_view',
-        builder: (context, state) =>
-            MempoolTxViewPage(state.extra as Uint8List)),
+    GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
     GoRoute(path: '/dkg1', builder: (context, state) => pinLock(DKGPage1())),
     GoRoute(path: '/dkg2', builder: (context, state) => pinLock(DKGPage2())),
     GoRoute(path: '/dkg3', builder: (context, state) => pinLock(DKGPage3())),
-    GoRoute(
-        path: '/frost1',
-        builder: (context, state) =>
-            pinLock(FrostPage1(state.extra as PcztPackage))),
-    GoRoute(
-        path: '/frost2', builder: (context, state) => pinLock(FrostPage2())),
-    GoRoute(
-        path: '/settings',
-        builder: (context, state) => SettingsPage()), // Authenticated by caller
-    GoRoute(
-      path: '/database_manager',
-      builder: (context, state) => DatabaseManagerPage()),
+    GoRoute(path: '/frost1', builder: (context, state) => pinLock(FrostPage1(state.extra as PcztPackage))),
+    GoRoute(path: '/frost2', builder: (context, state) => pinLock(FrostPage2())),
+    GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage())),
+    GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
   ],
 );
 
-Widget pinLock(Widget child) => Observer(
-    builder: (context) =>
-        (appStore.unlocked == null && appStore.needPin) ? PinLock() : child);
+Widget pinLock(Widget child) => Observer(builder: (context) {
+      appStore.unlocked;
+      appStore.needPin;
+      return (appStore.unlocked == null && appStore.needPin) ? PinLock() : child;
+    });
