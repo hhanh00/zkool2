@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:mobx/mobx.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
@@ -132,12 +131,5 @@ class PinLockState extends State<PinLock> {
             size: 200,
           ),
         )));
-  }
-
-  void onUnlock() async {
-    final authenticated = await authenticate(reason: "Unlock the App");
-    if (authenticated) {
-      runInAction(() => appStore.unlocked = DateTime.now());
-    }
   }
 }

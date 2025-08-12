@@ -17,20 +17,14 @@ import 'package:local_auth/local_auth.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/store.dart';
 
-String initials(String name) =>
-    name.substring(0, min(2, name.length)).toUpperCase();
+String initials(String name) => name.substring(0, min(2, name.length)).toUpperCase();
 
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
   return z.toString();
 }
 
-Widget zatToText(BigInt zat,
-    {String prefix = "",
-    TextStyle? style,
-    Function()? onTap,
-    required bool selectable,
-    bool colored = false}) {
+Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? onTap, required bool selectable, bool colored = false}) {
   style ??= Theme.of(navigatorKey.currentContext!).textTheme.bodyMedium!;
   if (colored && zat > BigInt.zero) {
     style = style.copyWith(color: Colors.green);
@@ -38,24 +32,17 @@ Widget zatToText(BigInt zat,
   final s = zatToString(zat);
   final minorUnits = s.substring(s.length - 5, s.length);
   final majorUnits = s.substring(0, s.length - 5);
-  return selectable ? Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
-        SelectableText.rich(TextSpan(children: [
+  return selectable
+      ? Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+          InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
+          SelectableText.rich(TextSpan(children: [
+            TextSpan(text: majorUnits, style: style),
+            TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+          ]))
+        ])
+      : Text.rich(TextSpan(children: [
           TextSpan(text: majorUnits, style: style),
-          TextSpan(
-              text: minorUnits,
-              style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-        ]))
-      ]) :
-      Text.rich(TextSpan(children: [
-          TextSpan(text: majorUnits, style: style),
-          TextSpan(
-              text: minorUnits,
-              style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+          TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
         ]));
 }
 
@@ -107,8 +94,7 @@ Future<void> showException(BuildContext context, String message) async {
   ).show();
 }
 
-Future<void> showMessage(BuildContext context, String message,
-    {String? title}) async {
+Future<void> showMessage(BuildContext context, String message, {String? title}) async {
   await AwesomeDialog(
     context: context,
     dialogType: DialogType.info,
@@ -127,8 +113,7 @@ Future<void> showSeed(BuildContext context, String message) async {
     dialogType: DialogType.warning,
     animType: AnimType.rightSlide,
     body: Column(children: [
-      Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS",
-          style: t.headlineSmall),
+      Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS", style: t.headlineSmall),
       Gap(16),
       CopyableText(
         message,
@@ -141,15 +126,13 @@ Future<void> showSeed(BuildContext context, String message) async {
   ).show();
 }
 
-void showSnackbar(String message) =>
-    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+void showSnackbar(String message) => ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
       SnackBar(
         content: Text(message),
       ),
     );
 
-Future<bool> confirmDialog(BuildContext context,
-    {required String title, required String message}) async {
+Future<bool> confirmDialog(BuildContext context, {required String title, required String message}) async {
   final confirmed = await AwesomeDialog(
         context: context,
         dialogType: DialogType.question,
@@ -175,8 +158,7 @@ Future<bool> confirmDialog(BuildContext context,
   return confirmed;
 }
 
-Future<String?> inputPassword(BuildContext context,
-    {required String title, String? btnCancelText, String? message}) async {
+Future<String?> inputPassword(BuildContext context, {required String title, String? btnCancelText, String? message}) async {
   final password = TextEditingController();
   bool confirmed = await AwesomeDialog(
         context: context,
@@ -186,8 +168,7 @@ Future<String?> inputPassword(BuildContext context,
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           Gap(8),
           TextField(
-            decoration:
-                InputDecoration(labelText: 'Password', hintText: message),
+            decoration: InputDecoration(labelText: 'Password', hintText: message),
             obscureText: true,
             controller: password,
           )
@@ -273,8 +254,7 @@ Future<void> resetTutorial() async {
   await prefs.remove("tutSettings0");
 }
 
-void tutorialHelper(BuildContext context, String id,
-    List<GlobalKey<State<StatefulWidget>>> ids) async {
+void tutorialHelper(BuildContext context, String id, List<GlobalKey<State<StatefulWidget>>> ids) async {
   final prefs = SharedPreferencesAsync();
   final tutNew = await prefs.getBool(id) ?? true;
   if (tutNew) {
@@ -290,9 +270,8 @@ void tutorialHelper(BuildContext context, String id,
 Future<bool> authenticate({String? reason}) async {
   final LocalAuthentication auth = LocalAuthentication();
   try {
-    final didAuthenticate = await auth.authenticate(
-        localizedReason: reason ?? "Authenticate to continue",
-        options: const AuthenticationOptions(useErrorDialogs: false));
+    final didAuthenticate =
+        await auth.authenticate(localizedReason: reason ?? "Authenticate to continue", options: const AuthenticationOptions(useErrorDialogs: false));
     if (didAuthenticate) runInAction(() => appStore.unlocked = DateTime.now());
     return didAuthenticate;
   } on PlatformException catch (e) {
@@ -311,17 +290,13 @@ Future<bool> authenticate({String? reason}) async {
   }
 }
 
-Widget maybeShowcase(bool condition,
-        {required GlobalKey key,
-        required String description,
-        required Widget child}) =>
-    condition
-        ? Showcase(
-            key: key,
-            description: description,
-            child: child,
-          )
-        : child;
+Widget maybeShowcase(bool condition, {required GlobalKey key, required String description, required Widget child}) => condition
+    ? Showcase(
+        key: key,
+        description: description,
+        child: child,
+      )
+    : child;
 
 void copyToClipboard(String text) {
   Clipboard.setData(ClipboardData(text: text));
@@ -347,5 +322,20 @@ class CopyableText extends StatelessWidget {
 }
 
 void lockApp() {
-  runInAction(() => appStore.unlocked = null);
+  runInAction(() {
+    appStore.needPin = true;
+    appStore.unlocked = null;
+  });
+}
+
+Future<bool> onUnlock() async {
+  final authenticated = await authenticate(reason: "Unlock the App");
+  if (authenticated) {
+    await runInAction(() async {
+      final prefs = SharedPreferencesAsync();
+      appStore.needPin = await prefs.getBool("pin_lock") ?? appStore.needPin;
+      appStore.unlocked = DateTime.now();
+    });
+  }
+  return authenticated;
 }
