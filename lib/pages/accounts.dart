@@ -139,6 +139,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                                 ? TextStyle(color: Colors.grey)
                                 : null),
                         subtitle: zatToText(account.balance,
+                            selectable: false,
                             style: t.copyWith(fontWeight: FontWeight.w700)),
                         trailing: Observer(builder: (context) {
                           final h = appStore.heights[account.id];
