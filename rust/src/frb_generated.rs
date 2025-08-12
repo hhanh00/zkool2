@@ -1798,13 +1798,11 @@ fn wire__crate__api__db__list_db_names_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_dir = <String>::sse_decode(&mut deserializer);
-            let api_db_name = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::db::list_db_names(&api_dir, &api_db_name).await?;
+                        let output_ok = crate::api::db::list_db_names(&api_dir).await?;
                         Ok(output_ok)
                     })()
                     .await,

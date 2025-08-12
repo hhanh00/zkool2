@@ -27,6 +27,5 @@ Future<String?> getProp({required String key}) =>
 Future<void> putProp({required String key, required String value}) =>
     RustLib.instance.api.crateApiDbPutProp(key: key, value: value);
 
-Future<List<String>> listDbNames(
-        {required String dir, required String dbName}) =>
-    RustLib.instance.api.crateApiDbListDbNames(dir: dir, dbName: dbName);
+Future<List<String>> listDbNames({required String dir}) =>
+    RustLib.instance.api.crateApiDbListDbNames(dir: dir);

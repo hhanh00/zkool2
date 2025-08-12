@@ -28,8 +28,8 @@ import 'package:zkool/widgets/scanner.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
-final router = GoRouter(
-  initialLocation: '/splash',
+GoRouter router(bool recoveryMode) => GoRouter(
+  initialLocation: recoveryMode ? '/database_manager' : '/splash',
   observers: [routeObserver],
   navigatorKey: navigatorKey,
   routes: [
