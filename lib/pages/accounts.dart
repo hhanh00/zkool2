@@ -245,10 +245,11 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   }
 
   void onSettings() async {
-    final authenticated = await authenticate(reason: "Open Settings");
+    final authenticated = await onUnlock();
     if (!mounted) return;
-    if (authenticated)
+    if (authenticated) {
       await GoRouter.of(context).push('/settings');
+    }
   }
 
   void onPrice() {

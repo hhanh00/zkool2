@@ -264,6 +264,22 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$needPinAtom =
+      Atom(name: 'AppStoreBase.needPin', context: context);
+
+  @override
+  bool get needPin {
+    _$needPinAtom.reportRead();
+    return super.needPin;
+  }
+
+  @override
+  set needPin(bool value) {
+    _$needPinAtom.reportWrite(value, super.needPin, () {
+      super.needPin = value;
+    });
+  }
+
   late final _$unlockedAtom =
       Atom(name: 'AppStoreBase.unlocked', context: context);
 
@@ -370,6 +386,7 @@ transactions: ${transactions},
 memos: ${memos},
 notes: ${notes},
 currentHeight: ${currentHeight},
+needPin: ${needPin},
 unlocked: ${unlocked},
 offline: ${offline},
 mempoolRunning: ${mempoolRunning}
