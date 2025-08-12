@@ -84,8 +84,7 @@ final router = GoRouter(
     GoRoute(path: '/log', builder: (context, state) => pinLock(LogviewPage())),
     GoRoute(
         path: '/scanner',
-        builder: (context, state) => pinLock(
-            ScannerPage(validator: state.extra as String? Function(String?)))),
+        builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
     GoRoute(
         path: '/qr',
         builder: (context, state) {

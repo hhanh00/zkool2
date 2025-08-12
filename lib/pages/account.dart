@@ -135,7 +135,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                               Gap(8),
                               if (unconfirmedAmount != null) ...[
                                 zatToText(BigInt.from(unconfirmedAmount),
-                                    prefix: "Unconfirmed: "),
+                                    prefix: "Unconfirmed: ",
+                                    selectable: true),
                                 Gap(8),
                               ],
                               if (b != null) ...[
@@ -144,6 +145,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                                     description: "Balance across all pools",
                                     child: zatToText(
                                         b.field0[0] + b.field0[1] + b.field0[2],
+                                        selectable: true,
                                         style: t.titleLarge!)),
                                 Gap(8)
                               ],
@@ -470,6 +472,7 @@ class BalanceWidget extends StatelessWidget {
           child: zatToText(
             balance.field0[0],
             prefix: "T: ",
+            selectable: true,
             onTap: () => onPoolSelected?.call(0),
           )),
       const Gap(8),
@@ -479,6 +482,7 @@ class BalanceWidget extends StatelessWidget {
           child: zatToText(
             balance.field0[1],
             prefix: "S: ",
+            selectable: true,
             onTap: () => onPoolSelected?.call(1),
           )),
       const Gap(8),
@@ -488,6 +492,7 @@ class BalanceWidget extends StatelessWidget {
           child: zatToText(
             balance.field0[2],
             prefix: "O: ",
+            selectable: true,
             onTap: () => onPoolSelected?.call(2),
           )),
     ]);
@@ -512,7 +517,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
           leading: Text("${tx.height}"),
           title: Text(getTransactionType(tx.tpe)),
           subtitle: Text(timeToString(tx.time)),
-          trailing: zatToText(BigInt.from(tx.value), colored: true),
+          trailing: zatToText(BigInt.from(tx.value), colored: true, selectable: false),
         );
 
         return (index == 0)
@@ -585,7 +590,7 @@ Widget showNotes(List<TxNote> notes) {
         onTap: () => toggleLock(context, note.id, !note.locked),
         leading: Text("${note.height}"),
         title: Text(poolToString(note.pool)),
-        trailing: zatToText(note.value),
+        trailing: zatToText(note.value, selectable: false),
         textColor: note.locked ? t.disabledColor : null,
       );
     },
