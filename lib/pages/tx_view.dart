@@ -56,26 +56,26 @@ class TxViewState extends State<TxView> {
           title: Text("Timestamp"), subtitle: CopyableText(exactTimeToString(txd.time))),
       ListTile(
           title: Text("Amount Spent"),
-          subtitle: zatToText(amountSpent)),
+          subtitle: zatToText(amountSpent, selectable: true)),
       ListTile(
           title: Text("Amount Received"),
-          subtitle: zatToText(amountReceived)),
+          subtitle: zatToText(amountReceived, selectable: true)),
       ListTile(
           title: Text("Amount Transacted"),
-          subtitle: zatToText(amountReceived - amountSpent)),
+          subtitle: zatToText(amountReceived - amountSpent, selectable: true)),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand((n) => [
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(
-                title: Text("Value"), subtitle: zatToText(n.value)),
+                title: Text("Value"), subtitle: zatToText(n.value, selectable: true)),
             Divider(),
           ]),
       if (txd.notes.isNotEmpty) Text("Received Notes", style: t.titleSmall),
       ...txd.notes.expand((n) => [
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(
-                title: Text("Value"), subtitle: zatToText(n.value)),
+                title: Text("Value"), subtitle: zatToText(n.value, selectable: true)),
             Divider()
           ]),
       if (txd.outputs.isNotEmpty) Text("Outputs", style: t.titleSmall),
@@ -83,7 +83,7 @@ class TxViewState extends State<TxView> {
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(title: Text("Address"), subtitle: CopyableText(n.address)),
             ListTile(
-                title: Text("Value"), subtitle: zatToText(n.value)),
+                title: Text("Value"), subtitle: zatToText(n.value, selectable: true)),
             Divider()
           ]),
       if (txd.memos.isNotEmpty) Text("Memos", style: t.titleSmall),

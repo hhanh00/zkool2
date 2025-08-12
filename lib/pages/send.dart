@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
@@ -25,8 +26,8 @@ final amountID = GlobalKey();
 final logID2 = GlobalKey();
 final openTxID = GlobalKey();
 final addTxID = GlobalKey();
+final clearID = GlobalKey();
 final sendID2 = GlobalKey();
-final memoID = GlobalKey();
 final dustChangePolicyID = GlobalKey();
 
 class SendPage extends StatefulWidget {
@@ -38,18 +39,14 @@ class SendPage extends StatefulWidget {
 
 class SendPageState extends State<SendPage> {
   final formKey = GlobalKey<FormBuilderState>();
-  final addressController = TextEditingController();
-  var amount = "";
-  String? memo;
   List<Recipient> recipients = [];
   bool supportsMemo = false;
   PoolBalance? pbalance;
   Addresses? addresses;
+  int? editingIndex;
 
   void tutorial() async {
-    tutorialHelper(context, "tutSend0",
-        [addressID, scanID, amountID, logID2, openTxID, addTxID, sendID2]);
-    if (supportsMemo) tutorialHelper(context, "tutSend1", [memoID]);
+    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, logID2, openTxID, addTxID, sendID2]);
   }
 
   @override
@@ -69,27 +66,28 @@ class SendPageState extends State<SendPage> {
   @override
   Widget build(BuildContext context) {
     Future(tutorial);
+    final cs = Theme.of(context).colorScheme;
 
     final balance = pbalance;
-    final address =
-        formKey.currentState?.fields['address']?.value as String? ?? "";
+    final address = formKey.currentState?.fields['address']?.value as String? ?? "";
     final recipientTiles = recipients
-        .map((r) => ListTile(
-              title: Text(r.address),
-              subtitle: zatToText(r.amount),
-              trailing: IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () {
-                    setState(() {
-                      recipients.remove(r);
-                    });
-                  }),
-            ))
+        .mapIndexed((i, r) => ListTile(
+            title: Text(r.address),
+            subtitle: zatToText(r.amount, selectable: false),
+            trailing: IconButton(
+                icon: Icon(Icons.delete),
+                onPressed: () {
+                  setState(() {
+                    editingIndex = null;
+                    recipients.remove(r);
+                  });
+                }),
+            onTap: () => onEdit(i),
+            selectedTileColor: cs.inversePrimary,
+            selected: i == editingIndex))
         .toList();
 
-    supportsMemo = address.isNotEmpty &&
-        validAddress(address) == null &&
-        !isValidTransparentAddress(address: address);
+    supportsMemo = address.isNotEmpty && validAddress(address) == null && !isValidTransparentAddress(address: address);
     return Scaffold(
         appBar: AppBar(
           title: Text("Recipient"),
@@ -97,31 +95,20 @@ class SendPageState extends State<SendPage> {
             Showcase(
                 key: logID2,
                 description: "Show App Log",
-                child: IconButton(
-                    tooltip: "Open Log",
-                    onPressed: () => onOpenLog(context),
-                    icon: Icon(Icons.description))),
+                child: IconButton(tooltip: "Open Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description))),
             Showcase(
                 key: openTxID,
                 description: "Load an unsigned transaction",
-                child: IconButton(
-                    tooltip: "Load Tx",
-                    onPressed: onLoad,
-                    icon: Icon(Icons.file_open))),
+                child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open))),
+            Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: reset, icon: Icon(Icons.clear))),
             Showcase(
                 key: addTxID,
                 description: "Queue this recipient to create a multi send",
-                child: IconButton(
-                    tooltip: "Add to Multi Tx",
-                    onPressed: onAdd,
-                    icon: Icon(Icons.add))),
+                child: IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add))),
             Showcase(
                 key: sendID2,
                 description: "Send transaction (including queued recipients)",
-                child: IconButton(
-                    tooltip: "Send (Next Step)",
-                    onPressed: onSend,
-                    icon: Icon(Icons.send))),
+                child: IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send))),
           ],
         ),
         body: SingleChildScrollView(
@@ -131,51 +118,30 @@ class SendPageState extends State<SendPage> {
                     key: formKey,
                     child: Column(children: [
                       ...recipientTiles,
-                      if (balance != null)
-                        BalanceWidget(balance, onPoolSelected: onPoolSelected),
+                      if (balance != null) BalanceWidget(balance, onPoolSelected: onPoolSelected),
                       Gap(16),
                       OverflowBar(spacing: 16, children: [
-                        if (addresses?.taddr != null)
-                          IconButton(
-                              onPressed: onUnshield,
-                              tooltip: "Unshield All",
-                              icon: Icon(Icons.lock_open)),
-                        if (addresses?.saddr != null ||
-                            addresses?.oaddr != null) ...[
-                          IconButton(
-                              onPressed: () => onShield(true),
-                              tooltip: "Shield One",
-                              icon: Icon(Icons.shield_outlined)),
-                          IconButton(
-                              onPressed: () => onShield(false),
-                              tooltip: "Shield All",
-                              icon: Icon(Icons.shield)),
-                          ]
+                        if (addresses?.taddr != null) IconButton(onPressed: onUnshield, tooltip: "Unshield All", icon: Icon(Icons.lock_open)),
+                        if (addresses?.saddr != null || addresses?.oaddr != null) ...[
+                          IconButton(onPressed: () => onShield(true), tooltip: "Shield One", icon: Icon(Icons.shield_outlined)),
+                          IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
+                        ]
                       ]),
                       Row(children: [
                         Expanded(
                             child: Showcase(
                                 key: addressID,
-                                description:
-                                    "Receiver Address (Transparent, Sapling or UA)",
+                                description: "Receiver Address (Transparent, Sapling or UA)",
                                 child: FormBuilderTextField(
                                   name: "address",
-                                  controller: addressController,
-                                  decoration: const InputDecoration(
-                                      labelText: "Address"),
-                                  validator: FormBuilderValidators.compose([
-                                    FormBuilderValidators.required(),
-                                    validAddressOrPaymentURI
-                                  ]),
+                                  decoration: const InputDecoration(labelText: "Address"),
+                                  validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
                                   onChanged: onAddressChanged,
                                 ))),
                         Showcase(
                             key: scanID,
                             description: "Open the QR Scanner",
-                            child: IconButton(
-                                tooltip: "Scan",
-                                onPressed: onScan,
-                                icon: Icon(Icons.qr_code_scanner))),
+                            child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner))),
                       ]),
                       Row(children: [
                         Expanded(
@@ -184,33 +150,20 @@ class SendPageState extends State<SendPage> {
                                 description: "Amount to send",
                                 child: FormBuilderTextField(
                                   name: "amount",
-                                  decoration: const InputDecoration(
-                                      labelText: "Amount"),
-                                  validator: FormBuilderValidators.compose([
-                                    FormBuilderValidators.required(),
-                                    validAmount
-                                  ]),
+                                  decoration: const InputDecoration(labelText: "Amount"),
+                                  validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
                                   keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                  initialValue: amount,
-                                  onChanged: (v) => setState(() => amount = v!),
                                 ))),
-                        IconButton(
-                            tooltip: "Set amount to entire balance",
-                            onPressed: onMax,
-                            icon: Icon(Icons.vertical_align_top)),
+                        IconButton(tooltip: "Set amount to entire balance", onPressed: onMax, icon: Icon(Icons.vertical_align_top)),
                       ]),
-                      if (supportsMemo)
-                        Showcase(
-                            key: memoID,
-                            description: "Optional memo",
-                            child: FormBuilderTextField(
-                              name: "memo",
-                              decoration:
-                                  const InputDecoration(labelText: "Memo"),
-                              initialValue: memo,
-                              onChanged: (v) => setState(() => memo = v),
-                              maxLines: 8,
-                            )),
+                      Visibility(
+                          visible: supportsMemo,
+                          maintainState: true,
+                          child: FormBuilderTextField(
+                            name: "memo",
+                            decoration: const InputDecoration(labelText: "Memo"),
+                            maxLines: 8,
+                          )),
                     ])))));
   }
 
@@ -235,17 +188,13 @@ class SendPageState extends State<SendPage> {
       setState(() {
         recipients.add(recipient);
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        addressController.clear();
-        formKey.currentState?.fields['amount']?.reset();
-      });
+      reset();
     }
   }
 
   void onShield(bool smartTransparent) async {
     if (!smartTransparent) {
-      final confirmed = await confirmDialog(
-          context,
+      final confirmed = await confirmDialog(context,
           title: 'Shield All Privacy Warning',
           message: 'Shielding all your transparent funds may result in a transaction that links multiple t-addresses.\nPrefer using "Shield One".');
       if (!confirmed) return;
@@ -259,9 +208,7 @@ class SendPageState extends State<SendPage> {
       final pczt = await prepare(
         recipients: [
           Recipient(
-              address: addresses?.oaddr ??
-                  addresses?.saddr ??
-                  "", // Shield to Orchard or Sapling address
+              address: addresses?.oaddr ?? addresses?.saddr ?? "", // Shield to Orchard or Sapling address
               amount: pbalance?.field0[0] ?? BigInt.zero)
         ],
         options: options,
@@ -281,11 +228,7 @@ class SendPageState extends State<SendPage> {
           dustChangePolicy: DustChangePolicy.sendToRecipient,
           smartTransparent: false);
       final pczt = await prepare(
-        recipients: [
-          Recipient(
-              address: addresses?.taddr ?? "",
-              amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))
-        ],
+        recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))],
         options: options,
       );
 
@@ -295,22 +238,50 @@ class SendPageState extends State<SendPage> {
     }
   }
 
+  void onEdit(int index) async {
+    final currentEditingIndex = editingIndex;
+    await finishEditing();
+    if (currentEditingIndex != index) {
+      editingIndex = index;
+      final fields = formKey.currentState!.fields;
+      final recipient = recipients[index];
+      fields["address"]!.didChange(recipient.address);
+      fields["amount"]!.didChange(zatToString(recipient.amount));
+      fields["memo"]!.didChange(recipient.userMemo);
+    }
+    setState(() {});
+  }
+
+  Future<void> finishEditing() async {
+    if (editingIndex != null) {
+      final recipient = await validateAndGetRecipient();
+      if (recipient != null) recipients[editingIndex!] = recipient;
+      editingIndex = null;
+      reset();
+    }
+  }
+
   void onSend() async {
-    final recipient = await validateAndGetRecipient();
-    if (recipient != null) recipients.add(recipient);
+    await finishEditing();
+
+    logger.i(formKey.currentState!.isDirty);
+    if (formKey.currentState!.isDirty) {
+      final recipient = await validateAndGetRecipient();
+      if (recipient != null) {
+        recipients.add(recipient);
+      } else
+        return;
+    }
 
     if (!mounted) return;
-    if (addressController.text.isNotEmpty || recipients.isNotEmpty)
-      await GoRouter.of(context).push("/send2", extra: recipients);
+    reset();
+    if (recipients.isNotEmpty) await GoRouter.of(context).push("/send2", extra: recipients);
   }
 
   void onScan() async {
-    final address2 =
-        await showScanner(context, validator: validAddressOrPaymentURI);
+    final address2 = await showScanner(context, validator: validAddressOrPaymentURI);
     if (address2 != null) {
-      setState(() {
-        addressController.text = address2;
-      });
+      formKey.currentState!.fields["address"]!.didChange(address2);
     }
   }
 
@@ -318,11 +289,9 @@ class SendPageState extends State<SendPage> {
     if (v == null || v.isEmpty) return;
     final recipients2 = parsePaymentUri(uri: v);
     if (recipients2 != null) {
-      setState(() {
-        recipients = recipients2;
-      });
+      setState(() => recipients = recipients2);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        addressController.clear();
+        if (formKey.currentState!.isDirty) reset();
       });
     }
   }
@@ -335,8 +304,7 @@ class SendPageState extends State<SendPage> {
       final memo = form.fields['memo']?.value as String?;
       logger.i("Send $amount to $address");
 
-      final recipient = Recipient(
-          address: address, amount: stringToZat(amount), userMemo: memo);
+      final recipient = Recipient(address: address, amount: stringToZat(amount), userMemo: memo);
       return recipient;
     }
     return null;
@@ -345,16 +313,21 @@ class SendPageState extends State<SendPage> {
   void onPoolSelected(int pool) {
     final a = addresses;
     if (a == null) return;
+    final addressField = formKey.currentState!.fields["address"]!;
     switch (pool) {
       case 0:
-        addressController.text = a.taddr ?? "";
+        addressField.didChange(a.taddr ?? "");
       case 1:
-        addressController.text = a.saddr ?? "";
+        addressField.didChange(a.saddr ?? "");
       case 2:
-        addressController.text = a.oaddr ?? "";
+        addressField.didChange(a.oaddr ?? "");
       default:
         logger.w("Unknown pool selected: $pool");
     }
+  }
+
+  void reset() {
+    formKey.currentState!.reset();
   }
 }
 
@@ -372,8 +345,7 @@ class Send2Page extends StatefulWidget {
 
 class Send2PageState extends State<Send2Page> {
   String? txId;
-  late final hasTex =
-      widget.recipients.any((r) => isTexAddress(address: r.address));
+  late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
   var recipientPaysFee = false;
   var discardDustChange = true;
   final formKey = GlobalKey<FormBuilderState>();
@@ -391,17 +363,11 @@ class Send2PageState extends State<Send2Page> {
       appBar: AppBar(
         title: Text("Extra Options"),
         actions: [
-          IconButton(
-              tooltip: "Open Log",
-              onPressed: () => onOpenLog(context),
-              icon: Icon(Icons.description)),
+          IconButton(tooltip: "Open Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
           Showcase(
               key: sendID3,
               description: "Send (Summary and Confirmation)",
-              child: IconButton(
-                  tooltip: "Send (Compute Tx)",
-                  onPressed: onSend,
-                  icon: Icon(Icons.send))),
+              child: IconButton(tooltip: "Send (Compute Tx)", onPressed: onSend, icon: Icon(Icons.send))),
         ],
       ),
       body: SingleChildScrollView(
@@ -412,8 +378,7 @@ class Send2PageState extends State<Send2Page> {
               child: Column(children: [
                 Showcase(
                     key: sourceID,
-                    description:
-                        "Pools to take funds from. Uncheck any pool you do not want to use",
+                    description: "Pools to take funds from. Uncheck any pool you do not want to use",
                     child: InputDecorator(
                         decoration: InputDecoration(labelText: "Source Pools"),
                         child: Align(
@@ -421,17 +386,12 @@ class Send2PageState extends State<Send2Page> {
                             child: FormBuilderField<int>(
                               name: "source pools",
                               initialValue: hasTex ? 1 : appStore.pools,
-                              builder: (field) => PoolSelect(
-                                  enabled: appStore.pools,
-                                  initialValue: field.value!,
-                                  onChanged: hasTex
-                                      ? null
-                                      : (v) => field.didChange(v)),
+                              builder: (field) =>
+                                  PoolSelect(enabled: appStore.pools, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
                             )))),
                 Showcase(
                     key: feeSourceID,
-                    description:
-                        "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the receipient instead",
+                    description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the receipient instead",
                     child: FormBuilderSwitch(
                       name: "recipientPaysFee",
                       title: Text("Recipient Pays Fee"),
@@ -440,8 +400,7 @@ class Send2PageState extends State<Send2Page> {
                     )),
                 Showcase(
                     key: dustChangePolicyID,
-                    description:
-                        "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
+                    description: "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
                     child: FormBuilderSwitch(
                       name: "dustChangePolicy",
                       title: Text("Discard Dust Change"),
@@ -466,16 +425,14 @@ class Send2PageState extends State<Send2Page> {
       final options = PaymentOptions(
           srcPools: srcPools,
           recipientPaysFee: recipientPaysFee,
-          dustChangePolicy: discardDustChange
-              ? DustChangePolicy.discard
-              : DustChangePolicy.sendToRecipient,
+          dustChangePolicy: discardDustChange ? DustChangePolicy.discard : DustChangePolicy.sendToRecipient,
           smartTransparent: false);
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,
       );
 
-      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
+      await GoRouter.of(navigatorKey.currentContext!).push("/tx", extra: pczt);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }

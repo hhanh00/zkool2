@@ -177,7 +177,9 @@ class TxPageState extends State<TxPage> {
         builder: (context) {
           return AlertDialog(
             title: Text("Payment URI"),
-            content: SizedBox(
+            content: GestureDetector(
+              onTap: () => copyToClipboard(widget.pczt.puri),
+              child: SizedBox(
                 width: 250,
                 height: 250,
                 child: QrImageView(
@@ -185,7 +187,7 @@ class TxPageState extends State<TxPage> {
                   version: QrVersions.auto,
                   backgroundColor: Colors.white,
                   size: 200.0,
-                )),
+                ))),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -218,7 +220,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           final input = txPlan.inputs[index];
           return ListTile(
             leading: Text("Input ${index + 1}"),
-            trailing: input.amount != null ? zatToText(input.amount!) : null,
+            trailing: input.amount != null ? zatToText(input.amount!, selectable: true) : null,
             subtitle: Text("Pool: ${poolToString(input.pool)}"),
           );
         } else {
@@ -227,7 +229,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           return ListTile(
             leading: Text("Output ${index2 + 1}"),
             title: Text("Address: ${output.address}"),
-            trailing: zatToText(output.amount),
+            trailing: zatToText(output.amount, selectable: true),
             subtitle: Text("Pool: ${poolToString(output.pool)}"),
           );
         }
