@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.20.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.0...zkool-v4.20.1) (2025-08-12)
+
+
+### Bug Fixes
+
+* move database manager to recovery mode ([#400](https://github.com/hhanh00/zkool2/issues/400)) ([83659ac](https://github.com/hhanh00/zkool2/commit/83659acf4baec38b550f0a96a98c51b0324732e8))
+* tooltip & router bug ([#402](https://github.com/hhanh00/zkool2/issues/402)) ([fd84d59](https://github.com/hhanh00/zkool2/commit/fd84d59b373dc588459eade631fbd034a9c680a9))
+
 ## [4.20.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.19.0...zkool-v4.20.0) (2025-08-12)
 
 
