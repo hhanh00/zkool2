@@ -235,7 +235,7 @@ Future<String?> inputText(BuildContext context, {required String title}) async {
   return null;
 }
 
-Future<void> resetTutorial() async {
+Future<void> resetTutorial(BuildContext context) async {
   final prefs = SharedPreferencesAsync();
   await prefs.remove("tutMain0");
   await prefs.remove("tutMain1");
@@ -252,6 +252,7 @@ Future<void> resetTutorial() async {
   await prefs.remove("tutSend3");
   await prefs.remove("tutSend4");
   await prefs.remove("tutSettings0");
+  await showMessage(context, "Tutorial tooltips will be shown again.");
 }
 
 void tutorialHelper(BuildContext context, String id, List<GlobalKey<State<StatefulWidget>>> ids) async {

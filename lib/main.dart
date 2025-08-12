@@ -28,6 +28,7 @@ Future<void> main() async {
   if (appStore.useTor) await initTor(directory: torDir.path);
 
   appWatcher.init();
+  final r = router(appStore.recovery);
 
   runApp(ToastificationWrapper(
       child: ShowCaseWidget(
@@ -41,7 +42,7 @@ Future<void> main() async {
             backgroundColor: Colors.transparent),
       ],
           builder: (context) => MaterialApp.router(
-              routerConfig: router(appStore.recovery),
+              routerConfig: r,
               themeMode: ThemeMode.system,
               theme: ThemeData.light(),
               darkTheme: ThemeData.dark(),
