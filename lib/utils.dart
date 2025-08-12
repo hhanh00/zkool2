@@ -29,6 +29,7 @@ Widget zatToText(BigInt zat,
     {String prefix = "",
     TextStyle? style,
     Function()? onTap,
+    required bool selectable,
     bool colored = false}) {
   style ??= Theme.of(navigatorKey.currentContext!).textTheme.bodyMedium!;
   if (colored && zat > BigInt.zero) {
@@ -37,7 +38,7 @@ Widget zatToText(BigInt zat,
   final s = zatToString(zat);
   final minorUnits = s.substring(s.length - 5, s.length);
   final majorUnits = s.substring(0, s.length - 5);
-  return Row(
+  return selectable ? Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
@@ -49,7 +50,13 @@ Widget zatToText(BigInt zat,
               text: minorUnits,
               style: style.copyWith(fontSize: style.fontSize! * 0.6)),
         ]))
-      ]);
+      ]) :
+      Text.rich(TextSpan(children: [
+          TextSpan(text: majorUnits, style: style),
+          TextSpan(
+              text: minorUnits,
+              style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+        ]));
 }
 
 BigInt stringToZat(String s) {
