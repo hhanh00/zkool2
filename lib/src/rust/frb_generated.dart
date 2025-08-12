@@ -200,8 +200,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<Account>> crateApiAccountListAccounts();
 
-  Future<List<String>> crateApiDbListDbNames(
-      {required String dir, required String dbName});
+  Future<List<String>> crateApiDbListDbNames({required String dir});
 
   Future<List<Memo>> crateApiAccountListMemos();
 
@@ -1586,14 +1585,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<String>> crateApiDbListDbNames(
-      {required String dir, required String dbName}) {
+  Future<List<String>> crateApiDbListDbNames({required String dir}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dir, serializer);
-          sse_encode_String(dbName, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 49, port: port_);
         },
@@ -1602,7 +1599,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiDbListDbNamesConstMeta,
-        argValues: [dir, dbName],
+        argValues: [dir],
         apiImpl: this,
       ),
     );
@@ -1610,7 +1607,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiDbListDbNamesConstMeta => const TaskConstMeta(
         debugName: "list_db_names",
-        argNames: ["dir", "dbName"],
+        argNames: ["dir"],
       );
 
   @override
