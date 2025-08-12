@@ -41,7 +41,7 @@ pub async fn put_prop(key: &str, value: &str) -> Result<()> {
 }
 
 #[frb]
-pub async fn list_db_names(dir: &str, db_name: &str) -> Result<Vec<String>> {
+pub async fn list_db_names(dir: &str) -> Result<Vec<String>> {
     let entries = fs::read_dir(dir)?;
     let mut db_names = vec![];
 
@@ -52,7 +52,7 @@ pub async fn list_db_names(dir: &str, db_name: &str) -> Result<Vec<String>> {
         if path.is_file() {
             if let Some(ext) = path.extension() {
                 let name = path.file_stem().unwrap().display().to_string();
-                if ext == "db" && db_name != name {
+                if ext == "db" {
                     db_names.push(name);
                 }
             }
