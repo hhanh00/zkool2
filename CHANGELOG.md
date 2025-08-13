@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.1...zkool-v4.20.2) (2025-08-13)
+
+
+### Bug Fixes
+
+* access database manager from open db dialog ([#403](https://github.com/hhanh00/zkool2/issues/403)) ([2de33e5](https://github.com/hhanh00/zkool2/commit/2de33e569b522ff7fde8cfcd498a7d3cf465e4c9))
+
 ## [4.20.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.0...zkool-v4.20.1) (2025-08-12)
 
 
