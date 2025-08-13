@@ -313,7 +313,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (confirmed) {
       final prefs = SharedPreferencesAsync();
       await prefs.setBool("recovery", true);
-      await showMessage(context, "Restart the app to enter the database manager.");
+      await showMessage(context, "Restart the app to enter the database manager");
     }
   }
 }
