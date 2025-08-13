@@ -12,14 +12,21 @@ export default defineUserConfig({
   bundler: viteBundler(),
   theme: defaultTheme({
     sidebar: [
-      "/overview",
+      // "/overview",
       {
-        text: "Protocol",
-        prefix: "/protocol/",
+        text: "Usage",
+        prefix: "/usage/",
         children: [
-          "concepts",
+          "files",
         ],
-      }
+      },
+      // {
+      //   text: "Protocol",
+      //   prefix: "/protocol/",
+      //   children: [
+      //     "concepts",
+      //   ],
+      // }
     ],
   }),
   head: [["link", { rel: "stylesheet", href: "/main.css" }]],
