@@ -76,7 +76,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
 
   void onSelect(String dbName) async {
     await selectDatabase(dbName);
-    GoRouter.of(context).pop(dbName);
+    await showMessage(context, "Database $dbName selected");
   }
 
   void onNewDatabase() async {
@@ -229,10 +229,10 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
     await showMessage(context, "Database password changed successfully");
   }
 
-  void onOK() async {
+  Future<void> onOK() async {
     final prefs = SharedPreferencesAsync();
     await prefs.remove("recovery");
-    await showMessage(context, "Restart the app to exit the database manager.");
+    GoRouter.of(context).go("/splash");
   }
 }
 
