@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.2...zkool-v4.20.3) (2025-08-13)
+
+
+### Bug Fixes
+
+* app locks even when pin is off ([#405](https://github.com/hhanh00/zkool2/issues/405)) ([3005d07](https://github.com/hhanh00/zkool2/commit/3005d077a5d30ed2ba9931ce8f09489af89e5271))
+
 ## [4.20.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.1...zkool-v4.20.2) (2025-08-13)
 
 
