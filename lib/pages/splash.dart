@@ -4,7 +4,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/pages/db.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/coin.dart';
@@ -36,16 +35,20 @@ class SplashPageState extends State<SplashPage> {
             }
             if (snapshot.hasData) {
               if (!appStore.disclaimerAccepted) {
-                WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => GoRouter.of(context).go("/disclaimer"));
+                WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/disclaimer"));
               } else {
+                final loaded = snapshot.data ?? false;
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
-                  final account = appStore.selectedAccount;
-                  if (account != null) {
-                    await selectAccount(account);
-                    GoRouter.of(context).go("/account", extra: account);
-                  } else
-                    GoRouter.of(context).go("/");
+                  if (!loaded)
+                    GoRouter.of(context).go('/database_manager');
+                  else {
+                    final account = appStore.selectedAccount;
+                    if (account != null) {
+                      await selectAccount(account);
+                      GoRouter.of(context).go("/account", extra: account);
+                    } else
+                      GoRouter.of(context).go("/");
+                  }
                 });
               }
             }
@@ -67,36 +70,25 @@ Future<bool> loadAccounts(BuildContext context) async {
       appStore.dbFilepath = dbFilepath;
       try {
         if (!File(dbFilepath).existsSync()) {
-          password = await inputPassword(context,
-              title: "Enter New Database Password");
+          password = await inputPassword(context, title: "Enter New Database Password");
           if (password != null && password.isEmpty) password = null;
         }
-
         await openDatabase(dbFilepath: dbFilepath, password: password);
         break;
       } catch (_) {
-        password = await inputPassword(context,
-            title: "Enter Database Password for $dbName",
-            btnCancelText: "Change Database");
+        password = await inputPassword(context, title: "Enter Database Password for $dbName", btnCancelText: "Database Manager");
         if (password == null) {
-          final dbName = await inputText(context, title: "Database Name");
-          if (dbName != null) {
-            await selectDatabase(dbName);
-          }
+          return false;
         }
       }
     }
     await appStore.loadAccounts();
     final accountId = await getSelectedAccount();
-    final account = accountId != null
-        ? appStore.accounts.firstWhereOrNull((a) => a.id == accountId)
-        : null;
+    final account = accountId != null ? appStore.accounts.firstWhereOrNull((a) => a.id == accountId) : null;
     if (account != null) await selectAccount(account);
 
     await appStore.loadSettings();
-    setLwd(
-        serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra,
-        lwd: appStore.lwd);
+    setLwd(serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra, lwd: appStore.lwd);
     setUseTor(useTor: appStore.useTor);
     appStore.autoSync();
     runMempoolListener();
