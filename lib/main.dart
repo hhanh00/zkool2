@@ -72,7 +72,7 @@ class LifecycleWatcher with WidgetsBindingObserver {
         return;
       }
 
-      if (appStore.unlocked != null &&
+      if (appStore.needPin && appStore.unlocked != null &&
           DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
         lockApp();
       }
