@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.3...zkool-v4.20.4) (2025-08-14)
+
+
+### Bug Fixes
+
+* missing memo field ([#407](https://github.com/hhanh00/zkool2/issues/407)) ([1cfff16](https://github.com/hhanh00/zkool2/commit/1cfff1619b2fdbddd4e100273a6e54282106530c))
+
 ## [4.20.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.2...zkool-v4.20.3) (2025-08-13)
 
 
