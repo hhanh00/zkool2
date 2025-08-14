@@ -137,6 +137,7 @@ class SendPageState extends State<SendPage> {
                                   decoration: const InputDecoration(labelText: "Address"),
                                   validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
                                   onChanged: onAddressChanged,
+                                  onEditingComplete: onAddressEditComplete,
                                 ))),
                         Showcase(
                             key: scanID,
@@ -296,6 +297,10 @@ class SendPageState extends State<SendPage> {
     }
   }
 
+  void onAddressEditComplete() {
+    setState(() {});
+  }
+
   Future<Recipient?> validateAndGetRecipient() async {
     final form = formKey.currentState!;
     if (form.saveAndValidate()) {
@@ -324,6 +329,7 @@ class SendPageState extends State<SendPage> {
       default:
         logger.w("Unknown pool selected: $pool");
     }
+    setState(() {});
   }
 
   void reset() {
