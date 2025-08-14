@@ -14,12 +14,24 @@ export default defineUserConfig({
     sidebar: [
       // "/overview",
       {
-        text: "Usage",
-        prefix: "/usage/",
+        text: "Guides",
+        prefix: "/guide/",
         children: [
-          "files",
+          "start",
+          "accounts",
+          "sync",
+          "account",
+          "addresses",
+          "pay",
         ],
       },
+      // {
+      //   text: "Usage",
+      //   prefix: "/usage/",
+      //   children: [
+      //     "files",
+      //   ],
+      // },
       // {
       //   text: "Protocol",
       //   prefix: "/protocol/",
