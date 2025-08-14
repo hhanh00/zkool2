@@ -23,6 +23,7 @@ export default defineUserConfig({
           "account",
           "addresses",
           "pay",
+          "other",
         ],
       },
       // {
