@@ -5,6 +5,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
@@ -354,6 +355,7 @@ class Send2PageState extends State<Send2Page> {
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
   var recipientPaysFee = false;
   var discardDustChange = true;
+  var puri = "";
   final formKey = GlobalKey<FormBuilderState>();
 
   void tutorial() async {
@@ -361,7 +363,17 @@ class Send2PageState extends State<Send2Page> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final uri = await buildPuri(recipients: widget.recipients);
+      setState(() => puri = uri);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
     Future(tutorial);
     logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
 
@@ -413,6 +425,22 @@ class Send2PageState extends State<Send2Page> {
                       initialValue: true,
                       onChanged: (v) => setState(() => discardDustChange = v!),
                     )),
+                Gap(16),
+                Divider(),
+                Gap(8),
+                SelectableText.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: "Payment URI: $puri ", style: t.titleSmall),
+                      WidgetSpan(
+                          child: IconButton(
+                        tooltip: "Show Payment URI",
+                        icon: Icon(Icons.qr_code),
+                        onPressed: onUriQr,
+                      )),
+                    ],
+                  ),
+                ),
               ])),
         ),
       ),
@@ -442,5 +470,33 @@ class Send2PageState extends State<Send2Page> {
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
+  }
+
+  void onUriQr() async {
+    await showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) {
+          return AlertDialog(
+            title: Text("Payment URI"),
+            content: GestureDetector(
+                onTap: () => copyToClipboard(puri),
+                child: SizedBox(
+                    width: 250,
+                    height: 250,
+                    child: QrImageView(
+                      data: puri,
+                      version: QrVersions.auto,
+                      backgroundColor: Colors.white,
+                      size: 200.0,
+                    ))),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text("Close"),
+              ),
+            ],
+          );
+        });
   }
 }
