@@ -1,4 +1,4 @@
-import{_ as n,c as a,b as i,o as t}from"./app-DK-ab512.js";const r={};function o(s,e){return t(),a("div",null,e[0]||(e[0]=[i(`<h1 id="protocol" tabindex="-1"><a class="header-anchor" href="#protocol"><span>Protocol</span></a></h1><pre><code>- Concepts
+import{_ as n,c as a,b as i,o as t}from"./app-Cx-sk55v.js";const r={};function o(s,e){return t(),a("div",null,e[0]||(e[0]=[i(`<h1 id="protocol" tabindex="-1"><a class="header-anchor" href="#protocol"><span>Protocol</span></a></h1><pre><code>- Concepts
     - State/Consensus
     - Centralized, Decentralized
     - Public/Private
@@ -50,4 +50,4 @@ import{_ as n,c as a,b as i,o as t}from"./app-DK-ab512.js";const r={};function o
         - Time
 - Full/Light Servers
 - Mitigations
-</code></pre>`,8)]))}const d=n(r,[["render",o]]),l=JSON.parse('{"path":"/overview.html","title":"Overview","lang":"en-US","frontmatter":{"title":"Overview"},"git":{"updatedTime":1755217513000,"contributors":[{"name":"Hanh","username":"Hanh","email":"hanh425@gmail.com","commits":1,"url":"https://github.com/Hanh"}],"changelog":[{"hash":"7a635b55ad178a9ab97aaa7a150ab1a9b7dd8b24","time":1755217513000,"email":"hanh425@gmail.com","author":"Hanh","message":"fix typos"}]},"filePathRelative":"overview.md"}');export{d as comp,l as data};
+</code></pre>`,8)]))}const d=n(r,[["render",o]]),l=JSON.parse('{"path":"/overview.html","title":"Overview","lang":"en-US","frontmatter":{"title":"Overview"},"git":{"updatedTime":1755236062000,"contributors":[{"name":"Hanh","username":"Hanh","email":"hanh425@gmail.com","commits":1,"url":"https://github.com/Hanh"}],"changelog":[{"hash":"3f1de746608710fb556cb2f1dde94645db1f42f1","time":1755236062000,"email":"hanh425@gmail.com","author":"Hanh","message":"build doc for fedora archlinux"}]},"filePathRelative":"overview.md"}');export{d as comp,l as data};
