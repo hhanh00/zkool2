@@ -428,18 +428,15 @@ class Send2PageState extends State<Send2Page> {
                 Gap(16),
                 Divider(),
                 Gap(8),
-                SelectableText.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: "Payment URI: $puri ", style: t.titleSmall),
-                      WidgetSpan(
-                          child: IconButton(
+                InputDecorator(
+                  decoration: InputDecoration(
+                      label: Text("Payment URI"),
+                      suffixIcon: IconButton(
                         tooltip: "Show Payment URI",
                         icon: Icon(Icons.qr_code),
                         onPressed: onUriQr,
                       )),
-                    ],
-                  ),
+                  child: CopyableText(puri),
                 ),
               ])),
         ),
