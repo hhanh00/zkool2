@@ -24,6 +24,7 @@ export default defineUserConfig({
           "addresses",
           "pay",
           "other",
+          "build",
         ],
       },
       // {
