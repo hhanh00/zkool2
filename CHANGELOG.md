@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.9](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.8...zkool-v4.20.9) (2025-08-15)
+
+
+### Bug Fixes
+
+* remove db creation with password ([#419](https://github.com/hhanh00/zkool2/issues/419)) ([7cb1583](https://github.com/hhanh00/zkool2/commit/7cb15835e37b544a4805dc887f1c9a7ad78f7df0))
+
 ## [4.20.8](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.7...zkool-v4.20.8) (2025-08-15)
 
 
