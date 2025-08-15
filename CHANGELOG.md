@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.6](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.5...zkool-v4.20.6) (2025-08-15)
+
+
+### Bug Fixes
+
+* reformat payment uri ([#413](https://github.com/hhanh00/zkool2/issues/413)) ([60a04d3](https://github.com/hhanh00/zkool2/commit/60a04d3c7b90c1404a86194338eb8e3946a19901))
+
 ## [4.20.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.4...zkool-v4.20.5) (2025-08-15)
 
 
