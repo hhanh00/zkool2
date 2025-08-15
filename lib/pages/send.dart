@@ -373,7 +373,6 @@ class Send2PageState extends State<Send2Page> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     Future(tutorial);
     logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
 
