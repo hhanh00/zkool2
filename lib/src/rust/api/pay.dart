@@ -12,6 +12,9 @@ part 'pay.freezed.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `borrow_decode`, `decode`, `encode`
 
+Future<String> buildPuri({required List<Recipient> recipients}) =>
+    RustLib.instance.api.crateApiPayBuildPuri(recipients: recipients);
+
 Future<PcztPackage> prepare(
         {required List<Recipient> recipients,
         required PaymentOptions options}) =>
@@ -90,6 +93,5 @@ class PcztPackage with _$PcztPackage {
     required Uint64List orchardIndices,
     required bool canSign,
     required bool canBroadcast,
-    required String puri,
   }) = _PcztPackage;
 }

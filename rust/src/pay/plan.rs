@@ -66,6 +66,25 @@ pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
     Ok(is_tex)
 }
 
+pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
+    // make a payment uri
+    let payments = recipients
+        .iter()
+        .map(|r| {
+            let address = ZcashAddress::from_str(&r.address)?;
+            let amount = Zatoshis::const_from_u64(r.amount);
+            let memo = encode_memo(r)?;
+            Ok::<_, anyhow::Error>(
+                Payment::new(address, amount, memo, None, None, vec![]).expect("payment"),
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let puri = TransactionRequest::new(payments)?;
+    let puri = puri.to_uri();
+
+    Ok(puri)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_transaction(
     network: &Network,
@@ -141,20 +160,6 @@ pub async fn plan_transaction(
             recipient_pays_fee,
         )
     };
-    // make a payment uri
-    let payments = recipients
-        .iter()
-        .map(|r| {
-            let address = ZcashAddress::from_str(&r.address)?;
-            let amount = Zatoshis::const_from_u64(r.amount);
-            let memo = encode_memo(r)?;
-            Ok::<_, anyhow::Error>(
-                Payment::new(address, amount, memo, None, None, vec![]).expect("payment"),
-            )
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let puri = TransactionRequest::new(payments)?;
-    let puri = puri.to_uri();
 
     let recipient_states = recipients
         .into_iter()
@@ -672,7 +677,6 @@ pub async fn plan_transaction(
             .collect(),
         can_sign,
         can_broadcast: false,
-        puri,
     };
 
     Ok(pczt_package)
@@ -706,7 +710,6 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
-        puri,
         ..
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
@@ -788,7 +791,6 @@ pub async fn sign_transaction(
         orchard_indices: orchard_indices.clone(),
         can_sign: true,
         can_broadcast: true,
-        puri: puri.clone(),
     })
 }
 
