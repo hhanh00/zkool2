@@ -17,6 +17,11 @@ pub struct PaymentOptions {
 }
 
 #[frb]
+pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
+    crate::pay::plan::build_puri(recipients).await
+}
+
+#[frb]
 pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Result<PcztPackage> {
     let c = crate::get_coin!();
     let account = c.account;
@@ -63,7 +68,6 @@ pub struct PcztPackage {
     pub orchard_indices: Vec<usize>,
     pub can_sign: bool,
     pub can_broadcast: bool,
-    pub puri: String,
 }
 
 #[frb]
