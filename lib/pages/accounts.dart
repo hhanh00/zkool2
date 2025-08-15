@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -65,13 +66,15 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
     super.didPopNext();
   }
 
-  void refreshHeight() async {
+  void refreshHeight(bool fetchPrice) async {
     if (appStore.checkOffline()) return;
     try {
       final height = await getCurrentHeight();
       appStore.currentHeight = height;
-      final p = await getCoingeckoPrice();
-      setState(() => price = p);
+      if (fetchPrice) {
+        final p = await getCoingeckoPrice();
+        setState(() => price = p);
+      }
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -112,13 +115,15 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                             "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
                         child: Observer(
                             builder: (context) => ElevatedButton(
-                                onPressed: () => Future(refreshHeight),
+                                onPressed: () => Future(() => refreshHeight(true)),
+                                onLongPress: () => Future(() => refreshHeight(false)),
                                 child: Text(
                                     "Height: ${appStore.currentHeight}")))),
                     const Gap(8),
                     if (price != null)
                       ElevatedButton(
-                          onPressed: onPrice, child: Text("Price: $price USD")),
+                          onPressed: !Platform.isLinux ? onPrice : null,
+                          child: Text("Price: $price USD")),
                     const Gap(8),
                   ],
               builder: (context, index, account, {selected, onSelectChanged}) {
