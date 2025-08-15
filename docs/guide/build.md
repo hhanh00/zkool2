@@ -36,3 +36,17 @@ export PATH=$HOME/.cargo/bin:$PATH
 cd zkool2
 flutter build linux
 ```
+
+## Fedora
+Only the installation of the required packages differs.
+
+```
+sudo dnf install clang cmake ninja-build gtk3-devel perl openssl-devel
+```
+
+## Archlinux
+Only the installation of the required packages differs.
+
+```
+sudo pacman -S unzip clang cmake ninja pkgconf gtk3
+```
