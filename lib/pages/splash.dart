@@ -70,8 +70,11 @@ Future<bool> loadAccounts(BuildContext context) async {
       appStore.dbFilepath = dbFilepath;
       try {
         if (!File(dbFilepath).existsSync()) {
-          password = await inputPassword(context, title: "Enter New Database Password");
-          if (password != null && password.isEmpty) password = null;
+          final confirmed = await confirmDialog(context, title: "New Database", message: "Do you want to encrypt your database file?");
+          if (confirmed) {
+            password = await inputPassword(context, title: "Enter New Database Password");
+            if (password != null && password.isEmpty) password = null;
+          }
         }
         await openDatabase(dbFilepath: dbFilepath, password: password);
         break;
