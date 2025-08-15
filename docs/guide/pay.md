@@ -2,7 +2,7 @@
 title: Payments
 ---
 
-Basic payments are simple.
+## Basic payments
 
 - Select the account to send from,
 - Click on the send button (in the red box),
@@ -22,7 +22,8 @@ Click on the send button to continue to the next step.
 
 ![Send 2](./images/13.send_3.png)
 
-In most of the cases, you can leave everything as it is.
+::: tip In most of the cases, you can leave everything as it is.
+:::
 
 Here's what the form means.
 
@@ -31,6 +32,10 @@ privacy by choosing notes that give the most private transaction. But it is not
 always possible. For example, if you have Transparent funds, Zkool can use
 them if there isn't enough Sapling or Orchard funds. By deselecting a pool,
 you tell Zkool not to use it.
+
+> This is unlike most shielded wallets that **NEVER** use transparent
+funds of your wallet to send to an external address.
+
 2. By default, you pay for the transaction fees and you
 spend more than the amount you indicated on the previous page.
 If you switch this on, you tell Zkool to deduct the fees from the amount
@@ -39,7 +44,7 @@ rules.
 3. If you input an amount that makes the change so small that it is below
 the "dust" amount, by default Zkool will just drop the change. The network
 rejects outputs (including change outputs that are too small). This only
-applies to Transparent Change since Shielded Change is not known to the
+applies to Transparent Change since Shielded Change are hidden to the
 node validators.
 
 Click on the "Send" button to continue.
@@ -72,6 +77,8 @@ out.
 If you send it, you get a final confirmation prompt and off the
 transaction goes.
 
+Close the page by clicking on the close button (X).
+
 ## Troubleshooting
 
 If you get an error after trying to send the transaction,
@@ -80,7 +87,8 @@ server error messages are not famous for their user friendliness.
 
 The most common cases are:
 - transport error: Some network issue prevented the submission
-of the transaction to the server. You can retry.
+of the transaction to the server. You can retry by clicking on
+the send button again.
 - the transaction uses some input that was already spent. That
 is usually because your account is not synchronized to the latest
 block and hasn't seen a transaction that has spent the note.

@@ -16,7 +16,8 @@ the summary of the account, and the transaction history.
 
 ### Height
 
-In the red box, you have the account height.
+In the red box, you have the curent account height.
+It is the height at which the account is currently synchronized to.
 If it is behind the tip of the blockchain (i.e the latest
 block), it will also say something like "tip-XYZ" to
 indicate that it is XYZ blocks behind.
@@ -33,7 +34,7 @@ If you haven't refreshed the current block height[^1], Zkool will not show "tip-
 In the green box, you have the current balance in the
 various pools and the total.
 
-::: tip
+::: warning
 All funds are made available immediately. Zkool
 does not have a note maturity requirement.
 :::

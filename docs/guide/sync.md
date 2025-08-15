@@ -2,7 +2,7 @@
 title: Synchronization
 ---
 
-Once all your accounts are input,
+Once all your accounts are entered,
 it's time to synchronize.
 
 ![Account List](./images/07.sync.png)
@@ -10,10 +10,10 @@ it's time to synchronize.
 ## Account Heights
 
 Zkool keeps the synchronization state
-of each account independently.
+of each account independent.
 
-This is like your gmail. If you have more
-than one gmail account, the gmail app
+This is like your gmail accounts. If you have more
+than one, the gmail app
 downloads the messages of your current account.
 Your other accounts are sometimes behind[^1].
 
@@ -33,7 +33,7 @@ If you want to start synchronization immediately, tap the sync
 button on the appbar (in the green box).
 This starts the synchronization of every account at once.
 
-You can also synchronize a specific account. First you
+You can also synchronize a specific account, but first you
 have to select it.
 
 Select on account by tapping on its row.

@@ -17,10 +17,10 @@ similarly on other platforms.
 
 ## Database Password
 
-It starts by asking for a database password.
-Zkool encrypts the wallet file on disk, so that
+Zkool starts by asking for a database password.
+It encrypts the wallet file on disk, so that
 if your device gets compromised and your wallet file
-stolen, an attacker will need the database password
+is stolen, an attacker will need the database password
 to retrieve your secret keys.
 
 The database password is not stored and you have
@@ -35,11 +35,16 @@ that Zkool is a non custodian wallet.
 
 ::: important
 You have full control of your secret keys.
+**Make sure to have a backup of the seed phrase**
 :::
 
 Your keys are only stored on the device database.
 If you lose your device, or reset the data, your keys
-and your funds are lost.
+and your funds are lost if you do not have your seed
+phrase.
+
+It may sound obvious, but make a backup of your
+seed phrase **before** you send funds to the account.
 
 Scroll to the bottom of the page, check the "I Agree"
 switch and click on the "Continue" button.
@@ -48,16 +53,16 @@ switch and click on the "Continue" button.
 
 Next, Zkool will ask for your device authentication.
 
-This is method you used to protect your device, i.e
+This is the method you used to protect your device, i.e
 a pin, password or fingerprint.
 
 On Windows, a password is *not* sufficient. You need
-to set a PIN, fingerprint or face lock.
+to set a PIN, a fingerprint or face lock.
 
 ::: important
 You can turn off the pin lock check in the settings
 but there are some parts of the app that require
-authentication. Therefore the device has to have
+authentication nonetheless. Therefore the device has to have
 a lock screen.
 :::
 
@@ -65,17 +70,17 @@ You should see the account manager screen now.
 
 ## Tooltips
 
-Zkool has a series of tutorial tooltips builtin.
+Zkool has a series of tutorial tooltips built in.
 The first time you navigate to a screen, you will
 see highlighted showcase items. Navigate to the next
-item by tapping "Next" or skip the whole page tutorial
+item by tapping "Next" or skip the whole tutorial page
 by tapping "Skip".
 
 ::: tip
 You can reenable the tutorial tips in the Settings page.
 :::
 
-Once you finish with the tutorial, you will an empty
+Once you finish with the tutorial, you will have an empty
 account manager list.
 
 ![Account Manager](images/01.account_mgr.png)
