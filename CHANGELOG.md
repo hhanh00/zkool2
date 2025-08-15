@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.5](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.4...zkool-v4.20.5) (2025-08-15)
+
+
+### Bug Fixes
+
+* move payment uri to extra options page ([#409](https://github.com/hhanh00/zkool2/issues/409)) ([70230ce](https://github.com/hhanh00/zkool2/commit/70230ce8e30773abc2d669f58d36bc9b0383417b))
+
 ## [4.20.4](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.3...zkool-v4.20.4) (2025-08-14)
 
 
