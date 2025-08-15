@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.7](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.6...zkool-v4.20.7) (2025-08-15)
+
+
+### Bug Fixes
+
+* don't fetch chart on linux because the webview isn't supported ([#415](https://github.com/hhanh00/zkool2/issues/415)) ([a4d4982](https://github.com/hhanh00/zkool2/commit/a4d498244a81b4ded0e96414c132309d660a1079))
+
 ## [4.20.6](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.5...zkool-v4.20.6) (2025-08-15)
 
 
