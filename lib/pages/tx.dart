@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
@@ -87,21 +87,7 @@ class TxPageState extends State<TxPage> {
           child: Column(children: [
             Text("Tx Plan", style: t.titleSmall),
             Text("Fee: ${zatToString(txPlan.fee)}"),
-            SelectableText.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                      text: "Payment URI: ${widget.pczt.puri} ",
-                      style: t.titleSmall),
-                  WidgetSpan(
-                      child: IconButton(
-                    tooltip: "Show Payment URI",
-                    icon: Icon(Icons.qr_code),
-                    onPressed: onUriQr,
-                  )),
-                ],
-              ),
-            ),
+            Gap(8),
             if (txId != null)
               Showcase(
                   key: txID,
@@ -168,34 +154,6 @@ class TxPageState extends State<TxPage> {
 
   void onCancel() {
     GoRouter.of(context).go("/account");
-  }
-
-  void onUriQr() async {
-    await showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Payment URI"),
-            content: GestureDetector(
-              onTap: () => copyToClipboard(widget.pczt.puri),
-              child: SizedBox(
-                width: 250,
-                height: 250,
-                child: QrImageView(
-                  data: widget.pczt.puri,
-                  version: QrVersions.auto,
-                  backgroundColor: Colors.white,
-                  size: 200.0,
-                ))),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text("Close"),
-              ),
-            ],
-          );
-        });
   }
 }
 
