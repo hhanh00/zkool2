@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.8](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.7...zkool-v4.20.8) (2025-08-15)
+
+
+### Bug Fixes
+
+* add a confirmation prompt ([#417](https://github.com/hhanh00/zkool2/issues/417)) ([a10168e](https://github.com/hhanh00/zkool2/commit/a10168e9ed82043a3232a94961e1e309b2826948))
+
 ## [4.20.7](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.6...zkool-v4.20.7) (2025-08-15)
 
 
