@@ -1,4 +1,4 @@
-import{_ as n,c as a,b as i,o as t}from"./app-BrsEMCn4.js";const r={};function o(s,e){return t(),a("div",null,e[0]||(e[0]=[i(`<h1 id="protocol" tabindex="-1"><a class="header-anchor" href="#protocol"><span>Protocol</span></a></h1><pre><code>- Concepts
+import{_ as n,c as a,b as i,o as t}from"./app-DK-ab512.js";const r={};function o(s,e){return t(),a("div",null,e[0]||(e[0]=[i(`<h1 id="protocol" tabindex="-1"><a class="header-anchor" href="#protocol"><span>Protocol</span></a></h1><pre><code>- Concepts
     - State/Consensus
     - Centralized, Decentralized
     - Public/Private
@@ -50,4 +50,4 @@ import{_ as n,c as a,b as i,o as t}from"./app-BrsEMCn4.js";const r={};function o
         - Time
 - Full/Light Servers
 - Mitigations
-</code></pre>`,8)]))}const d=n(r,[["render",o]]),l=JSON.parse('{"path":"/overview.html","title":"Overview","lang":"en-US","frontmatter":{"title":"Overview"},"git":{"updatedTime":1755168400000,"contributors":[{"name":"Hanh","username":"Hanh","email":"hanh425@gmail.com","commits":1,"url":"https://github.com/Hanh"}],"changelog":[{"hash":"8b920e3ffb9b6d5749f7db42a753b1e3de0d07fe","time":1755168400000,"email":"hanh425@gmail.com","author":"Hanh","message":"guide continued"}]},"filePathRelative":"overview.md"}');export{d as comp,l as data};
+</code></pre>`,8)]))}const d=n(r,[["render",o]]),l=JSON.parse('{"path":"/overview.html","title":"Overview","lang":"en-US","frontmatter":{"title":"Overview"},"git":{"updatedTime":1755217513000,"contributors":[{"name":"Hanh","username":"Hanh","email":"hanh425@gmail.com","commits":1,"url":"https://github.com/Hanh"}],"changelog":[{"hash":"7a635b55ad178a9ab97aaa7a150ab1a9b7dd8b24","time":1755217513000,"email":"hanh425@gmail.com","author":"Hanh","message":"fix typos"}]},"filePathRelative":"overview.md"}');export{d as comp,l as data};
