@@ -291,10 +291,23 @@ class SendPageState extends State<SendPage> {
     if (v == null || v.isEmpty) return;
     final recipients2 = parsePaymentUri(uri: v);
     if (recipients2 != null) {
-      setState(() => recipients = recipients2);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (formKey.currentState!.isDirty) reset();
-      });
+      // Is it an incomplete payment uri? like zcash:address?
+      if (recipients2.length == 1) {
+        final fields = formKey.currentState!.fields;
+        final recipient = recipients2.first;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          fields["address"]!.didChange(recipient.address);
+          if (recipient.amount > BigInt.zero)
+            fields["amount"]!.didChange(zatToString(recipient.amount));
+          fields["memo"]!.didChange(recipient.userMemo);
+          setState(() {});
+        });
+      } else {
+        setState(() => recipients = recipients2);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (formKey.currentState!.isDirty) reset();
+        });
+      }
     }
   }
 
