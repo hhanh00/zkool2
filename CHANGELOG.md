@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.10](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.9...zkool-v4.20.10) (2025-08-16)
+
+
+### Bug Fixes
+
+* handle "partial" payment uri like zcash:&lt;addr&gt;? ([#425](https://github.com/hhanh00/zkool2/issues/425)) ([da4749d](https://github.com/hhanh00/zkool2/commit/da4749dea9a1261a78d017d86148cf24030dc6ad))
+
 ## [4.20.9](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.8...zkool-v4.20.9) (2025-08-15)
 
 
