@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.20.11](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.10...zkool-v4.20.11) (2025-08-17)
+
+
+### Bug Fixes
+
+* database manager button ([#427](https://github.com/hhanh00/zkool2/issues/427)) ([fcdfb60](https://github.com/hhanh00/zkool2/commit/fcdfb60335e548f726983ad8527983a3ef80a0f9))
+
 ## [4.20.10](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.9...zkool-v4.20.10) (2025-08-16)
 
 
