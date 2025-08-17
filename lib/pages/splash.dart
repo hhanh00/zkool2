@@ -71,6 +71,7 @@ Future<bool> loadAccounts(BuildContext context) async {
         break;
       } catch (_) {
         password = await inputPassword(context, title: "Enter Database Password for $dbName", btnCancelText: "Database Manager");
+        if (password == null) return false;
       }
     }
     await appStore.loadAccounts();
