@@ -74,13 +74,6 @@ class AccountViewPageState extends State<AccountViewPage> {
               title: Text(account!.name),
               actions: [
                 Showcase(
-                    key: logID,
-                    description: "Open the App Log",
-                    child: IconButton(
-                        tooltip: "View Log",
-                        onPressed: () => onOpenLog(context),
-                        icon: Icon(Icons.description))),
-                Showcase(
                     key: sync1ID,
                     description: "Synchronize only this account",
                     child: IconButton(
@@ -600,10 +593,6 @@ Widget showNotes(List<TxNote> notes) {
 void toggleLock(BuildContext context, int id, bool locked) async {
   await lockNote(id: id, locked: locked);
   await appStore.loadNotes();
-}
-
-void onOpenLog(BuildContext context) async {
-  await GoRouter.of(context).push("/log");
 }
 
 class MemoWidget extends StatelessWidget {
