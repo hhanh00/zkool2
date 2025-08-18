@@ -24,7 +24,6 @@ import 'package:zkool/widgets/scanner.dart';
 final addressID = GlobalKey();
 final scanID = GlobalKey();
 final amountID = GlobalKey();
-final logID2 = GlobalKey();
 final openTxID = GlobalKey();
 final addTxID = GlobalKey();
 final clearID = GlobalKey();
@@ -47,7 +46,7 @@ class SendPageState extends State<SendPage> {
   int? editingIndex;
 
   void tutorial() async {
-    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, logID2, openTxID, addTxID, sendID2]);
+    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
   }
 
   @override
@@ -93,10 +92,6 @@ class SendPageState extends State<SendPage> {
         appBar: AppBar(
           title: Text("Recipient"),
           actions: [
-            Showcase(
-                key: logID2,
-                description: "Show App Log",
-                child: IconButton(tooltip: "Open Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description))),
             Showcase(
                 key: openTxID,
                 description: "Load an unsigned transaction",
@@ -291,7 +286,6 @@ class SendPageState extends State<SendPage> {
     if (v == null || v.isEmpty) return;
     final recipients2 = parsePaymentUri(uri: v);
     if (recipients2 != null) {
-      // Is it an incomplete payment uri? like zcash:address?
       if (recipients2.length == 1) {
         final fields = formKey.currentState!.fields;
         final recipient = recipients2.first;
@@ -393,7 +387,6 @@ class Send2PageState extends State<Send2Page> {
       appBar: AppBar(
         title: Text("Extra Options"),
         actions: [
-          IconButton(tooltip: "Open Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
           Showcase(
               key: sendID3,
               description: "Send (Summary and Confirmation)",
