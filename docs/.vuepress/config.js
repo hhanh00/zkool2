@@ -27,6 +27,13 @@ export default defineUserConfig({
           "build",
         ],
       },
+      {
+        text: "Recipes",
+        prefix: "/recipe/",
+        children: [
+          "restore",
+        ],
+      },
       // {
       //   text: "Usage",
       //   prefix: "/usage/",
