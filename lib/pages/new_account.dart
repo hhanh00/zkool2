@@ -249,11 +249,18 @@ class NewAccountPageState extends State<NewAccountPage> {
 
       final icon = iconBytes;
 
+      final r = restore ?? false;
+      if (r && birth == null) {
+        final confirmed = await confirmDialog(context,
+          title: "No Birth Height", message: "Are you sure you don't want to enter the birth height?");
+        if (!confirmed) return;
+      }
+
       final account = await newAccount(
           na: NewAccount(
         icon: icon,
         name: name ?? "",
-        restore: restore ?? false,
+        restore: r,
         key: key,
         passphrase: passphrase,
         aindex: int.parse(aindex ?? "0"),
