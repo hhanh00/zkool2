@@ -67,11 +67,17 @@ Zkool is a multi-account wallet for Zcash.
     - minimize cross pool usage
     - allow you to select your pools
     - can create multi recipient payments
+    - reads/writes multi recipient payment uris
+    - *supports shielded multi signature accounts using FROST*
+    - and more
 - and its transparent privacy as good as transparent wallets
     - shielded wallets tend to handle the lack of privacy of
     transparent addresses by mandating the shielding of transparent
     funds before they can be spent (Zashi, Zingo, ...). Instead,
     Zkool supports address rotation for the users[^2]
+- Your wallet file can be encrypted *at rest*
+- TOR proxy and Onion services for all connections to Zcash servers
+- Supports Fullnodes and Lightnodes
 
 ## What it does *not* do well
 
@@ -81,7 +87,6 @@ On the flipside, the UI is relatively simple to understand.
     - No *address book*. Mainly because Zcash has diversified addresses
     that make address books useless if used[^3]
 - No keytool
-- No Market Data charts
 - No customization of reference currency (always USD)
 - No pool transfer tool
 - No third party swap integration
