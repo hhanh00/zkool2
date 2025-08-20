@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -351,6 +352,10 @@ class DKGPage3State extends State<DKGPage3> {
           finished = true;
         });
       }
+    }, onError: (Object e) async {
+      final exc = e as AnyhowException;
+      if (!context.mounted) return;
+      await showException(context, exc.message);
     });
   }
 

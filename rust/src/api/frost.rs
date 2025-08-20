@@ -91,11 +91,15 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
-    let account = get_funding_account(&mut *connection)
+    let account = get_funding_account(&mut connection)
         .await?
         .expect("Funding account not set");
 
-    crate::frost::dkg::do_dkg(&c.network, &mut *connection, account, &mut client, height, status).await
+    let r = crate::frost::dkg::do_dkg(&c.network, &mut connection, account, &mut client, height, status.clone()).await;
+    if let Err(e) = r {
+        let _ = status.add_error(e);
+    }
+    Ok(())
 }
 
 pub async fn get_dkg_addresses() -> Result<Vec<String>> {
@@ -144,6 +148,7 @@ pub struct DKGParams {
     pub birth_height: u32,
 }
 
+#[derive(Clone)]
 pub enum DKGStatus {
     WaitParams,
     WaitAddresses(Vec<String>),
@@ -182,15 +187,19 @@ pub async fn do_sign(status: StreamSink<SigningStatus>) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
-    crate::frost::sign::do_sign(
+    let r = crate::frost::sign::do_sign(
         &c.network,
         &mut *connection,
         c.account,
         &mut client,
         height,
-        status,
+        status.clone(),
     )
-    .await
+    .await;
+    if let Err(e) = r {
+        let _ = status.add_error(e);
+    }
+    Ok(())
 }
 
 #[frb(dart_metadata = ("freezed"))]
@@ -200,6 +209,7 @@ pub struct FrostSignParams {
     pub funding_account: u32,
 }
 
+#[derive(Clone)]
 pub enum SigningStatus {
     SendingCommitment,
     WaitingForCommitments,
