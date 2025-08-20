@@ -5,6 +5,7 @@ import { markdownImagePlugin } from "@vuepress/plugin-markdown-image";
 import { markdownMathPlugin } from "@vuepress/plugin-markdown-math";
 import { markdownHintPlugin } from "@vuepress/plugin-markdown-hint";
 import { markdownExtPlugin } from "@vuepress/plugin-markdown-ext";
+import { markdownChartPlugin } from '@vuepress/plugin-markdown-chart'
 
 export default defineUserConfig({
   title: "Zkool Documentation",
@@ -32,6 +33,15 @@ export default defineUserConfig({
         prefix: "/recipe/",
         children: [
           "restore",
+        ],
+      },
+      {
+        text: "MultiSig Accounts",
+        prefix: "/frost/",
+        children: [
+          "overview",
+          "dkg",
+          "mpc",
         ],
       },
       // {
@@ -62,6 +72,9 @@ export default defineUserConfig({
     markdownExtPlugin({
       gfm: true,
       breaks: false,
+    }),
+    markdownChartPlugin({
+      mermaid: true,
     }),
   ],
 });
