@@ -125,7 +125,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                     Showcase(
                         key: internalID,
                         description:
-                            "Check if you want this account to use an internal address for the change like Zashi (ZIP 315)",
+                            "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                         child: FormBuilderSwitch(
                             name: "useInternal",
                             title: const Text("Use Internal Change"))),
