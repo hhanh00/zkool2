@@ -106,6 +106,10 @@ address because an account has been created.
 
 Close the DKG page by tapping the X on the app bar.
 
+::: tip
+Now would be a good time to make a backup of your new MultiSig Account.
+:::
+
 ## DKG Protocol
 
 ```mermaid
