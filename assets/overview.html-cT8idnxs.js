@@ -1,0 +1,53 @@
+import{_ as n,c as a,b as i,o as t}from"./app-By63bgJO.js";const r={};function o(s,e){return t(),a("div",null,e[0]||(e[0]=[i(`<h1 id="protocol" tabindex="-1"><a class="header-anchor" href="#protocol"><span>Protocol</span></a></h1><pre><code>- Concepts
+    - State/Consensus
+    - Centralized, Decentralized
+    - Public/Private
+    - Pools/Transaction
+    - Local/Global State
+- Mining Consensus Rules
+    - Fee
+    - Dev Fund/Lockbox
+    - Shielding/Maturity
+- Tx Consensus Rules
+    - Inputs
+        - Reference to Prev Outputs
+        - Single Spend
+        - Signature
+    - Outputs
+        - Address, Amount
+    - Net Value
+- Privacy
+    - Commitments/Nullifiers
+    - ZKP (CT Witnesses)
+    - PK Randomization
+    - Binding Signature
+</code></pre><h1 id="keys" tabindex="-1"><a class="header-anchor" href="#keys"><span>Keys</span></a></h1><pre><code>- Public/Private/Hash Keys
+- Shielded Keys
+    - Spend Authorization Key
+    - Nullifier Key
+    - Diversifier Key
+    - Incoming Viewing Key
+    - Outgoing Viewing Key
+    - Full Viewing Key
+    - Spending Key
+    - Seed Phrase + Account Derivation Path
+- Transparent Keys
+    - Key + Chain Code
+    - Seed Phrase + Account &amp; Address Derivation Path
+</code></pre><h1 id="transaction" tabindex="-1"><a class="header-anchor" href="#transaction"><span>Transaction</span></a></h1><pre><code>- Data Model
+- Secure Signing
+    - Cold Storage
+    - Hardware Wallets
+- Multi Signature (FROST)
+</code></pre><h1 id="privacy-considerations" tabindex="-1"><a class="header-anchor" href="#privacy-considerations"><span>Privacy Considerations</span></a></h1><pre><code>- Transaction Privacy
+    - Permanent Blockchain Record
+        - Block Height
+        - Anchor Height
+        - Transparent Data
+        - Shielded Net Amounts
+    - Transient Data
+        - Source IP
+        - Time
+- Full/Light Servers
+- Mitigations
+</code></pre>`,8)]))}const d=n(r,[["render",o]]),l=JSON.parse('{"path":"/overview.html","title":"Overview","lang":"en-US","frontmatter":{"title":"Overview"},"git":{"updatedTime":1755698906000,"contributors":[{"name":"Hanh","username":"Hanh","email":"hanh425@gmail.com","commits":1,"url":"https://github.com/Hanh"}],"changelog":[{"hash":"02ef68999e40b67b210fc72d260c17c7546eb850","time":1755698906000,"email":"hanh425@gmail.com","author":"Hanh","message":"dkg"}]},"filePathRelative":"overview.md"}');export{d as comp,l as data};
