@@ -12,7 +12,7 @@ use reddsa::frost::redpallas::keys::{
     dkg::{self, round1, round2},
     EvenY,
 };
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
@@ -371,6 +371,7 @@ async fn publish_round1(
     spkg1: &round1::SecretPackage,
     ppkg1: &round1::Package,
 ) -> Result<()> {
+    let mut tx = connection.begin().await?;
     sqlx::query(
         "INSERT INTO dkg_packages(account, public, round, from_id, data)
         VALUES (?, FALSE, 1, ?, ?) ON CONFLICT DO NOTHING",
@@ -378,7 +379,7 @@ async fn publish_round1(
     .bind(account)
     .bind(self_id)
     .bind(spkg1.serialize()?)
-    .execute(&mut *connection)
+    .execute(&mut *tx)
     .await?;
 
     let message = FrostMessage {
@@ -389,7 +390,7 @@ async fn publish_round1(
 
     let txid = publish(
         network,
-        connection,
+        &mut tx,
         account,
         client,
         height,
@@ -397,6 +398,7 @@ async fn publish_round1(
     )
     .await?;
     info!("Broadcasted transaction: {txid}");
+    tx.commit().await?;
 
     Ok(())
 }
@@ -413,6 +415,7 @@ async fn publish_round2(
     spkg2: &round2::SecretPackage,
     ppkg2s: &PK2Map,
 ) -> Result<()> {
+    let mut tx = connection.begin().await?;
     sqlx::query(
         "INSERT INTO dkg_packages(account, public, round, from_id, data)
         VALUES (?, FALSE, 2, ?, ?) ON CONFLICT DO NOTHING",
@@ -420,7 +423,7 @@ async fn publish_round2(
     .bind(account)
     .bind(self_id)
     .bind(spkg2.serialize()?)
-    .execute(&mut *connection)
+    .execute(&mut *tx)
     .await?;
 
     let mut recipients = vec![];
@@ -436,8 +439,9 @@ async fn publish_round2(
         }
     }
 
-    let txid = publish(network, connection, account, client, height, &recipients).await?;
+    let txid = publish(network, &mut tx, account, client, height, &recipients).await?;
     info!("Broadcasted transaction: {txid}");
+    tx.commit().await?;
 
     Ok(())
 }
