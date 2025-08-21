@@ -34,10 +34,11 @@ export default defineUserConfig({
         prefix: "/recipe/",
         children: [
           "restore",
+          "cold",
         ],
       },
       {
-        text: "MultiSig Accounts",
+        text: "MultiSig Accounts / FROST",
         prefix: "/frost/",
         children: [
           "overview",

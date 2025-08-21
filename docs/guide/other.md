@@ -10,7 +10,11 @@ TBD
 
 ## Cold Wallet
 
+[See Cold Wallet](../recipe/cold.md)
+
 ## Frost
+
+[See MultiSig Account](../frost/overview.md)
 
 ## MultiPay
 
