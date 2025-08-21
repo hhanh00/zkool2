@@ -30,6 +30,9 @@ importers:
       '@vuepress/plugin-markdown-math':
         specifier: 2.0.0-rc.112
         version: 2.0.0-rc.112(katex@0.16.22)(markdown-it@14.1.0)(vuepress@2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18))
+      '@vuepress/plugin-search':
+        specifier: 2.0.0-rc.112
+        version: 2.0.0-rc.112(vuepress@2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18))
       '@vuepress/theme-default':
         specifier: 2.0.0-rc.112
         version: 2.0.0-rc.112(markdown-it@14.1.0)(sass-embedded@1.89.2)(vuepress@2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18))
@@ -873,6 +876,11 @@ packages:
 
   '@vuepress/plugin-prismjs@2.0.0-rc.112':
     resolution: {integrity: sha512-OYToQltHyUEv4PYFOxpZfWENZbx+anEVcVsy4JV9Rg2x4xUijd0TdzaVfgWvl7WIHGUrJ3rFRy964X4YhTRLQA==}
+    peerDependencies:
+      vuepress: 2.0.0-rc.24
+
+  '@vuepress/plugin-search@2.0.0-rc.112':
+    resolution: {integrity: sha512-liQxClnwXRn3V8I3OORvS2/OwHSx2pi0c3F/V/ji++Zy4DVpSEzhMJAfHkHmo1KKzokqakSBiJz8bQudp5ZMFw==}
     peerDependencies:
       vuepress: 2.0.0-rc.24
 
@@ -3019,6 +3027,15 @@ snapshots:
       vuepress: 2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18)
     transitivePeerDependencies:
       - '@vueuse/core'
+      - typescript
+
+  '@vuepress/plugin-search@2.0.0-rc.112(vuepress@2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18))':
+    dependencies:
+      '@vuepress/helper': 2.0.0-rc.112(vuepress@2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18))
+      chokidar: 4.0.3
+      vue: 3.5.18
+      vuepress: 2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18)
+    transitivePeerDependencies:
       - typescript
 
   '@vuepress/plugin-seo@2.0.0-rc.112(vuepress@2.0.0-rc.24(@vuepress/bundler-vite@2.0.0-rc.24(@types/node@24.1.0)(sass-embedded@1.89.2))(vue@3.5.18))':

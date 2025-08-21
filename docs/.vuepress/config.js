@@ -6,6 +6,7 @@ import { markdownMathPlugin } from "@vuepress/plugin-markdown-math";
 import { markdownHintPlugin } from "@vuepress/plugin-markdown-hint";
 import { markdownExtPlugin } from "@vuepress/plugin-markdown-ext";
 import { markdownChartPlugin } from '@vuepress/plugin-markdown-chart'
+import { searchPlugin } from '@vuepress/plugin-search'
 
 export default defineUserConfig({
   title: "Zkool Documentation",
@@ -62,6 +63,7 @@ export default defineUserConfig({
   }),
   head: [["link", { rel: "stylesheet", href: "/main.css" }]],
   plugins: [
+    searchPlugin({}),
     markdownImagePlugin({
       figure: true,
       lazyload: true,

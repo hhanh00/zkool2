@@ -17,6 +17,7 @@
     "@vuepress/plugin-markdown-hint": "2.0.0-rc.112",
     "@vuepress/plugin-markdown-image": "2.0.0-rc.112",
     "@vuepress/plugin-markdown-math": "2.0.0-rc.112",
+    "@vuepress/plugin-search": "2.0.0-rc.112",
     "@vuepress/theme-default": "2.0.0-rc.112",
     "katex": "^0.16.22",
     "sass-embedded": "^1.89.2",
