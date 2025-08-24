@@ -10,6 +10,7 @@ purposes.
 ## Mnemonic Phrase or Seed Phrase
 
 The website [Mnemonic Code Converter](https://iancoleman.io/bip39/)
+
 is a useful tool for experimenting with seed phrases. We'll use it to illustrate
 the key types supported by Zkool.
 
@@ -20,6 +21,7 @@ too insecure. We recommend using 24 word seed phrases. Zkool will only generate
 this type of seed phrase.
 
 ![https://iancoleman.io/bip39/](./images/02.password.png)
+
 The passphrase can be complemented with an arbitrary password (or sentence) of
 your choice[^2]. This gives the BIP 39 Master Seed.
 

@@ -96,6 +96,7 @@ Once it finishes, you will see the transaction ID.
 ![Tx](./images/14.tx.png)
 
 Once it is mined. It will appear in the account transaction history[^2].
+
 ![History](./images/15.history.png)
 
 ::: tip

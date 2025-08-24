@@ -80,10 +80,12 @@ the form if a DKG is in progress.
 :::
 
 ![Filled Addresses](./images/05.addresses_filled.png)
+
 Once we filled the addresses of the other participants, we can go to the next step.
 
 Zkool prepares and broadcasts the first round of messages. Each participant
 sends their message to a common address.
+
 ![DKG Round 1](./images/06.dkg_r1.png)
 
 The DKG process continues when every participant has broadcast their round 1
