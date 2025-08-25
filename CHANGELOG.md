@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.21.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.11...zkool-v4.21.0) (2025-08-25)
+
+
+### Features
+
+* show confirm dialog when restoring without birth height ([#431](https://github.com/hhanh00/zkool2/issues/431)) ([bbeddbc](https://github.com/hhanh00/zkool2/commit/bbeddbc3b9b89ee7bb7e97cc8516058bf43e3555))
+
+
+### Bug Fixes
+
+* allow removal of account icon ([#434](https://github.com/hhanh00/zkool2/issues/434)) ([1046bf2](https://github.com/hhanh00/zkool2/commit/1046bf28e8f0982e4b6b78868592d6be3e75eda1))
+* dkg error handling ([#433](https://github.com/hhanh00/zkool2/issues/433)) ([2554163](https://github.com/hhanh00/zkool2/commit/25541634e8782975a0cf6a28f42c63de86281220))
+
 ## [4.20.11](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.10...zkool-v4.20.11) (2025-08-17)
 
 
