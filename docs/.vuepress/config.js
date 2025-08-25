@@ -36,6 +36,7 @@ export default defineUserConfig({
           "restore",
           "cold",
           "sync",
+          "database",
         ],
       },
       {
