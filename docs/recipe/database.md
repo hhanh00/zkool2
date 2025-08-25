@@ -2,6 +2,8 @@
 title: Database/Wallet Files
 ---
 
+## Database File
+
 Zkool keeps all the account data and some of the settings in wallet files, which
 are Sqlite/SqlCipher database files.
 
@@ -42,3 +44,23 @@ database name in the list.
 
 [^1]: If you have a database password set, you can also open the database
     manager from the dialog box that asks for the password.
+
+## Account File
+
+Accounts can be individually exported in encrypted form with a user provided
+password.
+
+![Export Account](./images/20.export.png)
+
+The account file can be then imported into another database by creating a new
+account and choosing the load file button.
+
+![Import Account](./images/21.load.png)
+
+::: important
+The password set during the creation of the account file must be input. There
+is no way to recover the password if it is forgotten.
+:::
+
+The database is a SQLCipher file. It can be browsed using a tool such as [DB
+Browser for SQLite](https://sqlitebrowser.org/)
