@@ -66,6 +66,13 @@ The Payment URI allows you to "save" the transaction if you need
 to repeat it. You can copy/paste a payment URI in the address
 field of the Send Page or scan the QR code.
 
+See [Payment URI](../recipe/puri.md)
+
+## Coin Control
+
+You can exclude some notes from the transaction by deselecting them in the Notes
+tab.
+
 ## Inputs/Outputs
 
 The Transaction Plan shows the inputs and outputs with the pool
@@ -92,3 +99,19 @@ the send button again.
 - the transaction uses some input that was already spent. That
 is usually because your account is not synchronized to the latest
 block and hasn't seen a transaction that has spent the note.
+
+## Multi Recipient Payments
+
+To create a payment with multiple recipients, instead of tapping on the "SEND"
+button, choose the "+".
+
+This adds the recipient to a list.
+
+::: tip
+You can select items form the list to edit them, and remove/add new entries too.
+:::
+
+The list has the address and amount sent to each recipient, but excludes the
+memo field. To see it, select the item to move it to the form.
+
+![Multi Pay](./images/16.multi.png)
