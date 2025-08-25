@@ -35,6 +35,7 @@ export default defineUserConfig({
         children: [
           "restore",
           "cold",
+          "sync",
         ],
       },
       {
