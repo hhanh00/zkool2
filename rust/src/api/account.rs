@@ -26,13 +26,21 @@ use zcash_protocol::consensus::NetworkConstants;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote}, api::key::generate_seed, bip38, db::{
+    account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote},
+    api::key::generate_seed,
+    bip38,
+    db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
         update_dindex,
-    }, get_coin, io::{decrypt, encrypt}, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, pay::pool::ALL_POOLS, setup
+    },
+    get_coin,
+    io::{decrypt, encrypt},
+    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    pay::pool::ALL_POOLS,
+    setup,
 };
 
 #[frb]
@@ -190,7 +198,8 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
             .execute(&mut *connection)
             .await?;
     }
-    if let Some(ref icon) = update.icon {
+    if let Some(icon) = update.icon.as_ref() {
+        let icon = if icon.is_empty() { None } else { Some(icon) };
         sqlx::query("UPDATE accounts SET icon = ? WHERE id_account = ?")
             .bind(icon)
             .bind(update.id)
