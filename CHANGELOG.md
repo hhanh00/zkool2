@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.21.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.21.1...zkool-v4.21.2) (2025-08-25)
+
+
+### Bug Fixes
+
+* pinlock + account icon ([#437](https://github.com/hhanh00/zkool2/issues/437)) ([d7227e6](https://github.com/hhanh00/zkool2/commit/d7227e60a05a1b778a3952bf6e37e103c9dbf7b3))
+
 ## [4.21.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.21.0...zkool-v4.21.1) (2025-08-25)
 
 
