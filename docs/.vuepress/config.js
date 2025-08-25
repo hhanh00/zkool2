@@ -37,6 +37,7 @@ export default defineUserConfig({
           "cold",
           "sync",
           "database",
+          "tor",
         ],
       },
       {
