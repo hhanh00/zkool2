@@ -50,8 +50,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutAccount0",
-        [tBalID, sBalID, oBalID, balID, logID, sync1ID, receiveID, sendID]);
+    tutorialHelper(context, "tutAccount0", [tBalID, sBalID, oBalID, balID, logID, sync1ID, receiveID, sendID]);
     if (appStore.transactions.isNotEmpty)
       tutorialHelper(context, "tutAccount1", [
         txdID,
@@ -76,24 +75,15 @@ class AccountViewPageState extends State<AccountViewPage> {
                 Showcase(
                     key: sync1ID,
                     description: "Synchronize only this account",
-                    child: IconButton(
-                        tooltip: "Sync this account",
-                        onPressed: onSync,
-                        icon: Icon(Icons.sync))),
+                    child: IconButton(tooltip: "Sync this account", onPressed: onSync, icon: Icon(Icons.sync))),
                 Showcase(
                     key: receiveID,
                     description: "Show the account receiving addresses",
-                    child: IconButton(
-                        tooltip: "Receive Funds",
-                        onPressed: onReceive,
-                        icon: Icon(Icons.download))),
+                    child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download))),
                 Showcase(
                     key: sendID,
                     description: "Send funds to one or many addresses",
-                    child: IconButton(
-                        tooltip: "Send Funds",
-                        onPressed: onSend,
-                        icon: Icon(Icons.send))),
+                    child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send))),
               ],
               bottom: TabBar(
                 tabs: [
@@ -127,19 +117,14 @@ class AccountViewPageState extends State<AccountViewPage> {
                               if (b != null) BalanceWidget(b, showcase: true),
                               Gap(8),
                               if (unconfirmedAmount != null) ...[
-                                zatToText(BigInt.from(unconfirmedAmount),
-                                    prefix: "Unconfirmed: ",
-                                    selectable: true),
+                                zatToText(BigInt.from(unconfirmedAmount), prefix: "Unconfirmed: ", selectable: true),
                                 Gap(8),
                               ],
                               if (b != null) ...[
                                 Showcase(
                                     key: balID,
                                     description: "Balance across all pools",
-                                    child: zatToText(
-                                        b.field0[0] + b.field0[1] + b.field0[2],
-                                        selectable: true,
-                                        style: t.titleLarge!)),
+                                    child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!)),
                                 Gap(8)
                               ],
                             ]))),
@@ -154,8 +139,7 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSync() async {
     try {
-      await appStore
-          .startSynchronize([account!.id], int.parse(appStore.actionsPerSync));
+      await appStore.startSynchronize([account!.id], int.parse(appStore.actionsPerSync));
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -201,17 +185,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutEdit0", [
-      nameID2,
-      iconID2,
-      birthID2,
-      enableID,
-      hideID2,
-      viewID,
-      exportID,
-      rewindID,
-      resetID
-    ]);
+    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2, enableID, hideID2, viewID, exportID, rewindID, resetID]);
   }
 
   @override
@@ -228,32 +202,22 @@ class AccountEditPageState extends State<AccountEditPage> {
                 description: "Show Viewing Keys",
                 child: IconButton(
                     tooltip: "Show Viewing Keys",
-                    onPressed: () => GoRouter.of(context)
-                        .push("/viewing_keys", extra: account.id),
+                    onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
                     icon: Icon(Icons.visibility))),
           if (account != null) ...[
             Showcase(
                 key: exportID,
                 description: "Export an encrypted file of this account",
-                child: IconButton(
-                    tooltip: "Export Account",
-                    onPressed: onExport,
-                    icon: Icon(Icons.save))),
+                child: IconButton(tooltip: "Export Account", onPressed: onExport, icon: Icon(Icons.save))),
             Showcase(
                 key: rewindID,
                 description: "Rewind back a few blocks",
-                child: IconButton(
-                    tooltip: "Rewind to previous checkpoint",
-                    onPressed: onRewind,
-                    icon: Icon(Icons.fast_rewind)))
+                child: IconButton(tooltip: "Rewind to previous checkpoint", onPressed: onRewind, icon: Icon(Icons.fast_rewind)))
           ],
           Showcase(
               key: resetID,
               description: "Clear and reset account to birth height",
-              child: IconButton(
-                  tooltip: "Clear Sync Data",
-                  onPressed: onReset,
-                  icon: Icon(Icons.delete_sweep)))
+              child: IconButton(tooltip: "Clear Sync Data", onPressed: onReset, icon: Icon(Icons.delete_sweep)))
         ]),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -272,14 +236,9 @@ class AccountEditPageState extends State<AccountEditPage> {
                                 decoration: InputDecoration(labelText: 'Name'),
                                 initialValue: account?.name ?? "(Multiple)",
                                 readOnly: account == null,
-                                onChanged:
-                                    (account != null) ? onEditName : null,
+                                onChanged: (account != null) ? onEditName : null,
                               ))),
-                      if (account != null)
-                        Showcase(
-                            key: iconID2,
-                            description: "Edit Account Icon",
-                            child: account.avatar(onTap: (_) => onEditIcon()))
+                      if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon()))
                     ],
                   ),
                   Showcase(
@@ -291,22 +250,16 @@ class AccountEditPageState extends State<AccountEditPage> {
                         initialValue: account?.birth.toString() ?? "",
                         keyboardType: TextInputType.number,
                         readOnly: account == null,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         onChanged: (account != null) ? onEditBirth : null,
                       )),
                   Showcase(
                       key: enableID,
-                      description:
-                          "Enable or disable. Only enabled accounts participate in the global sync",
+                      description: "Enable or disable. Only enabled accounts participate in the global sync",
                       child: FormBuilderCheckbox(
                         name: "enabled",
                         title: Text("Enabled"),
-                        initialValue: accounts
-                                .every((a) => a.enabled == accounts[0].enabled)
-                            ? accounts[0].enabled
-                            : null,
+                        initialValue: accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
                         tristate: account == null,
                         onChanged: onEditEnabled,
                       )),
@@ -316,10 +269,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                       child: FormBuilderCheckbox(
                         name: "hidden",
                         title: Text("Hidden"),
-                        initialValue: accounts
-                                .every((a) => a.hidden == accounts[0].hidden)
-                            ? accounts[0].hidden
-                            : null,
+                        initialValue: accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
                         tristate: account == null,
                         onChanged: onEditHidden,
                       ))
@@ -331,9 +281,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditName(String? name) async {
     if (name != null) {
       accounts[0] = accounts[0].copyWith(name: name);
-      await updateAccount(
-          update: AccountUpdate(
-              coin: accounts[0].coin, id: accounts[0].id, name: name));
+      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, name: name));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -342,12 +290,21 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditIcon() async {
     final picker = ImagePicker();
     final icon = await picker.pickImage(source: ImageSource.gallery);
+    var changed = false;
+    Uint8List? bytes;
     if (icon != null) {
-      final bytes = await icon.readAsBytes();
-      accounts[0] = accounts[0].copyWith(icon: bytes);
-      await updateAccount(
-          update: AccountUpdate(
-              coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
+      bytes = await icon.readAsBytes();
+      changed = true;
+    } else {
+      final remove = await confirmDialog(context, title: "Reset Icon", message: "Do you want to remove the current icon?");
+      if (remove) {
+        bytes = Uint8List(0);
+        changed = true;
+      }
+    }
+    if (changed) {
+      accounts[0] = accounts[0].copyWith(icon: bytes?.isNotEmpty == true ? bytes : null);
+      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -356,11 +313,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditBirth(String? birth) async {
     if (birth != null && birth.isNotEmpty) {
       accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
-      await updateAccount(
-          update: AccountUpdate(
-              coin: accounts[0].coin,
-              id: accounts[0].id,
-              birth: int.parse(birth)));
+      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth)));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -370,9 +323,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(enabled: v);
-      await updateAccount(
-          update: AccountUpdate(
-              coin: accounts[i].coin, id: accounts[i].id, enabled: v));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -382,9 +333,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(hidden: v);
-      await updateAccount(
-          update: AccountUpdate(
-              coin: accounts[i].coin, id: accounts[i].id, hidden: v));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -392,14 +341,10 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   void onExport() async {
     final account = accounts.first;
-    final password = await inputPassword(context,
-        title: "Export Account", message: "File Password");
+    final password = await inputPassword(context, title: "Export Account", message: "File Password");
     if (password != null) {
       final res = await exportAccount(id: account.id, passphrase: password);
-      await appWatcher.saveFile(
-        title: "Please select an output file for the encrypted account:",
-        fileName: "${account.name}.bin",
-        data: res);
+      await appWatcher.saveFile(title: "Please select an output file for the encrypted account:", fileName: "${account.name}.bin", data: res);
     }
   }
 
@@ -453,8 +398,7 @@ class BalanceWidget extends StatelessWidget {
   final PoolBalance balance;
   final bool showcase;
   final void Function(int)? onPoolSelected;
-  const BalanceWidget(this.balance,
-      {super.key, this.showcase = false, this.onPoolSelected});
+  const BalanceWidget(this.balance, {super.key, this.showcase = false, this.onPoolSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -496,10 +440,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
   return [
     SliverToBoxAdapter(
         child: Column(
-      children: [
-        Text("Transaction History (${transactions.length} txs)"),
-        const Gap(8)
-      ],
+      children: [Text("Transaction History (${transactions.length} txs)"), const Gap(8)],
     )),
     SliverFixedExtentList.builder(
       itemCount: transactions.length,
@@ -562,9 +503,7 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
   return SearchableList(
       initialList: memos,
       itemBuilder: (memo) => MemoWidget(memo),
-      filter: (query) => memos
-          .where((m) => query.isEmpty || (m.memo?.contains(query) == true))
-          .toList(),
+      filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
       inputDecoration: InputDecoration(
         labelText: "Search Memos",
         fillColor: Colors.white,
@@ -606,20 +545,17 @@ class MemoWidget extends StatelessWidget {
     final incoming = memo.idNote != null;
 
     return GestureDetector(
-      onTap: () => gotoTransaction(context, memo.idTx),
-      child: Padding(padding: EdgeInsetsGeometry.symmetric(vertical: 4),
-        child: Bubble(
-        nip: incoming ? BubbleNip.leftTop : BubbleNip.rightTop,
-        color: incoming ? cs.surface : cs.secondaryContainer,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Align(
-              alignment: Alignment.centerRight,
-              child: Text(timeToString(memo.time),
-                  style: t.textTheme.labelMedium)),
-          Gap(8),
-          CopyableText(
-              memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
-        ]))));
+        onTap: () => gotoTransaction(context, memo.idTx),
+        child: Padding(
+            padding: EdgeInsetsGeometry.symmetric(vertical: 4),
+            child: Bubble(
+                nip: incoming ? BubbleNip.leftTop : BubbleNip.rightTop,
+                color: incoming ? cs.surface : cs.secondaryContainer,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Align(alignment: Alignment.centerRight, child: Text(timeToString(memo.time), style: t.textTheme.labelMedium)),
+                  Gap(8),
+                  CopyableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
+                ]))));
   }
 }
 
@@ -657,46 +593,28 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Viewing Keys'), actions: [
-          if (seed != null)
-            IconButton(
-                tooltip: "Show Seed Phrase",
-                onPressed: onShowSeed,
-                icon: Icon(Icons.key))
-        ]),
+        appBar: AppBar(
+            title: Text('Viewing Keys'), actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))]),
         body: SingleChildScrollView(
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Column(children: [
                   if (showSeed && seed != null) ...[
-                    ListTile(
-                        title: Text("Mnemonic"),
-                        subtitle: CopyableText(seed!.mnemonic)),
-                    ListTile(
-                        title: Text("Passphrase"),
-                        subtitle: CopyableText(seed!.phrase)),
-                    ListTile(
-                        title: Text("Index"),
-                        subtitle: CopyableText(seed!.aindex.toString())),
+                    ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
+                    ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
+                    ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
                     Divider(),
                     Gap(8),
                   ],
-                  Center(
-                      child: PoolSelect(
-                          enabled: accountPools,
-                          initialValue: accountPools,
-                          onChanged: onPoolChanged)),
+                  Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
                   Gap(32),
                   if (uvk != null) CopyableText(uvk!),
                   Gap(32),
-                  if (uvk != null)
-                    QrImageView(
-                        data: uvk!, size: 200, backgroundColor: Colors.white),
+                  if (uvk != null) QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
                   Gap(8),
                   if (fingerprint != null) CopyableText(fingerprint!),
                   Gap(16),
-                  Text(
-                      "If the account does not include a pool, its receiver will be absent"),
+                  Text("If the account does not include a pool, its receiver will be absent"),
                 ]))));
   }
 
