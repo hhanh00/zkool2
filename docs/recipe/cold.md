@@ -8,7 +8,14 @@ It is not sufficient to be disconnected _most of the time_. For instance, a wall
 
 To make a payment, there needs to be another wallet that connects to the Zcash network and synchronizes the blockchain data. This wallet has the account _viewing key_ to properly identify the wallet transactions but is not capable of spending any funds. We'll call it the "Hot Viewing Wallet"[^1].
 
-You have two copies of Zkool: The "Hot Viewing Wallet" (HVW) and the "Cold Wallet" (CW).
+You have two copies of Zkool: The "Hot Viewing Wallet" (HVW) and the "Cold
+Wallet" (CW).
+
+::: tip
+To make sure the Cold Wallet does not connect to the Internet, you can turn off
+WIFI and Mobile Data. Zkool has a setting that puts the wallet "OFFLINE" as
+well.
+:::
 
 ## Setup
 

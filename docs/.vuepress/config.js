@@ -38,6 +38,9 @@ export default defineUserConfig({
           "sync",
           "database",
           "tor",
+          "pinlock",
+          "mempool",
+          "puri",
         ],
       },
       {

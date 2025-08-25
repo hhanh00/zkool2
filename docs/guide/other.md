@@ -18,6 +18,12 @@ TBD
 
 ## MultiPay
 
+[See Payment URI](../recipe/puri.md)
+
 ## TOR
 
+[See TOR](../recipe/tor.md)
+
 ## Mempool Viewer
+
+[See Mempool](../recipe/mempool.md)
