@@ -4,7 +4,6 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -282,8 +281,7 @@ class NewAccountPageState extends State<NewAccountPage> {
   }
 
   void onEdit() async {
-    final picker = ImagePicker();
-    final icon = await picker.pickImage(source: ImageSource.gallery);
+    final icon = await appWatcher.pickImage();
     if (icon != null) {
       final bytes = await icon.readAsBytes();
       setState(() => iconBytes = bytes);
