@@ -9,7 +9,6 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -288,8 +287,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void onEditIcon() async {
-    final picker = ImagePicker();
-    final icon = await picker.pickImage(source: ImageSource.gallery);
+    final icon = await appWatcher.pickImage();
     var changed = false;
     Uint8List? bytes;
     if (icon != null) {
