@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.21.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.21.0...zkool-v4.21.1) (2025-08-25)
+
+
+### Bug Fixes
+
+* ios build ([#435](https://github.com/hhanh00/zkool2/issues/435)) ([ae44aee](https://github.com/hhanh00/zkool2/commit/ae44aee6e62dbce42af99c36be423165b4e23a1a))
+
 ## [4.21.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.20.11...zkool-v4.21.0) (2025-08-25)
 
 
