@@ -18,6 +18,7 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/widgets/input_amount.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/scanner.dart';
 
@@ -140,19 +141,20 @@ class SendPageState extends State<SendPage> {
                             description: "Open the QR Scanner",
                             child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner))),
                       ]),
-                      Row(children: [
-                        Expanded(
-                            child: Showcase(
-                                key: amountID,
-                                description: "Amount to send",
-                                child: FormBuilderTextField(
-                                  name: "amount",
-                                  decoration: const InputDecoration(labelText: "Amount"),
-                                  validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
-                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                ))),
-                        IconButton(tooltip: "Set amount to entire balance", onPressed: onMax, icon: Icon(Icons.vertical_align_top)),
-                      ]),
+                      InputAmount(name: "amount", onMax: onMax),
+                      // Row(children: [
+                      //   Expanded(
+                      //       child: Showcase(
+                      //           key: amountID,
+                      //           description: "Amount to send",
+                      //           child: FormBuilderTextField(
+                      //             name: "amount",
+                      //             decoration: const InputDecoration(labelText: "Amount"),
+                      //             validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
+                      //             keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      //           ))),
+                      //   IconButton(tooltip: "Set amount to entire balance", onPressed: onMax, icon: Icon(Icons.vertical_align_top)),
+                      // ]),
                       Visibility(
                           visible: supportsMemo,
                           maintainState: true,
