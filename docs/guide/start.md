@@ -15,19 +15,6 @@ similarly on other platforms.
 
 # First Run
 
-## Database Password
-
-Zkool starts by asking for a database password.
-It encrypts the wallet file on disk, so that
-if your device gets compromised and your wallet file
-is stolen, an attacker will need the database password
-to retrieve your secret keys.
-
-The database password is not stored and you have
-to enter it every time you launch Zkool. If you
-don't want to encrypt your database, enter
-a blank password.
-
 ## Disclaimer
 
 Next, you must accept the disclaimer that states
