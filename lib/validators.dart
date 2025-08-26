@@ -47,7 +47,7 @@ String? validAddressOrPaymentURI(String? s) {
 
 String? validAmount(String? amount) {
   if ((amount == null || amount.isEmpty)) {
-    return "Amount is required";
+    return null;
   }
   final a = Fixed.tryParse(amount);
   if (a == null) {
