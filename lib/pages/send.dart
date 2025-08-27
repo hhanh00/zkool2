@@ -67,6 +67,7 @@ class SendPageState extends State<SendPage> {
   @override
   Widget build(BuildContext context) {
     Future(tutorial);
+    final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
     final balance = pbalance;
@@ -124,6 +125,10 @@ class SendPageState extends State<SendPage> {
                           IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
                         ]
                       ]),
+                      if (appStore.notes.any((n) => n.locked))
+                        Container(
+                          color: cs.secondaryContainer,
+                          child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer))),
                       Row(children: [
                         Expanded(
                             child: Showcase(
