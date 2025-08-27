@@ -9,23 +9,25 @@ import 'package:zkool/validators.dart';
 class InputAmount extends StatefulWidget {
   final String name;
   final String? amount;
-  final void Function(int amount)? onChanged;
   final void Function()? onMax;
-  const InputAmount({required this.name, this.amount, this.onChanged, this.onMax, super.key});
+  const InputAmount({required this.name, this.amount, this.onMax, super.key});
 
   @override
   State<StatefulWidget> createState() => InputAmountState();
 }
 
 class InputAmountState extends State<InputAmount> {
+  final formFieldKey = GlobalKey<FormBuilderFieldState>();
   final formKey = GlobalKey<FormBuilderState>();
   double? price;
 
   @override
   Widget build(BuildContext context) {
     return FormBuilderField<String>(
+        key: formFieldKey,
         name: widget.name,
         initialValue: widget.amount,
+        onReset: onReset,
         onChanged: onChanged,
         builder: (state) {
           return FormBuilder(
@@ -74,13 +76,15 @@ class InputAmountState extends State<InputAmount> {
 
   void onChanged(String? v, {bool interactive = false}) {
     if (disableChangeHandlers || v == null) return;
+    formFieldKey.currentState!.setValue(v);
     final form = formKey.currentState!;
     if (!interactive) form.fields["zat"]!.didChange(v);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       disableChangeHandlers = true;
-      if (v.isEmpty)
-        form.fields["fiat"]!.reset();
-      else if (price != null) {
+      if (v.isEmpty) {
+        onReset(zat: false);
+        formFieldKey.currentState!.reset();
+      } else if (price != null) {
         final usd = stringToZat(v).toDouble() * price! / 1e8;
         form.fields["fiat"]!.didChange(usd.toStringAsFixed(2));
       }
@@ -94,13 +98,22 @@ class InputAmountState extends State<InputAmount> {
     if (!interactive) form.fields["fiat"]!.didChange(v);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       disableChangeHandlers = true;
-      if (v.isEmpty)
-        form.fields["zat"]!.reset();
-      else if (price != null) {
+      if (v.isEmpty) {
+        onReset(fiat: false);
+        formFieldKey.currentState!.reset();
+      } else if (price != null) {
         final zat = double.parse(v) / price! * 1e8;
-        form.fields["zat"]!.didChange(zatToString(BigInt.from(zat)));
+        final z = zatToString(BigInt.from(zat));
+        form.fields["zat"]!.didChange(z);
+        formFieldKey.currentState!.setValue(z);
       }
       disableChangeHandlers = false;
     });
+  }
+
+  void onReset({bool zat = true, bool fiat = true}) {
+    final form = formKey.currentState!;
+    if (zat) form.fields["zat"]!.reset();
+    if (fiat) form.fields["fiat"]!.reset();
   }
 }
