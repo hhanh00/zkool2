@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.22.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.22.0...zkool-v4.22.1) (2025-08-27)
+
+
+### Bug Fixes
+
+* amount input widget ([#440](https://github.com/hhanh00/zkool2/issues/440)) ([b553a58](https://github.com/hhanh00/zkool2/commit/b553a580e2975522602179ecd53804f6583d2558))
+
 ## [4.22.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.21.1...zkool-v4.22.0) (2025-08-26)
 
 
