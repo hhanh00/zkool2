@@ -52,20 +52,13 @@ export default defineUserConfig({
           "mpc",
         ],
       },
-      // {
-      //   text: "Usage",
-      //   prefix: "/usage/",
-      //   children: [
-      //     "files",
-      //   ],
-      // },
-      // {
-      //   text: "Protocol",
-      //   prefix: "/protocol/",
-      //   children: [
-      //     "concepts",
-      //   ],
-      // }
+      {
+        text: "Zcash tech",
+        prefix: "/tech/",
+        children: [
+          "shielding",
+        ],
+      },
     ],
   }),
   plugins: [
