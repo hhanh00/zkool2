@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.23.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.22.1...zkool-v4.23.0) (2025-08-27)
+
+
+### Features
+
+* add warning when some notes are disabled ([#442](https://github.com/hhanh00/zkool2/issues/442)) ([e8d42b3](https://github.com/hhanh00/zkool2/commit/e8d42b3b19a7de2e0c05a9277b5328529b8c3977))
+
 ## [4.22.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.22.0...zkool-v4.22.1) (2025-08-27)
 
 
