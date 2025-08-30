@@ -465,10 +465,10 @@ pub async fn plan_transaction(
                         let pkh: [u8; 20] =
                             Ripemd160::digest(Sha256::digest(pubkey.serialize())).into();
                         let addr = TransparentAddress::PublicKeyHash(pkh);
-                        let coin = TxOut {
-                            value: Zatoshis::from_u64(*amount).unwrap(),
-                            script_pubkey: addr.script(),
-                        };
+                        let coin = TxOut::new(
+                            Zatoshis::from_u64(*amount).unwrap(),
+                            addr.script(),
+                        );
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder
