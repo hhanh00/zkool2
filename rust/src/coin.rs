@@ -75,7 +75,7 @@ impl Coin {
             let testnet = db_filepath.contains("testnet");
             let regtest = db_filepath.contains("regtest");
             let coin_value = if testnet {
-                "1 "
+                "1"
             } else if regtest {
                 "2"
             } else {
