@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.24.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.23.0...zkool-v4.24.0) (2025-08-30)
+
+
+### Features
+
+* add support for NU6.1 on testnet ([#444](https://github.com/hhanh00/zkool2/issues/444)) ([2390ab5](https://github.com/hhanh00/zkool2/commit/2390ab59f09e155b818f94ecb467cf365e793a4b))
+
 ## [4.23.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.22.1...zkool-v4.23.0) (2025-08-27)
 
 
