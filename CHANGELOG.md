@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.24.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.0...zkool-v4.24.1) (2025-08-30)
+
+
+### Bug Fixes
+
+* typo ([#446](https://github.com/hhanh00/zkool2/issues/446)) ([5f3e501](https://github.com/hhanh00/zkool2/commit/5f3e501b46fa8e9049f5b00f0153bfdb376c2fbb))
+
 ## [4.24.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.23.0...zkool-v4.24.0) (2025-08-30)
 
 
