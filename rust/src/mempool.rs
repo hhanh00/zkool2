@@ -142,7 +142,7 @@ pub async fn decode_raw_transaction(
     if let Some(tbundle) = tx_data.transparent_bundle() {
         for v in tbundle.vin.iter() {
             let mut nf = vec![];
-            v.prevout.write(&mut nf)?;
+            v.prevout().write(&mut nf)?;
             let spent_amount = sqlx::query(
                 "SELECT account, name, value FROM notes n
                 JOIN accounts a ON n.account = a.id_account
@@ -164,13 +164,13 @@ pub async fn decode_raw_transaction(
             notes.extend(spent_amount);
         }
         for v in tbundle.vout.iter() {
-            if let Some(vout_address) = v.script_pubkey.address() {
+            if let Some(vout_address) = v.script_pubkey().address() {
                 if let Some((account, name, _)) = tkeys.iter().find(|(_, _, a)| a == &vout_address)
                 {
                     let n = MempoolNote {
                         account: *account,
                         name: name.clone(),
-                        value: v.value.into_u64() as i64,
+                        value: v.value().into_u64() as i64,
                     };
                     notes.push(n);
                 }

@@ -275,7 +275,7 @@ pub(crate) async fn transparent_sync(
                             for vin in vins.iter() {
                                 // The "nullifier" of a transparent input is the outpoint
                                 let mut nf = vec![];
-                                vin.prevout.write(&mut nf)?;
+                                vin.prevout().write(&mut nf)?;
 
                                 let row: Option<(u32, i64)> = sqlx::query_as(
                                 "SELECT id_note, value FROM notes WHERE account = ?1 AND nullifier = ?2",
@@ -320,7 +320,7 @@ pub(crate) async fn transparent_sync(
                                         .bind(height)
                                         .bind(address_row.0)
                                         .bind(&nf)
-                                        .bind(vout.value.into_u64() as i64)
+                                        .bind(vout.value().into_u64() as i64)
                                         .bind(&txid)
                                         .bind(account)
                                         .execute(&mut *db_tx)
