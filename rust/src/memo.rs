@@ -6,7 +6,7 @@ use tracing::info;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 use zcash_primitives::transaction::{
-    components::sapling::zip212_enforcement, fees::transparent::OutputView,
+    components::sapling::zip212_enforcement,
 };
 use zcash_protocol::memo::Memo;
 

@@ -33,27 +33,26 @@ arti-client = {version = "0.31", features = ["tokio", "native-tls", "onion-servi
 tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
 hyper-util = {version = "0.1", features = ["tokio"]}
 tower = "0.5"
-
-group = "0.13"
-orchard = {version = "0.11", features = ["unstable-frost"]}
 rayon = "1.10"
-zcash_address = "0.7"
+
+zcash_address = "0.9"
 zcash_encoding = "0.3"
-zcash_keys = {version = "0.8", features = ["sapling", "orchard", "transparent-inputs"]}
+zcash_keys = {version = "0.10", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.4"
-zcash_primitives = {version = "0.22", features = ["transparent-inputs"]}
-zcash_proofs = {version = "0.22", features = ["bundled-prover"]}
-zcash_protocol = {version = "0.5", features = ["local-consensus"]}
-zcash_transparent = {version = "0.2.3", features = ["transparent-inputs"]}
-zip321 = "0.3"
+zcash_primitives = {version = "0.24", features = ["transparent-inputs"]}
+zcash_proofs = {version = "0.24", features = ["bundled-prover"]}
+zcash_protocol = {version = "0.6", features = ["local-consensus"]}
+zcash_transparent = {version = "0.4", features = ["transparent-inputs"]}
+pczt = { version = "0.3", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
+orchard = {version = "0.11", features = ["unstable-frost"]}
+zip321 = "0.5"
+
 reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}
 frost-rerandomized = "2.1.0"
-# zaino-fetch = {git="https://github.com/zingolabs/zaino.git", branch="stable"}
-# http = "1.3.1"
-byteorder = "1.5"
 
 bincode = {version = "2.0", features = ["serde"]}
-postcard = "1.1"
+byteorder = "1.5"
+#postcard = "1.1"
 bip32 = {version = "0.6.0-pre.1", default-features = false}
 blake2b_simd = "1.0"
 bs58 = "0.5"
@@ -61,8 +60,8 @@ chacha20 = "0.9"
 fpdec = "0.11"
 halo2_gadgets = "0.3"
 halo2_proofs = "0.3"
+group = "0.13"
 jubjub = "0.10"
-pczt = {version = "0.2.1", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"]}
 prost = "0.13.5"
 ripemd = "0.1"
 rustls = {version = "0.23", default-features = false, features = ["ring"]}
@@ -87,7 +86,16 @@ unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 tonic-build = "0.13"
 
 [patch.crates-io]
-# pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "a35a6c021e35eb53becc7e611ca0213328534be8" }
-# pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "c1c020d" }
 orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
-# orchard = { path = "../../orchard" }
+
+zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zcash_note_encryption = { git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29" }
+zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zcash_transparent = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+zip321 = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
+sapling-crypto = { git = "https://github.com/zcash/sapling-crypto.git", rev = "6a8282be0959b410a0b622cd5eb84f8c3c134078" }
