@@ -41,6 +41,7 @@ export default defineUserConfig({
           "security",
           "mempool",
           "puri",
+          "net",
         ],
       },
       {
