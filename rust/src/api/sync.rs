@@ -370,10 +370,10 @@ pub async fn cancel_sync() -> Result<()> {
 }
 
 #[frb]
-pub async fn rewind_sync(height: u32) -> Result<()> {
+pub async fn rewind_sync(height: u32, account: u32) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    crate::sync::rewind_sync(&mut *connection, c.account, height).await
+    crate::sync::rewind_sync(&mut *connection, account, height).await
 }
 
 #[frb]
