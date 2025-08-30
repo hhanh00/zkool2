@@ -356,7 +356,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     );
     if (!confirmed) return;
     final dbHeight = await getDbHeight();
-    await rewindSync(height: dbHeight - 60);
+    await rewindSync(height: dbHeight - 60, account: account.id);
     final h = await getDbHeight();
     appStore.heights[account.id]?.init(h);
   }
