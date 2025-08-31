@@ -14,20 +14,13 @@ class LogviewPageState extends State<LogviewPage> {
   Widget build(BuildContext context) {
     return Observer(builder: (context) {
       appStore.log;
+      final fullLog = appStore.log.join("\n");
 
       return Scaffold(
         appBar: AppBar(
           title: const Text("Log"),
         ),
-        body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: ListView.builder(
-              itemBuilder: (context, index) {
-                final logEntry = appStore.log[index];
-                return Text(logEntry);
-              },
-              itemCount: appStore.log.length,
-            )),
+        body: SingleChildScrollView(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: SelectableText(fullLog))),
       );
     });
   }
