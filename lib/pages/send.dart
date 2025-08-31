@@ -421,7 +421,7 @@ class Send2PageState extends State<Send2Page> {
                             )))),
                 Showcase(
                     key: feeSourceID,
-                    description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the receipient instead",
+                    description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
                     child: FormBuilderSwitch(
                       name: "recipientPaysFee",
                       title: Text("Recipient Pays Fee"),

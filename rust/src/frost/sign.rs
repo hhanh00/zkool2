@@ -284,7 +284,7 @@ pub async fn do_sign(
                 return Ok(());
             }
             // build the sigpackage for this input and store it
-            // note that it will be kept in the database only if we succesfully sent it out
+            // note that it will be kept in the database only if we successfully sent it out
             // because of the db transaction
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
 
