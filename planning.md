@@ -46,7 +46,7 @@ A wallet for zcash
     - [x] pczt
     - [x] broadcast
     - [x] generate change transparent addresses
-    - [x] expose src pools and receipient pays fee
+    - [x] expose src pools and recipient pays fee
 - [x] History
     - [x] tx list
     - [x] memo
