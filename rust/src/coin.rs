@@ -179,7 +179,6 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
         }
     });
 
-    tracing::info!("Connecting over TOR to {host} at {port}");
     let connector = service_fn(move |_dst| {
         let host = host.clone();
         async move {
@@ -199,7 +198,6 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
 
     let mut endpoint = Endpoint::from_shared(url.to_string())?;
     if url.starts_with("https") {
-        tracing::info!("Using TLS");
         let tls = ClientTlsConfig::new().with_enabled_roots();
         endpoint = endpoint.tls_config(tls)?;
     }
