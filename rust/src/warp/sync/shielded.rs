@@ -89,7 +89,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
         }
 
-        // map from (accout, nullifier) to NoteRef
+        // map from (account, nullifier) to NoteRef
         let mut utxos: HashMap<Vec<u8>, UTXO> = HashMap::new();
 
         for (account, _, _, _) in keys.iter() {
@@ -267,7 +267,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         // #region update commitment tree state
         for depth in 0..MERKLE_DEPTH as usize {
             let mut position = self.position >> depth;
-            // preprend previous trailing node (if resuming a half pair)
+            // prepend previous trailing node (if resuming a half pair)
             if position % 2 == 1 {
                 cmxs.insert(0, Some(self.tree_state.0[depth].unwrap()));
                 position -= 1;
