@@ -69,17 +69,6 @@ mixin _$ObservableHeight on ObservableHeightBase, Store {
       ActionController(name: 'ObservableHeightBase', context: context);
 
   @override
-  void init(int h) {
-    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
-        name: 'ObservableHeightBase.init');
-    try {
-      return super.init(h);
-    } finally {
-      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
   void begin(int endHeight) {
     final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
         name: 'ObservableHeightBase.begin');

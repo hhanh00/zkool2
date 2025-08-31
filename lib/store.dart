@@ -35,14 +35,8 @@ abstract class ObservableHeightBase with Store {
   double get progress => range > 0 ? (height - start) / range : 0.0;
 
   @action
-  void init(int h) {
-    height = h;
-    start = h;
-    range = 0;
-  }
-
-  @action
   void begin(int endHeight) {
+    start = height;
     range = endHeight - start;
   }
 
@@ -194,9 +188,8 @@ abstract class AppStoreBase with Store {
     final as = await listAccounts();
     accounts = as;
     for (var a in as) {
-      final h = ObservableHeight();
-      h.init(a.height);
-      heights[a.id] = h;
+      final h = heights.putIfAbsent(a.id, () => ObservableHeight());
+      h.set(a.height);
     }
     return as;
   }
