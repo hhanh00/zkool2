@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.24.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.1...zkool-v4.24.2) (2025-08-31)
+
+
+### Bug Fixes
+
+* fix typos ([#451](https://github.com/hhanh00/zkool2/issues/451)) ([3e02a70](https://github.com/hhanh00/zkool2/commit/3e02a70c83192a94c8233ad6a170f5dc2b495407))
+* progress bar ([#452](https://github.com/hhanh00/zkool2/issues/452)) ([a3bbfa7](https://github.com/hhanh00/zkool2/commit/a3bbfa7a99318588daf817fdb79134798a15c9d8))
+* rewind account ([#448](https://github.com/hhanh00/zkool2/issues/448)) ([4f21f15](https://github.com/hhanh00/zkool2/commit/4f21f15cf1682d58d631d47e3d0ea941b3d88e1b))
+
 ## [4.24.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.0...zkool-v4.24.1) (2025-08-30)
 
 
