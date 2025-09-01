@@ -82,7 +82,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1960965163;
+  int get rustContentHash => -2096335184;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -179,14 +179,14 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiInitInitApp();
 
+  Future<void> crateApiNetworkInitDatadir({required String directory});
+
   Future<void> crateApiFrostInitDkg();
 
   Future<void> crateApiFrostInitSign(
       {required int coordinator,
       required int fundingAccount,
       required PcztPackage pczt});
-
-  Future<void> crateApiNetworkInitTor({required String directory});
 
   Future<bool> crateApiFrostIsSigningInProgress();
 
@@ -1331,13 +1331,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiNetworkInitDatadir({required String directory}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(directory, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 39, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiNetworkInitDatadirConstMeta,
+        argValues: [directory],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNetworkInitDatadirConstMeta => const TaskConstMeta(
+        debugName: "init_datadir",
+        argNames: ["directory"],
+      );
+
+  @override
   Future<void> crateApiFrostInitDkg() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 39, port: port_);
+              funcId: 40, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1368,7 +1394,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(fundingAccount, serializer);
           sse_encode_box_autoadd_pczt_package(pczt, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 40, port: port_);
+              funcId: 41, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1384,32 +1410,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiFrostInitSignConstMeta => const TaskConstMeta(
         debugName: "init_sign",
         argNames: ["coordinator", "fundingAccount", "pczt"],
-      );
-
-  @override
-  Future<void> crateApiNetworkInitTor({required String directory}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(directory, serializer);
-          pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 41, port: port_);
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_AnyhowException,
-        ),
-        constMeta: kCrateApiNetworkInitTorConstMeta,
-        argValues: [directory],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiNetworkInitTorConstMeta => const TaskConstMeta(
-        debugName: "init_tor",
-        argNames: ["directory"],
       );
 
   @override
