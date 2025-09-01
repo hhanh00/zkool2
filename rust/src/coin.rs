@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex as StdMutex};
 
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
@@ -7,6 +7,7 @@ use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Sqlite, SqlitePool};
+use tokio::sync::{Mutex, OnceCell};
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Uri};
 use tor_rtcompat::PreferredRuntime;
 use tower::service_fn;
@@ -182,10 +183,8 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
     let connector = service_fn(move |_dst| {
         let host = host.clone();
         async move {
-            let tor_client = TOR.lock().await;
-            let tor_client = tor_client
-                .as_ref()
-                .ok_or(anyhow::anyhow!("TOR Client not started. App needs restart"))?;
+            let tor_client = get_tor_client().await.lock().await;
+
             let stream = tor_client
                 .connect((host.as_str(), port))
                 .await
@@ -278,18 +277,29 @@ pub fn _regtest() -> LocalNetwork {
     }
 }
 
-pub async fn init_tor(directory: &str) -> Result<()> {
-    let mut t = TOR.lock().await;
-    if t.is_none() {
-        let tor_client = build_tor(directory).await?;
-        *t = Some(tor_client);
-    }
+pub async fn init_datadir(directory: &str) -> Result<()> {
+    let mut data_dir = DATADIR.lock().unwrap();
+    *data_dir = directory.to_string();
     Ok(())
 }
 
+pub async fn get_tor_client() -> &'static Arc<Mutex<TorClient<PreferredRuntime>>> {
+    let data_dir = {
+        let data_dir = DATADIR.lock().unwrap();
+        data_dir.clone()
+    };
+    let tor = TOR.get_or_init(|| async {
+        let tor_client = build_tor(&data_dir).await.unwrap();
+        Arc::new(Mutex::new(tor_client))
+    }).await;
+    tor
+}
+
+pub static TOR: OnceCell<Arc<Mutex<TorClient<PreferredRuntime>>>> = OnceCell::const_new();
+
 lazy_static::lazy_static! {
-    pub static ref COIN: Mutex<Coin> = Mutex::new(Coin::default());
-    pub static ref TOR: tokio::sync::Mutex<Option<TorClient<PreferredRuntime>>> = tokio::sync::Mutex::new(None);
+    pub static ref DATADIR: StdMutex<String> = StdMutex::new(String::new());
+    pub static ref COIN: StdMutex<Coin> = StdMutex::new(Coin::default());
 
     pub static ref REGTEST: Network = Network::Regtest(_regtest());
 }
