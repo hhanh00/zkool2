@@ -1,4 +1,4 @@
-use std::{convert::Infallible, str::FromStr as _};
+use std::{convert::Infallible, str::FromStr as _, sync::LazyLock};
 
 use anyhow::{anyhow, Result};
 
@@ -1076,7 +1076,5 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     Ok(unspent_notes)
 }
 
-lazy_static::lazy_static! {
-    pub static ref SAPLING_PROVER: LocalTxProver = LocalTxProver::bundled();
-    pub static ref ORCHARD_PK: ProvingKey = ProvingKey::build();
-}
+pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(LocalTxProver::bundled);
+pub static ORCHARD_PK: LazyLock<ProvingKey> = LazyLock::new(ProvingKey::build);

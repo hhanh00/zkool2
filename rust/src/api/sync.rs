@@ -4,6 +4,7 @@ use futures::TryStreamExt as _;
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row, Connection as _};
 use std::collections::HashMap;
+use std::sync::LazyLock;
 use tokio::sync::mpsc::channel;
 use tokio::sync::{broadcast, Mutex};
 use tracing::info;
@@ -400,7 +401,5 @@ pub struct SyncProgress {
 
 pub struct PoolBalance(pub Vec<u64>);
 
-lazy_static::lazy_static! {
-    pub static ref SYNCING: Mutex<()> = Mutex::new(());
-    pub static ref CANCEL_SYNC: Mutex<Option<broadcast::Sender<()>>> = Mutex::new(None);
-}
+pub static SYNCING: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+pub static CANCEL_SYNC: LazyLock<Mutex<Option<broadcast::Sender<()>>>> = LazyLock::new(|| Mutex::new(None));
