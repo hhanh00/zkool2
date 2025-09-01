@@ -5,7 +5,6 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
@@ -221,10 +220,6 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     await prefs.setBool("use_tor", value);
     appStore.useTor = value;
     setUseTor(useTor: value);
-    if (useTor) {
-      final torDir = await getApplicationDocumentsDirectory();
-      await initTor(directory: torDir.path);
-    }
     setState(() {
       useTor = value;
     });
