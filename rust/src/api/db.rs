@@ -6,7 +6,7 @@ use flutter_rust_bridge::frb;
 
 pub async fn open_database(db_filepath: &str, password: Option<String>) -> Result<()> {
     let (server_type, lwd, use_tor) = {
-        let c = crate::coin::COIN.lock().unwrap();
+        let c = get_coin!();
         (c.server_type.clone(), c.url.clone(), c.use_tor)
     };
     let coin = Coin::new(server_type, &lwd, use_tor, db_filepath, password).await?;

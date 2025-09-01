@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex as StdMutex};
+use std::sync::{LazyLock, OnceLock};
 
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
@@ -93,7 +93,7 @@ impl Coin {
         let network = match coin {
             0 => Network::Main,
             1 => Network::Test,
-            2 => *REGTEST,
+            2 => REGTEST,
             _ => Network::Main,
         };
 
@@ -264,7 +264,7 @@ impl Parameters for Network {
     }
 }
 
-pub fn _regtest() -> LocalNetwork {
+pub const fn _regtest() -> LocalNetwork {
     LocalNetwork {
         overwinter: Some(BlockHeight::from_u32(1)),
         sapling: Some(BlockHeight::from_u32(1)),
@@ -278,28 +278,25 @@ pub fn _regtest() -> LocalNetwork {
 }
 
 pub async fn init_datadir(directory: &str) -> Result<()> {
-    let mut data_dir = DATADIR.lock().unwrap();
-    *data_dir = directory.to_string();
+    DATADIR.set(directory.to_string()).map_err(anyhow::Error::msg)?;
     Ok(())
 }
 
-pub async fn get_tor_client() -> &'static Arc<Mutex<TorClient<PreferredRuntime>>> {
+pub async fn get_tor_client() -> &'static Mutex<TorClient<PreferredRuntime>> {
     let data_dir = {
-        let data_dir = DATADIR.lock().unwrap();
+        let data_dir = DATADIR.get().expect("Data dir should have been set");
         data_dir.clone()
     };
     let tor = TOR.get_or_init(|| async {
         let tor_client = build_tor(&data_dir).await.unwrap();
-        Arc::new(Mutex::new(tor_client))
+        Mutex::new(tor_client)
     }).await;
     tor
 }
 
-pub static TOR: OnceCell<Arc<Mutex<TorClient<PreferredRuntime>>>> = OnceCell::const_new();
+pub static TOR: OnceCell<Mutex<TorClient<PreferredRuntime>>> = OnceCell::const_new();
+pub static DATADIR: OnceLock<String> = OnceLock::new();
+pub static REGTEST: Network = Network::Regtest(_regtest());
 
-lazy_static::lazy_static! {
-    pub static ref DATADIR: StdMutex<String> = StdMutex::new(String::new());
-    pub static ref COIN: StdMutex<Coin> = StdMutex::new(Coin::default());
-
-    pub static ref REGTEST: Network = Network::Regtest(_regtest());
-}
+pub static COIN: LazyLock<std::sync::Mutex<Coin>> =
+    LazyLock::new(|| std::sync::Mutex::new(Coin::default()));

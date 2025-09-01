@@ -4332,7 +4332,6 @@ dependencies = [
  "hyper-util",
  "itertools",
  "jubjub",
- "lazy_static",
  "libsqlite3-sys",
  "log",
  "orchard",
