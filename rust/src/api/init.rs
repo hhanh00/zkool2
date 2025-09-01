@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use flutter_rust_bridge::frb;
 use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
@@ -85,9 +85,8 @@ where
             message,
             span,
         };
-        let sink = LOG_SINK.lock().unwrap();
-        if let Some(sink) = sink.as_ref() {
-            let _ = sink.add(log);
+        if let Some(sink) = LOG_SINK.get() {
+            let _ = sink.lock().unwrap().add(log);
         }
     }
 }
@@ -102,10 +101,7 @@ pub struct LogMessage {
 #[frb(sync)]
 pub fn set_log_stream(s: StreamSink<LogMessage>) {
     println!("Setting log stream");
-    let mut sink = LOG_SINK.lock().unwrap();
-    *sink = Some(s);
+    let _ = LOG_SINK.set(Mutex::new(s));
 }
 
-lazy_static::lazy_static! {
-    static ref LOG_SINK: Mutex<Option<StreamSink<LogMessage>>> = Mutex::new(None);
-}
+static LOG_SINK: OnceLock<Mutex<StreamSink<LogMessage>>> = OnceLock::new();

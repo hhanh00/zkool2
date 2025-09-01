@@ -1,14 +1,11 @@
 use crate::Hash32;
 use halo2_proofs::pasta::group::{ff::PrimeField as _, Curve as _, GroupEncoding as _};
 use jubjub::{AffinePoint, ExtendedNielsPoint, ExtendedPoint, Fr, SubgroupPoint};
-use lazy_static::lazy_static;
 use rayon::prelude::*;
 use sapling_crypto::constants::PEDERSEN_HASH_CHUNKS_PER_GENERATOR;
-use std::io::Read;
+use std::{io::Read, sync::LazyLock};
 
-lazy_static! {
-    pub static ref GENERATORS_EXP: Vec<ExtendedNielsPoint> = read_generators_bin();
-}
+static GENERATORS_EXP: LazyLock<Vec<ExtendedNielsPoint>> = LazyLock::new(read_generators_bin);
 
 pub const GENERATORS: &[u8] = include_bytes!("generators.bin");
 
