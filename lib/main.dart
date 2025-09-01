@@ -25,8 +25,8 @@ Future<void> main() async {
   await RustLib.init();
   await appStore.init();
   await appStore.loadAppSettings();
-  final torDir = await getApplicationDocumentsDirectory();
-  if (appStore.useTor) await initTor(directory: torDir.path);
+  final dataDir = await getApplicationDocumentsDirectory();
+  await initDatadir(directory: dataDir.path);
 
   appWatcher.init();
   final r = router(appStore.recovery);
