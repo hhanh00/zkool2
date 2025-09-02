@@ -278,7 +278,7 @@ pub const fn _regtest() -> LocalNetwork {
 }
 
 pub async fn init_datadir(directory: &str) -> Result<()> {
-    DATADIR.set(directory.to_string()).map_err(anyhow::Error::msg)?;
+    let _ = DATADIR.set(directory.to_string());
     Ok(())
 }
 
