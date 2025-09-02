@@ -1,5 +1,5 @@
 import 'package:convert/convert.dart';
-import 'package:fixed/fixed.dart';
+import 'package:intl/intl.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 
@@ -49,7 +49,7 @@ String? validAmount(String? amount) {
   if ((amount == null || amount.isEmpty)) {
     return null;
   }
-  final a = Fixed.tryParse(amount);
+  final a = NumberFormat.decimalPattern().tryParse(amount);
   if (a == null) {
     return "Invalid Amount";
   }
