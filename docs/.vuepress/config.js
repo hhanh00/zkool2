@@ -58,6 +58,9 @@ export default defineUserConfig({
         prefix: "/tech/",
         children: [
           "shielding",
+          "bitcoin",
+          "graph",
+          "privacy",
         ],
       },
     ],
@@ -70,7 +73,6 @@ export default defineUserConfig({
       size: true,
     }),
     markdownMathPlugin({}),
-    markdownHintPlugin({}),
     markdownExtPlugin({
       gfm: true,
       breaks: false,
