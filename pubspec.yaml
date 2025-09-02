@@ -41,6 +41,7 @@ dependencies:
   showcaseview: ^4.0.1
 
   fixed: ^5.3.3
+  decimal: ^3.2.1
   timeago: ^3.7.0
   intl: ^0.20.2
 
