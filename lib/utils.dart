@@ -1,6 +1,8 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
+import 'package:decimal/intl.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,9 +21,17 @@ import 'package:zkool/store.dart';
 
 String initials(String name) => name.substring(0, min(2, name.length)).toUpperCase();
 
+  final locale = PlatformDispatcher.instance.locale.toString();
+  final formatter = NumberFormat.decimalPatternDigits(
+    locale: locale,
+    decimalDigits: 8);
+  final zatFormatter = DecimalFormatter(formatter);
+final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP != ".";
+
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
-  return z.formatIntl();
+  final s = zatFormatter.format(z.toDecimal());
+  return s;
 }
 
 Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? onTap, required bool selectable, bool colored = false}) {
@@ -47,7 +57,6 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
 }
 
 BigInt stringToZat(String s) {
-  final invertSeparator = NumberFormat.decimalPattern().symbols.DECIMAL_SEP != ".";
   final z = Fixed.parse(s, scale: 8, invertSeparator: invertSeparator);
   return z.minorUnits;
 }
