@@ -21,7 +21,7 @@ String initials(String name) => name.substring(0, min(2, name.length)).toUpperCa
 
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
-  return z.toString();
+  return z.formatIntl();
 }
 
 Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? onTap, required bool selectable, bool colored = false}) {
@@ -47,7 +47,8 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
 }
 
 BigInt stringToZat(String s) {
-  final z = Fixed.parse(s, scale: 8);
+  final invertSeparator = NumberFormat.decimalPattern().symbols.DECIMAL_SEP != ".";
+  final z = Fixed.parse(s, scale: 8, invertSeparator: invertSeparator);
   return z.minorUnits;
 }
 
