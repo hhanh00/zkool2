@@ -21,11 +21,9 @@ import 'package:zkool/store.dart';
 
 String initials(String name) => name.substring(0, min(2, name.length)).toUpperCase();
 
-  final locale = PlatformDispatcher.instance.locale.toString();
-  final formatter = NumberFormat.decimalPatternDigits(
-    locale: locale,
-    decimalDigits: 8);
-  final zatFormatter = DecimalFormatter(formatter);
+final locale = PlatformDispatcher.instance.locale.toString();
+final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 8);
+final zatFormatter = DecimalFormatter(formatter);
 final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP != ".";
 
 String zatToString(BigInt zat) {
