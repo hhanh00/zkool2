@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.24.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.2...zkool-v4.24.3) (2025-09-03)
+
+
+### Bug Fixes
+
+* lazily build Tor client ([#454](https://github.com/hhanh00/zkool2/issues/454)) ([aa017b8](https://github.com/hhanh00/zkool2/commit/aa017b8a22924407d448ef62411a44f289467c74))
+* respond to focus events on address field ([#460](https://github.com/hhanh00/zkool2/issues/460)) ([97fc0d9](https://github.com/hhanh00/zkool2/commit/97fc0d910eb69d6e2b4d8f6d2c95b0dec398bb83))
+* use locale for parsing amounts ([#458](https://github.com/hhanh00/zkool2/issues/458)) ([c366370](https://github.com/hhanh00/zkool2/commit/c3663705a5b2c203e9d008538c83310245314b01))
+
 ## [4.24.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.1...zkool-v4.24.2) (2025-08-31)
 
 
