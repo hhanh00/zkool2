@@ -99,6 +99,7 @@ class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
   bool loaded = false;
+  String net = "mainnet";
   @observable
   Account? selectedAccount;
   @observable
@@ -171,6 +172,7 @@ abstract class AppStoreBase with Store {
   // Only settings from SharedPreferences
   // This is called before getting the database
   Future<void> loadAppSettings() async {
+    net = await getNetworkName();
     final prefs = SharedPreferencesAsync();
     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
     needPin = await prefs.getBool("pin_lock") ?? needPin;
