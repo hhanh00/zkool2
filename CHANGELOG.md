@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.25.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.3...zkool-v4.25.0) (2025-09-03)
+
+
+### Features
+
+* link to block explorer ([#461](https://github.com/hhanh00/zkool2/issues/461)) ([caca27f](https://github.com/hhanh00/zkool2/commit/caca27fdc8da8bf48186edd9e232a1c0d1a6f261))
+
+
+### Bug Fixes
+
+* set net too early before db loaded ([#463](https://github.com/hhanh00/zkool2/issues/463)) ([de838e0](https://github.com/hhanh00/zkool2/commit/de838e0d5296884ae2503e54fdcf9f511f0c8f59))
+
 ## [4.24.3](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.2...zkool-v4.24.3) (2025-09-03)
 
 
