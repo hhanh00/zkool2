@@ -123,6 +123,7 @@ abstract class AppStoreBase with Store {
   String dbFilepath = "";
   bool isLightNode = true;
   String lwd = "https://zec.rocks";
+  String blockExplorer = "https://{net}.zcashexplorer.app/transactions/{txid}";
   String syncInterval = "30"; // in blocks
   String actionsPerSync = "10000";
   bool disclaimerAccepted = false;
@@ -182,6 +183,7 @@ abstract class AppStoreBase with Store {
     lwd = await getProp(key: "lwd") ?? lwd;
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
+    blockExplorer = await getProp(key: "block_explorer") ?? blockExplorer;
   }
 
   Future<List<Account>> loadAccounts() async {
