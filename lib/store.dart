@@ -99,6 +99,7 @@ class AppStore = AppStoreBase with _$AppStore;
 
 abstract class AppStoreBase with Store {
   bool loaded = false;
+  String net = "mainnet";
   @observable
   Account? selectedAccount;
   @observable
@@ -123,6 +124,7 @@ abstract class AppStoreBase with Store {
   String dbFilepath = "";
   bool isLightNode = true;
   String lwd = "https://zec.rocks";
+  String blockExplorer = "https://{net}.zcashexplorer.app/transactions/{txid}";
   String syncInterval = "30"; // in blocks
   String actionsPerSync = "10000";
   bool disclaimerAccepted = false;
@@ -170,6 +172,7 @@ abstract class AppStoreBase with Store {
   // Only settings from SharedPreferences
   // This is called before getting the database
   Future<void> loadAppSettings() async {
+    net = await getNetworkName();
     final prefs = SharedPreferencesAsync();
     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
     needPin = await prefs.getBool("pin_lock") ?? needPin;
@@ -182,6 +185,7 @@ abstract class AppStoreBase with Store {
     lwd = await getProp(key: "lwd") ?? lwd;
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
+    blockExplorer = await getProp(key: "block_explorer") ?? blockExplorer;
   }
 
   Future<List<Account>> loadAccounts() async {

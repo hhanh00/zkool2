@@ -2,7 +2,7 @@ use anyhow::Result;
 use flutter_rust_bridge::frb;
 use serde::Deserialize;
 
-use crate::coin::ServerType;
+use crate::{coin::ServerType, get_coin};
 
 #[frb]
 pub async fn init_datadir(directory: &str) -> Result<()> {
@@ -36,6 +36,12 @@ pub async fn get_coingecko_price() -> Result<f64> {
             .json::<ZcashUSD>()
             .await?;
     Ok(rep.zcash.usd)
+}
+
+#[frb]
+pub async fn get_network_name() -> String {
+    let c = get_coin!();
+    c.get_name().to_string()
 }
 
 #[derive(Deserialize)]

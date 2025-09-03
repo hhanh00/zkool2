@@ -24,6 +24,7 @@ final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
 final pinLockID = GlobalKey();
 final offlineID = GlobalKey();
+final blockExplorerID = GlobalKey();
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -41,6 +42,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   bool needPin = appStore.needPin;
   bool offline = appStore.offline;
   String lwd = appStore.lwd;
+  String blockExplorer = appStore.blockExplorer;
   String syncInterval = appStore.syncInterval;
   String actionsPerSync = appStore.actionsPerSync;
 
@@ -60,7 +62,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID]);
+    tutorialHelper(context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID, blockExplorerID]);
   }
 
   @override
@@ -161,6 +163,17 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                     key: offlineID,
                     description: "Toggle offline mode",
                     child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: offline, onChanged: onOfflineChanged)),
+                Gap(8),
+                Showcase(
+                    key: blockExplorerID,
+                    description: "Block Explorer URL",
+                    child: FormBuilderTextField(name: "block_explorer",
+                      decoration: InputDecoration(
+                        label: Text("Block Explorer"),
+                      ),
+                      initialValue: blockExplorer,
+                      onChanged: onChangedBlockExplorer,
+                      )),
                 Gap(16),
                 CopyableText(appStore.dbFilepath, style: t.bodySmall),
                 Gap(8),
@@ -201,6 +214,15 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     setLwd(lwd: value, serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra);
     setState(() {
       lwd = value;
+    });
+  }
+
+  void onChangedBlockExplorer(String? value) async {
+    if (value == null) return;
+    await putProp(key: "block_explorer", value: value);
+    appStore.blockExplorer = value;
+    setState(() {
+      blockExplorer = value;
     });
   }
 
