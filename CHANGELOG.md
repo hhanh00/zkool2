@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.25.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.25.0...zkool-v4.25.1) (2025-09-03)
+
+
+### Bug Fixes
+
+* observe unconfirmed amount ([#464](https://github.com/hhanh00/zkool2/issues/464)) ([8358c8f](https://github.com/hhanh00/zkool2/commit/8358c8f4840568038666e47b2043fb9f4d7ad927))
+
 ## [4.25.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.24.3...zkool-v4.25.0) (2025-09-03)
 
 
