@@ -63,7 +63,6 @@ class AccountViewPageState extends State<AccountViewPage> {
     Future(tutorial);
 
     assert(account != null);
-    final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
 
     return DefaultTabController(
         length: 3,
@@ -115,10 +114,18 @@ class AccountViewPageState extends State<AccountViewPage> {
                               Gap(8),
                               if (b != null) BalanceWidget(b, showcase: true),
                               Gap(8),
-                              if (unconfirmedAmount != null) ...[
-                                zatToText(BigInt.from(unconfirmedAmount), prefix: "Unconfirmed: ", selectable: true),
-                                Gap(8),
-                              ],
+                              Observer(builder: (context) {
+                                final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
+                                return unconfirmedAmount != null
+                                    ? zatToText(
+                                        BigInt.from(unconfirmedAmount),
+                                        prefix: "Unconfirmed: ",
+                                        colored: true,
+                                        selectable: true,
+                                        style: t.bodyLarge,)
+                                    : SizedBox.shrink();
+                              }),
+                              Gap(8),
                               if (b != null) ...[
                                 Showcase(
                                     key: balID,
