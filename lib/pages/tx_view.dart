@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 class TxView extends StatefulWidget {
@@ -49,7 +53,8 @@ class TxViewState extends State<TxView> {
     return [
       ListTile(
           title: Text("Transaction ID"),
-          subtitle: CopyableText(txIdToString(txd.txid))),
+          subtitle: CopyableText(txIdToString(txd.txid)),
+          trailing: IconButton(onPressed: () => openBlockExplorer(txd.txid), icon: Icon(Icons.open_in_browser)),),
       ListTile(
           title: Text("Block Height"), subtitle: CopyableText(txd.height.toString())),
       ListTile(
@@ -95,5 +100,11 @@ class TxViewState extends State<TxView> {
             Divider()
           ]),
     ];
+  }
+
+  void openBlockExplorer(Uint8List txid) async {
+    final blockExplorer = appStore.blockExplorer;
+    final url = blockExplorer.replaceAll("{net}", appStore.net).replaceAll("{txid}", txIdToString(txid));
+    await launchUrl(Uri.parse(url));
   }
 }

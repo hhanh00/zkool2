@@ -24,3 +24,6 @@ Future<int> getCurrentHeight() =>
 
 Future<double> getCoingeckoPrice() =>
     RustLib.instance.api.crateApiNetworkGetCoingeckoPrice();
+
+Future<String> getNetworkName() =>
+    RustLib.instance.api.crateApiNetworkGetNetworkName();
