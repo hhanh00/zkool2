@@ -109,6 +109,15 @@ impl Coin {
         })
     }
 
+    pub fn get_name(&self) -> &'static str {
+        match self.coin {
+            0 => "mainnet",
+            1 => "testnet",
+            2 => "regnet",
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn get_pool(&self) -> &SqlitePool {
         let pool = self.pool.as_ref().expect("Connection pool not initialized");
         pool

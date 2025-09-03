@@ -55,6 +55,7 @@ dependencies:
   easy_stepper: ^0.8.5+1
   searchable_listview: ^2.17.3
   flutter_inappwebview: ^6.1.5
+  url_launcher: ^6.3.2
 
   bubble: ^1.2.1
 
