@@ -134,32 +134,27 @@ class SendPageState extends State<SendPage> {
                             child: Showcase(
                                 key: addressID,
                                 description: "Receiver Address (Transparent, Sapling or UA)",
-                                child: FormBuilderTextField(
-                                  name: "address",
-                                  decoration: const InputDecoration(labelText: "Address"),
-                                  validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
-                                  onChanged: onAddressChanged,
-                                  onEditingComplete: onAddressEditComplete,
-                                ))),
+                                child: Focus(
+                                  canRequestFocus: false,
+                                  onFocusChange: (v) => {
+                                    if (!v) onAddressEditComplete(),
+                                  },
+                                  child: FormBuilderTextField(
+                                    name: "address",
+                                    decoration: const InputDecoration(labelText: "Address"),
+                                    validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
+                                    onChanged: onAddressChanged,
+                                    textInputAction: TextInputAction.next,
+                                    onEditingComplete: () {
+                                      FocusScope.of(context).nextFocus();
+                                    },
+                                )))),
                         Showcase(
                             key: scanID,
                             description: "Open the QR Scanner",
                             child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner))),
                       ]),
                       InputAmount(name: "amount", onMax: onMax),
-                      // Row(children: [
-                      //   Expanded(
-                      //       child: Showcase(
-                      //           key: amountID,
-                      //           description: "Amount to send",
-                      //           child: FormBuilderTextField(
-                      //             name: "amount",
-                      //             decoration: const InputDecoration(labelText: "Amount"),
-                      //             validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
-                      //             keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      //           ))),
-                      //   IconButton(tooltip: "Set amount to entire balance", onPressed: onMax, icon: Icon(Icons.vertical_align_top)),
-                      // ]),
                       Visibility(
                           visible: supportsMemo,
                           maintainState: true,
