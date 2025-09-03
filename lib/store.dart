@@ -172,7 +172,6 @@ abstract class AppStoreBase with Store {
   // Only settings from SharedPreferences
   // This is called before getting the database
   Future<void> loadAppSettings() async {
-    net = await getNetworkName();
     final prefs = SharedPreferencesAsync();
     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
     needPin = await prefs.getBool("pin_lock") ?? needPin;
@@ -182,6 +181,7 @@ abstract class AppStoreBase with Store {
   }
 
   Future<void> loadSettings() async {
+    net = await getNetworkName();
     lwd = await getProp(key: "lwd") ?? lwd;
     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
