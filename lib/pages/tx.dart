@@ -119,12 +119,18 @@ class TxPageState extends State<TxPage> {
         );
 
       final txBytes = await extractTransaction(package: pczt);
-      final txId2 = await broadcastTransaction(
+      final result = await broadcastTransaction(
         height: txPlan.height,
         txBytes: txBytes,
       );
+      try {
+        hex.decode(result);
+      }
+      catch (_) {
+        if (mounted) await showException(context, result);
+      }
       showSnackbar("Transaction broadcasted successfully");
-      setState(() => txId = txId2);
+      setState(() => txId = result);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
