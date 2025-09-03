@@ -9,8 +9,8 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'init.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `default_layer`, `env_layer`, `frb_layer`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbLogger`, `LOG_SINK`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `deref`, `initialize`, `on_event`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbLogger`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `on_event`
 
 Stream<LogMessage> setLogStream() =>
     RustLib.instance.api.crateApiInitSetLogStream();
