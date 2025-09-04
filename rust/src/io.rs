@@ -11,6 +11,8 @@ use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use std::io::prelude::*;
 use tracing::info;
 
+use crate::db::DB_VERSION;
+
 pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
     let mut io_account = sqlx::query(
@@ -36,6 +38,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let internal: bool = row.get(15);
 
             IOAccount {
+                version: DB_VERSION,
                 id_account,
                 name,
                 seed,
@@ -390,6 +393,9 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     let mut data = vec![];
     decoder.read_to_end(&mut data)?;
     let (io_account, _) = bincode::decode_from_slice::<IOAccount, _>(&data, legacy())?;
+    if io_account.version != DB_VERSION {
+        anyhow::bail!("This version only supports database version {DB_VERSION}");
+    }
 
     info!("Importing account {}", io_account.name);
     // Move all accounts down by one position
@@ -676,6 +682,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
 pub struct IOAccount {
+    pub version: u16,
     pub id_account: u32,
     pub name: String,
     pub seed: Option<String>,
