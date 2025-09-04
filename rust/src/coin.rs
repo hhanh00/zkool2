@@ -67,12 +67,12 @@ impl Coin {
             .await?;
 
         let mut connection = pool.acquire().await?;
+        create_schema(&mut connection).await?;
         if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='props'")
             .fetch_optional(&mut *connection)
             .await?
             .is_none()
         {
-            create_schema(&mut connection).await?;
             let testnet = db_filepath.contains("testnet");
             let regtest = db_filepath.contains("regtest");
             let coin_value = if testnet {
