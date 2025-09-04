@@ -15,6 +15,8 @@ use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 
+pub const DB_VERSION: u16 = 5;
+
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(
@@ -257,6 +259,30 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     )
     .execute(&mut *connection)
     .await?;
+
+    // V5
+    sqlx::query(
+        "ALTER TABLE accounts ADD COLUMN folder INTEGER"
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+"CREATE TABLE IF NOT EXISTS folders (
+        id_folder INTEGER PRIMARY KEY,
+        folder TEXT NOT NULL)",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    let version = get_prop(connection, "db_version").await?;
+    if let Some(version) = version {
+        let version = version.parse::<u16>()?;
+        if version > DB_VERSION {
+            anyhow::bail!("This version only supports up to version {DB_VERSION} of the database file");
+        }
+    }
+    put_prop(connection, "version", &DB_VERSION.to_string()).await?;
 
     Ok(())
 }
