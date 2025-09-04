@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.25.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.25.1...zkool-v4.25.2) (2025-09-03)
+
+
+### Bug Fixes
+
+* switch to rustls for arti-client on macos ([#457](https://github.com/hhanh00/zkool2/issues/457)) ([e9ccf6e](https://github.com/hhanh00/zkool2/commit/e9ccf6e827f10ca90de4f51db6bcfe18a98db944))
+
 ## [4.25.1](https://github.com/hhanh00/zkool2/compare/zkool-v4.25.0...zkool-v4.25.1) (2025-09-03)
 
 
