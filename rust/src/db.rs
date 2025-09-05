@@ -270,7 +270,7 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS folders (
         id_folder INTEGER PRIMARY KEY,
-        folder TEXT NOT NULL)",
+        name TEXT NOT NULL)",
     )
     .execute(&mut *connection)
     .await?;

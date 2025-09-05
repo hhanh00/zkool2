@@ -15,7 +15,7 @@ use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
-use crate::coin::Network;
+use crate::{api::account::Folder, coin::Network};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
@@ -616,4 +616,17 @@ pub struct TxMemo {
     pub output: Option<u32>,
     pub pool: u8,
     pub memo: Option<String>,
+}
+
+pub async fn create_new_folder(connection: &mut SqliteConnection, name: &str) -> Result<Folder> {
+    let r =sqlx::query(
+        "INSERT INTO folders(name) VALUES (?1)")
+    .bind(name)
+    .execute(connection)
+    .await?;
+
+    Ok(Folder {
+        id: r.last_insert_rowid() as u32,
+        name: name.to_string(),
+    })
 }
