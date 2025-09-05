@@ -1,5 +1,26 @@
 # Changelog
 
+## [5.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.25.2...zkool-v5.0.0) (2025-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* folder and db versioning ([#468](https://github.com/hhanh00/zkool2/issues/468))
+
+### Features
+
+* account folders ([#474](https://github.com/hhanh00/zkool2/issues/474)) ([d203af3](https://github.com/hhanh00/zkool2/commit/d203af3f3eb1f735b348ba6a1808cf43895d7ec4))
+* create new folders ([#472](https://github.com/hhanh00/zkool2/issues/472)) ([521d4b9](https://github.com/hhanh00/zkool2/commit/521d4b9d02c141dedfb9c8f513b141d8881001fc))
+* folder and db versioning ([#468](https://github.com/hhanh00/zkool2/issues/468)) ([0031c17](https://github.com/hhanh00/zkool2/commit/0031c17194c80a8f3953b9983e20f854d5c062bb))
+* folder pop up menu ([#471](https://github.com/hhanh00/zkool2/issues/471)) ([e38e54c](https://github.com/hhanh00/zkool2/commit/e38e54c44fdcd7afec879f91d9b68912d27eee59))
+* rename/delete folders ([#473](https://github.com/hhanh00/zkool2/issues/473)) ([2e36975](https://github.com/hhanh00/zkool2/commit/2e36975a88002e9ae43ddb3c4369575ef8947c7d))
+
+
+### Bug Fixes
+
+* do not add column if it exists ([#470](https://github.com/hhanh00/zkool2/issues/470)) ([bb6794f](https://github.com/hhanh00/zkool2/commit/bb6794f9d7ac1b59aef46b4fb756df8c56c3b821))
+* refresh after folder deletion ([#475](https://github.com/hhanh00/zkool2/issues/475)) ([459e32d](https://github.com/hhanh00/zkool2/commit/459e32de0182efdf28b1247de16f1719e22e171c))
+
 ## [4.25.2](https://github.com/hhanh00/zkool2/compare/zkool-v4.25.1...zkool-v4.25.2) (2025-09-03)
 
 
