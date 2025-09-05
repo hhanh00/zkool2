@@ -122,7 +122,8 @@ class AccountViewPageState extends State<AccountViewPage> {
                                         prefix: "Unconfirmed: ",
                                         colored: true,
                                         selectable: true,
-                                        style: t.bodyLarge,)
+                                        style: t.bodyLarge,
+                                      )
                                     : SizedBox.shrink();
                               }),
                               Gap(8),
@@ -287,7 +288,13 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditName(String? name) async {
     if (name != null) {
       accounts[0] = accounts[0].copyWith(name: name);
-      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, name: name));
+      await updateAccount(
+          update: AccountUpdate(
+        coin: accounts[0].coin,
+        id: accounts[0].id,
+        name: name,
+        folder: "",
+      ));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -309,7 +316,8 @@ class AccountEditPageState extends State<AccountEditPage> {
     }
     if (changed) {
       accounts[0] = accounts[0].copyWith(icon: bytes?.isNotEmpty == true ? bytes : null);
-      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes));
+      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes,
+      folder: "",));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -318,7 +326,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditBirth(String? birth) async {
     if (birth != null && birth.isNotEmpty) {
       accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
-      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth)));
+      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth), folder: "",));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -328,7 +336,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(enabled: v);
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v, folder: "",));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -338,7 +346,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(hidden: v);
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v, folder: "",));
     }
     await appStore.loadAccounts();
     setState(() {});

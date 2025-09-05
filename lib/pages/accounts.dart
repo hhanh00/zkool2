@@ -198,6 +198,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                         icon: Icon(includeHidden
                             ? Icons.visibility
                             : Icons.visibility_off))),
+                IconButton(onPressed: () {}, icon: Icon(Icons.folder)),
               ]));
     });
   }
