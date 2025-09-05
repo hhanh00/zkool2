@@ -227,6 +227,21 @@ pub async fn update_account(update: &AccountUpdate) -> Result<()> {
             .execute(&mut *connection)
             .await?;
     }
+    match update.folder {
+        0 => {
+            sqlx::query("UPDATE accounts SET folder = NULL WHERE id_account = ?")
+                .bind(update.id)
+                .execute(&mut *connection)
+                .await?;
+        }
+        folder => {
+            sqlx::query("UPDATE accounts SET folder = ? WHERE id_account = ?")
+                .bind(folder)
+                .bind(update.id)
+                .execute(&mut *connection)
+                .await?;
+        }
+    }
 
     Ok(())
 }
@@ -506,6 +521,7 @@ pub struct Account {
     pub aindex: u32,
     pub icon: Option<Vec<u8>>,
     pub birth: u32,
+    pub folder: Folder,
     pub position: u8,
     pub hidden: bool,
     pub saved: bool,
@@ -522,7 +538,7 @@ pub struct AccountUpdate {
     pub name: Option<String>,
     pub icon: Option<Vec<u8>>,
     pub birth: Option<u32>,
-    pub folder: String,
+    pub folder: u32,
     pub hidden: Option<bool>,
     pub enabled: Option<bool>,
 }

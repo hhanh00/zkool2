@@ -128,6 +128,7 @@ sealed class Account with _$Account {
     required int aindex,
     Uint8List? icon,
     required int birth,
+    required Folder folder,
     required int position,
     required bool hidden,
     required bool saved,
@@ -146,7 +147,7 @@ sealed class AccountUpdate with _$AccountUpdate {
     String? name,
     Uint8List? icon,
     int? birth,
-    required String folder,
+    required int folder,
     bool? hidden,
     bool? enabled,
   }) = _AccountUpdate;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:mobx/mobx.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 class FolderPage extends StatefulWidget {
@@ -11,6 +13,7 @@ class FolderPage extends StatefulWidget {
 
 class FolderPageState extends State<FolderPage> {
   List<(Folder, bool)> folders = [];
+  int? selectedIndex;
 
   @override
   void initState() {
@@ -19,15 +22,23 @@ class FolderPageState extends State<FolderPage> {
   }
 
   Future<void> refresh() async {
-    folders = (await listFolders()).map((f) => (f, false)).toList();
+    await appStore.loadFolders();
+    if (appStore.selectedFolder != null) {
+      selectedIndex = appStore.folders.indexWhere((f) => f.id == appStore.selectedFolder!.id);
+      if (selectedIndex == -1) {
+        selectedIndex = null;
+        appStore.selectedFolder = null;
+      }
+    }
+    folders = appStore.folders.map((f) => (f, false)).toList();
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text("Folders"),
-      actions: [
+      appBar: AppBar(title: Text("Folders"), actions: [
         IconButton(onPressed: onNew, icon: Icon(Icons.add)),
         if (hasSingleSelection) IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
         if (hasSelection) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
@@ -38,11 +49,25 @@ class FolderPageState extends State<FolderPage> {
           return ListTile(
             leading: Checkbox(value: f.$2, onChanged: (v) => setState(() => folders[index] = (f.$1, v ?? false))),
             title: Text(f.$1.name),
+            onTap: () => onSelect(index),
+            selected: selectedIndex == index,
+            selectedTileColor: cs.primaryContainer,
           );
         },
         itemCount: folders.length,
       ),
     );
+  }
+
+  void onSelect(int index) async {
+    if (selectedIndex == index) {
+      selectedIndex = null;
+      appStore.selectedFolder = null;
+    } else {
+      selectedIndex = index;
+      appStore.selectedFolder = folders[index].$1;
+    }
+    setState(() {});
   }
 
   void onNew() async {
@@ -52,6 +77,7 @@ class FolderPageState extends State<FolderPage> {
       await refresh();
     }
   }
+
   void onEdit() async {
     final folderName = await inputText(context, title: "Rename Folder");
     if (folderName != null) {
@@ -59,6 +85,7 @@ class FolderPageState extends State<FolderPage> {
       await refresh();
     }
   }
+
   void onDelete() async {
     final confirmed = await confirmDialog(context, title: "Do you want to delete these folders?", message: "Accounts assigned to these folders will be kept.");
     if (confirmed) {

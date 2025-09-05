@@ -76,6 +76,7 @@ Future<bool> loadAccounts(BuildContext context) async {
       }
     }
     await appStore.loadAccounts();
+    await appStore.loadFolders();
     final accountId = await getSelectedAccount();
     final account = accountId != null ? appStore.accounts.firstWhereOrNull((a) => a.id == accountId) : null;
     if (account != null) await selectAccount(account);

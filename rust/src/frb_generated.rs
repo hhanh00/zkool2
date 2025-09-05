@@ -3332,6 +3332,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_aindex = <u32>::sse_decode(deserializer);
         let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_birth = <u32>::sse_decode(deserializer);
+        let mut var_folder = <crate::api::account::Folder>::sse_decode(deserializer);
         let mut var_position = <u8>::sse_decode(deserializer);
         let mut var_hidden = <bool>::sse_decode(deserializer);
         let mut var_saved = <bool>::sse_decode(deserializer);
@@ -3347,6 +3348,7 @@ impl SseDecode for crate::api::account::Account {
             aindex: var_aindex,
             icon: var_icon,
             birth: var_birth,
+            folder: var_folder,
             position: var_position,
             hidden: var_hidden,
             saved: var_saved,
@@ -3366,7 +3368,7 @@ impl SseDecode for crate::api::account::AccountUpdate {
         let mut var_name = <Option<String>>::sse_decode(deserializer);
         let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_birth = <Option<u32>>::sse_decode(deserializer);
-        let mut var_folder = <String>::sse_decode(deserializer);
+        let mut var_folder = <u32>::sse_decode(deserializer);
         let mut var_hidden = <Option<bool>>::sse_decode(deserializer);
         let mut var_enabled = <Option<bool>>::sse_decode(deserializer);
         return crate::api::account::AccountUpdate {
@@ -4489,6 +4491,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.aindex.into_into_dart().into_dart(),
             self.icon.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
+            self.folder.into_into_dart().into_dart(),
             self.position.into_into_dart().into_dart(),
             self.hidden.into_into_dart().into_dart(),
             self.saved.into_into_dart().into_dart(),
@@ -5243,6 +5246,7 @@ impl SseEncode for crate::api::account::Account {
         <u32>::sse_encode(self.aindex, serializer);
         <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
         <u32>::sse_encode(self.birth, serializer);
+        <crate::api::account::Folder>::sse_encode(self.folder, serializer);
         <u8>::sse_encode(self.position, serializer);
         <bool>::sse_encode(self.hidden, serializer);
         <bool>::sse_encode(self.saved, serializer);
@@ -5261,7 +5265,7 @@ impl SseEncode for crate::api::account::AccountUpdate {
         <Option<String>>::sse_encode(self.name, serializer);
         <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
         <Option<u32>>::sse_encode(self.birth, serializer);
-        <String>::sse_encode(self.folder, serializer);
+        <u32>::sse_encode(self.folder, serializer);
         <Option<bool>>::sse_encode(self.hidden, serializer);
         <Option<bool>>::sse_encode(self.enabled, serializer);
     }
