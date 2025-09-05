@@ -106,6 +106,9 @@ Future<void> printKeys({required int id}) =>
 Future<FrostParams?> getAccountFrostParams() =>
     RustLib.instance.api.crateApiAccountGetAccountFrostParams();
 
+Future<Folder> createNewFolder({required String name}) =>
+    RustLib.instance.api.crateApiAccountCreateNewFolder(name: name);
+
 @freezed
 sealed class Account with _$Account {
   const factory Account({
@@ -166,6 +169,14 @@ class Addresses {
           saddr == other.saddr &&
           oaddr == other.oaddr &&
           ua == other.ua;
+}
+
+@freezed
+sealed class Folder with _$Folder {
+  const factory Folder({
+    required int id,
+    required String name,
+  }) = _Folder;
 }
 
 @freezed

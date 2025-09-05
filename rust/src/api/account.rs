@@ -810,3 +810,16 @@ pub struct FrostParams {
     pub n: u8,
     pub t: u8,
 }
+
+pub async fn create_new_folder(name: &str) -> Result<Folder> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::create_new_folder(&mut connection, name).await
+}
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct Folder {
+    pub id: u32,
+    pub name: String,
+}
