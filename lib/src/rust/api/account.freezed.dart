@@ -427,6 +427,7 @@ mixin _$AccountUpdate {
   String? get name => throw _privateConstructorUsedError;
   Uint8List? get icon => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
+  String get folder => throw _privateConstructorUsedError;
   bool? get hidden => throw _privateConstructorUsedError;
   bool? get enabled => throw _privateConstructorUsedError;
 
@@ -449,6 +450,7 @@ abstract class $AccountUpdateCopyWith<$Res> {
       String? name,
       Uint8List? icon,
       int? birth,
+      String folder,
       bool? hidden,
       bool? enabled});
 }
@@ -473,6 +475,7 @@ class _$AccountUpdateCopyWithImpl<$Res, $Val extends AccountUpdate>
     Object? name = freezed,
     Object? icon = freezed,
     Object? birth = freezed,
+    Object? folder = null,
     Object? hidden = freezed,
     Object? enabled = freezed,
   }) {
@@ -497,6 +500,10 @@ class _$AccountUpdateCopyWithImpl<$Res, $Val extends AccountUpdate>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      folder: null == folder
+          ? _value.folder
+          : folder // ignore: cast_nullable_to_non_nullable
+              as String,
       hidden: freezed == hidden
           ? _value.hidden
           : hidden // ignore: cast_nullable_to_non_nullable
@@ -523,6 +530,7 @@ abstract class _$$AccountUpdateImplCopyWith<$Res>
       String? name,
       Uint8List? icon,
       int? birth,
+      String folder,
       bool? hidden,
       bool? enabled});
 }
@@ -545,6 +553,7 @@ class __$$AccountUpdateImplCopyWithImpl<$Res>
     Object? name = freezed,
     Object? icon = freezed,
     Object? birth = freezed,
+    Object? folder = null,
     Object? hidden = freezed,
     Object? enabled = freezed,
   }) {
@@ -569,6 +578,10 @@ class __$$AccountUpdateImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      folder: null == folder
+          ? _value.folder
+          : folder // ignore: cast_nullable_to_non_nullable
+              as String,
       hidden: freezed == hidden
           ? _value.hidden
           : hidden // ignore: cast_nullable_to_non_nullable
@@ -590,6 +603,7 @@ class _$AccountUpdateImpl implements _AccountUpdate {
       this.name,
       this.icon,
       this.birth,
+      required this.folder,
       this.hidden,
       this.enabled});
 
@@ -604,13 +618,15 @@ class _$AccountUpdateImpl implements _AccountUpdate {
   @override
   final int? birth;
   @override
+  final String folder;
+  @override
   final bool? hidden;
   @override
   final bool? enabled;
 
   @override
   String toString() {
-    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, hidden: $hidden, enabled: $enabled)';
+    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, folder: $folder, hidden: $hidden, enabled: $enabled)';
   }
 
   @override
@@ -623,13 +639,22 @@ class _$AccountUpdateImpl implements _AccountUpdate {
             (identical(other.name, name) || other.name == name) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
             (identical(other.birth, birth) || other.birth == birth) &&
+            (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
             (identical(other.enabled, enabled) || other.enabled == enabled));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, coin, id, name,
-      const DeepCollectionEquality().hash(icon), birth, hidden, enabled);
+  int get hashCode => Object.hash(
+      runtimeType,
+      coin,
+      id,
+      name,
+      const DeepCollectionEquality().hash(icon),
+      birth,
+      folder,
+      hidden,
+      enabled);
 
   /// Create a copy of AccountUpdate
   /// with the given fields replaced by the non-null parameter values.
@@ -647,6 +672,7 @@ abstract class _AccountUpdate implements AccountUpdate {
       final String? name,
       final Uint8List? icon,
       final int? birth,
+      required final String folder,
       final bool? hidden,
       final bool? enabled}) = _$AccountUpdateImpl;
 
@@ -660,6 +686,8 @@ abstract class _AccountUpdate implements AccountUpdate {
   Uint8List? get icon;
   @override
   int? get birth;
+  @override
+  String get folder;
   @override
   bool? get hidden;
   @override
@@ -1135,6 +1163,7 @@ mixin _$NewAccount {
   Uint8List? get fingerprint => throw _privateConstructorUsedError;
   int get aindex => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
+  String get folder => throw _privateConstructorUsedError;
   int? get pools => throw _privateConstructorUsedError;
   bool get useInternal => throw _privateConstructorUsedError;
   bool get internal => throw _privateConstructorUsedError;
@@ -1161,6 +1190,7 @@ abstract class $NewAccountCopyWith<$Res> {
       Uint8List? fingerprint,
       int aindex,
       int? birth,
+      String folder,
       int? pools,
       bool useInternal,
       bool internal});
@@ -1189,6 +1219,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? fingerprint = freezed,
     Object? aindex = null,
     Object? birth = freezed,
+    Object? folder = null,
     Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
@@ -1226,6 +1257,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      folder: null == folder
+          ? _value.folder
+          : folder // ignore: cast_nullable_to_non_nullable
+              as String,
       pools: freezed == pools
           ? _value.pools
           : pools // ignore: cast_nullable_to_non_nullable
@@ -1259,6 +1294,7 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       Uint8List? fingerprint,
       int aindex,
       int? birth,
+      String folder,
       int? pools,
       bool useInternal,
       bool internal});
@@ -1285,6 +1321,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? fingerprint = freezed,
     Object? aindex = null,
     Object? birth = freezed,
+    Object? folder = null,
     Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
@@ -1322,6 +1359,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int?,
+      folder: null == folder
+          ? _value.folder
+          : folder // ignore: cast_nullable_to_non_nullable
+              as String,
       pools: freezed == pools
           ? _value.pools
           : pools // ignore: cast_nullable_to_non_nullable
@@ -1350,6 +1391,7 @@ class _$NewAccountImpl implements _NewAccount {
       this.fingerprint,
       required this.aindex,
       this.birth,
+      required this.folder,
       this.pools,
       required this.useInternal,
       required this.internal});
@@ -1371,6 +1413,8 @@ class _$NewAccountImpl implements _NewAccount {
   @override
   final int? birth;
   @override
+  final String folder;
+  @override
   final int? pools;
   @override
   final bool useInternal;
@@ -1379,7 +1423,7 @@ class _$NewAccountImpl implements _NewAccount {
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, pools: $pools, useInternal: $useInternal, internal: $internal)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal)';
   }
 
   @override
@@ -1397,6 +1441,7 @@ class _$NewAccountImpl implements _NewAccount {
                 .equals(other.fingerprint, fingerprint) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.birth, birth) || other.birth == birth) &&
+            (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.pools, pools) || other.pools == pools) &&
             (identical(other.useInternal, useInternal) ||
                 other.useInternal == useInternal) &&
@@ -1415,6 +1460,7 @@ class _$NewAccountImpl implements _NewAccount {
       const DeepCollectionEquality().hash(fingerprint),
       aindex,
       birth,
+      folder,
       pools,
       useInternal,
       internal);
@@ -1438,6 +1484,7 @@ abstract class _NewAccount implements NewAccount {
       final Uint8List? fingerprint,
       required final int aindex,
       final int? birth,
+      required final String folder,
       final int? pools,
       required final bool useInternal,
       required final bool internal}) = _$NewAccountImpl;
@@ -1458,6 +1505,8 @@ abstract class _NewAccount implements NewAccount {
   int get aindex;
   @override
   int? get birth;
+  @override
+  String get folder;
   @override
   int? get pools;
   @override
