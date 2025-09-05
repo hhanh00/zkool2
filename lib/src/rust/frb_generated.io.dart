@@ -144,6 +144,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Account> dco_decode_list_account(dynamic raw);
 
   @protected
+  List<Folder> dco_decode_list_folder(dynamic raw);
+
+  @protected
   List<Memo> dco_decode_list_memo(dynamic raw);
 
   @protected
@@ -429,6 +432,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Account> sse_decode_list_account(SseDeserializer deserializer);
+
+  @protected
+  List<Folder> sse_decode_list_folder(SseDeserializer deserializer);
 
   @protected
   List<Memo> sse_decode_list_memo(SseDeserializer deserializer);
@@ -725,6 +731,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_account(List<Account> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_folder(List<Folder> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_memo(List<Memo> self, SseSerializer serializer);

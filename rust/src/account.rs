@@ -1,3 +1,4 @@
+use crate::{api::account::Folder, coin::Network};
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
@@ -15,7 +16,6 @@ use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
-use crate::{api::account::Folder, coin::Network};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
@@ -618,15 +618,51 @@ pub struct TxMemo {
     pub memo: Option<String>,
 }
 
+pub async fn list_folders(connection: &mut SqliteConnection) -> Result<Vec<Folder>> {
+    let folders = sqlx::query("SELECT id_folder, name FROM folders ORDER BY name")
+        .map(|r: SqliteRow| {
+            Folder {
+                id: r.get(0),
+                name: r.get(1),
+            }
+        })
+        .fetch_all(connection)
+        .await?;
+    Ok(folders)
+}
+
 pub async fn create_new_folder(connection: &mut SqliteConnection, name: &str) -> Result<Folder> {
-    let r =sqlx::query(
-        "INSERT INTO folders(name) VALUES (?1)")
-    .bind(name)
-    .execute(connection)
-    .await?;
+    let r = sqlx::query("INSERT INTO folders(name) VALUES (?1)")
+        .bind(name)
+        .execute(connection)
+        .await?;
 
     Ok(Folder {
         id: r.last_insert_rowid() as u32,
         name: name.to_string(),
     })
+}
+
+pub async fn rename_folder(connection: &mut SqliteConnection, id: u32, name: &str) -> Result<()> {
+    sqlx::query("UPDATE folders SET name = ?2 WHERE id_folder = ?1")
+    .bind(id)
+    .bind(name)
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
+pub async fn delete_folders(connection: &mut SqliteConnection, ids: &[u32]) -> Result<()> {
+    for id in ids {
+        sqlx::query("UPDATE accounts SET folder = NULL where folder = ?1")
+        .bind(id)
+        .execute(&mut *connection)
+        .await?;
+
+        sqlx::query("DELETE FROM folders WHERE id_folder = ?1")
+        .bind(id)
+        .execute(&mut *connection)
+        .await?;
+    }
+    Ok(())
 }
