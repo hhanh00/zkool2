@@ -17,10 +17,8 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/editable_list.dart';
 
 final heightID = GlobalKey();
-final mempoolID = GlobalKey();
 final settingsID = GlobalKey();
 final syncID = GlobalKey();
-final hideID = GlobalKey();
 
 final accountListID = GlobalKey();
 final avatarID = GlobalKey();
@@ -80,16 +78,12 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
     }
   }
 
-  List<Account> get accounts => appStore.accounts
-      .where((a) => !a.internal && (includeHidden || !a.hidden))
-      .toList();
+  List<Account> get accounts => appStore.accounts.where((a) => !a.internal && (includeHidden || !a.hidden)).toList();
 
   void tutorial() async {
     if (!appStore.disclaimerAccepted) return;
-    tutorialHelper(context, "tutMain0",
-        [newAccountId, settingsID, mempoolID, syncID, hideID, heightID]);
-    if (accounts.isNotEmpty)
-      tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
+    tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, heightID]);
+    if (accounts.isNotEmpty) tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
   }
 
   @override
@@ -103,49 +97,32 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
 
       return Showcase(
           key: accountListID,
-          description:
-              "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
+          description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
           child: EditableList<Account>(
               key: listKey,
               items: accounts,
               headerBuilder: (context) => [
                     Showcase(
                         key: heightID,
-                        description:
-                            "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
+                        description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
                         child: Observer(
                             builder: (context) => ElevatedButton(
                                 onPressed: () => Future(() => refreshHeight(true)),
                                 onLongPress: () => Future(() => refreshHeight(false)),
-                                child: Text(
-                                    "Height: ${appStore.currentHeight}")))),
+                                child: Text("Height: ${appStore.currentHeight}")))),
                     const Gap(8),
-                    if (price != null)
-                      ElevatedButton(
-                          onPressed: !Platform.isLinux ? onPrice : null,
-                          child: Text("Price: $price USD")),
+                    if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
                     const Gap(8),
                   ],
               builder: (context, index, account, {selected, onSelectChanged}) {
-                final avatar = account.avatar(
-                    selected: selected ?? false, onTap: onSelectChanged);
+                final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
                 return Material(
                     key: ValueKey(account.id),
                     child: GestureDetector(
                       child: ListTile(
-                        leading: index == 0
-                            ? Showcase(
-                                key: avatarID,
-                                description: "Tap to select for edit/delete",
-                                child: avatar)
-                            : avatar,
-                        title: Text(account.name,
-                            style: !account.enabled
-                                ? TextStyle(color: Colors.grey)
-                                : null),
-                        subtitle: zatToText(account.balance,
-                            selectable: false,
-                            style: t.copyWith(fontWeight: FontWeight.w700)),
+                        leading: index == 0 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                        title: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null),
+                        subtitle: zatToText(account.balance, selectable: false, style: t.copyWith(fontWeight: FontWeight.w700)),
                         trailing: Observer(builder: (context) {
                           final h = appStore.heights[account.id];
                           return h!.build(context);
@@ -155,14 +132,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                     ));
               },
               title: "Account List",
-              createBuilder: (context) =>
-                  GoRouter.of(context).push("/account/new"),
-              editBuilder: (context, a) =>
-                  GoRouter.of(context).push("/account/edit", extra: a),
+              createBuilder: (context) => GoRouter.of(context).push("/account/new"),
+              editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
               deleteBuilder: (context, accounts) async {
-                final confirmed = await confirmDialog(context,
-                    title: "Delete Account(s)",
-                    message: "Are you sure you want to delete these accounts?");
+                final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
                 if (confirmed) {
                   for (var a in accounts) {
                     await deleteAccount(account: a.id);
@@ -173,32 +146,34 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
               isEqual: (a, b) => a.id == b.id,
               onReorder: onReorder,
               buttons: [
-                Showcase(
-                    key: settingsID,
-                    description: "Open Settings",
-                    child: IconButton(
-                        onPressed: onSettings, icon: Icon(Icons.settings))),
-                Showcase(
-                    key: mempoolID,
-                    description: "Show Mempool transactions",
-                    child: IconButton(
-                        onPressed: onMempool,
-                        icon: Icon(Icons.pending_actions))),
+                Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
                 Showcase(
                     key: syncID,
-                    description:
-                        "Synchronize all enabled accounts or the accounts currently selected",
-                    child:
-                        IconButton(onPressed: onSync, icon: Icon(Icons.sync))),
-                Showcase(
-                    key: hideID,
-                    description: "Show/Hide hidden accounts",
-                    child: IconButton(
-                        onPressed: onHide,
-                        icon: Icon(includeHidden
-                            ? Icons.visibility
-                            : Icons.visibility_off))),
-                IconButton(onPressed: () {}, icon: Icon(Icons.folder)),
+                    description: "Synchronize all enabled accounts or the accounts currently selected",
+                    child: IconButton(onPressed: onSync, icon: Icon(Icons.sync))),
+                PopupMenuButton<String>(
+                  onSelected: (String result) {
+                    switch (result) {
+                      case "mempool": onMempool();
+                      case "hide": onHide();
+                      case "folder": onFolder();
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                      value: "mempool",
+                      child: Text("Mempool")
+                    ),
+                    const PopupMenuItem<String>(
+                      value: "folder",
+                      child: Text("Folders")
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'hide',
+                      child: Text("Show All"),
+                    ),
+                  ],
+                ),
               ]));
     });
   }
@@ -206,12 +181,15 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   onMempool() => GoRouter.of(context).push('/mempool');
 
   onHide() async {
-    final authenticated =
-        await authenticate(reason: "Show/Hide Hidden Accounts");
+    final authenticated = await authenticate(reason: "Show/Hide Hidden Accounts");
     if (!authenticated) return;
     setState(() {
       includeHidden = !includeHidden;
     });
+  }
+
+  onFolder() async {
+    await GoRouter.of(context).push("/folders");
   }
 
   onSync() async {
@@ -230,8 +208,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
           if (a.enabled) accountIds.add(a.id);
         }
       }
-      await appStore.startSynchronize(
-          accountIds, int.parse(appStore.actionsPerSync));
+      await appStore.startSynchronize(accountIds, int.parse(appStore.actionsPerSync));
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -244,9 +221,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   }
 
   void onReorder(int oldIndex, int newIndex) async {
-    await reorderAccount(
-        oldPosition: accounts[oldIndex].position,
-        newPosition: accounts[newIndex].position);
+    await reorderAccount(oldPosition: accounts[oldIndex].position, newPosition: accounts[newIndex].position);
     await appStore.loadAccounts();
   }
 
