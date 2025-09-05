@@ -2690,16 +2690,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AccountUpdate dco_decode_account_update(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return AccountUpdate(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
       name: dco_decode_opt_String(arr[2]),
       icon: dco_decode_opt_list_prim_u_8_strict(arr[3]),
       birth: dco_decode_opt_box_autoadd_u_32(arr[4]),
-      hidden: dco_decode_opt_box_autoadd_bool(arr[5]),
-      enabled: dco_decode_opt_box_autoadd_bool(arr[6]),
+      folder: dco_decode_String(arr[5]),
+      hidden: dco_decode_opt_box_autoadd_bool(arr[6]),
+      enabled: dco_decode_opt_box_autoadd_bool(arr[7]),
     );
   }
 
@@ -3029,8 +3030,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NewAccount dco_decode_new_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return NewAccount(
       icon: dco_decode_opt_list_prim_u_8_strict(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -3040,9 +3041,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       fingerprint: dco_decode_opt_list_prim_u_8_strict(arr[5]),
       aindex: dco_decode_u_32(arr[6]),
       birth: dco_decode_opt_box_autoadd_u_32(arr[7]),
-      pools: dco_decode_opt_box_autoadd_u_8(arr[8]),
-      useInternal: dco_decode_bool(arr[9]),
-      internal: dco_decode_bool(arr[10]),
+      folder: dco_decode_String(arr[8]),
+      pools: dco_decode_opt_box_autoadd_u_8(arr[9]),
+      useInternal: dco_decode_bool(arr[10]),
+      internal: dco_decode_bool(arr[11]),
     );
   }
 
@@ -3555,6 +3557,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_name = sse_decode_opt_String(deserializer);
     var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
     var var_birth = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_folder = sse_decode_String(deserializer);
     var var_hidden = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_enabled = sse_decode_opt_box_autoadd_bool(deserializer);
     return AccountUpdate(
@@ -3563,6 +3566,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         name: var_name,
         icon: var_icon,
         birth: var_birth,
+        folder: var_folder,
         hidden: var_hidden,
         enabled: var_enabled);
   }
@@ -3980,6 +3984,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_fingerprint = sse_decode_opt_list_prim_u_8_strict(deserializer);
     var var_aindex = sse_decode_u_32(deserializer);
     var var_birth = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_folder = sse_decode_String(deserializer);
     var var_pools = sse_decode_opt_box_autoadd_u_8(deserializer);
     var var_useInternal = sse_decode_bool(deserializer);
     var var_internal = sse_decode_bool(deserializer);
@@ -3992,6 +3997,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         fingerprint: var_fingerprint,
         aindex: var_aindex,
         birth: var_birth,
+        folder: var_folder,
         pools: var_pools,
         useInternal: var_useInternal,
         internal: var_internal);
@@ -4560,6 +4566,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.name, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
     sse_encode_opt_box_autoadd_u_32(self.birth, serializer);
+    sse_encode_String(self.folder, serializer);
     sse_encode_opt_box_autoadd_bool(self.hidden, serializer);
     sse_encode_opt_box_autoadd_bool(self.enabled, serializer);
   }
@@ -4932,6 +4939,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_list_prim_u_8_strict(self.fingerprint, serializer);
     sse_encode_u_32(self.aindex, serializer);
     sse_encode_opt_box_autoadd_u_32(self.birth, serializer);
+    sse_encode_String(self.folder, serializer);
     sse_encode_opt_box_autoadd_u_8(self.pools, serializer);
     sse_encode_bool(self.useInternal, serializer);
     sse_encode_bool(self.internal, serializer);

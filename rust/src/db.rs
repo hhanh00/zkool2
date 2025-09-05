@@ -261,14 +261,14 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     // V5
-    sqlx::query(
-        "ALTER TABLE accounts ADD COLUMN folder INTEGER"
-    )
-    .execute(&mut *connection)
-    .await?;
+    if !has_column(&mut *connection, "accounts", "folder").await? {
+        sqlx::query("ALTER TABLE accounts ADD COLUMN folder INTEGER")
+            .execute(&mut *connection)
+            .await?;
+    }
 
     sqlx::query(
-"CREATE TABLE IF NOT EXISTS folders (
+        "CREATE TABLE IF NOT EXISTS folders (
         id_folder INTEGER PRIMARY KEY,
         folder TEXT NOT NULL)",
     )
@@ -279,12 +279,31 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     if let Some(version) = version {
         let version = version.parse::<u16>()?;
         if version > DB_VERSION {
-            anyhow::bail!("This version only supports up to version {DB_VERSION} of the database file");
+            anyhow::bail!(
+                "This version only supports up to version {DB_VERSION} of the database file"
+            );
         }
     }
     put_prop(connection, "version", &DB_VERSION.to_string()).await?;
 
     Ok(())
+}
+
+pub async fn has_column(
+    connection: &mut SqliteConnection,
+    table: &str,
+    column: &str,
+) -> Result<bool> {
+    let sql = sqlx::query("SELECT sql FROM sqlite_master WHERE name = ?1")
+        .bind(table)
+        .map(|r: SqliteRow| r.get::<String, _>(0))
+        .fetch_optional(connection)
+        .await?;
+    let res = match sql {
+        Some(sql) if sql.contains(column) => true,
+        _ => false,
+    };
+    Ok(res)
 }
 
 pub async fn put_prop(connection: &mut SqliteConnection, key: &str, value: &str) -> Result<()> {
@@ -460,7 +479,11 @@ pub async fn store_account_transparent_addr(
     Ok(r.rows_affected() > 0)
 }
 
-pub async fn init_account_sapling(connection: &mut SqliteConnection, account: u32, birth: u32) -> Result<()> {
+pub async fn init_account_sapling(
+    connection: &mut SqliteConnection,
+    account: u32,
+    birth: u32,
+) -> Result<()> {
     sqlx::query("INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')")
         .bind(account)
         .execute(&mut *connection)
@@ -504,7 +527,11 @@ pub async fn store_account_sapling_vk(
     Ok(())
 }
 
-pub async fn init_account_orchard(connection: &mut SqliteConnection, account: u32, birth: u32) -> Result<()> {
+pub async fn init_account_orchard(
+    connection: &mut SqliteConnection,
+    account: u32,
+    birth: u32,
+) -> Result<()> {
     sqlx::query("INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')")
         .bind(account)
         .execute(&mut *connection)
@@ -605,7 +632,10 @@ pub async fn select_account_transparent(
     Ok(keys)
 }
 
-pub async fn select_account_sapling(connection: &mut SqliteConnection, account: u32) -> Result<SaplingKeys> {
+pub async fn select_account_sapling(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<SaplingKeys> {
     let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
         sqlx::query_as("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
             .bind(account)
@@ -630,7 +660,10 @@ pub async fn select_account_sapling(connection: &mut SqliteConnection, account: 
     Ok(keys)
 }
 
-pub async fn select_account_orchard(connection: &mut SqliteConnection, account: u32) -> Result<OrchardKeys> {
+pub async fn select_account_orchard(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<OrchardKeys> {
     let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
         sqlx::query_as("SELECT xsk, xvk FROM orchard_accounts WHERE account = ?")
             .bind(account)
@@ -963,7 +996,12 @@ pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Resul
     Ok(notes)
 }
 
-pub async fn lock_note(connection: &mut SqliteConnection, account: u32, id: u32, locked: bool) -> Result<()> {
+pub async fn lock_note(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id: u32,
+    locked: bool,
+) -> Result<()> {
     sqlx::query("UPDATE notes SET locked = ? WHERE account = ? AND id_note = ?")
         .bind(locked)
         .bind(account)

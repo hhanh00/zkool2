@@ -522,6 +522,7 @@ pub struct AccountUpdate {
     pub name: Option<String>,
     pub icon: Option<Vec<u8>>,
     pub birth: Option<u32>,
+    pub folder: String,
     pub hidden: Option<bool>,
     pub enabled: Option<bool>,
 }
@@ -536,6 +537,7 @@ pub struct NewAccount {
     pub fingerprint: Option<Vec<u8>>,
     pub aindex: u32,
     pub birth: Option<u32>,
+    pub folder: String,
     pub pools: Option<u8>,
     pub use_internal: bool,
     pub internal: bool,
