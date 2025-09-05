@@ -78,7 +78,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
     }
   }
 
-  List<Account> get accounts => appStore.accounts.where((a) => !a.internal && (includeHidden || !a.hidden)).toList();
+  List<Account> get accounts => appStore.accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (appStore.selectedFolder?.id ?? 0)).toList();
 
   void tutorial() async {
     if (!appStore.disclaimerAccepted) return;
@@ -94,6 +94,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
       final tt = Theme.of(context).textTheme;
       final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
       appStore.accounts;
+      appStore.selectedFolder;
 
       return Showcase(
           key: accountListID,
@@ -120,7 +121,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                     key: ValueKey(account.id),
                     child: GestureDetector(
                       child: ListTile(
-                        leading: index == 0 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                        leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
                         title: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null),
                         subtitle: zatToText(account.balance, selectable: false, style: t.copyWith(fontWeight: FontWeight.w700)),
                         trailing: Observer(builder: (context) {

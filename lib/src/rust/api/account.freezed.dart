@@ -23,6 +23,7 @@ mixin _$Account {
   int get aindex => throw _privateConstructorUsedError;
   Uint8List? get icon => throw _privateConstructorUsedError;
   int get birth => throw _privateConstructorUsedError;
+  Folder get folder => throw _privateConstructorUsedError;
   int get position => throw _privateConstructorUsedError;
   bool get hidden => throw _privateConstructorUsedError;
   bool get saved => throw _privateConstructorUsedError;
@@ -50,6 +51,7 @@ abstract class $AccountCopyWith<$Res> {
       int aindex,
       Uint8List? icon,
       int birth,
+      Folder folder,
       int position,
       bool hidden,
       bool saved,
@@ -57,6 +59,8 @@ abstract class $AccountCopyWith<$Res> {
       bool internal,
       int height,
       BigInt balance});
+
+  $FolderCopyWith<$Res> get folder;
 }
 
 /// @nodoc
@@ -81,6 +85,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? aindex = null,
     Object? icon = freezed,
     Object? birth = null,
+    Object? folder = null,
     Object? position = null,
     Object? hidden = null,
     Object? saved = null,
@@ -118,6 +123,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int,
+      folder: null == folder
+          ? _value.folder
+          : folder // ignore: cast_nullable_to_non_nullable
+              as Folder,
       position: null == position
           ? _value.position
           : position // ignore: cast_nullable_to_non_nullable
@@ -148,6 +157,16 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
               as BigInt,
     ) as $Val);
   }
+
+  /// Create a copy of Account
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $FolderCopyWith<$Res> get folder {
+    return $FolderCopyWith<$Res>(_value.folder, (value) {
+      return _then(_value.copyWith(folder: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -165,6 +184,7 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int aindex,
       Uint8List? icon,
       int birth,
+      Folder folder,
       int position,
       bool hidden,
       bool saved,
@@ -172,6 +192,9 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       bool internal,
       int height,
       BigInt balance});
+
+  @override
+  $FolderCopyWith<$Res> get folder;
 }
 
 /// @nodoc
@@ -194,6 +217,7 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? aindex = null,
     Object? icon = freezed,
     Object? birth = null,
+    Object? folder = null,
     Object? position = null,
     Object? hidden = null,
     Object? saved = null,
@@ -231,6 +255,10 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.birth
           : birth // ignore: cast_nullable_to_non_nullable
               as int,
+      folder: null == folder
+          ? _value.folder
+          : folder // ignore: cast_nullable_to_non_nullable
+              as Folder,
       position: null == position
           ? _value.position
           : position // ignore: cast_nullable_to_non_nullable
@@ -274,6 +302,7 @@ class _$AccountImpl implements _Account {
       required this.aindex,
       this.icon,
       required this.birth,
+      required this.folder,
       required this.position,
       required this.hidden,
       required this.saved,
@@ -297,6 +326,8 @@ class _$AccountImpl implements _Account {
   @override
   final int birth;
   @override
+  final Folder folder;
+  @override
   final int position;
   @override
   final bool hidden;
@@ -313,7 +344,7 @@ class _$AccountImpl implements _Account {
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, height: $height, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, height: $height, balance: $balance)';
   }
 
   @override
@@ -328,6 +359,7 @@ class _$AccountImpl implements _Account {
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
             (identical(other.birth, birth) || other.birth == birth) &&
+            (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.position, position) ||
                 other.position == position) &&
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
@@ -349,6 +381,7 @@ class _$AccountImpl implements _Account {
       aindex,
       const DeepCollectionEquality().hash(icon),
       birth,
+      folder,
       position,
       hidden,
       saved,
@@ -375,6 +408,7 @@ abstract class _Account implements Account {
       required final int aindex,
       final Uint8List? icon,
       required final int birth,
+      required final Folder folder,
       required final int position,
       required final bool hidden,
       required final bool saved,
@@ -397,6 +431,8 @@ abstract class _Account implements Account {
   Uint8List? get icon;
   @override
   int get birth;
+  @override
+  Folder get folder;
   @override
   int get position;
   @override
@@ -427,7 +463,7 @@ mixin _$AccountUpdate {
   String? get name => throw _privateConstructorUsedError;
   Uint8List? get icon => throw _privateConstructorUsedError;
   int? get birth => throw _privateConstructorUsedError;
-  String get folder => throw _privateConstructorUsedError;
+  int get folder => throw _privateConstructorUsedError;
   bool? get hidden => throw _privateConstructorUsedError;
   bool? get enabled => throw _privateConstructorUsedError;
 
@@ -450,7 +486,7 @@ abstract class $AccountUpdateCopyWith<$Res> {
       String? name,
       Uint8List? icon,
       int? birth,
-      String folder,
+      int folder,
       bool? hidden,
       bool? enabled});
 }
@@ -503,7 +539,7 @@ class _$AccountUpdateCopyWithImpl<$Res, $Val extends AccountUpdate>
       folder: null == folder
           ? _value.folder
           : folder // ignore: cast_nullable_to_non_nullable
-              as String,
+              as int,
       hidden: freezed == hidden
           ? _value.hidden
           : hidden // ignore: cast_nullable_to_non_nullable
@@ -530,7 +566,7 @@ abstract class _$$AccountUpdateImplCopyWith<$Res>
       String? name,
       Uint8List? icon,
       int? birth,
-      String folder,
+      int folder,
       bool? hidden,
       bool? enabled});
 }
@@ -581,7 +617,7 @@ class __$$AccountUpdateImplCopyWithImpl<$Res>
       folder: null == folder
           ? _value.folder
           : folder // ignore: cast_nullable_to_non_nullable
-              as String,
+              as int,
       hidden: freezed == hidden
           ? _value.hidden
           : hidden // ignore: cast_nullable_to_non_nullable
@@ -618,7 +654,7 @@ class _$AccountUpdateImpl implements _AccountUpdate {
   @override
   final int? birth;
   @override
-  final String folder;
+  final int folder;
   @override
   final bool? hidden;
   @override
@@ -672,7 +708,7 @@ abstract class _AccountUpdate implements AccountUpdate {
       final String? name,
       final Uint8List? icon,
       final int? birth,
-      required final String folder,
+      required final int folder,
       final bool? hidden,
       final bool? enabled}) = _$AccountUpdateImpl;
 
@@ -687,7 +723,7 @@ abstract class _AccountUpdate implements AccountUpdate {
   @override
   int? get birth;
   @override
-  String get folder;
+  int get folder;
   @override
   bool? get hidden;
   @override

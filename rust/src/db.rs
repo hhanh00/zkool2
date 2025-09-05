@@ -11,6 +11,7 @@ use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::account::TxNote;
+use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
@@ -299,10 +300,7 @@ pub async fn has_column(
         .map(|r: SqliteRow| r.get::<String, _>(0))
         .fetch_optional(connection)
         .await?;
-    let res = match sql {
-        Some(sql) if sql.contains(column) => true,
-        _ => false,
-    };
+    let res = matches!(sql, Some(sql) if sql.contains(column));
     Ok(res)
 }
 
@@ -706,16 +704,23 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
                 FROM notes a
                 LEFT JOIN spends b ON a.id_note = b.id_note
                 WHERE b.id_note IS NULL)
-        SELECT id_account, name, seed, aindex,
+        SELECT id_account, a.name, seed, aindex,
         icon, birth, a.position, hidden, saved, enabled, internal,
-        sh.height, COALESCE(SUM(unspent.value), 0) AS balance
+        sh.height, COALESCE(SUM(unspent.value), 0) AS balance,
+        COALESCE(f.id_folder, 0), COALESCE(f.name, '') AS folder_name
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN unspent ON a.id_account = unspent.account
+        LEFT JOIN folders f ON a.folder = f.id_folder
         GROUP BY id_account
         ORDER by a.position",
     )
-    .map(|row: SqliteRow| Account {
+    .map(|row: SqliteRow| {
+        let folder = Folder {
+            id: row.get(13),
+            name: row.get(14),
+        };
+        Account {
         coin,
         id: row.get(0),
         name: row.get(1),
@@ -730,7 +735,8 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         internal: row.get(10),
         height: row.get(11),
         balance: row.get::<i64, _>(12) as u64,
-    })
+        folder,
+    }})
     .fetch(&mut *connection);
 
     let mut accounts = vec![];

@@ -7,7 +7,7 @@ use orion::{
     aead,
     kdf::{self, Salt},
 };
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use std::io::prelude::*;
 use tracing::info;
 
@@ -16,8 +16,11 @@ use crate::db::DB_VERSION;
 pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
     let mut io_account = sqlx::query(
-        "SELECT id_account, name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled, internal
-        FROM accounts WHERE id_account = ?")
+        "SELECT id_account, a.name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled, internal,
+        f.name
+        FROM accounts a
+        LEFT JOIN folders f ON a.folder = f.id_folder
+        WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let id_account: u32 = row.get(0);
@@ -36,6 +39,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let saved: bool = row.get(13);
             let enabled: bool = row.get(14);
             let internal: bool = row.get(15);
+            let folder_name: Option<String> = row.get(16);
 
             IOAccount {
                 version: DB_VERSION,
@@ -55,6 +59,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 saved,
                 enabled,
                 internal,
+                folder: folder_name.unwrap_or_default(),
                 ..Default::default()
             }
             // Process the data as needed
@@ -398,15 +403,33 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     }
 
     info!("Importing account {}", io_account.name);
+    let mut tx = connection.begin().await?;
     // Move all accounts down by one position
     sqlx::query("UPDATE accounts SET position = position + 1")
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
+
+    let mut folder: Option<u32> = None;
+    let folder_name = &io_account.folder;
+    if !folder_name.is_empty() {
+        sqlx::query("INSERT OR IGNORE INTO folders(name) VALUES (?1)")
+        .bind(folder_name)
+        .execute(&mut *tx)
+        .await?;
+        folder = sqlx::query("SELECT id_folder FROM folders WHERE name = ?1")
+        .bind(folder_name)
+        .map(|row: SqliteRow| {
+            let id_folder: u32 = row.get(0);
+            id_folder
+        })
+        .fetch_optional(&mut *tx)
+        .await?;
+    }
 
     // Insert the account into the database
     let r = sqlx::query("INSERT INTO accounts
-        (name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled, internal)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)")
+        (name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, folder, position, use_internal, hidden, saved, enabled, internal)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)")
         .bind(&io_account.name)
         .bind(&io_account.seed)
         .bind(&io_account.passphrase)
@@ -416,12 +439,13 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(io_account.def_dindex)
         .bind(&io_account.icon)
         .bind(io_account.birth)
+        .bind(folder)
         .bind(io_account.use_internal)
         .bind(io_account.hidden)
         .bind(io_account.saved)
         .bind(io_account.enabled)
         .bind(io_account.internal)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     let new_id_account = r.last_insert_rowid() as u32;
     // account must be replaced by new_id_account
@@ -435,7 +459,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(new_id_account)
         .bind(&tkeys.xsk)
         .bind(&tkeys.xvk)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     }
     info!("Importing sapling key");
@@ -447,7 +471,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(new_id_account)
         .bind(&skeys.xsk)
         .bind(&skeys.xvk)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     }
     info!("Importing orchard key");
@@ -459,7 +483,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(new_id_account)
         .bind(&okeys.xsk)
         .bind(&okeys.xvk)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     }
     info!("Importing transparent addresses");
@@ -475,7 +499,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(&taddr.sk)
         .bind(&taddr.pk)
         .bind(&taddr.address)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
         let new_id_taddress = r.last_insert_rowid() as u32;
         new_taddresses.insert(taddr.id_taddress, new_id_taddress);
@@ -490,7 +514,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(new_id_account)
         .bind(sync_height.pool)
         .bind(sync_height.height)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     }
 
@@ -510,7 +534,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(transaction.tpe)
         .bind(transaction.value)
         .bind(transaction.fee as i64)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
         let new_id_tx = r.last_insert_rowid() as u32;
         new_txs.insert(transaction.id_tx, new_id_tx);
@@ -537,7 +561,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
                 .bind(&note.rcm)
                 .bind(&note.rho)
                 .bind(note.locked)
-                .execute(&mut *connection)
+                .execute(&mut *tx)
                 .await?;
             let new_id_note = r.last_insert_rowid() as u32;
             new_notes.insert(note.id_note, new_id_note);
@@ -556,7 +580,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
                 .bind(new_id_note)
                 .bind(&note.memo_text)
                 .bind(&note.memo_bytes)
-                .execute(&mut *connection)
+                .execute(&mut *tx)
                 .await?;
             }
         }
@@ -573,7 +597,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
             .bind(output.value as i64)
             .bind(&output.address)
             .bind(output.vout)
-            .execute(&mut *connection)
+            .execute(&mut *tx)
             .await?;
             let new_id_output = r.last_insert_rowid() as u32;
 
@@ -591,7 +615,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
                 .bind(new_id_output) // Assuming output is linked to the note
                 .bind(&output.memo_text)
                 .bind(memo_bytes)
-                .execute(&mut *connection)
+                .execute(&mut *tx)
                 .await?;
             }
         }
@@ -616,7 +640,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
             .bind(new_id_account)
             .bind(spend.pool)
             .bind(spend.value as i64)
-            .execute(&mut *connection)
+            .execute(&mut *tx)
             .await?;
         }
     }
@@ -630,7 +654,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(block.height)
         .bind(&block.hash)
         .bind(block.time)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
 
         for witness in block.witness.iter() {
@@ -643,7 +667,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
             .bind(witness.height)
             .bind(new_id_note)
             .bind(&witness.witness)
-            .execute(&mut *connection)
+            .execute(&mut *tx)
             .await?;
         }
     }
@@ -659,7 +683,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(dkg_params.t)
         .bind(&dkg_params.seed)
         .bind(dkg_params.birth)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     }
 
@@ -673,7 +697,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(dkg_package.round)
         .bind(dkg_package.from_id)
         .bind(&dkg_package.data)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     }
 
@@ -693,6 +717,7 @@ pub struct IOAccount {
     pub def_dindex: u32,
     pub icon: Option<Vec<u8>>,
     pub birth: u32,
+    pub folder: String,
     pub position: u32,
     pub use_internal: bool,
     pub hidden: bool,

@@ -129,6 +129,22 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$selectedFolderAtom =
+      Atom(name: 'AppStoreBase.selectedFolder', context: context);
+
+  @override
+  Folder? get selectedFolder {
+    _$selectedFolderAtom.reportRead();
+    return super.selectedFolder;
+  }
+
+  @override
+  set selectedFolder(Folder? value) {
+    _$selectedFolderAtom.reportWrite(value, super.selectedFolder, () {
+      super.selectedFolder = value;
+    });
+  }
+
   late final _$accountsAtom =
       Atom(name: 'AppStoreBase.accounts', context: context);
 
@@ -142,6 +158,22 @@ mixin _$AppStore on AppStoreBase, Store {
   set accounts(List<Account> value) {
     _$accountsAtom.reportWrite(value, super.accounts, () {
       super.accounts = value;
+    });
+  }
+
+  late final _$foldersAtom =
+      Atom(name: 'AppStoreBase.folders', context: context);
+
+  @override
+  List<Folder> get folders {
+    _$foldersAtom.reportRead();
+    return super.folders;
+  }
+
+  @override
+  set folders(List<Folder> value) {
+    _$foldersAtom.reportWrite(value, super.folders, () {
+      super.folders = value;
     });
   }
 
@@ -349,6 +381,14 @@ mixin _$AppStore on AppStoreBase, Store {
     return _$refreshAsyncAction.run(() => super.refresh());
   }
 
+  late final _$loadFoldersAsyncAction =
+      AsyncAction('AppStoreBase.loadFolders', context: context);
+
+  @override
+  Future<void> loadFolders() {
+    return _$loadFoldersAsyncAction.run(() => super.loadFolders());
+  }
+
   late final _$AppStoreBaseActionController =
       ActionController(name: 'AppStoreBase', context: context);
 
@@ -367,7 +407,9 @@ mixin _$AppStore on AppStoreBase, Store {
   String toString() {
     return '''
 selectedAccount: ${selectedAccount},
+selectedFolder: ${selectedFolder},
 accounts: ${accounts},
+folders: ${folders},
 pools: ${pools},
 seqno: ${seqno},
 poolBalance: ${poolBalance},
