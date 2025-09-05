@@ -13,6 +13,17 @@ class FolderPageState extends State<FolderPage> {
   List<(Folder, bool)> folders = [];
 
   @override
+  void initState() {
+    super.initState();
+    Future(refresh);
+  }
+
+  Future<void> refresh() async {
+    folders = (await listFolders()).map((f) => (f, false)).toList();
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Folders"),
@@ -36,18 +47,27 @@ class FolderPageState extends State<FolderPage> {
 
   void onNew() async {
     final folderName = await inputText(context, title: "New Folder");
-    if (folderName != null)
+    if (folderName != null) {
       await createNewFolder(name: folderName);
+      await refresh();
+    }
   }
-  void onEdit() async {}
-  void onDelete() async {}
+  void onEdit() async {
+    final folderName = await inputText(context, title: "Rename Folder");
+    if (folderName != null) {
+      await renameFolder(id: selection.first.id, name: folderName);
+      await refresh();
+    }
+  }
+  void onDelete() async {
+    final confirmed = await confirmDialog(context, title: "Do you want to delete these folders?", message: "Accounts assigned to these folders will be kept.");
+    if (confirmed) {
+      await deleteFolders(ids: selection.map((f) => f.id).toList());
+      await refresh();
+    }
+  }
 
   Iterable<Folder> get selection => folders.where((a) => a.$2).map((a) => a.$1);
   bool get hasSingleSelection => selection.length == 1;
   bool get hasSelection => selection.isNotEmpty;
-}
-
-class Folder {
-  int id = 0;
-  String name = "";
 }
