@@ -266,6 +266,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         birth: birth != null
             ? int.parse(birth)
             : appStore.currentHeight,
+        folder: "",
         pools: pools,
         useInternal: useInternal ?? false,
         internal: false,

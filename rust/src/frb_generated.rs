@@ -3221,6 +3221,7 @@ impl SseDecode for crate::api::account::AccountUpdate {
         let mut var_name = <Option<String>>::sse_decode(deserializer);
         let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_birth = <Option<u32>>::sse_decode(deserializer);
+        let mut var_folder = <String>::sse_decode(deserializer);
         let mut var_hidden = <Option<bool>>::sse_decode(deserializer);
         let mut var_enabled = <Option<bool>>::sse_decode(deserializer);
         return crate::api::account::AccountUpdate {
@@ -3229,6 +3230,7 @@ impl SseDecode for crate::api::account::AccountUpdate {
             name: var_name,
             icon: var_icon,
             birth: var_birth,
+            folder: var_folder,
             hidden: var_hidden,
             enabled: var_enabled,
         };
@@ -3630,6 +3632,7 @@ impl SseDecode for crate::api::account::NewAccount {
         let mut var_fingerprint = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_aindex = <u32>::sse_decode(deserializer);
         let mut var_birth = <Option<u32>>::sse_decode(deserializer);
+        let mut var_folder = <String>::sse_decode(deserializer);
         let mut var_pools = <Option<u8>>::sse_decode(deserializer);
         let mut var_useInternal = <bool>::sse_decode(deserializer);
         let mut var_internal = <bool>::sse_decode(deserializer);
@@ -3642,6 +3645,7 @@ impl SseDecode for crate::api::account::NewAccount {
             fingerprint: var_fingerprint,
             aindex: var_aindex,
             birth: var_birth,
+            folder: var_folder,
             pools: var_pools,
             use_internal: var_useInternal,
             internal: var_internal,
@@ -4340,6 +4344,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::AccountUpdate {
             self.name.into_into_dart().into_dart(),
             self.icon.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
+            self.folder.into_into_dart().into_dart(),
             self.hidden.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
         ]
@@ -4556,6 +4561,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::NewAccount {
             self.fingerprint.into_into_dart().into_dart(),
             self.aindex.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
+            self.folder.into_into_dart().into_dart(),
             self.pools.into_into_dart().into_dart(),
             self.use_internal.into_into_dart().into_dart(),
             self.internal.into_into_dart().into_dart(),
@@ -4964,7 +4970,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::account::TxSpend> for crate::accou
 impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(format!("{self:?}"), serializer);
+        <String>::sse_encode(format!("{:?}", self), serializer);
     }
 }
 
@@ -5064,6 +5070,7 @@ impl SseEncode for crate::api::account::AccountUpdate {
         <Option<String>>::sse_encode(self.name, serializer);
         <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
         <Option<u32>>::sse_encode(self.birth, serializer);
+        <String>::sse_encode(self.folder, serializer);
         <Option<bool>>::sse_encode(self.hidden, serializer);
         <Option<bool>>::sse_encode(self.enabled, serializer);
     }
@@ -5399,6 +5406,7 @@ impl SseEncode for crate::api::account::NewAccount {
         <Option<Vec<u8>>>::sse_encode(self.fingerprint, serializer);
         <u32>::sse_encode(self.aindex, serializer);
         <Option<u32>>::sse_encode(self.birth, serializer);
+        <String>::sse_encode(self.folder, serializer);
         <Option<u8>>::sse_encode(self.pools, serializer);
         <bool>::sse_encode(self.use_internal, serializer);
         <bool>::sse_encode(self.internal, serializer);
