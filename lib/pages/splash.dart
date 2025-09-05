@@ -69,7 +69,8 @@ Future<bool> loadAccounts(BuildContext context) async {
       try {
         await openDatabase(dbFilepath: dbFilepath, password: password);
         break;
-      } catch (_) {
+      } catch (e) {
+        logger.e(e);
         password = await inputPassword(context, title: "Enter Database Password for $dbName", btnCancelText: "Database Manager");
         if (password == null) return false;
       }
