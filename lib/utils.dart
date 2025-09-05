@@ -176,6 +176,7 @@ Future<String?> inputPassword(BuildContext context, {required String title, Stri
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           Gap(8),
           TextField(
+            autofocus: true,
             decoration: InputDecoration(labelText: 'Password', hintText: message),
             obscureText: true,
             controller: password,
@@ -216,6 +217,7 @@ Future<String?> inputText(BuildContext context, {required String title}) async {
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           Gap(8),
           TextField(
+            autofocus: true,
             controller: controller,
           )
         ]),

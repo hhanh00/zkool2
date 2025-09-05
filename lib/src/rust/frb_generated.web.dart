@@ -125,6 +125,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  Folder dco_decode_folder(dynamic raw);
+
+  @protected
   FrostParams dco_decode_frost_params(dynamic raw);
 
   @protected
@@ -407,6 +410,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  Folder sse_decode_folder(SseDeserializer deserializer);
 
   @protected
   FrostParams sse_decode_frost_params(SseDeserializer deserializer);
@@ -699,6 +705,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_folder(Folder self, SseSerializer serializer);
 
   @protected
   void sse_encode_frost_params(FrostParams self, SseSerializer serializer);
