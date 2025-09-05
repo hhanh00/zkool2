@@ -103,7 +103,11 @@ abstract class AppStoreBase with Store {
   @observable
   Account? selectedAccount;
   @observable
+  Folder? selectedFolder;
+  @observable
   List<Account> accounts = [];
+  @observable
+  List<Folder> folders = [];
   @observable
   int pools = 7;
   @observable
@@ -221,12 +225,13 @@ abstract class AppStoreBase with Store {
 
   @action
   Future<void> refresh() async {
-    await appStore.loadAccounts();
+    await loadAccounts();
+    await loadFolders();
     if (selectedAccount != null) {
-      await appStore.loadTxHistory();
-      await appStore.loadMemos();
-      await appStore.loadNotes();
-      await appStore.loadOtherData();
+      await loadTxHistory();
+      await loadMemos();
+      await loadNotes();
+      await loadOtherData();
     }
     incSeqno();
   }
@@ -234,6 +239,11 @@ abstract class AppStoreBase with Store {
   @action
   void incSeqno() {
     seqno += 1;
+  }
+
+  @action
+  Future<void> loadFolders() async {
+    folders = await listFolders();
   }
 
   bool syncInProgress = false;

@@ -2783,8 +2783,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -2793,13 +2793,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       aindex: dco_decode_u_32(arr[4]),
       icon: dco_decode_opt_list_prim_u_8_strict(arr[5]),
       birth: dco_decode_u_32(arr[6]),
-      position: dco_decode_u_8(arr[7]),
-      hidden: dco_decode_bool(arr[8]),
-      saved: dco_decode_bool(arr[9]),
-      enabled: dco_decode_bool(arr[10]),
-      internal: dco_decode_bool(arr[11]),
-      height: dco_decode_u_32(arr[12]),
-      balance: dco_decode_u_64(arr[13]),
+      folder: dco_decode_folder(arr[7]),
+      position: dco_decode_u_8(arr[8]),
+      hidden: dco_decode_bool(arr[9]),
+      saved: dco_decode_bool(arr[10]),
+      enabled: dco_decode_bool(arr[11]),
+      internal: dco_decode_bool(arr[12]),
+      height: dco_decode_u_32(arr[13]),
+      balance: dco_decode_u_64(arr[14]),
     );
   }
 
@@ -2815,7 +2816,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       name: dco_decode_opt_String(arr[2]),
       icon: dco_decode_opt_list_prim_u_8_strict(arr[3]),
       birth: dco_decode_opt_box_autoadd_u_32(arr[4]),
-      folder: dco_decode_String(arr[5]),
+      folder: dco_decode_u_32(arr[5]),
       hidden: dco_decode_opt_box_autoadd_bool(arr[6]),
       enabled: dco_decode_opt_box_autoadd_bool(arr[7]),
     );
@@ -3660,6 +3661,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_aindex = sse_decode_u_32(deserializer);
     var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
     var var_birth = sse_decode_u_32(deserializer);
+    var var_folder = sse_decode_folder(deserializer);
     var var_position = sse_decode_u_8(deserializer);
     var var_hidden = sse_decode_bool(deserializer);
     var var_saved = sse_decode_bool(deserializer);
@@ -3675,6 +3677,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         aindex: var_aindex,
         icon: var_icon,
         birth: var_birth,
+        folder: var_folder,
         position: var_position,
         hidden: var_hidden,
         saved: var_saved,
@@ -3692,7 +3695,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_name = sse_decode_opt_String(deserializer);
     var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
     var var_birth = sse_decode_opt_box_autoadd_u_32(deserializer);
-    var var_folder = sse_decode_String(deserializer);
+    var var_folder = sse_decode_u_32(deserializer);
     var var_hidden = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_enabled = sse_decode_opt_box_autoadd_bool(deserializer);
     return AccountUpdate(
@@ -4704,6 +4707,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.aindex, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
     sse_encode_u_32(self.birth, serializer);
+    sse_encode_folder(self.folder, serializer);
     sse_encode_u_8(self.position, serializer);
     sse_encode_bool(self.hidden, serializer);
     sse_encode_bool(self.saved, serializer);
@@ -4721,7 +4725,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.name, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
     sse_encode_opt_box_autoadd_u_32(self.birth, serializer);
-    sse_encode_String(self.folder, serializer);
+    sse_encode_u_32(self.folder, serializer);
     sse_encode_opt_box_autoadd_bool(self.hidden, serializer);
     sse_encode_opt_box_autoadd_bool(self.enabled, serializer);
   }

@@ -632,18 +632,30 @@ pub async fn list_folders(connection: &mut SqliteConnection) -> Result<Vec<Folde
 }
 
 pub async fn create_new_folder(connection: &mut SqliteConnection, name: &str) -> Result<Folder> {
-    let r = sqlx::query("INSERT INTO folders(name) VALUES (?1)")
+    sqlx::query("INSERT OR IGNORE INTO folders(name) VALUES (?1)")
         .bind(name)
-        .execute(connection)
+        .execute(&mut *connection)
+        .await?;
+    let id = sqlx::query("SELECT id_folder FROM folders WHERE name = ?1")
+        .bind(name)
+        .map(|r: SqliteRow| r.get::<u32, _>(0))
+        .fetch_one(&mut *connection)
         .await?;
 
     Ok(Folder {
-        id: r.last_insert_rowid() as u32,
+        id,
         name: name.to_string(),
     })
 }
 
 pub async fn rename_folder(connection: &mut SqliteConnection, id: u32, name: &str) -> Result<()> {
+    if sqlx::query("SELECT 1 FROM folders WHERE name = ?1")
+    .bind(name)
+    .fetch_optional(&mut *connection)
+    .await?.is_some() {
+        anyhow::bail!("Folder name already exists");
+    }
+
     sqlx::query("UPDATE folders SET name = ?2 WHERE id_folder = ?1")
     .bind(id)
     .bind(name)

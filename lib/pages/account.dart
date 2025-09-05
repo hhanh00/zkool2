@@ -31,6 +31,7 @@ final sBalID = GlobalKey();
 final oBalID = GlobalKey();
 final balID = GlobalKey();
 final txdID = GlobalKey();
+final folderID = GlobalKey();
 
 class AccountViewPage extends StatefulWidget {
   const AccountViewPage({super.key});
@@ -192,7 +193,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2, enableID, hideID2, viewID, exportID, rewindID, resetID]);
+    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2, enableID, hideID2, folderID, viewID, exportID, rewindID, resetID]);
   }
 
   @override
@@ -200,6 +201,10 @@ class AccountEditPageState extends State<AccountEditPage> {
     Future(tutorial);
 
     final account = accounts.length == 1 ? accounts.first : null;
+    final folder = accounts.first.folder;
+    final folderOptions = [DropdownMenuItem(value: 0, child: Text("No Folder"))] +
+      appStore.folders.map((f) =>
+        DropdownMenuItem(value: f.id, child: Text(f.name))).toList();
 
     return Scaffold(
         appBar: AppBar(title: Text('Account Edit'), actions: [
@@ -279,6 +284,15 @@ class AccountEditPageState extends State<AccountEditPage> {
                         initialValue: accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
                         tristate: account == null,
                         onChanged: onEditHidden,
+                      )),
+                  Showcase(
+                      key: folderID,
+                      description: "Assign Account to Folder",
+                      child: FormBuilderDropdown<int>(
+                        name: "folder",
+                        initialValue: accounts.every((a) => a.folder.id == folder.id) ? folder.id : null,
+                        items: folderOptions,
+                        onChanged: onEditFolder,
                       ))
                 ],
               )),
@@ -293,7 +307,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         coin: accounts[0].coin,
         id: accounts[0].id,
         name: name,
-        folder: "",
+        folder: accounts[0].folder.id,
       ));
       await appStore.loadAccounts();
       setState(() {});
@@ -317,7 +331,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (changed) {
       accounts[0] = accounts[0].copyWith(icon: bytes?.isNotEmpty == true ? bytes : null);
       await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes,
-      folder: "",));
+      folder: accounts[0].folder.id,));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -326,7 +340,7 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditBirth(String? birth) async {
     if (birth != null && birth.isNotEmpty) {
       accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
-      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth), folder: "",));
+      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth), folder: accounts[0].folder.id,));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -336,7 +350,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(enabled: v);
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v, folder: "",));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v, folder: accounts[i].folder.id,));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -346,7 +360,17 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(hidden: v);
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v, folder: "",));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v, folder: accounts[i].folder.id,));
+    }
+    await appStore.loadAccounts();
+    setState(() {});
+  }
+
+  void onEditFolder(int? v) async {
+    if (v == null) return;
+    for (var i = 0; i < accounts.length; i++) {
+      accounts[i] = accounts[i].copyWith(folder: appStore.folders.firstWhere((f) => f.id == v, orElse: () => Folder(id: 0, name: "")));
+      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, folder: v,));
     }
     await appStore.loadAccounts();
     setState(() {});
