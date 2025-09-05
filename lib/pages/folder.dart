@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
