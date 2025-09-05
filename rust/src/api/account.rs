@@ -811,11 +811,33 @@ pub struct FrostParams {
     pub t: u8,
 }
 
+pub async fn list_folders() -> Result<Vec<Folder>> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::list_folders(&mut connection).await
+}
+
 pub async fn create_new_folder(name: &str) -> Result<Folder> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
     crate::account::create_new_folder(&mut connection, name).await
+}
+
+pub async fn rename_folder(id: u32, name: &str) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::rename_folder(&mut connection, id, name).await
+}
+
+pub async fn delete_folders(ids: &[u32]) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::delete_folders(&mut connection, ids).await
+
 }
 
 #[frb(dart_metadata = ("freezed"))]
