@@ -1,4 +1,6 @@
 name: Build and Release Linux Debian Package on ARM64
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
