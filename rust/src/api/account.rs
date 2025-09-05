@@ -853,7 +853,6 @@ pub async fn delete_folders(ids: &[u32]) -> Result<()> {
     let mut connection = c.get_connection().await?;
 
     crate::account::delete_folders(&mut connection, ids).await
-
 }
 
 #[frb(dart_metadata = ("freezed"))]

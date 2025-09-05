@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobx/mobx.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -21,6 +21,12 @@ class FolderPageState extends State<FolderPage> {
     Future(refresh);
   }
 
+  @override
+  void dispose() {
+    Future(refresh);
+    super.dispose();
+  }
+
   Future<void> refresh() async {
     await appStore.loadFolders();
     if (appStore.selectedFolder != null) {
@@ -31,7 +37,7 @@ class FolderPageState extends State<FolderPage> {
       }
     }
     folders = appStore.folders.map((f) => (f, false)).toList();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
@@ -91,6 +97,7 @@ class FolderPageState extends State<FolderPage> {
     if (confirmed) {
       await deleteFolders(ids: selection.map((f) => f.id).toList());
       await refresh();
+      await appStore.loadAccounts();
     }
   }
 
