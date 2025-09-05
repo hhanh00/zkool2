@@ -13,6 +13,7 @@ jobs:
     secrets: inherit
     permissions:
       contents: write
+      pull-requests: write
 
   build:
     if: "!contains(github.head_ref, 'release-please--')"
