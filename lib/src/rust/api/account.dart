@@ -106,8 +106,17 @@ Future<void> printKeys({required int id}) =>
 Future<FrostParams?> getAccountFrostParams() =>
     RustLib.instance.api.crateApiAccountGetAccountFrostParams();
 
+Future<List<Folder>> listFolders() =>
+    RustLib.instance.api.crateApiAccountListFolders();
+
 Future<Folder> createNewFolder({required String name}) =>
     RustLib.instance.api.crateApiAccountCreateNewFolder(name: name);
+
+Future<void> renameFolder({required int id, required String name}) =>
+    RustLib.instance.api.crateApiAccountRenameFolder(id: id, name: name);
+
+Future<void> deleteFolders({required List<int> ids}) =>
+    RustLib.instance.api.crateApiAccountDeleteFolders(ids: ids);
 
 @freezed
 sealed class Account with _$Account {
