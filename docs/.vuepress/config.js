@@ -34,6 +34,7 @@ export default defineUserConfig({
         prefix: "/recipe/",
         children: [
           "restore",
+          "folder",
           "cold",
           "sync",
           "database",
