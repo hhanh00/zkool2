@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/foundation.dart';
@@ -124,12 +126,13 @@ class TxPageState extends State<TxPage> {
         txBytes: txBytes,
       );
       try {
-        hex.decode(result);
+        final txid = jsonDecode(result) as String;
+        await showMessage(context, txid);
+        showSnackbar("Transaction broadcasted successfully");
       }
       catch (_) {
         if (mounted) await showException(context, result);
       }
-      showSnackbar("Transaction broadcasted successfully");
       setState(() => txId = result);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
