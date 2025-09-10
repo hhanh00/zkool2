@@ -33,6 +33,7 @@ export default defineUserConfig({
         text: "Recipes",
         prefix: "/recipe/",
         children: [
+          "account",
           "restore",
           "folder",
           "cold",
