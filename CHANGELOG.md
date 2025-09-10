@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.0...zkool-v5.0.1) (2025-09-10)
+
+
+### Bug Fixes
+
+* error message when tx was broadcast correctly ([#479](https://github.com/hhanh00/zkool2/issues/479)) ([c0d4c8e](https://github.com/hhanh00/zkool2/commit/c0d4c8e9fea82aa778d44d9a5722eb70ece11980))
+
 ## [5.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v4.25.2...zkool-v5.0.0) (2025-09-05)
 
 
