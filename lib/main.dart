@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
@@ -34,20 +35,11 @@ Future<void> main() async {
   runApp(ToastificationWrapper(
       child: ShowCaseWidget(
           globalTooltipActions: [
-        const TooltipActionButton(
-            type: TooltipDefaultActionType.skip,
-            textStyle: TextStyle(color: Colors.red),
-            backgroundColor: Colors.transparent),
-        const TooltipActionButton(
-            type: TooltipDefaultActionType.next,
-            backgroundColor: Colors.transparent),
+        const TooltipActionButton(type: TooltipDefaultActionType.skip, textStyle: TextStyle(color: Colors.red), backgroundColor: Colors.transparent),
+        const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
       ],
           builder: (context) => MaterialApp.router(
-              routerConfig: r,
-              themeMode: ThemeMode.system,
-              theme: ThemeData.light(),
-              darkTheme: ThemeData.dark(),
-              debugShowCheckedModeBanner: false))));
+              routerConfig: r, themeMode: ThemeMode.system, theme: ThemeData.light(), darkTheme: ThemeData.dark(), debugShowCheckedModeBanner: false))));
 }
 
 class LifecycleWatcher with WidgetsBindingObserver {
@@ -73,8 +65,7 @@ class LifecycleWatcher with WidgetsBindingObserver {
         return;
       }
 
-      if (appStore.needPin && appStore.unlocked != null &&
-          DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
+      if (appStore.needPin && appStore.unlocked != null && DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
         lockApp();
       }
     }
@@ -101,8 +92,7 @@ class LifecycleWatcher with WidgetsBindingObserver {
     return icon;
   }
 
-  Future<String?> saveFile(
-      {String? title, String? fileName, required Uint8List data}) async {
+  Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) async {
     temporaryDisableLock();
     return await FilePicker.platform.saveFile(
       dialogTitle: title,
@@ -133,12 +123,10 @@ class PinLockState extends State<PinLock> {
     return Scaffold(
         appBar: AppBar(title: Text("Locked")),
         body: Center(
-            child: IconButton(
-          onPressed: onUnlock,
-          icon: Icon(
-            Icons.lock,
-            size: 200,
+          child: InkWell(
+            onTap: onUnlock,
+            child: Image.asset("misc/icon.png", width: 200),
           ),
-        )));
+        ));
   }
 }
