@@ -50,7 +50,12 @@ class SplashPageState extends State<SplashPage> {
                 });
               }
             }
-            return Center(child: Image.asset("misc/icon.png", scale: 4.0));
+            return Center(
+              child: Image.asset(
+                "misc/icon.png",
+                width: 200,
+              ),
+            );
           }
 
           return Material(child: body());
