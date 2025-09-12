@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.2](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.1...zkool-v5.0.2) (2025-09-12)
+
+
+### Bug Fixes
+
+* update launcher icon ([#481](https://github.com/hhanh00/zkool2/issues/481)) ([d7ca47d](https://github.com/hhanh00/zkool2/commit/d7ca47d872238c4cf1e029b7b2d544da6135c97f))
+
 ## [5.0.1](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.0...zkool-v5.0.1) (2025-09-10)
 
 
