@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.5](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.4...zkool-v5.0.5) (2025-09-13)
+
+
+### Bug Fixes
+
+* android 16k page alignment for rive & camera ([#488](https://github.com/hhanh00/zkool2/issues/488)) ([#490](https://github.com/hhanh00/zkool2/issues/490)) ([6b1e486](https://github.com/hhanh00/zkool2/commit/6b1e48662e2febf1d098990959e7bfb80ebd6df0))
+
 ## [5.0.4](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.3...zkool-v5.0.4) (2025-09-13)
 
 
