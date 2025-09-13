@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.4](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.3...zkool-v5.0.4) (2025-09-13)
+
+
+### Bug Fixes
+
+* remove unused file ([#486](https://github.com/hhanh00/zkool2/issues/486)) ([f8a8b39](https://github.com/hhanh00/zkool2/commit/f8a8b393d292f8bcda5c7bac4ecd0c90c02c3e13))
+
 ## [5.0.3](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.2...zkool-v5.0.3) (2025-09-13)
 
 
