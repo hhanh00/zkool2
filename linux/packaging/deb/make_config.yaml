@@ -71,7 +71,7 @@ installed_size: 60604
 essential: false
 
 # application icon path relative to project url
-icon: assets/logo.png
+icon: misc/icon.png
 
 keywords:
   - Crypto
