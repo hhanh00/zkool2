@@ -5,6 +5,13 @@ allprojects {
     }
 }
 
+buildscript {
+    ext {
+        // Force Rive's minSdk to 21 for compatibility with the NDK
+        rive_min_sdk_version = 21
+    }
+}
+
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
