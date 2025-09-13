@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.3](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.2...zkool-v5.0.3) (2025-09-13)
+
+
+### Bug Fixes
+
+* update splash icon ([#483](https://github.com/hhanh00/zkool2/issues/483)) ([5144f15](https://github.com/hhanh00/zkool2/commit/5144f152d743e4e2ddc1dcd93cfe30f5ec9a9a2e))
+
 ## [5.0.2](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.1...zkool-v5.0.2) (2025-09-12)
 
 
