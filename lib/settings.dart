@@ -167,13 +167,14 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                 Showcase(
                     key: blockExplorerID,
                     description: "Block Explorer URL",
-                    child: FormBuilderTextField(name: "block_explorer",
+                    child: FormBuilderTextField(
+                      name: "block_explorer",
                       decoration: InputDecoration(
                         label: Text("Block Explorer"),
                       ),
                       initialValue: blockExplorer,
                       onChanged: onChangedBlockExplorer,
-                      )),
+                    )),
                 Gap(16),
                 CopyableText(appStore.dbFilepath, style: t.bodySmall),
                 Gap(8),
@@ -303,49 +304,72 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
 }
 
 Future<(String, String)?> showChangeDbPassword(BuildContext context, {required String databaseName}) async {
+  final formKey = GlobalKey<FormBuilderState>();
   final oldPassword = TextEditingController();
   final newPassword = TextEditingController();
+  final repeatNewPassword = TextEditingController();
 
-  bool confirmed = await AwesomeDialog(
+  late final AwesomeDialog dialog;
+  bool validated = false;
+  dialog = AwesomeDialog(
         context: context,
         dialogType: DialogType.question,
         animType: AnimType.rightSlide,
         title: "Change Database Password",
         body: FormBuilder(
-            child: Column(children: [
-          Text("Change $databaseName Password", style: Theme.of(context).textTheme.headlineSmall),
-          Gap(8),
-          FormBuilderTextField(
-            name: 'old_password',
-            decoration: InputDecoration(labelText: 'Old Password'),
-            obscureText: true,
-            controller: oldPassword,
-          ),
-          Gap(8),
-          FormBuilderTextField(
-            name: 'new_password',
-            decoration: InputDecoration(labelText: 'New Password'),
-            obscureText: true,
-            controller: newPassword,
-          ),
-        ])),
+            key: formKey,
+            child: Column(
+              children: [
+                Text("Change $databaseName Password", style: Theme.of(context).textTheme.headlineSmall),
+                Gap(8),
+                FormBuilderTextField(
+                  name: 'old_password',
+                  decoration: InputDecoration(labelText: 'Old Password'),
+                  obscureText: true,
+                  controller: oldPassword,
+                ),
+                Gap(8),
+                FormBuilderTextField(
+                  name: 'new_password',
+                  decoration: InputDecoration(labelText: 'New Password'),
+                  obscureText: true,
+                  controller: newPassword,
+                ),
+                Gap(8),
+                FormBuilderTextField(
+                  name: 'repeat_password',
+                  decoration: InputDecoration(labelText: 'Repeat New Password'),
+                  obscureText: true,
+                  controller: repeatNewPassword,
+                  validator: (v) {
+                    if (v == null) return null;
+                    final newPassword = formKey.currentState!.fields["new_password"]!.value as String?;
+                    if (newPassword != null && newPassword != v) return "New password does not match";
+                    return null;
+                  },
+                ),
+              ],
+            )),
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
-        onDismissCallback: (type) {
-          final res = (() {
-            switch (type) {
-              case DismissType.btnOk:
-                return true;
-              default:
-                return false;
+        btnOk: AnimatedButton(
+          isFixedHeight: false,
+          text: "Ok",
+          color: const Color(0xFF00CA71),
+          pressEvent: () {
+            validated = formKey.currentState!.validate();
+            if (validated) {
+              dialog.dismiss();
             }
-          })();
-          GoRouter.of(context).pop(res);
+          },
+        ),
+        onDismissCallback: (type) {
+          GoRouter.of(context).pop(validated);
         },
         dismissOnTouchOutside: false,
         autoDismiss: false,
-      ).show() ??
-      false;
+      );
+  final confirmed = await dialog.show();
   if (confirmed) {
     final op = oldPassword.text;
     final np = newPassword.text;
