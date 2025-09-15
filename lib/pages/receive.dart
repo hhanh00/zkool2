@@ -51,17 +51,17 @@ class ReceivePageState extends State<ReceivePage> {
             IconButton(
                 tooltip: "Transparent Addresses",
                 onPressed: onViewTransparentAddresses,
-                icon: Icon(Icons.visibility))),
+                icon: Icon(Icons.visibility),),),
             Showcase(key: sweepID, description: "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync", child:
             IconButton(
                 tooltip: "Sweep",
                 onPressed: onSweep,
-                icon: Icon(Icons.search))),
+                icon: Icon(Icons.search),),),
             Showcase(key: deriveID, description: "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds", child:
             IconButton(
                 tooltip: "Next Set of Addresses",
                 onPressed: onGenerateAddress,
-                icon: Icon(Icons.skip_next))),
+                icon: Icon(Icons.skip_next),),),
           ],
         ),
         body: addresses == null
@@ -74,7 +74,7 @@ class ReceivePageState extends State<ReceivePage> {
                           addresses.oaddr != null)
                         PoolSelect(enabled: appStore.pools,
                           initialValue: uaPools,
-                          onChanged: onChangedUAPools),
+                          onChanged: onChangedUAPools,),
                       if (addresses.ua != null)
                         ...[
                         Gap(8),
@@ -85,7 +85,7 @@ class ReceivePageState extends State<ReceivePage> {
                           IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () => onShowQR("Unified Address", addresses.ua!),
-                          )),
+                          ),),
                         ),
                         ],
                       if (addresses.oaddr != null)
@@ -115,7 +115,7 @@ class ReceivePageState extends State<ReceivePage> {
                             onPressed: () => onShowQR("Transparent", addresses.taddr!),
                           ),
                         ),
-                    ]))));
+                    ],),),),);
   }
 
   void onChangedUAPools(int pools) async {
@@ -167,7 +167,7 @@ class TransparentAddressesPage extends StatelessWidget {
           return ListTile(
             title: CopyableText(txCount.address),
             subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}, Last Used: ${timeToString(txCount.time)}"),
-            trailing: Text(zatToString(txCount.amount)));
+            trailing: Text(zatToString(txCount.amount)),);
         },
       ),
     );

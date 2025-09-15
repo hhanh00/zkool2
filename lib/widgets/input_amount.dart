@@ -41,10 +41,10 @@ class InputAmountState extends State<InputAmount> {
                     validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
                     keyboardType: TextInputType.numberWithOptions(decimal: true),
                     onChanged: (v) => onChanged(v, interactive: true),
-                  )),
+                  ),),
                   Gap(8),
-                  IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top))
-                ]),
+                  IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top)),
+                ],),
                 Row(
                   children: [
                     Expanded(
@@ -54,7 +54,7 @@ class InputAmountState extends State<InputAmount> {
                       validator: validAmount,
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                       onChanged: (v) => onFiatChanged(v, interactive: true),
-                    )),
+                    ),),
                     Gap(8),
                     ElevatedButton.icon(
                       onPressed: onUpdateFx,
@@ -62,9 +62,9 @@ class InputAmountState extends State<InputAmount> {
                       icon: Icon(Icons.refresh),
                     ),
                   ],
-                )
-              ]));
-        });
+                ),
+              ],),);
+        },);
   }
 
   void onUpdateFx() async {

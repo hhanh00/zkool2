@@ -43,7 +43,7 @@ class MarketPriceState extends State<MarketPrice> {
               "autosize": true
             }
             </script>
-          </body>"""),
+          </body>""",),
         ),
       ),
     );

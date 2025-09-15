@@ -46,7 +46,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
   void tutorial() async {
     tutorialHelper(context, "tutNew0",
-        [nameID, iconID, internalID, restoreID, dkgID, importID, saveID]);
+        [nameID, iconID, internalID, restoreID, dkgID, importID, saveID],);
     if (restore) tutorialHelper(context, "tutNew1", [keyID, generateID, birthID, accountPoolsID]);
     if (restore && isSeed)
       tutorialHelper(context, "tutNew2", [passphraseID, accountIndexID]);
@@ -68,19 +68,19 @@ class NewAccountPageState extends State<NewAccountPage> {
             Showcase(
                 key: dkgID,
                 description: "Start Distributed Key Generation",
-                child: IconButton(onPressed: onFrost, icon: Icon(Icons.group))),
+                child: IconButton(onPressed: onFrost, icon: Icon(Icons.group)),),
             Showcase(
                 key: importID,
                 description: "Import an account from file",
                 child: IconButton(
-                    onPressed: onImport, icon: Icon(Icons.file_open))),
+                    onPressed: onImport, icon: Icon(Icons.file_open),),),
             Showcase(
                 key: saveID,
                 description: "Save",
                 child: IconButton(
                   icon: const Icon(Icons.save),
                   onPressed: onSave,
-                )),
+                ),),
           ],
         ),
         body: Padding(
@@ -99,15 +99,15 @@ class NewAccountPageState extends State<NewAccountPage> {
                             backgroundImage:
                                 ib != null ? Image.memory(ib).image : null,
                             child: ib == null ? Text(initials(name)) : null,
-                          )),
+                          ),),
                       Positioned(
                           right: 0,
                           bottom: 0,
                           child: IconButton.filled(
                             onPressed: onEdit,
                             icon: Icon(Icons.edit),
-                          ))
-                    ]),
+                          ),),
+                    ],),
                     Gap(16),
                     Showcase(
                         key: nameID,
@@ -119,7 +119,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                               const InputDecoration(labelText: "Account Name"),
                           initialValue: name,
                           onChanged: (v) => setState(() => name = v!),
-                        )),
+                        ),),
                     Gap(16),
                     Showcase(
                         key: internalID,
@@ -127,7 +127,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                             "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                         child: FormBuilderSwitch(
                             name: "useInternal",
-                            title: const Text("Use Internal Change"))),
+                            title: const Text("Use Internal Change"),),),
                     Gap(16),
                     Showcase(
                         key: restoreID,
@@ -138,7 +138,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                             title: const Text("Restore Account?"),
                             initialValue: restore,
                             onChanged: (v) =>
-                                setState(() => restore = v ?? false))),
+                                setState(() => restore = v ?? false),),),
                     Gap(16),
                     if (restore)
                     Row(children: [
@@ -150,19 +150,19 @@ class NewAccountPageState extends State<NewAccountPage> {
                             name: "key",
                             decoration: const InputDecoration(
                                 labelText:
-                                    "Key (Seed Phrase, Private Key, or Viewing Key)"),
+                                    "Key (Seed Phrase, Private Key, or Viewing Key)",),
                             validator: (s) => validKey(s, restore: restore),
                             initialValue: key,
                             onChanged: (v) => setState(() => key = v!),
-                          ))),
+                          ),),),
                       Gap(8),
                       Showcase(
                         key: generateID,
                         description:
                             "Generate a new Seed Phrase",
                         child: IconButton.outlined(onPressed: onGenerate, icon: Icon(Icons.refresh),
-                        ))
-                    ]),
+                        ),),
+                    ],),
                     Gap(16),
                     if (restore && isSeed)
                       Showcase(
@@ -172,8 +172,8 @@ class NewAccountPageState extends State<NewAccountPage> {
                           child: FormBuilderTextField(
                             name: "passphrase",
                             decoration: const InputDecoration(
-                                labelText: "Extra Passphrase (optional)"),
-                          )),
+                                labelText: "Extra Passphrase (optional)",),
+                          ),),
                     Gap(16),
                     if (restore && isSeed)
                       Showcase(
@@ -183,12 +183,12 @@ class NewAccountPageState extends State<NewAccountPage> {
                           child: FormBuilderTextField(
                             name: "aindex",
                             decoration: const InputDecoration(
-                                labelText: "Account Index"),
+                                labelText: "Account Index",),
                             keyboardType: TextInputType.number,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
+                              FilteringTextInputFormatter.digitsOnly,
                             ],
-                          )),
+                          ),),
                     Gap(16),
                     if (restore)
                       Showcase(
@@ -198,12 +198,12 @@ class NewAccountPageState extends State<NewAccountPage> {
                           child: FormBuilderTextField(
                             name: "birth",
                             decoration: const InputDecoration(
-                                labelText: "Birth Height"),
+                                labelText: "Birth Height",),
                             keyboardType: TextInputType.number,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
+                              FilteringTextInputFormatter.digitsOnly,
                             ],
-                          )),
+                          ),),
                     if (restore && keyPools != 0) Showcase(
                         key: accountPoolsID,
                         description:
@@ -219,12 +219,12 @@ class NewAccountPageState extends State<NewAccountPage> {
                                   builder: (field) => PoolSelect(
                                       enabled: keyPools,
                                       initialValue: field.value!,
-                                      onChanged: (v) => field.didChange(v)),
-                                )))),
+                                      onChanged: (v) => field.didChange(v),),
+                                ),),),),
                   ],
                 ),
               ),
-            )));
+            ),),);
   }
 
   void onFrost() => GoRouter.of(context).push("/dkg1");
@@ -251,7 +251,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       final r = restore ?? false;
       if (r && birth == null) {
         final confirmed = await confirmDialog(context,
-          title: "No Birth Height", message: "Are you sure you don't want to enter the birth height?");
+          title: "No Birth Height", message: "Are you sure you don't want to enter the birth height?",);
         if (!confirmed) return;
       }
 
@@ -270,7 +270,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         pools: pools,
         useInternal: useInternal ?? false,
         internal: false,
-      ));
+      ),);
       await setAccount(account: account);
       final seed = await getAccountSeed(account: account);
       if (mounted && key.isEmpty) {
@@ -295,7 +295,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       if (data == null) return;
       if (!mounted) return;
       final password = await inputPassword(context,
-          title: "Import File", message: "File Password");
+          title: "Import File", message: "File Password",);
       if (password != null) {
         await importAccount(passphrase: password, data: data);
         if (mounted)

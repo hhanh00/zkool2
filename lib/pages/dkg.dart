@@ -21,23 +21,23 @@ final thresholdID = GlobalKey();
 final fundingID = GlobalKey();
 
 Widget buildDKGPage(BuildContext context,
-    {required int index, required bool finished, required Widget child}) {
+    {required int index, required bool finished, required Widget child,}) {
   return Scaffold(
       appBar: AppBar(title: const Text("Distributed Key Generation"), actions: [
         finished
             ? IconButton(
                 onPressed: () => onClose(context),
-                icon: const Icon(Icons.close))
+                icon: const Icon(Icons.close),)
             : IconButton(
                 onPressed: () => onCancel(context),
-                icon: const Icon(Icons.cancel))
-      ]),
+                icon: const Icon(Icons.cancel),),
+      ],),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: DKGSteps(currentIndex: index)),
         SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: 8),
-            sliver: SliverToBoxAdapter(child: child)),
-      ]));
+            sliver: SliverToBoxAdapter(child: child),),
+      ],),);
 }
 
 class DKGPage1 extends StatefulWidget {
@@ -66,7 +66,7 @@ class DKGPage1State extends State<DKGPage1> {
 
   void tutorial() async {
     tutorialHelper(
-        context, "dkg", [nameID3, participantID, pID, thresholdID, fundingID]);
+        context, "dkg", [nameID3, participantID, pID, thresholdID, fundingID],);
   }
 
   @override
@@ -79,8 +79,8 @@ class DKGPage1State extends State<DKGPage1> {
             actions: [
               IconButton(
                   onPressed: () => onCancel(context),
-                  icon: const Icon(Icons.cancel))
-            ]),
+                  icon: const Icon(Icons.cancel),),
+            ],),
         body: SingleChildScrollView(
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -97,14 +97,14 @@ class DKGPage1State extends State<DKGPage1> {
                               decoration:
                                   const InputDecoration(labelText: "Name"),
                               validator: FormBuilderValidators.required(),
-                            )),
+                            ),),
                         Showcase(
                             key: participantID,
                             description: "Number of signers",
                             child: FormBuilderDropdown(
                               name: "participants",
                               decoration: const InputDecoration(
-                                  labelText: "Number of Participants"),
+                                  labelText: "Number of Participants",),
                               initialValue: 2,
                               items: List.generate(
                                 4,
@@ -113,7 +113,7 @@ class DKGPage1State extends State<DKGPage1> {
                                   child: Text("${i + 2}"),
                                 ),
                               ),
-                            )),
+                            ),),
                         Showcase(
                             key: pID,
                             description:
@@ -121,7 +121,7 @@ class DKGPage1State extends State<DKGPage1> {
                             child: FormBuilderDropdown(
                               name: "id",
                               decoration: const InputDecoration(
-                                  labelText: "Your Participant ID"),
+                                  labelText: "Your Participant ID",),
                               initialValue: 1,
                               items: List.generate(
                                 5,
@@ -130,7 +130,7 @@ class DKGPage1State extends State<DKGPage1> {
                                   child: Text("${i + 1}"),
                                 ),
                               ),
-                            )),
+                            ),),
                         Showcase(
                             key: thresholdID,
                             description: "Minimum number of signers",
@@ -138,7 +138,7 @@ class DKGPage1State extends State<DKGPage1> {
                                 name: "threshold",
                                 decoration: const InputDecoration(
                                     labelText:
-                                        "Number of Signers Required (Threshold)"),
+                                        "Number of Signers Required (Threshold)",),
                                 initialValue: 2,
                                 items: List.generate(
                                   4,
@@ -153,7 +153,7 @@ class DKGPage1State extends State<DKGPage1> {
                                   if (v! > n)
                                     return "Threshold must be less than participants";
                                   return null;
-                                })),
+                                },),),
                         Showcase(
                             key: fundingID,
                             description:
@@ -162,22 +162,22 @@ class DKGPage1State extends State<DKGPage1> {
                               name: "account",
                               decoration: const InputDecoration(
                                   labelText:
-                                      "Funding Account for the DKG messages"),
+                                      "Funding Account for the DKG messages",),
                               items: accounts
                                   .map((a) => DropdownMenuItem(
                                         value: a.id,
                                         child: Text(a.name),
-                                      ))
+                                      ),)
                                   .toList(),
                               validator: FormBuilderValidators.required(),
-                            )),
+                            ),),
                         Gap(16),
                         ElevatedButton.icon(
                             onPressed: () => onNext(context),
                             label: Text("Next"),
-                            icon: Icon(Icons.arrow_forward))
+                            icon: Icon(Icons.arrow_forward),),
                       ],
-                    )))));
+                    ),),),),);
   }
 
   onNext(BuildContext context) async {
@@ -233,8 +233,8 @@ class DKGPage2State extends State<DKGPage2> {
         appBar: AppBar(title: const Text("DKG Addresses"), actions: [
           IconButton(
               onPressed: () => onCancel(context),
-              icon: const Icon(Icons.cancel))
-        ]),
+              icon: const Icon(Icons.cancel),),
+        ],),
         body: SingleChildScrollView(
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -248,19 +248,19 @@ class DKGPage2State extends State<DKGPage2> {
                         return FormBuilderTextField(
                             name: "$i",
                             decoration: InputDecoration(
-                                labelText: "Address for Participant #${i + 1}"),
+                                labelText: "Address for Participant #${i + 1}",),
                             initialValue: address,
                             validator: FormBuilderValidators.compose([
                               FormBuilderValidators.required(),
                               validAddress,
-                            ]));
+                            ]),);
                       }),
                       Gap(16),
                       ElevatedButton.icon(
                           onPressed: () => onNext(context),
                           label: Text("Next"),
-                          icon: Icon(Icons.arrow_forward))
-                    ])))));
+                          icon: Icon(Icons.arrow_forward),),
+                    ],),),),),);
   }
 
   onNext(BuildContext context) async {
@@ -314,7 +314,7 @@ class DKGPage3State extends State<DKGPage3> {
         .map((e) => e.id)
         .toList();
     await appStore.startSynchronize(
-        accounts, int.parse(appStore.actionsPerSync));
+        accounts, int.parse(appStore.actionsPerSync),);
 
     final status = doDkg();
     status.listen((s) {
@@ -356,7 +356,7 @@ class DKGPage3State extends State<DKGPage3> {
       final exc = e as AnyhowException;
       if (!context.mounted) return;
       await showException(context, exc.message);
-    });
+    },);
   }
 
   @override
@@ -365,7 +365,7 @@ class DKGPage3State extends State<DKGPage3> {
     return buildDKGPage(context,
         index: index,
         finished: finished,
-        child: CopyableText(message, style: t.bodyLarge));
+        child: CopyableText(message, style: t.bodyLarge),);
   }
 }
 

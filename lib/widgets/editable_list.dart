@@ -37,7 +37,7 @@ class EditableList<T extends Object> extends StatefulWidget {
     required this.deleteBuilder,
     required this.isEqual,
     this.onReorder,
-    this.buttons
+    this.buttons,
   });
 
   @override
@@ -80,7 +80,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
           actions: [
             if (!anySelected)
               Showcase(key: newAccountId, description: "Create new account",
-                child: IconButton(onPressed: onNew, icon: Icon(Icons.add))),
+                child: IconButton(onPressed: onNew, icon: Icon(Icons.add)),),
             if (anySelected)
               IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
             if (anySelected)
@@ -100,7 +100,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
                   selected: selected[index],
                   onSelectChanged: (value) => setState(() {
                         selected[index] = value ?? false;
-                      })),
+                      }),),
           isSameItem: (T a, T b) => widget.isEqual(a, b),
           onReorder: (int oldIndex, int newIndex) {
             widget.onReorder?.call(oldIndex, newIndex);
@@ -109,7 +109,7 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
               items.insert(newIndex, v);
             });
           },
-        ))])));
+        ),),],),),);
   }
 
   onNew() => widget.createBuilder(context);
