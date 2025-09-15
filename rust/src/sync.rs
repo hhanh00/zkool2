@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::{transparent_sync, SyncProgress}, coin::Network, db::{select_account_transparent, store_account_transparent_addr}, lwd::CompactBlock, warp::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::{transparent_sync, SyncProgress}, coin::Network, db::{select_account_transparent, store_account_transparent_addr}, io::SyncHeight, lwd::CompactBlock, warp::{
         legacy::CommitmentTreeFrontier,
         sync::{warp_sync, SyncError},
         Witness,
@@ -532,13 +532,13 @@ pub async fn prune_old_checkpoints(
     Ok(())
 }
 
-pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
-    let (height,): (u32,) =
-        sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
+pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> Result<SyncHeight> {
+    let (height, time): (u32, u32) =
+        sqlx::query_as("SELECT height, time FROM headers WHERE height = (SELECT MIN(height) FROM sync_heights WHERE account = ?)")
             .bind(account)
             .fetch_one(connection)
             .await?;
-    Ok(height)
+    Ok(SyncHeight { pool: 0, height, time })
 }
 
 pub async fn transparent_sweep(

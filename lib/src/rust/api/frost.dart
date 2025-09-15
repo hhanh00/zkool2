@@ -19,9 +19,9 @@ Future<void> setDkgParams(
         required int id,
         required int n,
         required int t,
-        required int fundingAccount,}) =>
+        required int fundingAccount}) =>
     RustLib.instance.api.crateApiFrostSetDkgParams(
-        name: name, id: id, n: n, t: t, fundingAccount: fundingAccount,);
+        name: name, id: id, n: n, t: t, fundingAccount: fundingAccount);
 
 Future<bool> hasDkgParams() => RustLib.instance.api.crateApiFrostHasDkgParams();
 
@@ -45,9 +45,9 @@ Future<void> resetSign() => RustLib.instance.api.crateApiFrostResetSign();
 Future<void> initSign(
         {required int coordinator,
         required int fundingAccount,
-        required PcztPackage pczt,}) =>
+        required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiFrostInitSign(
-        coordinator: coordinator, fundingAccount: fundingAccount, pczt: pczt,);
+        coordinator: coordinator, fundingAccount: fundingAccount, pczt: pczt);
 
 Future<bool> isSigningInProgress() =>
     RustLib.instance.api.crateApiFrostIsSigningInProgress();

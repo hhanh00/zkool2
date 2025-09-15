@@ -138,7 +138,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
         .map(|row: SqliteRow| {
             let pool: u8 = row.get(0);
             let height: u32 = row.get(1);
-            SyncHeight { pool, height }
+            SyncHeight { pool, height, time: 0 }
         })
         .fetch_all(&mut *connection)
         .await?;
@@ -755,6 +755,7 @@ pub struct TAddress {
 pub struct SyncHeight {
     pub pool: u8,
     pub height: u32,
+    pub time: u32,
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
