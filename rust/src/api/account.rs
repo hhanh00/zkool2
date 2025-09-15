@@ -53,7 +53,7 @@ pub async fn get_account_pools(account: u32) -> Result<u8> {
     let okeys = crate::db::select_account_orchard(&mut *connection, account).await?;
 
     let mut pools = 0;
-    if tkeys.xvk.is_some() {
+    if tkeys.xvk.is_some() || tkeys.address.is_some() {
         pools |= 1;
     }
     if skeys.xvk.is_some() {
