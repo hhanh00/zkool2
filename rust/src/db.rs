@@ -706,10 +706,11 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
                 WHERE b.id_note IS NULL)
         SELECT id_account, a.name, seed, aindex,
         icon, birth, a.position, hidden, saved, enabled, internal,
-        sh.height, COALESCE(SUM(unspent.value), 0) AS balance,
+        sh.height, COALESCE(hdr.time, 0), COALESCE(SUM(unspent.value), 0) AS balance,
         COALESCE(f.id_folder, 0), COALESCE(f.name, '') AS folder_name
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
+        LEFT JOIN headers hdr ON sh.height = hdr.height
         LEFT JOIN unspent ON a.id_account = unspent.account
         LEFT JOIN folders f ON a.folder = f.id_folder
         GROUP BY id_account
@@ -717,8 +718,8 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
     )
     .map(|row: SqliteRow| {
         let folder = Folder {
-            id: row.get(13),
-            name: row.get(14),
+            id: row.get(14),
+            name: row.get(15),
         };
         Account {
         coin,
@@ -734,7 +735,8 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         enabled: row.get(9),
         internal: row.get(10),
         height: row.get(11),
-        balance: row.get::<i64, _>(12) as u64,
+        time: row.get(12),
+        balance: row.get::<i64, _>(13) as u64,
         folder,
     }})
     .fetch(&mut *connection);

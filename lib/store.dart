@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:collection/collection.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +32,8 @@ abstract class ObservableHeightBase with Store {
   @observable
   int range = 0;
 
+  int time = 0;
+
   @computed
   double get progress => range > 0 ? (height - start) / range : 0.0;
 
@@ -41,8 +44,9 @@ abstract class ObservableHeightBase with Store {
   }
 
   @action
-  void set(int h) {
+  void set(int h, int t) {
     height = h;
+    time = t;
   }
 
   @action
@@ -52,17 +56,20 @@ abstract class ObservableHeightBase with Store {
   }
 
   Widget build(BuildContext context) {
+    final timestamp = DateTime.fromMillisecondsSinceEpoch(time * 1000);
+    final syncAge = DateTime.now().difference(timestamp);
+    final style = syncAge > Duration(minutes: 30) ? TextStyle(color: Colors.red) : null;
     return ProgressWidget(
-        height: this, width: 80, child: Text(height.toString()),);
+        height: this, width: 80, child: Text(height.toString(), style: style),);
   }
 
-  Widget buildHero(BuildContext context) {
+  Widget buildHero(BuildContext context, {TextStyle? style}) {
     final t = Theme.of(context).textTheme;
     final currentHeight = appStore.currentHeight;
     return ProgressWidget(
         height: this,
         child: Text.rich(TextSpan(children: [
-          TextSpan(text: "$height", style: t.bodyLarge),
+          TextSpan(text: "$height", style: t.bodyLarge!.merge(style)),
           if (currentHeight - height > 0)
             TextSpan(
                 text: " tip-${currentHeight - height}", style: t.labelSmall,),
@@ -197,7 +204,7 @@ abstract class AppStoreBase with Store {
     accounts = as;
     for (var a in as) {
       final h = heights.putIfAbsent(a.id, () => ObservableHeight());
-      h.set(a.height);
+      h.set(a.height, a.time);
     }
     return as;
   }
@@ -285,7 +292,7 @@ abstract class AppStoreBase with Store {
           for (var a in accounts) {
             if (p.height > heights[a]!.height)
               heights[a]!
-                  .set(p.height); // propagate progress to all account streams
+                  .set(p.height, p.time); // propagate progress to all account streams
           }
         });
       }, onError: (e) {

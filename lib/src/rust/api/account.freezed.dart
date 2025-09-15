@@ -30,6 +30,7 @@ mixin _$Account {
   bool get enabled => throw _privateConstructorUsedError;
   bool get internal => throw _privateConstructorUsedError;
   int get height => throw _privateConstructorUsedError;
+  int get time => throw _privateConstructorUsedError;
   BigInt get balance => throw _privateConstructorUsedError;
 
   /// Create a copy of Account
@@ -58,6 +59,7 @@ abstract class $AccountCopyWith<$Res> {
       bool enabled,
       bool internal,
       int height,
+      int time,
       BigInt balance});
 
   $FolderCopyWith<$Res> get folder;
@@ -92,6 +94,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? enabled = null,
     Object? internal = null,
     Object? height = null,
+    Object? time = null,
     Object? balance = null,
   }) {
     return _then(_value.copyWith(
@@ -151,6 +154,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
               as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
       balance: null == balance
           ? _value.balance
           : balance // ignore: cast_nullable_to_non_nullable
@@ -191,6 +198,7 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       bool enabled,
       bool internal,
       int height,
+      int time,
       BigInt balance});
 
   @override
@@ -224,6 +232,7 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? enabled = null,
     Object? internal = null,
     Object? height = null,
+    Object? time = null,
     Object? balance = null,
   }) {
     return _then(_$AccountImpl(
@@ -283,6 +292,10 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
               as int,
+      time: null == time
+          ? _value.time
+          : time // ignore: cast_nullable_to_non_nullable
+              as int,
       balance: null == balance
           ? _value.balance
           : balance // ignore: cast_nullable_to_non_nullable
@@ -309,6 +322,7 @@ class _$AccountImpl implements _Account {
       required this.enabled,
       required this.internal,
       required this.height,
+      required this.time,
       required this.balance});
 
   @override
@@ -340,11 +354,13 @@ class _$AccountImpl implements _Account {
   @override
   final int height;
   @override
+  final int time;
+  @override
   final BigInt balance;
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, height: $height, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, height: $height, time: $time, balance: $balance)';
   }
 
   @override
@@ -368,6 +384,7 @@ class _$AccountImpl implements _Account {
             (identical(other.internal, internal) ||
                 other.internal == internal) &&
             (identical(other.height, height) || other.height == height) &&
+            (identical(other.time, time) || other.time == time) &&
             (identical(other.balance, balance) || other.balance == balance));
   }
 
@@ -388,6 +405,7 @@ class _$AccountImpl implements _Account {
       enabled,
       internal,
       height,
+      time,
       balance);
 
   /// Create a copy of Account
@@ -415,6 +433,7 @@ abstract class _Account implements Account {
       required final bool enabled,
       required final bool internal,
       required final int height,
+      required final int time,
       required final BigInt balance}) = _$AccountImpl;
 
   @override
@@ -445,6 +464,8 @@ abstract class _Account implements Account {
   bool get internal;
   @override
   int get height;
+  @override
+  int get time;
   @override
   BigInt get balance;
 
