@@ -22,6 +22,14 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Install Inno-Setup
+        shell: powershell
+        run: |
+          $InnoSetup = Join-Path ${env:PROGRAMFILES(X86)} -ChildPath 'Inno Setup 6\iscc.exe'
+          if (!(Test-Path $InnoSetup)) {
+            Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "D:\\is.exe"
+            Start-Process -FilePath "D:\\is.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          }
       - name: Install packages
         run: |
           dart pub global activate fastforge
