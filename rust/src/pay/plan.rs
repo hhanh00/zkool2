@@ -5,7 +5,10 @@ use anyhow::{anyhow, Result};
 use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
-    circuit::ProvingKey, keys::{Scope, SpendAuthorizingKey}, note::ExtractedNoteCommitment, Address
+    circuit::ProvingKey,
+    keys::{Scope, SpendAuthorizingKey},
+    note::ExtractedNoteCommitment,
+    Address,
 };
 use pczt::{
     roles::{
@@ -48,13 +51,19 @@ use crate::{
         derive_transparent_sk, generate_next_change_address, get_account_full_address,
         get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
         get_sapling_vk,
-    }, api::pay::{DustChangePolicy, PcztPackage}, coin::Network, db::select_account_transparent, pay::{
+    },
+    api::pay::{DustChangePolicy, PcztPackage},
+    coin::Network,
+    db::select_account_transparent,
+    pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlanIn, TxPlanOut,
-    }, warp::hasher::{empty_roots, OrchardHasher, SaplingHasher}, Client
+    },
+    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
+    Client,
 };
 
 pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
@@ -148,11 +157,7 @@ pub async fn plan_transaction(
             amount: max,
             ..recipients.first().cloned().unwrap_or_default()
         };
-        (
-            notes,
-            vec![recipient],
-            true,
-        )
+        (notes, vec![recipient], true)
     } else {
         (
             fetch_unspent_notes_grouped_by_pool(connection, account).await?,
@@ -328,7 +333,8 @@ pub async fn plan_transaction(
     let orchard_anchor = eo.root(&OrchardHasher::default());
 
     // generate a new change address if we need a transparent address
-    let change_address = if change_pool == 0 {
+    let tkeys = select_account_transparent(connection, account).await?;
+    let change_address = if change_pool == 0 && tkeys.xvk.is_some() {
         generate_next_change_address(network, connection, account)
             .await?
             .unwrap()
@@ -371,7 +377,8 @@ pub async fn plan_transaction(
                     "Discarding change of {} in pool {}. Prev fee {}, current fee {}",
                     to_zec(change),
                     change_pool,
-                    fee, updated_fee
+                    fee,
+                    updated_fee
                 );
             }
             _ => {
@@ -439,7 +446,7 @@ pub async fn plan_transaction(
                 match pool {
                     0 => {
                         let row = sqlx::query(
-                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex FROM notes
+                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex, t.address FROM notes
                             JOIN transparent_address_accounts t ON notes.taddress = t.id_taddress
                             WHERE id_note = ?",
                         )
@@ -452,6 +459,7 @@ pub async fn plan_transaction(
                         let sk: Option<Vec<u8>> = row.get(2);
                         let scope: u32 = row.get(3);
                         let dindex: u32 = row.get(4);
+                        let taddress: String = row.get(5);
 
                         if sk.is_none() {
                             can_sign = false;
@@ -465,16 +473,13 @@ pub async fn plan_transaction(
                         let pkh: [u8; 20] =
                             Ripemd160::digest(Sha256::digest(pubkey.serialize())).into();
                         let addr = TransparentAddress::PublicKeyHash(pkh);
-                        let coin = TxOut::new(
-                            Zatoshis::from_u64(*amount).unwrap(),
-                            addr.script(),
-                        );
+                        let coin = TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script());
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder
                             .add_transparent_input(pubkey, utxo, coin)
                             .map_err(|e| anyhow!(e))?;
-                        tsk_dindex.push((pubkey, scope, dindex));
+                        tsk_dindex.push((pubkey, scope, dindex, taddress));
                     }
                     1 => {
                         let (note, merkle_path) = get_sapling_note(
@@ -491,7 +496,10 @@ pub async fn plan_transaction(
                             can_sign = false;
                         }
 
-                        info!("Adding sapling input {}", hex::encode(note.cmu().to_bytes()));
+                        info!(
+                            "Adding sapling input {}",
+                            hex::encode(note.cmu().to_bytes())
+                        );
                         builder.add_sapling_spend::<Infallible>(
                             svk.unwrap().clone(),
                             note,
@@ -513,7 +521,12 @@ pub async fn plan_transaction(
                             can_sign = false;
                         }
 
-                        info!("Adding orchard input {}", hex::encode(ExtractedNoteCommitment::from(note.commitment()).to_bytes()));
+                        info!(
+                            "Adding orchard input {}",
+                            hex::encode(
+                                ExtractedNoteCommitment::from(note.commitment()).to_bytes()
+                            )
+                        );
                         builder.add_orchard_spend::<Infallible>(
                             ovk.clone().unwrap(),
                             note,
@@ -563,14 +576,22 @@ pub async fn plan_transaction(
         match pool {
             0 => {
                 let to = get_transparent_address(network, &recipient.address)?;
-                info!("Adding transparent output {} {}", &recipient.address, to_zec(value.into()));
+                info!(
+                    "Adding transparent output {} {}",
+                    &recipient.address,
+                    to_zec(value.into())
+                );
                 builder
                     .add_transparent_output(&to, value)
                     .map_err(|e| anyhow!(e))?;
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;
-                info!("Adding sapling output {} {}", &recipient.address, to_zec(value.into()));
+                info!(
+                    "Adding sapling output {} {}",
+                    &recipient.address,
+                    to_zec(value.into())
+                );
                 builder.add_sapling_output::<Infallible>(
                     svk.as_ref().map(|svk| svk.ovk),
                     to,
@@ -580,7 +601,11 @@ pub async fn plan_transaction(
             }
             2 => {
                 let to = get_orchard_address(network, &recipient.address)?;
-                info!("Adding orchard output {} {}", &recipient.address, to_zec(value.into()));
+                info!(
+                    "Adding orchard output {} {}",
+                    &recipient.address,
+                    to_zec(value.into())
+                );
                 builder.add_orchard_output::<Infallible>(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
@@ -607,13 +632,14 @@ pub async fn plan_transaction(
     let updater = Updater::new(pczt);
     let updater = updater
         .update_transparent_with(|mut u| {
-            for (i, (pubkey, scope, dindex)) in tsk_dindex.into_iter().enumerate() {
+            for (i, (pubkey, scope, dindex, taddress)) in tsk_dindex.into_iter().enumerate() {
                 u.update_input_with(i, |mut u| {
                     let derivation_path = vec![scope, dindex];
                     let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
                     u.set_bip32_derivation(pubkey.serialize(), path);
                     u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
                     u.set_proprietary("dindex".to_string(), dindex.to_le_bytes().to_vec());
+                    u.set_proprietary("address".to_string(), taddress.into_bytes());
                     Ok(())
                 })?;
             }
@@ -745,11 +771,28 @@ pub async fn sign_transaction(
         let inp = &tbundle.inputs()[index];
         let scope = u32::from_le_bytes(inp.proprietary()["scope"].clone().try_into().unwrap());
         let dindex = u32::from_le_bytes(inp.proprietary()["dindex"].clone().try_into().unwrap());
-        let Some(tsk) = tsk.as_ref() else {
-            return Err(Error::NoSigningKey.into());
+        // Get the signing key
+        let sk = match tsk.as_ref() {
+            // From the derivation path if we have the xsk
+            Some(tsk) => {
+                let sk = derive_transparent_sk(tsk, scope, dindex)?;
+                SecretKey::from_bytes(&sk.try_into().unwrap()).ok()
+            }
+            // Or directly from the private key
+            None => {
+                let address = String::from_utf8(inp.proprietary()["address"].clone())?;
+                sqlx::query("SELECT sk FROM transparent_address_accounts
+                    WHERE account = ?1 AND address = ?2")
+                .bind(account)
+                .bind(&address)
+                .map(|r| {
+                    let sk: Vec<u8> = r.get(0);
+                    SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap()})
+                .fetch_optional(&mut *connection)
+                .await?
+            }
         };
-        let sk = derive_transparent_sk(tsk, scope, dindex)?;
-        let sk = SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap();
+        let sk = sk.ok_or(Error::NoSigningKey)?;
         signer.sign_transparent(index, &sk).unwrap();
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {

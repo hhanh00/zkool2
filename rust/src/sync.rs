@@ -533,8 +533,17 @@ pub async fn prune_old_checkpoints(
 }
 
 pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> Result<SyncHeight> {
+    // Use an outer join because the time stamp may not be present if we didn't
+    // have to scan the chain (i.e. the account is transparent only)
     let (height, time): (u32, u32) =
-        sqlx::query_as("SELECT height, time FROM headers WHERE height = (SELECT MIN(height) FROM sync_heights WHERE account = ?)")
+        sqlx::query_as(
+            "SELECT h.height, COALESCE(h.time, 0)
+            FROM headers h
+            LEFT JOIN (
+                SELECT MIN(height) AS min_height
+                FROM sync_heights
+                WHERE account = ?
+            ) sh ON h.height = sh.min_height")
             .bind(account)
             .fetch_one(connection)
             .await?;
