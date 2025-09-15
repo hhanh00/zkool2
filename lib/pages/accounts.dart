@@ -78,7 +78,8 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
     }
   }
 
-  List<Account> get accounts => appStore.accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (appStore.selectedFolder?.id ?? 0)).toList();
+  List<Account> get accounts =>
+      appStore.accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (appStore.selectedFolder?.id ?? 0)).toList();
 
   void tutorial() async {
     if (!appStore.disclaimerAccepted) return;
@@ -90,93 +91,106 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   Widget build(BuildContext context) {
     Future(tutorial);
 
-    return Observer(builder: (context) {
-      final tt = Theme.of(context).textTheme;
-      final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
-      appStore.accounts;
-      appStore.selectedFolder;
+    return Observer(
+      builder: (context) {
+        final tt = Theme.of(context).textTheme;
+        final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
+        appStore.accounts;
+        appStore.selectedFolder;
 
-      return Showcase(
+        return Showcase(
           key: accountListID,
           description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
           child: EditableList<Account>(
-              key: listKey,
-              items: accounts,
-              headerBuilder: (context) => [
-                    Showcase(
-                        key: heightID,
-                        description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
-                        child: Observer(
-                            builder: (context) => ElevatedButton(
-                                onPressed: () => Future(() => refreshHeight(true)),
-                                onLongPress: () => Future(() => refreshHeight(false)),
-                                child: Text("Height: ${appStore.currentHeight}"),),),),
-                    const Gap(8),
-                    if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
-                    const Gap(8),
-                  ],
-              builder: (context, index, account, {selected, onSelectChanged}) {
-                final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
-                return Material(
-                    key: ValueKey(account.id),
-                    child: GestureDetector(
-                      child: ListTile(
-                        leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
-                        title: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null),
-                        subtitle: zatToText(account.balance, selectable: false, style: t.copyWith(fontWeight: FontWeight.w700)),
-                        trailing: Observer(builder: (context) {
-                          final h = appStore.heights[account.id];
-                          return h!.build(context);
-                        },),
-                      ),
-                      onTap: () => onOpen(context, account),
-                    ),);
-              },
-              title: "Account List",
-              createBuilder: (context) => GoRouter.of(context).push("/account/new"),
-              editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
-              deleteBuilder: (context, accounts) async {
-                final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
-                if (confirmed) {
-                  for (var a in accounts) {
-                    await deleteAccount(account: a.id);
-                  }
-                  await appStore.loadAccounts();
-                }
-              },
-              isEqual: (a, b) => a.id == b.id,
-              onReorder: onReorder,
-              buttons: [
-                Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
-                Showcase(
-                    key: syncID,
-                    description: "Synchronize all enabled accounts or the accounts currently selected",
-                    child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),),
-                PopupMenuButton<String>(
-                  onSelected: (String result) {
-                    switch (result) {
-                      case "mempool": onMempool();
-                      case "hide": onHide();
-                      case "folder": onFolder();
-                    }
-                  },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                    const PopupMenuItem<String>(
-                      value: "mempool",
-                      child: Text("Mempool"),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: "folder",
-                      child: Text("Folders"),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'hide',
-                      child: Text("Show All"),
-                    ),
-                  ],
+            key: listKey,
+            items: accounts,
+            headerBuilder: (context) => [
+              Showcase(
+                key: heightID,
+                description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
+                child: Observer(builder: (context) => ElevatedButton(
+                    onPressed: () => Future(() => refreshHeight(true)),
+                    onLongPress: () => Future(() => refreshHeight(false)),
+                    child: Text("Height: ${appStore.currentHeight}"),
+                  ),
                 ),
-              ],),);
-    },);
+              ),
+              const Gap(8),
+              if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
+              const Gap(8),
+            ],
+            builder: (context, index, account, {selected, onSelectChanged}) {
+              final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
+              return Material(
+                key: ValueKey(account.id),
+                child: GestureDetector(
+                  child: ListTile(
+                    leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                    title: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null),
+                    subtitle: zatToText(account.balance, selectable: false, style: t.copyWith(fontWeight: FontWeight.w700)),
+                    trailing: Observer(
+                      builder: (context) {
+                        final h = appStore.heights[account.id];
+                        return h!.build(context);
+                      },
+                    ),
+                  ),
+                  onTap: () => onOpen(context, account),
+                ),
+              );
+            },
+            title: "Account List",
+            createBuilder: (context) => GoRouter.of(context).push("/account/new"),
+            editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
+            deleteBuilder: (context, accounts) async {
+              final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
+              if (confirmed) {
+                for (var a in accounts) {
+                  await deleteAccount(account: a.id);
+                }
+                await appStore.loadAccounts();
+              }
+            },
+            isEqual: (a, b) => a.id == b.id,
+            onReorder: onReorder,
+            buttons: [
+              Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
+              Showcase(
+                key: syncID,
+                description: "Synchronize all enabled accounts or the accounts currently selected",
+                child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (String result) {
+                  switch (result) {
+                    case "mempool":
+                      onMempool();
+                    case "hide":
+                      onHide();
+                    case "folder":
+                      onFolder();
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: "mempool",
+                    child: Text("Mempool"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "folder",
+                    child: Text("Folders"),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'hide',
+                    child: Text("Show All"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   onMempool() => GoRouter.of(context).push('/mempool');
