@@ -407,15 +407,15 @@ async fn get_transparent_keys(
         .bind(account)
         .map(|row: SqliteRow| {
             let xsk: Option<Vec<u8>> = row.get(0);
-            let xvk: Vec<u8> = row.get(1);
+            let xvk: Option<Vec<u8>> = row.get(1);
             let xsk = xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap());
-            let xvk = AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap();
+            let xvk = xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap());
             (xsk, xvk)
         })
         .fetch_optional(&mut *connection)
         .await?;
     let (xsk, xvk) = match tkeys {
-        Some((xsk, xvk)) => (xsk, Some(xvk)),
+        Some((xsk, xvk)) => (xsk, xvk),
         None => (None, None),
     };
     Ok((xsk, xvk))
