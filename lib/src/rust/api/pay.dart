@@ -17,7 +17,7 @@ Future<String> buildPuri({required List<Recipient> recipients}) =>
 
 Future<PcztPackage> prepare(
         {required List<Recipient> recipients,
-        required PaymentOptions options,}) =>
+        required PaymentOptions options}) =>
     RustLib.instance.api
         .crateApiPayPrepare(recipients: recipients, options: options);
 
@@ -34,7 +34,7 @@ Future<PcztPackage> unpackTransaction({required List<int> bytes}) =>
     RustLib.instance.api.crateApiPayUnpackTransaction(bytes: bytes);
 
 Future<String> broadcastTransaction(
-        {required int height, required List<int> txBytes,}) =>
+        {required int height, required List<int> txBytes}) =>
     RustLib.instance.api
         .crateApiPayBroadcastTransaction(height: height, txBytes: txBytes);
 

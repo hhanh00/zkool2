@@ -19,6 +19,7 @@ import 'dart:convert';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'io.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'pay.dart';
@@ -160,7 +161,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<int> crateApiNetworkGetCurrentHeight();
 
-  Future<int> crateApiSyncGetDbHeight();
+  Future<SyncHeight> crateApiSyncGetDbHeight();
 
   Future<List<String>> crateApiFrostGetDkgAddresses();
 
@@ -1110,7 +1111,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<int> crateApiSyncGetDbHeight() {
+  Future<SyncHeight> crateApiSyncGetDbHeight() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -1119,7 +1120,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 30, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_u_32,
+          decodeSuccessData: sse_decode_sync_height,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiSyncGetDbHeightConstMeta,
@@ -2783,8 +2784,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 15)
-      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -2800,7 +2801,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       enabled: dco_decode_bool(arr[11]),
       internal: dco_decode_bool(arr[12]),
       height: dco_decode_u_32(arr[13]),
-      balance: dco_decode_u_64(arr[14]),
+      time: dco_decode_u_32(arr[14]),
+      balance: dco_decode_u_64(arr[15]),
     );
   }
 
@@ -3372,6 +3374,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SyncHeight dco_decode_sync_height(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return SyncHeight(
+      pool: dco_decode_u_8(arr[0]),
+      height: dco_decode_u_32(arr[1]),
+      time: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
   SyncProgress dco_decode_sync_progress(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3668,6 +3683,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_enabled = sse_decode_bool(deserializer);
     var var_internal = sse_decode_bool(deserializer);
     var var_height = sse_decode_u_32(deserializer);
+    var var_time = sse_decode_u_32(deserializer);
     var var_balance = sse_decode_u_64(deserializer);
     return Account(
         coin: var_coin,
@@ -3684,6 +3700,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         enabled: var_enabled,
         internal: var_internal,
         height: var_height,
+        time: var_time,
         balance: var_balance);
   }
 
@@ -4384,6 +4401,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SyncHeight sse_decode_sync_height(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pool = sse_decode_u_8(deserializer);
+    var var_height = sse_decode_u_32(deserializer);
+    var var_time = sse_decode_u_32(deserializer);
+    return SyncHeight(pool: var_pool, height: var_height, time: var_time);
+  }
+
+  @protected
   SyncProgress sse_decode_sync_progress(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_height = sse_decode_u_32(deserializer);
@@ -4714,6 +4740,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.enabled, serializer);
     sse_encode_bool(self.internal, serializer);
     sse_encode_u_32(self.height, serializer);
+    sse_encode_u_32(self.time, serializer);
     sse_encode_u_64(self.balance, serializer);
   }
 
@@ -5307,6 +5334,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(9, serializer);
         sse_encode_String(field0, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_sync_height(SyncHeight self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.pool, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_u_32(self.time, serializer);
   }
 
   @protected

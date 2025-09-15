@@ -14,12 +14,12 @@ Future<void> changeDbPassword(
         {required String dbFilepath,
         required String tmpDir,
         required String oldPassword,
-        required String newPassword,}) =>
+        required String newPassword}) =>
     RustLib.instance.api.crateApiDbChangeDbPassword(
         dbFilepath: dbFilepath,
         tmpDir: tmpDir,
         oldPassword: oldPassword,
-        newPassword: newPassword,);
+        newPassword: newPassword);
 
 Future<String?> getProp({required String key}) =>
     RustLib.instance.api.crateApiDbGetProp(key: key);

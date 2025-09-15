@@ -3339,6 +3339,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_enabled = <bool>::sse_decode(deserializer);
         let mut var_internal = <bool>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_balance = <u64>::sse_decode(deserializer);
         return crate::api::account::Account {
             coin: var_coin,
@@ -3355,6 +3356,7 @@ impl SseDecode for crate::api::account::Account {
             enabled: var_enabled,
             internal: var_internal,
             height: var_height,
+            time: var_time,
             balance: var_balance,
         };
     }
@@ -4079,6 +4081,20 @@ impl SseDecode for crate::api::frost::SigningStatus {
     }
 }
 
+impl SseDecode for crate::io::SyncHeight {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_time = <u32>::sse_decode(deserializer);
+        return crate::io::SyncHeight {
+            pool: var_pool,
+            height: var_height,
+            time: var_time,
+        };
+    }
+}
+
 impl SseDecode for crate::api::sync::SyncProgress {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4498,6 +4514,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.enabled.into_into_dart().into_dart(),
             self.internal.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
+            self.time.into_into_dart().into_dart(),
             self.balance.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -4945,6 +4962,23 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::SigningStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::io::SyncHeight {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.pool.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.time.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::io::SyncHeight {}
+impl flutter_rust_bridge::IntoIntoDart<crate::io::SyncHeight> for crate::io::SyncHeight {
+    fn into_into_dart(self) -> crate::io::SyncHeight {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncProgress {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -5164,7 +5198,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::account::TxSpend> for crate::accou
 impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(format!("{self:?}"), serializer);
+        <String>::sse_encode(format!("{:?}", self), serializer);
     }
 }
 
@@ -5253,6 +5287,7 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.enabled, serializer);
         <bool>::sse_encode(self.internal, serializer);
         <u32>::sse_encode(self.height, serializer);
+        <u32>::sse_encode(self.time, serializer);
         <u64>::sse_encode(self.balance, serializer);
     }
 }
@@ -5838,6 +5873,15 @@ impl SseEncode for crate::api::frost::SigningStatus {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseEncode for crate::io::SyncHeight {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.pool, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <u32>::sse_encode(self.time, serializer);
     }
 }
 
