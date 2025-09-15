@@ -80,11 +80,11 @@ mixin _$ObservableHeight on ObservableHeightBase, Store {
   }
 
   @override
-  void set(int h) {
+  void set(int h, int t) {
     final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
         name: 'ObservableHeightBase.set');
     try {
-      return super.set(h);
+      return super.set(h, t);
     } finally {
       _$ObservableHeightBaseActionController.endAction(_$actionInfo);
     }

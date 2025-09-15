@@ -320,8 +320,8 @@ pub async fn plan_transaction(
         to_zec(fee)
     );
 
-    let height = crate::sync::get_db_height(connection, account).await?;
-    let (ts, to) = crate::sync::get_tree_state(network, client, height).await?;
+    let h = crate::sync::get_db_height(connection, account).await?;
+    let (ts, to) = crate::sync::get_tree_state(network, client, h.height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
     let sapling_anchor = es.root(&SaplingHasher::default());
@@ -480,7 +480,7 @@ pub async fn plan_transaction(
                         let (note, merkle_path) = get_sapling_note(
                             connection,
                             *id,
-                            height,
+                            h.height,
                             svk.as_ref().unwrap(),
                             &es,
                             &ers,
@@ -502,7 +502,7 @@ pub async fn plan_transaction(
                         let (note, merkle_path) = get_orchard_note(
                             connection,
                             *id,
-                            height,
+                            h.height,
                             ovk.as_ref().unwrap(),
                             &eo,
                             &ero,

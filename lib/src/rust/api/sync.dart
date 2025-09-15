@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../io.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `transparent_sync`
@@ -14,13 +15,13 @@ Stream<SyncProgress> synchronize(
         required int currentHeight,
         required int actionsPerSync,
         required int transparentLimit,
-        required int checkpointAge,}) =>
+        required int checkpointAge}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
         currentHeight: currentHeight,
         actionsPerSync: actionsPerSync,
         transparentLimit: transparentLimit,
-        checkpointAge: checkpointAge,);
+        checkpointAge: checkpointAge);
 
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 
@@ -30,7 +31,8 @@ Future<void> rewindSync({required int height, required int account}) =>
     RustLib.instance.api
         .crateApiSyncRewindSync(height: height, account: account);
 
-Future<int> getDbHeight() => RustLib.instance.api.crateApiSyncGetDbHeight();
+Future<SyncHeight> getDbHeight() =>
+    RustLib.instance.api.crateApiSyncGetDbHeight();
 
 Future<void> getTxDetails() => RustLib.instance.api.crateApiSyncGetTxDetails();
 

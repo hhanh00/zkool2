@@ -14,6 +14,7 @@ use zcash_primitives::legacy::TransparentAddress;
 use crate::coin::Network;
 
 use crate::db::calculate_balance;
+use crate::io::SyncHeight;
 use crate::sync::{get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync};
 use crate::Client;
 use crate::{
@@ -378,7 +379,7 @@ pub async fn rewind_sync(height: u32, account: u32) -> Result<()> {
 }
 
 #[frb]
-pub async fn get_db_height() -> Result<u32> {
+pub async fn get_db_height() -> Result<SyncHeight> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
     crate::sync::get_db_height(&mut *connection, c.account).await
