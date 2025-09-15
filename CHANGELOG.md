@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.1](https://github.com/hhanh00/zkool2/compare/zkool-v5.1.0...zkool-v5.1.1) (2025-09-15)
+
+
+### Bug Fixes
+
+* windows build ([#496](https://github.com/hhanh00/zkool2/issues/496)) ([59c3f26](https://github.com/hhanh00/zkool2/commit/59c3f26331162af326ae1273d7693661f427b95d))
+
 ## [5.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.5...zkool-v5.1.0) (2025-09-15)
 
 
