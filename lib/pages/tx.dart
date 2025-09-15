@@ -69,7 +69,7 @@ class TxPageState extends State<TxPage> {
           Showcase(
               key: cancelID,
               description: "Cancel, do NOT send",
-              child: IconButton(onPressed: onCancel, icon: Icon(Icons.cancel))),
+              child: IconButton(onPressed: onCancel, icon: Icon(Icons.cancel)),),
           Showcase(
               key: sendID4,
               description: "Confirm, broadcast transaction",
@@ -79,7 +79,7 @@ class TxPageState extends State<TxPage> {
                       ? Icons.send
                       : txPlan.canSign
                           ? Icons.draw
-                          : Icons.save))),
+                          : Icons.save,),),),
         ],
       ),
       body: CustomScrollView(slivers: [
@@ -94,11 +94,11 @@ class TxPageState extends State<TxPage> {
               Showcase(
                   key: txID,
                   description: "Transaction ID",
-                  child: CopyableText("Transaction ID: ${txId!}")),
-          ]),
-        )),
+                  child: CopyableText("Transaction ID: ${txId!}"),),
+          ],),
+        ),),
         showTxPlan(context, txPlan),
-      ]),
+      ],),
     );
   }
 
@@ -200,7 +200,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
             subtitle: Text("Pool: ${poolToString(output.pool)}"),
           );
         }
-      });
+      },);
 }
 
 class MempoolPage extends StatelessWidget {
@@ -222,8 +222,8 @@ class MempoolPage extends StatelessWidget {
                 trailing: Text(tx.$3.toString()),
               );
             },
-            itemCount: mempool.length);
-      }),
+            itemCount: mempool.length,);
+      },),
     );
   }
 
@@ -246,7 +246,7 @@ class MempoolTxViewPage extends StatelessWidget {
           padding: EdgeInsets.all(16),
           child: SingleChildScrollView(child: CopyableText(
             hex.encode(rawTx),
-          ))),
+          ),),),
     );
   }
 }

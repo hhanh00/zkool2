@@ -47,7 +47,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
               IconButton(tooltip: "Load Database", onPressed: onOpenDatabase, icon: Icon(Icons.file_open)),
               IconButton(tooltip: "Save Database", onPressed: onSaveDatabase, icon: Icon(Icons.save)),
               IconButton(onPressed: onChangeName, icon: Icon(Icons.edit)),
-              IconButton(onPressed: onChangePassword, icon: Icon(Icons.password))
+              IconButton(onPressed: onChangePassword, icon: Icon(Icons.password)),
             ],
             if (hasSelection) IconButton(onPressed: onDeleteDatabases, icon: Icon(Icons.delete)),
             IconButton(onPressed: onOK, icon: Icon(Icons.check)),
@@ -62,12 +62,12 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
                   value: dbName.$2,
                   onChanged: (v) {
                     setState(() => dbNames[index] = (dbName.$1, v ?? false));
-                  }),
+                  },),
               title: Text(dbName.$1),
               onTap: () => onSelect(dbName.$1),
             );
           },
-        ));
+        ),);
   }
 
   Iterable<String> get selection => dbNames.where((a) => a.$2).map((a) => a.$1);
@@ -99,8 +99,8 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
               decoration: InputDecoration(labelText: 'Password'),
               obscureText: true,
               controller: password,
-            )
-          ]),
+            ),
+          ],),
           btnCancelOnPress: () {},
           btnOkOnPress: () {},
           onDismissCallback: (type) {
@@ -141,7 +141,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
     if (data == null) return;
     if (!mounted) return;
     final confirmed = await confirmDialog(context,
-        title: "Restore Database", message: "Are you sure you want to restore the database? This file erase the contents of the selected database");
+        title: "Restore Database", message: "Are you sure you want to restore the database? This file erase the contents of the selected database",);
     if (!confirmed) return;
     final db = File(await getFullDatabasePath(databaseName));
     await db.writeAsBytes(data);
@@ -151,7 +151,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
 
   Future<void> onDeleteDatabases() async {
     final confirmed = await confirmDialog(context,
-        title: "Delete Databases", message: "Do you really want to delete the selected databases? This will remove all your data and cannot be undone!");
+        title: "Delete Databases", message: "Do you really want to delete the selected databases? This will remove all your data and cannot be undone!",);
     if (!confirmed) return;
 
     for (var dbName in selection) {
@@ -177,7 +177,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
               decoration: InputDecoration(labelText: 'Name'),
               controller: name,
             ),
-          ]),
+          ],),
           btnCancelOnPress: () {},
           btnOkOnPress: () {},
           onDismissCallback: (type) {
@@ -219,7 +219,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
           dbFilepath: await getFullDatabasePath(databaseName),
           tmpDir: (await getTemporaryDirectory()).path,
           oldPassword: oldPassword,
-          newPassword: newPassword);
+          newPassword: newPassword,);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, "Failed to change database password: $e");

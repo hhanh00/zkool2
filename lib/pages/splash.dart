@@ -29,7 +29,7 @@ class SplashPageState extends State<SplashPage> {
                   snapshot.error.toString(),
                   style: TextStyle(color: Colors.red),
                 ),
-              ));
+              ),);
             }
             if (snapshot.hasData) {
               if (!appStore.disclaimerAccepted) {
@@ -59,7 +59,7 @@ class SplashPageState extends State<SplashPage> {
           }
 
           return Material(child: body());
-        });
+        },);
   }
 }
 
