@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.5...zkool-v5.1.0) (2025-09-15)
+
+
+### Features
+
+* show accounts that were sync more than 30 mins ago in red ([#495](https://github.com/hhanh00/zkool2/issues/495)) ([4b1f927](https://github.com/hhanh00/zkool2/commit/4b1f9278eba143fe2c76d581f9bc6c98785a183b))
+
+
+### Bug Fixes
+
+* change password form has "repeat password" field ([#492](https://github.com/hhanh00/zkool2/issues/492)) ([38fad71](https://github.com/hhanh00/zkool2/commit/38fad71e986a61abf738c2181e0f5d9d8d0c14cc))
+
 ## [5.0.5](https://github.com/hhanh00/zkool2/compare/zkool-v5.0.4...zkool-v5.0.5) (2025-09-13)
 
 
