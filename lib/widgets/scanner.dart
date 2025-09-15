@@ -46,7 +46,7 @@ class _ScannerPageState extends State<ScannerPage> {
 }
 
 Future<String?> showScanner(BuildContext context,
-    {required String? Function(String?) validator}) async {
+    {required String? Function(String?) validator,}) async {
   return await GoRouter.of(context).push(
     '/scanner',
     extra: validator,
@@ -72,7 +72,7 @@ class QRPage extends StatelessWidget {
             errorCorrectionLevel: QrErrorCorrectLevel.L,
             gapless: false,
             backgroundColor: Colors.white,
-            padding: const EdgeInsets.all(16)), // Add your QR code widget here
+            padding: const EdgeInsets.all(16),), // Add your QR code widget here
       ),
     );
   }

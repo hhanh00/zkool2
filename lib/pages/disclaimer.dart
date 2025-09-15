@@ -48,7 +48,7 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
                     Gap(8),
                     Text(
                         "Cryptocurrencies, including Zcash, are subject to high market volatility. By using this wallet, you acknowledge and accept the risks associated with holding, transacting, or storing Zcash. We are not responsible for any loss of funds due to user error, software bugs, third-party attacks, or network-related issues.",
-                        style: t.bodyMedium),
+                        style: t.bodyMedium,),
                     Gap(16),
                     Text("No Liability", style: t.headlineSmall),
                     Gap(8),
@@ -68,7 +68,7 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
                         name: "agree",
                         title: Text("I Agree"),
                         initialValue: agree,
-                        onChanged: (v) => setState(() => agree = v!)),
+                        onChanged: (v) => setState(() => agree = v!),),
                     Gap(16),
                     ElevatedButton(
                       onPressed: agree
@@ -79,7 +79,7 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
                     Gap(16),
                   ],
                 ),
-              ))),
+              ),),),
     );
   }
 

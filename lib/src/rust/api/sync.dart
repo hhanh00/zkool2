@@ -14,13 +14,13 @@ Stream<SyncProgress> synchronize(
         required int currentHeight,
         required int actionsPerSync,
         required int transparentLimit,
-        required int checkpointAge}) =>
+        required int checkpointAge,}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
         currentHeight: currentHeight,
         actionsPerSync: actionsPerSync,
         transparentLimit: transparentLimit,
-        checkpointAge: checkpointAge);
+        checkpointAge: checkpointAge,);
 
 Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
 

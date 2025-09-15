@@ -78,7 +78,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
           Showcase(
               key: logID,
               description: "Open the App Log",
-              child: IconButton(tooltip: "View Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description))),
+              child: IconButton(tooltip: "View Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),),
           IconButton(tooltip: "Lock", onPressed: lockApp, icon: Icon(Icons.lock)),
           IconButton(tooltip: "Show Tutorials again", onPressed: () => resetTutorial(context), icon: Icon(Icons.school)),
           IconButton(tooltip: "Database Manager", onPressed: onDatabaseManager, icon: Icon(Icons.folder)),
@@ -99,7 +99,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                       title: Text("Light Node"),
                       initialValue: isLightNode,
                       onChanged: onChangedIsLightNode,
-                    )),
+                    ),),
                 Showcase(
                     key: lwdID,
                     description: "Node server to connect to",
@@ -108,7 +108,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                       decoration: InputDecoration(labelText: "${isLightNode ? 'Light' : 'Full'} Node Server"),
                       initialValue: lwd,
                       onChanged: onChangedLWD,
-                    )),
+                    ),),
                 if (isLightNode)
                   Showcase(
                       key: torID,
@@ -118,7 +118,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                         title: Text("Use TOR"),
                         initialValue: useTor,
                         onChanged: onChangedUseTOR,
-                      )),
+                      ),),
                 Showcase(
                     key: actionsID,
                     description: "Number actions per synchronization chunk",
@@ -130,7 +130,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                       validator: FormBuilderValidators.integer(),
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    )),
+                    ),),
                 Gap(16),
                 Row(
                   children: [
@@ -146,23 +146,23 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                               validator: FormBuilderValidators.integer(),
                               keyboardType: TextInputType.number,
                               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            ))),
+                            ),),),
                     Showcase(
                         key: cancelID,
                         description: "This will cancel the current sync and disable AutoSync",
-                        child: IconButton(tooltip: "Cancel Sync", onPressed: onCancelSync, icon: Icon(Icons.cancel))),
+                        child: IconButton(tooltip: "Cancel Sync", onPressed: onCancelSync, icon: Icon(Icons.cancel)),),
                   ],
                 ),
                 Gap(8),
                 Showcase(
                     key: pinLockID,
                     description: "Ask for device pin when app opens",
-                    child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: needPin, onChanged: onPinLockChanged)),
+                    child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: needPin, onChanged: onPinLockChanged),),
                 Gap(8),
                 Showcase(
                     key: offlineID,
                     description: "Toggle offline mode",
-                    child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: offline, onChanged: onOfflineChanged)),
+                    child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: offline, onChanged: onOfflineChanged),),
                 Gap(8),
                 Showcase(
                     key: blockExplorerID,
@@ -174,11 +174,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
                       ),
                       initialValue: blockExplorer,
                       onChanged: onChangedBlockExplorer,
-                    )),
+                    ),),
                 Gap(16),
                 CopyableText(appStore.dbFilepath, style: t.bodySmall),
                 Gap(8),
-                if (appStore.versionString != null) Text(appStore.versionString!)
+                if (appStore.versionString != null) Text(appStore.versionString!),
               ],
             ),
           ),
@@ -294,7 +294,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
 
   void onDatabaseManager() async {
     final confirmed = await confirmDialog(context,
-        title: "Database Manager", message: "The Database Manager will open when you restart the app. Do you want to schedule it now?");
+        title: "Database Manager", message: "The Database Manager will open when you restart the app. Do you want to schedule it now?",);
     if (confirmed) {
       final prefs = SharedPreferencesAsync();
       await prefs.setBool("recovery", true);
@@ -349,7 +349,7 @@ Future<(String, String)?> showChangeDbPassword(BuildContext context, {required S
                   },
                 ),
               ],
-            )),
+            ),),
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
         btnOk: AnimatedButton(

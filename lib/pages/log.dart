@@ -22,6 +22,6 @@ class LogviewPageState extends State<LogviewPage> {
         ),
         body: SingleChildScrollView(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: SelectableText(fullLog))),
       );
-    });
+    },);
   }
 }

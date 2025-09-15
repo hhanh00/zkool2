@@ -26,7 +26,7 @@ class FrostPage1 extends StatefulWidget {
 }
 
 Widget buildFrostPage(BuildContext context,
-    {required int index, required bool finished, required Widget child}) {
+    {required int index, required bool finished, required Widget child,}) {
   return Scaffold(
       appBar:
           AppBar(title: const Text("Frost Multi Party Signature"), actions: [
@@ -35,17 +35,17 @@ Widget buildFrostPage(BuildContext context,
                 onPressed: () {
                   GoRouter.of(context).go("/");
                 },
-                icon: Icon(Icons.close))
+                icon: Icon(Icons.close),)
             : IconButton(
                 onPressed: () => onCancel(context),
-                icon: const Icon(Icons.cancel))
-      ]),
+                icon: const Icon(Icons.cancel),),
+      ],),
       body: CustomScrollView(slivers: [
         PinnedHeaderSliver(child: FrostSteps(currentIndex: index)),
         SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: 8),
-            sliver: SliverToBoxAdapter(child: child)),
-      ]));
+            sliver: SliverToBoxAdapter(child: child),),
+      ],),);
 }
 
 class FrostPage1State extends State<FrostPage1> {
@@ -103,7 +103,7 @@ class FrostPage1State extends State<FrostPage1> {
                               value: i + 1,
                               child: Text("${i + 1}"),
                             ),
-                          )))),
+                          ),),),),
               Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Showcase(
@@ -114,21 +114,21 @@ class FrostPage1State extends State<FrostPage1> {
                         name: "account",
                         decoration: const InputDecoration(
                             labelText:
-                                "Funding Account for the FROST messages"),
+                                "Funding Account for the FROST messages",),
                         items: accounts
                             .map((a) => DropdownMenuItem(
                                   value: a.id,
                                   child: Text(a.name),
-                                ))
+                                ),)
                             .toList(),
                         validator: FormBuilderValidators.required(),
-                      ))),
+                      ),),),
               Gap(16),
               ElevatedButton.icon(
                   onPressed: onNext,
                   label: Text("Next"),
-                  icon: Icon(Icons.arrow_forward))
-            ])));
+                  icon: Icon(Icons.arrow_forward),),
+            ],),),);
   }
 
   void onNext() async {
@@ -139,7 +139,7 @@ class FrostPage1State extends State<FrostPage1> {
       await initSign(
           pczt: widget.pczt,
           coordinator: coordinator,
-          fundingAccount: fundingAccount);
+          fundingAccount: fundingAccount,);
       if (!mounted) return;
       await GoRouter.of(context).pushReplacement("/frost2");
     }
@@ -180,7 +180,7 @@ class FrostPage2State extends State<FrostPage2> {
     return buildFrostPage(context,
         index: currentIndex,
         finished: finished,
-        child: Column(children: [Text(message, style: t.bodyLarge)]));
+        child: Column(children: [Text(message, style: t.bodyLarge)]),);
   }
 
   int? currentHeight;
@@ -194,7 +194,7 @@ class FrostPage2State extends State<FrostPage2> {
         .map((e) => e.id)
         .toList();
     await appStore.startSynchronize(
-        accounts, int.parse(appStore.actionsPerSync));
+        accounts, int.parse(appStore.actionsPerSync),);
 
     final status = doSign();
     status.listen((s) {
@@ -256,7 +256,7 @@ class FrostPage2State extends State<FrostPage2> {
       final exc = e as AnyhowException;
       if (!context.mounted) return;
       await showException(context, exc.message);
-    });
+    },);
   }
 }
 
@@ -297,7 +297,7 @@ class FrostSteps extends StatelessWidget {
 void onCancel(BuildContext context) async {
   final confirmed = await confirmDialog(context,
       title: "Cancel Multi Signature",
-      message: "Are you sure you want to cancel the multi signature process?");
+      message: "Are you sure you want to cancel the multi signature process?",);
   if (!confirmed) return;
   await resetSign();
   if (!context.mounted) return;

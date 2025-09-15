@@ -56,49 +56,49 @@ class TxViewState extends State<TxView> {
           subtitle: CopyableText(txIdToString(txd.txid)),
           trailing: IconButton(onPressed: () => openBlockExplorer(txd.txid), icon: Icon(Icons.open_in_browser)),),
       ListTile(
-          title: Text("Block Height"), subtitle: CopyableText(txd.height.toString())),
+          title: Text("Block Height"), subtitle: CopyableText(txd.height.toString()),),
       ListTile(
-          title: Text("Timestamp"), subtitle: CopyableText(exactTimeToString(txd.time))),
+          title: Text("Timestamp"), subtitle: CopyableText(exactTimeToString(txd.time)),),
       ListTile(
           title: Text("Amount Spent"),
-          subtitle: zatToText(amountSpent, selectable: true)),
+          subtitle: zatToText(amountSpent, selectable: true),),
       ListTile(
           title: Text("Amount Received"),
-          subtitle: zatToText(amountReceived, selectable: true)),
+          subtitle: zatToText(amountReceived, selectable: true),),
       ListTile(
           title: Text("Amount Transacted"),
-          subtitle: zatToText(amountReceived - amountSpent, selectable: true)),
+          subtitle: zatToText(amountReceived - amountSpent, selectable: true),),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand((n) => [
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(
-                title: Text("Value"), subtitle: zatToText(n.value, selectable: true)),
+                title: Text("Value"), subtitle: zatToText(n.value, selectable: true),),
             Divider(),
-          ]),
+          ],),
       if (txd.notes.isNotEmpty) Text("Received Notes", style: t.titleSmall),
       ...txd.notes.expand((n) => [
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(
-                title: Text("Value"), subtitle: zatToText(n.value, selectable: true)),
-            Divider()
-          ]),
+                title: Text("Value"), subtitle: zatToText(n.value, selectable: true),),
+            Divider(),
+          ],),
       if (txd.outputs.isNotEmpty) Text("Outputs", style: t.titleSmall),
       ...txd.outputs.expand((n) => [
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
             ListTile(title: Text("Address"), subtitle: CopyableText(n.address)),
             ListTile(
-                title: Text("Value"), subtitle: zatToText(n.value, selectable: true)),
-            Divider()
-          ]),
+                title: Text("Value"), subtitle: zatToText(n.value, selectable: true),),
+            Divider(),
+          ],),
       if (txd.memos.isNotEmpty) Text("Memos", style: t.titleSmall),
       ...txd.memos.expand((m) => [
             ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(m.pool))),
             ListTile(
                 title: Text("Memo"),
-                subtitle: CopyableText(m.memo ?? "<Binary Content>")),
-            Divider()
-          ]),
+                subtitle: CopyableText(m.memo ?? "<Binary Content>"),),
+            Divider(),
+          ],),
     ];
   }
 

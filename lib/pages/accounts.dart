@@ -110,7 +110,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                             builder: (context) => ElevatedButton(
                                 onPressed: () => Future(() => refreshHeight(true)),
                                 onLongPress: () => Future(() => refreshHeight(false)),
-                                child: Text("Height: ${appStore.currentHeight}")))),
+                                child: Text("Height: ${appStore.currentHeight}"),),),),
                     const Gap(8),
                     if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
                     const Gap(8),
@@ -127,10 +127,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                         trailing: Observer(builder: (context) {
                           final h = appStore.heights[account.id];
                           return h!.build(context);
-                        }),
+                        },),
                       ),
                       onTap: () => onOpen(context, account),
-                    ));
+                    ),);
               },
               title: "Account List",
               createBuilder: (context) => GoRouter.of(context).push("/account/new"),
@@ -151,7 +151,7 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                 Showcase(
                     key: syncID,
                     description: "Synchronize all enabled accounts or the accounts currently selected",
-                    child: IconButton(onPressed: onSync, icon: Icon(Icons.sync))),
+                    child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),),
                 PopupMenuButton<String>(
                   onSelected: (String result) {
                     switch (result) {
@@ -163,11 +163,11 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                     const PopupMenuItem<String>(
                       value: "mempool",
-                      child: Text("Mempool")
+                      child: Text("Mempool"),
                     ),
                     const PopupMenuItem<String>(
                       value: "folder",
-                      child: Text("Folders")
+                      child: Text("Folders"),
                     ),
                     PopupMenuItem<String>(
                       value: 'hide',
@@ -175,8 +175,8 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                     ),
                   ],
                 ),
-              ]));
-    });
+              ],),);
+    },);
   }
 
   onMempool() => GoRouter.of(context).push('/mempool');

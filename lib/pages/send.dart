@@ -83,10 +83,10 @@ class SendPageState extends State<SendPage> {
                     editingIndex = null;
                     recipients.remove(r);
                   });
-                }),
+                },),
             onTap: () => onEdit(i),
             selectedTileColor: cs.inversePrimary,
-            selected: i == editingIndex))
+            selected: i == editingIndex,),)
         .toList();
 
     supportsMemo = address.isNotEmpty && validAddress(address) == null && !isValidTransparentAddress(address: address);
@@ -97,16 +97,16 @@ class SendPageState extends State<SendPage> {
             Showcase(
                 key: openTxID,
                 description: "Load an unsigned transaction",
-                child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open))),
+                child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open)),),
             Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: reset, icon: Icon(Icons.clear))),
             Showcase(
                 key: addTxID,
                 description: "Queue this recipient to create a multi send",
-                child: IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add))),
+                child: IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add)),),
             Showcase(
                 key: sendID2,
                 description: "Send transaction (including queued recipients)",
-                child: IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send))),
+                child: IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send)),),
           ],
         ),
         body: SingleChildScrollView(
@@ -123,12 +123,12 @@ class SendPageState extends State<SendPage> {
                         if (addresses?.saddr != null || addresses?.oaddr != null) ...[
                           IconButton(onPressed: () => onShield(true), tooltip: "Shield One", icon: Icon(Icons.shield_outlined)),
                           IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
-                        ]
-                      ]),
+                        ],
+                      ],),
                       if (appStore.notes.any((n) => n.locked))
                         Container(
                           color: cs.secondaryContainer,
-                          child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer))),
+                          child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer)),),
                       Row(children: [
                         Expanded(
                             child: Showcase(
@@ -148,12 +148,12 @@ class SendPageState extends State<SendPage> {
                                     onEditingComplete: () {
                                       FocusScope.of(context).nextFocus();
                                     },
-                                )))),
+                                ),),),),
                         Showcase(
                             key: scanID,
                             description: "Open the QR Scanner",
-                            child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner))),
-                      ]),
+                            child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),),
+                      ],),
                       InputAmount(name: "amount", onMax: onMax),
                       Visibility(
                           visible: supportsMemo,
@@ -162,8 +162,8 @@ class SendPageState extends State<SendPage> {
                             name: "memo",
                             decoration: const InputDecoration(labelText: "Memo"),
                             maxLines: 8,
-                          )),
-                    ])))));
+                          ),),
+                    ],),),),),);
   }
 
   void onLoad() async {
@@ -195,7 +195,7 @@ class SendPageState extends State<SendPage> {
     if (!smartTransparent) {
       final confirmed = await confirmDialog(context,
           title: 'Shield All Privacy Warning',
-          message: 'Shielding all your transparent funds may result in a transaction that links multiple t-addresses.\nPrefer using "Shield One".');
+          message: 'Shielding all your transparent funds may result in a transaction that links multiple t-addresses.\nPrefer using "Shield One".',);
       if (!confirmed) return;
     }
     try {
@@ -203,12 +203,12 @@ class SendPageState extends State<SendPage> {
           srcPools: 1, // Only the transparent pool (mask)
           recipientPaysFee: true,
           smartTransparent: smartTransparent,
-          dustChangePolicy: DustChangePolicy.sendToRecipient);
+          dustChangePolicy: DustChangePolicy.sendToRecipient,);
       final pczt = await prepare(
         recipients: [
           Recipient(
               address: addresses?.oaddr ?? addresses?.saddr ?? "", // Shield to Orchard or Sapling address
-              amount: pbalance?.field0[0] ?? BigInt.zero)
+              amount: pbalance?.field0[0] ?? BigInt.zero,),
         ],
         options: options,
       );
@@ -225,7 +225,7 @@ class SendPageState extends State<SendPage> {
           srcPools: 6, // Only the sapling and orchard pool (mask)
           recipientPaysFee: true,
           dustChangePolicy: DustChangePolicy.sendToRecipient,
-          smartTransparent: false);
+          smartTransparent: false,);
       final pczt = await prepare(
         recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))],
         options: options,
@@ -392,7 +392,7 @@ class Send2PageState extends State<Send2Page> {
           Showcase(
               key: sendID3,
               description: "Send (Summary and Confirmation)",
-              child: IconButton(tooltip: "Send (Compute Tx)", onPressed: onSend, icon: Icon(Icons.send))),
+              child: IconButton(tooltip: "Send (Compute Tx)", onPressed: onSend, icon: Icon(Icons.send)),),
         ],
       ),
       body: SingleChildScrollView(
@@ -413,7 +413,7 @@ class Send2PageState extends State<Send2Page> {
                               initialValue: hasTex ? 1 : appStore.pools,
                               builder: (field) =>
                                   PoolSelect(enabled: appStore.pools, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
-                            )))),
+                            ),),),),
                 Showcase(
                     key: feeSourceID,
                     description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
@@ -422,7 +422,7 @@ class Send2PageState extends State<Send2Page> {
                       title: Text("Recipient Pays Fee"),
                       initialValue: false,
                       onChanged: (v) => setState(() => recipientPaysFee = v!),
-                    )),
+                    ),),
                 Showcase(
                     key: dustChangePolicyID,
                     description: "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
@@ -431,7 +431,7 @@ class Send2PageState extends State<Send2Page> {
                       title: Text("Discard Dust Change"),
                       initialValue: true,
                       onChanged: (v) => setState(() => discardDustChange = v!),
-                    )),
+                    ),),
                 Gap(16),
                 Divider(),
                 Gap(8),
@@ -442,10 +442,10 @@ class Send2PageState extends State<Send2Page> {
                         tooltip: "Show Payment URI",
                         icon: Icon(Icons.qr_code),
                         onPressed: onUriQr,
-                      )),
+                      ),),
                   child: CopyableText(puri),
                 ),
-              ])),
+              ],),),
         ),
       ),
     );
@@ -464,7 +464,7 @@ class Send2PageState extends State<Send2Page> {
           srcPools: srcPools,
           recipientPaysFee: recipientPaysFee,
           dustChangePolicy: discardDustChange ? DustChangePolicy.discard : DustChangePolicy.sendToRecipient,
-          smartTransparent: false);
+          smartTransparent: false,);
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,
@@ -493,7 +493,7 @@ class Send2PageState extends State<Send2Page> {
                       version: QrVersions.auto,
                       backgroundColor: Colors.white,
                       size: 200.0,
-                    ))),
+                    ),),),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -501,6 +501,6 @@ class Send2PageState extends State<Send2Page> {
               ),
             ],
           );
-        });
+        },);
   }
 }
