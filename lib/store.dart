@@ -53,7 +53,7 @@ abstract class ObservableHeightBase with Store {
 
   Widget build(BuildContext context) {
     return ProgressWidget(
-        height: this, width: 80, child: Text(height.toString()));
+        height: this, width: 80, child: Text(height.toString()),);
   }
 
   Widget buildHero(BuildContext context) {
@@ -65,8 +65,8 @@ abstract class ObservableHeightBase with Store {
           TextSpan(text: "$height", style: t.bodyLarge),
           if (currentHeight - height > 0)
             TextSpan(
-                text: " tip-${currentHeight - height}", style: t.labelSmall)
-        ])));
+                text: " tip-${currentHeight - height}", style: t.labelSmall,),
+        ],),),);
   }
 }
 
@@ -75,7 +75,7 @@ class ProgressWidget extends StatelessWidget {
   final double? width;
   final Widget child;
   const ProgressWidget(
-      {super.key, required this.height, this.width, required this.child});
+      {super.key, required this.height, this.width, required this.child,});
 
   @override
   Widget build(BuildContext context) {
@@ -89,9 +89,9 @@ class ProgressWidget extends StatelessWidget {
           if (height.range != 0)
             SizedBox.expand(
                 child: LinearProgressIndicator(
-                    color: t.colorScheme.primary.withAlpha(128), value: p)),
-          Center(child: child)
-        ]));
+                    color: t.colorScheme.primary.withAlpha(128), value: p,),),
+          Center(child: child),
+        ],),);
   }
 }
 
@@ -168,7 +168,7 @@ abstract class AppStoreBase with Store {
             margin: EdgeInsets.all(8),
             borderRadius: BorderRadius.circular(8),
             animationDuration: Durations.long1,
-            autoCloseDuration: Duration(seconds: 3));
+            autoCloseDuration: Duration(seconds: 3),);
       }
     });
   }
@@ -277,7 +277,7 @@ abstract class AppStoreBase with Store {
           actionsPerSync: actionsPerSync,
           transparentLimit:
               100, // scan the last 100 known transparent addresses
-          checkpointAge: 200); // trim checkpoints older than 200 blocks
+          checkpointAge: 200,); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
       syncProgressSubscription = progress.listen((p) {
         retryCount = 0;
@@ -305,7 +305,7 @@ abstract class AppStoreBase with Store {
           logger.i("Synchronization Completed");
           completer.complete();
         });
-      });
+      },);
     } on AnyhowException catch (e) {
       retry(accounts, e);
     }
@@ -364,7 +364,7 @@ abstract class AppStoreBase with Store {
     }
     if (accountsToSync.isNotEmpty) {
       await startSynchronize(
-          accountsToSync, int.parse(appStore.actionsPerSync));
+          accountsToSync, int.parse(appStore.actionsPerSync),);
     }
   }
 
@@ -411,7 +411,7 @@ void runMempoolListener() async {
           onDone: c.complete,
           onError: (e) {
             c.complete();
-          });
+          },);
       await c.future; // wait for the stream to complete
       await Future.delayed(Duration(seconds: 5));
     } catch (_) {}

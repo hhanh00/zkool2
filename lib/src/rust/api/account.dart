@@ -38,9 +38,9 @@ Future<void> deleteAccount({required int account}) =>
     RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
 
 Future<void> reorderAccount(
-        {required int oldPosition, required int newPosition}) =>
+        {required int oldPosition, required int newPosition,}) =>
     RustLib.instance.api.crateApiAccountReorderAccount(
-        oldPosition: oldPosition, newPosition: newPosition);
+        oldPosition: oldPosition, newPosition: newPosition,);
 
 Future<void> setAccount({required int account}) =>
     RustLib.instance.api.crateApiAccountSetAccount(account: account);
@@ -61,9 +61,9 @@ Future<void> removeAccount({required int accountId}) =>
     RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId);
 
 Future<void> moveAccount(
-        {required int oldPosition, required int newPosition}) =>
+        {required int oldPosition, required int newPosition,}) =>
     RustLib.instance.api.crateApiAccountMoveAccount(
-        oldPosition: oldPosition, newPosition: newPosition);
+        oldPosition: oldPosition, newPosition: newPosition,);
 
 Future<List<Tx>> listTxHistory() =>
     RustLib.instance.api.crateApiAccountListTxHistory();
@@ -88,15 +88,15 @@ Future<List<TAddressTxCount>> fetchTransparentAddressTxCount() =>
 
 Future<int> transparentSweep({required int endHeight, required int gapLimit}) =>
     RustLib.instance.api.crateApiAccountTransparentSweep(
-        endHeight: endHeight, gapLimit: gapLimit);
+        endHeight: endHeight, gapLimit: gapLimit,);
 
 Future<Uint8List> exportAccount(
-        {required int id, required String passphrase}) =>
+        {required int id, required String passphrase,}) =>
     RustLib.instance.api
         .crateApiAccountExportAccount(id: id, passphrase: passphrase);
 
 Future<void> importAccount(
-        {required String passphrase, required List<int> data}) =>
+        {required String passphrase, required List<int> data,}) =>
     RustLib.instance.api
         .crateApiAccountImportAccount(passphrase: passphrase, data: data);
 

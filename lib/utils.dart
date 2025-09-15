@@ -46,12 +46,12 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
           SelectableText.rich(TextSpan(children: [
             TextSpan(text: majorUnits, style: style),
             TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-          ]))
-        ])
+          ],),),
+        ],)
       : Text.rich(TextSpan(children: [
           TextSpan(text: majorUnits, style: style),
           TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-        ]));
+        ],),);
 }
 
 BigInt stringToZat(String s) {
@@ -127,7 +127,7 @@ Future<void> showSeed(BuildContext context, String message) async {
         message,
         textAlign: TextAlign.center,
       ),
-    ]),
+    ],),
     desc: message,
     btnOkOnPress: () {},
     autoDismiss: true,
@@ -180,8 +180,8 @@ Future<String?> inputPassword(BuildContext context, {required String title, Stri
             decoration: InputDecoration(labelText: 'Password', hintText: message),
             obscureText: true,
             controller: password,
-          )
-        ]),
+          ),
+        ],),
         btnCancelText: btnCancelText,
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
@@ -219,8 +219,8 @@ Future<String?> inputText(BuildContext context, {required String title}) async {
           TextField(
             autofocus: true,
             controller: controller,
-          )
-        ]),
+          ),
+        ],),
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
         onDismissCallback: (type) {

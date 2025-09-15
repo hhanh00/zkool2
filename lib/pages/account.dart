@@ -74,15 +74,15 @@ class AccountViewPageState extends State<AccountViewPage> {
                 Showcase(
                     key: sync1ID,
                     description: "Synchronize only this account",
-                    child: IconButton(tooltip: "Sync this account", onPressed: onSync, icon: Icon(Icons.sync))),
+                    child: IconButton(tooltip: "Sync this account", onPressed: onSync, icon: Icon(Icons.sync)),),
                 Showcase(
                     key: receiveID,
                     description: "Show the account receiving addresses",
-                    child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download))),
+                    child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),),
                 Showcase(
                     key: sendID,
                     description: "Send funds to one or many addresses",
-                    child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send))),
+                    child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),),
               ],
               bottom: TabBar(
                 tabs: [
@@ -109,7 +109,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                               Observer(builder: (context) {
                                 final height = appStore.heights[account!.id]!;
                                 return height.buildHero(context);
-                              }),
+                              },),
                               Gap(16),
                               Text("Balance"),
                               Gap(8),
@@ -126,23 +126,23 @@ class AccountViewPageState extends State<AccountViewPage> {
                                         style: t.bodyLarge,
                                       )
                                     : SizedBox.shrink();
-                              }),
+                              },),
                               Gap(8),
                               if (b != null) ...[
                                 Showcase(
                                     key: balID,
                                     description: "Balance across all pools",
-                                    child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!)),
-                                Gap(8)
+                                    child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),),
+                                Gap(8),
                               ],
-                            ]))),
+                            ],),),),
                     ...showTxHistory(appStore.transactions),
-                  ]),
+                  ],),
                   showMemos(context, appStore.memos),
                   showNotes(appStore.notes),
-                ]);
-              }),
-            )));
+                ],);
+              },),
+            ),),);
   }
 
   void onSync() async {
@@ -204,7 +204,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     final folder = accounts.first.folder;
     final folderOptions = [DropdownMenuItem(value: 0, child: Text("No Folder"))] +
       appStore.folders.map((f) =>
-        DropdownMenuItem(value: f.id, child: Text(f.name))).toList();
+        DropdownMenuItem(value: f.id, child: Text(f.name)),).toList();
 
     return Scaffold(
         appBar: AppBar(title: Text('Account Edit'), actions: [
@@ -215,22 +215,22 @@ class AccountEditPageState extends State<AccountEditPage> {
                 child: IconButton(
                     tooltip: "Show Viewing Keys",
                     onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
-                    icon: Icon(Icons.visibility))),
+                    icon: Icon(Icons.visibility),),),
           if (account != null) ...[
             Showcase(
                 key: exportID,
                 description: "Export an encrypted file of this account",
-                child: IconButton(tooltip: "Export Account", onPressed: onExport, icon: Icon(Icons.save))),
+                child: IconButton(tooltip: "Export Account", onPressed: onExport, icon: Icon(Icons.save)),),
             Showcase(
                 key: rewindID,
                 description: "Rewind back a few blocks",
-                child: IconButton(tooltip: "Rewind to previous checkpoint", onPressed: onRewind, icon: Icon(Icons.fast_rewind)))
+                child: IconButton(tooltip: "Rewind to previous checkpoint", onPressed: onRewind, icon: Icon(Icons.fast_rewind)),),
           ],
           Showcase(
               key: resetID,
               description: "Clear and reset account to birth height",
-              child: IconButton(tooltip: "Clear Sync Data", onPressed: onReset, icon: Icon(Icons.delete_sweep)))
-        ]),
+              child: IconButton(tooltip: "Clear Sync Data", onPressed: onReset, icon: Icon(Icons.delete_sweep)),),
+        ],),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FormBuilder(
@@ -249,8 +249,8 @@ class AccountEditPageState extends State<AccountEditPage> {
                                 initialValue: account?.name ?? "(Multiple)",
                                 readOnly: account == null,
                                 onChanged: (account != null) ? onEditName : null,
-                              ))),
-                      if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon()))
+                              ),),),
+                      if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon())),
                     ],
                   ),
                   Showcase(
@@ -264,7 +264,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                         readOnly: account == null,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         onChanged: (account != null) ? onEditBirth : null,
-                      )),
+                      ),),
                   Showcase(
                       key: enableID,
                       description: "Enable or disable. Only enabled accounts participate in the global sync",
@@ -274,7 +274,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                         initialValue: accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
                         tristate: account == null,
                         onChanged: onEditEnabled,
-                      )),
+                      ),),
                   Showcase(
                       key: hideID2,
                       description: "Hide this account from the account list",
@@ -284,7 +284,7 @@ class AccountEditPageState extends State<AccountEditPage> {
                         initialValue: accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
                         tristate: account == null,
                         onChanged: onEditHidden,
-                      )),
+                      ),),
                   Showcase(
                       key: folderID,
                       description: "Assign Account to Folder",
@@ -293,10 +293,10 @@ class AccountEditPageState extends State<AccountEditPage> {
                         initialValue: accounts.every((a) => a.folder.id == folder.id) ? folder.id : null,
                         items: folderOptions,
                         onChanged: onEditFolder,
-                      ))
+                      ),),
                 ],
-              )),
-        ));
+              ),),
+        ),);
   }
 
   void onEditName(String? name) async {
@@ -308,7 +308,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         id: accounts[0].id,
         name: name,
         folder: accounts[0].folder.id,
-      ));
+      ),);
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -331,7 +331,7 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (changed) {
       accounts[0] = accounts[0].copyWith(icon: bytes?.isNotEmpty == true ? bytes : null);
       await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes,
-      folder: accounts[0].folder.id,));
+      folder: accounts[0].folder.id,),);
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -427,7 +427,7 @@ extension AccountExtension on Account {
               : icon != null
                   ? ClipOval(child: Image.memory(icon!))
                   : Text(i, style: TextStyle(color: t.onPrimaryContainer)),
-        ));
+        ),);
   }
 }
 
@@ -448,7 +448,7 @@ class BalanceWidget extends StatelessWidget {
             prefix: "T: ",
             selectable: true,
             onTap: () => onPoolSelected?.call(0),
-          )),
+          ),),
       const Gap(8),
       maybeShowcase(showcase,
           key: sBalID,
@@ -458,7 +458,7 @@ class BalanceWidget extends StatelessWidget {
             prefix: "S: ",
             selectable: true,
             onTap: () => onPoolSelected?.call(1),
-          )),
+          ),),
       const Gap(8),
       maybeShowcase(showcase,
           key: oBalID,
@@ -468,8 +468,8 @@ class BalanceWidget extends StatelessWidget {
             prefix: "O: ",
             selectable: true,
             onTap: () => onPoolSelected?.call(2),
-          )),
-    ]);
+          ),),
+    ],);
   }
 }
 
@@ -478,7 +478,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
     SliverToBoxAdapter(
         child: Column(
       children: [Text("Transaction History (${transactions.length} txs)"), const Gap(8)],
-    )),
+    ),),
     SliverFixedExtentList.builder(
       itemCount: transactions.length,
       itemBuilder: (context, index) {
@@ -544,7 +544,7 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
       inputDecoration: InputDecoration(
         labelText: "Search Memos",
         fillColor: Colors.white,
-      ));
+      ),);
 }
 
 Widget showNotes(List<TxNote> notes) {
@@ -592,7 +592,7 @@ class MemoWidget extends StatelessWidget {
                   Align(alignment: Alignment.centerRight, child: Text(timeToString(memo.time), style: t.textTheme.labelMedium)),
                   Gap(8),
                   CopyableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
-                ]))));
+                ],),),),);
   }
 }
 
@@ -631,7 +631,7 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-            title: Text('Viewing Keys'), actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))]),
+            title: Text('Viewing Keys'), actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))],),
         body: SingleChildScrollView(
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -652,7 +652,7 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
                   if (fingerprint != null) CopyableText(fingerprint!),
                   Gap(16),
                   Text("If the account does not include a pool, its receiver will be absent"),
-                ]))));
+                ],),),),);
   }
 
   onPoolChanged(int? v) async {
