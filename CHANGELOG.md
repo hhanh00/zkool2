@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v5.1.1...zkool-v5.2.0) (2025-09-15)
+
+
+### Features
+
+* show block timestamp of account synced height ([#498](https://github.com/hhanh00/zkool2/issues/498)) ([f768251](https://github.com/hhanh00/zkool2/commit/f7682517adf055dc34f6265662b417e33c12a9f4))
+
 ## [5.1.1](https://github.com/hhanh00/zkool2/compare/zkool-v5.1.0...zkool-v5.1.1) (2025-09-15)
 
 
