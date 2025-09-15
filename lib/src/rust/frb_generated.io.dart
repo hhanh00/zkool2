@@ -18,6 +18,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'frb_generated.dart';
+import 'io.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'pay.dart';
@@ -263,6 +264,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SigningStatus dco_decode_signing_status(dynamic raw);
+
+  @protected
+  SyncHeight dco_decode_sync_height(dynamic raw);
 
   @protected
   SyncProgress dco_decode_sync_progress(dynamic raw);
@@ -556,6 +560,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SigningStatus sse_decode_signing_status(SseDeserializer deserializer);
+
+  @protected
+  SyncHeight sse_decode_sync_height(SseDeserializer deserializer);
 
   @protected
   SyncProgress sse_decode_sync_progress(SseDeserializer deserializer);
@@ -866,6 +873,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_signing_status(SigningStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sync_height(SyncHeight self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer);

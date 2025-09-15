@@ -528,6 +528,7 @@ pub struct Account {
     pub enabled: bool,
     pub internal: bool,
     pub height: u32,
+    pub time: u32,
     pub balance: u64,
 }
 
