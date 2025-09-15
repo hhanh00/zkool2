@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:gap/gap.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -59,20 +60,36 @@ abstract class ObservableHeightBase with Store {
     final syncAge = DateTime.now().difference(timestamp);
     final style = syncAge > Duration(minutes: 30) ? TextStyle(color: Colors.red) : null;
     return ProgressWidget(
-        height: this, width: 80, child: Text(height.toString(), style: style),);
+      height: this,
+      width: 80,
+      child: Text(height.toString(), style: style),
+    );
   }
 
   Widget buildHero(BuildContext context, {TextStyle? style}) {
     final t = Theme.of(context).textTheme;
     final currentHeight = appStore.currentHeight;
+    final timestamp = timeToString(time);
     return ProgressWidget(
         height: this,
-        child: Text.rich(TextSpan(children: [
-          TextSpan(text: "$height", style: t.bodyLarge!.merge(style)),
-          if (currentHeight - height > 0)
-            TextSpan(
-                text: " tip-${currentHeight - height}", style: t.labelSmall,),
-        ],),),);
+        child: Column(
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: "$height", style: t.bodyLarge!.merge(style)),
+                  if (currentHeight - height > 0)
+                    TextSpan(
+                      text: " tip-${currentHeight - height}",
+                      style: t.labelSmall,
+                    ),
+                ],
+              ),
+            ),
+            Gap(8),
+            Text(timestamp, style: t.bodySmall),
+          ],
+        ));
   }
 }
 
@@ -80,8 +97,12 @@ class ProgressWidget extends StatelessWidget {
   final ObservableHeightBase height;
   final double? width;
   final Widget child;
-  const ProgressWidget(
-      {super.key, required this.height, this.width, required this.child,});
+  const ProgressWidget({
+    super.key,
+    required this.height,
+    this.width,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -89,15 +110,20 @@ class ProgressWidget extends StatelessWidget {
     final p = height.progress;
 
     return SizedBox(
-        width: width,
-        height: 40,
-        child: Stack(children: [
+      width: width,
+      child: Stack(
+        children: [
           if (height.range != 0)
             SizedBox.expand(
-                child: LinearProgressIndicator(
-                    color: t.colorScheme.primary.withAlpha(128), value: p,),),
+              child: LinearProgressIndicator(
+                color: t.colorScheme.primary.withAlpha(128),
+                value: p,
+              ),
+            ),
           Center(child: child),
-        ],),);
+        ],
+      ),
+    );
   }
 }
 
@@ -139,9 +165,12 @@ abstract class AppStoreBase with Store {
   String actionsPerSync = "10000";
   bool disclaimerAccepted = false;
   String? versionString;
-  @observable bool needPin = true;
-  @observable DateTime? unlocked;
-  @observable bool offline = false;
+  @observable
+  bool needPin = true;
+  @observable
+  DateTime? unlocked;
+  @observable
+  bool offline = false;
   bool useTor = false;
   bool recovery = false;
 
@@ -157,8 +186,7 @@ abstract class AppStoreBase with Store {
   Future<void> init() async {
     final prefs = SharedPreferencesAsync();
     dbName = await prefs.getString("database") ?? appName;
-    disclaimerAccepted =
-        await prefs.getBool("disclaimer_accepted") ?? disclaimerAccepted;
+    disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? disclaimerAccepted;
     final packageInfo = await PackageInfo.fromPlatform();
     final version = packageInfo.version;
     final buildNumber = packageInfo.buildNumber;
@@ -170,11 +198,12 @@ abstract class AppStoreBase with Store {
       log.add(m.message);
       if (m.span == "transaction") {
         toastification.show(
-            description: Text(m.message),
-            margin: EdgeInsets.all(8),
-            borderRadius: BorderRadius.circular(8),
-            animationDuration: Durations.long1,
-            autoCloseDuration: Duration(seconds: 3),);
+          description: Text(m.message),
+          margin: EdgeInsets.all(8),
+          borderRadius: BorderRadius.circular(8),
+          animationDuration: Durations.long1,
+          autoCloseDuration: Duration(seconds: 3),
+        );
       }
     });
   }
@@ -278,40 +307,42 @@ abstract class AppStoreBase with Store {
       }
 
       final progress = synchronize(
-          accounts: accounts,
-          currentHeight: currentHeight,
-          actionsPerSync: actionsPerSync,
-          transparentLimit:
-              100, // scan the last 100 known transparent addresses
-          checkpointAge: 200,); // trim checkpoints older than 200 blocks
+        accounts: accounts,
+        currentHeight: currentHeight,
+        actionsPerSync: actionsPerSync,
+        transparentLimit: 100, // scan the last 100 known transparent addresses
+        checkpointAge: 200,
+      ); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
-      syncProgressSubscription = progress.listen((p) {
-        retryCount = 0;
-        runInAction(() {
-          for (var a in accounts) {
-            if (p.height > heights[a]!.height)
-              heights[a]!
-                  .set(p.height, p.time); // propagate progress to all account streams
-          }
-        });
-      }, onError: (e) {
-        retry(accounts, e);
-      }, onDone: () {
-        runInAction(() {
-          for (var a in accounts) {
-            heights[a]?.done(currentHeight);
-          }
-        });
-        syncInProgress = false;
-        syncProgressSubscription?.cancel();
-        syncProgressSubscription = null;
-        Timer.run(() async {
-          await refresh();
-          showSnackbar("Synchronization Completed");
-          logger.i("Synchronization Completed");
-          completer.complete();
-        });
-      },);
+      syncProgressSubscription = progress.listen(
+        (p) {
+          retryCount = 0;
+          runInAction(() {
+            for (var a in accounts) {
+              if (p.height > heights[a]!.height) heights[a]!.set(p.height, p.time); // propagate progress to all account streams
+            }
+          });
+        },
+        onError: (e) {
+          retry(accounts, e);
+        },
+        onDone: () {
+          runInAction(() {
+            for (var a in accounts) {
+              heights[a]?.done(currentHeight);
+            }
+          });
+          syncInProgress = false;
+          syncProgressSubscription?.cancel();
+          syncProgressSubscription = null;
+          Timer.run(() async {
+            await refresh();
+            showSnackbar("Synchronization Completed");
+            logger.i("Synchronization Completed");
+            completer.complete();
+          });
+        },
+      );
     } on AnyhowException catch (e) {
       retry(accounts, e);
     }
@@ -323,8 +354,7 @@ abstract class AppStoreBase with Store {
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
     final delay = 30 + Random().nextInt(maxDelay); // randomize delay
-    final message =
-        "Sync error $e, $retryCount retries, retrying in $delay seconds";
+    final message = "Sync error $e, $retryCount retries, retrying in $delay seconds";
     logger.e(message);
     showSnackbar(message);
     retrySyncTimer?.cancel();
@@ -370,7 +400,9 @@ abstract class AppStoreBase with Store {
     }
     if (accountsToSync.isNotEmpty) {
       await startSynchronize(
-          accountsToSync, int.parse(appStore.actionsPerSync),);
+        accountsToSync,
+        int.parse(appStore.actionsPerSync),
+      );
     }
   }
 
@@ -397,27 +429,26 @@ void runMempoolListener() async {
       final height = await getCurrentHeight();
       final c = Completer();
       mp.run(height: height).listen(
-          (msg) {
-            if (msg is MempoolMsg_TxId) {
-              final txId = msg.field0;
-              final amounts = msg.field1
-                  .map((a) => "${a.$2} ${zatToString(BigInt.from(a.$3))}")
-                  .join(", ");
-              final size = msg.field2;
-              appStore.mempoolTxIds.add((txId, amounts, size));
-              for (var (account, _, amount) in msg.field1) {
-                appStore.mempoolAccounts.update(
-                  account,
-                  (value) => value + amount,
-                  ifAbsent: () => amount,
-                );
+            (msg) {
+              if (msg is MempoolMsg_TxId) {
+                final txId = msg.field0;
+                final amounts = msg.field1.map((a) => "${a.$2} ${zatToString(BigInt.from(a.$3))}").join(", ");
+                final size = msg.field2;
+                appStore.mempoolTxIds.add((txId, amounts, size));
+                for (var (account, _, amount) in msg.field1) {
+                  appStore.mempoolAccounts.update(
+                    account,
+                    (value) => value + amount,
+                    ifAbsent: () => amount,
+                  );
+                }
               }
-            }
-          },
-          onDone: c.complete,
-          onError: (e) {
-            c.complete();
-          },);
+            },
+            onDone: c.complete,
+            onError: (e) {
+              c.complete();
+            },
+          );
       await c.future; // wait for the stream to complete
       await Future.delayed(Duration(seconds: 5));
     } catch (_) {}
