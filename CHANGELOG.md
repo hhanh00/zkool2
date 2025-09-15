@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.2.1](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.0...zkool-v5.2.1) (2025-09-15)
+
+
+### Bug Fixes
+
+* send from transparent private key only account ([#501](https://github.com/hhanh00/zkool2/issues/501)) ([cf42f4a](https://github.com/hhanh00/zkool2/commit/cf42f4a60722758e52ad28066fb60b6e62041b3c))
+
 ## [5.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v5.1.1...zkool-v5.2.0) (2025-09-15)
 
 
