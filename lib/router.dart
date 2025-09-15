@@ -39,7 +39,7 @@ GoRouter router(bool recoveryMode) => GoRouter(
         path: 'account',
         builder: (context, state) => pinLock(AccountViewPage()),
       ),
-    ]),
+    ],),
     GoRoute(
       path: '/account/edit',
       builder: (context, state) => pinLock(AccountEditPage(state.extra as List<Account>)),
@@ -77,7 +77,7 @@ GoRouter router(bool recoveryMode) => GoRouter(
         builder: (context, state) {
           final args = state.extra as Map<String, dynamic>;
           return pinLock(QRPage(text: args["text"], title: args["title"]));
-        }),
+        },),
     GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
     GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
     GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
@@ -98,4 +98,4 @@ Widget pinLock(Widget child) => Observer(builder: (context) {
       appStore.unlocked;
       appStore.needPin;
       return (appStore.unlocked == null && appStore.needPin) ? PinLock() : child;
-    });
+    },);

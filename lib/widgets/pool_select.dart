@@ -7,7 +7,7 @@ class PoolSelect extends StatefulWidget {
   const PoolSelect({super.key,
     required this.enabled,
     required this.initialValue,
-    required this.onChanged});
+    required this.onChanged,});
 
   @override
   State<PoolSelect> createState() => _PoolSelectState();
@@ -78,6 +78,6 @@ class _PoolSelectState extends State<PoolSelect> {
           );
         });
       } : null,
-    )]);
+    ),],);
   }
 }

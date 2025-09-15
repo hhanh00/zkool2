@@ -38,7 +38,7 @@ Future<void> main() async {
         const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
       ],
           builder: (context) => MaterialApp.router(
-              routerConfig: r, themeMode: ThemeMode.system, theme: ThemeData.light(), darkTheme: ThemeData.dark(), debugShowCheckedModeBanner: false))));
+              routerConfig: r, themeMode: ThemeMode.system, theme: ThemeData.light(), darkTheme: ThemeData.dark(), debugShowCheckedModeBanner: false,),),),);
 }
 
 class LifecycleWatcher with WidgetsBindingObserver {
@@ -126,6 +126,6 @@ class PinLockState extends State<PinLock> {
             onTap: onUnlock,
             child: Image.asset("misc/icon.png", width: 200),
           ),
-        ));
+        ),);
   }
 }

@@ -47,7 +47,7 @@ class FolderPageState extends State<FolderPage> {
         IconButton(onPressed: onNew, icon: Icon(Icons.add)),
         if (hasSingleSelection) IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
         if (hasSelection) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
-      ]),
+      ],),
       body: ListView.builder(
         itemBuilder: (BuildContext context, int index) {
           final f = folders[index];
