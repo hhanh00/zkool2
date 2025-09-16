@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.2.3](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.2...zkool-v5.2.3) (2025-09-16)
+
+
+### Bug Fixes
+
+* resize icon ([#505](https://github.com/hhanh00/zkool2/issues/505)) ([e3fb3de](https://github.com/hhanh00/zkool2/commit/e3fb3def77e925f80a5b911e454b1890ffa58394))
+
 ## [5.2.2](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.1...zkool-v5.2.2) (2025-09-16)
 
 
