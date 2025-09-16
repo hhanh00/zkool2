@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.2.2](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.1...zkool-v5.2.2) (2025-09-16)
+
+
+### Bug Fixes
+
+* add white background to icon ([#503](https://github.com/hhanh00/zkool2/issues/503)) ([1395fb8](https://github.com/hhanh00/zkool2/commit/1395fb8e03dd45d4e35355d17a8abb6a5383bcfa))
+
 ## [5.2.1](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.0...zkool-v5.2.1) (2025-09-15)
 
 
