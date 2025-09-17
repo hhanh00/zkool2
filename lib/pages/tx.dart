@@ -67,38 +67,49 @@ class TxPageState extends State<TxPage> {
         actions: [
           if (hasFrost) IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
           Showcase(
-              key: cancelID,
-              description: "Cancel, do NOT send",
-              child: IconButton(onPressed: onCancel, icon: Icon(Icons.cancel)),),
+            key: cancelID,
+            description: "Cancel, do NOT send",
+            child: IconButton(onPressed: onCancel, icon: Icon(Icons.cancel)),
+          ),
           Showcase(
-              key: sendID4,
-              description: "Confirm, broadcast transaction",
-              child: IconButton(
-                  onPressed: canSend ? onSend : onSave,
-                  icon: Icon(canSend
-                      ? Icons.send
-                      : txPlan.canSign
-                          ? Icons.draw
-                          : Icons.save,),),),
+            key: sendID4,
+            description: "Confirm, broadcast transaction",
+            child: IconButton(
+              onPressed: canSend ? onSend : onSave,
+              icon: Icon(
+                canSend
+                    ? Icons.send
+                    : txPlan.canSign
+                        ? Icons.draw
+                        : Icons.save,
+              ),
+            ),
+          ),
         ],
       ),
-      body: CustomScrollView(slivers: [
-        SliverToBoxAdapter(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
             child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Column(children: [
-            Text("Tx Plan", style: t.titleSmall),
-            Text("Fee: ${zatToString(txPlan.fee)}"),
-            Gap(8),
-            if (txId != null)
-              Showcase(
-                  key: txID,
-                  description: "Transaction ID",
-                  child: CopyableText("Transaction ID: ${txId!}"),),
-          ],),
-        ),),
-        showTxPlan(context, txPlan),
-      ],),
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  Text("Tx Plan", style: t.titleSmall),
+                  Text("Fee: ${zatToString(txPlan.fee)}"),
+                  Gap(8),
+                  if (txId != null)
+                    Showcase(
+                      key: txID,
+                      description: "Transaction ID",
+                      child: CopyableText("Transaction ID: ${txId!}"),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          showTxPlan(context, txPlan),
+        ],
+      ),
     );
   }
 
@@ -129,11 +140,10 @@ class TxPageState extends State<TxPage> {
         final txid = jsonDecode(result) as String;
         await showMessage(context, txid);
         showSnackbar("Transaction broadcasted successfully");
-      }
-      catch (_) {
+      } catch (_) {
         if (mounted) await showException(context, result);
       }
-      setState(() => txId = result);
+      if (mounted) setState(() => txId = result);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -150,8 +160,7 @@ class TxPageState extends State<TxPage> {
       final pcztData = await packTransaction(pczt: pczt);
       final prefix = txPlan.canSign ? "signed" : "unsigned";
       await appWatcher.saveFile(
-        title:
-            "Please select an output file for the unsigned transaction",
+        title: "Please select an output file for the unsigned transaction",
         fileName: "$prefix-tx.bin",
         data: pcztData,
       );
@@ -181,26 +190,27 @@ String poolToString(int pool) {
 
 SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
   return SliverList.builder(
-      itemCount: txPlan.inputs.length + txPlan.outputs.length,
-      itemBuilder: (context, index) {
-        if (index < txPlan.inputs.length) {
-          final input = txPlan.inputs[index];
-          return ListTile(
-            leading: Text("Input ${index + 1}"),
-            trailing: input.amount != null ? zatToText(input.amount!, selectable: true) : null,
-            subtitle: Text("Pool: ${poolToString(input.pool)}"),
-          );
-        } else {
-          final index2 = index - txPlan.inputs.length;
-          final output = txPlan.outputs[index2];
-          return ListTile(
-            leading: Text("Output ${index2 + 1}"),
-            title: Text("Address: ${output.address}"),
-            trailing: zatToText(output.amount, selectable: true),
-            subtitle: Text("Pool: ${poolToString(output.pool)}"),
-          );
-        }
-      },);
+    itemCount: txPlan.inputs.length + txPlan.outputs.length,
+    itemBuilder: (context, index) {
+      if (index < txPlan.inputs.length) {
+        final input = txPlan.inputs[index];
+        return ListTile(
+          leading: Text("Input ${index + 1}"),
+          trailing: input.amount != null ? zatToText(input.amount!, selectable: true) : null,
+          subtitle: Text("Pool: ${poolToString(input.pool)}"),
+        );
+      } else {
+        final index2 = index - txPlan.inputs.length;
+        final output = txPlan.outputs[index2];
+        return ListTile(
+          leading: Text("Output ${index2 + 1}"),
+          title: Text("Address: ${output.address}"),
+          trailing: zatToText(output.amount, selectable: true),
+          subtitle: Text("Pool: ${poolToString(output.pool)}"),
+        );
+      }
+    },
+  );
 }
 
 class MempoolPage extends StatelessWidget {
@@ -210,9 +220,10 @@ class MempoolPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Mempool")),
-      body: Observer(builder: (context) {
-        final mempool = appStore.mempoolTxIds;
-        return ListView.builder(
+      body: Observer(
+        builder: (context) {
+          final mempool = appStore.mempoolTxIds;
+          return ListView.builder(
             itemBuilder: (context, index) {
               final tx = mempool[index];
               return ListTile(
@@ -222,8 +233,10 @@ class MempoolPage extends StatelessWidget {
                 trailing: Text(tx.$3.toString()),
               );
             },
-            itemCount: mempool.length,);
-      },),
+            itemCount: mempool.length,
+          );
+        },
+      ),
     );
   }
 
@@ -243,10 +256,13 @@ class MempoolTxViewPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text("Mempool Transaction")),
       body: Padding(
-          padding: EdgeInsets.all(16),
-          child: SingleChildScrollView(child: CopyableText(
+        padding: EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child: CopyableText(
             hex.encode(rawTx),
-          ),),),
+          ),
+        ),
+      ),
     );
   }
 }
