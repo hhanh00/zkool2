@@ -73,6 +73,7 @@ abstract class ObservableHeightBase with Store {
     return ProgressWidget(
         height: this,
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text.rich(
               TextSpan(
@@ -111,6 +112,7 @@ class ProgressWidget extends StatelessWidget {
 
     return SizedBox(
       width: width,
+      height: 80,
       child: Stack(
         children: [
           if (height.range != 0)
