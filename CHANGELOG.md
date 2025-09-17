@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.2.4](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.3...zkool-v5.2.4) (2025-09-17)
+
+
+### Bug Fixes
+
+* linear progress indicator ([#511](https://github.com/hhanh00/zkool2/issues/511)) ([a7bd615](https://github.com/hhanh00/zkool2/commit/a7bd61562ebf13cac6d8b831cfe89d3b9e2bc179))
+
 ## [5.2.3](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.2...zkool-v5.2.3) (2025-09-16)
 
 
