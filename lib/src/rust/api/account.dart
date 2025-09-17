@@ -60,11 +60,6 @@ Future<void> resetSync({required int id}) =>
 Future<void> removeAccount({required int accountId}) =>
     RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId);
 
-Future<void> moveAccount(
-        {required int oldPosition, required int newPosition}) =>
-    RustLib.instance.api.crateApiAccountMoveAccount(
-        oldPosition: oldPosition, newPosition: newPosition);
-
 Future<List<Tx>> listTxHistory() =>
     RustLib.instance.api.crateApiAccountListTxHistory();
 
