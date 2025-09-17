@@ -537,13 +537,11 @@ pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> R
     // have to scan the chain (i.e. the account is transparent only)
     let (height, time): (u32, u32) =
         sqlx::query_as(
-            "SELECT h.height, COALESCE(h.time, 0)
-            FROM headers h
-            LEFT JOIN (
-                SELECT MIN(height) AS min_height
-                FROM sync_heights
-                WHERE account = ?
-            ) sh ON h.height = sh.min_height")
+        "WITH mh AS (SELECT MIN(height) AS min_height
+            FROM sync_heights
+            WHERE account = ?1)
+            SELECT h.height, COALESCE(h.time, 0) FROM headers h
+            JOIN mh ON h.height = mh.min_height")
             .bind(account)
             .fetch_one(connection)
             .await?;

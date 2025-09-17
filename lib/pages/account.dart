@@ -30,7 +30,6 @@ final tBalID = GlobalKey();
 final sBalID = GlobalKey();
 final oBalID = GlobalKey();
 final balID = GlobalKey();
-final txdID = GlobalKey();
 final folderID = GlobalKey();
 
 class AccountViewPage extends StatefulWidget {
@@ -51,10 +50,6 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void tutorial() async {
     tutorialHelper(context, "tutAccount0", [tBalID, sBalID, oBalID, balID, logID, sync1ID, receiveID, sendID]);
-    if (appStore.transactions.isNotEmpty)
-      tutorialHelper(context, "tutAccount1", [
-        txdID,
-      ]);
   }
 
   @override
@@ -66,83 +61,103 @@ class AccountViewPageState extends State<AccountViewPage> {
     assert(account != null);
 
     return DefaultTabController(
-        length: 3,
-        child: Scaffold(
-            appBar: AppBar(
-              title: Text(account!.name),
-              actions: [
-                Showcase(
-                    key: sync1ID,
-                    description: "Synchronize only this account",
-                    child: IconButton(tooltip: "Sync this account", onPressed: onSync, icon: Icon(Icons.sync)),),
-                Showcase(
-                    key: receiveID,
-                    description: "Show the account receiving addresses",
-                    child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),),
-                Showcase(
-                    key: sendID,
-                    description: "Send funds to one or many addresses",
-                    child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),),
-              ],
-              bottom: TabBar(
-                tabs: [
-                  Tab(text: 'Transactions'),
-                  Tab(text: 'Memos'),
-                  Tab(text: 'Notes'),
-                ],
-              ),
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(account!.name),
+          actions: [
+            Showcase(
+              key: sync1ID,
+              description: "Synchronize only this account",
+              child: IconButton(tooltip: "Sync this account", onPressed: onSync, icon: Icon(Icons.sync)),
             ),
-            body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Observer(builder: (context) {
-                appStore.seqno;
-                final b = appStore.poolBalance;
+            Showcase(
+              key: receiveID,
+              description: "Show the account receiving addresses",
+              child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),
+            ),
+            Showcase(
+              key: sendID,
+              description: "Send funds to one or many addresses",
+              child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
+            ),
+          ],
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Transactions'),
+              Tab(text: 'Memos'),
+              Tab(text: 'Notes'),
+            ],
+          ),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Observer(
+            builder: (context) {
+              appStore.seqno;
+              final b = appStore.poolBalance;
 
-                return TabBarView(children: [
-                  CustomScrollView(slivers: [
-                    PinnedHeaderSliver(
+              return TabBarView(
+                children: [
+                  CustomScrollView(
+                    slivers: [
+                      PinnedHeaderSliver(
                         child: Container(
-                            color: Theme.of(context).colorScheme.surface,
-                            child: Column(children: [
+                          color: Theme.of(context).colorScheme.surface,
+                          child: Column(
+                            children: [
                               Text("Height"),
                               Gap(8),
-                              Observer(builder: (context) {
-                                final height = appStore.heights[account!.id]!;
-                                return height.buildHero(context);
-                              },),
+                              Observer(
+                                builder: (context) {
+                                  final height = appStore.heights[account!.id]!;
+                                  return height.buildHero(context);
+                                },
+                              ),
                               Gap(16),
                               Text("Balance"),
                               Gap(8),
                               if (b != null) BalanceWidget(b, showcase: true),
                               Gap(8),
-                              Observer(builder: (context) {
-                                final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
-                                return unconfirmedAmount != null
-                                    ? zatToText(
-                                        BigInt.from(unconfirmedAmount),
-                                        prefix: "Unconfirmed: ",
-                                        colored: true,
-                                        selectable: true,
-                                        style: t.bodyLarge,
-                                      )
-                                    : SizedBox.shrink();
-                              },),
+                              Observer(
+                                builder: (context) {
+                                  final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
+                                  return unconfirmedAmount != null
+                                      ? zatToText(
+                                          BigInt.from(unconfirmedAmount),
+                                          prefix: "Unconfirmed: ",
+                                          colored: true,
+                                          selectable: true,
+                                          style: t.bodyLarge,
+                                        )
+                                      : SizedBox.shrink();
+                                },
+                              ),
                               Gap(8),
                               if (b != null) ...[
                                 Showcase(
-                                    key: balID,
-                                    description: "Balance across all pools",
-                                    child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),),
+                                  key: balID,
+                                  description: "Balance across all pools",
+                                  child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),
+                                ),
                                 Gap(8),
                               ],
-                            ],),),),
-                    ...showTxHistory(appStore.transactions),
-                  ],),
+                            ],
+                          ),
+                        ),
+                      ),
+                      ...showTxHistory(appStore.transactions),
+                    ],
+                  ),
                   showMemos(context, appStore.memos),
                   showNotes(appStore.notes),
-                ],);
-              },),
-            ),),);
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   void onSync() async {
@@ -203,112 +218,132 @@ class AccountEditPageState extends State<AccountEditPage> {
     final account = accounts.length == 1 ? accounts.first : null;
     final folder = accounts.first.folder;
     final folderOptions = [DropdownMenuItem(value: 0, child: Text("No Folder"))] +
-      appStore.folders.map((f) =>
-        DropdownMenuItem(value: f.id, child: Text(f.name)),).toList();
+        appStore.folders
+            .map(
+              (f) => DropdownMenuItem(value: f.id, child: Text(f.name)),
+            )
+            .toList();
 
     return Scaffold(
-        appBar: AppBar(title: Text('Account Edit'), actions: [
+      appBar: AppBar(
+        title: Text('Account Edit'),
+        actions: [
           if (account != null)
             Showcase(
-                key: viewID,
-                description: "Show Viewing Keys",
-                child: IconButton(
-                    tooltip: "Show Viewing Keys",
-                    onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
-                    icon: Icon(Icons.visibility),),),
+              key: viewID,
+              description: "Show Viewing Keys",
+              child: IconButton(
+                tooltip: "Show Viewing Keys",
+                onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
+                icon: Icon(Icons.visibility),
+              ),
+            ),
           if (account != null) ...[
             Showcase(
-                key: exportID,
-                description: "Export an encrypted file of this account",
-                child: IconButton(tooltip: "Export Account", onPressed: onExport, icon: Icon(Icons.save)),),
+              key: exportID,
+              description: "Export an encrypted file of this account",
+              child: IconButton(tooltip: "Export Account", onPressed: onExport, icon: Icon(Icons.save)),
+            ),
             Showcase(
-                key: rewindID,
-                description: "Rewind back a few blocks",
-                child: IconButton(tooltip: "Rewind to previous checkpoint", onPressed: onRewind, icon: Icon(Icons.fast_rewind)),),
+              key: rewindID,
+              description: "Rewind back a few blocks",
+              child: IconButton(tooltip: "Rewind to previous checkpoint", onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+            ),
           ],
           Showcase(
-              key: resetID,
-              description: "Clear and reset account to birth height",
-              child: IconButton(tooltip: "Clear Sync Data", onPressed: onReset, icon: Icon(Icons.delete_sweep)),),
-        ],),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: FormBuilder(
-              key: formKey,
-              child: Column(
+            key: resetID,
+            description: "Clear and reset account to birth height",
+            child: IconButton(tooltip: "Clear Sync Data", onPressed: onReset, icon: Icon(Icons.delete_sweep)),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: FormBuilder(
+          key: formKey,
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                          child: Showcase(
-                              key: nameID2,
-                              description: "Edit Name of the account",
-                              child: FormBuilderTextField(
-                                name: 'name',
-                                decoration: InputDecoration(labelText: 'Name'),
-                                initialValue: account?.name ?? "(Multiple)",
-                                readOnly: account == null,
-                                onChanged: (account != null) ? onEditName : null,
-                              ),),),
-                      if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon())),
-                    ],
-                  ),
-                  Showcase(
-                      key: birthID2,
-                      description: "Edit Height at the creation of the account",
+                  Expanded(
+                    child: Showcase(
+                      key: nameID2,
+                      description: "Edit Name of the account",
                       child: FormBuilderTextField(
-                        name: 'birth',
-                        decoration: InputDecoration(labelText: 'Birth Height'),
-                        initialValue: account?.birth.toString() ?? "",
-                        keyboardType: TextInputType.number,
+                        name: 'name',
+                        decoration: InputDecoration(labelText: 'Name'),
+                        initialValue: account?.name ?? "(Multiple)",
                         readOnly: account == null,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        onChanged: (account != null) ? onEditBirth : null,
-                      ),),
-                  Showcase(
-                      key: enableID,
-                      description: "Enable or disable. Only enabled accounts participate in the global sync",
-                      child: FormBuilderCheckbox(
-                        name: "enabled",
-                        title: Text("Enabled"),
-                        initialValue: accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
-                        tristate: account == null,
-                        onChanged: onEditEnabled,
-                      ),),
-                  Showcase(
-                      key: hideID2,
-                      description: "Hide this account from the account list",
-                      child: FormBuilderCheckbox(
-                        name: "hidden",
-                        title: Text("Hidden"),
-                        initialValue: accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
-                        tristate: account == null,
-                        onChanged: onEditHidden,
-                      ),),
-                  Showcase(
-                      key: folderID,
-                      description: "Assign Account to Folder",
-                      child: FormBuilderDropdown<int>(
-                        name: "folder",
-                        initialValue: accounts.every((a) => a.folder.id == folder.id) ? folder.id : null,
-                        items: folderOptions,
-                        onChanged: onEditFolder,
-                      ),),
+                        onChanged: (account != null) ? onEditName : null,
+                      ),
+                    ),
+                  ),
+                  if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon())),
                 ],
-              ),),
-        ),);
+              ),
+              Showcase(
+                key: birthID2,
+                description: "Edit Height at the creation of the account",
+                child: FormBuilderTextField(
+                  name: 'birth',
+                  decoration: InputDecoration(labelText: 'Birth Height'),
+                  initialValue: account?.birth.toString() ?? "",
+                  keyboardType: TextInputType.number,
+                  readOnly: account == null,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (account != null) ? onEditBirth : null,
+                ),
+              ),
+              Showcase(
+                key: enableID,
+                description: "Enable or disable. Only enabled accounts participate in the global sync",
+                child: FormBuilderCheckbox(
+                  name: "enabled",
+                  title: Text("Enabled"),
+                  initialValue: accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
+                  tristate: account == null,
+                  onChanged: onEditEnabled,
+                ),
+              ),
+              Showcase(
+                key: hideID2,
+                description: "Hide this account from the account list",
+                child: FormBuilderCheckbox(
+                  name: "hidden",
+                  title: Text("Hidden"),
+                  initialValue: accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
+                  tristate: account == null,
+                  onChanged: onEditHidden,
+                ),
+              ),
+              Showcase(
+                key: folderID,
+                description: "Assign Account to Folder",
+                child: FormBuilderDropdown<int>(
+                  name: "folder",
+                  initialValue: accounts.every((a) => a.folder.id == folder.id) ? folder.id : null,
+                  items: folderOptions,
+                  onChanged: onEditFolder,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void onEditName(String? name) async {
     if (name != null) {
       accounts[0] = accounts[0].copyWith(name: name);
       await updateAccount(
-          update: AccountUpdate(
-        coin: accounts[0].coin,
-        id: accounts[0].id,
-        name: name,
-        folder: accounts[0].folder.id,
-      ),);
+        update: AccountUpdate(
+          coin: accounts[0].coin,
+          id: accounts[0].id,
+          name: name,
+          folder: accounts[0].folder.id,
+        ),
+      );
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -330,8 +365,14 @@ class AccountEditPageState extends State<AccountEditPage> {
     }
     if (changed) {
       accounts[0] = accounts[0].copyWith(icon: bytes?.isNotEmpty == true ? bytes : null);
-      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, icon: bytes,
-      folder: accounts[0].folder.id,),);
+      await updateAccount(
+        update: AccountUpdate(
+          coin: accounts[0].coin,
+          id: accounts[0].id,
+          icon: bytes,
+          folder: accounts[0].folder.id,
+        ),
+      );
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -340,7 +381,13 @@ class AccountEditPageState extends State<AccountEditPage> {
   void onEditBirth(String? birth) async {
     if (birth != null && birth.isNotEmpty) {
       accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
-      await updateAccount(update: AccountUpdate(coin: accounts[0].coin, id: accounts[0].id, birth: int.parse(birth), folder: accounts[0].folder.id,));
+      await updateAccount(
+          update: AccountUpdate(
+        coin: accounts[0].coin,
+        id: accounts[0].id,
+        birth: int.parse(birth),
+        folder: accounts[0].folder.id,
+      ));
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -350,7 +397,13 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(enabled: v);
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, enabled: v, folder: accounts[i].folder.id,));
+      await updateAccount(
+          update: AccountUpdate(
+        coin: accounts[i].coin,
+        id: accounts[i].id,
+        enabled: v,
+        folder: accounts[i].folder.id,
+      ));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -360,7 +413,13 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(hidden: v);
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, hidden: v, folder: accounts[i].folder.id,));
+      await updateAccount(
+          update: AccountUpdate(
+        coin: accounts[i].coin,
+        id: accounts[i].id,
+        hidden: v,
+        folder: accounts[i].folder.id,
+      ));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -370,7 +429,12 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (v == null) return;
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(folder: appStore.folders.firstWhere((f) => f.id == v, orElse: () => Folder(id: 0, name: "")));
-      await updateAccount(update: AccountUpdate(coin: accounts[i].coin, id: accounts[i].id, folder: v,));
+      await updateAccount(
+          update: AccountUpdate(
+        coin: accounts[i].coin,
+        id: accounts[i].id,
+        folder: v,
+      ));
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -419,15 +483,16 @@ extension AccountExtension on Account {
     final i = initials(name);
     final s = selected ?? false;
     return GestureDetector(
-        onTap: () => onTap?.call(!s),
-        child: CircleAvatar(
-          backgroundColor: s ? Colors.blue.shade700 : t.primaryContainer,
-          child: s
-              ? Icon(Icons.check, color: Colors.white)
-              : icon != null
-                  ? ClipOval(child: Image.memory(icon!))
-                  : Text(i, style: TextStyle(color: t.onPrimaryContainer)),
-        ),);
+      onTap: () => onTap?.call(!s),
+      child: CircleAvatar(
+        backgroundColor: s ? Colors.blue.shade700 : t.primaryContainer,
+        child: s
+            ? Icon(Icons.check, color: Colors.white)
+            : icon != null
+                ? ClipOval(child: Image.memory(icon!))
+                : Text(i, style: TextStyle(color: t.onPrimaryContainer)),
+      ),
+    );
   }
 }
 
@@ -439,8 +504,11 @@ class BalanceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      maybeShowcase(showcase,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        maybeShowcase(
+          showcase,
           key: tBalID,
           description: "Balance in the Transparent Pool",
           child: zatToText(
@@ -448,9 +516,11 @@ class BalanceWidget extends StatelessWidget {
             prefix: "T: ",
             selectable: true,
             onTap: () => onPoolSelected?.call(0),
-          ),),
-      const Gap(8),
-      maybeShowcase(showcase,
+          ),
+        ),
+        const Gap(8),
+        maybeShowcase(
+          showcase,
           key: sBalID,
           description: "Balance in the Sapling Pool",
           child: zatToText(
@@ -458,9 +528,11 @@ class BalanceWidget extends StatelessWidget {
             prefix: "S: ",
             selectable: true,
             onTap: () => onPoolSelected?.call(1),
-          ),),
-      const Gap(8),
-      maybeShowcase(showcase,
+          ),
+        ),
+        const Gap(8),
+        maybeShowcase(
+          showcase,
           key: oBalID,
           description: "Balance in the Orchard Pool",
           child: zatToText(
@@ -468,17 +540,20 @@ class BalanceWidget extends StatelessWidget {
             prefix: "O: ",
             selectable: true,
             onTap: () => onPoolSelected?.call(2),
-          ),),
-    ],);
+          ),
+        ),
+      ],
+    );
   }
 }
 
 List<Widget> showTxHistory(List<Tx> transactions) {
   return [
     SliverToBoxAdapter(
-        child: Column(
-      children: [Text("Transaction History (${transactions.length} txs)"), const Gap(8)],
-    ),),
+      child: Column(
+        children: [Text("Transaction History (${transactions.length} txs)"), const Gap(8)],
+      ),
+    ),
     SliverFixedExtentList.builder(
       itemCount: transactions.length,
       itemBuilder: (context, index) {
@@ -491,13 +566,7 @@ List<Widget> showTxHistory(List<Tx> transactions) {
           trailing: zatToText(BigInt.from(tx.value), colored: true, selectable: false),
         );
 
-        return (index == 0)
-            ? Showcase(
-                key: txdID,
-                description: "Tap on a transaction or memo to view details",
-                child: tile,
-              )
-            : tile;
+        return tile;
       },
       itemExtent: 64,
     ),
@@ -538,13 +607,14 @@ Uint8List trimTrailingZeros(Uint8List bytes) {
 
 Widget showMemos(BuildContext context, List<Memo> memos) {
   return SearchableList(
-      initialList: memos,
-      itemBuilder: (memo) => MemoWidget(memo),
-      filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
-      inputDecoration: InputDecoration(
-        labelText: "Search Memos",
-        fillColor: Colors.white,
-      ),);
+    initialList: memos,
+    itemBuilder: (memo) => MemoWidget(memo),
+    filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
+    inputDecoration: InputDecoration(
+      labelText: "Search Memos",
+      fillColor: Colors.white,
+    ),
+  );
 }
 
 Widget showNotes(List<TxNote> notes) {
@@ -582,17 +652,23 @@ class MemoWidget extends StatelessWidget {
     final incoming = memo.idNote != null;
 
     return GestureDetector(
-        onTap: () => gotoTransaction(context, memo.idTx),
-        child: Padding(
-            padding: EdgeInsetsGeometry.symmetric(vertical: 4),
-            child: Bubble(
-                nip: incoming ? BubbleNip.leftTop : BubbleNip.rightTop,
-                color: incoming ? cs.surface : cs.secondaryContainer,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Align(alignment: Alignment.centerRight, child: Text(timeToString(memo.time), style: t.textTheme.labelMedium)),
-                  Gap(8),
-                  CopyableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
-                ],),),),);
+      onTap: () => gotoTransaction(context, memo.idTx),
+      child: Padding(
+        padding: EdgeInsetsGeometry.symmetric(vertical: 4),
+        child: Bubble(
+          nip: incoming ? BubbleNip.leftTop : BubbleNip.rightTop,
+          color: incoming ? cs.surface : cs.secondaryContainer,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(alignment: Alignment.centerRight, child: Text(timeToString(memo.time), style: t.textTheme.labelMedium)),
+              Gap(8),
+              CopyableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -630,29 +706,36 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-            title: Text('Viewing Keys'), actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))],),
-        body: SingleChildScrollView(
-            child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Column(children: [
-                  if (showSeed && seed != null) ...[
-                    ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
-                    ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
-                    ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
-                    Divider(),
-                    Gap(8),
-                  ],
-                  Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
-                  Gap(32),
-                  if (uvk != null) CopyableText(uvk!),
-                  Gap(32),
-                  if (uvk != null) QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
-                  Gap(8),
-                  if (fingerprint != null) CopyableText(fingerprint!),
-                  Gap(16),
-                  Text("If the account does not include a pool, its receiver will be absent"),
-                ],),),),);
+      appBar: AppBar(
+        title: Text('Viewing Keys'),
+        actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              if (showSeed && seed != null) ...[
+                ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
+                ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
+                ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
+                Divider(),
+                Gap(8),
+              ],
+              Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
+              Gap(32),
+              if (uvk != null) CopyableText(uvk!),
+              Gap(32),
+              if (uvk != null) QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
+              Gap(8),
+              if (fingerprint != null) CopyableText(fingerprint!),
+              Gap(16),
+              Text("If the account does not include a pool, its receiver will be absent"),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   onPoolChanged(int? v) async {
