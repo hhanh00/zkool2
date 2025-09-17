@@ -71,7 +71,7 @@ impl Coin {
         if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='props'")
             .fetch_optional(&mut *connection)
             .await?
-            .is_none()
+            .is_some()
         {
             let testnet = db_filepath.contains("testnet");
             let regtest = db_filepath.contains("regtest");
