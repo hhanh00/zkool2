@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.2.5](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.4...zkool-v5.2.5) (2025-09-17)
+
+
+### Bug Fixes
+
+* testnet ([8f06fcf](https://github.com/hhanh00/zkool2/commit/8f06fcff4696a8c1ada83b07296086b34fedd3cc))
+* wrong height chosen for witness data, ([#512](https://github.com/hhanh00/zkool2/issues/512)) ([8f06fcf](https://github.com/hhanh00/zkool2/commit/8f06fcff4696a8c1ada83b07296086b34fedd3cc))
+
 ## [5.2.4](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.3...zkool-v5.2.4) (2025-09-17)
 
 
