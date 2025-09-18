@@ -616,7 +616,7 @@ pub async fn get_heights_without_time(
     start: u32,
     end: u32,
 ) -> Result<HashSet<u32>> {
-    let heights_without_time: HashSet<u32> = sqlx::query(
+    let mut tx_without_time: HashSet<u32> = sqlx::query(
         "SELECT DISTINCT height FROM transactions WHERE time = 0
         AND height >= ? AND height <= ?",
     )
@@ -631,5 +631,18 @@ pub async fn get_heights_without_time(
     .into_iter()
     .collect();
 
-    Ok(heights_without_time)
+    let synced_heights_without_time = sqlx::query(
+        "SELECT sh.height FROM sync_heights sh
+        LEFT JOIN headers h ON sh.height = h.height
+        WHERE h.time IS NULL")
+    .map(|row: SqliteRow| {
+        let height: u32 = row.get(0);
+        height
+    })
+    .fetch_all(&mut *connection)
+    .await?
+    .into_iter();
+    tx_without_time.extend(synced_heights_without_time);
+
+    Ok(tx_without_time)
 }
