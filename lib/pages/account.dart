@@ -22,16 +22,6 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
-final logID = GlobalKey();
-final sync1ID = GlobalKey();
-final receiveID = GlobalKey();
-final sendID = GlobalKey();
-final tBalID = GlobalKey();
-final sBalID = GlobalKey();
-final oBalID = GlobalKey();
-final balID = GlobalKey();
-final folderID = GlobalKey();
-
 class AccountViewPage extends StatefulWidget {
   const AccountViewPage({super.key});
 
@@ -40,6 +30,12 @@ class AccountViewPage extends StatefulWidget {
 }
 
 class AccountViewPageState extends State<AccountViewPage> {
+  final logID = GlobalKey(debugLabel: "logID");
+  final sync1ID = GlobalKey(debugLabel: "sync1ID");
+  final receiveID = GlobalKey(debugLabel: "receiveID");
+  final sendID = GlobalKey(debugLabel: "sendID");
+  final balID = GlobalKey(debugLabel: "balID");
+
   StreamSubscription<SyncProgress>? progressSubscription;
 
   @override
@@ -49,7 +45,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutAccount0", [tBalID, sBalID, oBalID, balID, logID, sync1ID, receiveID, sendID]);
+    tutorialHelper(context, "tutAccount0", [balID, logID, sync1ID, receiveID, sendID]);
   }
 
   @override
@@ -117,7 +113,7 @@ class AccountViewPageState extends State<AccountViewPage> {
                               Gap(16),
                               Text("Balance"),
                               Gap(8),
-                              if (b != null) BalanceWidget(b, showcase: true),
+                              BalanceWidget(b, showcase: true),
                               Gap(8),
                               Observer(
                                 builder: (context) {
@@ -134,14 +130,12 @@ class AccountViewPageState extends State<AccountViewPage> {
                                 },
                               ),
                               Gap(8),
-                              if (b != null) ...[
-                                Showcase(
-                                  key: balID,
-                                  description: "Balance across all pools",
-                                  child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),
-                                ),
-                                Gap(8),
-                              ],
+                              Showcase(
+                                key: balID,
+                                description: "Balance across all pools",
+                                child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),
+                              ),
+                              Gap(8),
                             ],
                           ),
                         ),
@@ -179,16 +173,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   Account? get account => appStore.selectedAccount;
 }
 
-final nameID2 = GlobalKey();
-final iconID2 = GlobalKey();
-final birthID2 = GlobalKey();
-final enableID = GlobalKey();
-final hideID2 = GlobalKey();
-final viewID = GlobalKey();
-final exportID = GlobalKey();
-final rewindID = GlobalKey();
-final resetID = GlobalKey();
-
 class AccountEditPage extends StatefulWidget {
   final List<Account> accounts;
   const AccountEditPage(this.accounts, {super.key});
@@ -198,8 +182,19 @@ class AccountEditPage extends StatefulWidget {
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
+  final nameID2 = GlobalKey(debugLabel: "nameID2");
+  final iconID2 = GlobalKey(debugLabel: "iconID2");
+  final birthID2 = GlobalKey(debugLabel: "birthID2");
+  final enableID = GlobalKey(debugLabel: "enableID");
+  final hideID2 = GlobalKey(debugLabel: "hideID2");
+  final viewID = GlobalKey(debugLabel: "viewID");
+  final exportID = GlobalKey(debugLabel: "exportID");
+  final rewindID = GlobalKey(debugLabel: "rewindID");
+  final resetID = GlobalKey(debugLabel: "resetID");
+  final folderID = GlobalKey(debugLabel: "folderID");
+
   late List<Account> accounts = widget.accounts;
-  final formKey = GlobalKey<FormBuilderState>();
+  final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
 
   @override
   void didUpdateWidget(covariant AccountEditPage oldWidget) {
@@ -507,40 +502,25 @@ class BalanceWidget extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        maybeShowcase(
-          showcase,
-          key: tBalID,
-          description: "Balance in the Transparent Pool",
-          child: zatToText(
-            balance.field0[0],
-            prefix: "T: ",
-            selectable: true,
-            onTap: () => onPoolSelected?.call(0),
-          ),
+        zatToText(
+          balance.field0[0],
+          prefix: "T: ",
+          selectable: true,
+          onTap: () => onPoolSelected?.call(0),
         ),
         const Gap(8),
-        maybeShowcase(
-          showcase,
-          key: sBalID,
-          description: "Balance in the Sapling Pool",
-          child: zatToText(
-            balance.field0[1],
-            prefix: "S: ",
-            selectable: true,
-            onTap: () => onPoolSelected?.call(1),
-          ),
+        zatToText(
+          balance.field0[1],
+          prefix: "S: ",
+          selectable: true,
+          onTap: () => onPoolSelected?.call(1),
         ),
         const Gap(8),
-        maybeShowcase(
-          showcase,
-          key: oBalID,
-          description: "Balance in the Orchard Pool",
-          child: zatToText(
-            balance.field0[2],
-            prefix: "O: ",
-            selectable: true,
-            onTap: () => onPoolSelected?.call(2),
-          ),
+        zatToText(
+          balance.field0[2],
+          prefix: "O: ",
+          selectable: true,
+          onTap: () => onPoolSelected?.call(2),
         ),
       ],
     );

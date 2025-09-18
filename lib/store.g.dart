@@ -211,13 +211,13 @@ mixin _$AppStore on AppStoreBase, Store {
       Atom(name: 'AppStoreBase.poolBalance', context: context);
 
   @override
-  PoolBalance? get poolBalance {
+  PoolBalance get poolBalance {
     _$poolBalanceAtom.reportRead();
     return super.poolBalance;
   }
 
   @override
-  set poolBalance(PoolBalance? value) {
+  set poolBalance(PoolBalance value) {
     _$poolBalanceAtom.reportWrite(value, super.poolBalance, () {
       super.poolBalance = value;
     });
