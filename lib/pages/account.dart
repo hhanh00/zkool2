@@ -22,13 +22,6 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
-final logID = GlobalKey(debugLabel: "logID");
-final sync1ID = GlobalKey(debugLabel: "sync1ID");
-final receiveID = GlobalKey(debugLabel: "receiveID");
-final sendID = GlobalKey(debugLabel: "sendID");
-final balID = GlobalKey(debugLabel: "balID");
-final folderID = GlobalKey(debugLabel: "folderID");
-
 class AccountViewPage extends StatefulWidget {
   const AccountViewPage({super.key});
 
@@ -37,6 +30,12 @@ class AccountViewPage extends StatefulWidget {
 }
 
 class AccountViewPageState extends State<AccountViewPage> {
+  final logID = GlobalKey(debugLabel: "logID");
+  final sync1ID = GlobalKey(debugLabel: "sync1ID");
+  final receiveID = GlobalKey(debugLabel: "receiveID");
+  final sendID = GlobalKey(debugLabel: "sendID");
+  final balID = GlobalKey(debugLabel: "balID");
+
   StreamSubscription<SyncProgress>? progressSubscription;
 
   @override
@@ -174,16 +173,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   Account? get account => appStore.selectedAccount;
 }
 
-final nameID2 = GlobalKey(debugLabel: "nameID2");
-final iconID2 = GlobalKey(debugLabel: "iconID2");
-final birthID2 = GlobalKey(debugLabel: "birthID2");
-final enableID = GlobalKey(debugLabel: "enableID");
-final hideID2 = GlobalKey(debugLabel: "hideID2");
-final viewID = GlobalKey(debugLabel: "viewID");
-final exportID = GlobalKey(debugLabel: "exportID");
-final rewindID = GlobalKey(debugLabel: "rewindID");
-final resetID = GlobalKey(debugLabel: "resetID");
-
 class AccountEditPage extends StatefulWidget {
   final List<Account> accounts;
   const AccountEditPage(this.accounts, {super.key});
@@ -193,6 +182,17 @@ class AccountEditPage extends StatefulWidget {
 }
 
 class AccountEditPageState extends State<AccountEditPage> {
+  final nameID2 = GlobalKey(debugLabel: "nameID2");
+  final iconID2 = GlobalKey(debugLabel: "iconID2");
+  final birthID2 = GlobalKey(debugLabel: "birthID2");
+  final enableID = GlobalKey(debugLabel: "enableID");
+  final hideID2 = GlobalKey(debugLabel: "hideID2");
+  final viewID = GlobalKey(debugLabel: "viewID");
+  final exportID = GlobalKey(debugLabel: "exportID");
+  final rewindID = GlobalKey(debugLabel: "rewindID");
+  final resetID = GlobalKey(debugLabel: "resetID");
+  final folderID = GlobalKey(debugLabel: "folderID");
+
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
 
