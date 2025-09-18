@@ -427,7 +427,7 @@ pub async fn reset_sync(connection: &mut SqliteConnection, account: u32) -> Resu
         .map(|row: SqliteRow| row.get::<u32, _>(0))
         .fetch_one(&mut *connection)
         .await?;
-    trim_sync_data(connection, account, birth_height - 1).await
+    trim_sync_data(connection, account, birth_height).await
 }
 
 pub async fn get_tx_details(
