@@ -147,7 +147,7 @@ abstract class AppStoreBase with Store {
   @observable
   int seqno = 0;
   @observable
-  PoolBalance? poolBalance;
+  PoolBalance poolBalance = PoolBalance(field0: Uint64List.fromList([0, 0, 0]));
   @observable
   List<Tx> transactions = [];
   @observable
