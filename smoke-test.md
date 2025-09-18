@@ -20,3 +20,8 @@
 - Drain SA -> TestCoins
 - Drain A -> TestCoins
 - Drain B -> TestCoins
+
+## Transparent Sync
+- Import account from private key
+- Sync
+- Send
