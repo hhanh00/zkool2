@@ -12,6 +12,7 @@ use reddsa::frost::redpallas::keys::{
     dkg::{self, round1, round2},
     EvenY,
 };
+use serde_json::Value;
 use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
@@ -478,8 +479,12 @@ pub async fn publish(
     .await?;
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
-    let txid = crate::pay::send(client, height, &txb).await?;
-    Ok(txid)
+    let result = crate::pay::send(client, height, &txb).await?;
+    // Check the result is a TXID and not an error json
+    let value = serde_json::from_str::<Value>(&result)?;
+    let value = value.as_str().ok_or(anyhow::anyhow!("Not a TXID String"))?;
+    hex::decode(value)?;
+    Ok(value.to_string())
 }
 
 async fn process_memos(

@@ -700,6 +700,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .execute(&mut *tx)
         .await?;
     }
+    tx.commit().await?;
 
     Ok(())
 }
