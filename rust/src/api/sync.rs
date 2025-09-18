@@ -2,7 +2,7 @@ use anyhow::{Context as _, Result};
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::SqliteConnection;
-use sqlx::{sqlite::SqliteRow, Row, Connection as _};
+use sqlx::{sqlite::SqliteRow, Connection as _, Row};
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use tokio::sync::mpsc::channel;
@@ -10,18 +10,16 @@ use tokio::sync::{broadcast, Mutex};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
-use zcash_primitives::legacy::TransparentAddress;
 use crate::coin::Network;
+use zcash_primitives::legacy::TransparentAddress;
 
 use crate::db::calculate_balance;
 use crate::io::SyncHeight;
-use crate::sync::{get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync};
-use crate::Client;
-use crate::{
-    frb_generated::StreamSink,
-    get_coin,
-    sync::shielded_sync,
+use crate::sync::{
+    get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync, BlockHeader,
 };
+use crate::Client;
+use crate::{frb_generated::StreamSink, get_coin, sync::shielded_sync};
 // use tokio_stream::StreamExt as _;
 
 #[frb]
@@ -165,9 +163,7 @@ pub async fn synchronize(
             let heights_without_time =
                 get_heights_without_time(&mut *connection, start_height, end_height).await?;
             for h in heights_without_time {
-                let block = client
-                    .block(&network, h)
-                    .await?;
+                let block = client.block(&network, h).await?;
                 let time = block.time;
                 sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0")
                     .bind(time)
@@ -179,7 +175,8 @@ pub async fn synchronize(
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
-                crate::memo::fetch_tx_details(&network, &mut *connection, &mut client, *account).await?;
+                crate::memo::fetch_tx_details(&network, &mut *connection, &mut client, *account)
+                    .await?;
             }
             info!(
                 "Sync completed for height range {}-{}",
@@ -243,10 +240,7 @@ pub(crate) async fn transparent_sync(
     for (account, address_row) in addresses.iter() {
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
         let mut txs = client
-            .taddress_txs(network,
-                &address_row.1,
-                start_height,
-                end_height)
+            .taddress_txs(network, &address_row.1, start_height, end_height)
             .await?
             .into_inner();
 
@@ -394,6 +388,21 @@ pub async fn get_tx_details() -> Result<()> {
     Ok(())
 }
 
+#[frb]
+pub async fn cache_block_time(height: u32) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    let mut client = c.client().await?;
+    let block = client.block(&c.network, height).await?;
+    let bh = BlockHeader {
+        height,
+        hash: block.hash,
+        time: block.time,
+    };
+    crate::db::store_block_header(&mut connection, &bh).await?;
+    Ok(())
+}
+
 #[derive(Clone, Debug)]
 pub struct SyncProgress {
     pub height: u32,
@@ -403,4 +412,5 @@ pub struct SyncProgress {
 pub struct PoolBalance(pub Vec<u64>);
 
 pub static SYNCING: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-pub static CANCEL_SYNC: LazyLock<Mutex<Option<broadcast::Sender<()>>>> = LazyLock::new(|| Mutex::new(None));
+pub static CANCEL_SYNC: LazyLock<Mutex<Option<broadcast::Sender<()>>>> =
+    LazyLock::new(|| Mutex::new(None));
