@@ -36,6 +36,9 @@ Future<SyncHeight> getDbHeight() =>
 
 Future<void> getTxDetails() => RustLib.instance.api.crateApiSyncGetTxDetails();
 
+Future<void> cacheBlockTime({required int height}) =>
+    RustLib.instance.api.crateApiSyncCacheBlockTime(height: height);
+
 class PoolBalance {
   final Uint64List field0;
 
