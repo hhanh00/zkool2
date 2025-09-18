@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.2.6](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.5...zkool-v5.2.6) (2025-09-18)
+
+
+### Bug Fixes
+
+* block time at birth height for new account ([#518](https://github.com/hhanh00/zkool2/issues/518)) ([68c33cb](https://github.com/hhanh00/zkool2/commit/68c33cbe32e1df04caada98c753077a6fbcdb230))
+* dkg - handle error from server ([#515](https://github.com/hhanh00/zkool2/issues/515)) ([f79d340](https://github.com/hhanh00/zkool2/commit/f79d3404c89e329dea2b61ae369650fb80b79d2a))
+* duplicate GlobalKey ([#520](https://github.com/hhanh00/zkool2/issues/520)) ([0bb17f2](https://github.com/hhanh00/zkool2/commit/0bb17f243c8b1f979ebc3d7ceeef9ee46f4dcdda))
+* get block times of synced points ([#517](https://github.com/hhanh00/zkool2/issues/517)) ([8aa5a51](https://github.com/hhanh00/zkool2/commit/8aa5a5123dccec3c4ac2bab614a94505e8fbc934))
+* import account ([f79d340](https://github.com/hhanh00/zkool2/commit/f79d3404c89e329dea2b61ae369650fb80b79d2a))
+
 ## [5.2.5](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.4...zkool-v5.2.5) (2025-09-17)
 
 
