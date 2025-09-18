@@ -15,6 +15,7 @@ use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
+use crate::sync::BlockHeader;
 
 pub const DB_VERSION: u16 = 5;
 
@@ -358,6 +359,22 @@ pub async fn store_account_metadata(
     Ok(id)
 }
 
+pub async fn store_block_header(
+    connection: &mut SqliteConnection,
+    block_header: &BlockHeader,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO headers (height, hash, time)
+                    VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+    )
+    .bind(block_header.height)
+    .bind(&block_header.hash)
+    .bind(block_header.time)
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
+
 pub async fn store_synced_height(
     connection: &mut SqliteConnection,
     account: u32,
@@ -413,7 +430,7 @@ pub async fn init_account_transparent(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    store_synced_height(connection, account, 0, birth - 1).await?;
+    store_synced_height(connection, account, 0, birth).await?;
 
     Ok(())
 }
@@ -486,7 +503,7 @@ pub async fn init_account_sapling(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    store_synced_height(connection, account, 1, birth - 1).await?;
+    store_synced_height(connection, account, 1, birth).await?;
 
     Ok(())
 }
@@ -534,7 +551,7 @@ pub async fn init_account_orchard(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    store_synced_height(connection, account, 2, birth - 1).await?;
+    store_synced_height(connection, account, 2, birth).await?;
 
     Ok(())
 }
@@ -722,23 +739,24 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             name: row.get(15),
         };
         Account {
-        coin,
-        id: row.get(0),
-        name: row.get(1),
-        seed: row.get(2),
-        aindex: row.get(3),
-        icon: row.get(4),
-        birth: row.get(5),
-        position: row.get(6),
-        hidden: row.get(7),
-        saved: row.get(8),
-        enabled: row.get(9),
-        internal: row.get(10),
-        height: row.get(11),
-        time: row.get(12),
-        balance: row.get::<i64, _>(13) as u64,
-        folder,
-    }})
+            coin,
+            id: row.get(0),
+            name: row.get(1),
+            seed: row.get(2),
+            aindex: row.get(3),
+            icon: row.get(4),
+            birth: row.get(5),
+            position: row.get(6),
+            hidden: row.get(7),
+            saved: row.get(8),
+            enabled: row.get(9),
+            internal: row.get(10),
+            height: row.get(11),
+            time: row.get(12),
+            balance: row.get::<i64, _>(13) as u64,
+            folder,
+        }
+    })
     .fetch(&mut *connection);
 
     let mut accounts = vec![];
