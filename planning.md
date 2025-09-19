@@ -106,3 +106,30 @@ In order of priority,
 ### Account Import/Export
 - [x] Single/Multi account export
 - [x] Add/Import to current database
+
+## USD history
+- [x] Create tx_pending table
+- [x] Add fx rate to send amount
+    - [x] Each recipient
+    - [x] Calculate tx average fx rate
+- [x] Store fx and category in tx_pending
+- [ ] Match new txs with tx_pending
+    - [ ] Update tx category and fx
+- [ ] Purge old tx_pending entries
+- [ ] Query tx without fx rate
+- [ ] Query coingecko for historical prices
+    - [ ] Daily for 31-365 days
+    - [ ] Hourly for 2-30 days
+    - [ ] Minutely for current day
+- [ ] Determine range of historical prices to fetch
+- [ ] Interpolate fx rate for txs without rate
+- [ ] Add fx to tx details
+- [ ] Show tx details in UI
+- [ ] Save/Restore fx rate in I/O
+
+## Categories
+- [ ] Assign category to tx
+- [ ] Save/Restore category in I/O
+- [ ] Add category to tx reports
+- [ ] Category over time
+- [ ] Bar chart by category for a given time period
