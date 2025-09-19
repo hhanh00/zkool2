@@ -290,8 +290,20 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS categories (
         id_category INTEGER PRIMARY KEY,
-        parent INTEGER,
         name TEXT NOT NULL)",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS pending_txs (
+        id_pending_tx INTEGER PRIMARY KEY,
+        account INTEGER NOT NULL,
+        txid BLOB NOT NULL,
+        height INTEGER NOT NULL,
+        fx REAL,
+        category INTEGER,
+        UNIQUE (account, txid))",
     )
     .execute(&mut *connection)
     .await?;
@@ -1127,5 +1139,18 @@ pub async fn change_db_password(
     std::fs::remove_file(db_filepath)?;
     std::fs::rename(tmp_db_filepath, db_filepath)?;
 
+    Ok(())
+}
+
+pub async fn store_pending_tx(connection: &mut SqliteConnection, account: u32, height: u32, txid: &[u8], fx: Option<f64>, category: Option<u32>) -> Result<()> {
+    sqlx::query("INSERT OR REPLACE INTO pending_txs(account, height, txid, fx, category)
+    VALUES (?, ?, ?, ?, ?)")
+    .bind(account)
+    .bind(height)
+    .bind(txid)
+    .bind(fx)
+    .bind(category)
+    .execute(connection)
+    .await?;
     Ok(())
 }

@@ -140,6 +140,9 @@ class TxPageState extends State<TxPage> {
         final txid = jsonDecode(result) as String;
         await showMessage(context, txid);
         showSnackbar("Transaction broadcasted successfully");
+        final txidHex = hex.decode(txid);
+        await storePendingTx(height: txPlan.height, txid: txidHex,
+          fx: pczt.fx, category: pczt.category);
       } catch (_) {
         if (mounted) await showException(context, result);
       }
