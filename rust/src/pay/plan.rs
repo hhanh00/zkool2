@@ -105,11 +105,26 @@ pub async fn plan_transaction(
     recipient_pays_fee: bool,
     smart_transparent: bool,
     dust_change_policy: DustChangePolicy,
+    category: Option<u32>,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
         info!("Computing plan");
     });
+
+    let mut total_amount = 0;
+    let mut total_fiat = 0.0;
+    for r in recipients {
+        if let Some(fiat) = r.fiat {
+            total_fiat += fiat;
+            total_amount += r.amount;
+        }
+    }
+    let fx = if total_amount != 0 {
+        Some(total_fiat / total_amount as f64)
+    } else {
+        None
+    };
 
     let has_tex = recipients
         .iter()
@@ -703,6 +718,8 @@ pub async fn plan_transaction(
             .collect(),
         can_sign,
         can_broadcast: false,
+        fx,
+        category,
     };
 
     Ok(pczt_package)
@@ -736,6 +753,8 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
+        fx,
+        category,
         ..
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
@@ -781,13 +800,16 @@ pub async fn sign_transaction(
             // Or directly from the private key
             None => {
                 let address = String::from_utf8(inp.proprietary()["address"].clone())?;
-                sqlx::query("SELECT sk FROM transparent_address_accounts
-                    WHERE account = ?1 AND address = ?2")
+                sqlx::query(
+                    "SELECT sk FROM transparent_address_accounts
+                    WHERE account = ?1 AND address = ?2",
+                )
                 .bind(account)
                 .bind(&address)
                 .map(|r| {
                     let sk: Vec<u8> = r.get(0);
-                    SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap()})
+                    SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap()
+                })
                 .fetch_optional(&mut *connection)
                 .await?
             }
@@ -834,6 +856,8 @@ pub async fn sign_transaction(
         orchard_indices: orchard_indices.clone(),
         can_sign: true,
         can_broadcast: true,
+        fx: *fx,
+        category: *category,
     })
 }
 
