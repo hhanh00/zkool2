@@ -11,9 +11,10 @@ use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
 use crate::coin::Network;
+use crate::memo::fetch_tx_details;
 use zcash_primitives::legacy::TransparentAddress;
 
-use crate::db::calculate_balance;
+use crate::db::{calculate_balance, store_block_header};
 use crate::io::SyncHeight;
 use crate::sync::{
     get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync, BlockHeader,
@@ -170,12 +171,14 @@ pub async fn synchronize(
                     .bind(h)
                     .execute(&mut *connection)
                     .await?;
+                let block_header = BlockHeader { height: h, hash: block.hash, time: block.time };
+                store_block_header(&mut *connection, &block_header).await?;
             }
 
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
-                crate::memo::fetch_tx_details(&network, &mut *connection, &mut client, *account)
+                fetch_tx_details(&network, &mut *connection, &mut client, *account)
                     .await?;
             }
             info!(
