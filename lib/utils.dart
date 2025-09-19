@@ -26,6 +26,8 @@ final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigit
 final zatFormatter = DecimalFormatter(formatter);
 final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP != ".";
 
+final int zatsPerZec = 100000000;
+
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
   final s = zatFormatter.format(z.toDecimal());
@@ -53,6 +55,8 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
           TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
         ],),);
 }
+
+Fixed stringToDecimal(String s, {int? scale}) => Fixed.parse(s, scale: scale, invertSeparator: invertSeparator);
 
 BigInt stringToZat(String s) {
   final z = Fixed.parse(s, scale: 8, invertSeparator: invertSeparator);
