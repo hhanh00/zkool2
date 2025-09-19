@@ -17,7 +17,7 @@ use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
 
-pub const DB_VERSION: u16 = 5;
+pub const DB_VERSION: u16 = 6;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
@@ -272,6 +272,25 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS folders (
         id_folder INTEGER PRIMARY KEY,
+        name TEXT NOT NULL)",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    // V6
+    if !has_column(&mut *connection, "transactions", "category").await? {
+        sqlx::query("ALTER TABLE transactions ADD COLUMN category INTEGER")
+            .execute(&mut *connection)
+            .await?;
+        sqlx::query("ALTER TABLE transactions ADD COLUMN fiat REAL")
+            .execute(&mut *connection)
+            .await?;
+    }
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS categories (
+        id_category INTEGER PRIMARY KEY,
+        parent INTEGER,
         name TEXT NOT NULL)",
     )
     .execute(&mut *connection)

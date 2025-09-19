@@ -53,5 +53,6 @@ jobs:
           files: |
             ${{ steps.package.outputs.PKG_PATH }}.deb
             ${{ steps.package.outputs.PKG_PATH }}.AppImage
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

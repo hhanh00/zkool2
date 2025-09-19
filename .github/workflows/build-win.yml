@@ -57,5 +57,6 @@ jobs:
           files: |
             ${{ steps.package.outputs.PKG_PATH }}
             ${{ steps.package.outputs.ZIP_PATH }}
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
