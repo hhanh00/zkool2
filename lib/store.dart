@@ -175,6 +175,7 @@ abstract class AppStoreBase with Store {
   bool offline = false;
   bool useTor = false;
   bool recovery = false;
+  double? price; // market price
 
   ObservableList<String> log = ObservableList.of([]);
   @observable
