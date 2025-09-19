@@ -12,6 +12,7 @@ class Recipient {
   final int? pools;
   final String? userMemo;
   final Uint8List? memoBytes;
+  final double? fiat;
 
   const Recipient({
     required this.address,
@@ -19,6 +20,7 @@ class Recipient {
     this.pools,
     this.userMemo,
     this.memoBytes,
+    this.fiat,
   });
 
   @override
@@ -27,7 +29,8 @@ class Recipient {
       amount.hashCode ^
       pools.hashCode ^
       userMemo.hashCode ^
-      memoBytes.hashCode;
+      memoBytes.hashCode ^
+      fiat.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -38,7 +41,8 @@ class Recipient {
           amount == other.amount &&
           pools == other.pools &&
           userMemo == other.userMemo &&
-          memoBytes == other.memoBytes;
+          memoBytes == other.memoBytes &&
+          fiat == other.fiat;
 }
 
 class TxPlan {

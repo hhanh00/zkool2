@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 913397078;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -924684376;
 
 // Section: executor
 
@@ -2999,6 +2999,51 @@ fn wire__crate__api__pay__sign_transaction_impl(
         },
     )
 }
+fn wire__crate__api__pay__store_pending_tx_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "store_pending_tx",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_height = <u32>::sse_decode(&mut deserializer);
+            let api_txid = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_fx = <Option<f64>>::sse_decode(&mut deserializer);
+            let api_category = <Option<u32>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::pay::store_pending_tx(
+                            api_height,
+                            &api_txid,
+                            api_fx,
+                            api_category,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__sync__synchronize_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3845,6 +3890,17 @@ impl SseDecode for Option<bool> {
     }
 }
 
+impl SseDecode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<f64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::account::FrostParams> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3948,6 +4004,8 @@ impl SseDecode for crate::api::pay::PcztPackage {
         let mut var_orchardIndices = <Vec<usize>>::sse_decode(deserializer);
         let mut var_canSign = <bool>::sse_decode(deserializer);
         let mut var_canBroadcast = <bool>::sse_decode(deserializer);
+        let mut var_fx = <Option<f64>>::sse_decode(deserializer);
+        let mut var_category = <Option<u32>>::sse_decode(deserializer);
         return crate::api::pay::PcztPackage {
             pczt: var_pczt,
             n_spends: var_nSpends,
@@ -3955,6 +4013,8 @@ impl SseDecode for crate::api::pay::PcztPackage {
             orchard_indices: var_orchardIndices,
             can_sign: var_canSign,
             can_broadcast: var_canBroadcast,
+            fx: var_fx,
+            category: var_category,
         };
     }
 }
@@ -3989,12 +4049,14 @@ impl SseDecode for crate::pay::Recipient {
         let mut var_pools = <Option<u8>>::sse_decode(deserializer);
         let mut var_userMemo = <Option<String>>::sse_decode(deserializer);
         let mut var_memoBytes = <Option<Vec<u8>>>::sse_decode(deserializer);
+        let mut var_fiat = <Option<f64>>::sse_decode(deserializer);
         return crate::pay::Recipient {
             address: var_address,
             amount: var_amount,
             pools: var_pools,
             user_memo: var_userMemo,
             memo_bytes: var_memoBytes,
+            fiat: var_fiat,
         };
     }
 }
@@ -4440,10 +4502,11 @@ fn pde_ffi_dispatcher_primary_impl(
         77 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
         78 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
         82 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__account__transparent_sweep_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -4470,8 +4533,8 @@ fn pde_ffi_dispatcher_sync_impl(
         79 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
         80 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
         81 => wire__crate__api__network__set_use_tor_impl(ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -4821,6 +4884,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PcztPackage {
             self.orchard_indices.into_into_dart().into_dart(),
             self.can_sign.into_into_dart().into_dart(),
             self.can_broadcast.into_into_dart().into_dart(),
+            self.fx.into_into_dart().into_dart(),
+            self.category.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4878,6 +4943,7 @@ impl flutter_rust_bridge::IntoDart for crate::pay::Recipient {
             self.pools.into_into_dart().into_dart(),
             self.user_memo.into_into_dart().into_dart(),
             self.memo_bytes.into_into_dart().into_dart(),
+            self.fiat.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5678,6 +5744,16 @@ impl SseEncode for Option<bool> {
     }
 }
 
+impl SseEncode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <f64>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::account::FrostParams> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -5767,6 +5843,8 @@ impl SseEncode for crate::api::pay::PcztPackage {
         <Vec<usize>>::sse_encode(self.orchard_indices, serializer);
         <bool>::sse_encode(self.can_sign, serializer);
         <bool>::sse_encode(self.can_broadcast, serializer);
+        <Option<f64>>::sse_encode(self.fx, serializer);
+        <Option<u32>>::sse_encode(self.category, serializer);
     }
 }
 
@@ -5794,6 +5872,7 @@ impl SseEncode for crate::pay::Recipient {
         <Option<u8>>::sse_encode(self.pools, serializer);
         <Option<String>>::sse_encode(self.user_memo, serializer);
         <Option<Vec<u8>>>::sse_encode(self.memo_bytes, serializer);
+        <Option<f64>>::sse_encode(self.fiat, serializer);
     }
 }
 

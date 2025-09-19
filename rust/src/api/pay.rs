@@ -39,6 +39,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Resul
         options.recipient_pays_fee,
         options.smart_transparent,
         options.dust_change_policy,
+        None,
     )
     .await
 }
@@ -68,6 +69,8 @@ pub struct PcztPackage {
     pub orchard_indices: Vec<usize>,
     pub can_sign: bool,
     pub can_broadcast: bool,
+    pub fx: Option<f64>,
+    pub category: Option<u32>,
 }
 
 #[frb]
@@ -104,6 +107,16 @@ pub async fn send(height: u32, data: &[u8]) -> Result<String> {
 
     let tx = crate::pay::send(&mut client, height, data).await?;
     Ok(tx)
+}
+
+#[frb]
+pub async fn store_pending_tx(height: u32, txid: &[u8],
+    fx: Option<f64>, category: Option<u32>) -> Result<()> {
+    let c = crate::get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::db::store_pending_tx(&mut connection, c.account, height, txid, fx, category).await?;
+
+    Ok(())
 }
 
 #[frb(sync)]

@@ -463,6 +463,7 @@ pub async fn publish(
             pools: None,
             user_memo: None,
             memo_bytes: Some(to_arb_memo(data)),
+            fiat: None,
         })
         .collect::<Vec<_>>();
     let pczt = plan_transaction(
@@ -475,6 +476,7 @@ pub async fn publish(
         false,
         false,
         crate::api::pay::DustChangePolicy::Discard,
+        None,
     )
     .await?;
     let pczt = sign_transaction(connection, account, &pczt).await?;
