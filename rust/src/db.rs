@@ -296,7 +296,7 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
-    let version = get_prop(connection, "db_version").await?;
+    let version = get_prop(connection, "version").await?;
     if let Some(version) = version {
         let version = version.parse::<u16>()?;
         if version > DB_VERSION {
