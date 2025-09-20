@@ -13,7 +13,7 @@ class TxAccount {
   final int height;
   final int time;
   final double? price;
-  final String? category;
+  final int? category;
   final List<TxNote> notes;
   final List<TxSpend> spends;
   final List<TxOutput> outputs;

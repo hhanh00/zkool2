@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -49,6 +50,7 @@ class TxViewState extends State<TxView> {
     final t = Theme.of(context).textTheme;
     final amountSpent = txd.spends.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
     final amountReceived = txd.notes.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
+    final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...appStore.categories.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
 
     return [
       ListTile(
@@ -80,10 +82,10 @@ class TxViewState extends State<TxView> {
         title: Text("Price"),
         subtitle: Text(txd.price != null ? NumberFormat.compactCurrency(decimalDigits: 2).format(txd.price) : "N/A"),
       ),
-      ListTile(
-        title: Text("Category"),
-        subtitle: CopyableText(txd.category ?? "Unknown"),
-      ),
+      ListTile(title: Text("Category"), subtitle: DropdownMenu(
+        initialSelection: txd.category,
+        onSelected: (v) => onChangeTxCategory(txd.id, v),
+        dropdownMenuEntries: categories)),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand(
@@ -137,5 +139,9 @@ class TxViewState extends State<TxView> {
     final blockExplorer = appStore.blockExplorer;
     final url = blockExplorer.replaceAll("{net}", appStore.net).replaceAll("{txid}", txIdToString(txid));
     await launchUrl(Uri.parse(url));
+  }
+
+  void onChangeTxCategory(int id, int? category) async {
+    await setTxCategory(id: id, category: category);
   }
 }
