@@ -18,6 +18,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/pool_select.dart';
@@ -77,6 +78,10 @@ class AccountViewPageState extends State<AccountViewPage> {
               description: "Send funds to one or many addresses",
               child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
             ),
+            IconButton(
+              icon: Icon(Icons.price_check),
+              onPressed: updateAllFx,
+            )
           ],
           bottom: TabBar(
             tabs: [
@@ -168,6 +173,25 @@ class AccountViewPageState extends State<AccountViewPage> {
 
   void onSend() async {
     await GoRouter.of(context).push("/send");
+  }
+
+  void updateAllFx() async {
+    final (min, max) = await getTxWithoutUsdRange();
+    if (min == null) return;
+    final minDT = DateTime.fromMillisecondsSinceEpoch(min * 1000);
+    final maxDT = DateTime.fromMillisecondsSinceEpoch(max! * 1000);
+    logger.i("$minDT $maxDT");
+    final now = DateTime.now();
+    final cutoff1D = now.subtract(Duration(days: 1));
+    final cutoff90D = now.subtract(Duration(days: 90));
+    if (minDT.isBefore(cutoff90D)) {
+      logger.i("Query 365 Days");
+    }
+    if (minDT.isBefore(cutoff1D)) {
+      logger.i("Query 90 Days");
+    }
+    logger.i("Query 1 Day");
+    // GET https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency=usd&days=1
   }
 
   Account? get account => appStore.selectedAccount;
