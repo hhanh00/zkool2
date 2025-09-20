@@ -1,4 +1,4 @@
-use crate::{api::account::Folder, coin::Network};
+use crate::{api::account::{Category, Folder}, coin::Network};
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
@@ -679,6 +679,67 @@ pub async fn delete_folders(connection: &mut SqliteConnection, ids: &[u32]) -> R
         .await?;
 
         sqlx::query("DELETE FROM folders WHERE id_folder = ?1")
+        .bind(id)
+        .execute(&mut *connection)
+        .await?;
+    }
+    Ok(())
+}
+
+pub async fn list_categories(connection: &mut SqliteConnection) -> Result<Vec<Category>> {
+    let folders = sqlx::query("SELECT id_category, name FROM categories ORDER BY name")
+        .map(|r: SqliteRow| {
+            Category {
+                id: r.get(0),
+                name: r.get(1),
+            }
+        })
+        .fetch_all(connection)
+        .await?;
+    Ok(folders)
+}
+
+pub async fn create_new_category(connection: &mut SqliteConnection, name: &str) -> Result<Category> {
+    sqlx::query("INSERT OR IGNORE INTO categories(name) VALUES (?1)")
+        .bind(name)
+        .execute(&mut *connection)
+        .await?;
+    let id = sqlx::query("SELECT id_category FROM categories WHERE name = ?1")
+        .bind(name)
+        .map(|r: SqliteRow| r.get::<u32, _>(0))
+        .fetch_one(&mut *connection)
+        .await?;
+
+    Ok(Category {
+        id,
+        name: name.to_string(),
+    })
+}
+
+pub async fn rename_category(connection: &mut SqliteConnection, id: u32, name: &str) -> Result<()> {
+    if sqlx::query("SELECT 1 FROM categories WHERE name = ?1")
+    .bind(name)
+    .fetch_optional(&mut *connection)
+    .await?.is_some() {
+        anyhow::bail!("Category name already exists");
+    }
+
+    sqlx::query("UPDATE categories SET name = ?2 WHERE id_category = ?1")
+    .bind(id)
+    .bind(name)
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
+pub async fn delete_categories(connection: &mut SqliteConnection, ids: &[u32]) -> Result<()> {
+    for id in ids {
+        sqlx::query("UPDATE transactions SET category = NULL where category = ?1")
+        .bind(id)
+        .execute(&mut *connection)
+        .await?;
+
+        sqlx::query("DELETE FROM categories WHERE id_category = ?1")
         .bind(id)
         .execute(&mut *connection)
         .await?;
