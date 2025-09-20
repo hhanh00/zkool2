@@ -98,6 +98,8 @@ class InputAmountState extends State<InputAmount> {
     });
   }
 
+  String? fx() => formKey.currentState!.fields["fx"]!.value as String?;
+
   bool disableChangeHandlers = false;
 
   void onPriceChanged(String? v) {

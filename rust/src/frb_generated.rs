@@ -4228,11 +4228,13 @@ impl SseDecode for crate::api::pay::PaymentOptions {
         let mut var_smartTransparent = <bool>::sse_decode(deserializer);
         let mut var_dustChangePolicy =
             <crate::api::pay::DustChangePolicy>::sse_decode(deserializer);
+        let mut var_category = <Option<u32>>::sse_decode(deserializer);
         return crate::api::pay::PaymentOptions {
             src_pools: var_srcPools,
             recipient_pays_fee: var_recipientPaysFee,
             smart_transparent: var_smartTransparent,
             dust_change_policy: var_dustChangePolicy,
+            category: var_category,
         };
     }
 }
@@ -4291,14 +4293,14 @@ impl SseDecode for crate::pay::Recipient {
         let mut var_pools = <Option<u8>>::sse_decode(deserializer);
         let mut var_userMemo = <Option<String>>::sse_decode(deserializer);
         let mut var_memoBytes = <Option<Vec<u8>>>::sse_decode(deserializer);
-        let mut var_fiat = <Option<f64>>::sse_decode(deserializer);
+        let mut var_fx = <Option<f64>>::sse_decode(deserializer);
         return crate::pay::Recipient {
             address: var_address,
             amount: var_amount,
             pools: var_pools,
             user_memo: var_userMemo,
             memo_bytes: var_memoBytes,
-            fiat: var_fiat,
+            fx: var_fx,
         };
     }
 }
@@ -5140,6 +5142,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PaymentOptions {
             self.recipient_pays_fee.into_into_dart().into_dart(),
             self.smart_transparent.into_into_dart().into_dart(),
             self.dust_change_policy.into_into_dart().into_dart(),
+            self.category.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5224,7 +5227,7 @@ impl flutter_rust_bridge::IntoDart for crate::pay::Recipient {
             self.pools.into_into_dart().into_dart(),
             self.user_memo.into_into_dart().into_dart(),
             self.memo_bytes.into_into_dart().into_dart(),
-            self.fiat.into_into_dart().into_dart(),
+            self.fx.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6133,6 +6136,7 @@ impl SseEncode for crate::api::pay::PaymentOptions {
         <bool>::sse_encode(self.recipient_pays_fee, serializer);
         <bool>::sse_encode(self.smart_transparent, serializer);
         <crate::api::pay::DustChangePolicy>::sse_encode(self.dust_change_policy, serializer);
+        <Option<u32>>::sse_encode(self.category, serializer);
     }
 }
 
@@ -6174,7 +6178,7 @@ impl SseEncode for crate::pay::Recipient {
         <Option<u8>>::sse_encode(self.pools, serializer);
         <Option<String>>::sse_encode(self.user_memo, serializer);
         <Option<Vec<u8>>>::sse_encode(self.memo_bytes, serializer);
-        <Option<f64>>::sse_encode(self.fiat, serializer);
+        <Option<f64>>::sse_encode(self.fx, serializer);
     }
 }
 
