@@ -437,7 +437,6 @@ pub async fn get_tx_details(
 ) -> Result<TxAccount> {
     let mut tx = sqlx::query(
         "SELECT txid, height, time, price, category FROM transactions t
-        LEFT JOIN categories c ON c.id_category = t.category
         WHERE account = ? AND id_tx = ?",
     )
     .bind(account)
@@ -447,7 +446,7 @@ pub async fn get_tx_details(
         let height: u32 = row.get(1);
         let time: u32 = row.get(2);
         let price: Option<f64> = row.get(3);
-        let category: Option<String> = row.get(4);
+        let category: Option<u32> = row.get(4);
         TxAccount {
             id: id_tx,
             account,
@@ -587,7 +586,7 @@ pub struct TxAccount {
     pub height: u32,
     pub time: u32,
     pub price: Option<f64>,
-    pub category: Option<String>,
+    pub category: Option<u32>,
     pub notes: Vec<TxNote>,
     pub spends: Vec<TxSpend>,
     pub outputs: Vec<TxOutput>,

@@ -8,3 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 Future<void> fillMissingTxPrices() =>
     RustLib.instance.api.crateApiTransactionFillMissingTxPrices();
+
+Future<void> setTxCategory({required int id, int? category}) =>
+    RustLib.instance.api
+        .crateApiTransactionSetTxCategory(id: id, category: category);
