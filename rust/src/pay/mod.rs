@@ -20,7 +20,7 @@ pub struct Recipient {
     pub pools: Option<u8>,
     pub user_memo: Option<String>,
     pub memo_bytes: Option<Vec<u8>>,
-    pub fx: Option<f64>,
+    pub price: Option<f64>,
 }
 
 #[derive(Clone, Debug, Default)]

@@ -115,12 +115,12 @@ pub async fn plan_transaction(
     let mut total_amount = 0;
     let mut total_fiat = 0.0;
     for r in recipients {
-        if let Some(fx) = r.fx {
-            total_fiat += fx * r.amount as f64;
+        if let Some(price) = r.price {
+            total_fiat += price * r.amount as f64;
             total_amount += r.amount;
         }
     }
-    let fx = if total_amount != 0 {
+    let price = if total_amount != 0 {
         Some(total_fiat / total_amount as f64)
     } else {
         None
@@ -718,7 +718,7 @@ pub async fn plan_transaction(
             .collect(),
         can_sign,
         can_broadcast: false,
-        fx,
+        price,
         category,
     };
 
@@ -753,7 +753,7 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
-        fx,
+        price,
         category,
         ..
     } = pczt;
@@ -856,7 +856,7 @@ pub async fn sign_transaction(
         orchard_indices: orchard_indices.clone(),
         can_sign: true,
         can_broadcast: true,
-        fx: *fx,
+        price: *price,
         category: *category,
     })
 }

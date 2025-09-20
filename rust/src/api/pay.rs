@@ -70,7 +70,7 @@ pub struct PcztPackage {
     pub orchard_indices: Vec<usize>,
     pub can_sign: bool,
     pub can_broadcast: bool,
-    pub fx: Option<f64>,
+    pub price: Option<f64>,
     pub category: Option<u32>,
 }
 
@@ -112,10 +112,10 @@ pub async fn send(height: u32, data: &[u8]) -> Result<String> {
 
 #[frb]
 pub async fn store_pending_tx(height: u32, txid: &[u8],
-    fx: Option<f64>, category: Option<u32>) -> Result<()> {
+    price: Option<f64>, category: Option<u32>) -> Result<()> {
     let c = crate::get_coin!();
     let mut connection = c.get_connection().await?;
-    crate::db::store_pending_tx(&mut connection, c.account, height, txid, fx, category).await?;
+    crate::db::store_pending_tx(&mut connection, c.account, height, txid, price, category).await?;
 
     Ok(())
 }

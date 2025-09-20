@@ -302,7 +302,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiPayStorePendingTx(
       {required int height,
       required List<int> txid,
-      double? fx,
+      double? price,
       int? category});
 
   Stream<SyncProgress> crateApiSyncSynchronize(
@@ -2700,7 +2700,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Future<void> crateApiPayStorePendingTx(
       {required int height,
       required List<int> txid,
-      double? fx,
+      double? price,
       int? category}) {
     return handler.executeNormal(
       NormalTask(
@@ -2708,7 +2708,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_u_32(height, serializer);
           sse_encode_list_prim_u_8_loose(txid, serializer);
-          sse_encode_opt_box_autoadd_f_64(fx, serializer);
+          sse_encode_opt_box_autoadd_f_64(price, serializer);
           sse_encode_opt_box_autoadd_u_32(category, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 89, port: port_);
@@ -2718,7 +2718,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiPayStorePendingTxConstMeta,
-        argValues: [height, txid, fx, category],
+        argValues: [height, txid, price, category],
         apiImpl: this,
       ),
     );
@@ -2726,7 +2726,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiPayStorePendingTxConstMeta => const TaskConstMeta(
         debugName: "store_pending_tx",
-        argNames: ["height", "txid", "fx", "category"],
+        argNames: ["height", "txid", "price", "category"],
       );
 
   @override
@@ -3513,7 +3513,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       orchardIndices: dco_decode_list_prim_usize_strict(arr[3]),
       canSign: dco_decode_bool(arr[4]),
       canBroadcast: dco_decode_bool(arr[5]),
-      fx: dco_decode_opt_box_autoadd_f_64(arr[6]),
+      price: dco_decode_opt_box_autoadd_f_64(arr[6]),
       category: dco_decode_opt_box_autoadd_u_32(arr[7]),
     );
   }
@@ -3554,7 +3554,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       pools: dco_decode_opt_box_autoadd_u_8(arr[2]),
       userMemo: dco_decode_opt_String(arr[3]),
       memoBytes: dco_decode_opt_list_prim_u_8_strict(arr[4]),
-      fx: dco_decode_opt_box_autoadd_f_64(arr[5]),
+      price: dco_decode_opt_box_autoadd_f_64(arr[5]),
     );
   }
 
@@ -4592,7 +4592,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_orchardIndices = sse_decode_list_prim_usize_strict(deserializer);
     var var_canSign = sse_decode_bool(deserializer);
     var var_canBroadcast = sse_decode_bool(deserializer);
-    var var_fx = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_price = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_category = sse_decode_opt_box_autoadd_u_32(deserializer);
     return PcztPackage(
         pczt: var_pczt,
@@ -4601,7 +4601,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         orchardIndices: var_orchardIndices,
         canSign: var_canSign,
         canBroadcast: var_canBroadcast,
-        fx: var_fx,
+        price: var_price,
         category: var_category);
   }
 
@@ -4629,14 +4629,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_pools = sse_decode_opt_box_autoadd_u_8(deserializer);
     var var_userMemo = sse_decode_opt_String(deserializer);
     var var_memoBytes = sse_decode_opt_list_prim_u_8_strict(deserializer);
-    var var_fx = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_price = sse_decode_opt_box_autoadd_f_64(deserializer);
     return Recipient(
         address: var_address,
         amount: var_amount,
         pools: var_pools,
         userMemo: var_userMemo,
         memoBytes: var_memoBytes,
-        fx: var_fx);
+        price: var_price);
   }
 
   @protected
@@ -5595,7 +5595,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_prim_usize_strict(self.orchardIndices, serializer);
     sse_encode_bool(self.canSign, serializer);
     sse_encode_bool(self.canBroadcast, serializer);
-    sse_encode_opt_box_autoadd_f_64(self.fx, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.price, serializer);
     sse_encode_opt_box_autoadd_u_32(self.category, serializer);
   }
 
@@ -5621,7 +5621,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_u_8(self.pools, serializer);
     sse_encode_opt_String(self.userMemo, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.memoBytes, serializer);
-    sse_encode_opt_box_autoadd_f_64(self.fx, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.price, serializer);
   }
 
   @protected
