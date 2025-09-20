@@ -325,7 +325,7 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         account INTEGER NOT NULL,
         txid BLOB NOT NULL,
         height INTEGER NOT NULL,
-        fx REAL,
+        price REAL,
         category INTEGER,
         UNIQUE (account, txid))",
     )
@@ -1174,17 +1174,19 @@ pub async fn store_pending_tx(
     account: u32,
     height: u32,
     txid: &[u8],
-    fx: Option<f64>,
+    price: Option<f64>,
     category: Option<u32>,
 ) -> Result<()> {
+    let mut txid = txid.to_vec();
+    txid.reverse();
     sqlx::query(
-        "INSERT OR REPLACE INTO pending_txs(account, height, txid, fx, category)
+        "INSERT OR REPLACE INTO pending_txs(account, height, txid, price, category)
     VALUES (?, ?, ?, ?, ?)",
     )
     .bind(account)
     .bind(height)
-    .bind(txid)
-    .bind(fx)
+    .bind(&txid)
+    .bind(price)
     .bind(category)
     .execute(connection)
     .await?;

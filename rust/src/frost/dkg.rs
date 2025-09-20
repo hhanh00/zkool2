@@ -463,7 +463,7 @@ pub async fn publish(
             pools: None,
             user_memo: None,
             memo_bytes: Some(to_arb_memo(data)),
-            fx: None,
+            price: None,
         })
         .collect::<Vec<_>>();
     let pczt = plan_transaction(
