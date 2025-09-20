@@ -285,15 +285,39 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         sqlx::query("ALTER TABLE transactions ADD COLUMN price REAL")
             .execute(&mut *connection)
             .await?;
-    }
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS categories (
+            id_category INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            UNIQUE (name))",
+        )
+        .execute(&mut *connection)
+        .await?;
 
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS categories (
-        id_category INTEGER PRIMARY KEY,
-        name TEXT NOT NULL)",
-    )
-    .execute(&mut *connection)
-    .await?;
+        for c in vec![
+            "Salary",
+            "Business Income",
+            "Investments",
+            "Rental/Property Income",
+            "Other Income",
+            "Housing & Utilities",
+            "Food & Groceries",
+            "Transportation",
+            "Health & Insurance",
+            "Debt & Financial Obligations",
+            "Education & Training",
+            "Entertainment & Lifestyle",
+            "Personal & Family Care",
+            "Taxes",
+            "Savings & Investments",
+        ] {
+            sqlx::query("INSERT OR REPLACE INTO categories(name)
+            VALUES (?)")
+            .bind(c)
+            .execute(&mut *connection)
+            .await?;
+        }
+    }
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS pending_txs (
@@ -1145,9 +1169,18 @@ pub async fn change_db_password(
     Ok(())
 }
 
-pub async fn store_pending_tx(connection: &mut SqliteConnection, account: u32, height: u32, txid: &[u8], fx: Option<f64>, category: Option<u32>) -> Result<()> {
-    sqlx::query("INSERT OR REPLACE INTO pending_txs(account, height, txid, fx, category)
-    VALUES (?, ?, ?, ?, ?)")
+pub async fn store_pending_tx(
+    connection: &mut SqliteConnection,
+    account: u32,
+    height: u32,
+    txid: &[u8],
+    fx: Option<f64>,
+    category: Option<u32>,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT OR REPLACE INTO pending_txs(account, height, txid, fx, category)
+    VALUES (?, ?, ?, ?, ?)",
+    )
     .bind(account)
     .bind(height)
     .bind(txid)
@@ -1158,11 +1191,15 @@ pub async fn store_pending_tx(connection: &mut SqliteConnection, account: u32, h
     Ok(())
 }
 
-pub async fn set_tx_category(connection: &mut SqliteConnection, id: u32, category: Option<u32>) -> Result<()> {
+pub async fn set_tx_category(
+    connection: &mut SqliteConnection,
+    id: u32,
+    category: Option<u32>,
+) -> Result<()> {
     sqlx::query("UPDATE transactions SET category = ?2 WHERE id_tx = ?1")
-    .bind(id)
-    .bind(category)
-    .execute(&mut *connection)
-    .await?;
+        .bind(id)
+        .bind(category)
+        .execute(&mut *connection)
+        .await?;
     Ok(())
 }
