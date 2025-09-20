@@ -112,24 +112,24 @@ In order of priority,
 - [x] Add fx rate to send amount
     - [x] Each recipient
     - [x] Calculate tx average fx rate
-- [x] Store fx and category in tx_pending
+- [ ] Store fx and category in tx_pending
 - [ ] Match new txs with tx_pending
     - [ ] Update tx category and fx
 - [ ] Purge old tx_pending entries
-- [ ] Query tx without fx rate
-- [ ] Query coingecko for historical prices
-    - [ ] Daily for 31-365 days
-    - [ ] Hourly for 2-30 days
-    - [ ] Minutely for current day
-- [ ] Determine range of historical prices to fetch
-- [ ] Interpolate fx rate for txs without rate
-- [ ] Add fx to tx details
-- [ ] Show tx details in UI
+- [x] Query tx without fx rate
+- [x] Query coingecko for historical prices
+    - [x] Daily for 31-365 days
+    - [x] Hourly for 2-30 days
+    - [x] Minutely for current day
+- [x] Determine range of historical prices to fetch
+- [x] Interpolate fx rate for txs without rate
+- [x] Add fx to tx details
+- [x] Show tx details in UI
 - [ ] Save/Restore fx rate in I/O
 
 ## Categories
-- [ ] Assign category to tx
+- [x] Assign category to tx
 - [ ] Save/Restore category in I/O
-- [ ] Add category to tx reports
+- [x] Add category to tx reports
 - [ ] Category over time
 - [ ] Bar chart by category for a given time period
