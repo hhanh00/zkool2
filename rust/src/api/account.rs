@@ -568,6 +568,7 @@ pub struct Tx {
     pub time: u32,
     pub value: i64,
     pub tpe: Option<u8>,
+    pub category: Option<String>,
 }
 
 pub struct TAddressTxCount {

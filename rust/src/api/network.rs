@@ -1,8 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use flutter_rust_bridge::frb;
 use serde::Deserialize;
-use serde_json::Value;
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 
 use crate::{coin::ServerType, get_coin};
 
