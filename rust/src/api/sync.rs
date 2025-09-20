@@ -10,6 +10,7 @@ use tokio::sync::{broadcast, Mutex};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
+use crate::budget::merge_pending_txs;
 use crate::coin::Network;
 use crate::memo::fetch_tx_details;
 use zcash_primitives::legacy::TransparentAddress;
@@ -171,20 +172,28 @@ pub async fn synchronize(
                     .bind(h)
                     .execute(&mut *connection)
                     .await?;
-                let block_header = BlockHeader { height: h, hash: block.hash, time: block.time };
+                let block_header = BlockHeader {
+                    height: h,
+                    hash: block.hash,
+                    time: block.time,
+                };
                 store_block_header(&mut *connection, &block_header).await?;
             }
 
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
-                fetch_tx_details(&network, &mut *connection, &mut client, *account)
-                    .await?;
+                fetch_tx_details(&network, &mut *connection, &mut client, *account).await?;
             }
+
             info!(
                 "Sync completed for height range {}-{}",
                 start_height, end_height
             );
+        }
+
+        for account in accounts.iter() {
+            merge_pending_txs(&mut *connection, *account, current_height).await?;
         }
 
         Ok::<_, anyhow::Error>(())

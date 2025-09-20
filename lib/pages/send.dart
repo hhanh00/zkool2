@@ -348,10 +348,10 @@ class SendPageState extends State<SendPage> {
       final amount = form.fields['amount']?.value as String;
       final memo = form.fields['memo']?.value as String?;
       final fxStr = amountKey.currentState!.fx();
-      final fx = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
+      final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
       logger.i("Send $amount to $address");
 
-      final recipient = Recipient(address: address, amount: stringToZat(amount), userMemo: memo, fx: fx);
+      final recipient = Recipient(address: address, amount: stringToZat(amount), userMemo: memo, price: price);
       return recipient;
     }
     return null;
