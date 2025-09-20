@@ -12,6 +12,7 @@ class TxAccount {
   final Uint8List txid;
   final int height;
   final int time;
+  final double? price;
   final String? category;
   final List<TxNote> notes;
   final List<TxSpend> spends;
@@ -24,6 +25,7 @@ class TxAccount {
     required this.txid,
     required this.height,
     required this.time,
+    this.price,
     this.category,
     required this.notes,
     required this.spends,
@@ -38,6 +40,7 @@ class TxAccount {
       txid.hashCode ^
       height.hashCode ^
       time.hashCode ^
+      price.hashCode ^
       category.hashCode ^
       notes.hashCode ^
       spends.hashCode ^
@@ -54,6 +57,7 @@ class TxAccount {
           txid == other.txid &&
           height == other.height &&
           time == other.time &&
+          price == other.price &&
           category == other.category &&
           notes == other.notes &&
           spends == other.spends &&
