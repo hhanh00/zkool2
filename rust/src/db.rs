@@ -282,7 +282,7 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         sqlx::query("ALTER TABLE transactions ADD COLUMN category INTEGER")
             .execute(&mut *connection)
             .await?;
-        sqlx::query("ALTER TABLE transactions ADD COLUMN fiat REAL")
+        sqlx::query("ALTER TABLE transactions ADD COLUMN price REAL")
             .execute(&mut *connection)
             .await?;
     }
