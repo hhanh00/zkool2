@@ -16,6 +16,7 @@ import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
 import 'api/sync.dart';
+import 'api/transaction.dart';
 import 'coin.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -260,6 +261,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient dco_decode_recipient(dynamic raw);
+
+  @protected
+  (int?, int?) dco_decode_record_opt_box_autoadd_u_32_opt_box_autoadd_u_32(
+      dynamic raw);
 
   @protected
   (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw);
@@ -561,6 +566,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient sse_decode_recipient(SseDeserializer deserializer);
+
+  @protected
+  (int?, int?) sse_decode_record_opt_box_autoadd_u_32_opt_box_autoadd_u_32(
+      SseDeserializer deserializer);
 
   @protected
   (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
@@ -880,6 +889,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_opt_box_autoadd_u_32_opt_box_autoadd_u_32(
+      (int?, int?) self, SseSerializer serializer);
 
   @protected
   void sse_encode_record_u_32_string_i_64(
