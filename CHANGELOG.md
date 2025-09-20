@@ -1,5 +1,34 @@
 # Changelog
 
+## [6.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.6...zkool-v6.0.0) (2025-09-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* db schema for categories and transaction value in fiat ([#524](https://github.com/hhanh00/zkool2/issues/524))
+
+### Features
+
+* add category to send form ([#537](https://github.com/hhanh00/zkool2/issues/537)) ([cd15e32](https://github.com/hhanh00/zkool2/commit/cd15e321f3099a55f389ae36f5951edc964b66f8))
+* add default categories ([#535](https://github.com/hhanh00/zkool2/issues/535)) ([14d9f14](https://github.com/hhanh00/zkool2/commit/14d9f147b9088f3a2473f4984aed9781247e4c0a))
+* allow manual input of fx rate ([#526](https://github.com/hhanh00/zkool2/issues/526)) ([48f8a61](https://github.com/hhanh00/zkool2/commit/48f8a617f060c61456b446835c493198aea96704))
+* category editor ([#532](https://github.com/hhanh00/zkool2/issues/532)) ([ed37f94](https://github.com/hhanh00/zkool2/commit/ed37f94c4f7287f1d7613e67a7a8bfea014d446d))
+* db schema for categories and transaction value in fiat ([#524](https://github.com/hhanh00/zkool2/issues/524)) ([1478f5d](https://github.com/hhanh00/zkool2/commit/1478f5d6fa3c9d6f991f8f977df72d149ef0fb35))
+* display fx rate in tx details ([#533](https://github.com/hhanh00/zkool2/issues/533)) ([d8f0d61](https://github.com/hhanh00/zkool2/commit/d8f0d6193d934cea4973e603324e3cc60ffcc0a2))
+* edit category in tx details ([#534](https://github.com/hhanh00/zkool2/issues/534)) ([1ffd3f6](https://github.com/hhanh00/zkool2/commit/1ffd3f60c1ba1d121b0e0627e8c6fd82936e14de))
+* fill missing tx prices by querying Coin Gecko ([#530](https://github.com/hhanh00/zkool2/issues/530)) ([e82acd0](https://github.com/hhanh00/zkool2/commit/e82acd030d09010a8d33b0ceb0eb333e9b491731))
+* get historical prices from CoinGecko ([#529](https://github.com/hhanh00/zkool2/issues/529)) ([574ea17](https://github.com/hhanh00/zkool2/commit/574ea17909bd53af5acd96a06efe6393c8804ab7))
+* reconcile pending tx price/category with real tx ([#538](https://github.com/hhanh00/zkool2/issues/538)) ([73cba46](https://github.com/hhanh00/zkool2/commit/73cba466be2936463555e057e091632d6d8ff6bc))
+* retrieve and display tx category ([#531](https://github.com/hhanh00/zkool2/issues/531)) ([e9b792a](https://github.com/hhanh00/zkool2/commit/e9b792a598590b599c05483947571a9d42d58e67))
+* save pending tx category & fx rate ([#527](https://github.com/hhanh00/zkool2/issues/527)) ([d8496f9](https://github.com/hhanh00/zkool2/commit/d8496f983d1a8065c277f53045a913cb7502d943))
+
+
+### Bug Fixes
+
+* height off by 1 after reset ([#521](https://github.com/hhanh00/zkool2/issues/521)) ([02802fb](https://github.com/hhanh00/zkool2/commit/02802fba3a93df3c5e8ac16f8a20c18633bf4d19))
+* store block header time ([#523](https://github.com/hhanh00/zkool2/issues/523)) ([fe09e1f](https://github.com/hhanh00/zkool2/commit/fe09e1fbe9d6c33e39d5353e010616ac1ccebb7e))
+* typo in db version key name ([#525](https://github.com/hhanh00/zkool2/issues/525)) ([9083a6e](https://github.com/hhanh00/zkool2/commit/9083a6e0a534c55a427c86b88d0b830bd4b28094))
+
 ## [5.2.6](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.5...zkool-v5.2.6) (2025-09-18)
 
 
