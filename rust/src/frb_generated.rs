@@ -4230,6 +4230,7 @@ impl SseDecode for crate::api::account::Tx {
         let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_value = <i64>::sse_decode(deserializer);
         let mut var_tpe = <Option<u8>>::sse_decode(deserializer);
+        let mut var_category = <Option<String>>::sse_decode(deserializer);
         return crate::api::account::Tx {
             id: var_id,
             txid: var_txid,
@@ -4237,6 +4238,7 @@ impl SseDecode for crate::api::account::Tx {
             time: var_time,
             value: var_value,
             tpe: var_tpe,
+            category: var_category,
         };
     }
 }
@@ -4249,6 +4251,7 @@ impl SseDecode for crate::account::TxAccount {
         let mut var_txid = <Vec<u8>>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_time = <u32>::sse_decode(deserializer);
+        let mut var_category = <Option<String>>::sse_decode(deserializer);
         let mut var_notes = <Vec<crate::account::TxNote>>::sse_decode(deserializer);
         let mut var_spends = <Vec<crate::account::TxSpend>>::sse_decode(deserializer);
         let mut var_outputs = <Vec<crate::account::TxOutput>>::sse_decode(deserializer);
@@ -4259,6 +4262,7 @@ impl SseDecode for crate::account::TxAccount {
             txid: var_txid,
             height: var_height,
             time: var_time,
+            category: var_category,
             notes: var_notes,
             spends: var_spends,
             outputs: var_outputs,
@@ -5138,6 +5142,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Tx {
             self.time.into_into_dart().into_dart(),
             self.value.into_into_dart().into_dart(),
             self.tpe.into_into_dart().into_dart(),
+            self.category.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5157,6 +5162,7 @@ impl flutter_rust_bridge::IntoDart for crate::account::TxAccount {
             self.txid.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
             self.time.into_into_dart().into_dart(),
+            self.category.into_into_dart().into_dart(),
             self.notes.into_into_dart().into_dart(),
             self.spends.into_into_dart().into_dart(),
             self.outputs.into_into_dart().into_dart(),
@@ -6031,6 +6037,7 @@ impl SseEncode for crate::api::account::Tx {
         <u32>::sse_encode(self.time, serializer);
         <i64>::sse_encode(self.value, serializer);
         <Option<u8>>::sse_encode(self.tpe, serializer);
+        <Option<String>>::sse_encode(self.category, serializer);
     }
 }
 
@@ -6042,6 +6049,7 @@ impl SseEncode for crate::account::TxAccount {
         <Vec<u8>>::sse_encode(self.txid, serializer);
         <u32>::sse_encode(self.height, serializer);
         <u32>::sse_encode(self.time, serializer);
+        <Option<String>>::sse_encode(self.category, serializer);
         <Vec<crate::account::TxNote>>::sse_encode(self.notes, serializer);
         <Vec<crate::account::TxSpend>>::sse_encode(self.spends, serializer);
         <Vec<crate::account::TxOutput>>::sse_encode(self.outputs, serializer);

@@ -1890,6 +1890,7 @@ mixin _$Tx {
   int get time => throw _privateConstructorUsedError;
   int get value => throw _privateConstructorUsedError;
   int? get tpe => throw _privateConstructorUsedError;
+  String? get category => throw _privateConstructorUsedError;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -1903,7 +1904,13 @@ abstract class $TxCopyWith<$Res> {
       _$TxCopyWithImpl<$Res, Tx>;
   @useResult
   $Res call(
-      {int id, Uint8List txid, int height, int time, int value, int? tpe});
+      {int id,
+      Uint8List txid,
+      int height,
+      int time,
+      int value,
+      int? tpe,
+      String? category});
 }
 
 /// @nodoc
@@ -1926,6 +1933,7 @@ class _$TxCopyWithImpl<$Res, $Val extends Tx> implements $TxCopyWith<$Res> {
     Object? time = null,
     Object? value = null,
     Object? tpe = freezed,
+    Object? category = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -1952,6 +1960,10 @@ class _$TxCopyWithImpl<$Res, $Val extends Tx> implements $TxCopyWith<$Res> {
           ? _value.tpe
           : tpe // ignore: cast_nullable_to_non_nullable
               as int?,
+      category: freezed == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -1963,7 +1975,13 @@ abstract class _$$TxImplCopyWith<$Res> implements $TxCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {int id, Uint8List txid, int height, int time, int value, int? tpe});
+      {int id,
+      Uint8List txid,
+      int height,
+      int time,
+      int value,
+      int? tpe,
+      String? category});
 }
 
 /// @nodoc
@@ -1983,6 +2001,7 @@ class __$$TxImplCopyWithImpl<$Res> extends _$TxCopyWithImpl<$Res, _$TxImpl>
     Object? time = null,
     Object? value = null,
     Object? tpe = freezed,
+    Object? category = freezed,
   }) {
     return _then(_$TxImpl(
       id: null == id
@@ -2009,6 +2028,10 @@ class __$$TxImplCopyWithImpl<$Res> extends _$TxCopyWithImpl<$Res, _$TxImpl>
           ? _value.tpe
           : tpe // ignore: cast_nullable_to_non_nullable
               as int?,
+      category: freezed == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -2022,7 +2045,8 @@ class _$TxImpl implements _Tx {
       required this.height,
       required this.time,
       required this.value,
-      this.tpe});
+      this.tpe,
+      this.category});
 
   @override
   final int id;
@@ -2036,10 +2060,12 @@ class _$TxImpl implements _Tx {
   final int value;
   @override
   final int? tpe;
+  @override
+  final String? category;
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category)';
   }
 
   @override
@@ -2052,12 +2078,21 @@ class _$TxImpl implements _Tx {
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
             (identical(other.value, value) || other.value == value) &&
-            (identical(other.tpe, tpe) || other.tpe == tpe));
+            (identical(other.tpe, tpe) || other.tpe == tpe) &&
+            (identical(other.category, category) ||
+                other.category == category));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id,
-      const DeepCollectionEquality().hash(txid), height, time, value, tpe);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      const DeepCollectionEquality().hash(txid),
+      height,
+      time,
+      value,
+      tpe,
+      category);
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -2075,7 +2110,8 @@ abstract class _Tx implements Tx {
       required final int height,
       required final int time,
       required final int value,
-      final int? tpe}) = _$TxImpl;
+      final int? tpe,
+      final String? category}) = _$TxImpl;
 
   @override
   int get id;
@@ -2089,6 +2125,8 @@ abstract class _Tx implements Tx {
   int get value;
   @override
   int? get tpe;
+  @override
+  String? get category;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
