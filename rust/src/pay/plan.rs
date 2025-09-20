@@ -115,8 +115,8 @@ pub async fn plan_transaction(
     let mut total_amount = 0;
     let mut total_fiat = 0.0;
     for r in recipients {
-        if let Some(fiat) = r.fiat {
-            total_fiat += fiat;
+        if let Some(fx) = r.fx {
+            total_fiat += fx * r.amount as f64;
             total_amount += r.amount;
         }
     }

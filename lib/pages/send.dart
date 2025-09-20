@@ -30,6 +30,7 @@ final addTxID = GlobalKey();
 final clearID = GlobalKey();
 final sendID2 = GlobalKey();
 final dustChangePolicyID = GlobalKey();
+final categoryID = GlobalKey();
 
 class SendPage extends StatefulWidget {
   const SendPage({super.key});
@@ -40,6 +41,7 @@ class SendPage extends StatefulWidget {
 
 class SendPageState extends State<SendPage> {
   final formKey = GlobalKey<FormBuilderState>();
+  final amountKey = GlobalKey<InputAmountState>();
   List<Recipient> recipients = [];
   bool supportsMemo = false;
   PoolBalance? pbalance;
@@ -73,97 +75,121 @@ class SendPageState extends State<SendPage> {
     final balance = pbalance;
     final address = formKey.currentState?.fields['address']?.value as String? ?? "";
     final recipientTiles = recipients
-        .mapIndexed((i, r) => ListTile(
+        .mapIndexed(
+          (i, r) => ListTile(
             title: Text(r.address),
             subtitle: zatToText(r.amount, selectable: false),
             trailing: IconButton(
-                icon: Icon(Icons.delete),
-                onPressed: () {
-                  setState(() {
-                    editingIndex = null;
-                    recipients.remove(r);
-                  });
-                },),
+              icon: Icon(Icons.delete),
+              onPressed: () {
+                setState(() {
+                  editingIndex = null;
+                  recipients.remove(r);
+                });
+              },
+            ),
             onTap: () => onEdit(i),
             selectedTileColor: cs.inversePrimary,
-            selected: i == editingIndex,),)
+            selected: i == editingIndex,
+          ),
+        )
         .toList();
 
     supportsMemo = address.isNotEmpty && validAddress(address) == null && !isValidTransparentAddress(address: address);
     return Scaffold(
-        appBar: AppBar(
-          title: Text("Recipient"),
-          actions: [
-            Showcase(
-                key: openTxID,
-                description: "Load an unsigned transaction",
-                child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open)),),
-            Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: reset, icon: Icon(Icons.clear))),
-            Showcase(
-                key: addTxID,
-                description: "Queue this recipient to create a multi send",
-                child: IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add)),),
-            Showcase(
-                key: sendID2,
-                description: "Send transaction (including queued recipients)",
-                child: IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send)),),
-          ],
-        ),
-        body: SingleChildScrollView(
-            child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: FormBuilder(
-                    key: formKey,
-                    child: Column(children: [
-                      ...recipientTiles,
-                      if (balance != null) BalanceWidget(balance, onPoolSelected: onPoolSelected),
-                      Gap(16),
-                      OverflowBar(spacing: 16, children: [
-                        if (addresses?.taddr != null) IconButton(onPressed: onUnshield, tooltip: "Unshield All", icon: Icon(Icons.lock_open)),
-                        if (addresses?.saddr != null || addresses?.oaddr != null) ...[
-                          IconButton(onPressed: () => onShield(true), tooltip: "Shield One", icon: Icon(Icons.shield_outlined)),
-                          IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
-                        ],
-                      ],),
-                      if (appStore.notes.any((n) => n.locked))
-                        Container(
-                          color: cs.secondaryContainer,
-                          child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer)),),
-                      Row(children: [
-                        Expanded(
-                            child: Showcase(
-                                key: addressID,
-                                description: "Receiver Address (Transparent, Sapling or UA)",
-                                child: Focus(
-                                  canRequestFocus: false,
-                                  onFocusChange: (v) => {
-                                    if (!v) onAddressEditComplete(),
-                                  },
-                                  child: FormBuilderTextField(
-                                    name: "address",
-                                    decoration: const InputDecoration(labelText: "Address"),
-                                    validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
-                                    onChanged: onAddressChanged,
-                                    textInputAction: TextInputAction.next,
-                                    onEditingComplete: () {
-                                      FocusScope.of(context).nextFocus();
-                                    },
-                                ),),),),
-                        Showcase(
-                            key: scanID,
-                            description: "Open the QR Scanner",
-                            child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),),
-                      ],),
-                      InputAmount(name: "amount", onMax: onMax),
-                      Visibility(
-                          visible: supportsMemo,
-                          maintainState: true,
+      appBar: AppBar(
+        title: Text("Recipient"),
+        actions: [
+          Showcase(
+            key: openTxID,
+            description: "Load an unsigned transaction",
+            child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open)),
+          ),
+          Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: reset, icon: Icon(Icons.clear))),
+          Showcase(
+            key: addTxID,
+            description: "Queue this recipient to create a multi send",
+            child: IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add)),
+          ),
+          Showcase(
+            key: sendID2,
+            description: "Send transaction (including queued recipients)",
+            child: IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send)),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: FormBuilder(
+            key: formKey,
+            child: Column(
+              children: [
+                ...recipientTiles,
+                if (balance != null) BalanceWidget(balance, onPoolSelected: onPoolSelected),
+                Gap(16),
+                OverflowBar(
+                  spacing: 16,
+                  children: [
+                    if (addresses?.taddr != null) IconButton(onPressed: onUnshield, tooltip: "Unshield All", icon: Icon(Icons.lock_open)),
+                    if (addresses?.saddr != null || addresses?.oaddr != null) ...[
+                      IconButton(onPressed: () => onShield(true), tooltip: "Shield One", icon: Icon(Icons.shield_outlined)),
+                      IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
+                    ],
+                  ],
+                ),
+                if (appStore.notes.any((n) => n.locked))
+                  Container(
+                    color: cs.secondaryContainer,
+                    child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer)),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Showcase(
+                        key: addressID,
+                        description: "Receiver Address (Transparent, Sapling or UA)",
+                        child: Focus(
+                          canRequestFocus: false,
+                          onFocusChange: (v) => {
+                            if (!v) onAddressEditComplete(),
+                          },
                           child: FormBuilderTextField(
-                            name: "memo",
-                            decoration: const InputDecoration(labelText: "Memo"),
-                            maxLines: 8,
-                          ),),
-                    ],),),),),);
+                            name: "address",
+                            decoration: const InputDecoration(labelText: "Address"),
+                            validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
+                            onChanged: onAddressChanged,
+                            textInputAction: TextInputAction.next,
+                            onEditingComplete: () {
+                              FocusScope.of(context).nextFocus();
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    Showcase(
+                      key: scanID,
+                      description: "Open the QR Scanner",
+                      child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),
+                    ),
+                  ],
+                ),
+                InputAmount(key: amountKey, name: "amount", onMax: onMax),
+                Visibility(
+                  visible: supportsMemo,
+                  maintainState: true,
+                  child: FormBuilderTextField(
+                    name: "memo",
+                    decoration: const InputDecoration(labelText: "Memo"),
+                    maxLines: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void onLoad() async {
@@ -193,22 +219,26 @@ class SendPageState extends State<SendPage> {
 
   void onShield(bool smartTransparent) async {
     if (!smartTransparent) {
-      final confirmed = await confirmDialog(context,
-          title: 'Shield All Privacy Warning',
-          message: 'Shielding all your transparent funds may result in a transaction that links multiple t-addresses.\nPrefer using "Shield One".',);
+      final confirmed = await confirmDialog(
+        context,
+        title: 'Shield All Privacy Warning',
+        message: 'Shielding all your transparent funds may result in a transaction that links multiple t-addresses.\nPrefer using "Shield One".',
+      );
       if (!confirmed) return;
     }
     try {
       final options = PaymentOptions(
-          srcPools: 1, // Only the transparent pool (mask)
-          recipientPaysFee: true,
-          smartTransparent: smartTransparent,
-          dustChangePolicy: DustChangePolicy.sendToRecipient,);
+        srcPools: 1, // Only the transparent pool (mask)
+        recipientPaysFee: true,
+        smartTransparent: smartTransparent,
+        dustChangePolicy: DustChangePolicy.sendToRecipient,
+      );
       final pczt = await prepare(
         recipients: [
           Recipient(
-              address: addresses?.oaddr ?? addresses?.saddr ?? "", // Shield to Orchard or Sapling address
-              amount: pbalance?.field0[0] ?? BigInt.zero,),
+            address: addresses?.oaddr ?? addresses?.saddr ?? "", // Shield to Orchard or Sapling address
+            amount: pbalance?.field0[0] ?? BigInt.zero,
+          ),
         ],
         options: options,
       );
@@ -222,10 +252,11 @@ class SendPageState extends State<SendPage> {
   void onUnshield() async {
     try {
       final options = PaymentOptions(
-          srcPools: 6, // Only the sapling and orchard pool (mask)
-          recipientPaysFee: true,
-          dustChangePolicy: DustChangePolicy.sendToRecipient,
-          smartTransparent: false,);
+        srcPools: 6, // Only the sapling and orchard pool (mask)
+        recipientPaysFee: true,
+        dustChangePolicy: DustChangePolicy.sendToRecipient,
+        smartTransparent: false,
+      );
       final pczt = await prepare(
         recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))],
         options: options,
@@ -293,8 +324,7 @@ class SendPageState extends State<SendPage> {
         final recipient = recipients2.first;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           fields["address"]!.didChange(recipient.address);
-          if (recipient.amount > BigInt.zero)
-            fields["amount"]!.didChange(zatToString(recipient.amount));
+          if (recipient.amount > BigInt.zero) fields["amount"]!.didChange(zatToString(recipient.amount));
           fields["memo"]!.didChange(recipient.userMemo);
           setState(() {});
         });
@@ -317,9 +347,11 @@ class SendPageState extends State<SendPage> {
       final address = form.fields['address']?.value as String;
       final amount = form.fields['amount']?.value as String;
       final memo = form.fields['memo']?.value as String?;
+      final fxStr = amountKey.currentState!.fx();
+      final fx = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
       logger.i("Send $amount to $address");
 
-      final recipient = Recipient(address: address, amount: stringToZat(amount), userMemo: memo);
+      final recipient = Recipient(address: address, amount: stringToZat(amount), userMemo: memo, fx: fx);
       return recipient;
     }
     return null;
@@ -364,6 +396,7 @@ class Send2PageState extends State<Send2Page> {
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
   var recipientPaysFee = false;
   var discardDustChange = true;
+  int? category;
   var puri = "";
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -384,68 +417,94 @@ class Send2PageState extends State<Send2Page> {
   Widget build(BuildContext context) {
     Future(tutorial);
     logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
+    final categories = [
+      DropdownMenuItem(value: null, child: Text("Unknown")),
+      ...appStore.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+    ];
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Extra Options"),
         actions: [
           Showcase(
-              key: sendID3,
-              description: "Send (Summary and Confirmation)",
-              child: IconButton(tooltip: "Send (Compute Tx)", onPressed: onSend, icon: Icon(Icons.send)),),
+            key: sendID3,
+            description: "Send (Summary and Confirmation)",
+            child: IconButton(tooltip: "Send (Compute Tx)", onPressed: onSend, icon: Icon(Icons.send)),
+          ),
         ],
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
           child: FormBuilder(
-              key: formKey,
-              child: Column(children: [
+            key: formKey,
+            child: Column(
+              children: [
                 Showcase(
-                    key: sourceID,
-                    description: "Pools to take funds from. Uncheck any pool you do not want to use",
-                    child: InputDecorator(
-                        decoration: InputDecoration(labelText: "Source Pools"),
-                        child: Align(
-                            alignment: Alignment.centerRight,
-                            child: FormBuilderField<int>(
-                              name: "source pools",
-                              initialValue: hasTex ? 1 : appStore.pools,
-                              builder: (field) =>
-                                  PoolSelect(enabled: appStore.pools, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
-                            ),),),),
+                  key: sourceID,
+                  description: "Pools to take funds from. Uncheck any pool you do not want to use",
+                  child: InputDecorator(
+                    decoration: InputDecoration(labelText: "Source Pools"),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FormBuilderField<int>(
+                        name: "source pools",
+                        initialValue: hasTex ? 1 : appStore.pools,
+                        builder: (field) =>
+                            PoolSelect(enabled: appStore.pools, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
+                      ),
+                    ),
+                  ),
+                ),
                 Showcase(
-                    key: feeSourceID,
-                    description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
-                    child: FormBuilderSwitch(
-                      name: "recipientPaysFee",
-                      title: Text("Recipient Pays Fee"),
-                      initialValue: false,
-                      onChanged: (v) => setState(() => recipientPaysFee = v!),
-                    ),),
+                  key: feeSourceID,
+                  description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
+                  child: FormBuilderSwitch(
+                    name: "recipientPaysFee",
+                    title: Text("Recipient Pays Fee"),
+                    initialValue: false,
+                    onChanged: (v) => setState(() => recipientPaysFee = v!),
+                  ),
+                ),
                 Showcase(
-                    key: dustChangePolicyID,
-                    description: "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
-                    child: FormBuilderSwitch(
-                      name: "dustChangePolicy",
-                      title: Text("Discard Dust Change"),
-                      initialValue: true,
-                      onChanged: (v) => setState(() => discardDustChange = v!),
-                    ),),
+                  key: dustChangePolicyID,
+                  description: "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
+                  child: FormBuilderSwitch(
+                    name: "dustChangePolicy",
+                    title: Text("Discard Dust Change"),
+                    initialValue: true,
+                    onChanged: (v) => setState(() => discardDustChange = v!),
+                  ),
+                ),
+                Gap(8),
+                Showcase(
+                  key: categoryID,
+                  description: "Spending or Income Category (for Budgetting)",
+                  child: FormBuilderDropdown(
+                    name: "category",
+                    decoration: InputDecoration(label: Text("Category")),
+                    items: categories,
+                    initialValue: null,
+                    onChanged: (v) => setState(() => category = v),
+                  ),
+                ),
                 Gap(16),
                 Divider(),
                 Gap(8),
                 InputDecorator(
                   decoration: InputDecoration(
-                      label: Text("Payment URI"),
-                      suffixIcon: IconButton(
-                        tooltip: "Show Payment URI",
-                        icon: Icon(Icons.qr_code),
-                        onPressed: onUriQr,
-                      ),),
+                    label: Text("Payment URI"),
+                    suffixIcon: IconButton(
+                      tooltip: "Show Payment URI",
+                      icon: Icon(Icons.qr_code),
+                      onPressed: onUriQr,
+                    ),
+                  ),
                   child: CopyableText(puri),
                 ),
-              ],),),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -461,10 +520,12 @@ class Send2PageState extends State<Send2Page> {
 
     try {
       final options = PaymentOptions(
-          srcPools: srcPools,
-          recipientPaysFee: recipientPaysFee,
-          dustChangePolicy: discardDustChange ? DustChangePolicy.discard : DustChangePolicy.sendToRecipient,
-          smartTransparent: false,);
+        srcPools: srcPools,
+        recipientPaysFee: recipientPaysFee,
+        dustChangePolicy: discardDustChange ? DustChangePolicy.discard : DustChangePolicy.sendToRecipient,
+        smartTransparent: false,
+        category: category,
+      );
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,
@@ -478,29 +539,32 @@ class Send2PageState extends State<Send2Page> {
 
   void onUriQr() async {
     await showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Payment URI"),
-            content: GestureDetector(
-                onTap: () => copyToClipboard(puri),
-                child: SizedBox(
-                    width: 250,
-                    height: 250,
-                    child: QrImageView(
-                      data: puri,
-                      version: QrVersions.auto,
-                      backgroundColor: Colors.white,
-                      size: 200.0,
-                    ),),),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text("Close"),
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Payment URI"),
+          content: GestureDetector(
+            onTap: () => copyToClipboard(puri),
+            child: SizedBox(
+              width: 250,
+              height: 250,
+              child: QrImageView(
+                data: puri,
+                version: QrVersions.auto,
+                backgroundColor: Colors.white,
+                size: 200.0,
               ),
-            ],
-          );
-        },);
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

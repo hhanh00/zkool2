@@ -14,6 +14,7 @@ pub struct PaymentOptions {
     pub recipient_pays_fee: bool,
     pub smart_transparent: bool,
     pub dust_change_policy: DustChangePolicy,
+    pub category: Option<u32>,
 }
 
 #[frb]
@@ -39,7 +40,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Resul
         options.recipient_pays_fee,
         options.smart_transparent,
         options.dust_change_policy,
-        None,
+        options.category,
     )
     .await
 }
