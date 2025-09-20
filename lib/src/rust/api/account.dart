@@ -113,6 +113,18 @@ Future<void> renameFolder({required int id, required String name}) =>
 Future<void> deleteFolders({required List<int> ids}) =>
     RustLib.instance.api.crateApiAccountDeleteFolders(ids: ids);
 
+Future<List<Category>> listCategories() =>
+    RustLib.instance.api.crateApiAccountListCategories();
+
+Future<Category> createNewCategory({required String name}) =>
+    RustLib.instance.api.crateApiAccountCreateNewCategory(name: name);
+
+Future<void> renameCategory({required int id, required String name}) =>
+    RustLib.instance.api.crateApiAccountRenameCategory(id: id, name: name);
+
+Future<void> deleteCategories({required List<int> ids}) =>
+    RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids);
+
 @freezed
 sealed class Account with _$Account {
   const factory Account({
@@ -175,6 +187,14 @@ class Addresses {
           saddr == other.saddr &&
           oaddr == other.oaddr &&
           ua == other.ua;
+}
+
+@freezed
+sealed class Category with _$Category {
+  const factory Category({
+    required int id,
+    required String name,
+  }) = _Category;
 }
 
 @freezed

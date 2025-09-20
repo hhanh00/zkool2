@@ -759,6 +759,150 @@ abstract class _AccountUpdate implements AccountUpdate {
 }
 
 /// @nodoc
+mixin _$Category {
+  int get id => throw _privateConstructorUsedError;
+  String get name => throw _privateConstructorUsedError;
+
+  /// Create a copy of Category
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $CategoryCopyWith<Category> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $CategoryCopyWith<$Res> {
+  factory $CategoryCopyWith(Category value, $Res Function(Category) then) =
+      _$CategoryCopyWithImpl<$Res, Category>;
+  @useResult
+  $Res call({int id, String name});
+}
+
+/// @nodoc
+class _$CategoryCopyWithImpl<$Res, $Val extends Category>
+    implements $CategoryCopyWith<$Res> {
+  _$CategoryCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of Category
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? name = null,
+  }) {
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$CategoryImplCopyWith<$Res>
+    implements $CategoryCopyWith<$Res> {
+  factory _$$CategoryImplCopyWith(
+          _$CategoryImpl value, $Res Function(_$CategoryImpl) then) =
+      __$$CategoryImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({int id, String name});
+}
+
+/// @nodoc
+class __$$CategoryImplCopyWithImpl<$Res>
+    extends _$CategoryCopyWithImpl<$Res, _$CategoryImpl>
+    implements _$$CategoryImplCopyWith<$Res> {
+  __$$CategoryImplCopyWithImpl(
+      _$CategoryImpl _value, $Res Function(_$CategoryImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of Category
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? name = null,
+  }) {
+    return _then(_$CategoryImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$CategoryImpl implements _Category {
+  const _$CategoryImpl({required this.id, required this.name});
+
+  @override
+  final int id;
+  @override
+  final String name;
+
+  @override
+  String toString() {
+    return 'Category(id: $id, name: $name)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$CategoryImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.name, name) || other.name == name));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id, name);
+
+  /// Create a copy of Category
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$CategoryImplCopyWith<_$CategoryImpl> get copyWith =>
+      __$$CategoryImplCopyWithImpl<_$CategoryImpl>(this, _$identity);
+}
+
+abstract class _Category implements Category {
+  const factory _Category({required final int id, required final String name}) =
+      _$CategoryImpl;
+
+  @override
+  int get id;
+  @override
+  String get name;
+
+  /// Create a copy of Category
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$CategoryImplCopyWith<_$CategoryImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$Folder {
   int get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;

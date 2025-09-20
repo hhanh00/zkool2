@@ -121,6 +121,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_u_8(dynamic raw);
 
   @protected
+  Category dco_decode_category(dynamic raw);
+
+  @protected
   DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
@@ -149,6 +152,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Account> dco_decode_list_account(dynamic raw);
+
+  @protected
+  List<Category> dco_decode_list_category(dynamic raw);
 
   @protected
   List<Folder> dco_decode_list_folder(dynamic raw);
@@ -420,6 +426,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
 
   @protected
+  Category sse_decode_category(SseDeserializer deserializer);
+
+  @protected
   DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
 
   @protected
@@ -448,6 +457,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Account> sse_decode_list_account(SseDeserializer deserializer);
+
+  @protected
+  List<Category> sse_decode_list_category(SseDeserializer deserializer);
 
   @protected
   List<Folder> sse_decode_list_folder(SseDeserializer deserializer);
@@ -726,6 +738,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_category(Category self, SseSerializer serializer);
+
+  @protected
   void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
 
   @protected
@@ -756,6 +771,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_account(List<Account> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_category(List<Category> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_folder(List<Folder> self, SseSerializer serializer);

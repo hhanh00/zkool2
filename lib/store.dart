@@ -143,6 +143,8 @@ abstract class AppStoreBase with Store {
   @observable
   List<Folder> folders = [];
   @observable
+  List<Category> categories = [];
+  @observable
   int pools = 7;
   @observable
   int seqno = 0;
@@ -282,6 +284,11 @@ abstract class AppStoreBase with Store {
   @action
   Future<void> loadFolders() async {
     folders = await listFolders();
+  }
+
+  @action
+  Future<void> loadCategories() async {
+    categories = await listCategories();
   }
 
   bool syncInProgress = false;
