@@ -1,17 +1,112 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use serde_json::Value;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 
-pub async fn get_tx_without_usd_range(
+async fn get_historical_prices_all() -> Result<Vec<PriceQuote>> {
+    // 1, 90 and 365 are the max day ranges per interval
+    let mut pqs = get_historical_prices(1).await?;
+    pqs.extend(get_historical_prices(90).await?);
+    pqs.extend(get_historical_prices(365).await?);
+    pqs.sort_by_key(|pq| pq.time);
+    Ok(pqs)
+}
+
+async fn get_historical_prices(days: u32) -> Result<Vec<PriceQuote>> {
+    let historical_price_url = format!(
+        "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency=usd&days={days}"
+    );
+    let rep: Value = reqwest::get(&historical_price_url).await?.json().await?;
+    let prices = rep
+        .pointer("/prices")
+        .ok_or(anyhow!("No /prices"))?
+        .as_array()
+        .ok_or(anyhow!("prices not array"))?;
+    let mut pqs = vec![];
+    for p in prices {
+        let pt = p.as_array().ok_or(anyhow!("price/time not array"))?;
+        let time = pt[0].as_u64().ok_or(anyhow!("time not int"))? as u64;
+        let price = pt[1].as_f64().ok_or(anyhow!("price not double"))?;
+        let pq = PriceQuote {
+            time: (time / 1000) as u32,
+            price,
+        };
+        pqs.push(pq);
+    }
+
+    Ok(pqs)
+}
+
+async fn fetch_missing_tx_prices(
     connection: &mut SqliteConnection,
     account: u32,
-) -> Result<(Option<u32>, Option<u32>)> {
-    let (min, max) = sqlx::query(
-        "SELECT MIN(time), MAX(time) FROM transactions
-        WHERE account = ?1 AND fiat IS NULL",
+) -> Result<Vec<TxUSD>> {
+    let txs = sqlx::query(
+        "SELECT id_tx, time FROM transactions
+            WHERE account = ?1 AND price IS NULL ORDER BY time",
     )
     .bind(account)
-    .map(|r: SqliteRow| (r.get::<Option<u32>, _>(0), r.get::<Option<u32>, _>(1)))
-    .fetch_one(connection)
+    .map(|r: SqliteRow| {
+        let id: u32 = r.get(0);
+        let time: u32 = r.get(1);
+        TxUSD {
+            id,
+            time,
+            price: 0.0,
+        }
+    })
+    .fetch_all(&mut *connection)
     .await?;
-    Ok((min, max))
+    Ok(txs)
+}
+
+async fn fill_historical_prices(txs: &mut [TxUSD], pqs: &[PriceQuote]) -> Result<()> {
+    assert!(!pqs.is_empty());
+    let mut i = 0;
+    for tx in txs.iter_mut() {
+        loop {
+            let time = if i == pqs.len() {
+                u32::MAX
+            } else {
+                pqs[i].time
+            };
+            if time > tx.time {
+                break;
+            }
+            i += 1;
+        }
+        let pq = if i == 0 { &pqs[0] } else { &pqs[i - 1] };
+        tx.price = pq.price;
+    }
+    Ok(())
+}
+
+pub async fn store_tx_prices(connection: &mut SqliteConnection, txs: &[TxUSD]) -> Result<()> {
+    for tx in txs {
+        sqlx::query("UPDATE transactions SET price = ?2 WHERE id_tx = ?1")
+            .bind(tx.id)
+            .bind(tx.price)
+            .execute(&mut *connection)
+            .await?;
+    }
+    Ok(())
+}
+
+pub async fn fill_missing_tx_prices(connection: &mut SqliteConnection, account: u32) -> Result<()> {
+    let mut txs = fetch_missing_tx_prices(&mut *connection, account).await?;
+    let pqs = get_historical_prices_all().await?;
+    fill_historical_prices(&mut txs, &pqs).await?;
+    store_tx_prices(&mut *connection, &txs).await?;
+    Ok(())
+}
+
+pub struct PriceQuote {
+    pub time: u32,
+    pub price: f64,
+}
+
+#[derive(Debug)]
+pub struct TxUSD {
+    pub id: u32,
+    pub time: u32,
+    pub price: f64,
 }
