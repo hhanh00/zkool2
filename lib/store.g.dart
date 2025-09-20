@@ -177,6 +177,22 @@ mixin _$AppStore on AppStoreBase, Store {
     });
   }
 
+  late final _$categoriesAtom =
+      Atom(name: 'AppStoreBase.categories', context: context);
+
+  @override
+  List<Category> get categories {
+    _$categoriesAtom.reportRead();
+    return super.categories;
+  }
+
+  @override
+  set categories(List<Category> value) {
+    _$categoriesAtom.reportWrite(value, super.categories, () {
+      super.categories = value;
+    });
+  }
+
   late final _$poolsAtom = Atom(name: 'AppStoreBase.pools', context: context);
 
   @override
@@ -389,6 +405,14 @@ mixin _$AppStore on AppStoreBase, Store {
     return _$loadFoldersAsyncAction.run(() => super.loadFolders());
   }
 
+  late final _$loadCategoriesAsyncAction =
+      AsyncAction('AppStoreBase.loadCategories', context: context);
+
+  @override
+  Future<void> loadCategories() {
+    return _$loadCategoriesAsyncAction.run(() => super.loadCategories());
+  }
+
   late final _$AppStoreBaseActionController =
       ActionController(name: 'AppStoreBase', context: context);
 
@@ -410,6 +434,7 @@ selectedAccount: ${selectedAccount},
 selectedFolder: ${selectedFolder},
 accounts: ${accounts},
 folders: ${folders},
+categories: ${categories},
 pools: ${pools},
 seqno: ${seqno},
 poolBalance: ${poolBalance},
