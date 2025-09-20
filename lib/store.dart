@@ -267,6 +267,7 @@ abstract class AppStoreBase with Store {
   Future<void> refresh() async {
     await loadAccounts();
     await loadFolders();
+    await loadCategories();
     if (selectedAccount != null) {
       await loadTxHistory();
       await loadMemos();

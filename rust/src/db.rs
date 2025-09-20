@@ -1157,3 +1157,12 @@ pub async fn store_pending_tx(connection: &mut SqliteConnection, account: u32, h
     .await?;
     Ok(())
 }
+
+pub async fn set_tx_category(connection: &mut SqliteConnection, id: u32, category: Option<u32>) -> Result<()> {
+    sqlx::query("UPDATE transactions SET category = ?2 WHERE id_tx = ?1")
+    .bind(id)
+    .bind(category)
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
