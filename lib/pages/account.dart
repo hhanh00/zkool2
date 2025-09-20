@@ -176,22 +176,7 @@ class AccountViewPageState extends State<AccountViewPage> {
   }
 
   void updateAllFx() async {
-    final (min, max) = await getTxWithoutUsdRange();
-    if (min == null) return;
-    final minDT = DateTime.fromMillisecondsSinceEpoch(min * 1000);
-    final maxDT = DateTime.fromMillisecondsSinceEpoch(max! * 1000);
-    logger.i("$minDT $maxDT");
-    final now = DateTime.now();
-    final cutoff1D = now.subtract(Duration(days: 1));
-    final cutoff90D = now.subtract(Duration(days: 90));
-    if (minDT.isBefore(cutoff90D)) {
-      logger.i("Query 365 Days");
-    }
-    if (minDT.isBefore(cutoff1D)) {
-      logger.i("Query 90 Days");
-    }
-    logger.i("Query 1 Day");
-    // GET https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency=usd&days=1
+    await fillMissingTxPrices();
   }
 
   Account? get account => appStore.selectedAccount;
