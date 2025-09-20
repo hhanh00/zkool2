@@ -167,6 +167,8 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                       onMempool();
                     case "hide":
                       onHide();
+                    case "category":
+                      onCategory();
                     case "folder":
                       onFolder();
                   }
@@ -179,6 +181,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
                   const PopupMenuItem<String>(
                     value: "folder",
                     child: Text("Folders"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "category",
+                    child: Text("Categories"),
                   ),
                   PopupMenuItem<String>(
                     value: 'hide',
@@ -205,6 +211,10 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
 
   onFolder() async {
     await GoRouter.of(context).push("/folders");
+  }
+
+  onCategory() async {
+    await GoRouter.of(context).push("/categories");
   }
 
   onSync() async {

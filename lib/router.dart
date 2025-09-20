@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
@@ -83,6 +84,7 @@ GoRouter router(bool recoveryMode) => GoRouter(
     GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
     GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
     GoRoute(path: '/folders', builder: (context, state) => FolderPage()),
+    GoRoute(path: '/categories', builder: (context, state) => CategoryPage()),
     GoRoute(path: '/dkg1', builder: (context, state) => pinLock(DKGPage1())),
     GoRoute(path: '/dkg2', builder: (context, state) => pinLock(DKGPage2())),
     GoRoute(path: '/dkg3', builder: (context, state) => pinLock(DKGPage3())),

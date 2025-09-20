@@ -855,3 +855,37 @@ pub struct Folder {
     pub id: u32,
     pub name: String,
 }
+
+pub async fn list_categories() -> Result<Vec<Category>> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::list_categories(&mut connection).await
+}
+
+pub async fn create_new_category(name: &str) -> Result<Category> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::create_new_category(&mut connection, name).await
+}
+
+pub async fn rename_category(id: u32, name: &str) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::rename_category(&mut connection, id, name).await
+}
+
+pub async fn delete_categories(ids: &[u32]) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+
+    crate::account::delete_categories(&mut connection, ids).await
+}
+
+#[frb(dart_metadata = ("freezed"))]
+pub struct Category {
+    pub id: u32,
+    pub name: String,
+}
