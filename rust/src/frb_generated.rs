@@ -3241,7 +3241,7 @@ fn wire__crate__api__pay__store_pending_tx_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_height = <u32>::sse_decode(&mut deserializer);
             let api_txid = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_fx = <Option<f64>>::sse_decode(&mut deserializer);
+            let api_price = <Option<f64>>::sse_decode(&mut deserializer);
             let api_category = <Option<u32>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
@@ -3250,7 +3250,7 @@ fn wire__crate__api__pay__store_pending_tx_impl(
                         let output_ok = crate::api::pay::store_pending_tx(
                             api_height,
                             &api_txid,
-                            api_fx,
+                            api_price,
                             api_category,
                         )
                         .await?;
@@ -4248,7 +4248,7 @@ impl SseDecode for crate::api::pay::PcztPackage {
         let mut var_orchardIndices = <Vec<usize>>::sse_decode(deserializer);
         let mut var_canSign = <bool>::sse_decode(deserializer);
         let mut var_canBroadcast = <bool>::sse_decode(deserializer);
-        let mut var_fx = <Option<f64>>::sse_decode(deserializer);
+        let mut var_price = <Option<f64>>::sse_decode(deserializer);
         let mut var_category = <Option<u32>>::sse_decode(deserializer);
         return crate::api::pay::PcztPackage {
             pczt: var_pczt,
@@ -4257,7 +4257,7 @@ impl SseDecode for crate::api::pay::PcztPackage {
             orchard_indices: var_orchardIndices,
             can_sign: var_canSign,
             can_broadcast: var_canBroadcast,
-            fx: var_fx,
+            price: var_price,
             category: var_category,
         };
     }
@@ -4293,14 +4293,14 @@ impl SseDecode for crate::pay::Recipient {
         let mut var_pools = <Option<u8>>::sse_decode(deserializer);
         let mut var_userMemo = <Option<String>>::sse_decode(deserializer);
         let mut var_memoBytes = <Option<Vec<u8>>>::sse_decode(deserializer);
-        let mut var_fx = <Option<f64>>::sse_decode(deserializer);
+        let mut var_price = <Option<f64>>::sse_decode(deserializer);
         return crate::pay::Recipient {
             address: var_address,
             amount: var_amount,
             pools: var_pools,
             user_memo: var_userMemo,
             memo_bytes: var_memoBytes,
-            fx: var_fx,
+            price: var_price,
         };
     }
 }
@@ -5168,7 +5168,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PcztPackage {
             self.orchard_indices.into_into_dart().into_dart(),
             self.can_sign.into_into_dart().into_dart(),
             self.can_broadcast.into_into_dart().into_dart(),
-            self.fx.into_into_dart().into_dart(),
+            self.price.into_into_dart().into_dart(),
             self.category.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -5227,7 +5227,7 @@ impl flutter_rust_bridge::IntoDart for crate::pay::Recipient {
             self.pools.into_into_dart().into_dart(),
             self.user_memo.into_into_dart().into_dart(),
             self.memo_bytes.into_into_dart().into_dart(),
-            self.fx.into_into_dart().into_dart(),
+            self.price.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6149,7 +6149,7 @@ impl SseEncode for crate::api::pay::PcztPackage {
         <Vec<usize>>::sse_encode(self.orchard_indices, serializer);
         <bool>::sse_encode(self.can_sign, serializer);
         <bool>::sse_encode(self.can_broadcast, serializer);
-        <Option<f64>>::sse_encode(self.fx, serializer);
+        <Option<f64>>::sse_encode(self.price, serializer);
         <Option<u32>>::sse_encode(self.category, serializer);
     }
 }
@@ -6178,7 +6178,7 @@ impl SseEncode for crate::pay::Recipient {
         <Option<u8>>::sse_encode(self.pools, serializer);
         <Option<String>>::sse_encode(self.user_memo, serializer);
         <Option<Vec<u8>>>::sse_encode(self.memo_bytes, serializer);
-        <Option<f64>>::sse_encode(self.fx, serializer);
+        <Option<f64>>::sse_encode(self.price, serializer);
     }
 }
 

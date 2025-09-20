@@ -22,7 +22,7 @@ mixin _$PcztPackage {
   Uint64List get orchardIndices => throw _privateConstructorUsedError;
   bool get canSign => throw _privateConstructorUsedError;
   bool get canBroadcast => throw _privateConstructorUsedError;
-  double? get fx => throw _privateConstructorUsedError;
+  double? get price => throw _privateConstructorUsedError;
   int? get category => throw _privateConstructorUsedError;
 
   /// Create a copy of PcztPackage
@@ -45,7 +45,7 @@ abstract class $PcztPackageCopyWith<$Res> {
       Uint64List orchardIndices,
       bool canSign,
       bool canBroadcast,
-      double? fx,
+      double? price,
       int? category});
 }
 
@@ -70,7 +70,7 @@ class _$PcztPackageCopyWithImpl<$Res, $Val extends PcztPackage>
     Object? orchardIndices = null,
     Object? canSign = null,
     Object? canBroadcast = null,
-    Object? fx = freezed,
+    Object? price = freezed,
     Object? category = freezed,
   }) {
     return _then(_value.copyWith(
@@ -98,9 +98,9 @@ class _$PcztPackageCopyWithImpl<$Res, $Val extends PcztPackage>
           ? _value.canBroadcast
           : canBroadcast // ignore: cast_nullable_to_non_nullable
               as bool,
-      fx: freezed == fx
-          ? _value.fx
-          : fx // ignore: cast_nullable_to_non_nullable
+      price: freezed == price
+          ? _value.price
+          : price // ignore: cast_nullable_to_non_nullable
               as double?,
       category: freezed == category
           ? _value.category
@@ -125,7 +125,7 @@ abstract class _$$PcztPackageImplCopyWith<$Res>
       Uint64List orchardIndices,
       bool canSign,
       bool canBroadcast,
-      double? fx,
+      double? price,
       int? category});
 }
 
@@ -148,7 +148,7 @@ class __$$PcztPackageImplCopyWithImpl<$Res>
     Object? orchardIndices = null,
     Object? canSign = null,
     Object? canBroadcast = null,
-    Object? fx = freezed,
+    Object? price = freezed,
     Object? category = freezed,
   }) {
     return _then(_$PcztPackageImpl(
@@ -176,9 +176,9 @@ class __$$PcztPackageImplCopyWithImpl<$Res>
           ? _value.canBroadcast
           : canBroadcast // ignore: cast_nullable_to_non_nullable
               as bool,
-      fx: freezed == fx
-          ? _value.fx
-          : fx // ignore: cast_nullable_to_non_nullable
+      price: freezed == price
+          ? _value.price
+          : price // ignore: cast_nullable_to_non_nullable
               as double?,
       category: freezed == category
           ? _value.category
@@ -198,7 +198,7 @@ class _$PcztPackageImpl implements _PcztPackage {
       required this.orchardIndices,
       required this.canSign,
       required this.canBroadcast,
-      this.fx,
+      this.price,
       this.category});
 
   @override
@@ -214,13 +214,13 @@ class _$PcztPackageImpl implements _PcztPackage {
   @override
   final bool canBroadcast;
   @override
-  final double? fx;
+  final double? price;
   @override
   final int? category;
 
   @override
   String toString() {
-    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, canSign: $canSign, canBroadcast: $canBroadcast, fx: $fx, category: $category)';
+    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category)';
   }
 
   @override
@@ -237,7 +237,7 @@ class _$PcztPackageImpl implements _PcztPackage {
             (identical(other.canSign, canSign) || other.canSign == canSign) &&
             (identical(other.canBroadcast, canBroadcast) ||
                 other.canBroadcast == canBroadcast) &&
-            (identical(other.fx, fx) || other.fx == fx) &&
+            (identical(other.price, price) || other.price == price) &&
             (identical(other.category, category) ||
                 other.category == category));
   }
@@ -251,7 +251,7 @@ class _$PcztPackageImpl implements _PcztPackage {
       const DeepCollectionEquality().hash(orchardIndices),
       canSign,
       canBroadcast,
-      fx,
+      price,
       category);
 
   /// Create a copy of PcztPackage
@@ -271,7 +271,7 @@ abstract class _PcztPackage implements PcztPackage {
       required final Uint64List orchardIndices,
       required final bool canSign,
       required final bool canBroadcast,
-      final double? fx,
+      final double? price,
       final int? category}) = _$PcztPackageImpl;
 
   @override
@@ -287,7 +287,7 @@ abstract class _PcztPackage implements PcztPackage {
   @override
   bool get canBroadcast;
   @override
-  double? get fx;
+  double? get price;
   @override
   int? get category;
 

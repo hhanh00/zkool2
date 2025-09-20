@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde_json::Value;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 
@@ -96,6 +96,27 @@ pub async fn fill_missing_tx_prices(connection: &mut SqliteConnection, account: 
     let pqs = get_historical_prices_all().await?;
     fill_historical_prices(&mut txs, &pqs).await?;
     store_tx_prices(&mut *connection, &txs).await?;
+    Ok(())
+}
+
+pub async fn merge_pending_txs(connection: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
+    sqlx::query(
+        "WITH upd AS (SELECT t.id_tx, p.price, p.category
+        FROM pending_txs p JOIN transactions t ON p.txid = t.txid
+        WHERE t.account = ?1)
+        UPDATE transactions SET price = upd.price, category = upd.category
+        FROM upd WHERE upd.id_tx = transactions.id_tx",
+    )
+    .bind(account)
+    .execute(&mut *connection)
+    .await?;
+    // delete pending txs that could not be merged for more than 100 blocks
+    // they were probably never mined
+    sqlx::query("DELETE FROM pending_txs WHERE account = ?1 AND height < ?2")
+        .bind(account)
+        .bind(height - 100)
+        .execute(&mut *connection)
+        .await?;
     Ok(())
 }
 
