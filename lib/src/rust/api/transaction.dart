@@ -6,5 +6,5 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<(int?, int?)> getTxWithoutUsdRange() =>
-    RustLib.instance.api.crateApiTransactionGetTxWithoutUsdRange();
+Future<void> fillMissingTxPrices() =>
+    RustLib.instance.api.crateApiTransactionFillMissingTxPrices();
