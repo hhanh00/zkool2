@@ -436,7 +436,8 @@ pub async fn get_tx_details(
     id_tx: u32,
 ) -> Result<TxAccount> {
     let mut tx = sqlx::query(
-        "SELECT txid, height, time FROM transactions
+        "SELECT txid, height, time, category FROM transactions t
+        LEFT JOIN categories c ON c.id_category = t.category
         WHERE account = ? AND id_tx = ?",
     )
     .bind(account)
@@ -445,13 +446,18 @@ pub async fn get_tx_details(
         let txid: Vec<u8> = row.get(0);
         let height: u32 = row.get(1);
         let time: u32 = row.get(2);
+        let category: Option<String> = row.get(3);
         TxAccount {
             id: id_tx,
             account,
             txid,
             height,
             time,
-            ..Default::default()
+            category,
+            notes: vec![],
+            spends: vec![],
+            outputs: vec![],
+            memos: vec![],
         }
     })
     .fetch_one(&mut *connection)
@@ -578,6 +584,7 @@ pub struct TxAccount {
     pub txid: Vec<u8>,
     pub height: u32,
     pub time: u32,
+    pub category: Option<String>,
     pub notes: Vec<TxNote>,
     pub spends: Vec<TxSpend>,
     pub outputs: Vec<TxOutput>,
