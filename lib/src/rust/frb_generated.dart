@@ -3498,8 +3498,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Tx dco_decode_tx(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return Tx(
       id: dco_decode_u_32(arr[0]),
       txid: dco_decode_list_prim_u_8_strict(arr[1]),
@@ -3507,6 +3507,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       time: dco_decode_u_32(arr[3]),
       value: dco_decode_i_64(arr[4]),
       tpe: dco_decode_opt_box_autoadd_u_8(arr[5]),
+      category: dco_decode_opt_String(arr[6]),
     );
   }
 
@@ -3514,18 +3515,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxAccount dco_decode_tx_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return TxAccount(
       id: dco_decode_u_32(arr[0]),
       account: dco_decode_u_32(arr[1]),
       txid: dco_decode_list_prim_u_8_strict(arr[2]),
       height: dco_decode_u_32(arr[3]),
       time: dco_decode_u_32(arr[4]),
-      notes: dco_decode_list_tx_note(arr[5]),
-      spends: dco_decode_list_tx_spend(arr[6]),
-      outputs: dco_decode_list_tx_output(arr[7]),
-      memos: dco_decode_list_tx_memo(arr[8]),
+      category: dco_decode_opt_String(arr[5]),
+      notes: dco_decode_list_tx_note(arr[6]),
+      spends: dco_decode_list_tx_spend(arr[7]),
+      outputs: dco_decode_list_tx_output(arr[8]),
+      memos: dco_decode_list_tx_memo(arr[9]),
     );
   }
 
@@ -4547,13 +4549,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_time = sse_decode_u_32(deserializer);
     var var_value = sse_decode_i_64(deserializer);
     var var_tpe = sse_decode_opt_box_autoadd_u_8(deserializer);
+    var var_category = sse_decode_opt_String(deserializer);
     return Tx(
         id: var_id,
         txid: var_txid,
         height: var_height,
         time: var_time,
         value: var_value,
-        tpe: var_tpe);
+        tpe: var_tpe,
+        category: var_category);
   }
 
   @protected
@@ -4564,6 +4568,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_txid = sse_decode_list_prim_u_8_strict(deserializer);
     var var_height = sse_decode_u_32(deserializer);
     var var_time = sse_decode_u_32(deserializer);
+    var var_category = sse_decode_opt_String(deserializer);
     var var_notes = sse_decode_list_tx_note(deserializer);
     var var_spends = sse_decode_list_tx_spend(deserializer);
     var var_outputs = sse_decode_list_tx_output(deserializer);
@@ -4574,6 +4579,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         txid: var_txid,
         height: var_height,
         time: var_time,
+        category: var_category,
         notes: var_notes,
         spends: var_spends,
         outputs: var_outputs,
@@ -5494,6 +5500,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.time, serializer);
     sse_encode_i_64(self.value, serializer);
     sse_encode_opt_box_autoadd_u_8(self.tpe, serializer);
+    sse_encode_opt_String(self.category, serializer);
   }
 
   @protected
@@ -5504,6 +5511,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_prim_u_8_strict(self.txid, serializer);
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_32(self.time, serializer);
+    sse_encode_opt_String(self.category, serializer);
     sse_encode_list_tx_note(self.notes, serializer);
     sse_encode_list_tx_spend(self.spends, serializer);
     sse_encode_list_tx_output(self.outputs, serializer);

@@ -311,5 +311,6 @@ sealed class Tx with _$Tx {
     required int time,
     required PlatformInt64 value,
     int? tpe,
+    String? category,
   }) = _Tx;
 }

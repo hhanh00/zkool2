@@ -68,6 +68,9 @@ class TxViewState extends State<TxView> {
       ListTile(
           title: Text("Amount Transacted"),
           subtitle: zatToText(amountReceived - amountSpent, selectable: true),),
+      ListTile(
+          title: Text("Category"),
+          subtitle: CopyableText(txd.category ?? "Unknown"),),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand((n) => [
