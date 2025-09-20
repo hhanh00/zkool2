@@ -47,10 +47,10 @@ Future<String> send({required int height, required List<int> data}) =>
 Future<void> storePendingTx(
         {required int height,
         required List<int> txid,
-        double? fx,
+        double? price,
         int? category}) =>
     RustLib.instance.api.crateApiPayStorePendingTx(
-        height: height, txid: txid, fx: fx, category: category);
+        height: height, txid: txid, price: price, category: category);
 
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);
@@ -105,7 +105,7 @@ sealed class PcztPackage with _$PcztPackage {
     required Uint64List orchardIndices,
     required bool canSign,
     required bool canBroadcast,
-    double? fx,
+    double? price,
     int? category,
   }) = _PcztPackage;
 }
