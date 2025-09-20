@@ -66,12 +66,14 @@ class PaymentOptions {
   final bool recipientPaysFee;
   final bool smartTransparent;
   final DustChangePolicy dustChangePolicy;
+  final int? category;
 
   const PaymentOptions({
     required this.srcPools,
     required this.recipientPaysFee,
     required this.smartTransparent,
     required this.dustChangePolicy,
+    this.category,
   });
 
   @override
@@ -79,7 +81,8 @@ class PaymentOptions {
       srcPools.hashCode ^
       recipientPaysFee.hashCode ^
       smartTransparent.hashCode ^
-      dustChangePolicy.hashCode;
+      dustChangePolicy.hashCode ^
+      category.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -89,7 +92,8 @@ class PaymentOptions {
           srcPools == other.srcPools &&
           recipientPaysFee == other.recipientPaysFee &&
           smartTransparent == other.smartTransparent &&
-          dustChangePolicy == other.dustChangePolicy;
+          dustChangePolicy == other.dustChangePolicy &&
+          category == other.category;
 }
 
 @freezed
