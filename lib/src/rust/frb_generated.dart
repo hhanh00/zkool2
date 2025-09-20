@@ -3489,13 +3489,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PaymentOptions dco_decode_payment_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return PaymentOptions(
       srcPools: dco_decode_u_8(arr[0]),
       recipientPaysFee: dco_decode_bool(arr[1]),
       smartTransparent: dco_decode_bool(arr[2]),
       dustChangePolicy: dco_decode_dust_change_policy(arr[3]),
+      category: dco_decode_opt_box_autoadd_u_32(arr[4]),
     );
   }
 
@@ -3553,7 +3554,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       pools: dco_decode_opt_box_autoadd_u_8(arr[2]),
       userMemo: dco_decode_opt_String(arr[3]),
       memoBytes: dco_decode_opt_list_prim_u_8_strict(arr[4]),
-      fiat: dco_decode_opt_box_autoadd_f_64(arr[5]),
+      fx: dco_decode_opt_box_autoadd_f_64(arr[5]),
     );
   }
 
@@ -4573,11 +4574,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_recipientPaysFee = sse_decode_bool(deserializer);
     var var_smartTransparent = sse_decode_bool(deserializer);
     var var_dustChangePolicy = sse_decode_dust_change_policy(deserializer);
+    var var_category = sse_decode_opt_box_autoadd_u_32(deserializer);
     return PaymentOptions(
         srcPools: var_srcPools,
         recipientPaysFee: var_recipientPaysFee,
         smartTransparent: var_smartTransparent,
-        dustChangePolicy: var_dustChangePolicy);
+        dustChangePolicy: var_dustChangePolicy,
+        category: var_category);
   }
 
   @protected
@@ -4626,14 +4629,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_pools = sse_decode_opt_box_autoadd_u_8(deserializer);
     var var_userMemo = sse_decode_opt_String(deserializer);
     var var_memoBytes = sse_decode_opt_list_prim_u_8_strict(deserializer);
-    var var_fiat = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_fx = sse_decode_opt_box_autoadd_f_64(deserializer);
     return Recipient(
         address: var_address,
         amount: var_amount,
         pools: var_pools,
         userMemo: var_userMemo,
         memoBytes: var_memoBytes,
-        fiat: var_fiat);
+        fx: var_fx);
   }
 
   @protected
@@ -5580,6 +5583,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.recipientPaysFee, serializer);
     sse_encode_bool(self.smartTransparent, serializer);
     sse_encode_dust_change_policy(self.dustChangePolicy, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.category, serializer);
   }
 
   @protected
@@ -5617,7 +5621,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_u_8(self.pools, serializer);
     sse_encode_opt_String(self.userMemo, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.memoBytes, serializer);
-    sse_encode_opt_box_autoadd_f_64(self.fiat, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.fx, serializer);
   }
 
   @protected
