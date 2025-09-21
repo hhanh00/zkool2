@@ -138,7 +138,11 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
         .map(|row: SqliteRow| {
             let pool: u8 = row.get(0);
             let height: u32 = row.get(1);
-            SyncHeight { pool, height, time: 0 }
+            SyncHeight {
+                pool,
+                height,
+                time: 0,
+            }
         })
         .fetch_all(&mut *connection)
         .await?;
@@ -197,10 +201,20 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     }
     io_account.blocks = blocks;
 
+    info!("Exporting categories");
+    let categories = sqlx::query("SELECT id_category, name FROM categories")
+        .map(|r: SqliteRow| {
+            let id_category: u32 = r.get(0);
+            let name: String = r.get(1);
+            IOCategory { id_category, name }
+        })
+        .fetch_all(&mut *connection)
+        .await?;
+
     info!("Exporting transactions");
     // Get the transactions for the given account
     let mut transactions = sqlx::query(
-        "SELECT id_tx, txid, height, time, details, tpe, value, fee FROM transactions WHERE account = ?",
+        "SELECT id_tx, txid, height, time, details, tpe, value, fee, price, category FROM transactions WHERE account = ?",
     )
     .bind(account)
     .map(|row: SqliteRow| {
@@ -212,6 +226,8 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
         let tpe: u8 = row.get(5);
         let value: i64 = row.get(6);
         let fee: u64 = row.get(7);
+        let price: Option<f64> = row.get(8);
+        let category: Option<u32> = row.get(9);
 
         IOTransaction {
             id_tx,
@@ -222,6 +238,8 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             tpe,
             value,
             fee,
+            price,
+            category,
             ..Default::default()
         }
     })
@@ -383,6 +401,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     .fetch_all(&mut *connection)
     .await?;
     io_account.dkg_packages = dkg_packages;
+    io_account.categories = categories;
 
     let io_account = bincode::encode_to_vec(&io_account, legacy())?;
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
@@ -409,21 +428,35 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .execute(&mut *tx)
         .await?;
 
+    let mut category_map: HashMap<u32, u32> = HashMap::new();
+    for category in io_account.categories.iter() {
+        let new_id_category = sqlx::query(
+            "INSERT INTO categories(name)
+            VALUES (?) ON CONFLICT DO UPDATE SET name = excluded.name
+            RETURNING (id_category)",
+        )
+        .bind(&category.name)
+        .map(|r: SqliteRow| r.get::<u32, _>(0))
+        .fetch_one(&mut *tx)
+        .await?;
+        category_map.insert(category.id_category, new_id_category);
+    }
+
     let mut folder: Option<u32> = None;
     let folder_name = &io_account.folder;
     if !folder_name.is_empty() {
         sqlx::query("INSERT OR IGNORE INTO folders(name) VALUES (?1)")
-        .bind(folder_name)
-        .execute(&mut *tx)
-        .await?;
+            .bind(folder_name)
+            .execute(&mut *tx)
+            .await?;
         folder = sqlx::query("SELECT id_folder FROM folders WHERE name = ?1")
-        .bind(folder_name)
-        .map(|row: SqliteRow| {
-            let id_folder: u32 = row.get(0);
-            id_folder
-        })
-        .fetch_optional(&mut *tx)
-        .await?;
+            .bind(folder_name)
+            .map(|row: SqliteRow| {
+                let id_folder: u32 = row.get(0);
+                id_folder
+            })
+            .fetch_optional(&mut *tx)
+            .await?;
     }
 
     // Insert the account into the database
@@ -522,9 +555,10 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     let mut new_txs = HashMap::<u32, u32>::new();
     let mut new_notes = HashMap::<u32, u32>::new();
     for transaction in io_account.transactions.iter() {
+        let category = transaction.category.and_then(|c| category_map.get(&c)).cloned();
         let r = sqlx::query(
             "INSERT INTO transactions
-            (account, txid, height, time, details, tpe, value, fee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (account, txid, height, time, details, tpe, value, fee, price, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(&transaction.txid)
@@ -534,6 +568,8 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(transaction.tpe)
         .bind(transaction.value)
         .bind(transaction.fee as i64)
+        .bind(transaction.price)
+        .bind(category)
         .execute(&mut *tx)
         .await?;
         let new_id_tx = r.last_insert_rowid() as u32;
@@ -734,6 +770,7 @@ pub struct IOAccount {
     pub transactions: Vec<IOTransaction>,
     pub dkg_params: Option<DKGParams>,
     pub dkg_packages: Vec<DKGPackage>,
+    pub categories: Vec<IOCategory>,
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
@@ -775,6 +812,12 @@ pub struct IOWitness {
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
+pub struct IOCategory {
+    pub id_category: u32,
+    pub name: String,
+}
+
+#[derive(Clone, Encode, Decode, Default, Debug)]
 pub struct IOTransaction {
     pub id_tx: u32,
     pub txid: Vec<u8>,
@@ -784,6 +827,8 @@ pub struct IOTransaction {
     pub tpe: u8,
     pub value: i64,
     pub fee: u64,
+    pub price: Option<f64>,
+    pub category: Option<u32>,
     pub notes: Vec<IONote>,
     pub spends: Vec<IOSpend>,
     pub outputs: Vec<IOOutput>,
