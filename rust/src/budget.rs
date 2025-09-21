@@ -99,7 +99,11 @@ pub async fn fill_missing_tx_prices(connection: &mut SqliteConnection, account: 
     Ok(())
 }
 
-pub async fn merge_pending_txs(connection: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
+pub async fn merge_pending_txs(
+    connection: &mut SqliteConnection,
+    account: u32,
+    height: u32,
+) -> Result<()> {
     sqlx::query(
         "WITH upd AS (SELECT t.id_tx, p.price, p.category
         FROM pending_txs p JOIN transactions t ON p.txid = t.txid
@@ -118,6 +122,29 @@ pub async fn merge_pending_txs(connection: &mut SqliteConnection, account: u32, 
         .execute(&mut *connection)
         .await?;
     Ok(())
+}
+
+pub async fn fetch_category_amounts(connection: &mut SqliteConnection,
+    account: u32, from: u32, to: u32, income: bool) -> Result<Vec<(String, f64)>> {
+    let category_amts = sqlx::query(
+        "SELECT c.name, SUM(value) * price / 1e8 AS amount
+        FROM transactions t
+        JOIN categories c ON c.id_category = t.category
+        WHERE account = ?1 AND c.income = ?2 AND t.time >= ?3
+        AND t.time < ?4
+        GROUP BY id_category")
+    .bind(account)
+    .bind(income)
+    .bind(from)
+    .bind(to)
+    .map(|r: SqliteRow| {
+        let category: String = r.get(0);
+        let amount: f64 = r.get(1);
+        (category, amount)
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(category_amts)
 }
 
 pub struct PriceQuote {

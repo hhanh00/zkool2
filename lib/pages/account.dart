@@ -81,6 +81,10 @@ class AccountViewPageState extends State<AccountViewPage> {
             IconButton(
               icon: Icon(Icons.price_check),
               onPressed: updateAllFx,
+            ),
+            IconButton(
+              icon: Icon(Icons.pie_chart),
+              onPressed: () => GoRouter.of(context).push("/chart"),
             )
           ],
           bottom: TabBar(
