@@ -289,31 +289,33 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
             "CREATE TABLE IF NOT EXISTS categories (
             id_category INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
+            income BOOL NOT NULL,
             UNIQUE (name))",
         )
         .execute(&mut *connection)
         .await?;
 
-        for c in vec![
-            "Salary",
-            "Business Income",
-            "Investments",
-            "Rental/Property Income",
-            "Other Income",
-            "Housing & Utilities",
-            "Food & Groceries",
-            "Transportation",
-            "Health & Insurance",
-            "Debt & Financial Obligations",
-            "Education & Training",
-            "Entertainment & Lifestyle",
-            "Personal & Family Care",
-            "Taxes",
-            "Savings & Investments",
+        for (c, i) in vec![
+            ("Salary", true),
+            ("Business Income", true),
+            ("Investments", true),
+            ("Rental/Property Income", true),
+            ("Other Income", true),
+            ("Housing & Utilities", false),
+            ("Food & Groceries", false),
+            ("Transportation", false),
+            ("Health & Insurance", false),
+            ("Debt & Financial Obligations", false),
+            ("Education & Training", false),
+            ("Entertainment & Lifestyle", false),
+            ("Personal & Family Care", false),
+            ("Taxes", false),
+            ("Savings & Investments", false),
         ] {
-            sqlx::query("INSERT OR REPLACE INTO categories(name)
-            VALUES (?)")
+            sqlx::query("INSERT OR REPLACE INTO categories(name, income)
+            VALUES (?, ?")
             .bind(c)
+            .bind(i)
             .execute(&mut *connection)
             .await?;
         }

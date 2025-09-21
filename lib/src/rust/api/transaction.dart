@@ -12,3 +12,8 @@ Future<void> fillMissingTxPrices() =>
 Future<void> setTxCategory({required int id, int? category}) =>
     RustLib.instance.api
         .crateApiTransactionSetTxCategory(id: id, category: category);
+
+Future<List<(String, double)>> fetchCategoryAmounts(
+        {required int from, required int to, required bool income}) =>
+    RustLib.instance.api.crateApiTransactionFetchCategoryAmounts(
+        from: from, to: to, income: income);
