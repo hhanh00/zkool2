@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:gap/gap.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 
 class ChartPage extends StatefulWidget {
@@ -122,7 +121,7 @@ class ChartPageState extends State<ChartPage> {
     }
     #chart {
       width: 100%;
-      max-width: 600px;
+      max-width: 800px;
       height: 400px;
       margin: auto;
     }

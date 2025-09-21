@@ -297,23 +297,23 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
 
         for (c, i) in vec![
             ("Salary", true),
-            ("Business Income", true),
-            ("Investments", true),
+            ("Investment Income/Mining", true),
             ("Rental/Property Income", true),
             ("Other Income", true),
             ("Housing & Utilities", false),
             ("Food & Groceries", false),
-            ("Transportation", false),
+            ("Restaurants & Coffee", false),
+            ("Transportation & Hotels", false),
             ("Health & Insurance", false),
             ("Debt & Financial Obligations", false),
             ("Education & Training", false),
             ("Entertainment & Lifestyle", false),
             ("Personal & Family Care", false),
-            ("Taxes", false),
             ("Savings & Investments", false),
+            ("Other Expenses", false),
         ] {
             sqlx::query("INSERT OR REPLACE INTO categories(name, income)
-            VALUES (?, ?")
+            VALUES (?, ?)")
             .bind(c)
             .bind(i)
             .execute(&mut *connection)
