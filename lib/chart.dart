@@ -1,41 +1,118 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:gap/gap.dart';
+import 'package:zkool/main.dart';
+import 'package:zkool/src/rust/api/transaction.dart';
 
 class ChartPage extends StatefulWidget {
+  const ChartPage({super.key});
+
   @override
   State<StatefulWidget> createState() => ChartPageState();
 }
 
 class ChartPageState extends State<ChartPage> {
-  late final Map<String, int> data;
-  @override
-  void initState() {
-    super.initState();
-
-    data = {
-      "totalIncome": 7600,
-      "totalExpenses": 5900,
-    };
-  }
-
+  final formKey = GlobalKey<FormBuilderState>();
+  final List<Map<String, dynamic>> data = [];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: Text("Chart")), body: Center(child: InAppWebView(
-      onLoadStop: (c, uri) {
-        final json = jsonEncode(data);
-        c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
+    final now = DateTime.now();
+
+    return Scaffold(
+      appBar: AppBar(),
+      body: Padding(
+        padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+        child: Column(
+          children: [
+            FormBuilder(
+              key: formKey,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    width: 100,
+                    child: FormBuilderDateTimePicker(
+                      name: "from",
+                      decoration: InputDecoration(
+                        label: Text("From"),
+                      ),
+                      inputType: InputType.date,
+                      initialValue: now.subtract(Duration(days: 30)),
+                    ),
+                  ),
+                  Gap(8),
+                  SizedBox(
+                    width: 100,
+                    child: FormBuilderDateTimePicker(
+                      name: "to",
+                      decoration: InputDecoration(
+                        label: Text("To"),
+                      ),
+                      inputType: InputType.date,
+                      initialValue: now,
+                    ),
+                  ),
+                  Gap(8),
+                  SizedBox(
+                    width: 100,
+                    child: FormBuilderDropdown(
+                      name: "income",
+                      initialValue: false,
+                      items: [
+                        DropdownMenuItem(value: true, child: Text("Income")),
+                        DropdownMenuItem(value: false, child: Text("Spending")),
+                      ],
+                    ),
+                  ),
+                  Gap(16),
+                  IconButton(onPressed: onRefresh, icon: Icon(Icons.check))
+                ],
+              ),
+            ),
+            Divider(),
+            Expanded(child: chart(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void onRefresh() async {
+    final fields = formKey.currentState!.fields;
+    final from = fields["from"]!.value as DateTime;
+    final to = fields["to"]!.value as DateTime;
+    final income = fields["income"]!.value as bool;
+    final f = from.millisecondsSinceEpoch ~/ 1000;
+    final t = to.millisecondsSinceEpoch ~/ 1000;
+    final amounts = await fetchCategoryAmounts(from: f, to: t, income: income);
+    data.clear();
+    for (var (c, a) in amounts) {
+      data.add({
+        "name": c,
+        "value": (a.abs() * 1000).ceilToDouble() * 0.001,
+      });
+    }
+    setState(() {});
+  }
+
+  Widget chart(BuildContext context) {
+    return Center(
+      key: UniqueKey(),
+      child: InAppWebView(
+        onLoadStop: (c, uri) {
+          final json = jsonEncode(data);
+          c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
         },
-      onConsoleMessage: (c, m) => print(m.message),
-      initialData: InAppWebViewInitialData(
-        data: r"""
+        initialData: InAppWebViewInitialData(
+          data: r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ECharts — Income vs Expense</title>
   <style>
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
@@ -52,10 +129,7 @@ class ChartPageState extends State<ChartPage> {
   </style>
 </head>
 <body>
-  <h1>Income vs Expense</h1>
   <div id="chart"></div>
-
-  <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <script>
     function initChart(data) {
@@ -73,7 +147,7 @@ class ChartPageState extends State<ChartPage> {
         },
         series: [
           {
-            name: 'Income vs Expense',
+            name: 'Income/Expense by Category',
             type: 'pie',
             radius: ['40%', '70%'],
             avoidLabelOverlap: false,
@@ -85,10 +159,7 @@ class ChartPageState extends State<ChartPage> {
             emphasis: {
               label: { show: true, fontSize: 18, fontWeight: 'bold' }
             },
-            data: [
-              {name: 'Total Income', value: data.totalIncome},
-              {name: 'Total Expenses', value: data.totalExpenses}
-            ]
+            data
           }
         ]
       };
@@ -101,6 +172,9 @@ class ChartPageState extends State<ChartPage> {
   </script>
 </body>
 </html>
-"""))));
+""",
+        ),
+      ),
+    );
   }
 }

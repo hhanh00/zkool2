@@ -184,6 +184,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> dco_decode_list_recipient(dynamic raw);
 
   @protected
+  List<(String, double)> dco_decode_list_record_string_f_64(dynamic raw);
+
+  @protected
   List<(int, String, PlatformInt64)> dco_decode_list_record_u_32_string_i_64(
       dynamic raw);
 
@@ -267,6 +270,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient dco_decode_recipient(dynamic raw);
+
+  @protected
+  (String, double) dco_decode_record_string_f_64(dynamic raw);
 
   @protected
   (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw);
@@ -489,6 +495,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer);
 
   @protected
+  List<(String, double)> sse_decode_list_record_string_f_64(
+      SseDeserializer deserializer);
+
+  @protected
   List<(int, String, PlatformInt64)> sse_decode_list_record_u_32_string_i_64(
       SseDeserializer deserializer);
 
@@ -574,6 +584,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient sse_decode_recipient(SseDeserializer deserializer);
+
+  @protected
+  (String, double) sse_decode_record_string_f_64(SseDeserializer deserializer);
 
   @protected
   (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
@@ -809,6 +822,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Recipient> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_record_string_f_64(
+      List<(String, double)> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_record_u_32_string_i_64(
       List<(int, String, PlatformInt64)> self, SseSerializer serializer);
 
@@ -899,6 +916,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_string_f_64(
+      (String, double) self, SseSerializer serializer);
 
   @protected
   void sse_encode_record_u_32_string_i_64(
