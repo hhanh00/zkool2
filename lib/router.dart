@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
 import 'package:zkool/main.dart';
@@ -93,6 +94,7 @@ GoRouter router(bool recoveryMode) => GoRouter(
     GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage())),
     GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
+    GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
   ],
 );
 
