@@ -184,7 +184,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> dco_decode_list_recipient(dynamic raw);
 
   @protected
-  List<(String, double)> dco_decode_list_record_string_f_64(dynamic raw);
+  List<(String, double, bool)> dco_decode_list_record_string_f_64_bool(
+      dynamic raw);
 
   @protected
   List<(int, String, PlatformInt64)> dco_decode_list_record_u_32_string_i_64(
@@ -272,7 +273,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient dco_decode_recipient(dynamic raw);
 
   @protected
-  (String, double) dco_decode_record_string_f_64(dynamic raw);
+  (String, double, bool) dco_decode_record_string_f_64_bool(dynamic raw);
 
   @protected
   (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw);
@@ -495,7 +496,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Recipient> sse_decode_list_recipient(SseDeserializer deserializer);
 
   @protected
-  List<(String, double)> sse_decode_list_record_string_f_64(
+  List<(String, double, bool)> sse_decode_list_record_string_f_64_bool(
       SseDeserializer deserializer);
 
   @protected
@@ -586,7 +587,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient sse_decode_recipient(SseDeserializer deserializer);
 
   @protected
-  (String, double) sse_decode_record_string_f_64(SseDeserializer deserializer);
+  (String, double, bool) sse_decode_record_string_f_64_bool(
+      SseDeserializer deserializer);
 
   @protected
   (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
@@ -822,8 +824,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Recipient> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_record_string_f_64(
-      List<(String, double)> self, SseSerializer serializer);
+  void sse_encode_list_record_string_f_64_bool(
+      List<(String, double, bool)> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_record_u_32_string_i_64(
@@ -918,8 +920,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
 
   @protected
-  void sse_encode_record_string_f_64(
-      (String, double) self, SseSerializer serializer);
+  void sse_encode_record_string_f_64_bool(
+      (String, double, bool) self, SseSerializer serializer);
 
   @protected
   void sse_encode_record_u_32_string_i_64(
