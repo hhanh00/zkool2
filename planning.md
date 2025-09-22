@@ -132,4 +132,4 @@ In order of priority,
 - [x] Save/Restore category in I/O
 - [x] Add category to tx reports
 - [ ] Category over time
-- [ ] Bar chart by category for a given time period
+- [x] Pie chart by category for a given time period
