@@ -13,9 +13,10 @@ class ChartPage extends StatefulWidget {
   State<StatefulWidget> createState() => ChartPageState();
 }
 
-class ChartPageState extends State<ChartPage> {
+class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixin {
   final formKey = GlobalKey<FormBuilderState>();
   final List<Map<String, dynamic>> data = [];
+  late final tabController = TabController(length: 2, vsync: this);
 
   @override
   Widget build(BuildContext context) {
@@ -55,25 +56,17 @@ class ChartPageState extends State<ChartPage> {
                       initialValue: now,
                     ),
                   ),
-                  Gap(8),
-                  SizedBox(
-                    width: 100,
-                    child: FormBuilderDropdown(
-                      name: "income",
-                      initialValue: false,
-                      items: [
-                        DropdownMenuItem(value: true, child: Text("Income")),
-                        DropdownMenuItem(value: false, child: Text("Spending")),
-                      ],
-                    ),
-                  ),
                   Gap(16),
                   IconButton(onPressed: onRefresh, icon: Icon(Icons.check))
                 ],
               ),
             ),
             Divider(),
-            Expanded(child: chart(context)),
+            TabBar.secondary(controller: tabController, tabs: [
+              Tab(text: "Income/Expenses"),
+              Tab(text: "Category"),
+            ]),
+            Expanded(child: spendingChart(context)),
           ],
         ),
       ),
@@ -98,16 +91,26 @@ class ChartPageState extends State<ChartPage> {
     setState(() {});
   }
 
-  Widget chart(BuildContext context) {
+  Widget spendingChart(BuildContext context) {
     return Center(
-      key: UniqueKey(),
-      child: InAppWebView(
-        onLoadStop: (c, uri) {
-          final json = jsonEncode(data);
-          c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
-        },
-        initialData: InAppWebViewInitialData(
-          data: r"""
+        key: UniqueKey(),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          DropdownButton(
+            items: [
+              DropdownMenuItem(value: true, child: Text("Income")),
+              DropdownMenuItem(value: false, child: Text("Spending")),
+            ],
+            onChanged: (bool? value) {},
+          ),
+          Gap(8),
+          Expanded(
+              child: InAppWebView(
+            onLoadStop: (c, uri) {
+              final json = jsonEncode(data);
+              c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
+            },
+            initialData: InAppWebViewInitialData(
+              data: r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -133,7 +136,6 @@ class ChartPageState extends State<ChartPage> {
   <script>
     function initChart(data) {
       const chart = echarts.init(document.getElementById('chart'));
-      console.log(data);
 
       const option = {
         tooltip: {
@@ -172,8 +174,8 @@ class ChartPageState extends State<ChartPage> {
 </body>
 </html>
 """,
-        ),
-      ),
-    );
+            ),
+          )),
+        ]));
   }
 }
