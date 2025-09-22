@@ -17,3 +17,8 @@ Future<List<(String, double, bool)>> fetchCategoryAmounts(
         {int? from, int? to}) =>
     RustLib.instance.api
         .crateApiTransactionFetchCategoryAmounts(from: from, to: to);
+
+Future<List<(int, double)>> fetchAmounts(
+        {int? from, int? to, required int category}) =>
+    RustLib.instance.api.crateApiTransactionFetchAmounts(
+        from: from, to: to, category: category);
