@@ -207,14 +207,14 @@ mod tests {
         let options = SqliteConnectOptions::new().filename(&db_path);
         let pool = SqlitePool::connect_with(options).await?;
         let mut connection = pool.acquire().await?;
-        let start_time = Utc.with_ymd_and_hms(2020, 5, 12, 8, 45, 12);
+        let start_time = Utc.with_ymd_and_hms(2025, 1, 1, 5, 0, 0);
         let mut time = start_time.single().unwrap().timestamp();
         let mut rng = rand::thread_rng();
         for i in 0..10000 {
             let mut txid = [0u8; 32];
             rng.fill_bytes(&mut txid);
             let height = 2_000_000 + i;
-            time += rng.gen_range(0, 30000);
+            time += rng.gen_range(0, 5000);
             let value = (rng.gen_range(0.5, 200.0) * 1e7) as i64;
             let category = rng.gen_range(0, 15) + 1;
             sqlx::query(
