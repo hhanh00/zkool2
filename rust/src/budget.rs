@@ -124,16 +124,20 @@ pub async fn merge_pending_txs(
     Ok(())
 }
 
-pub async fn fetch_category_amounts(connection: &mut SqliteConnection,
-    account: u32, from: Option<u32>, to: Option<u32>) -> Result<Vec<(String, f64, bool)>> {
-    tracing::info!("fetch_category_amounts {from:?} {to:?}");
+pub async fn fetch_category_amounts(
+    connection: &mut SqliteConnection,
+    account: u32,
+    from: Option<u32>,
+    to: Option<u32>,
+) -> Result<Vec<(String, f64, bool)>> {
     let category_amts = sqlx::query(
         "SELECT c.name, SUM(value) * price / 1e8 AS amount, income
         FROM transactions t
         JOIN categories c ON c.id_category = t.category
         WHERE account = ?1 AND t.time >= ?2
         AND t.time < ?3
-        GROUP BY id_category")
+        GROUP BY id_category",
+    )
     .bind(account)
     .bind(from.unwrap_or(0))
     .bind(to.unwrap_or(u32::MAX))
@@ -146,6 +150,34 @@ pub async fn fetch_category_amounts(connection: &mut SqliteConnection,
     .fetch_all(&mut *connection)
     .await?;
     Ok(category_amts)
+}
+
+pub async fn fetch_amounts(
+    connection: &mut SqliteConnection,
+    account: u32,
+    from: Option<u32>,
+    to: Option<u32>,
+    category: u32,
+) -> Result<Vec<(u32, f64)>> {
+    let amounts = sqlx::query(
+        "SELECT time, SUM(value) * price / 1e8 AS amount
+    FROM transactions t
+    WHERE account = ?1 AND time >= ?2
+    AND time < ?3 AND category = ?4
+    ORDER BY time",
+    )
+    .bind(account)
+    .bind(from.unwrap_or(0))
+    .bind(to.unwrap_or(u32::MAX))
+    .bind(category)
+    .map(|r: SqliteRow| {
+        let time: u32 = r.get(0);
+        let amount: f64 = r.get(1);
+        (time, amount)
+    })
+    .fetch_all(connection)
+    .await?;
+    Ok(amounts)
 }
 
 pub struct PriceQuote {
