@@ -141,8 +141,8 @@ abstract class RustLibApi extends BaseApi {
   Future<Uint8List> crateApiPayExtractTransaction(
       {required PcztPackage package});
 
-  Future<List<(String, double)>> crateApiTransactionFetchCategoryAmounts(
-      {required int from, required int to, required bool income});
+  Future<List<(String, double, bool)>> crateApiTransactionFetchCategoryAmounts(
+      {int? from, int? to});
 
   Future<List<TAddressTxCount>> crateApiAccountFetchTransparentAddressTxCount();
 
@@ -870,24 +870,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<(String, double)>> crateApiTransactionFetchCategoryAmounts(
-      {required int from, required int to, required bool income}) {
+  Future<List<(String, double, bool)>> crateApiTransactionFetchCategoryAmounts(
+      {int? from, int? to}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_u_32(from, serializer);
-          sse_encode_u_32(to, serializer);
-          sse_encode_bool(income, serializer);
+          sse_encode_opt_box_autoadd_u_32(from, serializer);
+          sse_encode_opt_box_autoadd_u_32(to, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 20, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_record_string_f_64,
+          decodeSuccessData: sse_decode_list_record_string_f_64_bool,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiTransactionFetchCategoryAmountsConstMeta,
-        argValues: [from, to, income],
+        argValues: [from, to],
         apiImpl: this,
       ),
     );
@@ -896,7 +895,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiTransactionFetchCategoryAmountsConstMeta =>
       const TaskConstMeta(
         debugName: "fetch_category_amounts",
-        argNames: ["from", "to", "income"],
+        argNames: ["from", "to"],
       );
 
   @override
@@ -3333,9 +3332,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<(String, double)> dco_decode_list_record_string_f_64(dynamic raw) {
+  List<(String, double, bool)> dco_decode_list_record_string_f_64_bool(
+      dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_record_string_f_64).toList();
+    return (raw as List<dynamic>)
+        .map(dco_decode_record_string_f_64_bool)
+        .toList();
   }
 
   @protected
@@ -3598,15 +3600,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  (String, double) dco_decode_record_string_f_64(dynamic raw) {
+  (String, double, bool) dco_decode_record_string_f_64_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2) {
-      throw Exception('Expected 2 elements, got ${arr.length}');
+    if (arr.length != 3) {
+      throw Exception('Expected 3 elements, got ${arr.length}');
     }
     return (
       dco_decode_String(arr[0]),
       dco_decode_f_64(arr[1]),
+      dco_decode_bool(arr[2]),
     );
   }
 
@@ -4320,14 +4323,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<(String, double)> sse_decode_list_record_string_f_64(
+  List<(String, double, bool)> sse_decode_list_record_string_f_64_bool(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <(String, double)>[];
+    var ans_ = <(String, double, bool)>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_record_string_f_64(deserializer));
+      ans_.add(sse_decode_record_string_f_64_bool(deserializer));
     }
     return ans_;
   }
@@ -4705,11 +4708,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  (String, double) sse_decode_record_string_f_64(SseDeserializer deserializer) {
+  (String, double, bool) sse_decode_record_string_f_64_bool(
+      SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_field0 = sse_decode_String(deserializer);
     var var_field1 = sse_decode_f_64(deserializer);
-    return (var_field0, var_field1);
+    var var_field2 = sse_decode_bool(deserializer);
+    return (var_field0, var_field1, var_field2);
   }
 
   @protected
@@ -5405,12 +5410,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_list_record_string_f_64(
-      List<(String, double)> self, SseSerializer serializer) {
+  void sse_encode_list_record_string_f_64_bool(
+      List<(String, double, bool)> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
-      sse_encode_record_string_f_64(item, serializer);
+      sse_encode_record_string_f_64_bool(item, serializer);
     }
   }
 
@@ -5708,11 +5713,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_record_string_f_64(
-      (String, double) self, SseSerializer serializer) {
+  void sse_encode_record_string_f_64_bool(
+      (String, double, bool) self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.$1, serializer);
     sse_encode_f_64(self.$2, serializer);
+    sse_encode_bool(self.$3, serializer);
   }
 
   @protected

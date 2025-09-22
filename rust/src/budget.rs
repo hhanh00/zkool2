@@ -125,22 +125,23 @@ pub async fn merge_pending_txs(
 }
 
 pub async fn fetch_category_amounts(connection: &mut SqliteConnection,
-    account: u32, from: u32, to: u32, income: bool) -> Result<Vec<(String, f64)>> {
+    account: u32, from: Option<u32>, to: Option<u32>) -> Result<Vec<(String, f64, bool)>> {
+    tracing::info!("fetch_category_amounts {from:?} {to:?}");
     let category_amts = sqlx::query(
-        "SELECT c.name, SUM(value) * price / 1e8 AS amount
+        "SELECT c.name, SUM(value) * price / 1e8 AS amount, income
         FROM transactions t
         JOIN categories c ON c.id_category = t.category
-        WHERE account = ?1 AND c.income = ?2 AND t.time >= ?3
-        AND t.time < ?4
+        WHERE account = ?1 AND t.time >= ?2
+        AND t.time < ?3
         GROUP BY id_category")
     .bind(account)
-    .bind(income)
-    .bind(from)
-    .bind(to)
+    .bind(from.unwrap_or(0))
+    .bind(to.unwrap_or(u32::MAX))
     .map(|r: SqliteRow| {
         let category: String = r.get(0);
         let amount: f64 = r.get(1);
-        (category, amount)
+        let income: bool = r.get(2);
+        (category, amount, income)
     })
     .fetch_all(&mut *connection)
     .await?;

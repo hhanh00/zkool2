@@ -801,17 +801,15 @@ fn wire__crate__api__transaction__fetch_category_amounts_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_from = <u32>::sse_decode(&mut deserializer);
-            let api_to = <u32>::sse_decode(&mut deserializer);
-            let api_income = <bool>::sse_decode(&mut deserializer);
+            let api_from = <Option<u32>>::sse_decode(&mut deserializer);
+            let api_to = <Option<u32>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::transaction::fetch_category_amounts(
-                            api_from, api_to, api_income,
-                        )
-                        .await?;
+                        let output_ok =
+                            crate::api::transaction::fetch_category_amounts(api_from, api_to)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3951,13 +3949,13 @@ impl SseDecode for Vec<crate::pay::Recipient> {
     }
 }
 
-impl SseDecode for Vec<(String, f64)> {
+impl SseDecode for Vec<(String, f64, bool)> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = vec![];
         for idx_ in 0..len_ {
-            ans_.push(<(String, f64)>::sse_decode(deserializer));
+            ans_.push(<(String, f64, bool)>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -4358,12 +4356,13 @@ impl SseDecode for crate::pay::Recipient {
     }
 }
 
-impl SseDecode for (String, f64) {
+impl SseDecode for (String, f64, bool) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_field0 = <String>::sse_decode(deserializer);
         let mut var_field1 = <f64>::sse_decode(deserializer);
-        return (var_field0, var_field1);
+        let mut var_field2 = <bool>::sse_decode(deserializer);
+        return (var_field0, var_field1, var_field2);
     }
 }
 
@@ -5948,12 +5947,12 @@ impl SseEncode for Vec<crate::pay::Recipient> {
     }
 }
 
-impl SseEncode for Vec<(String, f64)> {
+impl SseEncode for Vec<(String, f64, bool)> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <(String, f64)>::sse_encode(item, serializer);
+            <(String, f64, bool)>::sse_encode(item, serializer);
         }
     }
 }
@@ -6260,11 +6259,12 @@ impl SseEncode for crate::pay::Recipient {
     }
 }
 
-impl SseEncode for (String, f64) {
+impl SseEncode for (String, f64, bool) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.0, serializer);
         <f64>::sse_encode(self.1, serializer);
+        <bool>::sse_encode(self.2, serializer);
     }
 }
 
