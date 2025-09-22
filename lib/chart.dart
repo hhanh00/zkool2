@@ -75,8 +75,8 @@ class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixi
               child: TabBarView(
                 controller: tabController,
                 children: [
-                  SpendingChart(key: ValueKey((from, to)), from: from, to: to),
-                  CategoryChart(key: ValueKey((from, to)), from: from, to: to),
+                  SpendingChart(from: from, to: to),
+                  CategoryChart(from: from, to: to),
                 ],
               ),
             ),
@@ -105,30 +105,38 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
   @override
   void didUpdateWidget(covariant SpendingChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    epoch += 1;
+    if (widget.from != oldWidget.from || widget.to != oldWidget.to) {
+      Future(refresh);
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    Future(refresh);
+  }
 
-    Future(() async {
-      final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-      final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-      final amounts = await fetchCategoryAmounts(from: f, to: t);
-      for (var (c, a, i) in amounts) {
-        final datum = {
-          "name": c,
-          "value": (a.abs() * 1000).ceilToDouble() * 0.001,
-        };
-        if (i) {
-          income.add(datum);
-        } else {
-          spending.add(datum);
-        }
+  Future<void> refresh() async {
+    final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+    final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+    final amounts = await fetchCategoryAmounts(from: f, to: t);
+    income.clear();
+    spending.clear();
+    for (var (c, a, i) in amounts) {
+      final datum = {
+        "name": c,
+        "value": (a.abs() * 1000).ceilToDouble() * 0.001,
+      };
+      if (i) {
+        income.add(datum);
+      } else {
+        spending.add(datum);
       }
-      if (mounted) setState(() {});
-    });
+    }
+    if (mounted)
+      setState(() {
+        epoch += 1;
+      });
   }
 
   @override
@@ -151,7 +159,7 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
           Gap(8),
           Expanded(
             child: InAppWebView(
-              key: ValueKey((epoch, isIncome)),
+              key: ValueKey((isIncome, epoch)),
               onLoadStop: (c, uri) {
                 final data = isIncome ? income : spending;
                 final json = jsonEncode(data);
@@ -173,7 +181,7 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
     #chart {
       width: 100%;
       max-width: 800px;
-      height: 400px;
+      height: 550px;
       margin: auto;
     }
   </style>
@@ -188,10 +196,12 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
       const option = {
         tooltip: {
           trigger: 'item',
-          formatter: '{b}: {c} ({d}%)'
+          formatter: function(params) {
+            return params.name + ': ' + Math.round(params.value) + ' (' + Math.round(params.percent) + '%)';
+          }
         },
         legend: {
-          top: '5%',
+          top: '1%',
           left: 'center'
         },
         series: [
@@ -199,11 +209,14 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
             name: 'Income/Expense by Category',
             type: 'pie',
             radius: ['40%', '70%'],
+            center: ['50%', '60%'],
             avoidLabelOverlap: false,
             itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
             label: {
               show: true,
-              formatter: '{b}: {c}'
+              formatter: function(params) {
+                return params.name + ': ' + Math.round(params.value) + ' (' + Math.round(params.percent) + '%)';
+              }
             },
             emphasis: {
               label: { show: true, fontSize: 18, fontWeight: 'bold' }
@@ -244,10 +257,10 @@ class CategoryChart extends StatefulWidget {
 }
 
 class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveClientMixin {
-  int epoch = 0;
   late final List<DropdownMenuItem<int>> categories;
   int? category = 1;
   bool cumulative = false;
+  int epoch = 0;
   List<(int, double)> amounts = [];
 
   @override
@@ -261,17 +274,30 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
           ),
         )
         .toList();
+    Future(refresh);
   }
 
   @override
   void didUpdateWidget(covariant CategoryChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    epoch += 1;
+    if (widget.from != oldWidget.from || widget.to != oldWidget.to) {
+      Future(refresh);
+    }
+  }
+
+  Future<void> refresh() async {
+    final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+    final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+    amounts = await fetchAmounts(from: f, to: t, category: category!);
+    setState(() {
+      epoch += 1;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     final data = amounts.map((a) => [a.$1 * 1000.0, a.$2.abs()]).toList();
     if (cumulative) {
       var agg = 0.0;
@@ -293,7 +319,7 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
         Gap(8),
         Expanded(
           child: InAppWebView(
-            key: ValueKey((epoch, category, cumulative)),
+            key: ValueKey((category, cumulative, epoch)),
             onLoadStop: (c, uri) {
               final json = jsonEncode({"type": cumulative ? "line" : "scatter", "data": data});
               c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
@@ -370,13 +396,8 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
 
   void onCategoryChanged(int? v) async {
     if (v == null) return;
-    final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-    final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
     category = v;
-    if (category != null) {
-      amounts = await fetchAmounts(from: f, to: t, category: category!);
-      setState(() {});
-    }
+    await refresh();
   }
 
   @override
