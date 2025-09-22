@@ -19,8 +19,8 @@ pub async fn set_tx_category(id: u32, category: Option<u32>) -> Result<()> {
 }
 
 #[frb]
-pub async fn fetch_category_amounts(from: u32, to: u32, income: bool) -> Result<Vec<(String, f64)>> {
+pub async fn fetch_category_amounts(from: Option<u32>, to: Option<u32>) -> Result<Vec<(String, f64, bool)>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    crate::budget::fetch_category_amounts(&mut connection, c.account, from, to, income).await
+    crate::budget::fetch_category_amounts(&mut connection, c.account, from, to).await
 }

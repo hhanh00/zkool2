@@ -354,3 +354,7 @@ Future<bool> onUnlock() async {
   }
   return authenticated;
 }
+
+extension ScopeFunctions<T> on T {
+  R let<R>(R Function(T) block) => block(this);
+}

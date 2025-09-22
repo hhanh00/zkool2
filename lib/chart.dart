@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:gap/gap.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
+import 'package:zkool/utils.dart';
 
 class ChartPage extends StatefulWidget {
   const ChartPage({super.key});
@@ -13,14 +15,15 @@ class ChartPage extends StatefulWidget {
   State<StatefulWidget> createState() => ChartPageState();
 }
 
-class ChartPageState extends State<ChartPage> {
+class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixin {
   final formKey = GlobalKey<FormBuilderState>();
   final List<Map<String, dynamic>> data = [];
+  late final tabController = TabController(length: 2, vsync: this);
+  DateTime? from;
+  DateTime? to;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-
     return Scaffold(
       appBar: AppBar(),
       body: Padding(
@@ -40,7 +43,8 @@ class ChartPageState extends State<ChartPage> {
                         label: Text("From"),
                       ),
                       inputType: InputType.date,
-                      initialValue: now.subtract(Duration(days: 30)),
+                      initialValue: from,
+                      onChanged: (v) => setState(() => from = v),
                     ),
                   ),
                   Gap(8),
@@ -52,62 +56,101 @@ class ChartPageState extends State<ChartPage> {
                         label: Text("To"),
                       ),
                       inputType: InputType.date,
-                      initialValue: now,
+                      initialValue: to,
+                      onChanged: (v) => setState(() => to = v),
                     ),
                   ),
-                  Gap(8),
-                  SizedBox(
-                    width: 100,
-                    child: FormBuilderDropdown(
-                      name: "income",
-                      initialValue: false,
-                      items: [
-                        DropdownMenuItem(value: true, child: Text("Income")),
-                        DropdownMenuItem(value: false, child: Text("Spending")),
-                      ],
-                    ),
-                  ),
-                  Gap(16),
-                  IconButton(onPressed: onRefresh, icon: Icon(Icons.check))
                 ],
               ),
             ),
             Divider(),
-            Expanded(child: chart(context)),
+            TabBar.secondary(
+              controller: tabController,
+              tabs: [
+                Tab(text: "Income/Expenses"),
+                Tab(text: "Category"),
+              ],
+            ),
+            Expanded(child: SpendingChart(key: ValueKey((from, to)), from: from, to: to)),
           ],
         ),
       ),
     );
   }
+}
 
-  void onRefresh() async {
-    final fields = formKey.currentState!.fields;
-    final from = fields["from"]!.value as DateTime;
-    final to = fields["to"]!.value as DateTime;
-    final income = fields["income"]!.value as bool;
-    final f = from.millisecondsSinceEpoch ~/ 1000;
-    final t = to.millisecondsSinceEpoch ~/ 1000;
-    final amounts = await fetchCategoryAmounts(from: f, to: t, income: income);
-    data.clear();
-    for (var (c, a) in amounts) {
-      data.add({
-        "name": c,
-        "value": (a.abs() * 1000).ceilToDouble() * 0.001,
-      });
-    }
-    setState(() {});
+class SpendingChart extends StatefulWidget {
+  final DateTime? from;
+  final DateTime? to;
+  const SpendingChart({super.key, this.from, this.to});
+
+  @override
+  State<StatefulWidget> createState() => SpendingChartState();
+}
+
+class SpendingChartState extends State<SpendingChart> {
+  final List<Map<String, dynamic>> income = [];
+  final List<Map<String, dynamic>> spending = [];
+  bool isIncome = false;
+  int epoch = 0;
+
+  @override
+  void didUpdateWidget(covariant SpendingChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    epoch += 1;
   }
 
-  Widget chart(BuildContext context) {
+  @override
+  void initState() {
+    super.initState();
+    logger.i("---> ${widget.from} ${widget.to}");
+
+    Future(() async {
+      final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+      final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+      final amounts = await fetchCategoryAmounts(from: f, to: t);
+      for (var (c, a, i) in amounts) {
+        final datum = {
+          "name": c,
+          "value": (a.abs() * 1000).ceilToDouble() * 0.001,
+        };
+        if (i) {
+          income.add(datum);
+        } else {
+          spending.add(datum);
+        }
+      }
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
-      key: UniqueKey(),
-      child: InAppWebView(
-        onLoadStop: (c, uri) {
-          final json = jsonEncode(data);
-          c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
-        },
-        initialData: InAppWebViewInitialData(
-          data: r"""
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButton<bool>(
+            items: [
+              DropdownMenuItem(value: true, child: Text("Income")),
+              DropdownMenuItem(value: false, child: Text("Spending")),
+            ],
+            value: isIncome,
+            onChanged: (bool? v) {
+              if (v != null) setState(() => isIncome = v);
+            },
+          ),
+          Gap(8),
+          Expanded(
+            child: InAppWebView(
+              key: ValueKey((epoch, isIncome)),
+              onLoadStop: (c, uri) {
+                final data = isIncome ? income : spending;
+                final json = jsonEncode(data);
+                c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
+              },
+              initialData: InAppWebViewInitialData(
+                data: r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -133,7 +176,6 @@ class ChartPageState extends State<ChartPage> {
   <script>
     function initChart(data) {
       const chart = echarts.init(document.getElementById('chart'));
-      console.log(data);
 
       const option = {
         tooltip: {
@@ -172,7 +214,10 @@ class ChartPageState extends State<ChartPage> {
 </body>
 </html>
 """,
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
