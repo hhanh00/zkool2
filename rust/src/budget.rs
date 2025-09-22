@@ -160,7 +160,7 @@ pub async fn fetch_amounts(
     category: u32,
 ) -> Result<Vec<(u32, f64)>> {
     let amounts = sqlx::query(
-        "SELECT time, SUM(value) * price / 1e8 AS amount
+        "SELECT time, value * price / 1e8 AS amount
     FROM transactions t
     WHERE account = ?1 AND time >= ?2
     AND time < ?3 AND category = ?4
