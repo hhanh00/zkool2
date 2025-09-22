@@ -215,19 +215,17 @@ mod tests {
             rng.fill_bytes(&mut txid);
             let height = 2_000_000 + i;
             time += rng.gen_range(0, 30000);
-            let value = (rng.gen_range(0.5, 200.0) * 1e5) as i64;
+            let value = (rng.gen_range(0.5, 200.0) * 1e7) as i64;
             let category = rng.gen_range(0, 15) + 1;
-            let price = rng.gen_range(15.0, 200.0);
             sqlx::query(
-                "INSERT INTO transactions(txid, height, account, time, value, category, price)
-            VALUES (?,?,1,?,?,?,?)",
+                "INSERT INTO transactions(txid, height, account, time, value, category)
+            VALUES (?,?,1,?,?,?)",
             )
             .bind(&txid[..])
             .bind(height)
             .bind(time)
             .bind(value)
             .bind(category)
-            .bind(price)
             .execute(&mut *connection)
             .await?;
         }
