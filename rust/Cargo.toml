@@ -80,6 +80,10 @@ libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-ope
 [lints.rust]
 unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 
+[dev-dependencies]
+chrono = "0.4"
+rand = "0.6"
+
 [build-dependencies]
 tonic-build = "0.13"
 
