@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:gap/gap.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -248,7 +247,8 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
   int epoch = 0;
   late final List<DropdownMenuItem<int>> categories;
   int? category = 1;
-  List<List<double>> data = [];
+  bool cumulative = false;
+  List<(int, double)> amounts = [];
 
   @override
   void initState() {
@@ -272,16 +272,30 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final data = amounts.map((a) => [a.$1 * 1000.0, a.$2.abs()]).toList();
+    if (cumulative) {
+      var agg = 0.0;
+      for (var i = 0; i < data.length; i++) {
+        data[i][1] = agg + data[i][1];
+        agg = data[i][1];
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButton<int>(items: categories, value: category, onChanged: onCategoryChanged),
+        Row(children: [
+          SizedBox(width: 250, child: DropdownButton<int>(items: categories, value: category, onChanged: onCategoryChanged)),
+          Gap(8),
+          Text("Cumulative"),
+          Checkbox(value: cumulative, onChanged: (v) => setState(() => cumulative = v!)),
+        ]),
         Gap(8),
         Expanded(
           child: InAppWebView(
-            key: ValueKey((epoch, category)),
+            key: ValueKey((epoch, category, cumulative)),
             onLoadStop: (c, uri) {
-              final json = jsonEncode(data);
+              final json = jsonEncode({"type": cumulative ? "line" : "scatter", "data": data});
               c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
             },
             initialData: InAppWebViewInitialData(
@@ -330,9 +344,10 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
         },
         series: [
           {
-            type: 'scatter',
+            type: data.type,
+            step: 'start',
             symbolSize: 10,
-            data,
+            data: data.data,
           }
         ]
       };
@@ -359,8 +374,7 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
     final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
     category = v;
     if (category != null) {
-      final amounts = await fetchAmounts(from: f, to: t, category: category!);
-      data = amounts.map((a) => [a.$1 * 1000.0, a.$2.abs()]).toList();
+      amounts = await fetchAmounts(from: f, to: t, category: category!);
       setState(() {});
     }
   }
