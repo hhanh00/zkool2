@@ -24,3 +24,10 @@ pub async fn fetch_category_amounts(from: Option<u32>, to: Option<u32>) -> Resul
     let mut connection = c.get_connection().await?;
     crate::budget::fetch_category_amounts(&mut connection, c.account, from, to).await
 }
+
+#[frb]
+pub async fn fetch_amounts(from: Option<u32>, to: Option<u32>, category: u32) -> Result<Vec<(u32, f64)>> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::budget::fetch_amounts(&mut connection, c.account, from, to, category).await
+}
