@@ -6,6 +6,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 class ChartPage extends StatefulWidget {
@@ -71,7 +72,15 @@ class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixi
                 Tab(text: "Category"),
               ],
             ),
-            Expanded(child: SpendingChart(key: ValueKey((from, to)), from: from, to: to)),
+            Expanded(
+              child: TabBarView(
+                controller: tabController,
+                children: [
+                  SpendingChart(key: ValueKey((from, to)), from: from, to: to),
+                  CategoryChart(key: ValueKey((from, to)), from: from, to: to),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -88,7 +97,7 @@ class SpendingChart extends StatefulWidget {
   State<StatefulWidget> createState() => SpendingChartState();
 }
 
-class SpendingChartState extends State<SpendingChart> {
+class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveClientMixin {
   final List<Map<String, dynamic>> income = [];
   final List<Map<String, dynamic>> spending = [];
   bool isIncome = false;
@@ -103,7 +112,6 @@ class SpendingChartState extends State<SpendingChart> {
   @override
   void initState() {
     super.initState();
-    logger.i("---> ${widget.from} ${widget.to}");
 
     Future(() async {
       final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
@@ -126,6 +134,7 @@ class SpendingChartState extends State<SpendingChart> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,4 +230,141 @@ class SpendingChartState extends State<SpendingChart> {
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
+}
+
+class CategoryChart extends StatefulWidget {
+  final DateTime? from;
+  final DateTime? to;
+  const CategoryChart({super.key, this.from, this.to});
+
+  @override
+  State<StatefulWidget> createState() => CategoryChartState();
+}
+
+class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveClientMixin {
+  int epoch = 0;
+  late final List<DropdownMenuItem<int>> categories;
+  int? category = 1;
+  List<List<double>> data = [];
+
+  @override
+  void initState() {
+    super.initState();
+    categories = appStore.categories
+        .map(
+          (c) => DropdownMenuItem(
+            value: c.id,
+            child: Text(c.name),
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  void didUpdateWidget(covariant CategoryChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    epoch += 1;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButton<int>(items: categories, value: category, onChanged: onCategoryChanged),
+        Gap(8),
+        Expanded(
+          child: InAppWebView(
+            key: ValueKey((epoch, category)),
+            onLoadStop: (c, uri) {
+              final json = jsonEncode(data);
+              c.evaluateJavascript(source: "window.dispatchEvent(new CustomEvent('flutter-data', { detail: $json }))");
+            },
+            initialData: InAppWebViewInitialData(
+              data: r"""
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      margin: 20px;
+      background: #fafafa;
+      color: #222;
+    }
+    #chart {
+      width: 100%;
+      max-width: 800px;
+      height: 400px;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    function initChart(data) {
+      const chart = echarts.init(document.getElementById('chart'));
+
+      const option = {
+        tooltip: {
+          trigger: 'item',
+          formatter: function (params) {
+            const date = new Date(params.value[0]);
+            return date.toLocaleString() + '<br/>Amount: ' + params.value[1];
+          }
+        },
+        xAxis: {
+          type: 'time',
+          name: 'Date'
+        },
+        yAxis: {
+          type: 'value',
+          name: 'Amount'
+        },
+        series: [
+          {
+            type: 'scatter',
+            symbolSize: 10,
+            data,
+          }
+        ]
+      };
+
+      chart.setOption(option);
+      window.addEventListener('resize', () => chart.resize());
+    }
+
+    window.addEventListener('flutter-data', (e) => initChart(e.detail));
+  </script>
+</body>
+</html>
+""",
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void onCategoryChanged(int? v) async {
+    if (v == null) return;
+    final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+    final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
+    category = v;
+    if (category != null) {
+      final amounts = await fetchAmounts(from: f, to: t, category: category!);
+      data = amounts.map((a) => [a.$1 * 1000.0, a.$2.abs()]).toList();
+      setState(() {});
+    }
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
