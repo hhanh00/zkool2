@@ -312,8 +312,10 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
             ("Savings & Investments", false),
             ("Other Expenses", false),
         ] {
-            sqlx::query("INSERT OR REPLACE INTO categories(name, income)
-            VALUES (?, ?)")
+            sqlx::query(
+                "INSERT OR REPLACE INTO categories(name, income)
+            VALUES (?, ?)",
+            )
             .bind(c)
             .bind(i)
             .execute(&mut *connection)
@@ -335,15 +337,16 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     let version = get_prop(connection, "version").await?;
-    if let Some(version) = version {
-        let version = version.parse::<u16>()?;
-        if version > DB_VERSION {
+    match version {
+        Some(version) if version.parse::<u16>()? > DB_VERSION => {
             anyhow::bail!(
-                "This version only supports up to version {DB_VERSION} of the database file"
+                "This app version only supports up to db version {DB_VERSION}"
             );
         }
+        _ => {
+            put_prop(connection, "version", &DB_VERSION.to_string()).await?;
+        }
     }
-    put_prop(connection, "version", &DB_VERSION.to_string()).await?;
 
     Ok(())
 }
