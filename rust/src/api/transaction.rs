@@ -11,10 +11,19 @@ pub async fn fill_missing_tx_prices() -> Result<()> {
     Ok(())
 }
 
+#[frb]
 pub async fn set_tx_category(id: u32, category: Option<u32>) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
     crate::db::set_tx_category(&mut connection, id, category).await?;
+    Ok(())
+}
+
+#[frb]
+pub async fn set_tx_price(id: u32, price: Option<f64>) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::db::set_tx_price(&mut connection, id, price).await?;
     Ok(())
 }
 
