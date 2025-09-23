@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zkool/pages/tx.dart';
@@ -80,12 +79,17 @@ class TxViewState extends State<TxView> {
       ),
       ListTile(
         title: Text("Price"),
-        subtitle: Text(txd.price != null ? NumberFormat.compactCurrency(decimalDigits: 2).format(txd.price) : "N/A"),
+        subtitle: txd.price != null
+            ? TextFormField(
+                initialValue: txd.price!.toStringAsFixed(3),
+                onChanged: (v) => onPriceChanged(txd.id, v),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              )
+            : Text("N/A"),
       ),
-      ListTile(title: Text("Category"), subtitle: DropdownMenu(
-        initialSelection: txd.category,
-        onSelected: (v) => onChangeTxCategory(txd.id, v),
-        dropdownMenuEntries: categories)),
+      ListTile(
+          title: Text("Category"),
+          subtitle: DropdownMenu(initialSelection: txd.category, onSelected: (v) => onChangeTxCategory(txd.id, v), dropdownMenuEntries: categories)),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand(
@@ -139,6 +143,11 @@ class TxViewState extends State<TxView> {
     final blockExplorer = appStore.blockExplorer;
     final url = blockExplorer.replaceAll("{net}", appStore.net).replaceAll("{txid}", txIdToString(txid));
     await launchUrl(Uri.parse(url));
+  }
+
+  void onPriceChanged(int id, String? v) async {
+    final price = v?.let(((v) => v.isNotEmpty ? NumberFormat().parse(v).toDouble() : null));
+    await setTxPrice(id: id, price: price);
   }
 
   void onChangeTxCategory(int id, int? category) async {
