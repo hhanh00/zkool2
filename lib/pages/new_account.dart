@@ -300,7 +300,11 @@ class NewAccountPageState extends State<NewAccountPage> {
           internal: false,
         ),
       );
-      if (!appStore.offline) await cacheBlockTime(height: bh);
+      try {
+        // ignore errors since it's just caching
+        if (!appStore.offline) await cacheBlockTime(height: bh);
+      } on AnyhowException catch (_) {}
+
       await setAccount(account: account);
       final seed = await getAccountSeed(account: account);
       if (mounted && key.isEmpty) {
