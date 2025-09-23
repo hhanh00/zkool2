@@ -8,6 +8,8 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{Connection as _, Row as _, SqliteConnection};
 use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
+use zcash_protocol::consensus::NetworkUpgrade;
+use zcash_protocol::consensus::Parameters;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::account::TxNote;
@@ -15,6 +17,7 @@ use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
+use crate::coin::Network;
 use crate::sync::BlockHeader;
 
 pub const DB_VERSION: u16 = 6;
@@ -555,6 +558,7 @@ pub async fn store_account_transparent_addr(
 }
 
 pub async fn init_account_sapling(
+    network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
     birth: u32,
@@ -563,7 +567,8 @@ pub async fn init_account_sapling(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    store_synced_height(connection, account, 1, birth).await?;
+    let activation_height: u32 = network.activation_height(NetworkUpgrade::Sapling).unwrap().into();
+    store_synced_height(connection, account, 1, birth.max(activation_height)).await?;
 
     Ok(())
 }
@@ -603,6 +608,7 @@ pub async fn store_account_sapling_vk(
 }
 
 pub async fn init_account_orchard(
+    network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
     birth: u32,
@@ -611,7 +617,8 @@ pub async fn init_account_orchard(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    store_synced_height(connection, account, 2, birth).await?;
+    let activation_height = network.activation_height(NetworkUpgrade::Nu5).unwrap().into();
+    store_synced_height(connection, account, 2, birth.max(activation_height)).await?;
 
     Ok(())
 }
