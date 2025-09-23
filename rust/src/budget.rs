@@ -214,7 +214,7 @@ mod tests {
             let mut txid = [0u8; 32];
             rng.fill_bytes(&mut txid);
             let height = 2_000_000 + i;
-            time += rng.gen_range(0, 5000);
+            time += rng.gen_range(0, 30000);
             let value = (rng.gen_range(0.5, 200.0) * 1e7) as i64;
             let category = rng.gen_range(0, 15) + 1;
             sqlx::query(
