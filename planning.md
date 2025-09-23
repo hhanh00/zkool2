@@ -131,5 +131,7 @@ In order of priority,
 - [x] Assign category to tx
 - [x] Save/Restore category in I/O
 - [x] Add category to tx reports
-- [ ] Category over time
+- [x] Category over time
 - [x] Pie chart by category for a given time period
+
+- [ ] Support Webview on Linux
