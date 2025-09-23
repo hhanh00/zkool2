@@ -20,7 +20,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
-use zcash_protocol::consensus::Parameters;
+use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
@@ -191,6 +191,10 @@ pub async fn shielded_sync(
     tx_progress: Sender<SyncProgress>,
     rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
+    let activation_height: u32 = network.activation_height(NetworkUpgrade::Sapling).unwrap().into();
+    let start = start.max(activation_height);
+    let end = end.max(activation_height);
+
     let accounts = accounts.to_vec();
     let db_writer_task = {
         let (s, o) = get_tree_state(network, client, start - 1).await?;
