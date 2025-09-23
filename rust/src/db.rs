@@ -1210,3 +1210,16 @@ pub async fn set_tx_category(
         .await?;
     Ok(())
 }
+
+pub async fn set_tx_price(
+    connection: &mut SqliteConnection,
+    id: u32,
+    price: Option<f64>,
+) -> Result<()> {
+    sqlx::query("UPDATE transactions SET price = ?2 WHERE id_tx = ?1")
+        .bind(id)
+        .bind(price)
+        .execute(&mut *connection)
+        .await?;
+    Ok(())
+}
