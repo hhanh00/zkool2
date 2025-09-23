@@ -13,11 +13,6 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-subprojects { subproject ->
-    subproject.ext.compileSdkVersion = 36
-    subproject.ext.targetSdkVersion = 36
-}
-
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
