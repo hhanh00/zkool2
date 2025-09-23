@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bubble/bubble.dart';
 import 'package:convert/convert.dart';
@@ -78,14 +79,27 @@ class AccountViewPageState extends State<AccountViewPage> {
               description: "Send funds to one or many addresses",
               child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
             ),
-            IconButton(
-              icon: Icon(Icons.price_check),
-              onPressed: updateAllFx,
+            PopupMenuButton<String>(
+              onSelected: (String result) {
+                switch (result) {
+                  case "update_fx":
+                    onUpdateAllTxPrices();
+                  case "charts":
+                    GoRouter.of(context).push("/chart");
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: "update_fx",
+                  child: Text("Fetch Tx Prices"),
+                ),
+                if (!Platform.isLinux)
+                  const PopupMenuItem<String>(
+                    value: "charts",
+                    child: Text("Charts"),
+                  ),
+              ],
             ),
-            IconButton(
-              icon: Icon(Icons.pie_chart),
-              onPressed: () => GoRouter.of(context).push("/chart"),
-            )
           ],
           bottom: TabBar(
             tabs: [
@@ -179,8 +193,10 @@ class AccountViewPageState extends State<AccountViewPage> {
     await GoRouter.of(context).push("/send");
   }
 
-  void updateAllFx() async {
-    await fillMissingTxPrices();
+  void onUpdateAllTxPrices() async {
+    final confirmed =
+        await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
+    if (confirmed) await fillMissingTxPrices();
   }
 
   Account? get account => appStore.selectedAccount;
