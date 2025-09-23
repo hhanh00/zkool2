@@ -298,7 +298,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                     n.witness.value = cmxs[nidx].unwrap();
                 }
 
-                if nidx % 2 == 0 {
+                if nidx.is_multiple_of(2) {
                     // left node
                     if nidx + 1 < cmxs.len() {
                         // ommer is right node if it exists
