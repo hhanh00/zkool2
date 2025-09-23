@@ -275,13 +275,12 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
     let network = c.network;
-    let min_height: u32 = (network
-        .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
-        .unwrap()
-        + 1)
-    .into();
 
-    let birth = na.birth.unwrap_or(min_height).max(min_height);
+    let birth = na.birth.unwrap_or_else(|| {
+        network
+            .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
+            .unwrap().into()
+    });
 
     let account = store_account_metadata(
         &mut *connection,
@@ -345,7 +344,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
 
         if pools & 2 != 0 {
-            init_account_sapling(&mut *connection, account, birth).await?;
+            init_account_sapling(&network, &mut *connection, account, birth).await?;
             let sxsk = usk.sapling();
             store_account_sapling_sk(&mut *connection, account, sxsk).await?;
             let sxvk = sxsk.to_diversifiable_full_viewing_key();
@@ -353,7 +352,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
 
         if pools & 4 != 0 {
-            init_account_orchard(&mut *connection, account, birth).await?;
+            init_account_orchard(&network, &mut *connection, account, birth).await?;
             let oxsk = usk.orchard();
             store_account_orchard_sk(&mut *connection, account, oxsk).await?;
             let oxvk = FullViewingKey::from(oxsk);
@@ -416,7 +415,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
     }
     if is_valid_sapling_key(&network, &key) {
-        init_account_sapling(&mut *connection, account, birth).await?;
+        init_account_sapling(&network, &mut *connection, account, birth).await?;
         let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
             &key,
@@ -470,14 +469,14 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
         match uvk.sapling() {
             Some(sxvk) if pools & 2 != 0 => {
-                init_account_sapling(&mut *connection, account, birth).await?;
+                init_account_sapling(&network, &mut *connection, account, birth).await?;
                 store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
             }
             _ => {}
         }
         match uvk.orchard() {
             Some(ovk) if pools & 4 != 0 => {
-                init_account_orchard(&mut *connection, account, birth).await?;
+                init_account_orchard(&network, &mut *connection, account, birth).await?;
                 store_account_orchard_vk(&mut *connection, account, &ovk).await?;
             }
             _ => {}
