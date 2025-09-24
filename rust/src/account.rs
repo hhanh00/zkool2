@@ -441,7 +441,8 @@ pub async fn init_sync_heights(network: &Network, connection: &mut SqliteConnect
             2 => network.activation_height(NetworkUpgrade::Nu5).unwrap().into(),
             _ => unreachable!()
         };
-        sqlx::query("UPDATE sync_heights SET height = ?2 WHERE pool = ?1")
+        sqlx::query("UPDATE sync_heights SET height = ?3 WHERE account = ?1 AND pool = ?2")
+        .bind(account)
         .bind(pool)
         .bind(birth_height.max(activation_height))
         .execute(&mut *connection)
