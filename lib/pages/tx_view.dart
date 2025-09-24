@@ -9,24 +9,31 @@ import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-class TxView extends StatefulWidget {
+class TxViewPage extends StatefulWidget {
   final int idTx;
-  const TxView(this.idTx, {super.key});
+  const TxViewPage(this.idTx, {super.key});
 
   @override
-  State<TxView> createState() => TxViewState();
+  State<TxViewPage> createState() => TxViewPageState();
 }
 
-class TxViewState extends State<TxView> {
+class TxViewPageState extends State<TxViewPage> {
   TxAccount? txDetails;
+  late int? idx;
+  late int idTx = widget.idTx;
 
   @override
   void initState() {
     super.initState();
-    Future(() async {
-      final txd = await getTxDetails(idTx: widget.idTx);
-      setState(() => txDetails = txd);
-    });
+    idx = appStore.transactions.indexWhere((tx) => tx.id == idTx);
+    if (idx! < 0) idx = null;
+    Future(refresh);
+  }
+
+  Future<void> refresh() async {
+    final txd = await getTxDetails(idTx: idTx);
+    txDetails = txd;
+    setState(() {});
   }
 
   @override
@@ -36,6 +43,10 @@ class TxViewState extends State<TxView> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Transaction"),
+        actions: [
+          if (idx != null) IconButton(onPressed: idx! > 0 ? onPrev : null, icon: Icon(Icons.chevron_left)),
+          if (idx != null) IconButton(onPressed: idx! < appStore.transactions.length - 1 ? onNext : null, icon: Icon(Icons.chevron_right)),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -43,6 +54,20 @@ class TxViewState extends State<TxView> {
         ),
       ),
     );
+  }
+
+  Future<void> onPrev() async {
+    await gotoToTx(idx! - 1);
+  }
+
+  Future<void> onNext() async {
+    await gotoToTx(idx! + 1);
+  }
+
+  Future<void> gotoToTx(int newIdx) async {
+    idx = newIdx;
+    idTx = appStore.transactions[newIdx].id;
+    await refresh();
   }
 
   List<Widget> show(TxAccount txd) {

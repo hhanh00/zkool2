@@ -8,7 +8,6 @@ use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
-use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
 use zcash_primitives::{
@@ -78,7 +77,6 @@ pub async fn run_mempool(
     loop {
         tokio::select! {
             _ = cancel_token.cancelled() => {
-                info!("Mempool stream cancelled");
                 break;
             }
             r = mempool_txs.next() => {
