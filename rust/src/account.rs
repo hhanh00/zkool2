@@ -16,6 +16,7 @@ use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
+use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
@@ -421,13 +422,33 @@ async fn get_transparent_keys(
     Ok((xsk, xvk))
 }
 
-pub async fn reset_sync(connection: &mut SqliteConnection, account: u32) -> Result<()> {
+pub async fn reset_sync(network: &Network, connection: &mut SqliteConnection, account: u32) -> Result<()> {
     let birth_height = sqlx::query("SELECT birth FROM accounts WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| row.get::<u32, _>(0))
         .fetch_one(&mut *connection)
         .await?;
-    trim_sync_data(connection, account, birth_height).await
+    trim_sync_data(&mut *connection, account, 0).await?;
+    init_sync_heights(network, &mut *connection, account, birth_height).await?;
+    Ok(())
+}
+
+pub async fn init_sync_heights(network: &Network, connection: &mut SqliteConnection, account: u32, birth_height: u32) -> Result<()> {
+    for pool in 0..3 {
+        let activation_height: u32 = match pool {
+            0 => 0,
+            1 => network.activation_height(NetworkUpgrade::Sapling).unwrap().into(),
+            2 => network.activation_height(NetworkUpgrade::Nu5).unwrap().into(),
+            _ => unreachable!()
+        };
+        sqlx::query("UPDATE sync_heights SET height = ?3 WHERE account = ?1 AND pool = ?2")
+        .bind(account)
+        .bind(pool)
+        .bind(birth_height.max(activation_height))
+        .execute(&mut *connection)
+        .await?;
+    }
+    Ok(())
 }
 
 pub async fn get_tx_details(
