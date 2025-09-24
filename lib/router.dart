@@ -71,7 +71,7 @@ GoRouter router(bool recoveryMode) => GoRouter(
       builder: (context, state) => pinLock(Send2Page(state.extra as List<Recipient>)),
     ),
     GoRoute(path: '/tx', builder: (context, state) => pinLock(TxPage(state.extra as PcztPackage))),
-    GoRoute(path: '/tx_view', builder: (context, state) => pinLock(TxView(state.extra as int))),
+        GoRoute(path: '/tx_view', builder: (context, state) => pinLock(TxViewPage(state.extra as int))),
     GoRoute(path: '/log', builder: (context, state) => pinLock(LogviewPage())),
     GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
     GoRoute(
