@@ -47,6 +47,13 @@ export default defineUserConfig({
         ],
       },
       {
+        text: "Categories / Reports",
+        prefix: "/report/",
+        children: [
+          "examples",
+        ],
+      },
+      {
         text: "MultiSig Accounts / FROST",
         prefix: "/frost/",
         children: [

@@ -1,7 +1,7 @@
 ---
 title: Mainnet, Testnet, Regtest
 ---
-
+## Networks
 By default, Zkool connects to Mainnet.
 
 To make it work as a testnet wallet, use a database name that contains `testnet`. For

@@ -8,14 +8,29 @@ actions:
 features:
     - title: Private
       details: |
-        Full Zcash support with shielded transactions.
+        Full Zcash support with shielded transactions
     - title: Flexible
       details: |
-        Works across desktop and mobile.
-        Wallet and Accounts are interoperable.
+        Works across desktop and mobile /
+        Interoperable Wallet and Accounts
+    - title: Spending Reports
+      details: |
+        Income & Expense Charts /
+        Categories
+    - title: Zcash Tech
+      details: |
+        Transparent and Shielded Pools /
+        Diversified Addresses /
+    - title: Multi Accounts
+      details: |
+        Multi Signature FROST Accounts /
+        Multi Accounts /
+        Multi Databases
     - title: Secure
       details: |
+        Encrypted Data Files /
         Your keys stay with you.
+
 ---
 
 ## Features
