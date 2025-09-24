@@ -210,7 +210,7 @@ pub async fn shielded_sync(
         let heights_without_time = get_heights_without_time(&mut connection, start, end).await?;
 
         let mut writer_connection = pool.acquire().await?;
-        let network = network.clone();
+        let network = *network;
         let db_writer_task = tokio::spawn(async move {
             info!("[db handler] starting");
             let mut db_tx = writer_connection.begin().await?;
