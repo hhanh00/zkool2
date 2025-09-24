@@ -210,6 +210,7 @@ pub async fn shielded_sync(
         let heights_without_time = get_heights_without_time(&mut connection, start, end).await?;
 
         let mut writer_connection = pool.acquire().await?;
+        let network = *network;
         let db_writer_task = tokio::spawn(async move {
             info!("[db handler] starting");
             let mut db_tx = writer_connection.begin().await?;
@@ -220,7 +221,7 @@ pub async fn shielded_sync(
                     info!("Committing transaction");
                     db_tx = writer_connection.begin().await.unwrap();
                 } else {
-                    match handle_message(&mut db_tx, msg, &tx_progress).await {
+                    match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
                         Ok(_) => {}
                         Err(e) => {
                             info!("ERROR HANDLING MESSAGE: {:?}", e);
@@ -235,7 +236,6 @@ pub async fn shielded_sync(
             Ok::<_, anyhow::Error>(())
         });
 
-        let network = *network;
         tokio::spawn(async move {
             info!("Start sync");
             if let Err(e) = warp_sync(
@@ -268,6 +268,7 @@ pub async fn shielded_sync(
 }
 
 async fn handle_message(
+    network: &Network,
     db_tx: &mut sqlx::Transaction<'_, Sqlite>,
     msg: WarpSyncMessage,
     tx_progress: &Sender<SyncProgress>,
@@ -390,7 +391,7 @@ async fn handle_message(
         WarpSyncMessage::Rewind(accounts, height) => {
             info!("Discard height: {}", height);
             for account in accounts {
-                rewind_sync(db_tx, account, height).await?;
+                rewind_sync(network, db_tx, account, height).await?;
             }
         }
         WarpSyncMessage::Error(e) => {
@@ -479,6 +480,7 @@ pub async fn trim_sync_data(
 // for each account, find the latest checkpoint before the given height
 // and trim the synchronization data to that height
 pub async fn rewind_sync(
+    network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
     height: u32,
@@ -497,7 +499,7 @@ pub async fn rewind_sync(
     if let Some(prev_height) = prev_height {
         trim_sync_data(&mut *connection, account, prev_height).await?;
     } else {
-        crate::account::reset_sync(&mut *connection, account).await?;
+        crate::account::reset_sync(network, &mut *connection, account).await?;
     }
 
     // then trim the headers because there are no accounts using them
