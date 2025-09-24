@@ -508,7 +508,7 @@ pub async fn reset_sync(id: u32) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
-    crate::account::reset_sync(&mut connection, id).await
+    crate::account::reset_sync(&c.network, &mut connection, id).await
 }
 
 #[frb(dart_metadata = ("freezed"))]
