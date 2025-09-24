@@ -50,7 +50,9 @@ export default defineUserConfig({
         text: "Categories / Reports",
         prefix: "/report/",
         children: [
+          "overview",
           "examples",
+          "categories",
         ],
       },
       {
