@@ -53,6 +53,8 @@ export default defineUserConfig({
           "overview",
           "examples",
           "categories",
+          "price",
+          "chart",
         ],
       },
       {
