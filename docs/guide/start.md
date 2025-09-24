@@ -13,6 +13,16 @@ because Zkool does not always work like other wallets.
 I am using the MacOS version but the app behaves
 similarly on other platforms.
 
+# Installation
+
+Zkool is available on the Google Play Store and the Apple Store.
+The easiest way to find it is to search by its name `zkool`.
+
+The app store versions may be behind the "latest and greatest".
+The latest version is on the Github release page.
+
+[Releases](https://github.com/hhanh00/zkool2/releases)
+
 # First Run
 
 ## Disclaimer
