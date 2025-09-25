@@ -125,6 +125,9 @@ Future<void> renameCategory({required Category category}) =>
 Future<void> deleteCategories({required List<int> ids}) =>
     RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids);
 
+Future<String> getExportedData({required int type}) =>
+    RustLib.instance.api.crateApiAccountGetExportedData(type: type);
+
 @freezed
 sealed class Account with _$Account {
   const factory Account({
