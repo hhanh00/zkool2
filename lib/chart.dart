@@ -25,7 +25,7 @@ class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(title: Text("Charts")),
       body: Padding(
         padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
         child: Column(
@@ -174,13 +174,12 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
   <style>
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      margin: 20px;
+      margin: 8px;
       background: #fafafa;
       color: #222;
     }
     #chart {
       width: 100%;
-      max-width: 800px;
       height: 550px;
       margin: auto;
     }
@@ -333,13 +332,12 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
   <style>
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      margin: 20px;
+      margin: 8px;
       background: #fafafa;
       color: #222;
     }
     #chart {
       width: 100%;
-      max-width: 800px;
       height: 400px;
       margin: auto;
     }
