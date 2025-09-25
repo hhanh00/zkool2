@@ -135,6 +135,11 @@ keys, unified secret keys, etc. At the moment, there are not used much in
 production and Zkool does not support them.
 :::
 
+::: tip
+You can restore a very old account (even before Sapling activation), as
+far back as the genesis block.
+:::
+
 [1]: https://zips.z.cash/zip-0032
 [2]: https://zips.z.cash/protocol/protocol.pdf
 [^1]: Also called mnemonic phrases.
