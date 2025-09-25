@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:bubble/bubble.dart';
@@ -37,6 +38,8 @@ class AccountViewPageState extends State<AccountViewPage> {
   final receiveID = GlobalKey(debugLabel: "receiveID");
   final sendID = GlobalKey(debugLabel: "sendID");
   final balID = GlobalKey(debugLabel: "balID");
+
+  final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
   StreamSubscription<SyncProgress>? progressSubscription;
 
@@ -86,12 +89,18 @@ class AccountViewPageState extends State<AccountViewPage> {
                     onUpdateAllTxPrices();
                   case "charts":
                     GoRouter.of(context).push("/chart");
+                  default:
+                    onExport(int.parse(result));
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
                   value: "update_fx",
                   child: Text("Fetch Tx Prices"),
+                ),
+                PopupMenuItem<String>(
+                  value: tabIndex(context).toString(),
+                  child: Text("Export ${tabNames[tabIndex(context)]}"),
                 ),
                 if (!Platform.isLinux)
                   const PopupMenuItem<String>(
@@ -102,11 +111,7 @@ class AccountViewPageState extends State<AccountViewPage> {
             ),
           ],
           bottom: TabBar(
-            tabs: [
-              Tab(text: 'Transactions'),
-              Tab(text: 'Memos'),
-              Tab(text: 'Notes'),
-            ],
+            tabs: tabNames.map((n) => Tab(text: n)).toList(),
           ),
         ),
         body: Padding(
@@ -199,7 +204,17 @@ class AccountViewPageState extends State<AccountViewPage> {
     if (confirmed) await fillMissingTxPrices();
   }
 
+  void onExport(int index) async {
+    final data = await getExportedData(type: index);
+    final filename = await appWatcher.saveFile(data: utf8.encode(data));
+    if (!context.mounted) return;
+    await showMessage(context, "$filename Saved");
+  }
+
   Account? get account => appStore.selectedAccount;
+  // the context must be from inside the DefaultTabController, which
+  // means it cannot be this widget's context
+  int tabIndex(BuildContext context) => DefaultTabController.of(context).index;
 }
 
 class AccountEditPage extends StatefulWidget {
@@ -411,7 +426,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         id: accounts[0].id,
         birth: int.parse(birth),
         folder: accounts[0].folder.id,
-      ));
+      ),);
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -427,7 +442,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         id: accounts[i].id,
         enabled: v,
         folder: accounts[i].folder.id,
-      ));
+      ),);
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -443,7 +458,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         id: accounts[i].id,
         hidden: v,
         folder: accounts[i].folder.id,
-      ));
+      ),);
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -458,7 +473,7 @@ class AccountEditPageState extends State<AccountEditPage> {
         coin: accounts[i].coin,
         id: accounts[i].id,
         folder: v,
-      ));
+      ),);
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -560,7 +575,10 @@ List<Widget> showTxHistory(List<Tx> transactions) {
   return [
     SliverToBoxAdapter(
       child: Column(
-        children: [Text("Transaction History (${transactions.length} txs)"), const Gap(8)],
+        children: [
+          Text("Transaction History (${transactions.length} txs)"),
+          const Gap(8),
+        ],
       ),
     ),
     SliverFixedExtentList.builder(

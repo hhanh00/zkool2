@@ -1,11 +1,10 @@
 use std::fs::File;
 
 use anyhow::{anyhow, Result};
+use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
-use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::sqlite::SqliteRow;
-use sqlx::{Connection as _, Row as _, SqliteConnection};
+use sqlx::{sqlite::{SqliteConnectOptions, SqliteRow}, Column, Connection, Row, SqliteConnection, TypeInfo};
 use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_protocol::consensus::NetworkUpgrade;
@@ -1229,4 +1228,48 @@ pub async fn set_tx_price(
         .execute(&mut *connection)
         .await?;
     Ok(())
+}
+
+pub async fn export_data(connection: &mut SqliteConnection, account: u32, tpe: u8, writer: &mut AsyncWriter<Vec<u8>>) -> Result<()> {
+    let sql = match tpe {
+        0 => "SELECT * FROM transactions WHERE account = ?1 ORDER BY height",
+        1 => "SELECT * FROM memos WHERE account = ?1 ORDER BY height",
+        2 => "SELECT n.* FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE n.account = ?1 AND s.id_note IS NULL ORDER BY height",
+        _ => anyhow::bail!("Invalid exported data type")
+    };
+
+    let mut rows = sqlx::query(sql)
+    .bind(account)
+    .map(|r: SqliteRow|
+        r.columns().iter().enumerate().map(|(i, _)| get_sqlite_column_value(&r, i))
+        .collect::<Result<Vec<_>>>()
+    )
+    .fetch(connection);
+
+    while let Some(Ok(row)) = rows.try_next().await? {
+        writer.write_record(row).await?;
+    }
+    Ok(())
+}
+
+fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
+    let c = row.column(index);
+    let t = c.type_info();
+    let v = if let Ok(v) = row.try_get::<i64, _>(index) {
+        v.to_string()
+    }
+    else if let Ok(v) = row.try_get::<f64, _>(index) {
+        v.to_string()
+    }
+    else if let Ok(v) = row.try_get::<Vec<u8>, _>(index) {
+        hex::encode(&v)
+    }
+    else if let Ok(v) = row.try_get::<String, _>(index) {
+        v
+    }
+    else {
+        unreachable!("{}", t.name())
+    };
+
+    Ok(v)
 }
