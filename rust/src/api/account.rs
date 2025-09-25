@@ -821,6 +821,7 @@ pub struct FrostParams {
     pub t: u8,
 }
 
+#[frb]
 pub async fn list_folders() -> Result<Vec<Folder>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -828,6 +829,7 @@ pub async fn list_folders() -> Result<Vec<Folder>> {
     crate::account::list_folders(&mut connection).await
 }
 
+#[frb]
 pub async fn create_new_folder(name: &str) -> Result<Folder> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -835,6 +837,7 @@ pub async fn create_new_folder(name: &str) -> Result<Folder> {
     crate::account::create_new_folder(&mut connection, name).await
 }
 
+#[frb]
 pub async fn rename_folder(id: u32, name: &str) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -842,6 +845,7 @@ pub async fn rename_folder(id: u32, name: &str) -> Result<()> {
     crate::account::rename_folder(&mut connection, id, name).await
 }
 
+#[frb]
 pub async fn delete_folders(ids: &[u32]) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -855,6 +859,7 @@ pub struct Folder {
     pub name: String,
 }
 
+#[frb]
 pub async fn list_categories() -> Result<Vec<Category>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -862,20 +867,23 @@ pub async fn list_categories() -> Result<Vec<Category>> {
     crate::account::list_categories(&mut connection).await
 }
 
-pub async fn create_new_category(name: &str) -> Result<Category> {
+#[frb]
+pub async fn create_new_category(category: &Category) -> Result<u32> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
-    crate::account::create_new_category(&mut connection, name).await
+    crate::account::create_new_category(&mut connection, category).await
 }
 
-pub async fn rename_category(id: u32, name: &str) -> Result<()> {
+#[frb]
+pub async fn rename_category(category: &Category) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
-    crate::account::rename_category(&mut connection, id, name).await
+    crate::account::rename_category(&mut connection, category).await
 }
 
+#[frb]
 pub async fn delete_categories(ids: &[u32]) -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
@@ -887,4 +895,5 @@ pub async fn delete_categories(ids: &[u32]) -> Result<()> {
 pub struct Category {
     pub id: u32,
     pub name: String,
+    pub is_income: bool,
 }
