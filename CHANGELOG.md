@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.1.0...zkool-v6.2.0) (2025-09-25)
+
+
+### Features
+
+* export of tx/memos/notes to csv ([#562](https://github.com/hhanh00/zkool2/issues/562)) ([9f281e7](https://github.com/hhanh00/zkool2/commit/9f281e7ce150480e75edea7504ed049917d3d9aa))
+* unlock all notes & lock based on maturity ([#564](https://github.com/hhanh00/zkool2/issues/564)) ([552cc78](https://github.com/hhanh00/zkool2/commit/552cc786ef84670d12414d75d187b26a580d323f))
+
+
+### Bug Fixes
+
+* account for locked notes in max amount calculation ([#565](https://github.com/hhanh00/zkool2/issues/565)) ([2209073](https://github.com/hhanh00/zkool2/commit/22090737dd9f2162c56a7b3260dce7d7e921be74))
+* chart sizes and margins ([#568](https://github.com/hhanh00/zkool2/issues/568)) ([b784c51](https://github.com/hhanh00/zkool2/commit/b784c5194c146538b266c8be21e2f008facdeb0f))
+* do not show saved confirmation if canceled ([#566](https://github.com/hhanh00/zkool2/issues/566)) ([df848d8](https://github.com/hhanh00/zkool2/commit/df848d8a6f453e4a17a79f6c8657ba3d50496d0e))
+* try to decode as string before bytes ([#567](https://github.com/hhanh00/zkool2/issues/567)) ([b1ee770](https://github.com/hhanh00/zkool2/commit/b1ee7703cef32521d4a0d68006fcbb46d45d0253))
+
 ## [6.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.0.0...zkool-v6.1.0) (2025-09-25)
 
 
