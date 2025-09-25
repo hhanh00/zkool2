@@ -43,17 +43,30 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
   final minorUnits = s.substring(s.length - 5, s.length);
   final majorUnits = s.substring(0, s.length - 5);
   return selectable
-      ? Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-          InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
-          SelectableText.rich(TextSpan(children: [
-            TextSpan(text: majorUnits, style: style),
-            TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-          ],),),
-        ],)
-      : Text.rich(TextSpan(children: [
-          TextSpan(text: majorUnits, style: style),
-          TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
-        ],),);
+      ? Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            InkWell(onTap: onTap ?? () => copyToClipboard(s), child: Text(prefix)),
+            SelectableText.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: majorUnits, style: style),
+                  TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+                ],
+              ),
+            ),
+          ],
+        )
+      : Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: majorUnits, style: style),
+              TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+            ],
+          ),
+        );
 }
 
 Fixed stringToDecimal(String s, {int? scale}) => Fixed.parse(s, scale: scale, invertSeparator: invertSeparator);
@@ -124,14 +137,16 @@ Future<void> showSeed(BuildContext context, String message) async {
     context: context,
     dialogType: DialogType.warning,
     animType: AnimType.rightSlide,
-    body: Column(children: [
-      Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS", style: t.headlineSmall),
-      Gap(16),
-      CopyableText(
-        message,
-        textAlign: TextAlign.center,
-      ),
-    ],),
+    body: Column(
+      children: [
+        Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS", style: t.headlineSmall),
+        Gap(16),
+        CopyableText(
+          message,
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
     desc: message,
     btnOkOnPress: () {},
     autoDismiss: true,
@@ -176,16 +191,18 @@ Future<String?> inputPassword(BuildContext context, {required String title, Stri
         context: context,
         dialogType: DialogType.question,
         animType: AnimType.rightSlide,
-        body: Column(children: [
-          Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          Gap(8),
-          TextField(
-            autofocus: true,
-            decoration: InputDecoration(labelText: 'Password', hintText: message),
-            obscureText: true,
-            controller: password,
-          ),
-        ],),
+        body: Column(
+          children: [
+            Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            Gap(8),
+            TextField(
+              autofocus: true,
+              decoration: InputDecoration(labelText: 'Password', hintText: message),
+              obscureText: true,
+              controller: password,
+            ),
+          ],
+        ),
         btnCancelText: btnCancelText,
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
@@ -213,18 +230,32 @@ Future<String?> inputPassword(BuildContext context, {required String title, Stri
 
 Future<String?> inputText(BuildContext context, {required String title}) async {
   final controller = TextEditingController();
+  return await inputData(
+    context,
+    builder: (context) => Column(
+      children: [
+        Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        Gap(8),
+        TextField(
+          autofocus: true,
+          controller: controller,
+        ),
+      ],
+    ),
+    onConfirmed: () => controller.text,
+  );
+}
+
+Future<T?> inputData<T>(
+  BuildContext context, {
+  required Widget Function(BuildContext) builder,
+  required T Function() onConfirmed,
+}) async {
   bool confirmed = await AwesomeDialog(
         context: context,
         dialogType: DialogType.question,
         animType: AnimType.rightSlide,
-        body: Column(children: [
-          Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          Gap(8),
-          TextField(
-            autofocus: true,
-            controller: controller,
-          ),
-        ],),
+        body: builder(context),
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
         onDismissCallback: (type) {
@@ -243,8 +274,7 @@ Future<String?> inputText(BuildContext context, {required String title}) async {
       ).show() ??
       false;
   if (confirmed) {
-    final p = controller.text;
-    return p;
+    return onConfirmed();
   }
   return null;
 }

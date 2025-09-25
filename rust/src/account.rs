@@ -710,11 +710,12 @@ pub async fn delete_folders(connection: &mut SqliteConnection, ids: &[u32]) -> R
 }
 
 pub async fn list_categories(connection: &mut SqliteConnection) -> Result<Vec<Category>> {
-    let folders = sqlx::query("SELECT id_category, name FROM categories ORDER BY name")
+    let folders = sqlx::query("SELECT id_category, name, income FROM categories ORDER BY name")
         .map(|r: SqliteRow| {
             Category {
                 id: r.get(0),
                 name: r.get(1),
+                is_income: r.get(2),
             }
         })
         .fetch_all(connection)
@@ -722,34 +723,33 @@ pub async fn list_categories(connection: &mut SqliteConnection) -> Result<Vec<Ca
     Ok(folders)
 }
 
-pub async fn create_new_category(connection: &mut SqliteConnection, name: &str) -> Result<Category> {
-    sqlx::query("INSERT OR IGNORE INTO categories(name) VALUES (?1)")
-        .bind(name)
+pub async fn create_new_category(connection: &mut SqliteConnection, category: &Category) -> Result<u32> {
+    sqlx::query("INSERT OR IGNORE INTO categories(name, income) VALUES (?1, ?2)")
+        .bind(&category.name)
+        .bind(category.is_income)
         .execute(&mut *connection)
         .await?;
     let id = sqlx::query("SELECT id_category FROM categories WHERE name = ?1")
-        .bind(name)
+        .bind(&category.name)
         .map(|r: SqliteRow| r.get::<u32, _>(0))
         .fetch_one(&mut *connection)
         .await?;
 
-    Ok(Category {
-        id,
-        name: name.to_string(),
-    })
+    Ok(id)
 }
 
-pub async fn rename_category(connection: &mut SqliteConnection, id: u32, name: &str) -> Result<()> {
+pub async fn rename_category(connection: &mut SqliteConnection, category: &Category) -> Result<()> {
     if sqlx::query("SELECT 1 FROM categories WHERE name = ?1")
-    .bind(name)
+    .bind(&category.name)
     .fetch_optional(&mut *connection)
     .await?.is_some() {
         anyhow::bail!("Category name already exists");
     }
 
-    sqlx::query("UPDATE categories SET name = ?2 WHERE id_category = ?1")
-    .bind(id)
-    .bind(name)
+    sqlx::query("UPDATE categories SET name = ?2, income = ?3 WHERE id_category = ?1")
+    .bind(category.id)
+    .bind(&category.name)
+    .bind(category.is_income)
     .execute(connection)
     .await?;
     Ok(())

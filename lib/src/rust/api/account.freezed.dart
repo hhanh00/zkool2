@@ -762,6 +762,7 @@ abstract class _AccountUpdate implements AccountUpdate {
 mixin _$Category {
   int get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
+  bool get isIncome => throw _privateConstructorUsedError;
 
   /// Create a copy of Category
   /// with the given fields replaced by the non-null parameter values.
@@ -775,7 +776,7 @@ abstract class $CategoryCopyWith<$Res> {
   factory $CategoryCopyWith(Category value, $Res Function(Category) then) =
       _$CategoryCopyWithImpl<$Res, Category>;
   @useResult
-  $Res call({int id, String name});
+  $Res call({int id, String name, bool isIncome});
 }
 
 /// @nodoc
@@ -795,6 +796,7 @@ class _$CategoryCopyWithImpl<$Res, $Val extends Category>
   $Res call({
     Object? id = null,
     Object? name = null,
+    Object? isIncome = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -805,6 +807,10 @@ class _$CategoryCopyWithImpl<$Res, $Val extends Category>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
+      isIncome: null == isIncome
+          ? _value.isIncome
+          : isIncome // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -817,7 +823,7 @@ abstract class _$$CategoryImplCopyWith<$Res>
       __$$CategoryImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int id, String name});
+  $Res call({int id, String name, bool isIncome});
 }
 
 /// @nodoc
@@ -835,6 +841,7 @@ class __$$CategoryImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? name = null,
+    Object? isIncome = null,
   }) {
     return _then(_$CategoryImpl(
       id: null == id
@@ -845,6 +852,10 @@ class __$$CategoryImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
+      isIncome: null == isIncome
+          ? _value.isIncome
+          : isIncome // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -852,16 +863,19 @@ class __$$CategoryImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$CategoryImpl implements _Category {
-  const _$CategoryImpl({required this.id, required this.name});
+  const _$CategoryImpl(
+      {required this.id, required this.name, required this.isIncome});
 
   @override
   final int id;
   @override
   final String name;
+  @override
+  final bool isIncome;
 
   @override
   String toString() {
-    return 'Category(id: $id, name: $name)';
+    return 'Category(id: $id, name: $name, isIncome: $isIncome)';
   }
 
   @override
@@ -870,11 +884,13 @@ class _$CategoryImpl implements _Category {
         (other.runtimeType == runtimeType &&
             other is _$CategoryImpl &&
             (identical(other.id, id) || other.id == id) &&
-            (identical(other.name, name) || other.name == name));
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.isIncome, isIncome) ||
+                other.isIncome == isIncome));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, name);
+  int get hashCode => Object.hash(runtimeType, id, name, isIncome);
 
   /// Create a copy of Category
   /// with the given fields replaced by the non-null parameter values.
@@ -886,13 +902,17 @@ class _$CategoryImpl implements _Category {
 }
 
 abstract class _Category implements Category {
-  const factory _Category({required final int id, required final String name}) =
-      _$CategoryImpl;
+  const factory _Category(
+      {required final int id,
+      required final String name,
+      required final bool isIncome}) = _$CategoryImpl;
 
   @override
   int get id;
   @override
   String get name;
+  @override
+  bool get isIncome;
 
   /// Create a copy of Category
   /// with the given fields replaced by the non-null parameter values.
