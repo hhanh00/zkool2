@@ -135,6 +135,9 @@ Future<void> lockRecentNotes({required int height, required int threshold}) =>
 Future<void> unlockAllNotes() =>
     RustLib.instance.api.crateApiAccountUnlockAllNotes();
 
+Future<BigInt> maxSpendable() =>
+    RustLib.instance.api.crateApiAccountMaxSpendable();
+
 @freezed
 sealed class Account with _$Account {
   const factory Account({

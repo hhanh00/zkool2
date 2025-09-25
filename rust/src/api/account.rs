@@ -925,3 +925,10 @@ pub async fn unlock_all_notes() -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::unlock_all_notes(&mut connection, c.account).await
 }
+
+#[frb]
+pub async fn max_spendable() -> Result<u64> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::db::max_spendable(&mut connection, c.account).await
+}
