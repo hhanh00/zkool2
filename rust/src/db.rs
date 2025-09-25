@@ -1289,3 +1289,16 @@ pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -
     .execute(connection).await?;
     Ok(())
 }
+
+// TODO: Include pool filter
+// Unfortunately, the current UI flow asks for the amount before
+// the source pool selection. Therefore we don't know what the user
+// wants to use yet
+pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> Result<u64> {
+    let (amount, ): (Option<u64>, ) = sqlx::query_as(
+    "SELECT SUM(n.value) FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
+    WHERE s.id_note IS NULL AND n.account = ?1 AND NOT(locked)")
+    .bind(account)
+    .fetch_one(connection).await?;
+    Ok(amount.unwrap_or_default())
+}
