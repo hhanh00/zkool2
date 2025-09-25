@@ -44,7 +44,7 @@ class CategoryPageState extends State<CategoryPage> {
           if (hasSelection) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
         ],
       ),
-      body: ListView.builder(
+      body: ListView.separated(
         itemBuilder: (BuildContext context, int index) {
           final f = categories[index];
           return ListTile(
@@ -53,6 +53,8 @@ class CategoryPageState extends State<CategoryPage> {
           );
         },
         itemCount: categories.length,
+        separatorBuilder: (BuildContext context, int index) =>
+            (index < categories.length - 1 && categories[index].$1.isIncome != categories[index + 1].$1.isIncome) ? Divider() : SizedBox.shrink(),
       ),
     );
   }
