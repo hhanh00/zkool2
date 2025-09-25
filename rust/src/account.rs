@@ -710,7 +710,7 @@ pub async fn delete_folders(connection: &mut SqliteConnection, ids: &[u32]) -> R
 }
 
 pub async fn list_categories(connection: &mut SqliteConnection) -> Result<Vec<Category>> {
-    let folders = sqlx::query("SELECT id_category, name, income FROM categories ORDER BY name")
+    let folders = sqlx::query("SELECT id_category, name, income FROM categories ORDER BY income, name")
         .map(|r: SqliteRow| {
             Category {
                 id: r.get(0),
