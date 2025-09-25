@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.1.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.0.0...zkool-v6.1.0) (2025-09-25)
+
+
+### Features
+
+* navigation buttons on tx details ([#556](https://github.com/hhanh00/zkool2/issues/556)) ([530f67a](https://github.com/hhanh00/zkool2/commit/530f67a30d23a6d1d05a66ed13977d59ce5e2744))
+
+
+### Bug Fixes
+
+* edit category ([#560](https://github.com/hhanh00/zkool2/issues/560)) ([4e68483](https://github.com/hhanh00/zkool2/commit/4e684831db200847a296f192f7067b2b3c5c3c81))
+* reset account should remove all tx data ([#559](https://github.com/hhanh00/zkool2/issues/559)) ([4d8c550](https://github.com/hhanh00/zkool2/commit/4d8c5500694775d64df6a238f910dc91587d986b))
+* separate list of categories by income/expense ([#561](https://github.com/hhanh00/zkool2/issues/561)) ([3e670bc](https://github.com/hhanh00/zkool2/commit/3e670bc44a6138a8fc86c977ee61481c7cebf8e2))
+
 ## [6.0.0](https://github.com/hhanh00/zkool2/compare/zkool-v5.2.6...zkool-v6.0.0) (2025-09-23)
 
 
