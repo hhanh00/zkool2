@@ -3,6 +3,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use bip32::{ExtendedPrivateKey, ExtendedPublicKey, Prefix, PrivateKey};
 use bip39::Mnemonic;
+use csv_async::AsyncWriter;
 use flutter_rust_bridge::frb;
 use orchard::keys::{FullViewingKey, Scope};
 use ripemd::{Digest as _, Ripemd160};
@@ -896,4 +897,16 @@ pub struct Category {
     pub id: u32,
     pub name: String,
     pub is_income: bool,
+}
+
+pub async fn get_exported_data(r#type: u8) -> Result<String> {
+    let c = get_coin!();
+    let buffer = vec![];
+    let mut writer = AsyncWriter::from_writer(buffer);
+
+    let mut connection = c.get_connection().await?;
+    crate::db::export_data(&mut connection, c.account, r#type, &mut writer).await?;
+    let buffer = writer.into_inner().await?;
+    let res = String::from_utf8(buffer).unwrap();
+    Ok(res)
 }
