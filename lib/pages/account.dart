@@ -421,12 +421,13 @@ class AccountEditPageState extends State<AccountEditPage> {
     if (birth != null && birth.isNotEmpty) {
       accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
       await updateAccount(
-          update: AccountUpdate(
-        coin: accounts[0].coin,
-        id: accounts[0].id,
-        birth: int.parse(birth),
-        folder: accounts[0].folder.id,
-      ),);
+        update: AccountUpdate(
+          coin: accounts[0].coin,
+          id: accounts[0].id,
+          birth: int.parse(birth),
+          folder: accounts[0].folder.id,
+        ),
+      );
       await appStore.loadAccounts();
       setState(() {});
     }
@@ -437,12 +438,13 @@ class AccountEditPageState extends State<AccountEditPage> {
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(enabled: v);
       await updateAccount(
-          update: AccountUpdate(
-        coin: accounts[i].coin,
-        id: accounts[i].id,
-        enabled: v,
-        folder: accounts[i].folder.id,
-      ),);
+        update: AccountUpdate(
+          coin: accounts[i].coin,
+          id: accounts[i].id,
+          enabled: v,
+          folder: accounts[i].folder.id,
+        ),
+      );
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -453,12 +455,13 @@ class AccountEditPageState extends State<AccountEditPage> {
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(hidden: v);
       await updateAccount(
-          update: AccountUpdate(
-        coin: accounts[i].coin,
-        id: accounts[i].id,
-        hidden: v,
-        folder: accounts[i].folder.id,
-      ),);
+        update: AccountUpdate(
+          coin: accounts[i].coin,
+          id: accounts[i].id,
+          hidden: v,
+          folder: accounts[i].folder.id,
+        ),
+      );
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -469,11 +472,12 @@ class AccountEditPageState extends State<AccountEditPage> {
     for (var i = 0; i < accounts.length; i++) {
       accounts[i] = accounts[i].copyWith(folder: appStore.folders.firstWhere((f) => f.id == v, orElse: () => Folder(id: 0, name: "")));
       await updateAccount(
-          update: AccountUpdate(
-        coin: accounts[i].coin,
-        id: accounts[i].id,
-        folder: v,
-      ),);
+        update: AccountUpdate(
+          coin: accounts[i].coin,
+          id: accounts[i].id,
+          folder: v,
+        ),
+      );
     }
     await appStore.loadAccounts();
     setState(() {});
@@ -647,10 +651,18 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
 Widget showNotes(List<TxNote> notes) {
   final t = Theme.of(navigatorKey.currentContext!);
   return ListView.builder(
-    itemCount: notes.length,
+    itemCount: notes.length + 1,
     itemBuilder: (context, index) {
-      final note = notes[index];
+      if (index == 0)
+        return OverflowBar(
+          children: [
+            IconButton(onPressed: () => onLockRecent(context), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
+            IconButton(onPressed: () => onUnlockAll(context), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
+          ],
+        );
 
+      final noteIndex = index - 1;
+      final note = notes[noteIndex];
       return ListTile(
         key: ValueKey(note.id),
         onTap: () => toggleLock(context, note.id, !note.locked),
@@ -661,6 +673,26 @@ Widget showNotes(List<TxNote> notes) {
       );
     },
   );
+}
+
+void onLockRecent(BuildContext context) async {
+  final s = await inputText(context, title: "Enter confirmation threshold");
+  final threshold = s?.let((v) => int.tryParse(v));
+  if (threshold != null) {
+    await lockRecentNotes(
+      height: appStore.currentHeight,
+      threshold: threshold,
+    );
+    await appStore.loadNotes();
+  }
+}
+
+void onUnlockAll(BuildContext context) async {
+  final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
+  if (confirmed) {
+    await unlockAllNotes();
+    await appStore.loadNotes();
+  }
 }
 
 void toggleLock(BuildContext context, int id, bool locked) async {
