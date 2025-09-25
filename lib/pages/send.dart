@@ -202,8 +202,7 @@ class SendPageState extends State<SendPage> {
 
   void onMax() async {
     final form = formKey.currentState!;
-    final b = await balance();
-    final total = b.field0[0] + b.field0[1] + b.field0[2];
+    final total = await maxSpendable();
     form.fields['amount']?.didChange(zatToString(total));
   }
 
