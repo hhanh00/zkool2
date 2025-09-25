@@ -899,6 +899,7 @@ pub struct Category {
     pub is_income: bool,
 }
 
+#[frb]
 pub async fn get_exported_data(r#type: u8) -> Result<String> {
     let c = get_coin!();
     let buffer = vec![];
@@ -909,4 +910,18 @@ pub async fn get_exported_data(r#type: u8) -> Result<String> {
     let buffer = writer.into_inner().await?;
     let res = String::from_utf8(buffer).unwrap();
     Ok(res)
+}
+
+#[frb]
+pub async fn lock_recent_notes(height: u32, threshold: u32) -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::db::lock_recent_notes(&mut connection, c.account, height, threshold).await
+}
+
+#[frb]
+pub async fn unlock_all_notes() -> Result<()> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    crate::db::unlock_all_notes(&mut connection, c.account).await
 }
