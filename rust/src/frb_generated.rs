@@ -469,12 +469,13 @@ fn wire__crate__api__account__create_new_category_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_name = <String>::sse_decode(&mut deserializer);
+            let api_category = <crate::api::account::Category>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::create_new_category(&api_name).await?;
+                        let output_ok =
+                            crate::api::account::create_new_category(&api_category).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2761,14 +2762,12 @@ fn wire__crate__api__account__rename_category_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <u32>::sse_decode(&mut deserializer);
-            let api_name = <String>::sse_decode(&mut deserializer);
+            let api_category = <crate::api::account::Category>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::rename_category(api_id, &api_name).await?;
+                        let output_ok = crate::api::account::rename_category(&api_category).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3791,9 +3790,11 @@ impl SseDecode for crate::api::account::Category {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_id = <u32>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_isIncome = <bool>::sse_decode(deserializer);
         return crate::api::account::Category {
             id: var_id,
             name: var_name,
+            is_income: var_isIncome,
         };
     }
 }
@@ -5077,6 +5078,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Category {
         [
             self.id.into_into_dart().into_dart(),
             self.name.into_into_dart().into_dart(),
+            self.is_income.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5846,6 +5848,7 @@ impl SseEncode for crate::api::account::Category {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.id, serializer);
         <String>::sse_encode(self.name, serializer);
+        <bool>::sse_encode(self.is_income, serializer);
     }
 }
 
