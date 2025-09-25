@@ -1273,3 +1273,19 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
 
     Ok(v)
 }
+
+pub async fn lock_recent_notes(connection: &mut SqliteConnection, account: u32, height: u32, threshold: u32) -> Result<()> {
+    let max_height = height.saturating_sub(threshold);
+    sqlx::query("UPDATE notes SET locked = TRUE WHERE account = ?1 AND height > ?2")
+    .bind(account)
+    .bind(max_height)
+    .execute(connection).await?;
+    Ok(())
+}
+
+pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -> Result<()> {
+    sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ?1")
+    .bind(account)
+    .execute(connection).await?;
+    Ok(())
+}
