@@ -207,8 +207,8 @@ class AccountViewPageState extends State<AccountViewPage> {
   void onExport(int index) async {
     final data = await getExportedData(type: index);
     final filename = await appWatcher.saveFile(data: utf8.encode(data));
-    if (!context.mounted) return;
-    await showMessage(context, "$filename Saved");
+    if (!mounted) return;
+    if (filename != null) await showMessage(context, "$filename Saved");
   }
 
   Account? get account => appStore.selectedAccount;
