@@ -116,11 +116,11 @@ Future<void> deleteFolders({required List<int> ids}) =>
 Future<List<Category>> listCategories() =>
     RustLib.instance.api.crateApiAccountListCategories();
 
-Future<Category> createNewCategory({required String name}) =>
-    RustLib.instance.api.crateApiAccountCreateNewCategory(name: name);
+Future<int> createNewCategory({required Category category}) =>
+    RustLib.instance.api.crateApiAccountCreateNewCategory(category: category);
 
-Future<void> renameCategory({required int id, required String name}) =>
-    RustLib.instance.api.crateApiAccountRenameCategory(id: id, name: name);
+Future<void> renameCategory({required Category category}) =>
+    RustLib.instance.api.crateApiAccountRenameCategory(category: category);
 
 Future<void> deleteCategories({required List<int> ids}) =>
     RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids);
@@ -194,6 +194,7 @@ sealed class Category with _$Category {
   const factory Category({
     required int id,
     required String name,
+    required bool isIncome,
   }) = _Category;
 }
 

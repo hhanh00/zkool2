@@ -121,7 +121,7 @@ abstract class RustLibApi extends BaseApi {
       required String oldPassword,
       required String newPassword});
 
-  Future<Category> crateApiAccountCreateNewCategory({required String name});
+  Future<int> crateApiAccountCreateNewCategory({required Category category});
 
   Future<Folder> crateApiAccountCreateNewFolder({required String name});
 
@@ -262,8 +262,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAccountRemoveAccount({required int accountId});
 
-  Future<void> crateApiAccountRenameCategory(
-      {required int id, required String name});
+  Future<void> crateApiAccountRenameCategory({required Category category});
 
   Future<void> crateApiAccountRenameFolder(
       {required int id, required String name});
@@ -623,21 +622,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<Category> crateApiAccountCreateNewCategory({required String name}) {
+  Future<int> crateApiAccountCreateNewCategory({required Category category}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(name, serializer);
+          sse_encode_box_autoadd_category(category, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 11, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_category,
+          decodeSuccessData: sse_decode_u_32,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiAccountCreateNewCategoryConstMeta,
-        argValues: [name],
+        argValues: [category],
         apiImpl: this,
       ),
     );
@@ -646,7 +645,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountCreateNewCategoryConstMeta =>
       const TaskConstMeta(
         debugName: "create_new_category",
-        argNames: ["name"],
+        argNames: ["category"],
       );
 
   @override
@@ -2347,14 +2346,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAccountRenameCategory(
-      {required int id, required String name}) {
+  Future<void> crateApiAccountRenameCategory({required Category category}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_u_32(id, serializer);
-          sse_encode_String(name, serializer);
+          sse_encode_box_autoadd_category(category, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 76, port: port_);
         },
@@ -2363,7 +2360,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiAccountRenameCategoryConstMeta,
-        argValues: [id, name],
+        argValues: [category],
         apiImpl: this,
       ),
     );
@@ -2372,7 +2369,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountRenameCategoryConstMeta =>
       const TaskConstMeta(
         debugName: "rename_category",
-        argNames: ["id", "name"],
+        argNames: ["category"],
       );
 
   @override
@@ -3167,6 +3164,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Category dco_decode_box_autoadd_category(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_category(raw);
+  }
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
@@ -3224,11 +3227,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Category dco_decode_category(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return Category(
       id: dco_decode_u_32(arr[0]),
       name: dco_decode_String(arr[1]),
+      isIncome: dco_decode_bool(arr[2]),
     );
   }
 
@@ -4146,6 +4150,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Category sse_decode_box_autoadd_category(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_category(deserializer));
+  }
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_f_64(deserializer));
@@ -4207,7 +4217,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_u_32(deserializer);
     var var_name = sse_decode_String(deserializer);
-    return Category(id: var_id, name: var_name);
+    var var_isIncome = sse_decode_bool(deserializer);
+    return Category(id: var_id, name: var_name, isIncome: var_isIncome);
   }
 
   @protected
@@ -5270,6 +5281,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_category(
+      Category self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_category(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_64(self, serializer);
@@ -5332,6 +5350,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.id, serializer);
     sse_encode_String(self.name, serializer);
+    sse_encode_bool(self.isIncome, serializer);
   }
 
   @protected
