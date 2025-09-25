@@ -128,6 +128,13 @@ Future<void> deleteCategories({required List<int> ids}) =>
 Future<String> getExportedData({required int type}) =>
     RustLib.instance.api.crateApiAccountGetExportedData(type: type);
 
+Future<void> lockRecentNotes({required int height, required int threshold}) =>
+    RustLib.instance.api
+        .crateApiAccountLockRecentNotes(height: height, threshold: threshold);
+
+Future<void> unlockAllNotes() =>
+    RustLib.instance.api.crateApiAccountUnlockAllNotes();
+
 @freezed
 sealed class Account with _$Account {
   const factory Account({
