@@ -1261,11 +1261,11 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
     else if let Ok(v) = row.try_get::<f64, _>(index) {
         v.to_string()
     }
-    else if let Ok(v) = row.try_get::<Vec<u8>, _>(index) {
-        hex::encode(&v)
-    }
     else if let Ok(v) = row.try_get::<String, _>(index) {
         v
+    }
+    else if let Ok(v) = row.try_get::<Vec<u8>, _>(index) {
+        hex::encode(&v)
     }
     else {
         unreachable!("{}", t.name())
