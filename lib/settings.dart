@@ -1,4 +1,3 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -301,79 +300,4 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       await showMessage(context, "Restart the app to enter the database manager");
     }
   }
-}
-
-Future<(String, String)?> showChangeDbPassword(BuildContext context, {required String databaseName}) async {
-  final formKey = GlobalKey<FormBuilderState>();
-  final oldPassword = TextEditingController();
-  final newPassword = TextEditingController();
-  final repeatNewPassword = TextEditingController();
-
-  late final AwesomeDialog dialog;
-  bool validated = false;
-  dialog = AwesomeDialog(
-        context: context,
-        dialogType: DialogType.question,
-        animType: AnimType.rightSlide,
-        title: "Change Database Password",
-        body: FormBuilder(
-            key: formKey,
-            child: Column(
-              children: [
-                Text("Change $databaseName Password", style: Theme.of(context).textTheme.headlineSmall),
-                Gap(8),
-                FormBuilderTextField(
-                  name: 'old_password',
-                  decoration: InputDecoration(labelText: 'Old Password'),
-                  obscureText: true,
-                  controller: oldPassword,
-                ),
-                Gap(8),
-                FormBuilderTextField(
-                  name: 'new_password',
-                  decoration: InputDecoration(labelText: 'New Password'),
-                  obscureText: true,
-                  controller: newPassword,
-                ),
-                Gap(8),
-                FormBuilderTextField(
-                  name: 'repeat_password',
-                  decoration: InputDecoration(labelText: 'Repeat New Password'),
-                  obscureText: true,
-                  controller: repeatNewPassword,
-                  validator: (v) {
-                    if (v == null) return null;
-                    final newPassword = formKey.currentState!.fields["new_password"]!.value as String?;
-                    if (newPassword != null && newPassword != v) return "New password does not match";
-                    return null;
-                  },
-                ),
-              ],
-            ),),
-        btnCancelOnPress: () {},
-        btnOkOnPress: () {},
-        btnOk: AnimatedButton(
-          isFixedHeight: false,
-          text: "Ok",
-          color: const Color(0xFF00CA71),
-          pressEvent: () {
-            validated = formKey.currentState!.validate();
-            if (validated) {
-              dialog.dismiss();
-            }
-          },
-        ),
-        onDismissCallback: (type) {
-          GoRouter.of(context).pop(validated);
-        },
-        dismissOnTouchOutside: false,
-        autoDismiss: false,
-      );
-  final confirmed = await dialog.show();
-  if (confirmed) {
-    final op = oldPassword.text;
-    final np = newPassword.text;
-    return (op, np);
-  }
-  return null;
 }
