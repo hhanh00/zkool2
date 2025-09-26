@@ -485,7 +485,7 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   void onExport() async {
     final account = accounts.first;
-    final password = await inputPassword(context, title: "Export Account", message: "File Password");
+    final password = await inputPassword(context, title: "Export Account", message: "File Password", repeated: true);
     if (password != null) {
       final res = await exportAccount(id: account.id, passphrase: password);
       await appWatcher.saveFile(title: "Please select an output file for the encrypted account:", fileName: "${account.name}.bin", data: res);
