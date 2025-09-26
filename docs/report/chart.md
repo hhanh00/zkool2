@@ -5,6 +5,10 @@ title: Charts
 Zkool currently has two report charts[^1]. Both of them can be limited to a
 given time period.
 
+::: important
+Due to some technical issue, **charts are not available on Linux**.
+:::
+
 ## Income/Expense By Category
 
 This is a pie chart that shows your total of income or expenses by category.

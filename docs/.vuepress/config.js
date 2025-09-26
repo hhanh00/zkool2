@@ -35,15 +35,17 @@ export default defineUserConfig({
         children: [
           "account",
           "restore",
-          "folder",
           "cold",
           "sync",
+          "folder",
           "database",
           "tor",
           "security",
           "mempool",
           "puri",
+          "coin",
           "net",
+          "csv",
         ],
       },
       {
