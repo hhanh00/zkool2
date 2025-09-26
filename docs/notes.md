@@ -1,0 +1,13 @@
+- charts not available on linux
+- only wallet to
+    - recover multiple keys concurrently
+        - saves time and resources
+    - support account indices, password on seeds
+    - pre-sapling activation
+    - optimized scanning
+- expense tracking and tax reports
+- csv exports
+- coin control
+    - lock recent
+    - miner rewards
+- near intents tbd
