@@ -202,11 +202,12 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     io_account.blocks = blocks;
 
     info!("Exporting categories");
-    let categories = sqlx::query("SELECT id_category, name FROM categories")
+    let categories = sqlx::query("SELECT id_category, name, income FROM categories")
         .map(|r: SqliteRow| {
             let id_category: u32 = r.get(0);
             let name: String = r.get(1);
-            IOCategory { id_category, name }
+            let income: bool = r.get(2);
+            IOCategory { id_category, name, income }
         })
         .fetch_all(&mut *connection)
         .await?;
@@ -431,11 +432,12 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     let mut category_map: HashMap<u32, u32> = HashMap::new();
     for category in io_account.categories.iter() {
         let new_id_category = sqlx::query(
-            "INSERT INTO categories(name)
-            VALUES (?) ON CONFLICT DO UPDATE SET name = excluded.name
+            "INSERT INTO categories(name, income)
+            VALUES (?,?) ON CONFLICT DO UPDATE SET name = excluded.name
             RETURNING (id_category)",
         )
         .bind(&category.name)
+        .bind(category.income)
         .map(|r: SqliteRow| r.get::<u32, _>(0))
         .fetch_one(&mut *tx)
         .await?;
@@ -815,6 +817,7 @@ pub struct IOWitness {
 pub struct IOCategory {
     pub id_category: u32,
     pub name: String,
+    pub income: bool,
 }
 
 #[derive(Clone, Encode, Decode, Default, Debug)]
