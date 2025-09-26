@@ -6,6 +6,7 @@ import 'package:decimal/intl.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -185,47 +186,42 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
   return confirmed;
 }
 
-Future<String?> inputPassword(BuildContext context, {required String title, String? btnCancelText, String? message}) async {
-  final password = TextEditingController();
-  bool confirmed = await AwesomeDialog(
-        context: context,
-        dialogType: DialogType.question,
-        animType: AnimType.rightSlide,
-        body: Column(
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            Gap(8),
-            TextField(
+Future<String?> inputPassword(BuildContext context, {required String title, String? btnCancelText, String? message, bool repeated = false}) async {
+  final formKey = GlobalKey<FormBuilderState>();
+  final password = await inputData<String?>(
+    context,
+    builder: (context) => FormBuilder(
+      key: formKey,
+      child: Column(
+        children: [
+          Text(title, style: Theme.of(context).textTheme.headlineSmall),
+          Gap(8),
+          FormBuilderTextField(
+            name: "password",
+            autofocus: true,
+            decoration: InputDecoration(labelText: 'Password', hintText: message),
+            obscureText: true,
+          ),
+          Gap(8),
+          if (repeated)
+            FormBuilderTextField(
+              name: "repeated_password",
               autofocus: true,
-              decoration: InputDecoration(labelText: 'Password', hintText: message),
+              decoration: InputDecoration(labelText: 'Repeated Password', hintText: message),
               obscureText: true,
-              controller: password,
+              validator: (v) {
+                final password = formKey.currentState!.fields["password"]!.value as String?;
+                if (password != v) return "Passwords do not match";
+                return null;
+              },
             ),
-          ],
-        ),
-        btnCancelText: btnCancelText,
-        btnCancelOnPress: () {},
-        btnOkOnPress: () {},
-        onDismissCallback: (type) {
-          final res = (() {
-            switch (type) {
-              case DismissType.btnOk:
-                return true;
-              default:
-                return false;
-            }
-          })();
-          GoRouter.of(context).pop(res);
-        },
-        dismissOnTouchOutside: false,
-        autoDismiss: false,
-      ).show() ??
-      false;
-  if (confirmed) {
-    final p = password.text;
-    return p;
-  }
-  return null;
+        ],
+      ),
+    ),
+    validate: () => formKey.currentState!.validate(),
+    onConfirmed: () => formKey.currentState!.fields["password"]!.value as String?,
+  );
+  return password;
 }
 
 Future<String?> inputText(BuildContext context, {required String title}) async {
@@ -250,29 +246,35 @@ Future<T?> inputData<T>(
   BuildContext context, {
   required Widget Function(BuildContext) builder,
   required T Function() onConfirmed,
+  bool Function()? validate,
 }) async {
-  bool confirmed = await AwesomeDialog(
-        context: context,
-        dialogType: DialogType.question,
-        animType: AnimType.rightSlide,
-        body: builder(context),
-        btnCancelOnPress: () {},
-        btnOkOnPress: () {},
-        onDismissCallback: (type) {
-          final res = (() {
-            switch (type) {
-              case DismissType.btnOk:
-                return true;
-              default:
-                return false;
-            }
-          })();
-          GoRouter.of(context).pop(res);
-        },
-        dismissOnTouchOutside: false,
-        autoDismiss: false,
-      ).show() ??
-      false;
+  bool validated = false;
+  late final AwesomeDialog dialog;
+  dialog = AwesomeDialog(
+    context: context,
+    dialogType: DialogType.question,
+    animType: AnimType.rightSlide,
+    body: builder(context),
+    btnCancelOnPress: () {},
+    btnOkOnPress: () {},
+    btnOk: AnimatedButton(
+      isFixedHeight: false,
+      text: "Ok",
+      color: const Color(0xFF00CA71),
+      pressEvent: () {
+        validated = validate?.call() ?? true;
+        if (validated) {
+          dialog.dismiss();
+        }
+      },
+    ),
+    onDismissCallback: (type) {
+      GoRouter.of(context).pop(validated);
+    },
+    dismissOnTouchOutside: false,
+    autoDismiss: false,
+  );
+  final confirmed = await dialog.show();
   if (confirmed) {
     return onConfirmed();
   }
