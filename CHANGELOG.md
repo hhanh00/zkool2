@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.2.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.2.0...zkool-v6.2.1) (2025-09-26)
+
+
+### Bug Fixes
+
+* add repeated password and validation to forms ([#572](https://github.com/hhanh00/zkool2/issues/572)) ([a61e1bf](https://github.com/hhanh00/zkool2/commit/a61e1bf8c5ed1e86d51db30e7246abfe1dd444f8))
+* export category to tx csv as name ([#569](https://github.com/hhanh00/zkool2/issues/569)) ([48901fa](https://github.com/hhanh00/zkool2/commit/48901fa14705cfd5b91fe46473222bb40fca31e0))
+* I/O of is_income in category table ([#571](https://github.com/hhanh00/zkool2/issues/571)) ([e4bf10b](https://github.com/hhanh00/zkool2/commit/e4bf10b7e4a8eff3c514190cabc389f62aa17923))
+
 ## [6.2.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.1.0...zkool-v6.2.0) (2025-09-25)
 
 
