@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -83,7 +84,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
 
   void onNewDatabase() async {
     final formKey = GlobalKey<FormBuilderState>();
-    final res = await inputData<(String, String)>(
+    final res = await inputData<(String, String?)>(
       context,
       builder: (context) => FormBuilder(
         key: formKey,
@@ -94,6 +95,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
             FormBuilderTextField(
               name: "name",
               decoration: InputDecoration(labelText: 'Name'),
+              validator: FormBuilderValidators.required(),
             ),
             Gap(8),
             FormBuilderTextField(
@@ -119,7 +121,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
       onConfirmed: () {
         final fields = formKey.currentState!.fields;
         final name = fields["name"]!.value as String;
-        final password = fields["password"]!.value as String;
+        final password = fields["password"]!.value as String?;
         return (name, password);
       },
     );

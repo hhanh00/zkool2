@@ -7,6 +7,7 @@ import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -186,7 +187,8 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
   return confirmed;
 }
 
-Future<String?> inputPassword(BuildContext context, {required String title, String? btnCancelText, String? message, bool repeated = false}) async {
+Future<String?> inputPassword(BuildContext context,
+    {required String title, String? btnCancelText, String? message, bool repeated = false, bool required = false}) async {
   final formKey = GlobalKey<FormBuilderState>();
   final password = await inputData<String?>(
     context,
@@ -201,6 +203,7 @@ Future<String?> inputPassword(BuildContext context, {required String title, Stri
             autofocus: true,
             decoration: InputDecoration(labelText: 'Password', hintText: message),
             obscureText: true,
+            validator: required ? FormBuilderValidators.required() : null,
           ),
           Gap(8),
           if (repeated)
@@ -211,6 +214,7 @@ Future<String?> inputPassword(BuildContext context, {required String title, Stri
               obscureText: true,
               validator: (v) {
                 final password = formKey.currentState!.fields["password"]!.value as String?;
+                print("$password $v");
                 if (password != v) return "Passwords do not match";
                 return null;
               },
