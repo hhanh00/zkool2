@@ -314,7 +314,7 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
           Gap(8),
           Text("Cumulative"),
           Checkbox(value: cumulative, onChanged: (v) => setState(() => cumulative = v!)),
-        ]),
+        ],),
         Gap(8),
         Expanded(
           child: InAppWebView(

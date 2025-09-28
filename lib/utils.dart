@@ -188,7 +188,7 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
 }
 
 Future<String?> inputPassword(BuildContext context,
-    {required String title, String? btnCancelText, String? message, bool repeated = false, bool required = false}) async {
+    {required String title, String? btnCancelText, String? message, bool repeated = false, bool required = false,}) async {
   final formKey = GlobalKey<FormBuilderState>();
   final password = await inputData<String?>(
     context,

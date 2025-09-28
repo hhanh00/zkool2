@@ -3,7 +3,6 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/pool_select.dart';
@@ -143,10 +142,7 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void onSweep() async {
-    showSnackbar("Starting sweep");
-    final endHeight = await getCurrentHeight();
-    final nAdded = await transparentSweep(endHeight: endHeight, gapLimit: 40);
-    showSnackbar("Sweep complete. $nAdded new addresses added");
+    await GoRouter.of(context).push("/sweep");
   }
 }
 

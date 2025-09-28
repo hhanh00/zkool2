@@ -1,11 +1,18 @@
 use std::collections::HashSet;
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::{transparent_sync, SyncProgress}, coin::Network, db::{select_account_transparent, store_account_transparent_addr}, io::SyncHeight, lwd::CompactBlock, warp::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
+    api::sync::SyncProgress,
+    coin::Network,
+    db::{select_account_transparent, store_account_transparent_addr},
+    io::SyncHeight,
+    lwd::CompactBlock,
+    warp::{
         legacy::CommitmentTreeFrontier,
         sync::{warp_sync, SyncError},
         Witness,
-    }, Client
+    },
+    Client,
 };
 use anyhow::Result;
 use bincode::config;
@@ -18,6 +25,7 @@ use tokio::sync::{
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
+use tokio_util::sync::CancellationToken;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
@@ -191,7 +199,10 @@ pub async fn shielded_sync(
     tx_progress: Sender<SyncProgress>,
     rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
-    let activation_height: u32 = network.activation_height(NetworkUpgrade::Sapling).unwrap().into();
+    let activation_height: u32 = network
+        .activation_height(NetworkUpgrade::Sapling)
+        .unwrap()
+        .into();
     let start = start.max(activation_height);
     let end = end.max(activation_height);
 
@@ -541,19 +552,24 @@ pub async fn prune_old_checkpoints(
 pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> Result<SyncHeight> {
     // Use an outer join because the time stamp may not be present if we didn't
     // have to scan the chain (i.e. the account is transparent only)
-    let (height, time): (u32, u32) =
-        sqlx::query_as(
+    let (height, time): (u32, u32) = sqlx::query_as(
         "WITH mh AS (SELECT MIN(height) AS min_height
             FROM sync_heights
             WHERE account = ?1)
             SELECT h.height, COALESCE(h.time, 0) FROM headers h
-            JOIN mh ON h.height = mh.min_height")
-            .bind(account)
-            .fetch_one(connection)
-            .await?;
-    Ok(SyncHeight { pool: 0, height, time })
+            JOIN mh ON h.height = mh.min_height",
+    )
+    .bind(account)
+    .fetch_one(connection)
+    .await?;
+    Ok(SyncHeight {
+        pool: 0,
+        height,
+        time,
+    })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn transparent_sweep(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -561,6 +577,8 @@ pub async fn transparent_sweep(
     account: u32,
     end_height: u32,
     gap_limit: u32,
+    progress_fn: impl Fn(String),
+    cancellation_token: &CancellationToken,
 ) -> Result<u32> {
     let mut n_added = 0;
     let tk = select_account_transparent(connection, account).await?;
@@ -573,46 +591,42 @@ pub async fn transparent_sweep(
             loop {
                 let (pk, taddr) = derive_transparent_address(xvk, scope, dindex)?;
                 let taddr = taddr.encode(network);
-                let mut txids = client
-                    .taddress_txs(network, &taddr, start_height, end_height)
-                    .await?;
-                if txids.next().await.is_some() {
-                    let sk = if let Some(tsk) = tk.xsk.as_ref() {
-                        let sk = derive_transparent_sk(tsk, scope, dindex)?;
-                        Some(sk)
-                    } else {
-                        None
-                    };
-                    if store_account_transparent_addr(
-                        connection, account, scope, dindex, sk, &pk, &taddr,
-                    )
-                    .await?
-                    {
-                        n_added += 1;
+                progress_fn(taddr.clone());
+
+                tokio::select! {
+                    _ = cancellation_token.cancelled() => {
+                        return Ok(n_added)
                     }
-                } else {
-                    gap += 1;
-                }
-                dindex += 1;
-                if gap > gap_limit {
-                    break;
+
+                    txids = client
+                        .taddress_txs(network, &taddr, start_height, end_height)
+                        => {
+                        let mut txids = txids?;
+                        if txids.next().await.is_some() {
+                            let sk = if let Some(tsk) = tk.xsk.as_ref() {
+                                let sk = derive_transparent_sk(tsk, scope, dindex)?;
+                                Some(sk)
+                            } else {
+                                None
+                            };
+                            if store_account_transparent_addr(
+                                connection, account, scope, dindex, sk, &pk, &taddr,
+                            )
+                            .await?
+                            {
+                                n_added += 1;
+                            }
+                        } else {
+                            gap += 1;
+                        }
+                        dindex += 1;
+                        if gap > gap_limit {
+                            break;
+                        }
+                    }
                 }
             }
         }
-
-        let (tx, _) = broadcast::channel::<()>(1);
-
-        transparent_sync(
-            network,
-            connection,
-            client,
-            std::slice::from_ref(&account),
-            start_height,
-            end_height,
-            u32::MAX,
-            tx.subscribe(),
-        )
-        .await?;
     }
     Ok(n_added)
 }
@@ -640,7 +654,8 @@ pub async fn get_heights_without_time(
     let synced_heights_without_time = sqlx::query(
         "SELECT sh.height FROM sync_heights sh
         LEFT JOIN headers h ON sh.height = h.height
-        WHERE h.time IS NULL")
+        WHERE h.time IS NULL",
+    )
     .map(|row: SqliteRow| {
         let height: u32 = row.get(0);
         height

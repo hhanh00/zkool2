@@ -8,3 +8,4 @@ pub mod network;
 pub mod pay;
 pub mod sync;
 pub mod transaction;
+pub mod sweep;

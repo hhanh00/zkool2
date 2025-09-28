@@ -701,21 +701,6 @@ pub async fn fetch_transparent_address_tx_count() -> Result<Vec<TAddressTxCount>
 }
 
 #[frb]
-pub async fn transparent_sweep(end_height: u32, gap_limit: u32) -> Result<u32> {
-    let c = get_coin!();
-    let mut connection = c.get_connection().await?;
-    crate::sync::transparent_sweep(
-        &c.network,
-        &mut *connection,
-        &mut c.client().await?,
-        c.account,
-        end_height,
-        gap_limit,
-    )
-    .await
-}
-
-#[frb]
 pub async fn export_account(id: u32, passphrase: &str) -> Result<Vec<u8>> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
