@@ -769,3 +769,12 @@ pub async fn delete_categories(connection: &mut SqliteConnection, ids: &[u32]) -
     }
     Ok(())
 }
+
+pub async fn has_transparent_pub_key(connection: &mut SqliteConnection, account: u32) -> Result<bool> {
+    let r = sqlx::query("SELECT xvk FROM transparent_accounts WHERE account = ?1")
+    .bind(account)
+    .map(|r: SqliteRow| r.get::<Option<Vec<u8>>, _>(0))
+    .fetch_optional(connection)
+    .await?.flatten();
+    Ok(r.is_some())
+}

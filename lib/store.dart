@@ -15,6 +15,7 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
 
@@ -71,26 +72,27 @@ abstract class ObservableHeightBase with Store {
     final currentHeight = appStore.currentHeight;
     final timestamp = timeToString(time);
     return ProgressWidget(
-        height: this,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: "$height", style: t.bodyLarge!.merge(style)),
-                  if (currentHeight - height > 0)
-                    TextSpan(
-                      text: " tip-${currentHeight - height}",
-                      style: t.labelSmall,
-                    ),
-                ],
-              ),
+      height: this,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: "$height", style: t.bodyLarge!.merge(style)),
+                if (currentHeight - height > 0)
+                  TextSpan(
+                    text: " tip-${currentHeight - height}",
+                    style: t.labelSmall,
+                  ),
+              ],
             ),
-            Gap(8),
-            Text(timestamp, style: t.bodySmall),
-          ],
-        ));
+          ),
+          Gap(8),
+          Text(timestamp, style: t.bodySmall),
+        ],
+      ),
+    );
   }
 }
 
@@ -178,6 +180,7 @@ abstract class AppStoreBase with Store {
   bool useTor = false;
   bool recovery = false;
   double? price; // market price
+  TransparentScannerStore transparentScanner = TransparentScannerStore();
 
   ObservableList<String> log = ObservableList.of([]);
   @observable
@@ -484,4 +487,52 @@ Future<int?> getSelectedAccount() async {
   final s = await getProp(key: "selected_account");
   if (s == null || s == "") return null;
   return int.parse(s);
+}
+
+class TransparentScannerStore = _TransparentScannerStore with _$TransparentScannerStore;
+
+abstract class _TransparentScannerStore with Store {
+  @observable
+  String address = "";
+
+  int gapLimit = 40;
+  StreamSubscription? progressSubscription;
+  TransparentScanner? scanner;
+
+  @computed
+  bool get running => address.isNotEmpty;
+
+  @action
+  Future<void> run(BuildContext context, int gapLimit, {required void Function() onComplete}) async {
+    final sc = await TransparentScanner.newInstance();
+    scanner = sc;
+    final endHeight = await getCurrentHeight();
+    final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit);
+    progressSubscription = sub.listen(
+      (a) {
+        runInAction(() => address = a);
+      },
+      onDone: () => runInAction(() {
+        address = "";
+        onComplete();
+      }),
+      onError: (e) {
+        final exception = e as AnyhowException;
+        if (context.mounted) showException(context, exception.message);
+      },
+      cancelOnError: true,
+    );
+  }
+
+  @action
+  Future<void> cancel() async {
+    final sc = scanner;
+    scanner = null;
+    if (sc != null) {
+      await sc.cancel();
+    }
+    await progressSubscription?.cancel();
+    progressSubscription = null;
+    address = "";
+  }
 }
