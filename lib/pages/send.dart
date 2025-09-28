@@ -418,7 +418,7 @@ class Send2PageState extends State<Send2Page> {
     logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
     final categories = [
       DropdownMenuItem(value: null, child: Text("Unknown")),
-      ...appStore.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+      ...appStore.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
     ];
 
     return Scaffold(
