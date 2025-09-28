@@ -234,8 +234,8 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
       await changeDbPassword(
         dbFilepath: await getFullDatabasePath(databaseName),
         tmpDir: (await getTemporaryDirectory()).path,
-        oldPassword: oldPassword,
-        newPassword: newPassword,
+        oldPassword: oldPassword ?? "",
+        newPassword: newPassword ?? "",
       );
     } on AnyhowException catch (e) {
       if (!mounted) return;
@@ -259,10 +259,10 @@ Future<void> selectDatabase(String dbName) async {
   appStore.dbName = dbName;
 }
 
-Future<(String, String)?> showChangeDbPassword(BuildContext context, {required String databaseName}) async {
+Future<(String?, String?)?> showChangeDbPassword(BuildContext context, {required String databaseName}) async {
   final formKey = GlobalKey<FormBuilderState>();
 
-  return await inputData<(String, String)>(
+  return await inputData<(String?, String?)>(
     context,
     builder: (BuildContext context) => FormBuilder(
       key: formKey,
@@ -298,8 +298,9 @@ Future<(String, String)?> showChangeDbPassword(BuildContext context, {required S
     validate: () => formKey.currentState!.validate(),
     onConfirmed: () {
       final fields = formKey.currentState!.fields;
-      final oldPassword = fields["old_password"]!.value as String;
-      final newPassword = fields["new_password"]!.value as String;
+      final oldPassword = fields["old_password"]!.value as String?;
+      final newPassword = fields["new_password"]!.value as String?;
+      logger.i("$oldPassword $newPassword");
       return (oldPassword, newPassword);
     },
   );
