@@ -82,7 +82,7 @@ class InputAmountState extends State<InputAmount> {
                 ],
               ),
               Gap(16),
-              Text("The Amount in USD is indicative. The transaction is always made in ZEC.")
+              Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
             ],
           ),
         );

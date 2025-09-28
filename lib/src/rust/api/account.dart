@@ -48,6 +48,9 @@ Future<void> setAccount({required int account}) =>
 Future<int> newAccount({required NewAccount na}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na);
 
+Future<bool> hasTransparentPubKey() =>
+    RustLib.instance.api.crateApiAccountHasTransparentPubKey();
+
 Future<int> generateNextDindex() =>
     RustLib.instance.api.crateApiAccountGenerateNextDindex();
 
@@ -80,10 +83,6 @@ Future<void> lockNote({required int id, required bool locked}) =>
 
 Future<List<TAddressTxCount>> fetchTransparentAddressTxCount() =>
     RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount();
-
-Future<int> transparentSweep({required int endHeight, required int gapLimit}) =>
-    RustLib.instance.api.crateApiAccountTransparentSweep(
-        endHeight: endHeight, gapLimit: gapLimit);
 
 Future<Uint8List> exportAccount(
         {required int id, required String passphrase}) =>

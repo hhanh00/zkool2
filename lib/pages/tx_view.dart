@@ -114,7 +114,7 @@ class TxViewPageState extends State<TxViewPage> {
       ),
       ListTile(
           title: Text("Category"),
-          subtitle: DropdownMenu(initialSelection: txd.category, onSelected: (v) => onChangeTxCategory(txd.id, v), dropdownMenuEntries: categories)),
+          subtitle: DropdownMenu(initialSelection: txd.category, onSelected: (v) => onChangeTxCategory(txd.id, v), dropdownMenuEntries: categories),),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand(
