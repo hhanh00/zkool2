@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.3.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.3.0...zkool-v6.3.1) (2025-09-28)
+
+
+### Bug Fixes
+
+* database encryption form ([#577](https://github.com/hhanh00/zkool2/issues/577)) ([a4e7a8f](https://github.com/hhanh00/zkool2/commit/a4e7a8f3dfd6d5a2843ea2f44e904f3768dfc52e))
+
 ## [6.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.2.2...zkool-v6.3.0) (2025-09-28)
 
 
