@@ -6,6 +6,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -306,6 +307,11 @@ class NewAccountPageState extends State<NewAccountPage> {
       } on AnyhowException catch (_) {}
 
       await setAccount(account: account);
+
+      if (await hasTransparentPubKey()) {
+        await showTransparentScan(context);
+      }
+
       final seed = await getAccountSeed(account: account);
       if (mounted && key.isEmpty) {
         await showSeed(context, seed!.mnemonic);

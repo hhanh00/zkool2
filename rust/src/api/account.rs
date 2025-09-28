@@ -488,6 +488,14 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     Ok(account)
 }
 
+// #[frb]
+pub async fn has_transparent_pub_key() -> Result<bool> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    let r = crate::account::has_transparent_pub_key(&mut connection, c.account).await?;
+    Ok(r)
+}
+
 #[frb]
 pub async fn generate_next_dindex() -> Result<u32> {
     let c = get_coin!();

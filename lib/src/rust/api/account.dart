@@ -48,6 +48,9 @@ Future<void> setAccount({required int account}) =>
 Future<int> newAccount({required NewAccount na}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na);
 
+Future<bool> hasTransparentPubKey() =>
+    RustLib.instance.api.crateApiAccountHasTransparentPubKey();
+
 Future<int> generateNextDindex() =>
     RustLib.instance.api.crateApiAccountGenerateNextDindex();
 

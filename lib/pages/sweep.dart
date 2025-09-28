@@ -25,6 +25,8 @@ Future<void> showTransparentScan(BuildContext context) async {
       child: Observer(
         builder: (context) => Column(
           children: [
+            Text("Scan for alternative transparent addresses?", style: t.headlineSmall),
+            Gap(8),
             FormBuilderTextField(
               name: "gap",
               decoration: InputDecoration(label: Text("Gap Limit")),
