@@ -19,7 +19,6 @@ import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/splash.dart';
-import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/settings.dart';
@@ -83,7 +82,6 @@ GoRouter router(bool recoveryMode) => GoRouter(
         },),
     GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
     GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
-    GoRoute(path: '/sweep', builder: (context, state) => TransparentSweepPage()),
     GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
     GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
     GoRoute(path: '/folders', builder: (context, state) => FolderPage()),

@@ -17,11 +17,11 @@ use crate::{
 use anyhow::Result;
 use bincode::config;
 use flutter_rust_bridge::frb;
-use sqlx::Row;
+use sqlx::{pool::PoolConnection, Row};
 use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection, SqlitePool};
 use tokio::sync::{
     broadcast,
-    mpsc::{channel, Sender},
+    mpsc::{self, channel, Sender},
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
@@ -572,63 +572,67 @@ pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> R
 #[allow(clippy::too_many_arguments)]
 pub async fn transparent_sweep(
     network: &Network,
-    connection: &mut SqliteConnection,
-    client: &mut Client,
+    mut connection: PoolConnection<Sqlite>,
+    mut client: Client,
     account: u32,
     end_height: u32,
     gap_limit: u32,
-    progress_fn: impl Fn(String),
-    cancellation_token: &CancellationToken,
-) -> Result<u32> {
-    let mut n_added = 0;
-    let tk = select_account_transparent(connection, account).await?;
-    let xvk = tk.xvk;
-    if let Some(xvk) = xvk.as_ref() {
-        let start_height = get_birth_height(connection, account).await?;
-        for scope in 0..2 {
-            let mut dindex = 0;
-            let mut gap = 0;
-            loop {
-                let (pk, taddr) = derive_transparent_address(xvk, scope, dindex)?;
-                let taddr = taddr.encode(network);
-                progress_fn(taddr.clone());
+    progress_fn: impl Fn(String) + 'static + Send,
+    cancellation_token: CancellationToken,
+) -> Result<()> {
+    let network = *network;
+    tokio::spawn(async move {
+        let mut n_added = 0;
+        let tk = select_account_transparent(&mut connection, account).await?;
+        let xvk = tk.xvk;
+        if let Some(xvk) = xvk.as_ref() {
+            let start_height = get_birth_height(&mut connection, account).await?;
+            for scope in 0..2 {
+                let mut dindex = 0;
+                let mut gap = 0;
+                loop {
+                    let (pk, taddr) = derive_transparent_address(xvk, scope, dindex)?;
+                    let taddr = taddr.encode(&network);
+                    progress_fn(taddr.clone());
 
-                tokio::select! {
-                    _ = cancellation_token.cancelled() => {
-                        return Ok(n_added)
-                    }
-
-                    txids = client
-                        .taddress_txs(network, &taddr, start_height, end_height)
-                        => {
-                        let mut txids = txids?;
-                        if txids.next().await.is_some() {
-                            let sk = if let Some(tsk) = tk.xsk.as_ref() {
-                                let sk = derive_transparent_sk(tsk, scope, dindex)?;
-                                Some(sk)
-                            } else {
-                                None
-                            };
-                            if store_account_transparent_addr(
-                                connection, account, scope, dindex, sk, &pk, &taddr,
-                            )
-                            .await?
-                            {
-                                n_added += 1;
-                            }
-                        } else {
-                            gap += 1;
+                    tokio::select! {
+                        _ = cancellation_token.cancelled() => {
+                            return Ok::<_, anyhow::Error>(n_added)
                         }
-                        dindex += 1;
-                        if gap > gap_limit {
-                            break;
+
+                        txids = client
+                            .taddress_txs(&network, &taddr, start_height, end_height)
+                            => {
+                            let mut txids = txids?;
+                            if txids.next().await.is_some() {
+                                let sk = if let Some(tsk) = tk.xsk.as_ref() {
+                                    let sk = derive_transparent_sk(tsk, scope, dindex)?;
+                                    Some(sk)
+                                } else {
+                                    None
+                                };
+                                if store_account_transparent_addr(
+                                    &mut connection, account, scope, dindex, sk, &pk, &taddr,
+                                )
+                                .await?
+                                {
+                                    n_added += 1;
+                                }
+                            } else {
+                                gap += 1;
+                            }
+                            dindex += 1;
+                            if gap > gap_limit {
+                                break;
+                            }
                         }
                     }
                 }
             }
         }
-    }
-    Ok(n_added)
+        Ok(n_added)
+    });
+    Ok(())
 }
 
 pub async fn get_heights_without_time(

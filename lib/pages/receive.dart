@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -142,7 +143,7 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void onSweep() async {
-    await GoRouter.of(context).push("/sweep");
+    await showTransparentScan(context);
   }
 }
 

@@ -495,6 +495,7 @@ abstract class _TransparentScannerStore with Store {
   @observable
   String address = "";
 
+  int gapLimit = 40;
   StreamSubscription? progressSubscription;
   TransparentScanner? scanner;
 
@@ -517,8 +518,7 @@ abstract class _TransparentScannerStore with Store {
       }),
       onError: (e) {
         final exception = e as AnyhowException;
-        if (context.mounted)
-          showException(context, exception.message);
+        if (context.mounted) showException(context, exception.message);
       },
       cancelOnError: true,
     );

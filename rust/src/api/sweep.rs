@@ -11,9 +11,8 @@ pub struct TransparentScanner {
 
 impl TransparentScanner {
     pub fn new() -> Result<Self> {
-        let cancellation_token = CancellationToken::new();
         Ok(Self {
-            cancellation_token,
+            cancellation_token: CancellationToken::new(),
         })
     }
 
@@ -23,28 +22,26 @@ impl TransparentScanner {
 
     ) -> Result<()> {
         let c = get_coin!();
-        let mut connection = c.get_connection().await?;
-        let mut client = c.client().await?;
-
+        let connection = c.get_connection().await?;
+        let client = c.client().await?;
         transparent_sweep(
             &c.network,
-            &mut connection,
-            &mut client,
+            connection,
+            client,
             c.account,
             end_height,
             gap_limit,
-            |address| {
+            move |address| {
                 let _ = address_stream.add(address);
             },
-            &self.cancellation_token,
+            self.cancellation_token.clone(),
         )
         .await?;
         Ok(())
     }
 
-    pub async fn cancel(&mut self) -> Result<()> {
-        let cancellation_token = &self.cancellation_token;
-        cancellation_token.cancel();
+    pub fn cancel(&self) -> Result<()> {
+        self.cancellation_token.cancel();
         Ok(())
     }
 }

@@ -193,7 +193,7 @@ fn wire__crate__api__sweep__TransparentScanner_cancel_impl(
     rust_vec_len_: i32,
     data_len_: i32,
 ) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "TransparentScanner_cancel",
             port: Some(port_),
@@ -213,9 +213,9 @@ fn wire__crate__api__sweep__TransparentScanner_cancel_impl(
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TransparentScanner>,
             >>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| async move {
+            move |context| {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
+                    (move || {
                         let mut api_that_guard = None;
                         let decode_indices_ =
                             flutter_rust_bridge::for_generated::lockable_compute_decode_order(
@@ -225,20 +225,15 @@ fn wire__crate__api__sweep__TransparentScanner_cancel_impl(
                             );
                         for i in decode_indices_ {
                             match i {
-                                0 => {
-                                    api_that_guard =
-                                        Some(api_that.lockable_decode_async_ref_mut().await)
-                                }
+                                0 => api_that_guard = Some(api_that.lockable_decode_sync_ref_mut()),
                                 _ => unreachable!(),
                             }
                         }
                         let mut api_that_guard = api_that_guard.unwrap();
                         let output_ok =
-                            crate::api::sweep::TransparentScanner::cancel(&mut *api_that_guard)
-                                .await?;
+                            crate::api::sweep::TransparentScanner::cancel(&mut *api_that_guard)?;
                         Ok(output_ok)
-                    })()
-                    .await,
+                    })(),
                 )
             }
         },
