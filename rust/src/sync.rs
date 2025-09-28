@@ -21,7 +21,7 @@ use sqlx::{pool::PoolConnection, Row};
 use sqlx::{sqlite::SqliteRow, Connection, Sqlite, SqliteConnection, SqlitePool};
 use tokio::sync::{
     broadcast,
-    mpsc::{self, channel, Sender},
+    mpsc::{channel, Sender},
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
