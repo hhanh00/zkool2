@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.2.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.2.1...zkool-v6.2.2) (2025-09-28)
+
+
+### Bug Fixes
+
+* db creation with no password ([#573](https://github.com/hhanh00/zkool2/issues/573)) ([aff19e8](https://github.com/hhanh00/zkool2/commit/aff19e8fc31a6dd41af96c1cbd116017d8c03930))
+
 ## [6.2.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.2.0...zkool-v6.2.1) (2025-09-26)
 
 
