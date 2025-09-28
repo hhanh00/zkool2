@@ -449,3 +449,54 @@ mempoolRunning: ${mempoolRunning}
     ''';
   }
 }
+
+mixin _$TransparentScannerStore on _TransparentScannerStore, Store {
+  Computed<bool>? _$runningComputed;
+
+  @override
+  bool get running => (_$runningComputed ??= Computed<bool>(() => super.running,
+          name: '_TransparentScannerStore.running'))
+      .value;
+
+  late final _$addressAtom =
+      Atom(name: '_TransparentScannerStore.address', context: context);
+
+  @override
+  String get address {
+    _$addressAtom.reportRead();
+    return super.address;
+  }
+
+  @override
+  set address(String value) {
+    _$addressAtom.reportWrite(value, super.address, () {
+      super.address = value;
+    });
+  }
+
+  late final _$runAsyncAction =
+      AsyncAction('_TransparentScannerStore.run', context: context);
+
+  @override
+  Future<void> run(BuildContext context, int gapLimit,
+      {required void Function() onComplete}) {
+    return _$runAsyncAction
+        .run(() => super.run(context, gapLimit, onComplete: onComplete));
+  }
+
+  late final _$cancelAsyncAction =
+      AsyncAction('_TransparentScannerStore.cancel', context: context);
+
+  @override
+  Future<void> cancel() {
+    return _$cancelAsyncAction.run(() => super.cancel());
+  }
+
+  @override
+  String toString() {
+    return '''
+address: ${address},
+running: ${running}
+    ''';
+  }
+}
