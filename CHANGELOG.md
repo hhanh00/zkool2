@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.3.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.2.2...zkool-v6.3.0) (2025-09-28)
+
+
+### Features
+
+* transparent scan for addresses page ([#575](https://github.com/hhanh00/zkool2/issues/575)) ([3c3182e](https://github.com/hhanh00/zkool2/commit/3c3182ee07ea17e528301fefbe43141facc2e8be))
+
 ## [6.2.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.2.1...zkool-v6.2.2) (2025-09-28)
 
 
