@@ -1,15 +1,18 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
+use age::{scrypt::Identity, Decryptor, Encryptor};
 use anyhow::Result;
-use bincode::{config::legacy, Decode, Encode};
-use flate2::{bufread::GzDecoder, write::GzEncoder, Compression};
-use orion::{
-    aead,
-    kdf::{self, Salt},
+use serde::{Deserialize, Serialize};
+use serde_with::{hex::Hex, serde_as};
+use sqlx::{
+    encode::IsNull,
+    error::BoxDynError,
+    sqlite::{SqliteArgumentValue, SqliteRow, SqliteValueRef},
+    Connection, Decode, Encode, Row, Sqlite, SqliteConnection, Type,
 };
-use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use std::io::prelude::*;
 use tracing::info;
+use zstd::DEFAULT_COMPRESSION_LEVEL;
 
 use crate::db::DB_VERSION;
 
@@ -47,11 +50,11 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 name,
                 seed,
                 passphrase,
-                seed_fingerprint,
+                seed_fingerprint: seed_fingerprint.map(HexBytes),
                 aindex,
                 dindex,
                 def_dindex,
-                icon,
+                icon: icon.map(HexBytes),
                 birth,
                 position,
                 use_internal,
@@ -75,7 +78,10 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 let xsk: Option<Vec<u8>> = row.get(0);
                 let xvk: Vec<u8> = row.get(1);
 
-                IOKeys { xsk, xvk }
+                IOKeys {
+                    xsk: xsk.map(HexBytes),
+                    xvk: xvk.into(),
+                }
             })
             .fetch_optional(&mut *connection)
             .await?
@@ -90,7 +96,10 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let xsk: Option<Vec<u8>> = row.get(0);
             let xvk: Vec<u8> = row.get(1);
 
-            IOKeys { xsk, xvk }
+            IOKeys {
+                xsk: xsk.map(HexBytes),
+                xvk: xvk.into(),
+            }
         })
         .fetch_optional(&mut *connection)
         .await?
@@ -105,7 +114,10 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let xsk: Option<Vec<u8>> = row.get(0);
             let xvk: Vec<u8> = row.get(1);
 
-            IOKeys { xsk, xvk }
+            IOKeys {
+                xsk: xsk.map(HexBytes),
+                xvk: xvk.into(),
+            }
         })
         .fetch_optional(&mut *connection)
         .await?
@@ -124,7 +136,10 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let pk: Vec<u8> = row.get(4);
             let address: String = row.get(5);
 
-            TAddress {id_taddress, scope, dindex, sk, pk, address}
+            TAddress {
+                id_taddress, scope, dindex, sk: sk.map(HexBytes),
+                pk: pk.into(), address
+            }
 
         })
         .fetch_all(&mut *connection)
@@ -171,7 +186,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
 
                 IOBlock {
                     height: *height,
-                    hash,
+                    hash: hash.into(),
                     time,
                     ..Default::default()
                 }
@@ -190,7 +205,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                     IOWitness {
                         height: *height,
                         note,
-                        witness,
+                        witness: witness.into(),
                     }
                 })
                 .fetch_all(&mut *connection)
@@ -207,7 +222,11 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let id_category: u32 = r.get(0);
             let name: String = r.get(1);
             let income: bool = r.get(2);
-            IOCategory { id_category, name, income }
+            IOCategory {
+                id_category,
+                name,
+                income,
+            }
         })
         .fetch_all(&mut *connection)
         .await?;
@@ -232,7 +251,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
 
         IOTransaction {
             id_tx,
-            txid,
+            txid: txid.into(),
             height,
             time,
             details,
@@ -280,18 +299,18 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 account,
                 pool,
                 scope,
-                nullifier,
+                nullifier: nullifier.into(),
                 value,
-                cmx,
+                cmx: cmx.map(HexBytes),
                 taddress,
                 position,
-                diversifier,
-                rcm,
-                rho,
+                diversifier: diversifier.map(HexBytes),
+                rcm: rcm.map(HexBytes),
+                rho: rho.map(HexBytes),
                 locked,
                 vout,
                 memo_text,
-                memo_bytes,
+                memo_bytes: memo_bytes.map(HexBytes),
             }
         })
         .fetch_all(&mut *connection)
@@ -326,7 +345,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 address,
                 vout,
                 memo_text,
-                memo_bytes,
+                memo_bytes: memo_bytes.map(HexBytes),
             }
         })
         .fetch_all(&mut *connection)
@@ -396,7 +415,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             public,
             round,
             from_id,
-            data,
+            data: data.into(),
         }
     })
     .fetch_all(&mut *connection)
@@ -404,9 +423,9 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     io_account.dkg_packages = dkg_packages;
     io_account.categories = categories;
 
-    let io_account = bincode::encode_to_vec(&io_account, legacy())?;
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&io_account)?;
+    let io_account = serde_json::to_string(&io_account)?;
+    let mut encoder = zstd::Encoder::new(Vec::new(), DEFAULT_COMPRESSION_LEVEL)?;
+    encoder.write_all(io_account.as_bytes())?;
     let data = encoder.finish()?;
 
     info!("Exported account size: {}", data.len());
@@ -414,10 +433,10 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
 }
 
 pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> Result<()> {
-    let mut decoder = GzDecoder::new(data);
-    let mut data = vec![];
-    decoder.read_to_end(&mut data)?;
-    let (io_account, _) = bincode::decode_from_slice::<IOAccount, _>(&data, legacy())?;
+    let mut decoder = zstd::Decoder::new(data)?;
+    let mut data = String::new();
+    decoder.read_to_string(&mut data)?;
+    let io_account = serde_json::from_str::<IOAccount>(&data)?;
     if io_account.version != DB_VERSION {
         anyhow::bail!("This version only supports database version {DB_VERSION}");
     }
@@ -557,7 +576,10 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     let mut new_txs = HashMap::<u32, u32>::new();
     let mut new_notes = HashMap::<u32, u32>::new();
     for transaction in io_account.transactions.iter() {
-        let category = transaction.category.and_then(|c| category_map.get(&c)).cloned();
+        let category = transaction
+            .category
+            .and_then(|c| category_map.get(&c))
+            .cloned();
         let r = sqlx::query(
             "INSERT INTO transactions
             (account, txid, height, time, details, tpe, value, fee, price, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -743,18 +765,18 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     Ok(())
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOAccount {
     pub version: u16,
     pub id_account: u32,
     pub name: String,
     pub seed: Option<String>,
     pub passphrase: String,
-    pub seed_fingerprint: Option<Vec<u8>>,
+    pub seed_fingerprint: Option<HexBytes>,
     pub aindex: u32,
     pub dindex: u32,
     pub def_dindex: u32,
-    pub icon: Option<Vec<u8>>,
+    pub icon: Option<HexBytes>,
     pub birth: u32,
     pub folder: String,
     pub position: u32,
@@ -775,55 +797,55 @@ pub struct IOAccount {
     pub categories: Vec<IOCategory>,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOKeys {
-    pub xsk: Option<Vec<u8>>,
-    pub xvk: Vec<u8>,
+    pub xsk: Option<HexBytes>,
+    pub xvk: HexBytes,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct TAddress {
     pub id_taddress: u32,
     pub scope: u32,
     pub dindex: u32,
-    pub sk: Option<Vec<u8>>,
-    pub pk: Vec<u8>,
+    pub sk: Option<HexBytes>,
+    pub pk: HexBytes,
     pub address: String,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct SyncHeight {
     pub pool: u8,
     pub height: u32,
     pub time: u32,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOBlock {
     pub height: u32,
-    pub hash: Vec<u8>,
+    pub hash: HexBytes,
     pub time: u32,
     pub witness: Vec<IOWitness>,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOWitness {
     pub height: u32,
     pub note: u32,
-    pub witness: Vec<u8>,
+    pub witness: HexBytes,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOCategory {
     pub id_category: u32,
     pub name: String,
     pub income: bool,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOTransaction {
     pub id_tx: u32,
-    pub txid: Vec<u8>,
+    pub txid: HexBytes,
     pub height: u32,
     pub time: u32,
     pub details: bool,
@@ -837,28 +859,28 @@ pub struct IOTransaction {
     pub outputs: Vec<IOOutput>,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IONote {
     pub id_note: u32,
     pub height: u32,
     pub account: u32,
     pub pool: u8,
     pub scope: Option<u8>,
-    pub nullifier: Vec<u8>,
+    pub nullifier: HexBytes,
     pub value: u64,
-    pub cmx: Option<Vec<u8>>,
+    pub cmx: Option<HexBytes>,
     pub taddress: Option<u32>,
     pub position: Option<u32>,
-    pub diversifier: Option<Vec<u8>>,
-    pub rcm: Option<Vec<u8>>,
-    pub rho: Option<Vec<u8>>,
+    pub diversifier: Option<HexBytes>,
+    pub rcm: Option<HexBytes>,
+    pub rho: Option<HexBytes>,
     pub locked: bool,
     pub vout: Option<u32>,
     pub memo_text: Option<String>,
-    pub memo_bytes: Option<Vec<u8>>,
+    pub memo_bytes: Option<HexBytes>,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOSpend {
     pub id_note: u32,
     pub height: u32,
@@ -867,7 +889,7 @@ pub struct IOSpend {
     pub value: u64,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct IOOutput {
     pub id_output: u32,
     pub height: u32,
@@ -877,10 +899,10 @@ pub struct IOOutput {
     pub address: String,
     pub vout: u32,
     pub memo_text: Option<String>,
-    pub memo_bytes: Option<Vec<u8>>,
+    pub memo_bytes: Option<HexBytes>,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct DKGParams {
     pub id: u8,
     pub n: u8,
@@ -889,40 +911,76 @@ pub struct DKGParams {
     pub birth: u32,
 }
 
-#[derive(Clone, Encode, Decode, Default, Debug)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct DKGPackage {
     pub account: u32,
     pub public: bool,
     pub round: u32,
     pub from_id: u16,
-    pub data: Vec<u8>,
+    pub data: HexBytes,
 }
 
 pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
-    info!("Encrypting {} bytes with {}", data.len(), passphrase);
-
-    let (salt, secret_key) = derive_encryption_key(passphrase, None)?;
-    let mut ciphertext = salt.as_ref().to_vec();
-    ciphertext.extend(aead::seal(&secret_key, data)?);
-
+    let encryptor = Encryptor::with_user_passphrase(passphrase.into());
+    let mut ciphertext = vec![];
+    let mut writer = encryptor.wrap_output(&mut ciphertext)?;
+    writer.write_all(data)?;
+    writer.finish()?;
     Ok(ciphertext)
 }
 
 pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
-    info!("Decrypting {} bytes with {}", data.len(), passphrase);
-    let (salt, ciphertext) = data.split_at(16);
-    let salt = Salt::from_slice(salt)?;
-
-    let (_, secret_key) = derive_encryption_key(passphrase, Some(salt))?;
-    let plaintext = aead::open(&secret_key, ciphertext)?;
-
-    Ok(plaintext)
+    let decryptor = Decryptor::new_buffered(data)?;
+    let identity = Identity::new(passphrase.into());
+    let identity: Vec<&dyn age::Identity> = vec![&identity];
+    let mut reader = decryptor.decrypt(identity.into_iter())?;
+    let mut output = vec![];
+    reader.read_to_end(&mut output)?;
+    Ok(output)
 }
 
-fn derive_encryption_key(passphrase: &str, salt: Option<Salt>) -> Result<(Salt, aead::SecretKey)> {
-    let user_password = kdf::Password::from_slice(passphrase.as_bytes())?;
-    let salt = salt.unwrap_or_default();
-    let derived_key = kdf::derive_key(&user_password, &salt, 3, 1 << 16, 32)?;
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+pub struct HexBytes(#[serde_as(as = "Hex")] pub Vec<u8>);
 
-    Ok((salt, derived_key))
+impl From<Vec<u8>> for HexBytes {
+    fn from(value: Vec<u8>) -> Self {
+        HexBytes(value)
+    }
+}
+
+impl From<HexBytes> for Vec<u8> {
+    fn from(value: HexBytes) -> Self {
+        value.0
+    }
+}
+
+impl<'q> Encode<'q, Sqlite> for HexBytes {
+    fn encode(self, args: &mut Vec<SqliteArgumentValue<'q>>) -> Result<IsNull, BoxDynError> {
+        args.push(SqliteArgumentValue::Blob(Cow::Owned(self.0)));
+
+        Ok(IsNull::No)
+    }
+
+    fn encode_by_ref(
+        &self,
+        args: &mut Vec<SqliteArgumentValue<'q>>,
+    ) -> Result<IsNull, BoxDynError> {
+        args.push(SqliteArgumentValue::Blob(Cow::Owned(self.0.clone())));
+
+        Ok(IsNull::No)
+    }
+}
+
+impl<'r> Decode<'r, Sqlite> for HexBytes {
+    fn decode(value: SqliteValueRef<'r>) -> Result<Self, BoxDynError> {
+        let inner = <Vec<u8> as Decode<'r, Sqlite>>::decode(value)?;
+        Ok(HexBytes(inner))
+    }
+}
+
+impl Type<Sqlite> for HexBytes {
+    fn type_info() -> <sqlx::Sqlite as sqlx::Database>::TypeInfo {
+        <Vec<u8> as Type<Sqlite>>::type_info()
+    }
 }
