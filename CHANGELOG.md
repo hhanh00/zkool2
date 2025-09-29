@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.3.1...zkool-v6.4.0) (2025-09-29)
+
+
+### Features
+
+* encrypt wallet file with age/zstd ([#579](https://github.com/hhanh00/zkool2/issues/579)) ([6943da2](https://github.com/hhanh00/zkool2/commit/6943da2c2a4286f719af58d1860162e69313528c))
+
 ## [6.3.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.3.0...zkool-v6.3.1) (2025-09-28)
 
 
