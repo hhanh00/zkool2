@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.4.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.4.1) (2025-10-01)
+
+
+### Bug Fixes
+
+* remove dialog asking for scanning taddr on new accounts ([#582](https://github.com/hhanh00/zkool2/issues/582)) ([7a1ee58](https://github.com/hhanh00/zkool2/commit/7a1ee58f43008066975a2d607d57899e53e39227))
+
 ## [6.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.3.1...zkool-v6.4.0) (2025-09-29)
 
 
