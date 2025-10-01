@@ -308,7 +308,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
       await setAccount(account: account);
 
-      if (await hasTransparentPubKey()) {
+      if (key.isNotEmpty && await hasTransparentPubKey()) {
         await showTransparentScan(context);
       }
 
