@@ -22,6 +22,7 @@ pub mod sync;
 pub mod warp;
 pub mod zebra;
 pub mod budget;
+pub mod ledger;
 
 pub type Hash32 = [u8; 32];
 pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;
