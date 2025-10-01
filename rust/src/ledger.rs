@@ -25,6 +25,7 @@ impl LedgerDevice {
     pub fn execute(&self, command: &APDUCommand) -> Result<APDUAnswer> {
         let c = command.to_bytes()?;
         self.write(&c)?;
+        println!("reading");
         let rep = self.read()?;
         let answer = APDUAnswer::from_bytes(&rep)?;
         Ok(answer)
@@ -47,11 +48,14 @@ impl LedgerDevice {
         buffer[2] = 1; // channel
         buffer[3] = 5; // tag
 
-        for (idx, chunk) in data.chunks(64 - 5).enumerate() {
+        for (idx, chunk) in prefixed_data.chunks(64 - 5).enumerate() {
             let seqno = idx as u16;
+            println!("write {seqno}");
             buffer[4..6].copy_from_slice(&seqno.to_be_bytes());
             buffer[6..6 + chunk.len()].copy_from_slice(chunk);
-            self.device.write(&buffer)?;
+            println!("{}", hex::encode(&buffer));
+            let written = self.device.write(&buffer)?;
+            println!("written {written}");
         }
         Ok(())
     }
@@ -63,7 +67,9 @@ impl LedgerDevice {
         let mut data = vec![];
 
         loop {
+            println!("R");
             let size = self.device.read_timeout(&mut buffer, self.timeout)?;
+            println!("{size}");
             // the first chunk has the total length, therefore it must be larger
             if size < 5 || (seqno == 0 && size < 7) {
                 anyhow::bail!("No header");
@@ -77,15 +83,17 @@ impl LedgerDevice {
             }
             if seqno == 0 {
                 data_len = u16::from_be_bytes([buffer[5], buffer[6]]);
-                data.write_all(&buffer[7..size - 7])?;
+                data.write_all(&buffer[7..size])?;
             } else {
-                data.write_all(&buffer[5..size - 5])?;
+                data.write_all(&buffer[5..size])?;
             }
             seqno += 1;
-            if data.len() == data_len as usize {
+            if data.len() >= data_len as usize {
                 break;
             }
         }
+        data.truncate(data_len as usize);
+        println!("{} {}", data_len, hex::encode(&data));
         Ok(data)
     }
 }
@@ -130,12 +138,36 @@ impl APDUAnswer {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{Cursor, Read};
+
+    use byteorder::ReadBytesExt;
     use hidapi::HidApi;
+
+    use crate::ledger::APDUCommand;
 
     #[test]
     fn t() -> anyhow::Result<()> {
         let api = HidApi::new()?;
-        let _device = super::open_ledger(&api)?;
+        let device = super::open_ledger(&api)?;
+
+        let get_pk = APDUCommand {
+            cla: 0xE0,
+            ins: 0x40,
+            p1: 0,
+            p2: 0,
+            data: hex::decode("058000002C80000085800000000000000000000000").unwrap(),
+        };
+        let rep = device.execute(&get_pk)?;
+        println!("{}", rep.retcode);
+        let mut data = Cursor::new(&rep.data);
+        let pk_len = data.read_u8()? as usize;
+        let mut pk = vec![0u8; pk_len];
+        data.read_exact(&mut pk)?;
+        let address_len = data.read_u8()? as usize;
+        let mut address = vec![0u8; address_len];
+        data.read_exact(&mut address)?;
+        let address = String::from_utf8(address)?;
+        println!("{address}");
         Ok(())
     }
 }
