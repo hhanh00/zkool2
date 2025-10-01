@@ -78,6 +78,8 @@ age = "0.11.1"
 zstd = "0.13.3"
 
 libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"] }
+
+[target.'cfg(all(not(target_os = "ios"), not(target_os = "android")))'.dependencies]
 ledger-sdk-transport-hid = "0.0.2"
 
 [lints.rust]
