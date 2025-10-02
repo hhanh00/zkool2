@@ -1,18 +1,11 @@
 use std::collections::HashSet;
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
-    api::sync::SyncProgress,
-    coin::Network,
-    db::{select_account_transparent, store_account_transparent_addr},
-    io::SyncHeight,
-    lwd::CompactBlock,
-    warp::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::SyncProgress, coin::Network, db::{get_account_aindex, select_account_transparent, store_account_transparent_addr, LEDGER_CODE}, io::SyncHeight, ledger::derive_hw_transparent_address, lwd::CompactBlock, warp::{
         legacy::CommitmentTreeFrontier,
         sync::{warp_sync, SyncError},
         Witness,
-    },
-    Client,
+    }, Client
 };
 use anyhow::Result;
 use bincode::config;
@@ -581,50 +574,53 @@ pub async fn transparent_sweep(
     cancellation_token: CancellationToken,
 ) -> Result<()> {
     let network = *network;
+    let aindex = get_account_aindex(&mut connection, account).await?;
     tokio::spawn(async move {
         let mut n_added = 0;
         let tk = select_account_transparent(&mut connection, account).await?;
         let xvk = tk.xvk;
-        if let Some(xvk) = xvk.as_ref() {
-            let start_height = get_birth_height(&mut connection, account).await?;
-            for scope in 0..2 {
-                let mut dindex = 0;
-                let mut gap = 0;
-                loop {
-                    let (pk, taddr) = derive_transparent_address(xvk, scope, dindex)?;
-                    let taddr = taddr.encode(&network);
-                    progress_fn(taddr.clone());
+        let start_height = get_birth_height(&mut connection, account).await?;
+        for scope in 0..2 {
+            let mut dindex = 0;
+            let mut gap = 0;
+            loop {
+                let (pk, taddr) = match xvk.as_ref() {
+                    Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
+                    None if tk.hw == LEDGER_CODE => derive_hw_transparent_address(&network, tk.hw, aindex, scope, dindex)?,
+                    _ => panic!("No way to derive transparent keys"),
+                };
+                let taddr = taddr.encode(&network);
+                progress_fn(taddr.clone());
 
-                    tokio::select! {
-                        _ = cancellation_token.cancelled() => {
-                            return Ok::<_, anyhow::Error>(n_added)
-                        }
+                tokio::select! {
+                    _ = cancellation_token.cancelled() => {
+                        return Ok::<_, anyhow::Error>(n_added)
+                    }
 
-                        txids = client
-                            .taddress_txs(&network, &taddr, start_height, end_height)
-                            => {
-                            let mut txids = txids?;
-                            if txids.next().await.is_some() {
-                                let sk = if let Some(tsk) = tk.xsk.as_ref() {
-                                    let sk = derive_transparent_sk(tsk, scope, dindex)?;
-                                    Some(sk)
-                                } else {
-                                    None
-                                };
-                                if store_account_transparent_addr(
-                                    &mut connection, account, scope, dindex, sk, &pk, &taddr,
-                                )
-                                .await?
-                                {
-                                    n_added += 1;
-                                }
+                    txids = client
+                        .taddress_txs(&network, &taddr, start_height, end_height)
+                        => {
+                        let mut txids = txids?;
+                        if txids.next().await.is_some() {
+                            let sk = if let Some(tsk) = tk.xsk.as_ref() {
+                                let sk = derive_transparent_sk(tsk, scope, dindex)?;
+                                Some(sk)
                             } else {
-                                gap += 1;
+                                None
+                            };
+                            if store_account_transparent_addr(
+                                &mut connection, account, scope, dindex, sk, &pk, &taddr,
+                            )
+                            .await?
+                            {
+                                n_added += 1;
                             }
-                            dindex += 1;
-                            if gap > gap_limit {
-                                break;
-                            }
+                        } else {
+                            gap += 1;
+                        }
+                        dindex += 1;
+                        if gap > gap_limit {
+                            break;
                         }
                     }
                 }
