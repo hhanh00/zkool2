@@ -10,7 +10,7 @@ use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::Sha256;
-use sqlx::{sqlite::SqliteRow, Row};
+use sqlx::{sqlite::SqliteRow, Acquire, Row};
 use tracing::info;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
@@ -31,15 +31,16 @@ use crate::{
     api::key::generate_seed,
     bip38,
     db::{
-        init_account_orchard, init_account_sapling, init_account_transparent,
+        init_account_orchard, init_account_sapling, init_account_transparent, store_account_hw,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
         store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
         store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
-        update_dindex,
+        update_dindex, LEDGER_CODE,
     },
     get_coin,
     io::{decrypt, encrypt},
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    ledger::derive_hw_transparent_address,
     pay::pool::ALL_POOLS,
     setup,
 };
@@ -275,16 +276,18 @@ pub fn set_account(account: u32) -> Result<()> {
 pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
+    let mut db_tx = connection.begin().await?;
     let network = c.network;
 
     let birth = na.birth.unwrap_or_else(|| {
         network
             .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
-            .unwrap().into()
+            .unwrap()
+            .into()
     });
 
     let account = store_account_metadata(
-        &mut *connection,
+        &mut *db_tx,
         &na.name,
         &na.icon,
         &na.fingerprint,
@@ -295,19 +298,25 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     .await?;
 
     let mut key = na.key.clone();
-    if key.is_empty() {
+    if key.is_empty() && !na.ledger {
         key = generate_seed()?;
     }
 
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
-    if is_valid_phrase(&key) {
+    if na.ledger {
+        init_account_transparent(&mut *db_tx, account, birth).await?;
+        store_account_hw(&mut *db_tx, account, LEDGER_CODE).await?;
+        let address = derive_hw_transparent_address(LEDGER_CODE, na.aindex, 0)?;
+        let pk = [0u8; 33];
+        store_account_transparent_addr(&mut *db_tx, account, 0, 0, None, &pk, &address).await?;
+    } else if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let passphrase = na.passphrase.clone().unwrap_or(String::new());
         let seed = seed_phrase.to_seed(&passphrase);
         let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
         store_account_seed(
-            &mut *connection,
+            &mut *db_tx,
             account,
             &key,
             &passphrase,
@@ -325,15 +334,15 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let dindex: u32 = di.try_into()?;
 
         if pools & 1 != 0 {
-            init_account_transparent(&mut *connection, account, birth).await?;
+            init_account_transparent(&mut *db_tx, account, birth).await?;
             let tsk = usk.transparent();
-            store_account_transparent_sk(&mut *connection, account, tsk).await?;
+            store_account_transparent_sk(&mut *db_tx, account, tsk).await?;
             let tvk = &tsk.to_account_pubkey();
-            store_account_transparent_vk(&mut *connection, account, tvk).await?;
+            store_account_transparent_vk(&mut *db_tx, account, tvk).await?;
             let sk = derive_transparent_sk(&tsk, 0, dindex)?;
             let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
             store_account_transparent_addr(
-                &mut *connection,
+                &mut *db_tx,
                 account,
                 0,
                 dindex,
@@ -345,34 +354,34 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
 
         if pools & 2 != 0 {
-            init_account_sapling(&network, &mut *connection, account, birth).await?;
+            init_account_sapling(&network, &mut *db_tx, account, birth).await?;
             let sxsk = usk.sapling();
-            store_account_sapling_sk(&mut *connection, account, sxsk).await?;
+            store_account_sapling_sk(&mut *db_tx, account, sxsk).await?;
             let sxvk = sxsk.to_diversifiable_full_viewing_key();
-            store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
+            store_account_sapling_vk(&mut *db_tx, account, &sxvk).await?;
         }
 
         if pools & 4 != 0 {
-            init_account_orchard(&network, &mut *connection, account, birth).await?;
+            init_account_orchard(&network, &mut *db_tx, account, birth).await?;
             let oxsk = usk.orchard();
-            store_account_orchard_sk(&mut *connection, account, oxsk).await?;
+            store_account_orchard_sk(&mut *db_tx, account, oxsk).await?;
             let oxvk = FullViewingKey::from(oxsk);
-            store_account_orchard_vk(&mut *connection, account, &oxvk).await?;
+            store_account_orchard_vk(&mut *db_tx, account, &oxvk).await?;
         }
 
-        update_dindex(&mut *connection, account, dindex, true).await?;
+        update_dindex(&mut *db_tx, account, dindex, true).await?;
     }
     if is_valid_transparent_key(&key) {
-        init_account_transparent(&mut *connection, account, birth).await?;
+        init_account_transparent(&mut *db_tx, account, birth).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
-            store_account_transparent_sk(&mut *connection, account, &xsk).await?;
+            store_account_transparent_sk(&mut *db_tx, account, &xsk).await?;
             let xvk = xsk.to_account_pubkey();
-            store_account_transparent_vk(&mut *connection, account, &xvk).await?;
+            store_account_transparent_vk(&mut *db_tx, account, &xvk).await?;
             let sk = derive_transparent_sk(&xsk, 0, 0)?;
             let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(
-                &mut *connection,
+                &mut *db_tx,
                 account,
                 0,
                 0,
@@ -386,10 +395,10 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             let mut buf = xvk.attrs().chain_code.to_vec();
             buf.extend_from_slice(&xvk.to_bytes());
             let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
-            store_account_transparent_vk(&mut *connection, account, &xvk).await?;
+            store_account_transparent_vk(&mut *db_tx, account, &xvk).await?;
             let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
             store_account_transparent_addr(
-                &mut *connection,
+                &mut *db_tx,
                 account,
                 0,
                 0,
@@ -404,7 +413,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             let pkh: [u8; 20] = Ripemd160::digest(&Sha256::digest(&tpk)).into();
             let addr = TransparentAddress::PublicKeyHash(pkh.clone());
             store_account_transparent_addr(
-                &mut *connection,
+                &mut *db_tx,
                 account,
                 0,
                 0,
@@ -416,14 +425,14 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
     }
     if is_valid_sapling_key(&network, &key) {
-        init_account_sapling(&network, &mut *connection, account, birth).await?;
+        init_account_sapling(&network, &mut *db_tx, account, birth).await?;
         let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
             &key,
         ) {
-            store_account_sapling_sk(&mut *connection, account, &xsk).await?;
+            store_account_sapling_sk(&mut *db_tx, account, &xsk).await?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
-            store_account_sapling_vk(&mut *connection, account, &xvk).await?;
+            store_account_sapling_vk(&mut *db_tx, account, &xvk).await?;
             let (di, _) = xvk.default_address();
             di
         } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
@@ -431,7 +440,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             &key,
         ) {
             store_account_sapling_vk(
-                &mut *connection,
+                &mut *db_tx,
                 account,
                 &xvk.to_diversifiable_full_viewing_key(),
             )
@@ -442,7 +451,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             return Err(anyhow!("Invalid Sapling Key"));
         };
         let dindex: u32 = di.try_into()?;
-        update_dindex(&mut *connection, account, dindex, true).await?;
+        update_dindex(&mut *db_tx, account, dindex, true).await?;
     }
     if is_valid_ufvk(&network, &key) {
         let uvk =
@@ -452,11 +461,11 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
 
         match uvk.transparent() {
             Some(tvk) if pools & 1 != 0 => {
-                init_account_transparent(&mut *connection, account, birth).await?;
-                store_account_transparent_vk(&mut *connection, account, tvk).await?;
+                init_account_transparent(&mut *db_tx, account, birth).await?;
+                store_account_transparent_vk(&mut *db_tx, account, tvk).await?;
                 let (pk, address) = derive_transparent_address(tvk, 0, dindex)?;
                 store_account_transparent_addr(
-                    &mut *connection,
+                    &mut *db_tx,
                     account,
                     0,
                     dindex,
@@ -470,21 +479,21 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
         match uvk.sapling() {
             Some(sxvk) if pools & 2 != 0 => {
-                init_account_sapling(&network, &mut *connection, account, birth).await?;
-                store_account_sapling_vk(&mut *connection, account, &sxvk).await?;
+                init_account_sapling(&network, &mut *db_tx, account, birth).await?;
+                store_account_sapling_vk(&mut *db_tx, account, &sxvk).await?;
             }
             _ => {}
         }
         match uvk.orchard() {
             Some(ovk) if pools & 4 != 0 => {
-                init_account_orchard(&network, &mut *connection, account, birth).await?;
-                store_account_orchard_vk(&mut *connection, account, &ovk).await?;
+                init_account_orchard(&network, &mut *db_tx, account, birth).await?;
+                store_account_orchard_vk(&mut *db_tx, account, &ovk).await?;
             }
             _ => {}
         }
-        update_dindex(&mut *connection, account, dindex, true).await?;
+        update_dindex(&mut *db_tx, account, dindex, true).await?;
     }
-
+    db_tx.commit().await?;
     Ok(account)
 }
 
@@ -566,6 +575,7 @@ pub struct NewAccount {
     pub pools: Option<u8>,
     pub use_internal: bool,
     pub internal: bool,
+    pub ledger: bool,
 }
 
 #[frb(dart_metadata = ("freezed"))]
