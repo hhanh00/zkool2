@@ -1,5 +1,15 @@
 # Changelog
 
+## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.1...zkool-v6.5.0) (2025-10-02)
+
+
+### Features
+
+* **ledger:** apdu communication via hidapi ([#584](https://github.com/hhanh00/zkool2/issues/584)) ([8e81b5f](https://github.com/hhanh00/zkool2/commit/8e81b5fe269bb55e754a3d7c187eb2d065ca1762))
+* **ledger:** derive additional transparent addresses ([#589](https://github.com/hhanh00/zkool2/issues/589)) ([a1d6b37](https://github.com/hhanh00/zkool2/commit/a1d6b3764533307b412ea6b967f27027efbc5fa5))
+* **ledger:** import account from h/w ledger ([#587](https://github.com/hhanh00/zkool2/issues/587)) ([e14e0c4](https://github.com/hhanh00/zkool2/commit/e14e0c4b7a6ca46bef68ae78e5d7abfa6c573f3d))
+* **ledger:** scan transparent addresses ([#588](https://github.com/hhanh00/zkool2/issues/588)) ([1719c65](https://github.com/hhanh00/zkool2/commit/1719c654df98055fbda755f505d8fc91a4bbab4b))
+
 ## [6.4.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.4.1) (2025-10-01)
 
 
