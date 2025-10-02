@@ -42,6 +42,7 @@ class NewAccountPageState extends State<NewAccountPage> {
   var restore = false;
   var key = "";
   var isSeed = false;
+  var ledger = false;
   var isFvk = false;
   Uint8List? iconBytes;
   final formKey = GlobalKey<FormBuilderState>();
@@ -153,6 +154,14 @@ class NewAccountPageState extends State<NewAccountPage> {
                 ),
                 Gap(16),
                 if (restore)
+                  FormBuilderSwitch(
+                    name: "ledger",
+                    title: const Text("H/W Ledger"),
+                    initialValue: ledger,
+                    onChanged: (v) => setState(() => ledger = v ?? false),
+                  ),
+                Gap(16),
+                if (restore && !ledger)
                   Row(
                     children: [
                       Expanded(
@@ -195,7 +204,7 @@ class NewAccountPageState extends State<NewAccountPage> {
                     ),
                   ),
                 Gap(16),
-                if (restore && isSeed)
+                if (restore && (isSeed || ledger))
                   Showcase(
                     key: accountIndexID,
                     description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
@@ -267,6 +276,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       final formData = formKey.currentState?.value;
       final String? name = formData?["name"];
       final bool? restore = formData?["restore"];
+      final bool ledger = formData?["ledger"] as bool? ?? false;
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
@@ -286,38 +296,43 @@ class NewAccountPageState extends State<NewAccountPage> {
       }
 
       final bh = birth != null ? int.parse(birth) : appStore.currentHeight;
-      final account = await newAccount(
-        na: NewAccount(
-          icon: icon,
-          name: name ?? "",
-          restore: r,
-          key: key,
-          passphrase: passphrase,
-          aindex: int.parse(aindex ?? "0"),
-          birth: bh,
-          folder: "",
-          pools: pools,
-          useInternal: useInternal ?? false,
-          internal: false,
-        ),
-      );
       try {
-        // ignore errors since it's just caching
-        if (!appStore.offline) await cacheBlockTime(height: bh);
-      } on AnyhowException catch (_) {}
+        final account = await newAccount(
+          na: NewAccount(
+            icon: icon,
+            name: name ?? "",
+            restore: r,
+            key: key,
+            passphrase: passphrase,
+            aindex: int.parse(aindex ?? "0"),
+            birth: bh,
+            folder: "",
+            pools: pools,
+            useInternal: useInternal ?? false,
+            internal: false,
+            ledger: ledger,
+          ),
+        );
+        try {
+          // ignore errors since it's just caching
+          if (!appStore.offline) await cacheBlockTime(height: bh);
+        } on AnyhowException catch (_) {}
 
-      await setAccount(account: account);
+        await setAccount(account: account);
 
-      if (key.isNotEmpty && await hasTransparentPubKey()) {
-        await showTransparentScan(context);
+        if (key.isNotEmpty && await hasTransparentPubKey()) {
+          await showTransparentScan(context);
+        }
+
+        final seed = await getAccountSeed(account: account);
+        if (mounted && key.isEmpty && seed != null) {
+          await showSeed(context, seed.mnemonic);
+        }
+        await appStore.loadAccounts();
+        if (mounted) GoRouter.of(context).pop();
+      } on AnyhowException catch (e) {
+        await showException(context, e.message);
       }
-
-      final seed = await getAccountSeed(account: account);
-      if (mounted && key.isEmpty) {
-        await showSeed(context, seed!.mnemonic);
-      }
-      await appStore.loadAccounts();
-      if (mounted) GoRouter.of(context).pop();
     }
   }
 

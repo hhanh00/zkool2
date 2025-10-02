@@ -4,7 +4,10 @@ use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
-use sqlx::{sqlite::{SqliteConnectOptions, SqliteRow}, Column, Connection, Row, SqliteConnection, TypeInfo};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqliteRow},
+    Column, Connection, Row, SqliteConnection, TypeInfo,
+};
 use tracing::info;
 use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zcash_protocol::consensus::NetworkUpgrade;
@@ -19,7 +22,7 @@ use crate::api::sync::PoolBalance;
 use crate::coin::Network;
 use crate::sync::BlockHeader;
 
-pub const DB_VERSION: u16 = 6;
+pub const DB_VERSION: u16 = 7;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
@@ -338,12 +341,17 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
+    // V7
+    if !has_column(&mut *connection, "transparent_accounts", "hw").await? {
+        sqlx::query("ALTER TABLE transparent_accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
+            .execute(&mut *connection)
+            .await?;
+    }
+
     let version = get_prop(connection, "version").await?;
     match version {
         Some(version) if version.parse::<u16>()? > DB_VERSION => {
-            anyhow::bail!(
-                "This app version only supports up to db version {DB_VERSION}"
-            );
+            anyhow::bail!("This app version only supports up to db version {DB_VERSION}");
         }
         _ => {
             put_prop(connection, "version", &DB_VERSION.to_string()).await?;
@@ -497,6 +505,21 @@ pub async fn init_account_transparent(
     Ok(())
 }
 
+pub const LEDGER_CODE: u32 = 1;
+
+pub async fn store_account_hw(
+    connection: &mut SqliteConnection,
+    account: u32,
+    hw_code: u32,
+) -> Result<()> {
+    sqlx::query("UPDATE transparent_accounts SET hw = ?2 WHERE account = ?1")
+        .bind(account)
+        .bind(hw_code)
+        .execute(connection)
+        .await?;
+    Ok(())
+}
+
 pub async fn store_account_transparent_sk(
     connection: &mut SqliteConnection,
     account: u32,
@@ -566,7 +589,10 @@ pub async fn init_account_sapling(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    let activation_height: u32 = network.activation_height(NetworkUpgrade::Sapling).unwrap().into();
+    let activation_height: u32 = network
+        .activation_height(NetworkUpgrade::Sapling)
+        .unwrap()
+        .into();
     store_synced_height(connection, account, 1, birth.max(activation_height)).await?;
 
     Ok(())
@@ -616,7 +642,10 @@ pub async fn init_account_orchard(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    let activation_height = network.activation_height(NetworkUpgrade::Nu5).unwrap().into();
+    let activation_height = network
+        .activation_height(NetworkUpgrade::Nu5)
+        .unwrap()
+        .into();
     store_synced_height(connection, account, 2, birth.max(activation_height)).await?;
 
     Ok(())
@@ -693,7 +722,7 @@ pub async fn select_account_transparent(
         Some((None, None)) => {
             // no xprv, no xpub => get the address imported as bip38
             let taddress =
-                sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?")
+                sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ? ORDER BY dindex DESC LIMIT 1")
                     .bind(account)
                     .map(|row: SqliteRow| row.get::<String, _>(0))
                     .fetch_one(&mut *connection)
@@ -1230,7 +1259,12 @@ pub async fn set_tx_price(
     Ok(())
 }
 
-pub async fn export_data(connection: &mut SqliteConnection, account: u32, tpe: u8, writer: &mut AsyncWriter<Vec<u8>>) -> Result<()> {
+pub async fn export_data(
+    connection: &mut SqliteConnection,
+    account: u32,
+    tpe: u8,
+    writer: &mut AsyncWriter<Vec<u8>>,
+) -> Result<()> {
     let sql = match tpe {
         0 => "SELECT t.*, c.name FROM transactions t JOIN categories c ON c.id_category = t.category WHERE account = ?1 ORDER BY height",
         1 => "SELECT * FROM memos WHERE account = ?1 ORDER BY height",
@@ -1239,12 +1273,15 @@ pub async fn export_data(connection: &mut SqliteConnection, account: u32, tpe: u
     };
 
     let mut rows = sqlx::query(sql)
-    .bind(account)
-    .map(|r: SqliteRow|
-        r.columns().iter().enumerate().map(|(i, _)| get_sqlite_column_value(&r, i))
-        .collect::<Result<Vec<_>>>()
-    )
-    .fetch(connection);
+        .bind(account)
+        .map(|r: SqliteRow| {
+            r.columns()
+                .iter()
+                .enumerate()
+                .map(|(i, _)| get_sqlite_column_value(&r, i))
+                .collect::<Result<Vec<_>>>()
+        })
+        .fetch(connection);
 
     while let Some(Ok(row)) = rows.try_next().await? {
         writer.write_record(row).await?;
@@ -1257,36 +1294,39 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
     let t = c.type_info();
     let v = if let Ok(v) = row.try_get::<i64, _>(index) {
         v.to_string()
-    }
-    else if let Ok(v) = row.try_get::<f64, _>(index) {
+    } else if let Ok(v) = row.try_get::<f64, _>(index) {
         v.to_string()
-    }
-    else if let Ok(v) = row.try_get::<String, _>(index) {
+    } else if let Ok(v) = row.try_get::<String, _>(index) {
         v
-    }
-    else if let Ok(v) = row.try_get::<Vec<u8>, _>(index) {
+    } else if let Ok(v) = row.try_get::<Vec<u8>, _>(index) {
         hex::encode(&v)
-    }
-    else {
+    } else {
         unreachable!("{}", t.name())
     };
 
     Ok(v)
 }
 
-pub async fn lock_recent_notes(connection: &mut SqliteConnection, account: u32, height: u32, threshold: u32) -> Result<()> {
+pub async fn lock_recent_notes(
+    connection: &mut SqliteConnection,
+    account: u32,
+    height: u32,
+    threshold: u32,
+) -> Result<()> {
     let max_height = height.saturating_sub(threshold);
     sqlx::query("UPDATE notes SET locked = TRUE WHERE account = ?1 AND height > ?2")
-    .bind(account)
-    .bind(max_height)
-    .execute(connection).await?;
+        .bind(account)
+        .bind(max_height)
+        .execute(connection)
+        .await?;
     Ok(())
 }
 
 pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -> Result<()> {
     sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ?1")
-    .bind(account)
-    .execute(connection).await?;
+        .bind(account)
+        .execute(connection)
+        .await?;
     Ok(())
 }
 
@@ -1295,10 +1335,12 @@ pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -
 // the source pool selection. Therefore we don't know what the user
 // wants to use yet
 pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> Result<u64> {
-    let (amount, ): (Option<u64>, ) = sqlx::query_as(
-    "SELECT SUM(n.value) FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
-    WHERE s.id_note IS NULL AND n.account = ?1 AND NOT(locked)")
+    let (amount,): (Option<u64>,) = sqlx::query_as(
+        "SELECT SUM(n.value) FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
+    WHERE s.id_note IS NULL AND n.account = ?1 AND NOT(locked)",
+    )
     .bind(account)
-    .fetch_one(connection).await?;
+    .fetch_one(connection)
+    .await?;
     Ok(amount.unwrap_or_default())
 }
