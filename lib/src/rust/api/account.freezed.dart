@@ -1530,6 +1530,7 @@ mixin _$NewAccount {
   int? get pools => throw _privateConstructorUsedError;
   bool get useInternal => throw _privateConstructorUsedError;
   bool get internal => throw _privateConstructorUsedError;
+  bool get ledger => throw _privateConstructorUsedError;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -1556,7 +1557,8 @@ abstract class $NewAccountCopyWith<$Res> {
       String folder,
       int? pools,
       bool useInternal,
-      bool internal});
+      bool internal,
+      bool ledger});
 }
 
 /// @nodoc
@@ -1586,6 +1588,7 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
     Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
+    Object? ledger = null,
   }) {
     return _then(_value.copyWith(
       icon: freezed == icon
@@ -1636,6 +1639,10 @@ class _$NewAccountCopyWithImpl<$Res, $Val extends NewAccount>
           ? _value.internal
           : internal // ignore: cast_nullable_to_non_nullable
               as bool,
+      ledger: null == ledger
+          ? _value.ledger
+          : ledger // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -1660,7 +1667,8 @@ abstract class _$$NewAccountImplCopyWith<$Res>
       String folder,
       int? pools,
       bool useInternal,
-      bool internal});
+      bool internal,
+      bool ledger});
 }
 
 /// @nodoc
@@ -1688,6 +1696,7 @@ class __$$NewAccountImplCopyWithImpl<$Res>
     Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
+    Object? ledger = null,
   }) {
     return _then(_$NewAccountImpl(
       icon: freezed == icon
@@ -1738,6 +1747,10 @@ class __$$NewAccountImplCopyWithImpl<$Res>
           ? _value.internal
           : internal // ignore: cast_nullable_to_non_nullable
               as bool,
+      ledger: null == ledger
+          ? _value.ledger
+          : ledger // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -1757,7 +1770,8 @@ class _$NewAccountImpl implements _NewAccount {
       required this.folder,
       this.pools,
       required this.useInternal,
-      required this.internal});
+      required this.internal,
+      required this.ledger});
 
   @override
   final Uint8List? icon;
@@ -1783,10 +1797,12 @@ class _$NewAccountImpl implements _NewAccount {
   final bool useInternal;
   @override
   final bool internal;
+  @override
+  final bool ledger;
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger)';
   }
 
   @override
@@ -1809,7 +1825,8 @@ class _$NewAccountImpl implements _NewAccount {
             (identical(other.useInternal, useInternal) ||
                 other.useInternal == useInternal) &&
             (identical(other.internal, internal) ||
-                other.internal == internal));
+                other.internal == internal) &&
+            (identical(other.ledger, ledger) || other.ledger == ledger));
   }
 
   @override
@@ -1826,7 +1843,8 @@ class _$NewAccountImpl implements _NewAccount {
       folder,
       pools,
       useInternal,
-      internal);
+      internal,
+      ledger);
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -1850,7 +1868,8 @@ abstract class _NewAccount implements NewAccount {
       required final String folder,
       final int? pools,
       required final bool useInternal,
-      required final bool internal}) = _$NewAccountImpl;
+      required final bool internal,
+      required final bool ledger}) = _$NewAccountImpl;
 
   @override
   Uint8List? get icon;
@@ -1876,6 +1895,8 @@ abstract class _NewAccount implements NewAccount {
   bool get useInternal;
   @override
   bool get internal;
+  @override
+  bool get ledger;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.

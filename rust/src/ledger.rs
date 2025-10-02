@@ -1,19 +1,62 @@
-use std::io::Write;
+use std::io::{Cursor, Read, Write};
 
 use anyhow::Result;
+use byteorder::ReadBytesExt;
 use byteorder::{WriteBytesExt, BE};
 use hidapi::{self, HidApi, HidDevice};
+
+use crate::db::LEDGER_CODE;
 
 pub fn open_ledger(api: &HidApi) -> Result<LedgerDevice> {
     for devinfo in api.device_list() {
         let vendor_id = devinfo.vendor_id();
         if vendor_id == 0x2C97 {
             // Ledger
-            let device = devinfo.open_device(&api)?;
-            return Ok(LedgerDevice { device, timeout: 10_000_000 });
+            let device = devinfo.open_device(api)?;
+            return Ok(LedgerDevice {
+                device,
+                timeout: 10_000_000,
+            });
         }
     }
     anyhow::bail!("No Ledger Device");
+}
+
+pub fn derive_hw_transparent_address(hw_code: u32, aindex: u32, dindex: u32) -> Result<String> {
+    assert_eq!(hw_code, LEDGER_CODE);
+    let api = HidApi::new()?;
+    let device = open_ledger(&api)?;
+
+    let mut params = vec![];
+    // 5 parts, begins with m/44'/133'
+    params.extend_from_slice(&hex::decode("058000002C80000085").unwrap());
+    // account'
+    params.extend_from_slice(&(aindex | 0x80000000).to_be_bytes());
+    // external
+    params.extend_from_slice(&(0u32).to_be_bytes());
+    // dindex
+    params.extend_from_slice(&(dindex).to_be_bytes());
+
+    let get_pk = APDUCommand {
+        cla: 0xE0,
+        ins: 0x40,
+        p1: 0,
+        p2: 0,
+        data: params,
+    };
+    let rep = device.execute(&get_pk)?;
+    if rep.retcode != 0x9000 {
+        anyhow::bail!("Ledger error {}", rep.retcode);
+    }
+    let mut data = Cursor::new(&rep.data);
+    let pk_len = data.read_u8()? as usize;
+    let mut pk = vec![0u8; pk_len];
+    data.read_exact(&mut pk)?;
+    let address_len = data.read_u8()? as usize;
+    let mut address = vec![0u8; address_len];
+    data.read_exact(&mut address)?;
+    let address = String::from_utf8(address)?;
+    Ok(address)
 }
 
 pub struct LedgerDevice {
@@ -25,7 +68,6 @@ impl LedgerDevice {
     pub fn execute(&self, command: &APDUCommand) -> Result<APDUAnswer> {
         let c = command.to_bytes()?;
         self.write(&c)?;
-        println!("reading");
         let rep = self.read()?;
         let answer = APDUAnswer::from_bytes(&rep)?;
         Ok(answer)
@@ -50,12 +92,9 @@ impl LedgerDevice {
 
         for (idx, chunk) in prefixed_data.chunks(64 - 5).enumerate() {
             let seqno = idx as u16;
-            println!("write {seqno}");
             buffer[4..6].copy_from_slice(&seqno.to_be_bytes());
             buffer[6..6 + chunk.len()].copy_from_slice(chunk);
-            println!("{}", hex::encode(&buffer));
             let written = self.device.write(&buffer)?;
-            println!("written {written}");
         }
         Ok(())
     }
@@ -67,9 +106,7 @@ impl LedgerDevice {
         let mut data = vec![];
 
         loop {
-            println!("R");
             let size = self.device.read_timeout(&mut buffer, self.timeout)?;
-            println!("{size}");
             // the first chunk has the total length, therefore it must be larger
             if size < 5 || (seqno == 0 && size < 7) {
                 anyhow::bail!("No header");
@@ -93,7 +130,6 @@ impl LedgerDevice {
             }
         }
         data.truncate(data_len as usize);
-        println!("{} {}", data_len, hex::encode(&data));
         Ok(data)
     }
 }
