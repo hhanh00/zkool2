@@ -4,7 +4,10 @@ use anyhow::Result;
 use byteorder::ReadBytesExt;
 use byteorder::{WriteBytesExt, BE};
 use hidapi::{self, HidApi, HidDevice};
+use zcash_keys::encoding::AddressCodec;
+use zcash_primitives::legacy::TransparentAddress;
 
+use crate::coin::Network;
 use crate::db::LEDGER_CODE;
 
 pub fn open_ledger(api: &HidApi) -> Result<LedgerDevice> {
@@ -19,10 +22,10 @@ pub fn open_ledger(api: &HidApi) -> Result<LedgerDevice> {
             });
         }
     }
-    anyhow::bail!("No Ledger Device");
+    anyhow::bail!("No Ledger Device. Is it unlocked?");
 }
 
-pub fn derive_hw_transparent_address(hw_code: u32, aindex: u32, dindex: u32) -> Result<String> {
+pub fn derive_hw_transparent_address(network: &Network, hw_code: u32, aindex: u32, scope: u32, dindex: u32) -> Result<(Vec<u8>, TransparentAddress)> {
     assert_eq!(hw_code, LEDGER_CODE);
     let api = HidApi::new()?;
     let device = open_ledger(&api)?;
@@ -33,7 +36,7 @@ pub fn derive_hw_transparent_address(hw_code: u32, aindex: u32, dindex: u32) -> 
     // account'
     params.extend_from_slice(&(aindex | 0x80000000).to_be_bytes());
     // external
-    params.extend_from_slice(&(0u32).to_be_bytes());
+    params.extend_from_slice(&(scope).to_be_bytes());
     // dindex
     params.extend_from_slice(&(dindex).to_be_bytes());
 
@@ -56,7 +59,8 @@ pub fn derive_hw_transparent_address(hw_code: u32, aindex: u32, dindex: u32) -> 
     let mut address = vec![0u8; address_len];
     data.read_exact(&mut address)?;
     let address = String::from_utf8(address)?;
-    Ok(address)
+    let address = TransparentAddress::decode(network, &address)?;
+    Ok((pk, address))
 }
 
 pub struct LedgerDevice {
@@ -94,7 +98,7 @@ impl LedgerDevice {
             let seqno = idx as u16;
             buffer[4..6].copy_from_slice(&seqno.to_be_bytes());
             buffer[6..6 + chunk.len()].copy_from_slice(chunk);
-            let written = self.device.write(&buffer)?;
+            self.device.write(&buffer)?;
         }
         Ok(())
     }

@@ -712,14 +712,14 @@ pub async fn select_account_transparent(
     account: u32,
 ) -> Result<TransparentKeys> {
     #[allow(clippy::type_complexity)]
-    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
-        sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>, u32)> =
+        sqlx::query_as("SELECT xsk, xvk, hw FROM transparent_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
 
-    let (xsk, xvk, taddress) = match r {
-        Some((None, None)) => {
+    let (xsk, xvk, taddress, hw) = match r {
+        Some((None, None, hw)) => {
             // no xprv, no xpub => get the address imported as bip38
             let taddress =
                 sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ? ORDER BY dindex DESC LIMIT 1")
@@ -727,16 +727,17 @@ pub async fn select_account_transparent(
                     .map(|row: SqliteRow| row.get::<String, _>(0))
                     .fetch_one(&mut *connection)
                     .await?;
-            (None, None, Some(taddress))
+            (None, None, Some(taddress), hw)
         }
-        Some((xsk, xvk)) => (xsk, xvk, None),
-        None => (None, None, None),
+        Some((xsk, xvk, hw)) => (xsk, xvk, None, hw),
+        None => (None, None, None, 0),
     };
 
     let keys = TransparentKeys {
         xsk: xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap()),
         xvk: xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap()),
         address: taddress,
+        hw,
     };
 
     Ok(keys)
@@ -797,6 +798,7 @@ pub struct TransparentKeys {
     pub xsk: Option<AccountPrivKey>,
     pub xvk: Option<AccountPubKey>,
     pub address: Option<String>,
+    pub hw: u32,
 }
 
 pub struct SaplingKeys {
@@ -1081,6 +1083,14 @@ pub async fn fetch_memos(pool: &mut SqliteConnection, account: u32) -> Result<Ve
     .await?;
 
     Ok(memos)
+}
+
+pub async fn get_account_aindex(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
+    let (dindex,): (u32,) = sqlx::query_as("SELECT aindex FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .fetch_one(&mut *connection)
+        .await?;
+    Ok(dindex)
 }
 
 pub async fn get_account_dindex(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
