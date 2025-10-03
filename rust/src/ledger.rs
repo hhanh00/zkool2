@@ -1,11 +1,12 @@
 use std::io::{Cursor, Read, Write};
 
 use anyhow::Result;
-use byteorder::ReadBytesExt;
+use byteorder::{ReadBytesExt, LE};
 use byteorder::{WriteBytesExt, BE};
 use hidapi::{self, HidApi, HidDevice};
 use zcash_keys::encoding::AddressCodec;
 use zcash_primitives::legacy::TransparentAddress;
+use zcash_primitives::transaction::Transaction;
 
 use crate::coin::Network;
 use crate::db::LEDGER_CODE;
@@ -13,19 +14,26 @@ use crate::db::LEDGER_CODE;
 pub fn open_ledger(api: &HidApi) -> Result<LedgerDevice> {
     for devinfo in api.device_list() {
         let vendor_id = devinfo.vendor_id();
-        if vendor_id == 0x2C97 {
+        if vendor_id == 0x2C97 { // LEDGER
             // Ledger
             let device = devinfo.open_device(api)?;
+            let _ = device.set_blocking_mode(true);
             return Ok(LedgerDevice {
                 device,
-                timeout: 10_000_000,
+                timeout: 100_000_000,
             });
         }
     }
     anyhow::bail!("No Ledger Device. Is it unlocked?");
 }
 
-pub fn derive_hw_transparent_address(network: &Network, hw_code: u32, aindex: u32, scope: u32, dindex: u32) -> Result<(Vec<u8>, TransparentAddress)> {
+pub fn derive_hw_transparent_address(
+    network: &Network,
+    hw_code: u32,
+    aindex: u32,
+    scope: u32,
+    dindex: u32,
+) -> Result<(Vec<u8>, TransparentAddress)> {
     assert_eq!(hw_code, LEDGER_CODE);
     let api = HidApi::new()?;
     let device = open_ledger(&api)?;
@@ -63,12 +71,210 @@ pub fn derive_hw_transparent_address(network: &Network, hw_code: u32, aindex: u3
     Ok((pk, address))
 }
 
+pub fn get_trusted_input(tx: &Transaction, index: usize) -> Result<Vec<Vec<u8>>> {
+    /*
+    - output index - 4 bytes
+    - version
+    - version group
+    - branch id
+    - # tin
+        - prev txid
+        - prev vout
+        - redeem script
+        - sequence
+    - # tout
+        - value
+        - pubscript
+    - # sin/sout/oact
+    - if sapling
+        - value balance
+        - anchor if spend
+        - spends
+            - cv
+            - nf
+            - rk
+        - outputs
+            - cmu
+            - epk
+            - cenc comp
+        - outputs
+            - memo
+        - outputs
+            - cv
+            - cenc authd
+            - cout
+    - if orchard
+        - for each action
+            - nf
+            - cmx
+            - epk
+            - cenc comp
+        - for each action
+            - memos
+        - for each action
+            - cv
+            - rk
+            - authd
+            - cout
+        - flags
+        - balance
+        - anchor
+    */
+
+    let mut buffers = vec![];
+    let mut buffer = vec![];
+    buffer.write_u32::<LE>(index as u32)?;
+    buffer.write_u32::<LE>(tx.version().header())?;
+    buffer.write_u32::<LE>(tx.version().version_group_id())?;
+    buffer.write_u32::<LE>(tx.consensus_branch_id().into())?;
+    if let Some(tbundle) = tx.transparent_bundle() {
+        buffer.write_u8(tbundle.vin.len() as u8)?; // TODO use compact
+        for tin in tbundle.vin.iter() {
+            buffer.write_all(tin.prevout().hash())?;
+            buffer.write_u32::<LE>(tin.prevout().n())?;
+            tin.script_sig().write(&mut buffer)?;
+            buffer.write_u32::<LE>(tin.sequence())?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+        buffer.write_u8(tbundle.vout.len() as u8)?; // TODO use compact
+        for tout in tbundle.vout.iter() {
+            buffer.write_u64::<LE>(tout.value().into_u64())?;
+            tout.script_pubkey().write(&mut buffer)?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+    } else {
+        buffer.write_u16::<LE>(0)?;
+        buffers.push(std::mem::take(&mut buffer));
+        buffer.clear();
+    }
+    let (sin, sout) = tx
+        .sapling_bundle()
+        .map(|b| (b.shielded_spends().len(), b.shielded_outputs().len()))
+        .unwrap_or_default();
+    let oact = tx
+        .orchard_bundle()
+        .map(|b| b.actions().len())
+        .unwrap_or_default();
+    buffer.write_u8(sin as u8)?; // TODO use compact
+    buffer.write_u8(sout as u8)?; // TODO use compact
+    buffer.write_u8(oact as u8)?; // TODO use compact
+    buffers.push(std::mem::take(&mut buffer));
+    buffer.clear();
+
+    if let Some(sbundle) = tx.sapling_bundle() {
+        buffer.write_i64::<LE>(sbundle.value_balance().into())?;
+        if sin > 0 {
+            buffer.write_all(&sbundle.shielded_spends()[0].anchor().to_bytes())?;
+        }
+        buffers.push(std::mem::take(&mut buffer));
+        buffer.clear();
+        for sin in sbundle.shielded_spends().iter() {
+            buffer.write_all(&sin.cv().to_bytes())?;
+            buffer.write_all(&sin.nullifier().to_vec())?;
+            let rk: [u8; 32] = (*sin.rk()).into();
+            buffer.write_all(&rk)?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+        for sout in sbundle.shielded_outputs() {
+            buffer.write_all(&sout.cmu().to_bytes())?;
+            buffer.write_all(&sout.ephemeral_key().0)?;
+            buffer.write_all(&sout.enc_ciphertext()[0..52])?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+        for sout in sbundle.shielded_outputs() {
+            for i in 0..4 {
+                buffer.write_all(&sout.enc_ciphertext()[52 + i * 128..52 + (i + 1) * 128])?;
+                buffers.push(std::mem::take(&mut buffer));
+                buffer.clear();
+            }
+        }
+        for sout in sbundle.shielded_outputs() {
+            buffer.write_all(&sout.cv().to_bytes())?;
+            buffer.write_all(&sout.enc_ciphertext()[52 + 512..])?;
+            buffer.write_all(sout.out_ciphertext())?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+    }
+
+    if let Some(obundle) = tx.orchard_bundle() {
+        for a in obundle.actions().iter() {
+            buffer.write_all(&a.nullifier().to_bytes())?;
+            buffer.write_all(&a.cmx().to_bytes())?;
+            buffer.write_all(&a.encrypted_note().epk_bytes)?;
+            buffer.write_all(&a.encrypted_note().enc_ciphertext[..52])?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+        for a in obundle.actions().iter() {
+            for i in 0..4 {
+                buffer.write_all(
+                    &a.encrypted_note().enc_ciphertext[52 + i * 128..52 + (i + 1) * 128],
+                )?;
+                buffers.push(std::mem::take(&mut buffer));
+                buffer.clear();
+            }
+        }
+        for a in obundle.actions().iter() {
+            buffer.write_all(&a.cv_net().to_bytes())?;
+            let rk: [u8; 32] = (a.rk()).into();
+            buffer.write_all(&rk)?;
+            buffer.write_all(&a.encrypted_note().enc_ciphertext[52 + 512..])?;
+            buffer.write_all(&a.encrypted_note().out_ciphertext)?;
+            buffers.push(std::mem::take(&mut buffer));
+            buffer.clear();
+        }
+
+        buffer.write_u8(obundle.flags().to_byte())?;
+        buffer.write_i64::<LE>(obundle.value_balance().into())?;
+        buffer.write_all(&obundle.anchor().to_bytes())?;
+        buffers.push(std::mem::take(&mut buffer));
+        buffer.clear();
+    }
+    buffer.write_u32::<LE>(tx.lock_time())?;
+    buffer.write_u8(4)?; // len of extra data
+    buffer.write_u32::<LE>(tx.expiry_height().into())?;
+    buffers.push(std::mem::take(&mut buffer));
+    buffer.clear();
+
+    Ok(buffers)
+}
+
+pub fn sign_transaction() -> Result<()> {
+    todo!()
+}
+
 pub struct LedgerDevice {
     device: HidDevice,
     timeout: i32,
 }
 
 impl LedgerDevice {
+    pub fn long_execute(&self, command: &APDUCommand, data: &[Vec<u8>]) -> Result<APDUAnswer> {
+        for (i, p) in data.iter().enumerate() {
+            let c = APDUCommand {
+                cla: command.cla,
+                ins: command.ins,
+                p1: command.p1 | (if i != 0 { 0x80 } else { 0x00 }),
+                p2: command.p2,
+                data: p.clone(),
+            };
+            let res = self.execute(&c)?;
+            if res.retcode != 0x9000 {
+                anyhow::bail!("{}", res.retcode);
+            }
+
+            if i == data.len() - 1 {
+                return Ok(res);
+            }
+        }
+        anyhow::bail!("No payload");
+    }
+
     pub fn execute(&self, command: &APDUCommand) -> Result<APDUAnswer> {
         let c = command.to_bytes()?;
         self.write(&c)?;
@@ -178,18 +384,47 @@ impl APDUAnswer {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Cursor, Read};
+    use std::{io::{Cursor, Read}, sync::{LazyLock, Mutex}};
 
     use byteorder::ReadBytesExt;
     use hidapi::HidApi;
 
-    use crate::ledger::APDUCommand;
+    use crate::{
+        coin::{Coin, Network, ServerType},
+        ledger::{APDUCommand, LedgerDevice},
+    };
+
+    pub static LEDGER: LazyLock<Mutex<LedgerDevice>> = LazyLock::new(|| {
+        let hidapi = HidApi::new().unwrap();
+        let device = super::open_ledger(&hidapi).unwrap();
+        Mutex::new(device)
+    });
+
+    #[tokio::test]
+    async fn test_get_trusted_inputs() -> anyhow::Result<()> {
+        let mut txid =
+            hex::decode("339df469e5b5e0259e214a1c653cdcb28c2c2e9664c5b5df5d518974950c36e1")?;
+        txid.reverse();
+        let coin = Coin::new(ServerType::Lwd, "https://zec.rocks", false, "test.db", None).await?;
+        let mut client = coin.client().await?;
+        let (_, tx) = client.transaction(&Network::Main, &txid).await?;
+        let payload = super::get_trusted_input(&tx, 0)?;
+
+        LEDGER.lock().unwrap().long_execute(
+            &APDUCommand {
+                cla: 0xE0,
+                ins: 0x42,
+                p1: 0,
+                p2: 0,
+                data: vec![],
+            },
+            &payload,
+        )?;
+        Ok(())
+    }
 
     #[test]
-    fn t() -> anyhow::Result<()> {
-        let api = HidApi::new()?;
-        let device = super::open_ledger(&api)?;
-
+    fn get_pk() -> anyhow::Result<()> {
         let get_pk = APDUCommand {
             cla: 0xE0,
             ins: 0x40,
@@ -197,7 +432,7 @@ mod tests {
             p2: 0,
             data: hex::decode("058000002C80000085800000000000000000000000").unwrap(),
         };
-        let rep = device.execute(&get_pk)?;
+        let rep = LEDGER.lock().unwrap().execute(&get_pk)?;
         println!("{}", rep.retcode);
         let mut data = Cursor::new(&rep.data);
         let pk_len = data.read_u8()? as usize;
