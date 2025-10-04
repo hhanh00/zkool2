@@ -1,20 +1,25 @@
 use std::io::{Cursor, Read, Write};
+use std::sync::{LazyLock, Mutex};
 
 use anyhow::Result;
 use byteorder::{ReadBytesExt, LE};
 use byteorder::{WriteBytesExt, BE};
 use hidapi::{self, HidApi, HidDevice};
+use pczt::Pczt;
+use sqlx::SqliteConnection;
 use zcash_keys::encoding::AddressCodec;
 use zcash_primitives::legacy::TransparentAddress;
 use zcash_primitives::transaction::Transaction;
 
 use crate::coin::Network;
 use crate::db::LEDGER_CODE;
+use crate::Client;
 
 pub fn open_ledger(api: &HidApi) -> Result<LedgerDevice> {
     for devinfo in api.device_list() {
         let vendor_id = devinfo.vendor_id();
-        if vendor_id == 0x2C97 { // LEDGER
+        if vendor_id == 0x2C97 {
+            // LEDGER
             // Ledger
             let device = devinfo.open_device(api)?;
             let _ = device.set_blocking_mode(true);
@@ -71,7 +76,7 @@ pub fn derive_hw_transparent_address(
     Ok((pk, address))
 }
 
-pub fn get_trusted_input(tx: &Transaction, index: usize) -> Result<Vec<Vec<u8>>> {
+pub fn get_trusted_input(tx: &Transaction, index: u32) -> Result<Vec<Vec<u8>>> {
     /*
     - output index - 4 bytes
     - version
@@ -123,7 +128,7 @@ pub fn get_trusted_input(tx: &Transaction, index: usize) -> Result<Vec<Vec<u8>>>
 
     let mut buffers = vec![];
     let mut buffer = vec![];
-    buffer.write_u32::<LE>(index as u32)?;
+    buffer.write_u32::<LE>(index)?;
     buffer.write_u32::<LE>(tx.version().header())?;
     buffer.write_u32::<LE>(tx.version().version_group_id())?;
     buffer.write_u32::<LE>(tx.consensus_branch_id().into())?;
@@ -244,7 +249,61 @@ pub fn get_trusted_input(tx: &Transaction, index: usize) -> Result<Vec<Vec<u8>>>
     Ok(buffers)
 }
 
-pub fn sign_transaction() -> Result<()> {
+pub async fn sign_transaction(
+    network: &Network,
+    connection: &SqliteConnection,
+    account: u32,
+    client: &mut Client,
+    pczt: &Pczt,
+) -> Result<()> {
+    if !pczt.sapling().spends().is_empty()
+        || !pczt.sapling().outputs().is_empty()
+        || !pczt.orchard().actions().is_empty()
+    {
+        anyhow::bail!("Ledger only supports transparent transactions")
+    }
+
+    let ledger = LEDGER.lock().unwrap();
+
+    let tins = pczt.transparent().inputs();
+    for tin in tins {
+        let txid = tin.prevout_txid();
+        let (_, prev_tx) = client.transaction(network, txid).await?;
+        let apdu = get_trusted_input(&prev_tx, *tin.prevout_index())?;
+        let r = ledger.long_execute(
+            &APDUCommand {
+                cla: 0xE0,
+                ins: 0x42,
+                p1: 0,
+                p2: 0,
+                data: vec![],
+            },
+            &apdu,
+        )?;
+        if r.retcode != 0x9000 {
+            anyhow::bail!("Ledger error {}", r.retcode)
+        }
+        let tin = r.data;
+        println!("{}", hex::encode(&tin));
+    }
+
+    /*
+    How to sign
+
+    1. get trusted inputs
+       1. send previous transactions to ins 0x42 and get the txid
+    2. use 0x44
+       1. send transaction up to outputs replacing tins by the trusted inputs
+          1. (p1, p2) = (00, 05) then (80, 80)
+       2. add prev pubscripts (should be our wallet addresses) + sequence
+    3. use 0x4a
+       1. set change output, p1 = FF
+       2. set other outputs too
+    4. send e04800000b 0000000000000100000000
+    5. use 0x44 again but with 1 input at a time
+    6. sign with 0x48 + path
+    */
+
     todo!()
 }
 
@@ -382,23 +441,23 @@ impl APDUAnswer {
     }
 }
 
+pub static LEDGER: LazyLock<Mutex<LedgerDevice>> = LazyLock::new(|| {
+    let hidapi = HidApi::new().unwrap();
+    let device = open_ledger(&hidapi).unwrap();
+    Mutex::new(device)
+});
+
 #[cfg(test)]
 mod tests {
-    use std::{io::{Cursor, Read}, sync::{LazyLock, Mutex}};
+    use std::io::{Cursor, Read};
 
     use byteorder::ReadBytesExt;
-    use hidapi::HidApi;
 
     use crate::{
         coin::{Coin, Network, ServerType},
-        ledger::{APDUCommand, LedgerDevice},
+        ledger::APDUCommand,
     };
-
-    pub static LEDGER: LazyLock<Mutex<LedgerDevice>> = LazyLock::new(|| {
-        let hidapi = HidApi::new().unwrap();
-        let device = super::open_ledger(&hidapi).unwrap();
-        Mutex::new(device)
-    });
+    use super::*;
 
     #[tokio::test]
     async fn test_get_trusted_inputs() -> anyhow::Result<()> {
