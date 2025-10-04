@@ -257,6 +257,7 @@ sealed class NewAccount with _$NewAccount {
     int? pools,
     required bool useInternal,
     required bool internal,
+    required bool ledger,
   }) = _NewAccount;
 }
 

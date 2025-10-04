@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -125,11 +126,16 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void onGenerateAddress() async {
-    final confirmed = await confirmDialog(context, title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
-    if (!confirmed) return;
-    await generateNextDindex();
-    addresses = await getAddresses(uaPools: uaPools);
-    setState(() {});
+    try {
+      final confirmed = await confirmDialog(context, title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
+      if (!confirmed) return;
+      await generateNextDindex();
+      addresses = await getAddresses(uaPools: uaPools);
+      setState(() {});
+    }
+    on AnyhowException catch (e) {
+      await showException(context, e.message);
+    }
   }
 
   void onShowQR(String title, String text) {
