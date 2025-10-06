@@ -1,17 +1,19 @@
 use std::str::FromStr as _;
 
+use crate::coin::Network;
 use anyhow::Result;
+use bech32::Hrp;
 use bip32::{ChildNumber, ExtendedKeyAttrs, ExtendedPrivateKey, ExtendedPublicKey, Prefix};
 use bip39::Mnemonic;
 use secp256k1::{PublicKey, SecretKey};
 use sqlx::SqliteConnection;
 use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
 use zcash_keys::{
-    encoding::{decode_extended_full_viewing_key, decode_extended_spending_key},
+    encoding::{decode_extended_full_viewing_key, decode_extended_spending_key, AddressCodec as _},
     keys::UnifiedFullViewingKey,
 };
-use zcash_protocol::consensus::{NetworkConstants as _};
-use crate::coin::Network;
+use zcash_primitives::legacy::TransparentAddress;
+use zcash_protocol::consensus::NetworkConstants as _;
 
 use crate::{
     bip38,
@@ -100,6 +102,12 @@ pub fn is_valid_transparent_key(key: &str) -> bool {
         return true;
     }
 
+    if let Ok((hrp, pk)) = bech32::decode(key) {
+        if hrp == Hrp::parse_unchecked("zpk") && PublicKey::from_slice(&pk).is_ok() {
+            return true;
+        }
+    }
+
     false
 }
 
@@ -119,4 +127,8 @@ pub fn is_valid_sapling_key(network: &Network, key: &str) -> bool {
 
 pub fn is_valid_ufvk(network: &Network, key: &str) -> bool {
     UnifiedFullViewingKey::decode(network, key).is_ok()
+}
+
+pub fn is_valid_transparent_address(network: &Network, address: &str) -> bool {
+    TransparentAddress::decode(network, address).is_ok()
 }
