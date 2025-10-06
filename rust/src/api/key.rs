@@ -1,8 +1,7 @@
 use anyhow::Result;
 use flutter_rust_bridge::frb;
 use rand_core::{OsRng, RngCore as _};
-use zcash_keys::{encoding::AddressCodec as _, keys::UnifiedFullViewingKey};
-use zcash_primitives::legacy::TransparentAddress;
+use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::{
     get_coin,
@@ -49,6 +48,10 @@ pub fn is_valid_key(key: &str) -> bool {
         return true;
     }
 
+    if crate::key::is_valid_transparent_address(network, key) {
+        return true;
+    }
+
     false
 }
 
@@ -61,7 +64,7 @@ pub fn is_valid_address(address: &str) -> bool {
 #[frb(sync)]
 pub fn is_valid_transparent_address(address: &str) -> bool {
     let c = get_coin!();
-    TransparentAddress::decode(&c.network, address).is_ok()
+    crate::key::is_valid_transparent_address(&c.network, address)
 }
 
 #[frb(sync)]
