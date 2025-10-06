@@ -39,7 +39,10 @@ use crate::{
     },
     get_coin,
     io::{decrypt, encrypt},
-    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    key::{
+        is_valid_phrase, is_valid_sapling_key,
+        is_valid_transparent_key, is_valid_ufvk,
+    },
     pay::pool::ALL_POOLS,
     setup,
 };
@@ -411,6 +414,20 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
                 0,
                 0,
                 Some(sk.to_bytes().to_vec()),
+                &tpk,
+                &addr.encode(&network),
+            )
+            .await?;
+        }
+        else if let Ok((_, tpk)) = bech32::decode(&key) {
+            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
+            let addr = TransparentAddress::PublicKeyHash(pkh);
+            store_account_transparent_addr(
+                &mut connection,
+                account,
+                0,
+                0,
+                None,
                 &tpk,
                 &addr.encode(&network),
             )

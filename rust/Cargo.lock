@@ -4590,6 +4590,7 @@ dependencies = [
  "age",
  "anyhow",
  "arti-client",
+ "bech32 0.11.0",
  "bincode",
  "bip32",
  "bip39",
