@@ -7,12 +7,8 @@ use hidapi::{self, HidApi, HidDevice};
 use ledger_transport::Exchange;
 #[cfg(target_os = "macos")]
 use ledger_transport_zemu::TransportZemuHttp;
-use sqlx::SqliteConnection;
 use tokio::sync::Mutex;
 use tonic::async_trait;
-
-use crate::api::pay::PcztPackage;
-use crate::coin::Network;
 
 pub mod builder;
 pub mod error;
@@ -332,15 +328,6 @@ impl Device for LedgerDeviceZEMU {
     ) -> LedgerResult<APDUAnswer> {
         unimplemented!()
     }
-}
-
-pub async fn sign_transaction(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-    pczt: &PcztPackage,
-) -> anyhow::Result<PcztPackage> {
-    todo!()
 }
 
 pub static LEDGER: LazyLock<Mutex<Option<LedgerDevice>>> = LazyLock::new(|| Mutex::new(None));
