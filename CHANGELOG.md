@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.1...zkool-v6.5.0) (2025-10-10)
+
+
+### Features
+
+* accept transparent public keys ([#592](https://github.com/hhanh00/zkool2/issues/592)) ([86e6477](https://github.com/hhanh00/zkool2/commit/86e6477bc78f6c34f54cc5d0a3a02203d29c6864))
+* import ledger accounts ([#594](https://github.com/hhanh00/zkool2/issues/594)) ([dce26f8](https://github.com/hhanh00/zkool2/commit/dce26f84c31052778011eafbc4420273ce446828))
+* **ledger:** Ledger integration ([#591](https://github.com/hhanh00/zkool2/issues/591)) ([439efcb](https://github.com/hhanh00/zkool2/commit/439efcbc6a5f51db5fc90a48e0b92beba1f515e8))
+* send tx with Ledger ([#595](https://github.com/hhanh00/zkool2/issues/595)) ([4c8daf3](https://github.com/hhanh00/zkool2/commit/4c8daf3e86905e37a4664d3f4ddb613b4f7a639d))
+
+
+### Bug Fixes
+
+* conversion from USD to ZEC does not take locale into consideration ([#597](https://github.com/hhanh00/zkool2/issues/597)) ([d45c6ea](https://github.com/hhanh00/zkool2/commit/d45c6ea17831ef0f7a680bb49964014866c18314))
+
 ## [6.4.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.4.1) (2025-10-01)
 
 
