@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -58,7 +59,7 @@ class TxPageState extends State<TxPage> {
 
     Future(tutorial);
 
-    final canSend = txPlan.canSign && canBroadcast;
+    final canSend = (txPlan.canSign || appStore.selectedAccount!.hw != 0) && canBroadcast;
     final hasFrost = appStore.frostParams != null;
 
     return Scaffold(
@@ -126,10 +127,25 @@ class TxPageState extends State<TxPage> {
       );
       if (!confirmed) return;
       var pczt = widget.pczt;
-      if (!txPlan.canBroadcast)
-        pczt = await signTransaction(
-          pczt: widget.pczt,
-        );
+      if (!txPlan.canBroadcast) {
+        if (appStore.selectedAccount!.hw != 0) {
+          final c = Completer();
+          signLedgerTransaction(pczt: widget.pczt).listen((e) {
+            switch (e) {
+              case SigningEvent_Progress p:
+                showSnackbar(p.field0);
+              case SigningEvent_Result r:
+                pczt = r.field0;
+                c.complete();
+            }
+          });
+          await c.future;
+        } else {
+          pczt = await signTransaction(
+            pczt: widget.pczt,
+          );
+        }
+      }
 
       final txBytes = await extractTransaction(package: pczt);
       final result = await broadcastTransaction(
@@ -139,8 +155,12 @@ class TxPageState extends State<TxPage> {
       try {
         final txid = jsonDecode(result) as String;
         final txidHex = hex.decode(txid);
-        await storePendingTx(height: txPlan.height, txid: txidHex,
-          price: pczt.price, category: pczt.category,);
+        await storePendingTx(
+          height: txPlan.height,
+          txid: txidHex,
+          price: pczt.price,
+          category: pczt.category,
+        );
         await showMessage(context, txid);
         showSnackbar("Transaction broadcasted successfully");
       } catch (_) {

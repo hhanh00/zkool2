@@ -1,7 +1,7 @@
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
 
-use crate::pay::{plan::plan_transaction, Recipient, TxPlan};
+use crate::{frb_generated::StreamSink, pay::{plan::plan_transaction, Recipient, TxPlan}};
 use flutter_rust_bridge::frb;
 
 pub enum DustChangePolicy {
@@ -54,6 +54,18 @@ pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
     let tx = crate::pay::plan::sign_transaction(&mut *connection, account, pczt).await?;
 
     Ok(tx)
+}
+
+#[frb]
+pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage) -> Result<()> {
+    let c = crate::get_coin!();
+    let connection = c.get_connection().await?;
+    crate::ledger::builder::sign_ledger_transaction(c.network, sink, connection, c.account, pczt).await
+}
+
+pub enum SigningEvent {
+    Progress(String),
+    Result(PcztPackage),
 }
 
 #[frb]

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use sapling_crypto::keys::FullViewingKey;
-use tracing::info;
 
 use crate::{coin::Network, db::LEDGER_CODE, ledger::connect_ledger};
 
