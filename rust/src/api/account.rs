@@ -7,7 +7,7 @@ use csv_async::AsyncWriter;
 use flutter_rust_bridge::frb;
 use orchard::keys::{FullViewingKey, Scope};
 use ripemd::{Digest as _, Ripemd160};
-use sapling_crypto::PaymentAddress;
+use sapling_crypto::{zip32::DiversifiableFullViewingKey, PaymentAddress};
 use secp256k1::{PublicKey, SecretKey};
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Acquire, Row};
@@ -28,7 +28,7 @@ use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::{
     account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote},
-    api::key::generate_seed,
+    api::{key::generate_seed, ledger::get_hw_fvk},
     bip38,
     db::{
         init_account_orchard, init_account_sapling, init_account_transparent, store_account_hw,
@@ -43,9 +43,8 @@ use crate::{
         is_valid_phrase, is_valid_sapling_key,
         is_valid_transparent_key, is_valid_ufvk,
     },
-    ledger::derive_hw_transparent_address,
     pay::pool::ALL_POOLS,
-    setup,
+    setup, tiu,
 };
 
 #[frb]
@@ -308,10 +307,13 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
     if na.ledger {
-        init_account_transparent(&mut db_tx, account, birth).await?;
+        init_account_sapling(&network, &mut db_tx, account, birth).await?;
         store_account_hw(&mut db_tx, account, LEDGER_CODE).await?;
-        let (pk, address) = derive_hw_transparent_address(&network, LEDGER_CODE, na.aindex, 0, 0).await?;
-        store_account_transparent_addr(&mut db_tx, account, 0, 0, None, &pk, &address.encode(&network)).await?;
+        let fvk = get_hw_fvk(&network, LEDGER_CODE, na.aindex).await?;
+        let mut dfvk = fvk.to_bytes().to_vec();
+        dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
+        let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
+        store_account_sapling_vk(&mut db_tx, account, &xvk).await?;
     } else if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let passphrase = na.passphrase.clone().unwrap_or_default();
@@ -496,8 +498,8 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
         match uvk.sapling() {
             Some(sxvk) if pools & 2 != 0 => {
-                init_account_sapling(&network, &mut *db_tx, account, birth).await?;
-                store_account_sapling_vk(&mut *db_tx, account, &sxvk).await?;
+                init_account_sapling(&network, &mut db_tx, account, birth).await?;
+                store_account_sapling_vk(&mut db_tx, account, sxvk).await?;
             }
             _ => {}
         }

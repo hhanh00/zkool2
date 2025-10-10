@@ -30,3 +30,23 @@ pub type Client = Box<dyn LwdServer<
         CompactBlockStream = ReceiverStream<CompactBlock>,
         TransactionStream = ReceiverStream<(u32, Transaction, usize)>,
     >>;
+
+#[macro_export]
+macro_rules! tiu {
+    ($x: expr) => {
+        $x.try_into().unwrap()
+    };
+}
+
+pub trait IntoAnyhow<T> {
+    fn anyhow(self) -> Result<T, anyhow::Error>;
+}
+
+impl<T, E> IntoAnyhow<T> for Result<T, E>
+where
+    E: std::error::Error + Send + Sync + 'static,
+{
+    fn anyhow(self) -> Result<T, anyhow::Error> {
+        self.map_err(anyhow::Error::new)
+    }
+}

@@ -1,4 +1,4 @@
-use crate::{api::account::{Category, Folder}, coin::Network, db::{get_account_aindex, select_account_transparent}, ledger::derive_hw_transparent_address};
+use crate::{api::account::{Category, Folder}, coin::Network, db::select_account_transparent};
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
@@ -345,11 +345,7 @@ pub async fn generate_next_dindex(
             let (pk, address) = derive_transparent_address(&xvk, 0, dindex)?;
             (sk, pk, Some(address))
         }
-        None if tkeys.hw != 0 => {
-            let aindex = get_account_aindex(&mut db_tx, account).await?;
-            let (pk, address) = derive_hw_transparent_address(network, tkeys.hw, aindex, 0, dindex).await?;
-            (None, pk, Some(address))
-        }
+        None if tkeys.hw != 0 => anyhow::bail!("Diversified addresses are not suported by Ledger accounts yet"),
         _ => (None, vec![], None)
     };
 
