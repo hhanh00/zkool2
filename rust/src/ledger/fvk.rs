@@ -1,5 +1,4 @@
 use sapling_crypto::keys::FullViewingKey;
-use tracing::info;
 
 use crate::ledger::{APDUCommand, Device, LedgerError, LedgerResult};
 

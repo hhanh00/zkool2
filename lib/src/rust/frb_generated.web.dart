@@ -93,6 +93,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<MempoolMsg> dco_decode_StreamSink_mempool_msg_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<SigningEvent> dco_decode_StreamSink_signing_event_Sse(
+      dynamic raw);
+
+  @protected
   RustStreamSink<SigningStatus> dco_decode_StreamSink_signing_status_Sse(
       dynamic raw);
 
@@ -322,6 +326,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ServerType dco_decode_server_type(dynamic raw);
 
   @protected
+  SigningEvent dco_decode_signing_event(dynamic raw);
+
+  @protected
   SigningStatus dco_decode_signing_status(dynamic raw);
 
   @protected
@@ -433,6 +440,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<MempoolMsg> sse_decode_StreamSink_mempool_msg_Sse(
+      SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<SigningEvent> sse_decode_StreamSink_signing_event_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -672,6 +683,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ServerType sse_decode_server_type(SseDeserializer deserializer);
 
   @protected
+  SigningEvent sse_decode_signing_event(SseDeserializer deserializer);
+
+  @protected
   SigningStatus sse_decode_signing_status(SseDeserializer deserializer);
 
   @protected
@@ -785,6 +799,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_mempool_msg_Sse(
       RustStreamSink<MempoolMsg> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_signing_event_Sse(
+      RustStreamSink<SigningEvent> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_signing_status_Sse(
@@ -1038,6 +1056,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_server_type(ServerType self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_signing_event(SigningEvent self, SseSerializer serializer);
 
   @protected
   void sse_encode_signing_status(SigningStatus self, SseSerializer serializer);

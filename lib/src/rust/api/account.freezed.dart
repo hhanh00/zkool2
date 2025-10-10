@@ -29,6 +29,7 @@ mixin _$Account {
   bool get saved => throw _privateConstructorUsedError;
   bool get enabled => throw _privateConstructorUsedError;
   bool get internal => throw _privateConstructorUsedError;
+  int get hw => throw _privateConstructorUsedError;
   int get height => throw _privateConstructorUsedError;
   int get time => throw _privateConstructorUsedError;
   BigInt get balance => throw _privateConstructorUsedError;
@@ -58,6 +59,7 @@ abstract class $AccountCopyWith<$Res> {
       bool saved,
       bool enabled,
       bool internal,
+      int hw,
       int height,
       int time,
       BigInt balance});
@@ -93,6 +95,7 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? saved = null,
     Object? enabled = null,
     Object? internal = null,
+    Object? hw = null,
     Object? height = null,
     Object? time = null,
     Object? balance = null,
@@ -150,6 +153,10 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.internal
           : internal // ignore: cast_nullable_to_non_nullable
               as bool,
+      hw: null == hw
+          ? _value.hw
+          : hw // ignore: cast_nullable_to_non_nullable
+              as int,
       height: null == height
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
@@ -197,6 +204,7 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       bool saved,
       bool enabled,
       bool internal,
+      int hw,
       int height,
       int time,
       BigInt balance});
@@ -231,6 +239,7 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? saved = null,
     Object? enabled = null,
     Object? internal = null,
+    Object? hw = null,
     Object? height = null,
     Object? time = null,
     Object? balance = null,
@@ -288,6 +297,10 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.internal
           : internal // ignore: cast_nullable_to_non_nullable
               as bool,
+      hw: null == hw
+          ? _value.hw
+          : hw // ignore: cast_nullable_to_non_nullable
+              as int,
       height: null == height
           ? _value.height
           : height // ignore: cast_nullable_to_non_nullable
@@ -321,6 +334,7 @@ class _$AccountImpl implements _Account {
       required this.saved,
       required this.enabled,
       required this.internal,
+      required this.hw,
       required this.height,
       required this.time,
       required this.balance});
@@ -352,6 +366,8 @@ class _$AccountImpl implements _Account {
   @override
   final bool internal;
   @override
+  final int hw;
+  @override
   final int height;
   @override
   final int time;
@@ -360,7 +376,7 @@ class _$AccountImpl implements _Account {
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
   }
 
   @override
@@ -383,6 +399,7 @@ class _$AccountImpl implements _Account {
             (identical(other.enabled, enabled) || other.enabled == enabled) &&
             (identical(other.internal, internal) ||
                 other.internal == internal) &&
+            (identical(other.hw, hw) || other.hw == hw) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
             (identical(other.balance, balance) || other.balance == balance));
@@ -404,6 +421,7 @@ class _$AccountImpl implements _Account {
       saved,
       enabled,
       internal,
+      hw,
       height,
       time,
       balance);
@@ -432,6 +450,7 @@ abstract class _Account implements Account {
       required final bool saved,
       required final bool enabled,
       required final bool internal,
+      required final int hw,
       required final int height,
       required final int time,
       required final BigInt balance}) = _$AccountImpl;
@@ -462,6 +481,8 @@ abstract class _Account implements Account {
   bool get enabled;
   @override
   bool get internal;
+  @override
+  int get hw;
   @override
   int get height;
   @override
