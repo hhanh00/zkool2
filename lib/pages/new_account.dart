@@ -320,7 +320,7 @@ class NewAccountPageState extends State<NewAccountPage> {
 
         await setAccount(account: account);
 
-        if ((key.isNotEmpty && await hasTransparentPubKey()) || ledger) {
+        if (key.isNotEmpty && await hasTransparentPubKey()) {
           await showTransparentScan(context);
         }
 

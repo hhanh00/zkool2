@@ -1,7 +1,6 @@
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
-    ops::Deref,
 };
 
 use anyhow::Result;
@@ -41,19 +40,13 @@ use crate::{
             zoutput_hasher,
         },
         APDUCommand, Device,
-    },
+    }, tiu,
 };
 
-macro_rules! tiu {
-    ($x: expr) => {
-        $x.try_into().unwrap()
-    };
-}
-
-pub async fn z2z<D: Device, G: Deref<Target = D>, R: RngCore + CryptoRng>(
+pub async fn z2z<D: Device, R: RngCore + CryptoRng>(
     stage: u8,
     account: u32,
-    ledger: &G,
+    ledger: &D,
     prover: &LocalTxProver,
     mut rng: R,
 ) -> Result<()> {
@@ -562,21 +555,21 @@ mod tests {
     #[tokio::test]
     async fn z2z_p1() -> anyhow::Result<()> {
         let sapling_prover = LocalTxProver::with_default_location().unwrap();
-        let ledger = &LEDGER.lock().await;
-        super::z2z(1, 1, ledger, &sapling_prover, OsRng).await
+        let ledger = LEDGER.lock().await.clone().unwrap();
+        super::z2z(1, 1, &ledger, &sapling_prover, OsRng).await
     }
 
     #[tokio::test]
     async fn z2z_p2() -> anyhow::Result<()> {
         let sapling_prover = LocalTxProver::with_default_location().unwrap();
-        let ledger = &LEDGER.lock().await;
-        super::z2z(2, 1, ledger, &sapling_prover, OsRng).await
+        let ledger = LEDGER.lock().await.clone().unwrap();
+        super::z2z(2, 1, &ledger, &sapling_prover, OsRng).await
     }
 
     #[tokio::test]
     async fn z2z_p3() -> anyhow::Result<()> {
         let sapling_prover = LocalTxProver::with_default_location().unwrap();
-        let ledger = &LEDGER.lock().await;
+        let ledger = &LEDGER.lock().await.clone().unwrap();
         super::z2z(3, 1, ledger, &sapling_prover, OsRng).await
     }
 }
