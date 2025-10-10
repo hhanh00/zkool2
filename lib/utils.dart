@@ -30,6 +30,11 @@ final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP 
 
 final int zatsPerZec = 100000000;
 
+String doubleToString(double v, { required int decimals }) {
+  final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: decimals);
+  return formatter.format(v);
+}
+
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
   final s = zatFormatter.format(z.toDecimal());
