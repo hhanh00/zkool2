@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1861020497;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1959192837;
 
 // Section: executor
 
@@ -3596,6 +3596,47 @@ fn wire__crate__api__network__set_use_tor_impl(
         },
     )
 }
+fn wire__crate__api__pay__sign_ledger_transaction_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "sign_ledger_transaction",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_sink = <StreamSink<
+                crate::api::pay::SigningEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            let api_pczt = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::pay::sign_ledger_transaction(api_sink, api_pczt).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__pay__sign_transaction_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3997,6 +4038,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for StreamSink<crate::api::pay::SigningEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<crate::api::frost::SigningStatus, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -4040,6 +4091,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_saved = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
         let mut var_internal = <bool>::sse_decode(deserializer);
+        let mut var_hw = <u8>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_balance = <u64>::sse_decode(deserializer);
@@ -4057,6 +4109,7 @@ impl SseDecode for crate::api::account::Account {
             saved: var_saved,
             enabled: var_enabled,
             internal: var_internal,
+            hw: var_hw,
             height: var_height,
             time: var_time,
             balance: var_balance,
@@ -4830,6 +4883,26 @@ impl SseDecode for crate::coin::ServerType {
     }
 }
 
+impl SseDecode for crate::api::pay::SigningEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::api::pay::SigningEvent::Progress(var_field0);
+            }
+            1 => {
+                let mut var_field0 = <crate::api::pay::PcztPackage>::sse_decode(deserializer);
+                return crate::api::pay::SigningEvent::Result(var_field0);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 impl SseDecode for crate::api::frost::SigningStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5284,12 +5357,15 @@ fn pde_ffi_dispatcher_primary_impl(
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
         96 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        99 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
-        100 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        104 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        98 => {
+            wire__crate__api__pay__sign_ledger_transaction_impl(port, ptr, rust_vec_len, data_len)
+        }
+        99 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        106 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5316,8 +5392,8 @@ fn pde_ffi_dispatcher_sync_impl(
         93 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
         94 => wire__crate__api__network__set_lwd_impl(ptr, rust_vec_len, data_len),
         97 => wire__crate__api__network__set_use_tor_impl(ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5374,6 +5450,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.saved.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
             self.internal.into_into_dart().into_dart(),
+            self.hw.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
             self.time.into_into_dart().into_dart(),
             self.balance.into_into_dart().into_dart(),
@@ -5810,6 +5887,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::coin::ServerType> for crate::coin:
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::pay::SigningEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::api::pay::SigningEvent::Progress(field0) => {
+                [0.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            crate::api::pay::SigningEvent::Result(field0) => {
+                [1.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::pay::SigningEvent {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pay::SigningEvent>
+    for crate::api::pay::SigningEvent
+{
+    fn into_into_dart(self) -> crate::api::pay::SigningEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::frost::SigningStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -6159,6 +6260,15 @@ impl SseEncode
 }
 
 impl SseEncode
+    for StreamSink<crate::api::pay::SigningEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
     for StreamSink<crate::api::frost::SigningStatus, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -6199,6 +6309,7 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.saved, serializer);
         <bool>::sse_encode(self.enabled, serializer);
         <bool>::sse_encode(self.internal, serializer);
+        <u8>::sse_encode(self.hw, serializer);
         <u32>::sse_encode(self.height, serializer);
         <u32>::sse_encode(self.time, serializer);
         <u64>::sse_encode(self.balance, serializer);
@@ -6815,6 +6926,25 @@ impl SseEncode for crate::coin::ServerType {
             },
             serializer,
         );
+    }
+}
+
+impl SseEncode for crate::api::pay::SigningEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::api::pay::SigningEvent::Progress(field0) => {
+                <i32>::sse_encode(0, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            crate::api::pay::SigningEvent::Result(field0) => {
+                <i32>::sse_encode(1, serializer);
+                <crate::api::pay::PcztPackage>::sse_encode(field0, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 

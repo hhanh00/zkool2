@@ -563,6 +563,7 @@ pub struct Account {
     pub saved: bool,
     pub enabled: bool,
     pub internal: bool,
+    pub hw: u8,
     pub height: u32,
     pub time: u32,
     pub balance: u64,

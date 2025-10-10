@@ -24,6 +24,9 @@ Future<PcztPackage> prepare(
 Future<PcztPackage> signTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt);
 
+Stream<SigningEvent> signLedgerTransaction({required PcztPackage pczt}) =>
+    RustLib.instance.api.crateApiPaySignLedgerTransaction(pczt: pczt);
+
 Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);
 
@@ -108,4 +111,16 @@ sealed class PcztPackage with _$PcztPackage {
     double? price,
     int? category,
   }) = _PcztPackage;
+}
+
+@freezed
+sealed class SigningEvent with _$SigningEvent {
+  const SigningEvent._();
+
+  const factory SigningEvent.progress(
+    String field0,
+  ) = SigningEvent_Progress;
+  const factory SigningEvent.result(
+    PcztPackage field0,
+  ) = SigningEvent_Result;
 }
