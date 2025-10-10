@@ -8,7 +8,7 @@ pub async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let account = args.get(1).expect("<account>");
     let stage = args.get(2).expect("<stage>");
-    let ledger = LEDGER.lock().await;
+    let ledger = LEDGER.lock().await.clone().unwrap();
     let prover = LocalTxProver::with_default_location().unwrap();
     let rng = OsRng;
     z2z(stage.parse::<u8>()?, account.parse::<u32>()?, &ledger, &prover, rng).await?;
