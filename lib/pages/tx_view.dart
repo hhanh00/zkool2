@@ -106,7 +106,7 @@ class TxViewPageState extends State<TxViewPage> {
         title: Text("Price"),
         subtitle: txd.price != null
             ? TextFormField(
-                initialValue: txd.price!.toStringAsFixed(3),
+                initialValue: doubleToString(txd.price!, decimals: 3),
                 onChanged: (v) => onPriceChanged(txd.id, v),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               )
