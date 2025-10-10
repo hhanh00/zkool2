@@ -70,7 +70,7 @@ class InputAmountState extends State<InputAmount> {
                       decoration: InputDecoration(label: Text("Fx")),
                       validator: validAmount,
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      initialValue: price?.toStringAsFixed(3),
+                      initialValue: displayPrice(price),
                       onChanged: onPriceChanged,
                     ),
                   ),
@@ -94,11 +94,12 @@ class InputAmountState extends State<InputAmount> {
     final p = await getCoingeckoPrice();
     setState(() {
       price = p;
-      formKey.currentState!.fields["fx"]!.didChange(price?.toStringAsFixed(3));
+      formKey.currentState!.fields["fx"]!.didChange(displayPrice(price));
     });
   }
 
   String? fx() => formKey.currentState!.fields["fx"]!.value as String?;
+  String? displayPrice(double? p) => p?.let((p) => doubleToString(p, decimals: 3));
 
   bool disableChangeHandlers = false;
 
@@ -116,7 +117,7 @@ class InputAmountState extends State<InputAmount> {
       if (v != null) {
         final usd = stringToZat(v).toDecimal() * p.toDecimal() /
           Decimal.fromInt(zatsPerZec);
-        form.fields["fiat"]!.didChange(usd.toDecimal().toStringAsFixed(2));
+        form.fields["fiat"]!.didChange(displayPrice(usd.toDecimal().toDouble()));
       }
       disableChangeHandlers = false;
     });
@@ -134,7 +135,7 @@ class InputAmountState extends State<InputAmount> {
         formFieldKey.currentState!.reset();
       } else if (price != null) {
         final usd = stringToZat(v).toDouble() * price! / 1e8;
-        form.fields["fiat"]!.didChange(usd.toStringAsFixed(2));
+        form.fields["fiat"]!.didChange(displayPrice(usd));
       }
       disableChangeHandlers = false;
     });
