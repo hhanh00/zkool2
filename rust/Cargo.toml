@@ -3,8 +3,11 @@ edition = "2021"
 name = "rlz"
 version = "0.1.0"
 
+[[bin]]
+name = "ledger"
+
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.11.1"
@@ -49,6 +52,8 @@ zip321 = "0.5"
 
 reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}
 frost-rerandomized = "2.1.0"
+redjubjub = "0.8"
+incrementalmerkletree = "0.8"
 
 bincode = {version = "2.0", features = ["serde"]}
 byteorder = "1.5"
@@ -79,9 +84,12 @@ age = "0.11.1"
 zstd = "0.13.3"
 
 libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"] }
+ledger-transport = "0.10.0"
+cfg-if = "1.0.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 hidapi = "2.6.3"
+ledger-transport-zemu = "0.10.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 hidapi = {version = "2.6.3", default-features = false, features = ["linux-native"]}
@@ -102,14 +110,26 @@ tonic-build = "0.13"
 [patch.crates-io]
 orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
 
-zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
 zcash_note_encryption = { git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29" }
-zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-zcash_transparent = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-zip321 = { git = "https://github.com/zcash/librustzcash.git", rev = "5fe0e5234d6e8d0cee38ccc0dff6f32135aabedd" }
-sapling-crypto = { git = "https://github.com/zcash/sapling-crypto.git", rev = "6a8282be0959b410a0b622cd5eb84f8c3c134078" }
+
+sapling-crypto = { git = "https://github.com/zcash/sapling-crypto.git", rev = "0475817b60fced17ec59b0c9412d2b2d29ef529f" }
+zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_proofs = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_transparent = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zip321 = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+
+# sapling-crypto = { path = "../../sapling-crypto" }
+# zcash_address = { path = "../../librustzcash/components/zcash_address" }
+# zcash_encoding = { path = "../../librustzcash/components/zcash_encoding" }
+# zcash_keys = { path = "../../librustzcash/zcash_keys" }
+# zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
+# zcash_proofs = { path = "../../librustzcash/zcash_proofs" }
+# zcash_protocol = { path = "../../librustzcash/components/zcash_protocol" }
+# zcash_transparent = { path = "../../librustzcash/zcash_transparent" }
+# pczt = { path = "../../librustzcash/pczt" }
+# zip321 = { path = "../../librustzcash/components/zip321" }
