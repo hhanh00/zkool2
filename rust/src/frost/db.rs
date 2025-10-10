@@ -74,6 +74,7 @@ pub async fn get_mailbox_account(
                     pools: None,
                     use_internal: false,
                     internal: true,
+                    ledger: false,
                 };
                 let mailbox_account = new_account(&na).await?;
                 let fvk = get_orchard_vk(&mut *connection, mailbox_account)
@@ -168,6 +169,7 @@ pub async fn get_coordinator_broadcast_account(
                     pools: None,
                     use_internal: false,
                     internal: true,
+                    ledger: false,
                 };
                 new_account(&na).await?;
                 // Loop again to retrieve the account

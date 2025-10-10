@@ -1,4 +1,4 @@
-use crate::{api::account::{Category, Folder}, coin::Network};
+use crate::{api::account::{Category, Folder}, coin::Network, db::{get_account_aindex, select_account_transparent}, ledger::derive_hw_transparent_address};
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
@@ -13,7 +13,7 @@ use orchard::{
 use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use sha2::Sha256;
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Row, Connection, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
@@ -315,11 +315,12 @@ pub async fn generate_next_dindex(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<u32> {
+    let mut db_tx = connection.begin().await?;
     let (mut dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
         .bind(account)
-        .fetch_one(&mut *connection)
+        .fetch_one(&mut *db_tx)
         .await?;
-    let svk = get_sapling_vk(&mut *connection, account).await?;
+    let svk = get_sapling_vk(&mut db_tx, account).await?;
     if let Some(svk) = svk.as_ref() {
         dindex += 1;
         let (di, _) = svk.find_address(dindex.into()).unwrap();
@@ -332,26 +333,39 @@ pub async fn generate_next_dindex(
     sqlx::query("UPDATE accounts SET dindex = ? WHERE id_account = ?")
         .bind(dindex)
         .bind(account)
-        .execute(&mut *connection)
+        .execute(&mut *db_tx)
         .await?;
 
-    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-    if let Some(xvk) = xvk.as_ref() {
-        let sk = xsk
-            .as_ref()
-            .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
-        let (tpk, taddress) = derive_transparent_address(xvk, 0, dindex)?;
+    let tkeys = select_account_transparent(&mut db_tx, account).await?;
+    let (sk, pk, address) = match tkeys.xvk {
+        Some(xvk) => {
+            let sk = tkeys.xsk
+                .as_ref()
+                .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
+            let (pk, address) = derive_transparent_address(&xvk, 0, dindex)?;
+            (sk, pk, Some(address))
+        }
+        None if tkeys.hw != 0 => {
+            let aindex = get_account_aindex(&mut db_tx, account).await?;
+            let (pk, address) = derive_hw_transparent_address(network, tkeys.hw, aindex, 0, dindex).await?;
+            (None, pk, Some(address))
+        }
+        _ => (None, vec![], None)
+    };
+
+    if let Some(address) = address {
         store_account_transparent_addr(
-            &mut *connection,
+            &mut db_tx,
             account,
             0,
             dindex,
             sk,
-            &tpk,
-            &taddress.encode(network),
+            &pk,
+            &address.encode(network),
         )
         .await?;
     }
+    db_tx.commit().await?;
 
     Ok(dindex)
 }
