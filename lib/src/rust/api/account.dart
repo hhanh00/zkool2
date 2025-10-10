@@ -153,6 +153,7 @@ sealed class Account with _$Account {
     required bool saved,
     required bool enabled,
     required bool internal,
+    required int hw,
     required int height,
     required int time,
     required BigInt balance,

@@ -3,9 +3,6 @@ edition = "2021"
 name = "rlz"
 version = "0.1.0"
 
-[[bin]]
-name = "ledger"
-
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
 

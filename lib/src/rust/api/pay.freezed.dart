@@ -298,3 +298,368 @@ abstract class _PcztPackage implements PcztPackage {
   _$$PcztPackageImplCopyWith<_$PcztPackageImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$SigningEvent {
+  Object get field0 => throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(String field0) progress,
+    required TResult Function(PcztPackage field0) result,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(String field0)? progress,
+    TResult? Function(PcztPackage field0)? result,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(String field0)? progress,
+    TResult Function(PcztPackage field0)? result,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningEvent_Progress value) progress,
+    required TResult Function(SigningEvent_Result value) result,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningEvent_Progress value)? progress,
+    TResult? Function(SigningEvent_Result value)? result,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningEvent_Progress value)? progress,
+    TResult Function(SigningEvent_Result value)? result,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $SigningEventCopyWith<$Res> {
+  factory $SigningEventCopyWith(
+          SigningEvent value, $Res Function(SigningEvent) then) =
+      _$SigningEventCopyWithImpl<$Res, SigningEvent>;
+}
+
+/// @nodoc
+class _$SigningEventCopyWithImpl<$Res, $Val extends SigningEvent>
+    implements $SigningEventCopyWith<$Res> {
+  _$SigningEventCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+}
+
+/// @nodoc
+abstract class _$$SigningEvent_ProgressImplCopyWith<$Res> {
+  factory _$$SigningEvent_ProgressImplCopyWith(
+          _$SigningEvent_ProgressImpl value,
+          $Res Function(_$SigningEvent_ProgressImpl) then) =
+      __$$SigningEvent_ProgressImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({String field0});
+}
+
+/// @nodoc
+class __$$SigningEvent_ProgressImplCopyWithImpl<$Res>
+    extends _$SigningEventCopyWithImpl<$Res, _$SigningEvent_ProgressImpl>
+    implements _$$SigningEvent_ProgressImplCopyWith<$Res> {
+  __$$SigningEvent_ProgressImplCopyWithImpl(_$SigningEvent_ProgressImpl _value,
+      $Res Function(_$SigningEvent_ProgressImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(_$SigningEvent_ProgressImpl(
+      null == field0
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$SigningEvent_ProgressImpl extends SigningEvent_Progress {
+  const _$SigningEvent_ProgressImpl(this.field0) : super._();
+
+  @override
+  final String field0;
+
+  @override
+  String toString() {
+    return 'SigningEvent.progress(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningEvent_ProgressImpl &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$SigningEvent_ProgressImplCopyWith<_$SigningEvent_ProgressImpl>
+      get copyWith => __$$SigningEvent_ProgressImplCopyWithImpl<
+          _$SigningEvent_ProgressImpl>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(String field0) progress,
+    required TResult Function(PcztPackage field0) result,
+  }) {
+    return progress(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(String field0)? progress,
+    TResult? Function(PcztPackage field0)? result,
+  }) {
+    return progress?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(String field0)? progress,
+    TResult Function(PcztPackage field0)? result,
+    required TResult orElse(),
+  }) {
+    if (progress != null) {
+      return progress(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningEvent_Progress value) progress,
+    required TResult Function(SigningEvent_Result value) result,
+  }) {
+    return progress(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningEvent_Progress value)? progress,
+    TResult? Function(SigningEvent_Result value)? result,
+  }) {
+    return progress?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningEvent_Progress value)? progress,
+    TResult Function(SigningEvent_Result value)? result,
+    required TResult orElse(),
+  }) {
+    if (progress != null) {
+      return progress(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningEvent_Progress extends SigningEvent {
+  const factory SigningEvent_Progress(final String field0) =
+      _$SigningEvent_ProgressImpl;
+  const SigningEvent_Progress._() : super._();
+
+  @override
+  String get field0;
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$SigningEvent_ProgressImplCopyWith<_$SigningEvent_ProgressImpl>
+      get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$SigningEvent_ResultImplCopyWith<$Res> {
+  factory _$$SigningEvent_ResultImplCopyWith(_$SigningEvent_ResultImpl value,
+          $Res Function(_$SigningEvent_ResultImpl) then) =
+      __$$SigningEvent_ResultImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({PcztPackage field0});
+
+  $PcztPackageCopyWith<$Res> get field0;
+}
+
+/// @nodoc
+class __$$SigningEvent_ResultImplCopyWithImpl<$Res>
+    extends _$SigningEventCopyWithImpl<$Res, _$SigningEvent_ResultImpl>
+    implements _$$SigningEvent_ResultImplCopyWith<$Res> {
+  __$$SigningEvent_ResultImplCopyWithImpl(_$SigningEvent_ResultImpl _value,
+      $Res Function(_$SigningEvent_ResultImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(_$SigningEvent_ResultImpl(
+      null == field0
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as PcztPackage,
+    ));
+  }
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $PcztPackageCopyWith<$Res> get field0 {
+    return $PcztPackageCopyWith<$Res>(_value.field0, (value) {
+      return _then(_value.copyWith(field0: value));
+    });
+  }
+}
+
+/// @nodoc
+
+class _$SigningEvent_ResultImpl extends SigningEvent_Result {
+  const _$SigningEvent_ResultImpl(this.field0) : super._();
+
+  @override
+  final PcztPackage field0;
+
+  @override
+  String toString() {
+    return 'SigningEvent.result(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$SigningEvent_ResultImpl &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$SigningEvent_ResultImplCopyWith<_$SigningEvent_ResultImpl> get copyWith =>
+      __$$SigningEvent_ResultImplCopyWithImpl<_$SigningEvent_ResultImpl>(
+          this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(String field0) progress,
+    required TResult Function(PcztPackage field0) result,
+  }) {
+    return result(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(String field0)? progress,
+    TResult? Function(PcztPackage field0)? result,
+  }) {
+    return result?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(String field0)? progress,
+    TResult Function(PcztPackage field0)? result,
+    required TResult orElse(),
+  }) {
+    if (result != null) {
+      return result(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(SigningEvent_Progress value) progress,
+    required TResult Function(SigningEvent_Result value) result,
+  }) {
+    return result(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningEvent_Progress value)? progress,
+    TResult? Function(SigningEvent_Result value)? result,
+  }) {
+    return result?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningEvent_Progress value)? progress,
+    TResult Function(SigningEvent_Result value)? result,
+    required TResult orElse(),
+  }) {
+    if (result != null) {
+      return result(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class SigningEvent_Result extends SigningEvent {
+  const factory SigningEvent_Result(final PcztPackage field0) =
+      _$SigningEvent_ResultImpl;
+  const SigningEvent_Result._() : super._();
+
+  @override
+  PcztPackage get field0;
+
+  /// Create a copy of SigningEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$SigningEvent_ResultImplCopyWith<_$SigningEvent_ResultImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}

@@ -85,7 +85,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1861020497;
+  int get rustContentHash => -1959192837;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -323,6 +323,9 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiTransactionSetTxPrice({required int id, double? price});
 
   void crateApiNetworkSetUseTor({required bool useTor});
+
+  Stream<SigningEvent> crateApiPaySignLedgerTransaction(
+      {required PcztPackage pczt});
 
   Future<PcztPackage> crateApiPaySignTransaction({required PcztPackage pczt});
 
@@ -2993,6 +2996,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<SigningEvent> crateApiPaySignLedgerTransaction(
+      {required PcztPackage pczt}) {
+    final sink = RustStreamSink<SigningEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_signing_event_Sse(sink, serializer);
+            sse_encode_box_autoadd_pczt_package(pczt, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer,
+                funcId: 98, port: port_);
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiPaySignLedgerTransactionConstMeta,
+          argValues: [sink, pczt],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiPaySignLedgerTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_ledger_transaction",
+        argNames: ["sink", "pczt"],
+      );
+
+  @override
   Future<PcztPackage> crateApiPaySignTransaction({required PcztPackage pczt}) {
     return handler.executeNormal(
       NormalTask(
@@ -3000,7 +3036,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_pczt_package(pczt, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 98, port: port_);
+              funcId: 99, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_pczt_package,
@@ -3033,7 +3069,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_opt_box_autoadd_f_64(price, serializer);
           sse_encode_opt_box_autoadd_u_32(category, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 99, port: port_);
+              funcId: 100, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -3071,7 +3107,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             sse_encode_u_32(transparentLimit, serializer);
             sse_encode_u_32(checkpointAge, serializer);
             pdeCallFfi(generalizedFrbRustBinding, serializer,
-                funcId: 100, port: port_);
+                funcId: 101, port: port_);
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
@@ -3113,7 +3149,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_pczt_package(package, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 101)!;
+              funcId: 102)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_tx_plan,
@@ -3140,7 +3176,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(ufvk, serializer);
           sse_encode_opt_box_autoadd_u_32(di, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 102)!;
+              funcId: 103)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -3165,7 +3201,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 103, port: port_);
+              funcId: 104, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -3192,7 +3228,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 104, port: port_);
+              funcId: 105, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_pczt_package,
@@ -3219,7 +3255,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_account_update(update, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 105, port: port_);
+              funcId: 106, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -3343,6 +3379,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<SigningEvent> dco_decode_StreamSink_signing_event_Sse(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   RustStreamSink<SigningStatus> dco_decode_StreamSink_signing_status_Sse(
       dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -3366,8 +3409,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 16)
-      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    if (arr.length != 17)
+      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -3382,9 +3425,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       saved: dco_decode_bool(arr[10]),
       enabled: dco_decode_bool(arr[11]),
       internal: dco_decode_bool(arr[12]),
-      height: dco_decode_u_32(arr[13]),
-      time: dco_decode_u_32(arr[14]),
-      balance: dco_decode_u_64(arr[15]),
+      hw: dco_decode_u_8(arr[13]),
+      height: dco_decode_u_32(arr[14]),
+      time: dco_decode_u_32(arr[15]),
+      balance: dco_decode_u_64(arr[16]),
     );
   }
 
@@ -4009,6 +4053,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SigningEvent dco_decode_signing_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return SigningEvent_Progress(
+          dco_decode_String(raw[1]),
+        );
+      case 1:
+        return SigningEvent_Result(
+          dco_decode_box_autoadd_pczt_package(raw[1]),
+        );
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
   SigningStatus dco_decode_signing_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     switch (raw[0]) {
@@ -4358,6 +4419,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<SigningEvent> sse_decode_StreamSink_signing_event_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   RustStreamSink<SigningStatus> sse_decode_StreamSink_signing_status_Sse(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -4394,6 +4462,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_saved = sse_decode_bool(deserializer);
     var var_enabled = sse_decode_bool(deserializer);
     var var_internal = sse_decode_bool(deserializer);
+    var var_hw = sse_decode_u_8(deserializer);
     var var_height = sse_decode_u_32(deserializer);
     var var_time = sse_decode_u_32(deserializer);
     var var_balance = sse_decode_u_64(deserializer);
@@ -4411,6 +4480,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         saved: var_saved,
         enabled: var_enabled,
         internal: var_internal,
+        hw: var_hw,
         height: var_height,
         time: var_time,
         balance: var_balance);
@@ -5179,6 +5249,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SigningEvent sse_decode_signing_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_field0 = sse_decode_String(deserializer);
+        return SigningEvent_Progress(var_field0);
+      case 1:
+        var var_field0 = sse_decode_box_autoadd_pczt_package(deserializer);
+        return SigningEvent_Result(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
   SigningStatus sse_decode_signing_status(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5559,6 +5646,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_signing_event_Sse(
+      RustStreamSink<SigningEvent> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_signing_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_signing_status_Sse(
       RustStreamSink<SigningStatus> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -5610,6 +5712,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.saved, serializer);
     sse_encode_bool(self.enabled, serializer);
     sse_encode_bool(self.internal, serializer);
+    sse_encode_u_8(self.hw, serializer);
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_32(self.time, serializer);
     sse_encode_u_64(self.balance, serializer);
@@ -6259,6 +6362,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_server_type(ServerType self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_signing_event(SigningEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case SigningEvent_Progress(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_String(field0, serializer);
+      case SigningEvent_Result(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_box_autoadd_pczt_package(field0, serializer);
+    }
   }
 
   @protected

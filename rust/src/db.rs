@@ -342,8 +342,8 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     // V7
-    if !has_column(&mut *connection, "transparent_accounts", "hw").await? {
-        sqlx::query("ALTER TABLE transparent_accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
+    if !has_column(&mut *connection, "accounts", "hw").await? {
+        sqlx::query("ALTER TABLE accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
             .execute(&mut *connection)
             .await?;
     }
@@ -512,7 +512,7 @@ pub async fn store_account_hw(
     account: u32,
     hw_code: u32,
 ) -> Result<()> {
-    sqlx::query("UPDATE transparent_accounts SET hw = ?2 WHERE account = ?1")
+    sqlx::query("UPDATE accounts SET hw = ?2 WHERE id_account = ?1")
         .bind(account)
         .bind(hw_code)
         .execute(connection)
@@ -821,7 +821,8 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         SELECT id_account, a.name, seed, aindex,
         icon, birth, a.position, hidden, saved, enabled, internal,
         sh.height, COALESCE(hdr.time, 0), COALESCE(SUM(unspent.value), 0) AS balance,
-        COALESCE(f.id_folder, 0), COALESCE(f.name, '') AS folder_name
+        COALESCE(f.id_folder, 0), COALESCE(f.name, '') AS folder_name,
+        hw
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN headers hdr ON sh.height = hdr.height
@@ -852,6 +853,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             time: row.get(12),
             balance: row.get::<i64, _>(13) as u64,
             folder,
+            hw: row.get::<u8, _>(16)
         }
     })
     .fetch(&mut *connection);
@@ -1099,6 +1101,14 @@ pub async fn get_account_dindex(connection: &mut SqliteConnection, account: u32)
         .fetch_one(&mut *connection)
         .await?;
     Ok(dindex)
+}
+
+pub async fn get_account_hw(connection: &mut SqliteConnection, account: u32) -> Result<u8> {
+    let (hw,): (u8,) = sqlx::query_as("SELECT hw FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .fetch_one(&mut *connection)
+        .await?;
+    Ok(hw)
 }
 
 pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
