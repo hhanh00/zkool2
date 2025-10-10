@@ -325,7 +325,7 @@ impl Device for LedgerDeviceZEMU {
         &self,
         command: &APDUCommand,
         data: &[Vec<u8>],
-    ) -> anyhow::LedgerResult<APDUAnswer> {
+    ) -> LedgerResult<APDUAnswer> {
         unimplemented!()
     }
 }

@@ -15,6 +15,7 @@ pub enum Error {
     Hid(#[from] HidError),
     #[error(transparent)]
     IO(#[from] std::io::Error),
+    #[cfg(target_os = "macos")]
     #[error(transparent)]
     ZEMU(#[from] ledger_transport_zemu::LedgerZemuError),
     #[error(transparent)]
