@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::SyncProgress, coin::Network, db::{get_account_aindex, select_account_transparent, store_account_transparent_addr, LEDGER_CODE}, io::SyncHeight, ledger::derive_hw_transparent_address, lwd::CompactBlock, warp::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::SyncProgress, coin::Network, db::{select_account_transparent, store_account_transparent_addr, LEDGER_CODE}, io::SyncHeight, lwd::CompactBlock, warp::{
         legacy::CommitmentTreeFrontier,
         sync::{warp_sync, SyncError},
         Witness,
@@ -574,7 +574,6 @@ pub async fn transparent_sweep(
     cancellation_token: CancellationToken,
 ) -> Result<()> {
     let network = *network;
-    let aindex = get_account_aindex(&mut connection, account).await?;
     tokio::spawn(async move {
         let mut n_added = 0;
         let tk = select_account_transparent(&mut connection, account).await?;
@@ -586,7 +585,7 @@ pub async fn transparent_sweep(
             loop {
                 let (pk, taddr) = match xvk.as_ref() {
                     Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
-                    None if tk.hw == LEDGER_CODE => derive_hw_transparent_address(&network, tk.hw, aindex, scope, dindex).await?,
+                    None if tk.hw == LEDGER_CODE => anyhow::bail!("Sweep not supported by Ledger account yet"),
                     _ => panic!("No way to derive transparent keys"),
                 };
                 let taddr = taddr.encode(&network);
