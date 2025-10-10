@@ -85,17 +85,11 @@ pub fn transparent_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut buffer = vec![];
     buffer.write_u8(1u8)?;
     buffer.write_all(&prevout_hasher(pczt)?)?;
-    println!("P {}", hex::encode(prevout_hasher(pczt)?));
     buffer.write_all(&amount_hasher(pczt)?)?;
-    println!("A {}", hex::encode(amount_hasher(pczt)?));
     buffer.write_all(&script_hasher(pczt)?)?;
-    println!("Sc {}", hex::encode(script_hasher(pczt)?));
     buffer.write_all(&sequence_hasher(pczt)?)?;
-    println!("Sq {}", hex::encode(sequence_hasher(pczt)?));
     buffer.write_all(&output_hasher(pczt)?)?;
-    println!("O {}", hex::encode(output_hasher(pczt)?));
     buffer.write_all(&txin_hasher(pczt, 0)?)?;
-    println!("Ti {}", hex::encode(txin_hasher(pczt, 0)?));
     hasher.update(&buffer);
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
@@ -122,9 +116,7 @@ pub fn spend_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxIdSSpendsHash");
     let mut buffer = vec![];
     buffer.write_all(&sp_compact_hasher(pczt)?)?;
-    println!("C {}", hex::encode(sp_compact_hasher(pczt)?));
     buffer.write_all(&sp_noncompact_hasher(pczt)?)?;
-    println!("NC {}", hex::encode(sp_noncompact_hasher(pczt)?));
     hasher.update(&buffer);
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
@@ -161,11 +153,8 @@ pub fn zoutput_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxIdSOutputHash");
     let mut buffer = vec![];
     buffer.write_all(&output_compact_hasher(pczt)?)?;
-    println!("C {}", hex::encode(output_compact_hasher(pczt)?));
     buffer.write_all(&output_memo_hasher(pczt)?)?;
-    println!("M {}", hex::encode(output_memo_hasher(pczt)?));
     buffer.write_all(&output_noncompact_hasher(pczt)?)?;
-    println!("NC {}", hex::encode(output_noncompact_hasher(pczt)?));
     hasher.update(&buffer);
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
