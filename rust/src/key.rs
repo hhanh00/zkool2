@@ -27,7 +27,7 @@ pub async fn get_account_ufvk(
     pools: u8,
 ) -> Result<String> {
     let tkeys = select_account_transparent(connection, account).await?;
-    let skeys = select_account_sapling(connection, account).await?;
+    let skeys = select_account_sapling(network, connection, account).await?;
     let okeys = select_account_orchard(connection, account).await?;
 
     let items = vec![

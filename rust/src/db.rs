@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
+use sapling_crypto::PaymentAddress;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
@@ -648,13 +649,15 @@ pub async fn store_account_sapling_vk(
     connection: &mut SqliteConnection,
     account: u32,
     xvk: &DiversifiableFullViewingKey,
+    address: &str,
 ) -> Result<()> {
     sqlx::query(
         "UPDATE sapling_accounts
-        SET xvk = ? WHERE account = ?",
+        SET xvk = ?2, address = ?3 WHERE account = ?1",
     )
-    .bind(xvk.to_bytes().as_slice())
     .bind(account)
+    .bind(xvk.to_bytes().as_slice())
+    .bind(address)
     .execute(&mut *connection)
     .await?;
 
@@ -773,18 +776,19 @@ pub async fn select_account_transparent(
 }
 
 pub async fn select_account_sapling(
+    network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<SaplingKeys> {
-    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
-        sqlx::query_as("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
+    let r: Option<(Option<Vec<u8>>, Vec<u8>, String)> =
+        sqlx::query_as("SELECT xsk, xvk, address FROM sapling_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
 
-    let (xsk, xvk) = match r {
-        Some((xsk, xvk)) => (xsk, Some(xvk)),
-        None => (None, None),
+    let (xsk, xvk, address) = match r {
+        Some((xsk, xvk, address)) => (xsk, Some(xvk), Some(address)),
+        None => (None, None, None),
     };
 
     let keys = SaplingKeys {
@@ -795,6 +799,7 @@ pub async fn select_account_sapling(
         }),
         xvk: xvk
             .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+        address: address.map(|a| PaymentAddress::decode(network, &a).unwrap()),
     };
 
     Ok(keys)
@@ -833,6 +838,7 @@ pub struct TransparentKeys {
 pub struct SaplingKeys {
     pub xsk: Option<ExtendedSpendingKey>,
     pub xvk: Option<DiversifiableFullViewingKey>,
+    pub address: Option<PaymentAddress>,
 }
 
 pub struct OrchardKeys {
