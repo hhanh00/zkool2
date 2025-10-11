@@ -87,12 +87,6 @@ pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
     Ok(device)
 }
 
-// pub static LEDGER: LazyLock<Mutex<LedgerDevice>> = LazyLock::new(|| {
-//     let hidapi = HidApi::new().unwrap();
-//     let device = open_ledger(&hidapi).unwrap();
-//     Mutex::new(device)
-// });
-
 #[derive(Clone)]
 pub struct LedgerDevice {
     device: Arc<Mutex<HidDevice>>,
