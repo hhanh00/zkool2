@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.5.1) (2025-10-11)
+
+
+### Bug Fixes
+
+* build break on mobile ([#598](https://github.com/hhanh00/zkool2/issues/598)) ([c0616b5](https://github.com/hhanh00/zkool2/commit/c0616b5a0dabb415cfb9e2d1dd5afc18e0676aa9))
+
 ## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.1...zkool-v6.5.0) (2025-10-10)
 
 
