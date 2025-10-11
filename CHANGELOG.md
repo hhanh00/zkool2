@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.5.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.1...zkool-v6.5.2) (2025-10-11)
+
+
+### Bug Fixes
+
+* build break on CI macos ([#600](https://github.com/hhanh00/zkool2/issues/600)) ([40796e0](https://github.com/hhanh00/zkool2/commit/40796e0dab70389acd77b8afc9d5e1414cead576))
+
 ## [6.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.5.1) (2025-10-11)
 
 
