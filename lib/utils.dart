@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:awesome_dialog/awesome_dialog.dart';
@@ -126,16 +127,23 @@ Future<void> showException(BuildContext context, String message) async {
   ).show();
 }
 
-Future<void> showMessage(BuildContext context, String message, {String? title}) async {
-  await AwesomeDialog(
+Future<AwesomeDialog> showMessage(BuildContext context, String message, {String? title, bool dismissable = true}) async {
+  final dialog = AwesomeDialog(
     context: context,
     dialogType: DialogType.info,
     animType: AnimType.rightSlide,
     title: title,
     desc: message,
-    btnOkOnPress: () {},
+    btnOkOnPress: dismissable ? () {} : null,
     autoDismiss: true,
-  ).show();
+    dismissOnTouchOutside: dismissable,
+    dismissOnBackKeyPress: dismissable,
+  );
+  final f = dialog.show();
+  // if not dismissable, do not await because it should be dismissed
+  // in code and we don't want to be hanging here
+  if (dismissable) await f;
+  return dialog;
 }
 
 Future<void> showSeed(BuildContext context, String message) async {
