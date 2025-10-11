@@ -28,6 +28,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+      - name: Install Protoc
+        run: brew install protobuf
       - name: Install python
         uses: actions/setup-python@v4
         with:
