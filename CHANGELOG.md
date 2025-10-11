@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.6.0) (2025-10-11)
+
+
+### Features
+
+* generate diversified addresses for the Ledger ([4a83769](https://github.com/hhanh00/zkool2/commit/4a83769e5c72222c82e62dff4ceb1c35059b01ae))
+
 ## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.5.0) (2025-10-11)
 
 
