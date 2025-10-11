@@ -29,9 +29,7 @@ jobs:
         with:
           channel: stable
       - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: "32.x"
+        run: brew install protobuf
       - name: Install python
         uses: actions/setup-python@v4
         with:
