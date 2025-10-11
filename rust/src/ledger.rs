@@ -80,8 +80,8 @@ pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
             return Ok(ledger.clone());
         }
     };
-    let hidapi = HidApi::new().unwrap();
-    let device = open_ledger(&hidapi).unwrap();
+    let hidapi = HidApi::new()?;
+    let device = open_ledger(&hidapi)?;
     let mut ledger = LEDGER.lock().await;
     *ledger = Some(device.clone());
     Ok(device)
