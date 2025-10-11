@@ -4,17 +4,18 @@ use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
+use sapling_crypto::PaymentAddress;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
 };
 use tracing::info;
-use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
+use zcash_keys::{encoding::AddressCodec, keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey}};
 use zcash_protocol::consensus::NetworkUpgrade;
 use zcash_protocol::consensus::Parameters;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::account::TxNote;
+use crate::{account::TxNote, tiu};
 use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
@@ -87,6 +88,12 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     )
     .execute(&mut *connection)
     .await?;
+
+    if !has_column(&mut *connection, "sapling_accounts", "address").await? {
+        sqlx::query("ALTER TABLE sapling_accounts ADD COLUMN address BLOB NOT NULL DEFAULT('')")
+            .execute(&mut *connection)
+            .await?;
+    }
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS orchard_accounts(
@@ -361,6 +368,29 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     Ok(())
 }
 
+pub async fn migrate_sapling_addresses(network: &Network, connection: &mut SqliteConnection) -> Result<()> {
+    let accounts: Vec<(u32, u32, Vec<u8>)> =
+        sqlx::query_as(
+            "SELECT id_account, dindex, xvk FROM accounts a
+            JOIN sapling_accounts s ON a.id_account = s.account
+            WHERE address = ''")
+        .fetch_all(&mut *connection)
+        .await?;
+
+    for (account, dindex, xvk) in accounts {
+        let fvk: [u8; 128] = tiu!(xvk);
+        let fvk = DiversifiableFullViewingKey::from_bytes(&fvk).unwrap();
+        let address = fvk.address((dindex as u64).into()).unwrap();
+        let address = address.encode(network);
+        sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
+        .bind(account)
+        .bind(&address)
+        .execute(&mut *connection)
+        .await?;
+    }
+    Ok(())
+}
+
 pub async fn has_column(
     connection: &mut SqliteConnection,
     table: &str,
@@ -619,13 +649,15 @@ pub async fn store_account_sapling_vk(
     connection: &mut SqliteConnection,
     account: u32,
     xvk: &DiversifiableFullViewingKey,
+    address: &str,
 ) -> Result<()> {
     sqlx::query(
         "UPDATE sapling_accounts
-        SET xvk = ? WHERE account = ?",
+        SET xvk = ?2, address = ?3 WHERE account = ?1",
     )
-    .bind(xvk.to_bytes().as_slice())
     .bind(account)
+    .bind(xvk.to_bytes().as_slice())
+    .bind(address)
     .execute(&mut *connection)
     .await?;
 
@@ -744,18 +776,19 @@ pub async fn select_account_transparent(
 }
 
 pub async fn select_account_sapling(
+    network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<SaplingKeys> {
-    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
-        sqlx::query_as("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
+    let r: Option<(Option<Vec<u8>>, Vec<u8>, String)> =
+        sqlx::query_as("SELECT xsk, xvk, address FROM sapling_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
 
-    let (xsk, xvk) = match r {
-        Some((xsk, xvk)) => (xsk, Some(xvk)),
-        None => (None, None),
+    let (xsk, xvk, address) = match r {
+        Some((xsk, xvk, address)) => (xsk, Some(xvk), Some(address)),
+        None => (None, None, None),
     };
 
     let keys = SaplingKeys {
@@ -766,6 +799,7 @@ pub async fn select_account_sapling(
         }),
         xvk: xvk
             .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+        address: address.map(|a| PaymentAddress::decode(network, &a).unwrap()),
     };
 
     Ok(keys)
@@ -804,6 +838,7 @@ pub struct TransparentKeys {
 pub struct SaplingKeys {
     pub xsk: Option<ExtendedSpendingKey>,
     pub xvk: Option<DiversifiableFullViewingKey>,
+    pub address: Option<PaymentAddress>,
 }
 
 pub struct OrchardKeys {

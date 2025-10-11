@@ -16,7 +16,7 @@ use zcash_protocol::consensus::{
 };
 use zcash_protocol::local_consensus::LocalNetwork;
 
-use crate::db::create_schema;
+use crate::db::{create_schema, migrate_sapling_addresses};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::zebra::ZebraClient;
 use crate::Client;
@@ -96,6 +96,8 @@ impl Coin {
             2 => REGTEST,
             _ => Network::Main,
         };
+
+        migrate_sapling_addresses(&network, &mut connection).await?;
 
         Ok(Coin {
             coin,
