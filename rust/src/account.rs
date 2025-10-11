@@ -1,4 +1,8 @@
-use crate::{api::account::{Category, Folder}, coin::Network, db::select_account_transparent};
+use crate::{
+    api::account::{Category, Folder},
+    coin::Network,
+    db::{get_account_hw, select_account_transparent}, ledger::fvk::get_next_diversifier_address,
+};
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
@@ -13,7 +17,7 @@ use orchard::{
 use ripemd::{Digest as _, Ripemd160};
 use sapling_crypto::zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use sha2::Sha256;
-use sqlx::{sqlite::SqliteRow, Row, Connection, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
@@ -316,15 +320,30 @@ pub async fn generate_next_dindex(
     account: u32,
 ) -> Result<u32> {
     let mut db_tx = connection.begin().await?;
-    let (mut dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = ?")
+    let (aindex, mut dindex,): (u32, u32) = sqlx::query_as("SELECT aindex, dindex FROM accounts WHERE id_account = ?")
         .bind(account)
         .fetch_one(&mut *db_tx)
         .await?;
+    let hw = get_account_hw(&mut db_tx, account).await?;
+    // Next Sapling address. Some dindex must be skipped because they do not
+    // correspond to a valid sapling address
     let svk = get_sapling_vk(&mut db_tx, account).await?;
     if let Some(svk) = svk.as_ref() {
         dindex += 1;
-        let (di, _) = svk.find_address(dindex.into()).unwrap();
-        dindex = di.try_into()?;
+        let address = if hw != 0 {
+            let (di, address) = get_next_diversifier_address(network, aindex, dindex).await?;
+            dindex = di;
+            address
+        } else {
+            let (di, address) = svk.find_address(dindex.into()).unwrap();
+            dindex = di.try_into()?;
+            address.encode(network)
+        };
+        sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
+        .bind(account)
+        .bind(&address)
+        .execute(&mut *db_tx)
+        .await?;
     } else {
         // without sapling, any dindex is ok, just increment
         dindex += 1;
@@ -339,14 +358,17 @@ pub async fn generate_next_dindex(
     let tkeys = select_account_transparent(&mut db_tx, account).await?;
     let (sk, pk, address) = match tkeys.xvk {
         Some(xvk) => {
-            let sk = tkeys.xsk
+            let sk = tkeys
+                .xsk
                 .as_ref()
                 .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
             let (pk, address) = derive_transparent_address(&xvk, 0, dindex)?;
             (sk, pk, Some(address))
         }
-        None if tkeys.hw != 0 => anyhow::bail!("Diversified addresses are not suported by Ledger accounts yet"),
-        _ => (None, vec![], None)
+        None if tkeys.hw != 0 => {
+            anyhow::bail!("Diversified addresses are not suported by Ledger accounts yet")
+        }
+        _ => (None, vec![], None),
     };
 
     if let Some(address) = address {
@@ -432,7 +454,11 @@ async fn get_transparent_keys(
     Ok((xsk, xvk))
 }
 
-pub async fn reset_sync(network: &Network, connection: &mut SqliteConnection, account: u32) -> Result<()> {
+pub async fn reset_sync(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<()> {
     let birth_height = sqlx::query("SELECT birth FROM accounts WHERE id_account = ?")
         .bind(account)
         .map(|row: SqliteRow| row.get::<u32, _>(0))
@@ -443,20 +469,31 @@ pub async fn reset_sync(network: &Network, connection: &mut SqliteConnection, ac
     Ok(())
 }
 
-pub async fn init_sync_heights(network: &Network, connection: &mut SqliteConnection, account: u32, birth_height: u32) -> Result<()> {
+pub async fn init_sync_heights(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    birth_height: u32,
+) -> Result<()> {
     for pool in 0..3 {
         let activation_height: u32 = match pool {
             0 => 0,
-            1 => network.activation_height(NetworkUpgrade::Sapling).unwrap().into(),
-            2 => network.activation_height(NetworkUpgrade::Nu5).unwrap().into(),
-            _ => unreachable!()
+            1 => network
+                .activation_height(NetworkUpgrade::Sapling)
+                .unwrap()
+                .into(),
+            2 => network
+                .activation_height(NetworkUpgrade::Nu5)
+                .unwrap()
+                .into(),
+            _ => unreachable!(),
         };
         sqlx::query("UPDATE sync_heights SET height = ?3 WHERE account = ?1 AND pool = ?2")
-        .bind(account)
-        .bind(pool)
-        .bind(birth_height.max(activation_height))
-        .execute(&mut *connection)
-        .await?;
+            .bind(account)
+            .bind(pool)
+            .bind(birth_height.max(activation_height))
+            .execute(&mut *connection)
+            .await?;
     }
     Ok(())
 }
@@ -660,11 +697,9 @@ pub struct TxMemo {
 
 pub async fn list_folders(connection: &mut SqliteConnection) -> Result<Vec<Folder>> {
     let folders = sqlx::query("SELECT id_folder, name FROM folders ORDER BY name")
-        .map(|r: SqliteRow| {
-            Folder {
-                id: r.get(0),
-                name: r.get(1),
-            }
+        .map(|r: SqliteRow| Folder {
+            id: r.get(0),
+            name: r.get(1),
         })
         .fetch_all(connection)
         .await?;
@@ -690,50 +725,54 @@ pub async fn create_new_folder(connection: &mut SqliteConnection, name: &str) ->
 
 pub async fn rename_folder(connection: &mut SqliteConnection, id: u32, name: &str) -> Result<()> {
     if sqlx::query("SELECT 1 FROM folders WHERE name = ?1")
-    .bind(name)
-    .fetch_optional(&mut *connection)
-    .await?.is_some() {
+        .bind(name)
+        .fetch_optional(&mut *connection)
+        .await?
+        .is_some()
+    {
         anyhow::bail!("Folder name already exists");
     }
 
     sqlx::query("UPDATE folders SET name = ?2 WHERE id_folder = ?1")
-    .bind(id)
-    .bind(name)
-    .execute(connection)
-    .await?;
+        .bind(id)
+        .bind(name)
+        .execute(connection)
+        .await?;
     Ok(())
 }
 
 pub async fn delete_folders(connection: &mut SqliteConnection, ids: &[u32]) -> Result<()> {
     for id in ids {
         sqlx::query("UPDATE accounts SET folder = NULL where folder = ?1")
-        .bind(id)
-        .execute(&mut *connection)
-        .await?;
+            .bind(id)
+            .execute(&mut *connection)
+            .await?;
 
         sqlx::query("DELETE FROM folders WHERE id_folder = ?1")
-        .bind(id)
-        .execute(&mut *connection)
-        .await?;
+            .bind(id)
+            .execute(&mut *connection)
+            .await?;
     }
     Ok(())
 }
 
 pub async fn list_categories(connection: &mut SqliteConnection) -> Result<Vec<Category>> {
-    let folders = sqlx::query("SELECT id_category, name, income FROM categories ORDER BY income, name")
-        .map(|r: SqliteRow| {
-            Category {
+    let folders =
+        sqlx::query("SELECT id_category, name, income FROM categories ORDER BY income, name")
+            .map(|r: SqliteRow| Category {
                 id: r.get(0),
                 name: r.get(1),
                 is_income: r.get(2),
-            }
-        })
-        .fetch_all(connection)
-        .await?;
+            })
+            .fetch_all(connection)
+            .await?;
     Ok(folders)
 }
 
-pub async fn create_new_category(connection: &mut SqliteConnection, category: &Category) -> Result<u32> {
+pub async fn create_new_category(
+    connection: &mut SqliteConnection,
+    category: &Category,
+) -> Result<u32> {
     sqlx::query("INSERT OR IGNORE INTO categories(name, income) VALUES (?1, ?2)")
         .bind(&category.name)
         .bind(category.is_income)
@@ -750,41 +789,47 @@ pub async fn create_new_category(connection: &mut SqliteConnection, category: &C
 
 pub async fn rename_category(connection: &mut SqliteConnection, category: &Category) -> Result<()> {
     if sqlx::query("SELECT 1 FROM categories WHERE name = ?1")
-    .bind(&category.name)
-    .fetch_optional(&mut *connection)
-    .await?.is_some() {
+        .bind(&category.name)
+        .fetch_optional(&mut *connection)
+        .await?
+        .is_some()
+    {
         anyhow::bail!("Category name already exists");
     }
 
     sqlx::query("UPDATE categories SET name = ?2, income = ?3 WHERE id_category = ?1")
-    .bind(category.id)
-    .bind(&category.name)
-    .bind(category.is_income)
-    .execute(connection)
-    .await?;
+        .bind(category.id)
+        .bind(&category.name)
+        .bind(category.is_income)
+        .execute(connection)
+        .await?;
     Ok(())
 }
 
 pub async fn delete_categories(connection: &mut SqliteConnection, ids: &[u32]) -> Result<()> {
     for id in ids {
         sqlx::query("UPDATE transactions SET category = NULL where category = ?1")
-        .bind(id)
-        .execute(&mut *connection)
-        .await?;
+            .bind(id)
+            .execute(&mut *connection)
+            .await?;
 
         sqlx::query("DELETE FROM categories WHERE id_category = ?1")
-        .bind(id)
-        .execute(&mut *connection)
-        .await?;
+            .bind(id)
+            .execute(&mut *connection)
+            .await?;
     }
     Ok(())
 }
 
-pub async fn has_transparent_pub_key(connection: &mut SqliteConnection, account: u32) -> Result<bool> {
+pub async fn has_transparent_pub_key(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<bool> {
     let r = sqlx::query("SELECT xvk FROM transparent_accounts WHERE account = ?1")
-    .bind(account)
-    .map(|r: SqliteRow| r.get::<Option<Vec<u8>>, _>(0))
-    .fetch_optional(connection)
-    .await?.flatten();
+        .bind(account)
+        .map(|r: SqliteRow| r.get::<Option<Vec<u8>>, _>(0))
+        .fetch_optional(connection)
+        .await?
+        .flatten();
     Ok(r.is_some())
 }
