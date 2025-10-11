@@ -9,12 +9,12 @@ use sqlx::{
     Column, Connection, Row, SqliteConnection, TypeInfo,
 };
 use tracing::info;
-use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
+use zcash_keys::{encoding::AddressCodec, keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey}};
 use zcash_protocol::consensus::NetworkUpgrade;
 use zcash_protocol::consensus::Parameters;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::account::TxNote;
+use crate::{account::TxNote, tiu};
 use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
@@ -87,6 +87,12 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     )
     .execute(&mut *connection)
     .await?;
+
+    if !has_column(&mut *connection, "sapling_accounts", "address").await? {
+        sqlx::query("ALTER TABLE sapling_accounts ADD COLUMN address BLOB NOT NULL DEFAULT('')")
+            .execute(&mut *connection)
+            .await?;
+    }
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS orchard_accounts(
@@ -358,6 +364,29 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+pub async fn migrate_sapling_addresses(network: &Network, connection: &mut SqliteConnection) -> Result<()> {
+    let accounts: Vec<(u32, u32, Vec<u8>)> =
+        sqlx::query_as(
+            "SELECT id_account, dindex, xvk FROM accounts a
+            JOIN sapling_accounts s ON a.id_account = s.account
+            WHERE address = ''")
+        .fetch_all(&mut *connection)
+        .await?;
+
+    for (account, dindex, xvk) in accounts {
+        let fvk: [u8; 128] = tiu!(xvk);
+        let fvk = DiversifiableFullViewingKey::from_bytes(&fvk).unwrap();
+        let address = fvk.address((dindex as u64).into()).unwrap();
+        let address = address.encode(network);
+        sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
+        .bind(account)
+        .bind(&address)
+        .execute(&mut *connection)
+        .await?;
+    }
     Ok(())
 }
 
