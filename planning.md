@@ -134,4 +134,12 @@ In order of priority,
 - [x] Category over time
 - [x] Pie chart by category for a given time period
 
-- [ ] Support Webview on Linux
+## Ledger
+- [ ] Get FVK
+- [ ] Sign Tx z2z
+- [ ] Generate div addresses
+- [ ] Support TAddr
+- [ ] Generate new TAddr
+- [ ] t2z
+- [ ] z2t
+- [ ] t2t
