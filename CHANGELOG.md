@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.5.0) (2025-10-11)
+
+
+### Features
+
+* accept transparent public keys ([#592](https://github.com/hhanh00/zkool2/issues/592)) ([86e6477](https://github.com/hhanh00/zkool2/commit/86e6477bc78f6c34f54cc5d0a3a02203d29c6864))
+* import ledger accounts ([#594](https://github.com/hhanh00/zkool2/issues/594)) ([dce26f8](https://github.com/hhanh00/zkool2/commit/dce26f84c31052778011eafbc4420273ce446828))
+* **ledger:** Ledger integration ([#591](https://github.com/hhanh00/zkool2/issues/591)) ([439efcb](https://github.com/hhanh00/zkool2/commit/439efcbc6a5f51db5fc90a48e0b92beba1f515e8))
+* send tx with Ledger ([#595](https://github.com/hhanh00/zkool2/issues/595)) ([4c8daf3](https://github.com/hhanh00/zkool2/commit/4c8daf3e86905e37a4664d3f4ddb613b4f7a639d))
+
+
+### Bug Fixes
+
+* build break on CI macos ([#600](https://github.com/hhanh00/zkool2/issues/600)) ([40796e0](https://github.com/hhanh00/zkool2/commit/40796e0dab70389acd77b8afc9d5e1414cead576))
+* build break on mobile ([#598](https://github.com/hhanh00/zkool2/issues/598)) ([c0616b5](https://github.com/hhanh00/zkool2/commit/c0616b5a0dabb415cfb9e2d1dd5afc18e0676aa9))
+* conversion from USD to ZEC does not take locale into consideration ([#597](https://github.com/hhanh00/zkool2/issues/597)) ([d45c6ea](https://github.com/hhanh00/zkool2/commit/d45c6ea17831ef0f7a680bb49964014866c18314))
+* remove dialog asking for scanning taddr on new accounts ([#582](https://github.com/hhanh00/zkool2/issues/582)) ([7a1ee58](https://github.com/hhanh00/zkool2/commit/7a1ee58f43008066975a2d607d57899e53e39227))
+
 ## [6.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.5.1) (2025-10-11)
 
 
