@@ -22,6 +22,7 @@ pub mod sync;
 pub mod warp;
 pub mod zebra;
 pub mod budget;
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub mod ledger;
 
 pub type Hash32 = [u8; 32];
