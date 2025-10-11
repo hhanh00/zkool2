@@ -30,6 +30,7 @@ use crate::{
     account::{derive_transparent_address, derive_transparent_sk, TxAccount, TxNote},
     api::{key::generate_seed, ledger::get_hw_fvk},
     bip38,
+    coin::Network,
     db::{
         init_account_orchard, init_account_sapling, init_account_transparent, store_account_hw,
         store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
@@ -39,10 +40,8 @@ use crate::{
     },
     get_coin,
     io::{decrypt, encrypt},
-    key::{
-        is_valid_phrase, is_valid_sapling_key,
-        is_valid_transparent_key, is_valid_ufvk,
-    },
+    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    ledger::fvk::get_next_diversifier_address,
     pay::pool::ALL_POOLS,
     setup, tiu,
 };
@@ -53,7 +52,7 @@ pub async fn get_account_pools(account: u32) -> Result<u8> {
     let mut connection = c.get_connection().await?;
 
     let tkeys = crate::db::select_account_transparent(&mut connection, account).await?;
-    let skeys = crate::db::select_account_sapling(&mut connection, account).await?;
+    let skeys = crate::db::select_account_sapling(&c.network, &mut connection, account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, account).await?;
 
     let mut pools = 0;
@@ -313,7 +312,9 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let mut dfvk = fvk.to_bytes().to_vec();
         dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
         let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
-        store_account_sapling_vk(&mut db_tx, account, &xvk).await?;
+        let (dindex, address) = get_next_diversifier_address(&network, na.aindex, 0).await?;
+        store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
+        update_dindex(&mut db_tx, account, dindex, true).await?;
     } else if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let passphrase = na.passphrase.clone().unwrap_or_default();
@@ -362,7 +363,8 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             let sxsk = usk.sapling();
             store_account_sapling_sk(&mut db_tx, account, sxsk).await?;
             let sxvk = sxsk.to_diversifiable_full_viewing_key();
-            store_account_sapling_vk(&mut db_tx, account, &sxvk).await?;
+            let address = derive_sapling_address(&network, &sxvk, dindex);
+            store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
         }
 
         if pools & 4 != 0 {
@@ -427,8 +429,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
                 &addr.encode(&network),
             )
             .await?;
-        }
-        else if let Ok((_, tpk)) = bech32::decode(&key) {
+        } else if let Ok((_, tpk)) = bech32::decode(&key) {
             let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
             let addr = TransparentAddress::PublicKeyHash(pkh);
             store_account_transparent_addr(
@@ -451,20 +452,23 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         ) {
             store_account_sapling_sk(&mut db_tx, account, &xsk).await?;
             let xvk = xsk.to_diversifiable_full_viewing_key();
-            store_account_sapling_vk(&mut db_tx, account, &xvk).await?;
-            let (di, _) = xvk.default_address();
+            let (di, address) = xvk.default_address();
+            let address = address.encode(&network);
+            store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
             di
         } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
             network.hrp_sapling_extended_full_viewing_key(),
             &key,
         ) {
+            let (di, address) = xvk.default_address();
+            let address = address.encode(&network);
             store_account_sapling_vk(
                 &mut db_tx,
                 account,
                 &xvk.to_diversifiable_full_viewing_key(),
+                &address,
             )
             .await?;
-            let (di, _) = xvk.default_address();
             di
         } else {
             return Err(anyhow!("Invalid Sapling Key"));
@@ -475,7 +479,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     if is_valid_ufvk(&network, &key) {
         let uvk =
             UnifiedFullViewingKey::decode(&network, &key).map_err(|_| anyhow!("Invalid Key"))?;
-        let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+        let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
         match uvk.transparent() {
@@ -499,7 +503,9 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         match uvk.sapling() {
             Some(sxvk) if pools & 2 != 0 => {
                 init_account_sapling(&network, &mut db_tx, account, birth).await?;
-                store_account_sapling_vk(&mut db_tx, account, sxvk).await?;
+                let address = ua.sapling().unwrap();
+                let address = address.encode(&network);
+                store_account_sapling_vk(&mut db_tx, account, sxvk, &address).await?;
             }
             _ => {}
         }
@@ -514,6 +520,15 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     }
     db_tx.commit().await?;
     Ok(account)
+}
+
+fn derive_sapling_address(
+    network: &Network,
+    sxvk: &DiversifiableFullViewingKey,
+    dindex: u32,
+) -> String {
+    let address = sxvk.address(dindex.into()).unwrap();
+    address.encode(network)
 }
 
 #[frb]
@@ -659,7 +674,7 @@ pub async fn get_addresses(ua_pools: u8) -> Result<Addresses> {
     let mut connection = c.get_connection().await?;
 
     let tkeys = crate::db::select_account_transparent(&mut connection, c.account).await?;
-    let skeys = crate::db::select_account_sapling(&mut connection, c.account).await?;
+    let skeys = crate::db::select_account_sapling(&c.network, &mut connection, c.account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, c.account).await?;
 
     let dindex = crate::db::get_account_dindex(&mut connection, c.account).await?;
@@ -670,10 +685,7 @@ pub async fn get_addresses(ua_pools: u8) -> Result<Addresses> {
         .map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap().1);
 
     let dindex = dindex as u64;
-    let saddr = skeys
-        .xvk
-        .as_ref()
-        .map(|xvk| xvk.address(dindex.into()).unwrap());
+    let saddr = skeys.address;
     let oaddr = okeys
         .xvk
         .as_ref()

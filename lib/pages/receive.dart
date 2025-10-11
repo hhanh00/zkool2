@@ -129,8 +129,11 @@ class ReceivePageState extends State<ReceivePage> {
     try {
       final confirmed = await confirmDialog(context, title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
       if (!confirmed) return;
-      await generateNextDindex();
+      if (!mounted) return;
+      final dialog = await showMessage(context, "Please wait for the address generation", dismissable: false);
+      await generateNextDindex(); // This takes a while on the Ledger
       addresses = await getAddresses(uaPools: uaPools);
+      dialog.dismiss();
       setState(() {});
     }
     on AnyhowException catch (e) {
