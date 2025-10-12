@@ -1,7 +1,7 @@
 use crate::{
     api::account::{Category, Folder},
     coin::Network,
-    db::{get_account_hw, select_account_transparent}, ledger::fvk::get_next_diversifier_address,
+    db::{get_account_hw, select_account_transparent}, ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address},
 };
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
@@ -331,7 +331,7 @@ pub async fn generate_next_dindex(
     if let Some(svk) = svk.as_ref() {
         dindex += 1;
         let address = if hw != 0 {
-            let (di, address) = get_next_diversifier_address(network, aindex, dindex).await?;
+            let (di, address) = get_hw_next_diversifier_address(network, aindex, dindex).await?;
             dindex = di;
             address
         } else {
@@ -365,8 +365,9 @@ pub async fn generate_next_dindex(
             let (pk, address) = derive_transparent_address(&xvk, 0, dindex)?;
             (sk, pk, Some(address))
         }
-        None if tkeys.hw != 0 => {
-            anyhow::bail!("Diversified addresses are not suported by Ledger accounts yet")
+        None if hw != 0 => {
+            let (pk, address) = get_hw_transparent_address(network, aindex, 0, dindex).await?;
+            (None, pk, Some(address))
         }
         _ => (None, vec![], None),
     };
