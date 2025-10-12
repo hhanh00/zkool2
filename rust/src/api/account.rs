@@ -41,10 +41,14 @@ use crate::{
     get_coin,
     io::{decrypt, encrypt},
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address},
     pay::pool::ALL_POOLS,
     setup, tiu,
 };
+
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address};
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address};
 
 #[frb]
 pub async fn get_account_pools(account: u32) -> Result<u8> {
