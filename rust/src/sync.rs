@@ -1,11 +1,18 @@
 use std::collections::HashSet;
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height}, api::sync::SyncProgress, coin::Network, db::{select_account_transparent, store_account_transparent_addr, LEDGER_CODE}, io::SyncHeight, lwd::CompactBlock, warp::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
+    api::sync::SyncProgress,
+    coin::Network,
+    db::{select_account_transparent, store_account_transparent_addr},
+    io::SyncHeight,
+    lwd::CompactBlock,
+    warp::{
         legacy::CommitmentTreeFrontier,
         sync::{warp_sync, SyncError},
         Witness,
-    }, Client
+    },
+    Client,
 };
 use anyhow::Result;
 use bincode::config;
@@ -585,8 +592,7 @@ pub async fn transparent_sweep(
             loop {
                 let (pk, taddr) = match xvk.as_ref() {
                     Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
-                    None if tk.hw == LEDGER_CODE => anyhow::bail!("Sweep not supported by Ledger account yet"),
-                    _ => panic!("No way to derive transparent keys"),
+                    _ => anyhow::bail!("Sweep not supported by Ledger account yet"),
                 };
                 let taddr = taddr.encode(&network);
                 progress_fn(taddr.clone());
