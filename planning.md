@@ -135,11 +135,18 @@ In order of priority,
 - [x] Pie chart by category for a given time period
 
 ## Ledger
-- [ ] Get FVK
-- [ ] Sign Tx z2z
-- [ ] Generate div addresses
-- [ ] Support TAddr
+- [x] Get FVK
+- [x] Sign Tx z2z
+- [x] Generate div addresses
+- [x] Support TAddr
 - [ ] Generate new TAddr
-- [ ] t2z
+- [x] t2z
 - [ ] z2t
 - [ ] t2t
+- [ ] address sweep
+- [ ] support memos
+
+- [ ] show "wait" on account creation
+- [ ] error when recipient ua only has orchard and warn when only it does not have sapling
+- [ ] error when # inputs/outputs > 5
+
