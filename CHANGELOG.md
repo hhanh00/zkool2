@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.6.0...zkool-v6.7.0) (2025-10-12)
+
+
+### Features
+
+* **ledger:** error when tx has too many I/O ([#611](https://github.com/hhanh00/zkool2/issues/611)) ([48392d0](https://github.com/hhanh00/zkool2/commit/48392d03fc8cb2c430a282aeb96508b46acc2914))
+
+
+### Bug Fixes
+
+* **ledger:** build break on mobile platforms (no support for ledger) ([#613](https://github.com/hhanh00/zkool2/issues/613)) ([33236b3](https://github.com/hhanh00/zkool2/commit/33236b3a892ec74b33bc317ecd55f6addbfbfaf5))
+
 ## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.6.0) (2025-10-12)
 
 
