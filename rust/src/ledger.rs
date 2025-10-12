@@ -72,24 +72,28 @@ impl APDUAnswer {
     }
 }
 
+#[cfg(feature="zemu")]
 pub async fn connect_ledger() -> LedgerResult<LedgerDeviceZEMU> {
     let ledger = LEDGER_ZEMU.lock().await;
     Ok(ledger.clone().unwrap())
 }
 
-// pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
-//     {
-//         let ledger = LEDGER.lock().await;
-//         if let Some(ledger) = ledger.deref() {
-//             return Ok(ledger.clone());
-//         }
-//     };
-//     let hidapi = HidApi::new()?;
-//     let device = open_ledger(&hidapi)?;
-//     let mut ledger = LEDGER.lock().await;
-//     *ledger = Some(device.clone());
-//     Ok(device)
-// }
+#[cfg(not(feature="zemu"))]
+pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
+    {
+        use std::ops::Deref;
+
+        let ledger = LEDGER.lock().await;
+        if let Some(ledger) = ledger.deref() {
+            return Ok(ledger.clone());
+        }
+    };
+    let hidapi = HidApi::new()?;
+    let device = open_ledger(&hidapi)?;
+    let mut ledger = LEDGER.lock().await;
+    *ledger = Some(device.clone());
+    Ok(device)
+}
 
 #[derive(Clone)]
 pub struct LedgerDevice {
