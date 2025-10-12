@@ -1,8 +1,14 @@
 use crate::{
     api::account::{Category, Folder},
     coin::Network,
-    db::{get_account_hw, select_account_transparent}, ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address},
+    db::{get_account_hw, select_account_transparent},
 };
+
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address};
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address};
+
 use anyhow::{Ok, Result};
 use bincode::config::legacy;
 use bip32::PrivateKey;
