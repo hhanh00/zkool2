@@ -9,7 +9,6 @@ use crate::{
         store_account_transparent_addr,
     },
     io::SyncHeight,
-    ledger::fvk::get_hw_transparent_address,
     lwd::CompactBlock,
     warp::{
         legacy::CommitmentTreeFrontier,
@@ -33,6 +32,12 @@ use tokio_util::sync::CancellationToken;
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
+
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+use crate::ledger::fvk::get_hw_transparent_address;
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+use crate::no_ledger::get_hw_transparent_address;
+
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
