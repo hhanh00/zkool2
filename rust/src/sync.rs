@@ -4,8 +4,12 @@ use crate::{
     account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
     api::sync::SyncProgress,
     coin::Network,
-    db::{select_account_transparent, store_account_transparent_addr},
+    db::{
+        get_account_aindex, get_account_hw, select_account_transparent,
+        store_account_transparent_addr,
+    },
     io::SyncHeight,
+    ledger::fvk::get_hw_transparent_address,
     lwd::CompactBlock,
     warp::{
         legacy::CommitmentTreeFrontier,
@@ -581,6 +585,8 @@ pub async fn transparent_sweep(
     cancellation_token: CancellationToken,
 ) -> Result<()> {
     let network = *network;
+    let hw = get_account_hw(&mut connection, account).await?;
+    let aindex = get_account_aindex(&mut connection, account).await?;
     tokio::spawn(async move {
         let mut n_added = 0;
         let tk = select_account_transparent(&mut connection, account).await?;
@@ -592,7 +598,10 @@ pub async fn transparent_sweep(
             loop {
                 let (pk, taddr) = match xvk.as_ref() {
                     Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
-                    _ => anyhow::bail!("Sweep not supported by Ledger account yet"),
+                    None if hw != 0 => {
+                        get_hw_transparent_address(&network, aindex, scope, dindex).await?
+                    }
+                    _ => anyhow::bail!("Sweep needs an xpub key"),
                 };
                 let taddr = taddr.encode(&network);
                 progress_fn(taddr.clone());
