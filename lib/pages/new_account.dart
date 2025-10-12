@@ -297,6 +297,9 @@ class NewAccountPageState extends State<NewAccountPage> {
 
       final bh = birth != null ? int.parse(birth) : appStore.currentHeight;
       try {
+        String message = "Please wait while we create the account";
+        if (ledger) message += "\nConfirm on your Ledger device";
+        final dialog = await showMessage(context, message, dismissable: false);
         final account = await newAccount(
           na: NewAccount(
             icon: icon,
@@ -313,6 +316,7 @@ class NewAccountPageState extends State<NewAccountPage> {
             ledger: ledger,
           ),
         );
+        dialog.dismiss();
         try {
           // ignore errors since it's just caching
           if (!appStore.offline) await cacheBlockTime(height: bh);
