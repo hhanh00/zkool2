@@ -139,11 +139,11 @@ In order of priority,
 - [x] Sign Tx z2z
 - [x] Generate div addresses
 - [x] Support TAddr
-- [ ] Generate new TAddr
+- [x] Generate new TAddr
 - [x] t2z
 - [ ] z2t
 - [ ] t2t
-- [ ] address sweep
+- [x] address sweep
 - [ ] support memos
 
 - [ ] show "wait" on account creation
