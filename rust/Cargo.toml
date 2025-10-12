@@ -104,6 +104,9 @@ rand = "0.6"
 [build-dependencies]
 tonic-build = "0.13"
 
+[features]
+zemu = []
+
 [patch.crates-io]
 orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
 
