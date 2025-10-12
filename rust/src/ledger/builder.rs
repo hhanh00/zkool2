@@ -20,17 +20,22 @@ use sapling_crypto::{
     value::{NoteValue, TrapdoorSum, ValueCommitTrapdoor, ValueCommitment},
     Diversifier, MerklePath, Node, Note, PaymentAddress, ProofGenerationKey, Rseed,
 };
+use secp256k1::PublicKey;
 use sqlx::{pool::PoolConnection, Sqlite, SqliteConnection};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
 use zcash_note_encryption::Domain;
 use zcash_primitives::legacy::{Script, TransparentAddress};
 use zcash_proofs::prover::LocalTxProver;
-use zcash_protocol::memo::{Memo, MemoBytes};
+use zcash_protocol::{
+    consensus::NetworkConstants,
+    memo::{Memo, MemoBytes},
+};
 
 use crate::{
     api::pay::{PcztPackage, SigningEvent},
     coin::Network,
+    db::get_account_aindex,
     frb_generated::StreamSink,
     ledger::{
         connect_ledger,
@@ -45,7 +50,7 @@ use crate::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
+pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
@@ -55,6 +60,8 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
     ledger: &D,
     mut rng: R,
 ) -> Result<PcztPackage> {
+    let coin_type = network.coin_type();
+    let aindex = get_account_aindex(&mut *connection, account).await?;
     let (xvk,): (Vec<u8>,) = sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?1")
         .bind(account)
         .fetch_one(&mut *connection)
@@ -83,6 +90,7 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
     buffers.push(data);
 
     let mut tins = vec![];
+    let mut pks = vec![];
     for tin in pczt.transparent().inputs() {
         let pczt_tin = pczt::transparent::Input::from_parts(
             *tin.prevout_txid(),
@@ -101,8 +109,8 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
         let mut nullifier = vec![];
         nullifier.write_all(tin.prevout_txid())?;
         nullifier.write_u32::<LE>(*tin.prevout_index())?;
-        let (scope, dindex, address): (u32, u32, String) = sqlx::query_as(
-            "SELECT ta.scope, ta.dindex, ta.address
+        let (scope, dindex, pk, address): (u32, u32, Vec<u8>, String) = sqlx::query_as(
+            "SELECT ta.scope, ta.dindex, ta.pk, ta.address
             FROM notes n
             JOIN transparent_address_accounts ta
             ON ta.id_taddress = n.taddress
@@ -113,12 +121,14 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
         .fetch_one(&mut *connection)
         .await?;
 
+        let pk = PublicKey::from_slice(&pk)?;
+        pks.push(pk);
         let address = TransparentAddress::decode(&network, &address)?;
 
         let mut data = vec![];
         data.write_u32::<LE>(44 + 0x80000000)?; // derivation path
-        data.write_u32::<LE>(133 + 0x80000000)?;
-        data.write_u32::<LE>(0x80000000)?;
+        data.write_u32::<LE>(coin_type | 0x80000000)?;
+        data.write_u32::<LE>(aindex | 0x80000000)?;
         data.write_u32::<LE>(scope)?;
         data.write_u32::<LE>(dindex)?;
         address.script().write(&mut data)?;
@@ -160,7 +170,7 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
         let diversifier = Diversifier(tiu!(diversifier));
         let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
         let mut data = vec![];
-        data.write_u32::<LE>(0)?;
+        data.write_u32::<LE>(aindex)?;
         data.write_all(&recipient.to_bytes())?;
         data.write_u64::<LE>(value)?;
         assert_eq!(data.len(), 55);
@@ -179,6 +189,7 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
         buffers.push(data);
     }
 
+    info!("Confirm Tx on Ledger");
     let _ = sink.add(SigningEvent::Progress("Confirm Tx on Ledger".to_string()));
     let init_tx = APDUCommand {
         cla: 0x85,
@@ -189,6 +200,7 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
     };
     let res = ledger.long_execute(&init_tx, &buffers).await?;
     assert_eq!(res.retcode, 0x9000);
+    info!("init_tx: {} {}", res.retcode, hex::encode(&res.data));
 
     let mut nsk: [u8; 32] = [0; 32];
     let mut value_sum: i128 = 0;
@@ -334,7 +346,8 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
     }
 
     info!("Creating new PCZT");
-    let sbundle = pczt::sapling::Bundle::from_parts(sins, souts, value_sum, anchor.unwrap(), None);
+    let sbundle =
+        pczt::sapling::Bundle::from_parts(sins, souts, value_sum, anchor.unwrap_or_default(), None);
     let pczt = pczt::Pczt::from_parts(global, tbundle, sbundle, pczt::orchard::Bundle::default());
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
@@ -500,7 +513,15 @@ pub async fn sign_transaction<D: Device, R: RngCore + CryptoRng>(
 
     let signer = Signer::new(pczt.clone());
     let signer = signer
-        .sign_sapling_with(|_pczt, sbundle, _| {
+        .sign_transparent_with(|_, tbundle, _| {
+            for ((tin, signature), pk) in tbundle.inputs_mut().iter_mut().zip(tsigs.iter()).zip(pks.iter()) {
+                tin.apply_signature(pk, signature);
+            }
+            Ok::<_, zcash_transparent::pczt::ParseError>(())
+        })
+        .unwrap();
+    let signer = signer
+        .sign_sapling_with(|_, sbundle, _| {
             for (sp, signature) in sbundle.spends_mut().iter_mut().zip(ssigs.iter()) {
                 sp.apply_signature(*signature);
             }

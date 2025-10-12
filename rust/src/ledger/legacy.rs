@@ -287,6 +287,8 @@ mod tests {
         LEDGER_ZEMU
             .lock()
             .await
+            .clone()
+            .unwrap()
             .long_execute(
                 &APDUCommand {
                     cla: 0xE0,
@@ -314,6 +316,8 @@ mod tests {
         let rep = LEDGER_ZEMU
             .lock()
             .await
+            .clone()
+            .unwrap()
             .long_execute(
                 &get_pk,
                 &[hex::decode("058000002C80000085800000000000000000000000").unwrap()],

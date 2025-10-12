@@ -20,7 +20,6 @@ pub fn header_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     buffer.write_all(&header.consensus_branch_id().to_le_bytes())?;
     buffer.write_all(&0u32.to_le_bytes())?;
     buffer.write_all(&header.expiry_height().to_le_bytes())?;
-    println!("HEADER: {}", hex::encode(&buffer));
     hasher.update(&buffer);
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
@@ -114,10 +113,12 @@ pub fn sp_noncompact_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
 
 pub fn spend_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxIdSSpendsHash");
-    let mut buffer = vec![];
-    buffer.write_all(&sp_compact_hasher(pczt)?)?;
-    buffer.write_all(&sp_noncompact_hasher(pczt)?)?;
-    hasher.update(&buffer);
+    if !pczt.sapling().spends().is_empty() {
+        let mut buffer = vec![];
+        buffer.write_all(&sp_compact_hasher(pczt)?)?;
+        buffer.write_all(&sp_noncompact_hasher(pczt)?)?;
+        hasher.update(&buffer);
+    }
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
 
@@ -151,31 +152,17 @@ pub fn output_noncompact_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
 
 pub fn zoutput_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxIdSOutputHash");
-    let mut buffer = vec![];
-    buffer.write_all(&output_compact_hasher(pczt)?)?;
-    buffer.write_all(&output_memo_hasher(pczt)?)?;
-    buffer.write_all(&output_noncompact_hasher(pczt)?)?;
-    hasher.update(&buffer);
-    Ok(hasher.finalize().as_bytes().try_into().unwrap())
-}
-
-pub fn sapling_hasher(_pczt: &Pczt) -> Result<[u8; 32]> {
-    let hasher = create_hasher(b"ZTxIdSaplingHash");
+    if !pczt.sapling().outputs().is_empty() {
+        let mut buffer = vec![];
+        buffer.write_all(&output_compact_hasher(pczt)?)?;
+        buffer.write_all(&output_memo_hasher(pczt)?)?;
+        buffer.write_all(&output_noncompact_hasher(pczt)?)?;
+        hasher.update(&buffer);
+    }
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
 
 pub fn orchard_hasher(_pczt: &Pczt) -> Result<[u8; 32]> {
     let hasher = create_hasher(b"ZTxIdOrchardHash");
-    Ok(hasher.finalize().as_bytes().try_into().unwrap())
-}
-
-pub fn sig_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
-    let mut perso = b"ZcashTxHash_0000".to_vec();
-    perso[12..].copy_from_slice(&pczt.global().consensus_branch_id().to_le_bytes());
-    let mut hasher = create_hasher(&perso);
-    hasher.update(&header_hasher(pczt)?);
-    hasher.update(&transparent_hasher(pczt)?);
-    hasher.update(&sapling_hasher(pczt)?);
-    hasher.update(&orchard_hasher(pczt)?);
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }

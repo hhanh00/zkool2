@@ -15,7 +15,7 @@ use orchard::{
     Note,
 };
 use ripemd::{Digest as _, Ripemd160};
-use sapling_crypto::zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey};
+use sapling_crypto::{zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey}, PaymentAddress};
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
@@ -248,6 +248,7 @@ pub async fn get_account_full_address(
     connection: &mut SqliteConnection,
     account: u32,
     scope: u8,
+    hw: u8,
 ) -> Result<String> {
     let taddress = sqlx::query(
         "SELECT ta.address FROM transparent_address_accounts ta
@@ -264,21 +265,21 @@ pub async fn get_account_full_address(
     .await?;
 
     let saddress = sqlx::query(
-        "SELECT a.dindex, sa.xvk FROM sapling_accounts sa
+        "SELECT sa.xvk, sa.address FROM sapling_accounts sa
         JOIN accounts a ON sa.account = a.id_account AND sa.account = ?",
     )
     .bind(account)
     .map(|row: SqliteRow| {
-        let dindex: u32 = row.get(0);
-        let xvk: Vec<u8> = row.get(1);
+        let xvk: Vec<u8> = row.get(0);
+        let address: String = row.get(1);
         let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
-        if scope == 1 {
+        if scope == 1 && hw == 0 {
             // we do not need to derive a diversified change address
             // since they are not exposed to the user
             let (_, pa) = fvk.change_address();
             pa
         } else {
-            fvk.address(dindex.into()).unwrap()
+            PaymentAddress::decode(network, &address).unwrap()
         }
     })
     .fetch_optional(&mut *connection)
