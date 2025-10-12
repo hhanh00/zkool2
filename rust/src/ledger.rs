@@ -240,7 +240,7 @@ pub static LEDGER_ZEMU: LazyLock<tokio::sync::Mutex<Option<LedgerDeviceZEMU>>> =
             tokio::sync::Mutex::new(Some(ledger))
         }
         #[cfg(not(target_os = "macos"))]
-        tokio::sync::Mutex::new(LedgerDeviceZEMU {})
+        tokio::sync::Mutex::new(Some(LedgerDeviceZEMU {}))
     });
 
 #[derive(Clone)]
