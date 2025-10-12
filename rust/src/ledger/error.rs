@@ -10,6 +10,8 @@ pub enum Error {
     Execute(u16, u8),
     #[error("Protocol Error: {0}")]
     Protocol(String),
+    #[error("Transaction Too Complex, check the number of inputs/outputs")]
+    TooComplex,
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[error(transparent)]
     Hid(#[from] hidapi::HidError),

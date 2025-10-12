@@ -148,6 +148,6 @@ In order of priority,
 - [x] show "wait" on account creation
 - [ ] import/export
 
-- [ ] error when recipient ua only has orchard and warn when only it does not have sapling
-- [ ] error when # inputs/outputs > 5
+- [x] error when recipient ua only has orchard and warn when only it does not have sapling (won't fix)
+- [x] error when # inputs/outputs > 5
 
