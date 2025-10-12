@@ -144,9 +144,10 @@ In order of priority,
 - [x] z2t
 - [x] t2t
 - [x] address sweep
-- [ ] support memos
+- [x] support memos
+- [x] show "wait" on account creation
+- [ ] import/export
 
-- [ ] show "wait" on account creation
 - [ ] error when recipient ua only has orchard and warn when only it does not have sapling
 - [ ] error when # inputs/outputs > 5
 
