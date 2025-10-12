@@ -41,7 +41,7 @@ use crate::{
     get_coin,
     io::{decrypt, encrypt},
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    ledger::fvk::get_next_diversifier_address,
+    ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address},
     pay::pool::ALL_POOLS,
     setup, tiu,
 };
@@ -306,14 +306,31 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
     if na.ledger {
+        // we must do sapling derivation first to know a valid dindex
+        // because in sapling some indices are invalid
         init_account_sapling(&network, &mut db_tx, account, birth).await?;
         store_account_hw(&mut db_tx, account, LEDGER_CODE).await?;
         let fvk = get_hw_fvk(&network, LEDGER_CODE, na.aindex).await?;
         let mut dfvk = fvk.to_bytes().to_vec();
         dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
         let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
-        let (dindex, address) = get_next_diversifier_address(&network, na.aindex, 0).await?;
+        let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
         store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
+
+        init_account_transparent(&mut db_tx, account, birth).await?;
+        let (pk, taddr) = get_hw_transparent_address(&network, na.aindex, 0, dindex).await?;
+        store_account_transparent_addr(
+            &mut db_tx,
+            account,
+            0,
+            dindex,
+            None,
+            &pk,
+            &taddr.encode(&c.network),
+        )
+        .await?;
+
+
         update_dindex(&mut db_tx, account, dindex, true).await?;
     } else if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
