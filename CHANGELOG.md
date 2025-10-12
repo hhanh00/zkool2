@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.6.0) (2025-10-12)
+
+
+### Features
+
+* generate diversified addresses for the Ledger ([4a83769](https://github.com/hhanh00/zkool2/commit/4a83769e5c72222c82e62dff4ceb1c35059b01ae))
+* **ledger:** error handling ([#609](https://github.com/hhanh00/zkool2/issues/609)) ([9221866](https://github.com/hhanh00/zkool2/commit/9221866e881c1804274c4dba7d66347236c5d963))
+* **ledger:** move zemu under feature flag ([#610](https://github.com/hhanh00/zkool2/issues/610)) ([b022902](https://github.com/hhanh00/zkool2/commit/b022902875c8bdf129d1a818edfc06b07b73e26c))
+* **ledger:** scan transparent addresses ([#607](https://github.com/hhanh00/zkool2/issues/607)) ([244d5bc](https://github.com/hhanh00/zkool2/commit/244d5bcb8159e982064b2d206477c85ed80edd62))
+* **ledger:** support for t2t and t2z ([#608](https://github.com/hhanh00/zkool2/issues/608)) ([8ec5a70](https://github.com/hhanh00/zkool2/commit/8ec5a7068f408ad4a4dff52c354a7f7c0a084189))
+* **ledger:** support transparent addresses ([#606](https://github.com/hhanh00/zkool2/issues/606)) ([c099ec1](https://github.com/hhanh00/zkool2/commit/c099ec1b5e2d1533d3b2ac312aad85854690f875))
+
 ## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.5.0) (2025-10-11)
 
 
