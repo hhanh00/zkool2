@@ -96,8 +96,8 @@ pub async fn get_hw_transparent_address(
     data.write_all(&(0x8000_0000u32 | 44).to_le_bytes())?;
     data.write_all(&(0x8000_0000u32 | coin_type).to_le_bytes())?;
     data.write_all(&(0x8000_0000u32 | aindex).to_le_bytes())?;
-    data.write_all(&(0x8000_0000u32 | scope).to_le_bytes())?;
-    data.write_all(&(0x8000_0000u32 | dindex).to_le_bytes())?;
+    data.write_all(&(scope).to_le_bytes())?;
+    data.write_all(&(dindex).to_le_bytes())?;
     assert_eq!(data.len(), 20);
     let get_taddress = APDUCommand {
         cla: 0x85,
@@ -123,23 +123,29 @@ mod tests {
 
     #[tokio::test]
     pub async fn f() -> anyhow::Result<()> {
-        let ledger = LEDGER_ZEMU.lock().await;
-        let aindex = 0x8000_0000u32;
+        let ledger = LEDGER_ZEMU.lock().await.clone().unwrap();
+        // let ledger = connect_ledger().await?;
+        let aindex = 0u32;
         let dindex = 0u32;
         let mut data = vec![];
-        data.write_all(&aindex.to_le_bytes())?;
-        data.write_all(&dindex.to_le_bytes())?;
-        data.write_all(&[0u8; 7])?; // div index is 11 bytes (4 + 7)
-        let get_address_div = APDUCommand {
+        data.write_all(&(0x8000_0000u32 | 44).to_le_bytes())?;
+        data.write_all(&(0x8000_0000u32 | 133).to_le_bytes())?;
+        data.write_all(&(0x8000_0000u32 | aindex).to_le_bytes())?;
+        data.write_all(&(aindex).to_le_bytes())?;
+        data.write_all(&(dindex).to_le_bytes())?;
+        let get_taddress = APDUCommand {
             cla: 0x85,
-            ins: 0x09,
-            p1: 0,
+            ins: 0x01,
+            p1: 1,
             p2: 0,
             data,
         };
 
-        let res = ledger.execute(&get_address_div).await?;
+        println!("{}", get_taddress.ins);
+        let res = ledger.execute(&get_taddress).await?;
         println!("{}", res.retcode);
+        let address = String::from_utf8(res.data[33..].to_vec())?;
+        println!("{address}");
         Ok(())
     }
 }

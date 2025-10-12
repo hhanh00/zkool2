@@ -141,8 +141,8 @@ In order of priority,
 - [x] Support TAddr
 - [x] Generate new TAddr
 - [x] t2z
-- [ ] z2t
-- [ ] t2t
+- [x] z2t
+- [x] t2t
 - [x] address sweep
 - [ ] support memos
 
