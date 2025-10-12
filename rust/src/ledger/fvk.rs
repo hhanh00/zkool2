@@ -1,12 +1,15 @@
 use std::io::Write;
 
 use sapling_crypto::{keys::FullViewingKey, PaymentAddress};
+use secp256k1::PublicKey;
 use zcash_keys::encoding::AddressCodec;
+use zcash_primitives::legacy::TransparentAddress;
+use zcash_protocol::consensus::NetworkConstants;
 
 use crate::{
     coin::Network,
     ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult},
-    tiu,
+    tiu, IntoAnyhow,
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
@@ -28,7 +31,7 @@ pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullVie
     Ok(fvk)
 }
 
-pub async fn get_next_diversifier_address(
+pub async fn get_hw_next_diversifier_address(
     network: &Network,
     aindex: u32,
     dindex: u32,
@@ -79,6 +82,38 @@ pub async fn get_next_diversifier_address(
     Err(LedgerError::Anyhow(anyhow::anyhow!(
         "No diversified addresses found"
     )))
+}
+
+pub async fn get_hw_transparent_address(
+    network: &Network,
+    aindex: u32,
+    scope: u32,
+    dindex: u32,
+) -> LedgerResult<(Vec<u8>, TransparentAddress)> {
+    let ledger = connect_ledger().await?;
+    let mut data = vec![];
+    let coin_type = network.coin_type();
+    data.write_all(&(0x8000_0000u32 | 44).to_le_bytes())?;
+    data.write_all(&(0x8000_0000u32 | coin_type).to_le_bytes())?;
+    data.write_all(&(0x8000_0000u32 | aindex).to_le_bytes())?;
+    data.write_all(&(0x8000_0000u32 | scope).to_le_bytes())?;
+    data.write_all(&(0x8000_0000u32 | dindex).to_le_bytes())?;
+    assert_eq!(data.len(), 20);
+    let get_taddress = APDUCommand {
+        cla: 0x85,
+        ins: 0x01,
+        p1: 0,
+        p2: 0,
+        data,
+    };
+    let res = ledger.execute(&get_taddress).await?;
+    if res.retcode != 0x9000 {
+        return Err(LedgerError::Execute(res.retcode, get_taddress.ins));
+    }
+    let pk = &res.data[0..33];
+    let pubkey = PublicKey::from_slice(pk).anyhow()?;
+    let taddress = TransparentAddress::from_pubkey(&pubkey);
+    Ok((pk.to_vec(), taddress))
 }
 
 #[cfg(test)]
