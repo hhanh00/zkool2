@@ -43,10 +43,10 @@ use crate::{
             orchard_hasher, output_hasher, prevout_hasher, sequence_hasher, spend_hasher,
             zoutput_hasher,
         },
-        APDUCommand, Device, LedgerError,
+        APDUCommand, Device, LedgerError, LedgerResult,
     },
     pay::plan::SAPLING_PROVER,
-    tiu,
+    tiu, IntoAnyhow,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -59,7 +59,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
     sink: &StreamSink<SigningEvent>,
     ledger: &D,
     mut rng: R,
-) -> Result<()> {
+) -> LedgerResult<()> {
     let s = sink;
     let run = async move {
         let coin_type = network.coin_type();
@@ -68,7 +68,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?1")
                 .bind(account)
                 .fetch_one(&mut *connection)
-                .await?;
+                .await.anyhow()?;
         let fvk = FullViewingKey::read(&*xvk)?;
 
         let pczt = Pczt::parse(&package.pczt).expect("cannot parse PCZT");
@@ -84,6 +84,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         let stin = pczt.sapling().spends().len();
         let stout = pczt.sapling().outputs().len();
         info!("PCZT structure: {ctin}/{ctout} : {stin}/{stout}");
+        if ctin > 5 || ctout > 5 || stin > 5 || stout > 5 {
+            return Err(LedgerError::TooComplex);
+        }
 
         let _ = sink.add(SigningEvent::Progress("Init Tx".to_string()));
         data.write_u8(ctin as u8)?;
@@ -122,11 +125,11 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             .bind(account)
             .bind(&nullifier)
             .fetch_one(&mut *connection)
-            .await?;
+            .await.anyhow()?;
 
-            let pk = PublicKey::from_slice(&pk)?;
+            let pk = PublicKey::from_slice(&pk).anyhow()?;
             pks.push(pk);
-            let address = TransparentAddress::decode(&network, &address)?;
+            let address = TransparentAddress::decode(&network, &address).anyhow()?;
 
             let mut data = vec![];
             data.write_u32::<LE>(44 + 0x80000000)?; // derivation path
@@ -161,14 +164,14 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let nullifier = sp.nullifier();
             let (value, diversifier): (u64, Vec<u8>) = sqlx::query_as(
             "SELECT n.value, n.diversifier FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
-        WHERE s.id_note IS NULL
-        AND n.account = ?1 AND n.pool = 1
-        AND n.nullifier = ?2",
-        )
-        .bind(account)
-        .bind(&nullifier[..])
-        .fetch_one(&mut *connection)
-        .await?;
+            WHERE s.id_note IS NULL
+            AND n.account = ?1 AND n.pool = 1
+            AND n.nullifier = ?2",
+            )
+            .bind(account)
+            .bind(&nullifier[..])
+            .fetch_one(&mut *connection)
+            .await.anyhow()?;
 
             let diversifier = Diversifier(tiu!(diversifier));
             let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
@@ -203,9 +206,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         };
         let res = ledger.long_execute(&init_tx, &buffers).await?;
         if res.retcode != 0x9000 {
-            anyhow::bail!("Execution error: {} {}", res.retcode, init_tx.ins);
+            return Err(LedgerError::Execute(res.retcode, init_tx.ins));
         }
-        info!("init_tx: {} {}", res.retcode, hex::encode(&res.data));
 
         let mut nsk: [u8; 32] = [0; 32];
         let mut value_sum: i128 = 0;
@@ -242,7 +244,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 .bind(account)
                 .bind(&nullifier[..])
                 .fetch_one(&mut *connection)
-                .await?;
+                .await.anyhow()?;
             value_sum += value as i128;
             let rcm: [u8; 32] = tiu!(rcm);
             let rcv: [u8; 32] = tiu!(rcv);
@@ -499,7 +501,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let res = ledger.execute(&get_tsig).await?;
             assert_eq!(res.retcode, 0x9000);
             let signature = res.data[..64].to_vec();
-            let signature = secp256k1::ecdsa::Signature::from_compact(&signature)?;
+            let signature = secp256k1::ecdsa::Signature::from_compact(&signature).anyhow()?;
             tsigs.push(signature);
         }
 
@@ -575,7 +577,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let _ = sink.add(SigningEvent::Result(new_package));
         }
         Err(error) => {
-            let _ = s.add_error(error);
+            let _ = s.add_error(anyhow::Error::new(error));
         }
     }
     Ok(())
