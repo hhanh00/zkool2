@@ -56,21 +56,18 @@ pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
     Ok(tx)
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))] {
-        #[frb]
-        pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage) -> Result<()> {
-            let c = crate::get_coin!();
-            let connection = c.get_connection().await?;
-            crate::ledger::builder::sign_ledger_transaction(c.network, sink, connection, c.account, pczt).await
-        }
-    }
-    else {
-        #[frb]
-        pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage) -> Result<()> {
-            Err(anyhow::anyhow!("Ledger is not supported on mobile devices"))
-        }
-    }
+#[frb]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage) -> Result<()> {
+    let c = crate::get_coin!();
+    let connection = c.get_connection().await?;
+    crate::ledger::builder::sign_ledger_transaction(c.network, sink, connection, c.account, pczt).await
+}
+
+#[frb]
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage) -> Result<()> {
+    crate::no_ledger::sign_ledger_transaction().await
 }
 
 pub enum SigningEvent {
