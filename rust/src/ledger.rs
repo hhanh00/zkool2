@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::sync::LazyLock;
 use std::{io::Write, sync::Arc};
 
@@ -73,19 +72,24 @@ impl APDUAnswer {
     }
 }
 
-pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
-    {
-        let ledger = LEDGER.lock().await;
-        if let Some(ledger) = ledger.deref() {
-            return Ok(ledger.clone());
-        }
-    };
-    let hidapi = HidApi::new()?;
-    let device = open_ledger(&hidapi)?;
-    let mut ledger = LEDGER.lock().await;
-    *ledger = Some(device.clone());
-    Ok(device)
+pub async fn connect_ledger() -> LedgerResult<LedgerDeviceZEMU> {
+    let ledger = LEDGER_ZEMU.lock().await;
+    Ok(ledger.clone().unwrap())
 }
+
+// pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
+//     {
+//         let ledger = LEDGER.lock().await;
+//         if let Some(ledger) = ledger.deref() {
+//             return Ok(ledger.clone());
+//         }
+//     };
+//     let hidapi = HidApi::new()?;
+//     let device = open_ledger(&hidapi)?;
+//     let mut ledger = LEDGER.lock().await;
+//     *ledger = Some(device.clone());
+//     Ok(device)
+// }
 
 #[derive(Clone)]
 pub struct LedgerDevice {
@@ -100,20 +104,8 @@ pub trait Device {
         &self,
         command: &APDUCommand,
         data: &[Vec<u8>],
-    ) -> LedgerResult<APDUAnswer>;
-}
-
-#[async_trait]
-impl Device for LedgerDevice {
-    async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
-        self.run(command).await
-    }
-
-    async fn long_execute(
-        &self,
-        command: &APDUCommand,
-        data: &[Vec<u8>],
     ) -> LedgerResult<APDUAnswer> {
+        tracing::info!("Init Sending: {}", command.ins);
         let c = APDUCommand {
             cla: command.cla,
             ins: command.ins,
@@ -122,12 +114,14 @@ impl Device for LedgerDevice {
             data: vec![],
         };
         let res = self.execute(&c).await?;
+        tracing::info!("res: {}", res.retcode);
         if res.retcode != 0x9000 {
             return Err(LedgerError::Execute(res.retcode, c.ins));
         }
 
         for p in data.iter() {
             for c in p.chunks(200) {
+                tracing::info!("Sending: {}", hex::encode(c));
                 let command = APDUCommand {
                     cla: command.cla,
                     ins: command.ins,
@@ -136,11 +130,13 @@ impl Device for LedgerDevice {
                     data: c.to_vec(),
                 };
                 let res = self.execute(&command).await?;
+                tracing::info!("res: {}", res.retcode);
                 if res.retcode != 0x9000 {
                     return Err(LedgerError::Execute(res.retcode, command.ins));
                 }
             }
         }
+        tracing::info!("Finish: {}", command.ins);
         let c = APDUCommand {
             cla: command.cla,
             ins: command.ins,
@@ -149,7 +145,15 @@ impl Device for LedgerDevice {
             data: vec![],
         };
         let res = self.execute(&c).await?;
+        tracing::info!("res: {}", res.retcode);
         Ok(res)
+    }
+}
+
+#[async_trait]
+impl Device for LedgerDevice {
+    async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
+        self.run(command).await
     }
 }
 
@@ -225,20 +229,24 @@ impl LedgerDevice {
     }
 }
 
-pub static LEDGER_ZEMU: LazyLock<tokio::sync::Mutex<LedgerDeviceZEMU>> = LazyLock::new(|| {
-    #[cfg(target_os = "macos")]
-    {
-        let device = ledger_transport_zemu::TransportZemuHttp::new("192.168.18.13", 9999);
-        let ledger = LedgerDeviceZEMU { device };
-        tokio::sync::Mutex::new(ledger)
-    }
-    #[cfg(not(target_os = "macos"))]
-    tokio::sync::Mutex::new(LedgerDeviceZEMU {})
-});
+pub static LEDGER_ZEMU: LazyLock<tokio::sync::Mutex<Option<LedgerDeviceZEMU>>> =
+    LazyLock::new(|| {
+        #[cfg(target_os = "macos")]
+        {
+            let device = ledger_transport_zemu::TransportZemuHttp::new("192.168.18.13", 9999);
+            let ledger = LedgerDeviceZEMU {
+                device: Arc::new(device),
+            };
+            tokio::sync::Mutex::new(Some(ledger))
+        }
+        #[cfg(not(target_os = "macos"))]
+        tokio::sync::Mutex::new(LedgerDeviceZEMU {})
+    });
 
+#[derive(Clone)]
 pub struct LedgerDeviceZEMU {
     #[cfg(target_os = "macos")]
-    pub device: TransportZemuHttp,
+    pub device: Arc<TransportZemuHttp>,
 }
 
 #[async_trait]
@@ -250,7 +258,7 @@ impl Device for LedgerDeviceZEMU {
             .exchange(&ledger_transport::APDUCommand {
                 cla: command.cla,
                 ins: command.ins,
-                p1: 0,
+                p1: command.p1,
                 p2: command.p2,
                 data: command.data.clone(),
             })
@@ -265,67 +273,9 @@ impl Device for LedgerDeviceZEMU {
     async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
         unimplemented!()
     }
-
-    #[cfg(target_os = "macos")]
-    async fn long_execute(
-        &self,
-        command: &APDUCommand,
-        data: &[Vec<u8>],
-    ) -> LedgerResult<APDUAnswer> {
-        self.device
-            .exchange(&ledger_transport::APDUCommand {
-                cla: command.cla,
-                ins: command.ins,
-                p1: 0,
-                p2: command.p2,
-                data: vec![],
-            })
-            .await?;
-
-        for d in data.iter() {
-            for c in d.chunks(200) {
-                let res = self
-                    .device
-                    .exchange(&ledger_transport::APDUCommand {
-                        cla: command.cla,
-                        ins: command.ins,
-                        p1: 1,
-                        p2: command.p2,
-                        data: c,
-                    })
-                    .await?;
-                assert_eq!(res.retcode(), 0x9000);
-            }
-        }
-
-        let res = self
-            .device
-            .exchange(&ledger_transport::APDUCommand {
-                cla: command.cla,
-                ins: command.ins,
-                p1: 2,
-                p2: command.p2,
-                data: vec![],
-            })
-            .await?;
-        Ok(APDUAnswer {
-            data: res.data().to_vec(),
-            retcode: res.retcode(),
-        })
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    async fn long_execute(
-        &self,
-        command: &APDUCommand,
-        data: &[Vec<u8>],
-    ) -> LedgerResult<APDUAnswer> {
-        unimplemented!()
-    }
 }
 
 pub static LEDGER: LazyLock<Mutex<Option<LedgerDevice>>> = LazyLock::new(|| Mutex::new(None));
 
 #[cfg(test)]
 mod tests;
-

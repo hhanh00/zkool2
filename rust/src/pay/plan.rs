@@ -54,7 +54,7 @@ use crate::{
     },
     api::pay::{DustChangePolicy, PcztPackage},
     coin::Network,
-    db::select_account_transparent,
+    db::{get_account_hw, select_account_transparent},
     pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
@@ -132,6 +132,7 @@ pub async fn plan_transaction(
     info!("has_tex: {account} {has_tex}");
 
     let mut can_sign = true;
+    let hw = get_account_hw(&mut *connection, account).await?;
     let (use_internal,): (bool,) =
         sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
             .bind(account)
@@ -355,7 +356,7 @@ pub async fn plan_transaction(
             .unwrap()
     } else {
         let change_scope = if use_internal { 1 } else { 0 };
-        get_account_full_address(network, connection, account, change_scope).await?
+        get_account_full_address(network, connection, account, change_scope, hw).await?
     };
 
     let change_recipient = RecipientState {
@@ -886,16 +887,15 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
 }
 
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
-    let zaddress = ZcashAddress::from_str(address)?;
-    let zaddress: zcash_keys::address::Address = zaddress
-        .convert_if_network(network.network_type())
-        .map_err(|_| anyhow::Error::msg("Conversion error"))?;
-    let taddr = match zaddress {
-        zcash_keys::address::Address::Transparent(addr) => addr,
-        zcash_keys::address::Address::Tex(addr) => TransparentAddress::PublicKeyHash(addr),
-        _ => anyhow::bail!("Invalid transparent address: {address}"),
-    };
-    Ok(taddr)
+    tracing::info!("{address}");
+    if let Ok(taddr) = TransparentAddress::decode(network, address) {
+        return Ok(taddr);
+    }
+    let ua = UnifiedAddress::decode(network, address).map_err(|e| anyhow::anyhow!(e))?;
+    if let Some(taddr) = ua.transparent() {
+        return Ok(*taddr);
+    }
+    anyhow::bail!("Invalid transparent address: {address}");
 }
 
 fn get_sapling_address(network: &Network, address: &str) -> Result<PaymentAddress> {
