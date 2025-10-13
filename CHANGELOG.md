@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.0...zkool-v6.8.1) (2025-10-13)
+
+
+### Bug Fixes
+
+* remove extra column from query ([#618](https://github.com/hhanh00/zkool2/issues/618)) ([0cee52c](https://github.com/hhanh00/zkool2/commit/0cee52c52bce77d7ac5c887b690d026201f5c4a8))
+
 ## [6.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.1...zkool-v6.8.0) (2025-10-13)
 
 
