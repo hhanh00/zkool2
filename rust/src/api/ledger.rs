@@ -14,13 +14,11 @@ cfg_if::cfg_if! {
     }
     else {
         pub(crate) async fn get_hw_fvk(_network: &Network, ledger_code: u32, aindex: u32) -> Result<FullViewingKey> {
-            Err(anyhow::anyhow!("Ledger is not supported on mobile devices"))
+            crate::no_ledger!()
         }
 
         pub async fn show_ledger_sapling_address() -> Result<String> {
             Err(anyhow::anyhow!("Ledger is not supported on mobile devices"))
         }
-
-        fn fail() -> Result
     }
 }
