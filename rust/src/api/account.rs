@@ -32,11 +32,7 @@ use crate::{
     bip38,
     coin::Network,
     db::{
-        init_account_orchard, init_account_sapling, init_account_transparent, store_account_hw,
-        store_account_metadata, store_account_orchard_sk, store_account_orchard_vk,
-        store_account_sapling_sk, store_account_sapling_vk, store_account_seed,
-        store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk,
-        update_dindex, LEDGER_CODE,
+        get_account_dindex, init_account_orchard, init_account_sapling, init_account_transparent, store_account_hw, store_account_metadata, store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk, store_account_sapling_vk, store_account_seed, store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk, update_dindex, LEDGER_CODE
     },
     get_coin,
     io::{decrypt, encrypt},
@@ -46,16 +42,17 @@ use crate::{
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address};
+use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address};
+use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
 
 #[frb]
 pub async fn get_account_pools(account: u32) -> Result<u8> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
-    let tkeys = crate::db::select_account_transparent(&mut connection, account).await?;
+    let dindex = get_account_dindex(&mut connection, account).await?;
+    let tkeys = crate::db::select_account_transparent(&mut connection, account, dindex).await?;
     let skeys = crate::db::select_account_sapling(&c.network, &mut connection, account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, account).await?;
 
@@ -694,11 +691,11 @@ pub async fn get_addresses(ua_pools: u8) -> Result<Addresses> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
 
-    let tkeys = crate::db::select_account_transparent(&mut connection, c.account).await?;
+    let dindex = crate::db::get_account_dindex(&mut connection, c.account).await?;
+
+    let tkeys = crate::db::select_account_transparent(&mut connection, c.account, dindex).await?;
     let skeys = crate::db::select_account_sapling(&c.network, &mut connection, c.account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, c.account).await?;
-
-    let dindex = crate::db::get_account_dindex(&mut connection, c.account).await?;
 
     let taddr = tkeys
         .xvk
@@ -987,4 +984,18 @@ pub async fn max_spendable() -> Result<u64> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
     crate::db::max_spendable(&mut connection, c.account).await
+}
+
+#[frb]
+pub async fn show_ledger_sapling_address() -> Result<String> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    show_sapling_address(&c.network, &mut connection, c.account).await.map_err(anyhow::Error::new)
+}
+
+#[frb]
+pub async fn show_ledger_transparent_address() -> Result<String> {
+    let c = get_coin!();
+    let mut connection = c.get_connection().await?;
+    show_transparent_address(&c.network, &mut connection, c.account).await.map_err(anyhow::Error::new)
 }

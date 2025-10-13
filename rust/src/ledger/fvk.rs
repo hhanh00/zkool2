@@ -1,15 +1,15 @@
 use std::io::Write;
 
+use byteorder::{WriteBytesExt, LE};
 use sapling_crypto::{keys::FullViewingKey, PaymentAddress};
 use secp256k1::PublicKey;
+use sqlx::SqliteConnection;
 use zcash_keys::encoding::AddressCodec;
 use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::NetworkConstants;
 
 use crate::{
-    coin::Network,
-    ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult},
-    tiu, IntoAnyhow,
+    coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
@@ -114,6 +114,72 @@ pub async fn get_hw_transparent_address(
     let pubkey = PublicKey::from_slice(pk).anyhow()?;
     let taddress = TransparentAddress::from_pubkey(&pubkey);
     Ok((pk.to_vec(), taddress))
+}
+
+pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConnection, account: u32) -> LedgerResult<String> {
+    let ledger = connect_ledger().await?;
+    let aindex = get_account_aindex(connection, account).await? | 0x80000000u32;
+    let dindex = get_account_dindex(connection, account).await?;
+    let mut data = vec![];
+    data.write_u32::<LE>(aindex)?;
+    data.write_u32::<LE>(dindex)?;
+    data.write_all(&[0u8; 7])?;
+    let get_div = APDUCommand {
+        cla: 0x85,
+        ins: 0x09,
+        p1: 0,
+        p2: 0,
+        data,
+    };
+    let res = ledger.execute(&get_div).await?;
+    if res.retcode != 0x9000 {
+        return Err(LedgerError::Execute(res.retcode, get_div.ins));
+    }
+    let div = &res.data[0..11];
+    let mut data = vec![];
+    data.write_u32::<LE>(aindex)?;
+    data.write_all(div)?;
+    let get_address = APDUCommand {
+        cla: 0x85,
+        ins: 0x10,
+        p1: 1,
+        p2: 0,
+        data,
+    };
+    let res = ledger.execute(&get_address).await?;
+    if res.retcode != 0x9000 {
+        return Err(LedgerError::Execute(res.retcode, get_address.ins));
+    }
+    let address: [u8; 43] = tiu!(&res.data[0..43]);
+    let address = PaymentAddress::from_bytes(&address).unwrap();
+    Ok(address.encode(network))
+}
+
+pub async fn show_transparent_address(network: &Network, connection: &mut SqliteConnection, account: u32) -> LedgerResult<String> {
+    let ledger = connect_ledger().await?;
+    let aindex = get_account_aindex(connection, account).await?;
+    let dindex = get_account_dindex(connection, account).await?;
+    let mut data = vec![];
+    data.write_u32::<LE>(0x80000000u32 | 44)?;
+    data.write_u32::<LE>(0x80000000u32 | network.coin_type())?;
+    data.write_u32::<LE>(0x80000000u32 | aindex)?;
+    data.write_u32::<LE>(0)?;
+    data.write_u32::<LE>(dindex)?;
+    let get_address = APDUCommand {
+        cla: 0x85,
+        ins: 0x01,
+        p1: 1,
+        p2: 0,
+        data,
+    };
+    let res = ledger.execute(&get_address).await?;
+    if res.retcode != 0x9000 {
+        return Err(LedgerError::Execute(res.retcode, get_address.ins));
+    }
+    let pk = &res.data[0..33];
+    let pk = PublicKey::from_slice(pk).anyhow()?;
+    let ta = TransparentAddress::from_pubkey(&pk);
+    Ok(ta.encode(network))
 }
 
 #[cfg(test)]
