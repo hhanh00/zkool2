@@ -990,12 +990,14 @@ pub async fn max_spendable() -> Result<u64> {
 pub async fn show_ledger_sapling_address() -> Result<String> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    show_sapling_address(&c.network, &mut connection, c.account).await.map_err(anyhow::Error::new)
+    let r = show_sapling_address(&c.network, &mut connection, c.account).await?;
+    Ok(r)
 }
 
 #[frb]
 pub async fn show_ledger_transparent_address() -> Result<String> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
-    show_transparent_address(&c.network, &mut connection, c.account).await.map_err(anyhow::Error::new)
+    let r = show_transparent_address(&c.network, &mut connection, c.account).await?;
+    Ok(r)
 }
