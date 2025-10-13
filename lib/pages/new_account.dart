@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -296,10 +297,11 @@ class NewAccountPageState extends State<NewAccountPage> {
       }
 
       final bh = birth != null ? int.parse(birth) : appStore.currentHeight;
+      AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";
         if (ledger) message += "\nConfirm on your Ledger device";
-        final dialog = await showMessage(context, message, dismissable: false);
+        dialog = await showMessage(context, message, dismissable: false);
         final account = await newAccount(
           na: NewAccount(
             icon: icon,
@@ -317,6 +319,7 @@ class NewAccountPageState extends State<NewAccountPage> {
           ),
         );
         dialog.dismiss();
+        dialog = null;
         try {
           // ignore errors since it's just caching
           if (!appStore.offline) await cacheBlockTime(height: bh);
@@ -336,6 +339,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         if (mounted) GoRouter.of(context).pop();
       } on AnyhowException catch (e) {
         await showException(context, e.message);
+        dialog?.dismiss();
       }
     }
   }
