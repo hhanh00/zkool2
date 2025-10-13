@@ -10,22 +10,26 @@ use sqlx::{
     Column, Connection, Row, SqliteConnection, TypeInfo,
 };
 use tracing::info;
-use zcash_keys::{encoding::AddressCodec, keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey}};
+use zcash_keys::{
+    encoding::AddressCodec,
+    keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey},
+};
 use zcash_protocol::consensus::NetworkUpgrade;
 use zcash_protocol::consensus::Parameters;
 use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
-use crate::{account::TxNote, tiu};
 use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
 use crate::coin::Network;
 use crate::sync::BlockHeader;
+use crate::{account::TxNote, tiu};
 
 pub const DB_VERSION: u16 = 7;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
+    tracing::info!("Schema install");
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(
         key TEXT PRIMARY KEY,
@@ -89,11 +93,10 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
-    if !has_column(&mut *connection, "sapling_accounts", "address").await? {
+    let _ =
         sqlx::query("ALTER TABLE sapling_accounts ADD COLUMN address BLOB NOT NULL DEFAULT('')")
             .execute(&mut *connection)
-            .await?;
-    }
+            .await;
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS orchard_accounts(
@@ -275,11 +278,9 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     // V5
-    if !has_column(&mut *connection, "accounts", "folder").await? {
-        sqlx::query("ALTER TABLE accounts ADD COLUMN folder INTEGER")
-            .execute(&mut *connection)
-            .await?;
-    }
+    let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN folder INTEGER")
+        .execute(&mut *connection)
+        .await;
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS folders (
@@ -289,20 +290,23 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
-    // V6
-    if !has_column(&mut *connection, "transactions", "category").await? {
-        sqlx::query("ALTER TABLE transactions ADD COLUMN category INTEGER")
-            .execute(&mut *connection)
-            .await?;
-        sqlx::query("ALTER TABLE transactions ADD COLUMN price REAL")
-            .execute(&mut *connection)
-            .await?;
+    let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN category INTEGER")
+        .execute(&mut *connection)
+        .await;
+    let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN price REAL")
+        .execute(&mut *connection)
+        .await;
+    if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='categories'")
+        .fetch_optional(&mut *connection)
+        .await?
+        .is_none()
+    {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS categories (
-            id_category INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            income BOOL NOT NULL,
-            UNIQUE (name))",
+                id_category INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                income BOOL NOT NULL,
+                UNIQUE (name))",
         )
         .execute(&mut *connection)
         .await?;
@@ -349,11 +353,9 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     // V7
-    if !has_column(&mut *connection, "accounts", "hw").await? {
-        sqlx::query("ALTER TABLE accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
-            .execute(&mut *connection)
-            .await?;
-    }
+    let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
+        .execute(&mut *connection)
+        .await;
 
     let version = get_prop(connection, "version").await?;
     match version {
@@ -368,14 +370,17 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     Ok(())
 }
 
-pub async fn migrate_sapling_addresses(network: &Network, connection: &mut SqliteConnection) -> Result<()> {
-    let accounts: Vec<(u32, u32, Vec<u8>)> =
-        sqlx::query_as(
-            "SELECT id_account, dindex, xvk FROM accounts a
+pub async fn migrate_sapling_addresses(
+    network: &Network,
+    connection: &mut SqliteConnection,
+) -> Result<()> {
+    let accounts: Vec<(u32, u32, Vec<u8>)> = sqlx::query_as(
+        "SELECT id_account, dindex, xvk FROM accounts a
             JOIN sapling_accounts s ON a.id_account = s.account
-            WHERE address = ''")
-        .fetch_all(&mut *connection)
-        .await?;
+            WHERE address = ''",
+    )
+    .fetch_all(&mut *connection)
+    .await?;
 
     for (account, dindex, xvk) in accounts {
         let fvk: [u8; 128] = tiu!(xvk);
@@ -383,26 +388,12 @@ pub async fn migrate_sapling_addresses(network: &Network, connection: &mut Sqlit
         let address = fvk.address((dindex as u64).into()).unwrap();
         let address = address.encode(network);
         sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
-        .bind(account)
-        .bind(&address)
-        .execute(&mut *connection)
-        .await?;
+            .bind(account)
+            .bind(&address)
+            .execute(&mut *connection)
+            .await?;
     }
     Ok(())
-}
-
-pub async fn has_column(
-    connection: &mut SqliteConnection,
-    table: &str,
-    column: &str,
-) -> Result<bool> {
-    let sql = sqlx::query("SELECT sql FROM sqlite_master WHERE name = ?1")
-        .bind(table)
-        .map(|r: SqliteRow| r.get::<String, _>(0))
-        .fetch_optional(connection)
-        .await?;
-    let res = matches!(sql, Some(sql) if sql.contains(column));
-    Ok(res)
 }
 
 pub async fn put_prop(connection: &mut SqliteConnection, key: &str, value: &str) -> Result<()> {
@@ -886,7 +877,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             time: row.get(12),
             balance: row.get::<i64, _>(13) as u64,
             folder,
-            hw: row.get::<u8, _>(16)
+            hw: row.get::<u8, _>(16),
         }
     })
     .fetch(&mut *connection);
