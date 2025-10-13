@@ -733,6 +733,7 @@ pub async fn update_dindex(
 pub async fn select_account_transparent(
     connection: &mut SqliteConnection,
     account: u32,
+    dindex: u32,
 ) -> Result<TransparentKeys> {
     #[allow(clippy::type_complexity)]
     let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
@@ -745,8 +746,9 @@ pub async fn select_account_transparent(
         Some((None, None)) => {
             // no xprv, no xpub => get the address imported as bip38
             let taddress =
-                sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ? ORDER BY dindex DESC LIMIT 1")
+                sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?1 AND dindex = ?2 AND scope = 0")
                     .bind(account)
+                    .bind(dindex)
                     .map(|row: SqliteRow| row.get::<String, _>(0))
                     .fetch_one(&mut *connection)
                     .await?;

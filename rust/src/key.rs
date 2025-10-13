@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use crate::coin::Network;
+use crate::{coin::Network, db::get_account_dindex};
 use anyhow::Result;
 use bech32::Hrp;
 use bip32::{ChildNumber, ExtendedKeyAttrs, ExtendedPrivateKey, ExtendedPublicKey, Prefix};
@@ -26,7 +26,8 @@ pub async fn get_account_ufvk(
     account: u32,
     pools: u8,
 ) -> Result<String> {
-    let tkeys = select_account_transparent(connection, account).await?;
+    let dindex = get_account_dindex(connection, account).await?;
+    let tkeys = select_account_transparent(connection, account, dindex).await?;
     let skeys = select_account_sapling(network, connection, account).await?;
     let okeys = select_account_orchard(connection, account).await?;
 

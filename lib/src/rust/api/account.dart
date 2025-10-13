@@ -9,6 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'account.freezed.dart';
 
+// These functions are ignored because they are not marked as `pub`: `derive_sapling_address`
+
 Future<int> getAccountPools({required int account}) =>
     RustLib.instance.api.crateApiAccountGetAccountPools(account: account);
 
@@ -136,6 +138,12 @@ Future<void> unlockAllNotes() =>
 
 Future<BigInt> maxSpendable() =>
     RustLib.instance.api.crateApiAccountMaxSpendable();
+
+Future<String> showLedgerSaplingAddress() =>
+    RustLib.instance.api.crateApiAccountShowLedgerSaplingAddress();
+
+Future<String> showLedgerTransparentAddress() =>
+    RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress();
 
 @freezed
 sealed class Account with _$Account {

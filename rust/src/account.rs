@@ -362,7 +362,7 @@ pub async fn generate_next_dindex(
         .execute(&mut *db_tx)
         .await?;
 
-    let tkeys = select_account_transparent(&mut db_tx, account).await?;
+    let tkeys = select_account_transparent(&mut db_tx, account, dindex).await?;
     let (sk, pk, address) = match tkeys.xvk {
         Some(xvk) => {
             let sk = tkeys
