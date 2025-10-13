@@ -736,7 +736,7 @@ pub async fn select_account_transparent(
 ) -> Result<TransparentKeys> {
     #[allow(clippy::type_complexity)]
     let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
-        sqlx::query_as("SELECT xsk, xvk, hw FROM transparent_accounts WHERE account = ?")
+        sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
