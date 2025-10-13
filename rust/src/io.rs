@@ -20,6 +20,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     info!("Exporting account {}", account);
     let mut io_account = sqlx::query(
         "SELECT id_account, a.name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, position, use_internal, hidden, saved, enabled, internal,
+        hw,
         f.name
         FROM accounts a
         LEFT JOIN folders f ON a.folder = f.id_folder
@@ -42,7 +43,8 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let saved: bool = row.get(13);
             let enabled: bool = row.get(14);
             let internal: bool = row.get(15);
-            let folder_name: Option<String> = row.get(16);
+            let hw: u8 = row.get(16);
+            let folder_name: Option<String> = row.get(17);
 
             IOAccount {
                 version: DB_VERSION,
@@ -62,6 +64,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 saved,
                 enabled,
                 internal,
+                hw,
                 folder: folder_name.unwrap_or_default(),
                 ..Default::default()
             }
@@ -482,8 +485,8 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
 
     // Insert the account into the database
     let r = sqlx::query("INSERT INTO accounts
-        (name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, folder, position, use_internal, hidden, saved, enabled, internal)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)")
+        (name, seed, passphrase, seed_fingerprint, aindex, dindex, def_dindex, icon, birth, folder, position, use_internal, hidden, saved, enabled, internal, hw)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)")
         .bind(&io_account.name)
         .bind(&io_account.seed)
         .bind(&io_account.passphrase)
@@ -499,6 +502,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(io_account.saved)
         .bind(io_account.enabled)
         .bind(io_account.internal)
+        .bind(io_account.hw)
         .execute(&mut *tx)
         .await?;
     let new_id_account = r.last_insert_rowid() as u32;
@@ -785,6 +789,7 @@ pub struct IOAccount {
     pub saved: bool,
     pub enabled: bool,
     pub internal: bool,
+    pub hw: u8,
     pub tkeys: Option<IOKeys>,
     pub skeys: Option<IOKeys>,
     pub okeys: Option<IOKeys>,
