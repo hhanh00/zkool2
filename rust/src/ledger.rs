@@ -6,8 +6,11 @@ use hidapi::{self, HidApi, HidDevice};
 use ledger_transport::Exchange;
 #[cfg(target_os = "macos")]
 use ledger_transport_zemu::TransportZemuHttp;
-use tokio::sync::Mutex;
+use tokio::runtime::Builder;
+use tokio::sync::{mpsc, oneshot, Mutex};
 use tonic::async_trait;
+
+use crate::IntoAnyhow;
 
 pub mod builder;
 pub mod error;
@@ -18,22 +21,20 @@ pub mod legacy;
 pub type LedgerError = error::Error;
 pub type LedgerResult<T> = std::result::Result<T, LedgerError>;
 
-pub fn open_ledger(api: &HidApi) -> LedgerResult<LedgerDevice> {
+pub fn open_ledger(api: &HidApi) -> LedgerResult<HidDevice> {
     for devinfo in api.device_list() {
         let vendor_id = devinfo.vendor_id();
         if vendor_id == 0x2C97 {
             // Ledger
             let device = devinfo.open_device(api)?;
             let _ = device.set_blocking_mode(true);
-            return Ok(LedgerDevice {
-                device: Arc::new(Mutex::new(device)),
-                timeout: 100_000_000,
-            });
+            return Ok(device);
         }
     }
     Err(LedgerError::NotFound)
 }
 
+#[derive(Clone)]
 pub struct APDUCommand {
     pub cla: u8,
     pub ins: u8,
@@ -72,13 +73,13 @@ impl APDUAnswer {
     }
 }
 
-#[cfg(feature="zemu")]
+#[cfg(feature = "zemu")]
 pub async fn connect_ledger() -> LedgerResult<LedgerDeviceZEMU> {
     let ledger = LEDGER_ZEMU.lock().await;
     Ok(ledger.clone().unwrap())
 }
 
-#[cfg(not(feature="zemu"))]
+#[cfg(not(feature = "zemu"))]
 pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
     {
         use std::ops::Deref;
@@ -88,28 +89,29 @@ pub async fn connect_ledger() -> LedgerResult<LedgerDevice> {
             return Ok(ledger.clone());
         }
     };
-    let hidapi = HidApi::new()?;
-    let device = open_ledger(&hidapi)?;
     let mut ledger = LEDGER.lock().await;
+    let device = LedgerDevice::new().await?;
     *ledger = Some(device.clone());
     Ok(device)
 }
 
+pub type ReponseChannel = oneshot::Sender<LedgerResult<APDUAnswer>>;
+
 #[derive(Clone)]
 pub struct LedgerDevice {
-    device: Arc<Mutex<HidDevice>>,
-    timeout: i32,
+    tx: mpsc::Sender<(APDUCommand, ReponseChannel)>,
 }
 
 #[async_trait]
 pub trait Device {
-    async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer>;
+    async fn execute(&self, command: APDUCommand) -> LedgerResult<APDUAnswer>;
     async fn long_execute(
         &self,
         command: &APDUCommand,
         data: &[Vec<u8>],
     ) -> LedgerResult<APDUAnswer> {
         tracing::info!("Init Sending: {}", command.ins);
+        let ins = command.ins;
         let c = APDUCommand {
             cla: command.cla,
             ins: command.ins,
@@ -117,15 +119,16 @@ pub trait Device {
             p2: command.p2,
             data: vec![],
         };
-        let res = self.execute(&c).await?;
+        let res = self.execute(c).await?;
         tracing::info!("res: {}", res.retcode);
         if res.retcode != 0x9000 {
-            return Err(LedgerError::Execute(res.retcode, c.ins));
+            return Err(LedgerError::Execute(res.retcode, ins));
         }
 
         for p in data.iter() {
             for c in p.chunks(200) {
                 tracing::info!("Sending: {}", hex::encode(c));
+                let ins = command.ins;
                 let command = APDUCommand {
                     cla: command.cla,
                     ins: command.ins,
@@ -133,10 +136,10 @@ pub trait Device {
                     p2: command.p2,
                     data: c.to_vec(),
                 };
-                let res = self.execute(&command).await?;
+                let res = self.execute(command).await?;
                 tracing::info!("res: {}", res.retcode);
                 if res.retcode != 0x9000 {
-                    return Err(LedgerError::Execute(res.retcode, command.ins));
+                    return Err(LedgerError::Execute(res.retcode, ins));
                 }
             }
         }
@@ -148,7 +151,7 @@ pub trait Device {
             p2: command.p2,
             data: vec![],
         };
-        let res = self.execute(&c).await?;
+        let res = self.execute(c).await?;
         tracing::info!("res: {}", res.retcode);
         Ok(res)
     }
@@ -156,22 +159,50 @@ pub trait Device {
 
 #[async_trait]
 impl Device for LedgerDevice {
-    async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
+    async fn execute(&self, command: APDUCommand) -> LedgerResult<APDUAnswer> {
         self.run(command).await
     }
 }
 
 impl LedgerDevice {
-    pub async fn run(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
-        let c = command.to_bytes()?;
-        self.write(&c).await?;
-        let rep = self.read().await?;
-        let answer = APDUAnswer::from_bytes(&rep)?;
-        Ok(answer)
+    pub async fn new() -> LedgerResult<Self> {
+        let tx = Self::start().await?;
+        Ok(LedgerDevice {
+            tx,
+        })
     }
 
-    async fn write(&self, data: &[u8]) -> LedgerResult<()> {
-        let device = self.device.lock().await;
+    pub async fn start() -> LedgerResult<mpsc::Sender<(APDUCommand, ReponseChannel)>> {
+        let hidapi = HidApi::new()?;
+        let device = open_ledger(&hidapi)?;
+        let (tx, mut rx) = mpsc::channel::<(APDUCommand, ReponseChannel)>(8);
+        // spawn a single thread worker to make sure that access to the device is serialized
+        std::thread::spawn(move || {
+            let r = Builder::new_current_thread().enable_all().build().unwrap();
+            r.block_on(async move {
+                while let Some((command, sender)) = rx.recv().await {
+                    let answer = async {
+                        let c = command.to_bytes()?;
+                        Self::write(&device, &c).await?;
+                        let rep = Self::read(&device).await?;
+                        let answer = APDUAnswer::from_bytes(&rep)?;
+                        Ok::<_, LedgerError>(answer)
+                    }.await;
+                    let _ = sender.send(answer);
+                }
+            });
+        });
+        Ok(tx)
+    }
+
+    pub async fn run(&self, command: APDUCommand) -> LedgerResult<APDUAnswer> {
+        let (tx, rx) = oneshot::channel::<LedgerResult<APDUAnswer>>();
+        self.tx.send((command, tx)).await.anyhow()?;
+        let rep = rx.await.anyhow()?;
+        rep
+    }
+
+    async fn write(device: &HidDevice, data: &[u8]) -> LedgerResult<()> {
         // data is prefixed by its length
         let mut prefixed_data = Vec::<u8>::with_capacity(data.len() + 2);
         prefixed_data.write_u16::<BE>(data.len() as u16)?;
@@ -197,15 +228,14 @@ impl LedgerDevice {
         Ok(())
     }
 
-    async fn read(&self) -> LedgerResult<Vec<u8>> {
-        let device = self.device.lock().await;
+    async fn read(device: &HidDevice) -> LedgerResult<Vec<u8>> {
         let mut seqno = 0;
         let mut data_len = 0;
         let mut buffer = [0u8; 64];
         let mut data = vec![];
 
         loop {
-            let size = device.read_timeout(&mut buffer, self.timeout)?;
+            let size = device.read(&mut buffer)?;
             // the first chunk has the total length, therefore it must be larger
             if size < 5 || (seqno == 0 && size < 7) {
                 return Err(LedgerError::Protocol("No header".into()));
@@ -256,7 +286,7 @@ pub struct LedgerDeviceZEMU {
 #[async_trait]
 impl Device for LedgerDeviceZEMU {
     #[cfg(target_os = "macos")]
-    async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
+    async fn execute(&self, command: APDUCommand) -> LedgerResult<APDUAnswer> {
         let res = self
             .device
             .exchange(&ledger_transport::APDUCommand {

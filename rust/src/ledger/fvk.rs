@@ -15,7 +15,7 @@ use crate::{
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
     let aindex = aindex | 0x8000_0000u32;
     let res = ledger
-        .execute(&APDUCommand {
+        .execute(APDUCommand {
             cla: 0x85,
             ins: 0xF3,
             p1: 1,
@@ -51,9 +51,9 @@ pub async fn get_hw_next_diversifier_address(
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_div_list).await?;
+    let res = ledger.execute(get_div_list).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_div_list.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x09));
     }
     for i in 0..20 {
         let div = &res.data[i * 11..(i + 1) * 11];
@@ -69,9 +69,9 @@ pub async fn get_hw_next_diversifier_address(
                 p2: 0,
                 data,
             };
-            let res = ledger.execute(&get_address_div).await?;
+            let res = ledger.execute(get_address_div).await?;
             if res.retcode != 0x9000 {
-                return Err(LedgerError::Execute(res.retcode, get_address_div.ins));
+                return Err(LedgerError::Execute(res.retcode, 0x10));
             }
             let address = &res.data[0..43];
             let address = PaymentAddress::from_bytes(tiu!(address)).unwrap();
@@ -106,9 +106,9 @@ pub async fn get_hw_transparent_address(
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_taddress).await?;
+    let res = ledger.execute(get_taddress).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_taddress.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x01));
     }
     let pk = &res.data[0..33];
     let pubkey = PublicKey::from_slice(pk).anyhow()?;
@@ -131,9 +131,9 @@ pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConn
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_div).await?;
+    let res = ledger.execute(get_div).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_div.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x09));
     }
     let div = &res.data[0..11];
     let mut data = vec![];
@@ -146,9 +146,9 @@ pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConn
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_address).await?;
+    let res = ledger.execute(get_address).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_address.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x10));
     }
     let address: [u8; 43] = tiu!(&res.data[0..43]);
     let address = PaymentAddress::from_bytes(&address).unwrap();
@@ -172,9 +172,9 @@ pub async fn show_transparent_address(network: &Network, connection: &mut Sqlite
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_address).await?;
+    let res = ledger.execute(get_address).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_address.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x01));
     }
     let pk = &res.data[0..33];
     let pk = PublicKey::from_slice(pk).anyhow()?;
@@ -208,7 +208,7 @@ mod tests {
         };
 
         println!("{}", get_taddress.ins);
-        let res = ledger.execute(&get_taddress).await?;
+        let res = ledger.execute(get_taddress).await?;
         println!("{}", res.retcode);
         let address = String::from_utf8(res.data[33..].to_vec())?;
         println!("{address}");
