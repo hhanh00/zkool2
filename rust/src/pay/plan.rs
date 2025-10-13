@@ -54,7 +54,7 @@ use crate::{
     },
     api::pay::{DustChangePolicy, PcztPackage},
     coin::Network,
-    db::{get_account_hw, select_account_transparent},
+    db::{get_account_dindex, get_account_hw, select_account_transparent},
     pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
@@ -112,6 +112,7 @@ pub async fn plan_transaction(
         info!("Computing plan");
     });
 
+    let dindex = get_account_dindex(connection, account).await?;
     let mut total_amount = 0;
     let mut total_fiat = 0.0;
     for r in recipients {
@@ -349,7 +350,7 @@ pub async fn plan_transaction(
     let orchard_anchor = eo.root(&OrchardHasher::default());
 
     // generate a new change address if we need a transparent address
-    let tkeys = select_account_transparent(connection, account).await?;
+    let tkeys = select_account_transparent(connection, account, dindex).await?;
     let change_address = if change_pool == 0 && tkeys.xvk.is_some() {
         generate_next_change_address(network, connection, account)
             .await?
@@ -760,7 +761,8 @@ pub async fn sign_transaction(
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
 
-    let tkeys = select_account_transparent(connection, account).await?;
+    let dindex = get_account_dindex(connection, account).await?;
+    let tkeys = select_account_transparent(connection, account, dindex).await?;
     let tsk = tkeys.xsk;
     let ssk = get_sapling_sk(connection, account).await?;
     let osk = get_orchard_sk(connection, account).await?;
