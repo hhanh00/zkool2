@@ -43,80 +43,122 @@ class ReceivePageState extends State<ReceivePage> {
   Widget build(BuildContext context) {
     Future(tutorial);
     final addresses = this.addresses;
+    final account = appStore.selectedAccount!;
 
     return Scaffold(
-        appBar: AppBar(
-          title: Text("Receive Funds"),
-          actions: [
-            Showcase(key: viewID, description: "View Transparent Addresses", child:
-            IconButton(
-                tooltip: "Transparent Addresses",
-                onPressed: onViewTransparentAddresses,
-                icon: Icon(Icons.visibility),),),
-            Showcase(key: sweepID, description: "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync", child:
-            IconButton(
-                tooltip: "Sweep",
-                onPressed: onSweep,
-                icon: Icon(Icons.search),),),
-            Showcase(key: deriveID, description: "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds", child:
-            IconButton(
-                tooltip: "Next Set of Addresses",
-                onPressed: onGenerateAddress,
-                icon: Icon(Icons.skip_next),),),
-          ],
-        ),
-        body: addresses == null
-            ? SizedBox.shrink()
-            : SingleChildScrollView(
-                child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Column(children: [
-                      if (addresses.saddr != null ||
-                          addresses.oaddr != null)
-                        PoolSelect(enabled: appStore.pools,
-                          initialValue: uaPools,
-                          onChanged: onChangedUAPools,),
-                      if (addresses.ua != null)
-                        ...[
-                        Gap(8),
-                        ListTile(
-                          title: Text("Unified Address"),
-                          subtitle: CopyableText(addresses.ua!),
-                          trailing: Showcase(key: qrID, description: "Show address as a QR Code", child:
-                          IconButton(
+      appBar: AppBar(
+        title: Text("Receive Funds"),
+        actions: [
+          Showcase(
+            key: viewID,
+            description: "View Transparent Addresses",
+            child: IconButton(
+              tooltip: "Transparent Addresses",
+              onPressed: onViewTransparentAddresses,
+              icon: Icon(Icons.visibility),
+            ),
+          ),
+          Showcase(
+            key: sweepID,
+            description:
+                "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync",
+            child: IconButton(
+              tooltip: "Sweep",
+              onPressed: onSweep,
+              icon: Icon(Icons.search),
+            ),
+          ),
+          Showcase(
+            key: deriveID,
+            description: "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds",
+            child: IconButton(
+              tooltip: "Next Set of Addresses",
+              onPressed: onGenerateAddress,
+              icon: Icon(Icons.skip_next),
+            ),
+          ),
+        ],
+      ),
+      body: addresses == null
+          ? SizedBox.shrink()
+          : SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  children: [
+                    if (addresses.saddr != null || addresses.oaddr != null)
+                      PoolSelect(
+                        enabled: appStore.pools,
+                        initialValue: uaPools,
+                        onChanged: onChangedUAPools,
+                      ),
+                    if (addresses.ua != null) ...[
+                      Gap(8),
+                      ListTile(
+                        title: Text("Unified Address"),
+                        subtitle: CopyableText(addresses.ua!),
+                        trailing: Showcase(
+                          key: qrID,
+                          description: "Show address as a QR Code",
+                          child: IconButton(
                             icon: Icon(Icons.qr_code),
                             onPressed: () => onShowQR("Unified Address", addresses.ua!),
-                          ),),
-                        ),
-                        ],
-                      if (addresses.oaddr != null)
-                        ListTile(
-                          title: Text("Orchard only Address"),
-                          subtitle: CopyableText(addresses.oaddr!),
-                          trailing: IconButton(
-                            icon: Icon(Icons.qr_code),
-                            onPressed: () => onShowQR("Orchard", addresses.oaddr!),
                           ),
                         ),
-                      if (addresses.saddr != null)
-                        ListTile(
-                          title: Text("Sapling Address"),
-                          subtitle: CopyableText(addresses.saddr!),
-                          trailing: IconButton(
-                            icon: Icon(Icons.qr_code),
-                            onPressed: () => onShowQR("Sapling", addresses.saddr!),
-                          ),
+                      ),
+                    ],
+                    if (addresses.oaddr != null)
+                      ListTile(
+                        title: Text("Orchard only Address"),
+                        subtitle: CopyableText(addresses.oaddr!),
+                        trailing: IconButton(
+                          icon: Icon(Icons.qr_code),
+                          onPressed: () => onShowQR("Orchard", addresses.oaddr!),
                         ),
-                      if (addresses.taddr != null)
-                        ListTile(
-                          title: Text("Transparent Address"),
-                          subtitle: CopyableText(addresses.taddr!),
-                          trailing: IconButton(
-                            icon: Icon(Icons.qr_code),
-                            onPressed: () => onShowQR("Transparent", addresses.taddr!),
-                          ),
+                      ),
+                    if (addresses.saddr != null)
+                      ListTile(
+                        title: Text("Sapling Address"),
+                        subtitle: CopyableText(addresses.saddr!),
+                        leading: account.hw != 0 ? IconButton(onPressed: onCheckSapling, icon: Icon(Icons.check)) : null,
+                        trailing: IconButton(
+                          icon: Icon(Icons.qr_code),
+                          onPressed: () => onShowQR("Sapling", addresses.saddr!),
                         ),
-                    ],),),),);
+                      ),
+                    if (addresses.taddr != null)
+                      ListTile(
+                        title: Text("Transparent Address"),
+                        subtitle: CopyableText(addresses.taddr!),
+                        leading: account.hw != 0 ? IconButton(onPressed: onCheckTransparent, icon: Icon(Icons.check)) : null,
+                        trailing: IconButton(
+                          icon: Icon(Icons.qr_code),
+                          onPressed: () => onShowQR("Transparent", addresses.taddr!),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  void onCheckSapling() async {
+    showSnackbar("Check address on the device");
+    try {
+      await showLedgerSaplingAddress();
+    } on AnyhowException catch (e) {
+      await showException(context, e.message);
+    }
+  }
+
+  void onCheckTransparent() async {
+    showSnackbar("Check address on the device");
+    try {
+      await showLedgerTransparentAddress();
+    } on AnyhowException catch (e) {
+      await showException(context, e.message);
+    }
   }
 
   void onChangedUAPools(int pools) async {
@@ -127,7 +169,8 @@ class ReceivePageState extends State<ReceivePage> {
 
   void onGenerateAddress() async {
     try {
-      final confirmed = await confirmDialog(context, title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
+      final confirmed = await confirmDialog(context,
+          title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
       if (!confirmed) return;
       if (!mounted) return;
       final dialog = await showMessage(context, "Please wait for the address generation", dismissable: false);
@@ -135,8 +178,7 @@ class ReceivePageState extends State<ReceivePage> {
       addresses = await getAddresses(uaPools: uaPools);
       dialog.dismiss();
       setState(() {});
-    }
-    on AnyhowException catch (e) {
+    } on AnyhowException catch (e) {
       await showException(context, e.message);
     }
   }
@@ -173,7 +215,8 @@ class TransparentAddressesPage extends StatelessWidget {
           return ListTile(
             title: CopyableText(txCount.address),
             subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}, Last Used: ${timeToString(txCount.time)}"),
-            trailing: Text(zatToString(txCount.amount)),);
+            trailing: Text(zatToString(txCount.amount)),
+          );
         },
       ),
     );

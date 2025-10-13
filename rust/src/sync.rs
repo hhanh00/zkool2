@@ -5,8 +5,7 @@ use crate::{
     api::sync::SyncProgress,
     coin::Network,
     db::{
-        get_account_aindex, get_account_hw, select_account_transparent,
-        store_account_transparent_addr,
+        get_account_aindex, get_account_dindex, get_account_hw, select_account_transparent, store_account_transparent_addr
     },
     io::SyncHeight,
     lwd::CompactBlock,
@@ -592,9 +591,10 @@ pub async fn transparent_sweep(
     let network = *network;
     let hw = get_account_hw(&mut connection, account).await?;
     let aindex = get_account_aindex(&mut connection, account).await?;
+    let dindex = get_account_dindex(&mut connection, account).await?;
     tokio::spawn(async move {
         let mut n_added = 0;
-        let tk = select_account_transparent(&mut connection, account).await?;
+        let tk = select_account_transparent(&mut connection, account, dindex).await?;
         let xvk = tk.xvk;
         let start_height = get_birth_height(&mut connection, account).await?;
         for scope in 0..2 {
