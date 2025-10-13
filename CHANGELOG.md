@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.2...zkool-v6.9.0) (2025-10-13)
+
+
+### Features
+
+* **ledger:** show t/z address on device for verification ([#622](https://github.com/hhanh00/zkool2/issues/622)) ([e01eaf6](https://github.com/hhanh00/zkool2/commit/e01eaf62598d9348b5189e124bf237fade3200fa))
+
 ## [6.8.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.1...zkool-v6.8.2) (2025-10-13)
 
 
