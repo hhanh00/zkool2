@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.7.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.0...zkool-v6.7.1) (2025-10-13)
+
+
+### Bug Fixes
+
+* db schema upgrage ([#614](https://github.com/hhanh00/zkool2/issues/614)) ([da6c584](https://github.com/hhanh00/zkool2/commit/da6c584c1bb9fb6e58aba8537a071d0237ee5683))
+
 ## [6.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.6.0...zkool-v6.7.0) (2025-10-12)
 
 
