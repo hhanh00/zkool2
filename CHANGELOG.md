@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.1...zkool-v6.8.2) (2025-10-13)
+
+
+### Bug Fixes
+
+* macos usb entitlements ([#620](https://github.com/hhanh00/zkool2/issues/620)) ([b0db91f](https://github.com/hhanh00/zkool2/commit/b0db91fb4d9bde4094078d876d4f7d7ee2b026e1))
+
 ## [6.8.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.0...zkool-v6.8.1) (2025-10-13)
 
 
