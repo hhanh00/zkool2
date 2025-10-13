@@ -1,10 +1,14 @@
 use anyhow::Result;
 use zcash_primitives::legacy::TransparentAddress;
+use sqlx::SqliteConnection;
 
 use crate::{coin::Network, frb_generated::StreamSink};
 
+#[macro_export]
 macro_rules! no_ledger {
-    Err(anyhow::anyhow!("Ledger not supported on this platform"))
+    () => {
+        Err(anyhow::anyhow!("Ledger not supported on this platform"))
+    }
 }
 
 pub async fn get_hw_next_diversifier_address(
