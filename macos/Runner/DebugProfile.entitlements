@@ -18,5 +18,8 @@
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<key>com.apple.security.device.usb</key>
+	<true/>
+<true/>
 </dict>
 </plist>
