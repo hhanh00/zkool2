@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.1...zkool-v6.8.0) (2025-10-13)
+
+
+### Features
+
+* **ledger:** save/restore hw account ([#616](https://github.com/hhanh00/zkool2/issues/616)) ([9a8b6c5](https://github.com/hhanh00/zkool2/commit/9a8b6c58d2e7177433312e86d82c5743c54341da))
+
 ## [6.7.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.0...zkool-v6.7.1) (2025-10-13)
 
 
