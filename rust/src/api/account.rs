@@ -42,9 +42,9 @@ use crate::{
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
+use crate::ledger::fvk::{get_hw_sapling_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
+use crate::no_ledger::{get_hw_sapling_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
 
 #[frb]
 pub async fn get_account_pools(account: u32) -> Result<u8> {
@@ -315,7 +315,12 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let mut dfvk = fvk.to_bytes().to_vec();
         dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
         let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
-        let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
+        // We should get the default address dindex by using the get_div_list
+        // api but it is currently not working
+        // instead, we "assume" the dindex = 0 is the default sapling address
+        // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
+        let dindex = 0;
+        let address = get_hw_sapling_address(&network, na.aindex).await?;
         store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
 
         init_account_transparent(&mut db_tx, account, birth).await?;
