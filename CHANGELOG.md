@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.9.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.0...zkool-v6.9.1) (2025-10-14)
+
+
+### Bug Fixes
+
+* build break on mobile ([#624](https://github.com/hhanh00/zkool2/issues/624)) ([180455d](https://github.com/hhanh00/zkool2/commit/180455dedb4877f8b163660785441dd444a02842))
+* **ledger:** device thread serialization ([#626](https://github.com/hhanh00/zkool2/issues/626)) ([66568bd](https://github.com/hhanh00/zkool2/commit/66568bd551e8d5063444bbb5e55f27b9336c11bb))
+
 ## [6.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.2...zkool-v6.9.0) (2025-10-13)
 
 
