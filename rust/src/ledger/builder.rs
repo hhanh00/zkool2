@@ -226,7 +226,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let _ = sink.add(SigningEvent::Progress(
                 "Extracting spend randomness".to_string(),
             ));
-            let res = ledger.execute(&xtract_sp).await?;
+            let res = ledger.execute(xtract_sp.clone()).await?;
             assert_eq!(res.retcode, 0x9000);
             let data = &res.data;
             nsk = tiu!(data[32..64]);
@@ -309,7 +309,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let _ = sink.add(SigningEvent::Progress(
                 "Extracting output randomness".to_string(),
             ));
-            let res = ledger.execute(&xtract_out).await?;
+            let res = ledger.execute(xtract_out.clone()).await?;
             assert_eq!(res.retcode, 0x9000);
             let data = &res.data;
             let rcv = &data[0..32];
@@ -498,7 +498,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 p2: 0,
                 data: vec![],
             };
-            let res = ledger.execute(&get_tsig).await?;
+            let res = ledger.execute(get_tsig).await?;
             assert_eq!(res.retcode, 0x9000);
             let signature = res.data[..64].to_vec();
             let signature = secp256k1::ecdsa::Signature::from_compact(&signature).anyhow()?;
@@ -517,7 +517,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 p2: 0,
                 data: vec![],
             };
-            let res = ledger.execute(&get_ssig).await?;
+            let res = ledger.execute(get_ssig).await?;
             assert_eq!(res.retcode, 0x9000);
             let signature: [u8; 64] = tiu!(res.data[..64].to_vec());
             let signature: redjubjub::Signature<SpendAuth> = tiu!(signature);

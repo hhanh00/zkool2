@@ -98,6 +98,23 @@ pub async fn get_sapling_vk(
     Ok(vk)
 }
 
+pub async fn get_sapling_address(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<PaymentAddress>> {
+    let address = sqlx::query("SELECT address FROM sapling_accounts WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let address: String = row.get(0);
+            PaymentAddress::decode(network, &address).unwrap()
+        })
+        .fetch_optional(&mut *connection)
+        .await?;
+
+    Ok(address)
+}
+
 pub async fn get_sapling_note(
     connection: &mut SqliteConnection,
     id: u32,
