@@ -36,6 +36,7 @@ export default defineUserConfig({
           "account",
           "restore",
           "cold",
+          "ledger",
           "sync",
           "folder",
           "database",
