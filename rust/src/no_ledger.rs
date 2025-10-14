@@ -22,7 +22,7 @@ pub async fn get_hw_next_diversifier_address(
 pub async fn get_hw_sapling_address(
     network: &Network,
     aindex: u32,
-) -> LedgerResult<String> {
+) -> Result<String> {
     no_ledger!()
 }
 
