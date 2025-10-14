@@ -89,7 +89,7 @@ pub async fn get_fvk() -> LedgerResult<()> {
     // Run it again and it should pass
     let ledger = LEDGER_ZEMU.lock().await.clone().unwrap();
     let res = ledger
-        .execute(&APDUCommand {
+        .execute(APDUCommand {
             cla: 0x85,
             ins: 0xF3,
             p1: 1,
@@ -108,7 +108,7 @@ pub async fn get_fvk() -> LedgerResult<()> {
 pub async fn get_address() -> LedgerResult<()> {
     let ledger = LEDGER_ZEMU.lock().await.clone().unwrap();
     let res = ledger
-        .execute(&APDUCommand {
+        .execute(APDUCommand {
             cla: 0x85,
             ins: 0x11,
             p1: 0,
