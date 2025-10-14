@@ -9,7 +9,7 @@ use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::NetworkConstants;
 
 use crate::{
-    coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
+    account::get_sapling_address, coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
@@ -44,6 +44,11 @@ pub async fn get_hw_next_diversifier_address(
     data.write_all(&[0u8; 7])?; // div index is 11 bytes (4 + 7)
     assert_eq!(data.len(), 15);
 
+    // Note: Currently there is a bug in the ledger app and the dindex
+    // is ignored. We leave the code as is for when the bug gets fixed
+    // In the meantime, the diversifiers returned *do not* correspond
+    // to the given start index.
+    // We still use them because they are valid
     let get_div_list = APDUCommand {
         cla: 0x85,
         ins: 0x09,
@@ -119,23 +124,34 @@ pub async fn get_hw_transparent_address(
 pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConnection, account: u32) -> LedgerResult<String> {
     let ledger = connect_ledger().await?;
     let aindex = get_account_aindex(connection, account).await? | 0x80000000u32;
-    let dindex = get_account_dindex(connection, account).await?;
-    let mut data = vec![];
-    data.write_u32::<LE>(aindex)?;
-    data.write_u32::<LE>(dindex)?;
-    data.write_all(&[0u8; 7])?;
-    let get_div = APDUCommand {
-        cla: 0x85,
-        ins: 0x09,
-        p1: 0,
-        p2: 0,
-        data,
-    };
-    let res = ledger.execute(get_div).await?;
-    if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, 0x09));
-    }
-    let div = &res.data[0..11];
+    // We SHOULD be using the diversifier index and ask the device
+    // to give us the matching diversifer, but there is currently
+    // a bug in this API fn and the input diversifier index is ignored
+    // and an undefined value is used instead
+    // As a work around, we use the diversifier from the stored address
+    //
+    // let dindex = get_account_dindex(connection, account).await?;
+    // let mut data = vec![];
+    // data.write_u32::<LE>(aindex)?;
+    // data.write_u32::<LE>(dindex)?;
+    // data.write_all(&[0u8; 7])?;
+    // let get_div = APDUCommand {
+    //     cla: 0x85,
+    //     ins: 0x09,
+    //     p1: 0,
+    //     p2: 0,
+    //     data,
+    // };
+    // let res = ledger.execute(get_div).await?;
+    // if res.retcode != 0x9000 {
+    //     return Err(LedgerError::Execute(res.retcode, 0x09));
+    // }
+    // let div = &res.data[0..11];
+
+    let address = get_sapling_address(network, connection, account).await?;
+    let address = address.ok_or(LedgerError::Generic(1, "No sapling address found".into()))?;
+    let div = &address.diversifier().0;
+
     let mut data = vec![];
     data.write_u32::<LE>(aindex)?;
     data.write_all(div)?;
