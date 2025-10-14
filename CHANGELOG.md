@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.9.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.1...zkool-v6.9.2) (2025-10-14)
+
+
+### Bug Fixes
+
+* use get_address_sapling to avoid div_list bug ([#627](https://github.com/hhanh00/zkool2/issues/627)) ([3778ac7](https://github.com/hhanh00/zkool2/commit/3778ac7e9e2839aeeabc4b8642fc21a8fa5666ba))
+
 ## [6.9.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.0...zkool-v6.9.1) (2025-10-14)
 
 
