@@ -1,5 +1,40 @@
 # Changelog
 
+## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.5.0) (2025-10-14)
+
+
+### Features
+
+* accept transparent public keys ([#592](https://github.com/hhanh00/zkool2/issues/592)) ([7bec12c](https://github.com/hhanh00/zkool2/commit/7bec12c345d37ee3dedde2b898805743bb294c81))
+* generate diversified addresses for the Ledger ([f269ed4](https://github.com/hhanh00/zkool2/commit/f269ed4154c5b34be58aa59e5fb9ef6d2e03fdd9))
+* import ledger accounts ([#594](https://github.com/hhanh00/zkool2/issues/594)) ([bade75c](https://github.com/hhanh00/zkool2/commit/bade75cff829cdaeb14eebfa1c8771be003df2d1))
+* **ledger:** error handling ([#609](https://github.com/hhanh00/zkool2/issues/609)) ([c557065](https://github.com/hhanh00/zkool2/commit/c55706525b13c5e7e55e8790f65ba279c047b6c6))
+* **ledger:** error when tx has too many I/O ([#611](https://github.com/hhanh00/zkool2/issues/611)) ([2d69baf](https://github.com/hhanh00/zkool2/commit/2d69baf66336626c9609281368a178ba86fdaf59))
+* **ledger:** Ledger integration ([#591](https://github.com/hhanh00/zkool2/issues/591)) ([dbd2a65](https://github.com/hhanh00/zkool2/commit/dbd2a65544d66de15e6ea5d2f680b28b1bdca49d))
+* **ledger:** move zemu under feature flag ([#610](https://github.com/hhanh00/zkool2/issues/610)) ([ecf07e9](https://github.com/hhanh00/zkool2/commit/ecf07e91c3309be39ac394c3ec5adaac007c2329))
+* **ledger:** save/restore hw account ([#616](https://github.com/hhanh00/zkool2/issues/616)) ([db18458](https://github.com/hhanh00/zkool2/commit/db18458a828ee3cb284c93fdb9eb718edfda9eca))
+* **ledger:** scan transparent addresses ([#607](https://github.com/hhanh00/zkool2/issues/607)) ([63d9331](https://github.com/hhanh00/zkool2/commit/63d93313582b6296807dc85f04ddd31edfac628a))
+* **ledger:** show t/z address on device for verification ([#622](https://github.com/hhanh00/zkool2/issues/622)) ([8a8260c](https://github.com/hhanh00/zkool2/commit/8a8260c8e95bc7fecb509d2641c37098a203108f))
+* **ledger:** support for t2t and t2z ([#608](https://github.com/hhanh00/zkool2/issues/608)) ([08013d5](https://github.com/hhanh00/zkool2/commit/08013d5812b76eac68376754efe26ab91c24d26f))
+* **ledger:** support transparent addresses ([#606](https://github.com/hhanh00/zkool2/issues/606)) ([9c81e54](https://github.com/hhanh00/zkool2/commit/9c81e54480affad19c6d85b9f1472f3fd031c2ae))
+* send tx with Ledger ([#595](https://github.com/hhanh00/zkool2/issues/595)) ([69546be](https://github.com/hhanh00/zkool2/commit/69546be43b8ccfd79399f56c77ee6a657ed28b41))
+
+
+### Bug Fixes
+
+* build break on CI macos ([#600](https://github.com/hhanh00/zkool2/issues/600)) ([34c44cd](https://github.com/hhanh00/zkool2/commit/34c44cd9d40e58eec3103165bf1cea7889501059))
+* build break on mobile ([#598](https://github.com/hhanh00/zkool2/issues/598)) ([76dcef4](https://github.com/hhanh00/zkool2/commit/76dcef4b20a14ebc6e9a9c9f51068a41bac21670))
+* build break on mobile ([#624](https://github.com/hhanh00/zkool2/issues/624)) ([4e8c429](https://github.com/hhanh00/zkool2/commit/4e8c429524b2f476587640fdaf58f1d799512706))
+* conversion from USD to ZEC does not take locale into consideration ([#597](https://github.com/hhanh00/zkool2/issues/597)) ([9ea8436](https://github.com/hhanh00/zkool2/commit/9ea8436b0f670175c67635b132445b5ae6f77f6d))
+* db schema upgrage ([#614](https://github.com/hhanh00/zkool2/issues/614)) ([286e493](https://github.com/hhanh00/zkool2/commit/286e4939f63c0e2fef867deba7ee49d405afaf8c))
+* **ledger:** build break on mobile platforms (no support for ledger) ([#613](https://github.com/hhanh00/zkool2/issues/613)) ([9e15ed5](https://github.com/hhanh00/zkool2/commit/9e15ed5668b427414bc9727cefeeeb54e89cab5d))
+* **ledger:** device thread serialization ([#626](https://github.com/hhanh00/zkool2/issues/626)) ([a009248](https://github.com/hhanh00/zkool2/commit/a0092486193950bae3aebbd61b192b54513df675))
+* macos usb entitlements ([#620](https://github.com/hhanh00/zkool2/issues/620)) ([40755ff](https://github.com/hhanh00/zkool2/commit/40755ff795e863382f9f6a644155e2a8bf0f4bb3))
+* no ledger build break ([#629](https://github.com/hhanh00/zkool2/issues/629)) ([96f3d87](https://github.com/hhanh00/zkool2/commit/96f3d87b98e9ec019761810ef91877097a01f566))
+* remove dialog asking for scanning taddr on new accounts ([#582](https://github.com/hhanh00/zkool2/issues/582)) ([7a1ee58](https://github.com/hhanh00/zkool2/commit/7a1ee58f43008066975a2d607d57899e53e39227))
+* remove extra column from query ([#618](https://github.com/hhanh00/zkool2/issues/618)) ([5c5b113](https://github.com/hhanh00/zkool2/commit/5c5b11378cdcd27f218dc5c5729257f14b64744e))
+* use get_address_sapling to avoid div_list bug ([#627](https://github.com/hhanh00/zkool2/issues/627)) ([86ed507](https://github.com/hhanh00/zkool2/commit/86ed5077dd6515aaa427b7c108cafa1b84874c2a))
+
 ## [6.4.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.3.1...zkool-v6.4.0) (2025-09-29)
 
 
