@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.9.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.2...zkool-v6.9.3) (2025-10-14)
+
+
+### Bug Fixes
+
+* no ledger build break ([#629](https://github.com/hhanh00/zkool2/issues/629)) ([c9146b9](https://github.com/hhanh00/zkool2/commit/c9146b9c960de1f74292e30bad3e68c0815fb02e))
+
 ## [6.9.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.1...zkool-v6.9.2) (2025-10-14)
 
 
