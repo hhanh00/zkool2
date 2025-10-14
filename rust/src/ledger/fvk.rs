@@ -39,8 +39,8 @@ pub async fn get_hw_next_diversifier_address(
     let ledger = connect_ledger().await?;
     let mut data = vec![];
     let aindex = aindex | 0x8000_0000u32;
-    data.write_all(&aindex.to_le_bytes())?;
-    data.write_all(&dindex.to_le_bytes())?;
+    data.write_u32::<LE>(aindex)?;
+    data.write_u32::<LE>(dindex)?;
     data.write_all(&[0u8; 7])?; // div index is 11 bytes (4 + 7)
     assert_eq!(data.len(), 15);
 
@@ -60,7 +60,7 @@ pub async fn get_hw_next_diversifier_address(
         if div != [0u8; 11] {
             let dindex = dindex + i as u32;
             let mut data = vec![];
-            data.write_all(&aindex.to_le_bytes())?;
+            data.write_u32::<LE>(aindex)?;
             data.write_all(div)?;
             let get_address_div = APDUCommand {
                 cla: 0x85,
@@ -93,11 +93,11 @@ pub async fn get_hw_transparent_address(
     let ledger = connect_ledger().await?;
     let mut data = vec![];
     let coin_type = network.coin_type();
-    data.write_all(&(0x8000_0000u32 | 44).to_le_bytes())?;
-    data.write_all(&(0x8000_0000u32 | coin_type).to_le_bytes())?;
-    data.write_all(&(0x8000_0000u32 | aindex).to_le_bytes())?;
-    data.write_all(&(scope).to_le_bytes())?;
-    data.write_all(&(dindex).to_le_bytes())?;
+    data.write_u32::<LE>(0x8000_0000u32 | 44)?;
+    data.write_u32::<LE>(0x8000_0000u32 | coin_type)?;
+    data.write_u32::<LE>(0x8000_0000u32 | aindex)?;
+    data.write_u32::<LE>(scope)?;
+    data.write_u32::<LE>(dindex)?;
     assert_eq!(data.len(), 20);
     let get_taddress = APDUCommand {
         cla: 0x85,

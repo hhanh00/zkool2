@@ -304,7 +304,7 @@ impl Device for LedgerDeviceZEMU {
     }
 
     #[cfg(not(target_os = "macos"))]
-    async fn execute(&self, command: &APDUCommand) -> LedgerResult<APDUAnswer> {
+    async fn execute(&self, command: APDUCommand) -> LedgerResult<APDUAnswer> {
         unimplemented!()
     }
 }
