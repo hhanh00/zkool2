@@ -19,6 +19,13 @@ pub async fn get_hw_next_diversifier_address(
     no_ledger!()
 }
 
+pub async fn get_hw_sapling_address(
+    network: &Network,
+    aindex: u32,
+) -> LedgerResult<String> {
+    no_ledger!()
+}
+
 pub async fn get_hw_transparent_address(
     _network: &Network,
     _aindex: u32,
