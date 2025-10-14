@@ -9,13 +9,13 @@ use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::NetworkConstants;
 
 use crate::{
-    coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
+    account::get_sapling_address, coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
     let aindex = aindex | 0x8000_0000u32;
     let res = ledger
-        .execute(&APDUCommand {
+        .execute(APDUCommand {
             cla: 0x85,
             ins: 0xF3,
             p1: 1,
@@ -39,11 +39,16 @@ pub async fn get_hw_next_diversifier_address(
     let ledger = connect_ledger().await?;
     let mut data = vec![];
     let aindex = aindex | 0x8000_0000u32;
-    data.write_all(&aindex.to_le_bytes())?;
-    data.write_all(&dindex.to_le_bytes())?;
+    data.write_u32::<LE>(aindex)?;
+    data.write_u32::<LE>(dindex)?;
     data.write_all(&[0u8; 7])?; // div index is 11 bytes (4 + 7)
     assert_eq!(data.len(), 15);
 
+    // Note: Currently there is a bug in the ledger app and the dindex
+    // is ignored. We leave the code as is for when the bug gets fixed
+    // In the meantime, the diversifiers returned *do not* correspond
+    // to the given start index.
+    // We still use them because they are valid
     let get_div_list = APDUCommand {
         cla: 0x85,
         ins: 0x09,
@@ -51,16 +56,16 @@ pub async fn get_hw_next_diversifier_address(
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_div_list).await?;
+    let res = ledger.execute(get_div_list).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_div_list.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x09));
     }
     for i in 0..20 {
         let div = &res.data[i * 11..(i + 1) * 11];
         if div != [0u8; 11] {
             let dindex = dindex + i as u32;
             let mut data = vec![];
-            data.write_all(&aindex.to_le_bytes())?;
+            data.write_u32::<LE>(aindex)?;
             data.write_all(div)?;
             let get_address_div = APDUCommand {
                 cla: 0x85,
@@ -69,9 +74,9 @@ pub async fn get_hw_next_diversifier_address(
                 p2: 0,
                 data,
             };
-            let res = ledger.execute(&get_address_div).await?;
+            let res = ledger.execute(get_address_div).await?;
             if res.retcode != 0x9000 {
-                return Err(LedgerError::Execute(res.retcode, get_address_div.ins));
+                return Err(LedgerError::Execute(res.retcode, 0x10));
             }
             let address = &res.data[0..43];
             let address = PaymentAddress::from_bytes(tiu!(address)).unwrap();
@@ -93,11 +98,11 @@ pub async fn get_hw_transparent_address(
     let ledger = connect_ledger().await?;
     let mut data = vec![];
     let coin_type = network.coin_type();
-    data.write_all(&(0x8000_0000u32 | 44).to_le_bytes())?;
-    data.write_all(&(0x8000_0000u32 | coin_type).to_le_bytes())?;
-    data.write_all(&(0x8000_0000u32 | aindex).to_le_bytes())?;
-    data.write_all(&(scope).to_le_bytes())?;
-    data.write_all(&(dindex).to_le_bytes())?;
+    data.write_u32::<LE>(0x8000_0000u32 | 44)?;
+    data.write_u32::<LE>(0x8000_0000u32 | coin_type)?;
+    data.write_u32::<LE>(0x8000_0000u32 | aindex)?;
+    data.write_u32::<LE>(scope)?;
+    data.write_u32::<LE>(dindex)?;
     assert_eq!(data.len(), 20);
     let get_taddress = APDUCommand {
         cla: 0x85,
@@ -106,9 +111,9 @@ pub async fn get_hw_transparent_address(
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_taddress).await?;
+    let res = ledger.execute(get_taddress).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_taddress.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x01));
     }
     let pk = &res.data[0..33];
     let pubkey = PublicKey::from_slice(pk).anyhow()?;
@@ -119,23 +124,34 @@ pub async fn get_hw_transparent_address(
 pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConnection, account: u32) -> LedgerResult<String> {
     let ledger = connect_ledger().await?;
     let aindex = get_account_aindex(connection, account).await? | 0x80000000u32;
-    let dindex = get_account_dindex(connection, account).await?;
-    let mut data = vec![];
-    data.write_u32::<LE>(aindex)?;
-    data.write_u32::<LE>(dindex)?;
-    data.write_all(&[0u8; 7])?;
-    let get_div = APDUCommand {
-        cla: 0x85,
-        ins: 0x09,
-        p1: 0,
-        p2: 0,
-        data,
-    };
-    let res = ledger.execute(&get_div).await?;
-    if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_div.ins));
-    }
-    let div = &res.data[0..11];
+    // We SHOULD be using the diversifier index and ask the device
+    // to give us the matching diversifer, but there is currently
+    // a bug in this API fn and the input diversifier index is ignored
+    // and an undefined value is used instead
+    // As a work around, we use the diversifier from the stored address
+    //
+    // let dindex = get_account_dindex(connection, account).await?;
+    // let mut data = vec![];
+    // data.write_u32::<LE>(aindex)?;
+    // data.write_u32::<LE>(dindex)?;
+    // data.write_all(&[0u8; 7])?;
+    // let get_div = APDUCommand {
+    //     cla: 0x85,
+    //     ins: 0x09,
+    //     p1: 0,
+    //     p2: 0,
+    //     data,
+    // };
+    // let res = ledger.execute(get_div).await?;
+    // if res.retcode != 0x9000 {
+    //     return Err(LedgerError::Execute(res.retcode, 0x09));
+    // }
+    // let div = &res.data[0..11];
+
+    let address = get_sapling_address(network, connection, account).await?;
+    let address = address.ok_or(LedgerError::Generic(1, "No sapling address found".into()))?;
+    let div = &address.diversifier().0;
+
     let mut data = vec![];
     data.write_u32::<LE>(aindex)?;
     data.write_all(div)?;
@@ -146,9 +162,9 @@ pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConn
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_address).await?;
+    let res = ledger.execute(get_address).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_address.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x10));
     }
     let address: [u8; 43] = tiu!(&res.data[0..43]);
     let address = PaymentAddress::from_bytes(&address).unwrap();
@@ -172,9 +188,9 @@ pub async fn show_transparent_address(network: &Network, connection: &mut Sqlite
         p2: 0,
         data,
     };
-    let res = ledger.execute(&get_address).await?;
+    let res = ledger.execute(get_address).await?;
     if res.retcode != 0x9000 {
-        return Err(LedgerError::Execute(res.retcode, get_address.ins));
+        return Err(LedgerError::Execute(res.retcode, 0x01));
     }
     let pk = &res.data[0..33];
     let pk = PublicKey::from_slice(pk).anyhow()?;
@@ -208,7 +224,7 @@ mod tests {
         };
 
         println!("{}", get_taddress.ins);
-        let res = ledger.execute(&get_taddress).await?;
+        let res = ledger.execute(get_taddress).await?;
         println!("{}", res.retcode);
         let address = String::from_utf8(res.data[33..].to_vec())?;
         println!("{address}");
