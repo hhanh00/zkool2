@@ -29,7 +29,6 @@ use crate::{account::TxNote, tiu};
 pub const DB_VERSION: u16 = 7;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
-    tracing::info!("Schema install");
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(
         key TEXT PRIMARY KEY,
@@ -750,9 +749,9 @@ pub async fn select_account_transparent(
                     .bind(account)
                     .bind(dindex)
                     .map(|row: SqliteRow| row.get::<String, _>(0))
-                    .fetch_one(&mut *connection)
+                    .fetch_optional(&mut *connection)
                     .await?;
-            (None, None, Some(taddress))
+            (None, None, taddress)
         }
         Some((xsk, xvk)) => (xsk, xvk, None),
         None => (None, None, None),

@@ -330,8 +330,6 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             &taddr.encode(&c.network),
         )
         .await?;
-
-
         update_dindex(&mut db_tx, account, dindex, true).await?;
     } else if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
@@ -395,7 +393,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
 
         update_dindex(&mut db_tx, account, dindex, true).await?;
     }
-    if is_valid_transparent_key(&key) {
+    else if is_valid_transparent_key(&key) {
         init_account_transparent(&mut db_tx, account, birth).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
@@ -462,7 +460,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             .await?;
         }
     }
-    if is_valid_sapling_key(&network, &key) {
+    else if is_valid_sapling_key(&network, &key) {
         init_account_sapling(&network, &mut db_tx, account, birth).await?;
         let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
@@ -494,7 +492,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         let dindex: u32 = di.try_into()?;
         update_dindex(&mut db_tx, account, dindex, true).await?;
     }
-    if is_valid_ufvk(&network, &key) {
+    else if is_valid_ufvk(&network, &key) {
         let uvk =
             UnifiedFullViewingKey::decode(&network, &key).map_err(|_| anyhow!("Invalid Key"))?;
         let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;

@@ -43,7 +43,7 @@ pub async fn derive_hw_transparent_address<D: Device>(
         p2: 0,
         data: params,
     };
-    let rep = device.execute(&get_pk).await?;
+    let rep = device.execute(get_pk).await?;
     if rep.retcode != 0x9000 {
         anyhow::bail!("Ledger error {}", rep.retcode);
     }
