@@ -89,6 +89,28 @@ pub async fn get_hw_next_diversifier_address(
     )))
 }
 
+pub async fn get_hw_sapling_address(
+    network: &Network,
+    aindex: u32,
+) -> LedgerResult<String> {
+    let ledger = connect_ledger().await?;
+    let aindex = aindex | 0x80000000u32;
+    let get_zaddress = APDUCommand {
+        cla: 0x85,
+        ins: 0x11,
+        p1: 1,
+        p2: 0,
+        data: aindex.to_le_bytes().to_vec(),
+    };
+    let res = ledger.execute(get_zaddress).await?;
+    if res.retcode != 0x9000 {
+        return Err(LedgerError::Execute(res.retcode, 0x011));
+    }
+    let address: [u8; 43] = tiu!(&res.data[0..43]);
+    let address = PaymentAddress::from_bytes(&address).unwrap();
+    Ok(address.encode(network))
+}
+
 pub async fn get_hw_transparent_address(
     network: &Network,
     aindex: u32,
@@ -200,11 +222,16 @@ pub async fn show_transparent_address(network: &Network, connection: &mut Sqlite
 
 #[cfg(test)]
 mod tests {
-    use crate::ledger::{APDUCommand, Device, LEDGER_ZEMU};
+    use byteorder::{WriteBytesExt, LE};
+    use sapling_crypto::PaymentAddress;
+    use zcash_keys::encoding::AddressCodec;
+    use zcash_protocol::consensus::MainNetwork;
+
+    use crate::{ledger::{APDUCommand, Device, LEDGER_ZEMU}, tiu};
     use std::io::Write;
 
     #[tokio::test]
-    pub async fn f() -> anyhow::Result<()> {
+    pub async fn get_taddress() -> anyhow::Result<()> {
         let ledger = LEDGER_ZEMU.lock().await.clone().unwrap();
         // let ledger = connect_ledger().await?;
         let aindex = 0u32;
@@ -228,6 +255,30 @@ mod tests {
         println!("{}", res.retcode);
         let address = String::from_utf8(res.data[33..].to_vec())?;
         println!("{address}");
+        Ok(())
+    }
+
+    #[tokio::test]
+    pub async fn get_zaddress() -> anyhow::Result<()> {
+        let ledger = LEDGER_ZEMU.lock().await.clone().unwrap();
+        // let ledger = connect_ledger().await?;
+        let aindex = 0u32;
+        let mut data = vec![];
+        data.write_u32::<LE>(0x8000_0000u32 | aindex)?;
+        let get_taddress = APDUCommand {
+            cla: 0x85,
+            ins: 0x11,
+            p1: 0,
+            p2: 0,
+            data,
+        };
+
+        let res = ledger.execute(get_taddress).await?;
+        assert_eq!(res.retcode, 0x9000);
+        let address: [u8; 43] = tiu!(res.data[0..43]);
+        let address = PaymentAddress::from_bytes(&address).unwrap();
+        let address = address.encode(&MainNetwork);
+        assert_eq!(address, "zs157m24pkqcq09edxz9p0p653xcsfpdpcspcad5wkkp3pq29hvc7h2uvs7wncakwqtl6jqkxn939p");
         Ok(())
     }
 }
