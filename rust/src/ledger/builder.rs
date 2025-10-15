@@ -15,8 +15,10 @@ use pczt::{
 use rand_core::{CryptoRng, OsRng, RngCore};
 use redjubjub::{SpendAuth, VerificationKey, VerificationKeyBytes};
 use sapling_crypto::{
+    bundle::OutputDescription,
     keys::FullViewingKey,
-    note_encryption::{sapling_note_encryption, SaplingDomain},
+    note::ExtractedNoteCommitment,
+    note_encryption::{sapling_note_encryption, SaplingDomain, Zip212Enforcement},
     value::{NoteValue, TrapdoorSum, ValueCommitTrapdoor, ValueCommitment},
     Diversifier, MerklePath, Node, Note, PaymentAddress, ProofGenerationKey, Rseed,
 };
@@ -24,13 +26,10 @@ use secp256k1::PublicKey;
 use sqlx::{pool::PoolConnection, Sqlite, SqliteConnection};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
-use zcash_note_encryption::Domain;
+use zcash_note_encryption::{try_output_recovery_with_ovk, Domain, EphemeralKeyBytes};
 use zcash_primitives::legacy::{Script, TransparentAddress};
 use zcash_proofs::prover::LocalTxProver;
-use zcash_protocol::{
-    consensus::NetworkConstants,
-    memo::{Memo, MemoBytes},
-};
+use zcash_protocol::{consensus::NetworkConstants, memo::Memo};
 
 use crate::{
     api::pay::{PcztPackage, SigningEvent},
@@ -68,8 +67,10 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?1")
                 .bind(account)
                 .fetch_one(&mut *connection)
-                .await.anyhow()?;
+                .await
+                .anyhow()?;
         let fvk = FullViewingKey::read(&*xvk)?;
+        let ovk = fvk.ovk;
 
         let pczt = Pczt::parse(&package.pczt).expect("cannot parse PCZT");
         let orig_pczt = pczt.clone();
@@ -83,11 +84,16 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         let ctout = pczt.transparent().outputs().len();
         let stin = pczt.sapling().spends().len();
         let stout = pczt.sapling().outputs().len();
+        if !pczt.orchard().actions().is_empty() {
+            return Err(LedgerError::HasOrchard);
+        }
         info!("PCZT structure: {ctin}/{ctout} : {stin}/{stout}");
         if ctin > 5 || ctout > 5 || stin > 5 || stout > 5 {
             return Err(LedgerError::TooComplex);
         }
 
+        // Signing a tx with the Ledger involves several steps
+        // Step 1. Send a InitTx instruction with inputs/outputs
         let _ = sink.add(SigningEvent::Progress("Init Tx".to_string()));
         data.write_u8(ctin as u8)?;
         data.write_u8(ctout as u8)?;
@@ -125,7 +131,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             .bind(account)
             .bind(&nullifier)
             .fetch_one(&mut *connection)
-            .await.anyhow()?;
+            .await
+            .anyhow()?;
 
             let pk = PublicKey::from_slice(&pk).anyhow()?;
             pks.push(pk);
@@ -183,18 +190,55 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             buffers.push(data);
         }
 
+        let mut memos = vec![];
         for sout in pczt.sapling().outputs().iter() {
             let recipient = sout.recipient().unwrap();
+            // Decrypt the memo so that we can reencrypt it with the
+            // randomness
+            let cmu: [u8; 32] = tiu!(sout.cmu().clone());
+            let cv: [u8; 32] = tiu!(sout.cv().clone());
+            let epk: [u8; 32] = tiu!(sout.ephemeral_key().clone());
+            let enc: [u8; 580] = tiu!(sout.enc_ciphertext().clone());
+            let cout: [u8; 80] = tiu!(sout.out_ciphertext().clone());
+            let cv = ValueCommitment::from_bytes_not_small_order(&cv).unwrap();
+            let od = OutputDescription::from_parts(
+                cv.clone(),
+                ExtractedNoteCommitment::from_bytes(&cmu).unwrap(),
+                EphemeralKeyBytes(epk),
+                enc,
+                cout,
+                (),
+            );
+
+            let memo = match try_output_recovery_with_ovk(
+                &SaplingDomain::new(Zip212Enforcement::On),
+                &ovk,
+                &od,
+                &cv,
+                &cout,
+            ) {
+                Some((_, _, memo)) => memo,
+                None => {
+                    let memo = Memo::Empty;
+                    let memo_bytes = memo.encode();
+                    let memo: [u8; 512] = tiu!(memo_bytes.as_array().clone());
+                    memo
+                },
+            };
+            let memo_type = memo[0];
+            memos.push(memo);
+
             let mut data = vec![];
             data.write_all(&recipient)?;
             data.write_u64::<LE>(sout.value().unwrap())?;
-            data.write_u8(0xF6)?;
+            data.write_u8(memo_type)?;
             data.write_u8(0x01)?; // OVK marker
             data.write_all(&fvk.ovk.0)?;
             assert_eq!(data.len(), 85);
             buffers.push(data);
         }
 
+        // This will make the Ledger show "Please Review..."
         info!("Confirm Tx on Ledger");
         let _ = sink.add(SigningEvent::Progress("Confirm Tx on Ledger".to_string()));
         let init_tx = APDUCommand {
@@ -209,6 +253,12 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             return Err(LedgerError::Execute(res.retcode, init_tx.ins));
         }
 
+        // On confirmation, we move on to the next step
+        // Step 2. Retrieve the random values for the spends and outputs
+        // These values are generated on the Ledger and must be used
+        // by the PCZT
+        // Since the current PCZT was created with different random
+        // values, we must create a new one
         let mut nsk: [u8; 32] = [0; 32];
         let mut value_sum: i128 = 0;
         let mut bsk = TrapdoorSum::zero();
@@ -296,7 +346,6 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             rseeds.push((rcm, position));
         }
 
-        let ovk = fvk.ovk;
         let xtract_out = APDUCommand {
             cla: 0x85,
             ins: 0xA2,
@@ -305,7 +354,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             data: vec![],
         };
         let mut souts: Vec<pczt::sapling::Output> = vec![];
-        for out in pczt.sapling().outputs().iter() {
+        for (out, memo) in pczt.sapling().outputs().iter().zip(memos.iter()) {
             let _ = sink.add(SigningEvent::Progress(
                 "Extracting output randomness".to_string(),
             ));
@@ -328,10 +377,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let recipient = PaymentAddress::from_bytes(&recipient).unwrap();
             let note = Note::from_parts(recipient, value, Rseed::AfterZip212(rseed));
             let cmu = note.cmu();
-            // TODO: Support memos
-            let memo_bytes: MemoBytes = Memo::Empty.into();
-            let note_enc =
-                sapling_note_encryption(Some(ovk), note.clone(), memo_bytes.into_bytes(), &mut rng);
+
+            let note_enc = sapling_note_encryption(Some(ovk), note.clone(), *memo, &mut rng);
             let cout = note_enc.encrypt_outgoing_plaintext(&cv, &cmu, &mut rng);
             let epk = note_enc.epk().to_bytes();
             let enc = note_enc.encrypt_note_plaintext();
@@ -407,6 +454,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             .unwrap()
             .finish();
 
+        // The signing steps requires the newly computed spends/outputs
+        // and a bunch of hashes as defined in the Tx v5 (ZIP 244)
         let mut buffers = vec![];
         for tin in pczt.transparent().inputs() {
             let mut data = vec![];
@@ -486,6 +535,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         let res = ledger.long_execute(&check_sign, &buffers).await?;
         assert_eq!(res.retcode, 0x9000);
 
+        // We are now ready to get the signatures for each inputs
+        // Starting from the transparent inputs
         let mut tsigs = vec![];
         for _ in pczt.transparent().inputs() {
             let _ = sink.add(SigningEvent::Progress(
@@ -505,6 +556,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             tsigs.push(signature);
         }
 
+        // And then the shielded spends
         let mut ssigs = vec![];
         for _ in pczt.sapling().spends() {
             let _ = sink.add(SigningEvent::Progress(
@@ -524,6 +576,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             ssigs.push(signature);
         }
 
+        // We apply these signatures to the PCZT
         let signer = Signer::new(pczt.clone());
         let signer = signer
             .sign_transparent_with(|_, tbundle, _| {
@@ -547,8 +600,11 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             })
             .unwrap();
         let pczt = signer.finish();
+        // And calculate the final components, i.e the binding signature
         let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
 
+        // Then we rebuild a PCZT (package) identical to the input
+        // ones, but with signatures and different random values
         let PcztPackage {
             n_spends,
             sapling_indices,
@@ -560,6 +616,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             ..
         } = package;
 
+        // The new package is ready to be broadcast
         let new_package = PcztPackage {
             pczt: pczt.serialize(),
             n_spends: *n_spends,
