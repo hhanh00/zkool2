@@ -12,6 +12,10 @@ pub enum Error {
     Protocol(String),
     #[error("Transaction Too Complex, check the number of inputs/outputs")]
     TooComplex,
+    #[error("Transaction has Orchard actions. Orchard is not supported")]
+    HasOrchard,
+    #[error("Invalid Output")]
+    InvalidOut,
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[error(transparent)]
     Hid(#[from] hidapi::HidError),
