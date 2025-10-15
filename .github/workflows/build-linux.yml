@@ -18,6 +18,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Check out code
         uses: actions/checkout@v4
+      - name: Get version number
+        id: version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq '.version' pubspec.yaml
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -42,10 +47,23 @@ jobs:
           BASE_NAME=$(basename "$PKG_PATH" .deb)
           echo "Found package: $PKG_PATH"
           echo "PKG_PATH=$DIR_NAME/$BASE_NAME" >> $GITHUB_OUTPUT
+      - name: Make ISO
+        id: iso
+        run: |
+          cp -r build/linux/x64/release/bundle misc/
+          cd misc
+          docker build -t iso_builder -f iso.dockerfile .
+          docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
+          mv ZKOOL--x86_64.iso $ISO_NAME
+          echo "ISO_PATH=misc/$ISO_NAME" >> $GITHUB_OUTPUT
+        env:
+          ISO_NAME: zkool-${{ steps.version.outputs.result }}.iso
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ steps.package.outputs.PKG_PATH }}.AppImage
+          path: |
+            ${{ steps.package.outputs.PKG_PATH }}.AppImage
+            ${{ steps.iso.outputs.ISO_PATH }}
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
@@ -53,6 +71,7 @@ jobs:
           files: |
             ${{ steps.package.outputs.PKG_PATH }}.deb
             ${{ steps.package.outputs.PKG_PATH }}.AppImage
+            ${{ steps.iso.outputs.ISO_PATH }}
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
