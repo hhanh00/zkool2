@@ -29,7 +29,7 @@ use zcash_keys::encoding::AddressCodec;
 use zcash_note_encryption::{try_output_recovery_with_ovk, Domain, EphemeralKeyBytes};
 use zcash_primitives::legacy::{Script, TransparentAddress};
 use zcash_proofs::prover::LocalTxProver;
-use zcash_protocol::consensus::NetworkConstants;
+use zcash_protocol::{consensus::NetworkConstants, memo::Memo};
 
 use crate::{
     api::pay::{PcztPackage, SigningEvent},
@@ -197,7 +197,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             // randomness
             let cmu: [u8; 32] = tiu!(sout.cmu().clone());
             let cv: [u8; 32] = tiu!(sout.cv().clone());
-            let epk: [u8; 32] = tiu!(sout.enc_ciphertext().clone());
+            let epk: [u8; 32] = tiu!(sout.ephemeral_key().clone());
             let enc: [u8; 580] = tiu!(sout.enc_ciphertext().clone());
             let cout: [u8; 80] = tiu!(sout.out_ciphertext().clone());
             let cv = ValueCommitment::from_bytes_not_small_order(&cv).unwrap();
@@ -210,14 +210,21 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 (),
             );
 
-            let (_, _, memo) = try_output_recovery_with_ovk(
+            let memo = match try_output_recovery_with_ovk(
                 &SaplingDomain::new(Zip212Enforcement::On),
                 &ovk,
                 &od,
                 &cv,
                 &cout,
-            )
-            .ok_or(LedgerError::InvalidOut)?;
+            ) {
+                Some((_, _, memo)) => memo,
+                None => {
+                    let memo = Memo::Empty;
+                    let memo_bytes = memo.encode();
+                    let memo: [u8; 512] = tiu!(memo_bytes.as_array().clone());
+                    memo
+                },
+            };
             let memo_type = memo[0];
             memos.push(memo);
 
