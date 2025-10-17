@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.5.1) (2025-10-17)
+
+
+### Bug Fixes
+
+* build script for iso ([#636](https://github.com/hhanh00/zkool2/issues/636)) ([bd6e3b3](https://github.com/hhanh00/zkool2/commit/bd6e3b32c08b24cddd24c3bf88b0603731b079b5))
+* support ledger memos ([#632](https://github.com/hhanh00/zkool2/issues/632)) ([c5677dd](https://github.com/hhanh00/zkool2/commit/c5677dd3938b92f18f97e3de0d6e557ed9ead708))
+
 ## [6.5.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.4.0...zkool-v6.5.0) (2025-10-14)
 
 
