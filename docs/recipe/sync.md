@@ -6,14 +6,15 @@ title: Troubleshooting Synchronization Issues
 
 > An account does not sync automatically but others do.
 
-It may be *disabled*. Edit the account properties and reenable it.
+It may be _disabled_. Edit the account properties and reenable it.
 
 > An account disappeared from the list
 
 It may be from a different database. Check that you are using the right one.
-Also, it could be *hidden*. Tap the "Show hidden button".
+Also, it could be _hidden_. Tap the "Show hidden button".
 
 ## No Synchronization
+
 > Synchronization does not start
 
 - The Autosynchronization (autosync) checks every ~15-30 seconds. You may just need to wait a bit longer.
@@ -21,11 +22,12 @@ Also, it could be *hidden*. Tap the "Show hidden button".
 
 ![AutoSync interval](./images/11.autosync.png)
 
-This is so the app saves on bandwidth. The interval can be set to a lower value to sync more often. When set to 0, autosync is *disabled*.
+This is so the app saves on bandwidth. The interval can be set to a lower value to sync more often. When set to 0, autosync is _disabled_.
+
 - When you have multiple accounts, you will see that autosync starts with them and progressively include more accounts. For example, if A is synchronized to height 2m and B to 2.5m, sync starts with A between 2 and 2.5m. Then after 2.5m, both A and B are processed concurrently.
 
-You can *manually* start a sync by tapping the sync button. On the account list
-page, the sync button triggers the sync of every account *enabled*. You can
+You can _manually_ start a sync by tapping the sync button. On the account list
+page, the sync button triggers the sync of every account _enabled_. You can
 disable and reenable account by editing the account properties.
 
 ![Sync](./images/12.sync.png)
@@ -35,7 +37,7 @@ page.
 
 ## No Funds / Incorrect Balance
 
-> If you see no funds at all it is likely caused by an *incorrect key*
+> If you see no funds at all it is likely caused by an _incorrect key_
 
 Seed phrases have a "checksum" and use specific words from a list. If you
 mispell a word, it will be invalid. Unfortunately, there is no error
@@ -43,10 +45,10 @@ correction. The app knows there is an error somewhere but cannot help you
 correct the mistake. Make sure you write down the seed phrase exactly as
 shown.
 
->  The *address index* could be wrong.
+> The _address index_ could be wrong.
 
 If you are sure you have the right seed phrase but still see no funds, it may be
-because you do not have the right *account index*. Account indices start at 0.
+because you do not have the right _account index_. Account indices start at 0.
 If your original wallet had multiple accounts, it could have used an index
 different than 0.
 
@@ -56,8 +58,8 @@ addresses.
 :::
 
 Accounts that have the same address have the same key (and therefore the same
-balance). *However accounts that have different addresses may also have the
-same key* (using different diversified addresses or different receivers of the
+balance). _However accounts that have different addresses may also have the
+same key_ (using different diversified addresses or different receivers of the
 UA). If your address in Zkool differs from the one in your original wallet app,
 it may stil work.
 
@@ -142,3 +144,19 @@ Fortunately, you can fix the issue by rewinding the account to an earlier
 checkpoint in the Edit page.
 
 ![Rewind Checkpoint](./images/16.rewind.png)
+
+## Too Slow
+
+Between block 1.7m and 2.1m, there has been a spike in the number of transactions
+that filled up every block. It represents close to a 100x increase in data
+to process. Consequently, synchronization will slow down significantly during
+that range.
+
+> If your wallet was created after block 2.2m, I _highly_ encourage you
+> to provide a birth height. You do not want to be processing the "spam" blocks
+> if you can avoid it.
+
+You could try tweaking the setting "Actions Per Sync". It is the size of the
+batch of blocks that we process concurrently before writing a checkpoint to the
+database. A high number requires more memory and checkpoints spaced farther
+apart, but can improve the synchronization process on powerful computers.

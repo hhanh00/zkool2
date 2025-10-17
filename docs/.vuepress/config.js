@@ -42,6 +42,7 @@ export default defineUserConfig({
           "database",
           "tor",
           "security",
+          "iso",
           "mempool",
           "puri",
           "coin",
