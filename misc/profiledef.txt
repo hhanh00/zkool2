@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2034
+
+iso_name="ZKOOL"
+iso_label="ZKOOL"
+iso_publisher="Hanh <https://github.com/hhanh00>"
+iso_application="ZKOOL"
+install_dir="arch"
+buildmodes=('iso')
+bootmodes=('bios.syslinux'
+           'uefi.grub')
+arch="x86_64"
+pacman_conf="pacman.conf"
+airootfs_image_type="erofs"
+airootfs_image_tool_options=('-zlzma,109' -E 'ztailpacking')
+bootstrap_tarball_compression=(zstd -c -T0 --long -19)
+file_permissions=(
+  ["/etc/shadow"]="0:0:400"
+  ["/root/zkool"]="0:0:755"
+)
