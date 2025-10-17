@@ -79,3 +79,5 @@ Changes to Zkool will be saved in the data folder.
 Start the graphical environment XFCE 4: `startxfce4`
 
 Then run Zkool from your home directory using the file explorer.
+
+![Zkool Kiosk](./images/34.iso.png)
