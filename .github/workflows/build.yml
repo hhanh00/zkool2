@@ -37,9 +37,9 @@ jobs:
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
       - name: Get version number
         id: version
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq '.version' pubspec.yaml
+        run: |
+          RELEASE_VERSION=$(yq '.version' pubspec.yaml)
+          echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
       - run: |
           echo $TARGET
         env:
