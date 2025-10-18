@@ -13,10 +13,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            target: android
+          - os: ubuntu-latest
             target: linux
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
+      - name: Install PYTHON
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up Flutter
@@ -32,3 +38,13 @@ jobs:
           echo $TARGET
         env:
           TARGET: ${{ matrix.target }}
+      - name: Install android codesign
+        run: |
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/gcp.json.enc -out misc/gcp.json -pass pass:$JKS_PASSWORD
+          echo storePassword=$JKS_PASSWORD > android/key.properties
+          echo keyPassword=$JKS_PASSWORD >> android/key.properties
+          echo keyAlias=zkool >> android/key.properties
+          echo storeFile=zkool-keystore.jks >> android/key.properties
+        env:
+          JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
