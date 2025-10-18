@@ -1,0 +1,41 @@
+name: "Build Android"
+inputs:
+  version:
+    description: release version
+    required: true
+outputs:
+  outdir:
+    description: release directory
+    value: ${{ steps.out.outputs.outdir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Build
+      shell: bash
+      run: |
+        echo "Building zkool version: ${RELEASE_VERSION}"
+        flutter build apk --split-per-abi
+        flutter build aab
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
+        mkdir out
+        find . -type f -name "*.apk" -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          newf=$(echo "$base" | sed "s/app/$NAME/g")
+          mv "$f" "out/${newf}"
+        ' sh {} \;
+        ls -l $PWD/out
+        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
+    # - name: Upload to Google Play
+    #   if: startsWith(github.ref_name, 'zkool-v')
+    #   uses: r0adkll/upload-google-play@v1
+    #   with:
+    #     packageName: cc.methyl.zkool
+    #     releaseFiles: ./build/app/outputs/bundle/release/app-release.aab
+    #     track: internal
+    #     serviceAccountJson: misc/gcp.json

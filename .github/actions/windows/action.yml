@@ -1,0 +1,13 @@
+name: "Build Windows"
+inputs:
+  version:
+    required: true
+outputs:
+  outdir:
+    value: ${{ steps.out.outputs.outdir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install yq
+      shell: bash
+      run: choco -y yq

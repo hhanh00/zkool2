@@ -1,0 +1,104 @@
+name: Build and Release Composite
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - zkool-v*
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # - os: ubuntu-latest
+          #   target: android
+          # - os: ubuntu-latest
+          #   target: linux
+          #   arch: x86_64
+          # - os: ubuntu-24.04-arm
+          #   target: linux
+          #   arch: aarch64
+          # - os: macos-latest
+          #   target: mac
+          - os: windows-latest
+            target: windows
+    steps:
+      - name: Install yq
+        if: ${{ matrix.target == 'windows' }}
+        shell: bash
+        run: choco install yq -y
+      - name: Install RUST
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install PYTHON
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
+          echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
+      - name: Get version number
+        id: version
+        run: |
+          RELEASE_VERSION=$(yq '.version' pubspec.yaml)
+          echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+      - name: Install android codesign
+        run: |
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
+          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/gcp.json.enc -out misc/gcp.json -pass pass:$JKS_PASSWORD
+          echo storePassword=$JKS_PASSWORD > android/key.properties
+          echo keyPassword=$JKS_PASSWORD >> android/key.properties
+          echo keyAlias=zkool >> android/key.properties
+          echo storeFile=zkool-keystore.jks >> android/key.properties
+        env:
+          JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
+      - name: Build Android
+        id: build_android
+        if: ${{ matrix.target == 'android' }}
+        uses: ./.github/actions/android
+        with:
+          version: ${{ steps.version.outputs.result }}
+      - name: Build Linux
+        id: build_linux
+        if: ${{ matrix.target == 'linux' }}
+        uses: ./.github/actions/linux
+        with:
+          version: ${{ steps.version.outputs.result }}
+          os: ${{ matrix.os }}
+          arch: ${{ matrix.arch }}
+      - name: Build Mac
+        id: build_mac
+        if: ${{ matrix.target == 'mac' }}
+        uses: ./.github/actions/mac
+        with:
+          version: ${{ steps.version.outputs.result }}
+          jks: ${{ secrets.JKS_PASSWORD }}
+          ios_pwd: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          mac_pwd: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          apple_cert_name: ${{ secrets.MACOS_CERTIFICATE_NAME }}
+          apple_id: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
+          apple_pwd: ${{ secrets.MACOS_NOTARIZATION_PWD }}
+          apple_team_id: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
+      - name: Build Windows
+        id: build_windows
+        if: ${{ matrix.target == 'windows' }}
+        uses: ./.github/actions/windows
+        with:
+          version: ${{ steps.version.outputs.result }}
+      - name: Collect output dir
+        id: collect
+        run: |
+          echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir || steps.build_windows.outputs.outdir }}" >> $GITHUB_OUTPUT
+      - name: Create Release
+        # if: startsWith(github.ref_name, 'zkool-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.collect.outputs.outdir }}/*
+          draft: true
+          tag_name: TEST
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

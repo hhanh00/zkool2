@@ -1,0 +1,58 @@
+name: "Build Android"
+inputs:
+  os:
+    required: true
+  arch:
+    required: true
+  version:
+    description: release version
+    required: true
+outputs:
+  outdir:
+    description: release directory
+    value: ${{ steps.out.outputs.outdir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install packages
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libudev-dev
+        dart pub global activate fastforge
+        sudo apt install locate
+        wget -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
+        chmod +x appimagetool
+        sudo mv appimagetool /usr/local/bin/
+        mkdir out
+        echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+      env:
+        ARCH: ${{ inputs.arch }}
+    - name: Build
+      shell: bash
+      run: |
+        fastforge package --platform=linux --targets=deb,appimage
+    - name: Make ISO
+      if: ${{ !(contains(inputs.os, 'arm')) }}
+      id: iso
+      shell: bash
+      run: |
+        cp -r build/linux/x64/release/bundle misc/
+        cd misc
+        docker build -t iso_builder -f iso.dockerfile .
+        docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
+        find . -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          ext="${base##*.}"
+          mv "$f" "out/${NAME}-${ARCH}.${ext}"
+        ' sh {} \;
+        ls -l $PWD/out
+        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
+        ARCH: ${{ inputs.arch }}
