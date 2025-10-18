@@ -25,22 +25,19 @@ runs:
         chmod +x appimagetool
         sudo mv appimagetool /usr/local/bin/
         mkdir out
-    - name: Mock Build
+    - name: Build
       shell: bash
-      run: touch mock.deb mock.AppImage mock.iso
-    # - name: Build
-    #   shell: bash
-    #   run: |
-    #     fastforge package --platform=linux --targets=deb,appimage
-    # - name: Make ISO
-    #   if: ${{ !(contains(inputs.os, 'arm')) }}
-    #   id: iso
-    #   shell: bash
-    #   run: |
-    #     cp -r build/linux/x64/release/bundle misc/
-    #     cd misc
-    #     docker build -t iso_builder -f iso.dockerfile .
-    #     docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
+      run: |
+        fastforge package --platform=linux --targets=deb,appimage
+    - name: Make ISO
+      if: ${{ !(contains(inputs.os, 'arm')) }}
+      id: iso
+      shell: bash
+      run: |
+        cp -r build/linux/x64/release/bundle misc/
+        cd misc
+        docker build -t iso_builder -f iso.dockerfile .
+        docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
     - name: Move to outdir
       id: out
       shell: bash
