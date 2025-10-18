@@ -6,6 +6,7 @@ inputs:
 outputs:
   outdir:
     description: release directory
+    value: ${{ steps.out.outputs.outdir }}
 runs:
   using: "composite"
   steps:
@@ -15,13 +16,21 @@ runs:
         echo "Building zkool version: ${RELEASE_VERSION}"
         flutter build apk --split-per-abi
         flutter build aab
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
         mkdir out
-        mv ./build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ./out/${RELEASE_VERSION}-armeabi-v7a.apk
-        mv ./build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ./out/${RELEASE_VERSION}-arm64-v8a.apk
-        mv ./build/app/outputs/flutter-apk/app-x86_64-release.apk ./out/${RELEASE_VERSION}-x86_64.apk
+        find . -type f -name "*.apk" -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          newf=$(echo "$base" | sed "s/app/$NAME/g")
+          mv "$f" "out/${newf}"
+        ' sh {} \;
+        ls -l $PWD/out
         echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
       env:
-        RELEASE_VERSION: zkool-${{ inputs.version }}
+        NAME: zkool-${{ inputs.version }}
     # - name: Upload to Google Play
     #   if: startsWith(github.ref_name, 'zkool-v')
     #   uses: r0adkll/upload-google-play@v1
