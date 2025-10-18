@@ -16,6 +16,8 @@ jobs:
             target: android
           - os: ubuntu-latest
             target: linux
+          - os: ubuntu-latest-arm
+            target: linux
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
@@ -49,16 +51,26 @@ jobs:
         env:
           JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
       - name: Build Android
-        id: build
+        id: build_android
         if: ${{ matrix.target == 'android' }}
         uses: ./.github/actions/android
         with:
           version: ${{ steps.version.outputs.result }}
+      - name: Build Linux
+        id: build_linux
+        if: ${{ matrix.target == 'linux' }}
+        uses: ./.github/actions/linux
+        with:
+          version: ${{ steps.version.outputs.result }}
+          os: ${{ matrix.os }}
+      - id: collect
+        run: |
+          echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir }}" >> $GITHUB_OUTPUT
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.build.outputs.outdir }}/*
+          files: ${{ steps.collect.outputs.outdir }}/*
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
