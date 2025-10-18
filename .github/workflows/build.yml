@@ -1,4 +1,4 @@
-name: Build and Release Android/FDroid
+name: Build and Release Composite
 
 on:
   workflow_dispatch:
