@@ -53,3 +53,4 @@ jobs:
         uses: ./.github/actions/android
         with:
           version: steps.version.outputs.result
+          token: ${{ secrets.GITHUB_TOKEN }}

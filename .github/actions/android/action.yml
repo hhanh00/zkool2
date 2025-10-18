@@ -3,10 +3,13 @@ inputs:
   version:
     description: 'release version'
     required: true
+  token:
+    required: true
 runs:
   using: "composite"
   steps:
     - name: Build
+      shell: bash
       run: |
         echo "Building zkool version: ${RELEASE_VERSION}"
         flutter build apk --split-per-abi
@@ -28,7 +31,7 @@ runs:
         files: ./*.apk
         draft: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.token }}
     # - name: Upload to Google Play
     #   if: startsWith(github.ref_name, 'zkool-v')
     #   uses: r0adkll/upload-google-play@v1
