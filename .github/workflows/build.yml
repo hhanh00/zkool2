@@ -30,9 +30,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
+          echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
       - name: Get version number
         id: version
         uses: mikefarah/yq@master
