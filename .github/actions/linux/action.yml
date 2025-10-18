@@ -25,19 +25,22 @@ runs:
         chmod +x appimagetool
         sudo mv appimagetool /usr/local/bin/
         mkdir out
-    - name: Build
-      shell: bash
-      run: |
-        fastforge package --platform=linux --targets=deb,appimage
-    - name: Make ISO
-      if: ${{ !(contains(inputs.os, 'arm')) }}
-      id: iso
-      shell: bash
-      run: |
-        cp -r build/linux/x64/release/bundle misc/
-        cd misc
-        docker build -t iso_builder -f iso.dockerfile .
-        docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
+      - Mock Build
+        shell: bash
+        run: touch mock.deb mock.AppImage mock.iso
+    # - name: Build
+    #   shell: bash
+    #   run: |
+    #     fastforge package --platform=linux --targets=deb,appimage
+    # - name: Make ISO
+    #   if: ${{ !(contains(inputs.os, 'arm')) }}
+    #   id: iso
+    #   shell: bash
+    #   run: |
+    #     cp -r build/linux/x64/release/bundle misc/
+    #     cd misc
+    #     docker build -t iso_builder -f iso.dockerfile .
+    #     docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
     - name: Move to outdir
       id: out
       shell: bash
@@ -46,10 +49,10 @@ runs:
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"
-          mv "$f" "out/${NAME}.${ext}"
+          mv "$f" "out/${NAME}-${ARCH}.${ext}"
         ' sh {} \;
         ls -l $PWD/out
         echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
-
+        ARCH: ${{ inputs.arch }}
