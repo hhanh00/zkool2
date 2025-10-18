@@ -25,9 +25,9 @@ runs:
         chmod +x appimagetool
         sudo mv appimagetool /usr/local/bin/
         mkdir out
-      - Mock Build
-        shell: bash
-        run: touch mock.deb mock.AppImage mock.iso
+    - name: Mock Build
+      shell: bash
+      run: touch mock.deb mock.AppImage mock.iso
     # - name: Build
     #   shell: bash
     #   run: |
