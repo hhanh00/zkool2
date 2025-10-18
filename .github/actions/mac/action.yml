@@ -33,7 +33,6 @@ runs:
         pip3 install codemagic-cli-tools
         ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/apple.distrib.p12 $APPLE_DISTRIB_PASSWORD
         ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/cert.p12 $APPLE_CERTIFICATE_PASSWORD
-        xcode-project use-profiles
       env:
         JKS_PASSWORD: ${{ inputs.jks }}
         KEYCHAIN_PWD: azB27DoYCFe5kzd3
@@ -41,9 +40,7 @@ runs:
         APPLE_CERTIFICATE_PASSWORD: ${{ inputs.mac_pwd }}
     - name: Build
       shell: bash
-      run: |
-        flutter build ipa --export-options-plist=ios/export_options.plist
-        flutter build macos
+      run: flutter build macos
     - name: Notarization
       shell: bash
       run: ./misc/codesign-notarize.sh
@@ -59,6 +56,11 @@ runs:
         python3 -m pip install packaging
         npm install -g appdmg
         (cd misc; appdmg app.json app.dmg)
+    - name: Build iOS
+      shell: bash
+      run: |
+        xcode-project use-profiles
+        flutter build ipa --export-options-plist=ios/export_options.plist
     - name: Move to outdir
       id: out
       shell: bash
