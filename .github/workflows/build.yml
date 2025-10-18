@@ -48,3 +48,8 @@ jobs:
           echo storeFile=zkool-keystore.jks >> android/key.properties
         env:
           JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
+      - name: Build Android
+        if: ${{ matrix.target == 'android' }}
+        uses: ./.github/actions/android
+        with:
+          version: steps.version.outputs.result
