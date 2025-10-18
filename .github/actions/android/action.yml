@@ -1,0 +1,52 @@
+name: "Build Android"
+inputs:
+  version:
+    required: true
+  jks:
+    required: true
+outputs:
+  outdir:
+    value: ${{ steps.out.outputs.outdir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install android codesign
+      shell: bash
+      run: |
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/gcp.json.enc -out misc/gcp.json -pass pass:$JKS_PASSWORD
+        echo storePassword=$JKS_PASSWORD > android/key.properties
+        echo keyPassword=$JKS_PASSWORD >> android/key.properties
+        echo keyAlias=zkool >> android/key.properties
+        echo storeFile=zkool-keystore.jks >> android/key.properties
+      env:
+        JKS_PASSWORD: ${{ inputs.jks }}
+    - name: Build
+      shell: bash
+      run: |
+        echo "Building zkool version: ${RELEASE_VERSION}"
+        flutter build apk --split-per-abi
+        flutter build aab
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
+        mkdir out
+        find . -type f -name "*.apk" -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          newf=$(echo "$base" | sed "s/app/$NAME/g")
+          mv "$f" "out/${newf}"
+        ' sh {} \;
+        ls -l $PWD/out
+        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
+    # - name: Upload to Google Play
+    #   if: startsWith(github.ref_name, 'zkool-v')
+    #   uses: r0adkll/upload-google-play@v1
+    #   with:
+    #     packageName: cc.methyl.zkool
+    #     releaseFiles: ./build/app/outputs/bundle/release/app-release.aab
+    #     track: internal
+    #     serviceAccountJson: misc/gcp.json

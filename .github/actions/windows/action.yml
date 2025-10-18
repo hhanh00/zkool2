@@ -1,0 +1,43 @@
+name: "Build Windows"
+inputs:
+  version:
+    required: true
+outputs:
+  outdir:
+    value: ${{ steps.out.outputs.outdir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install Inno-Setup
+      shell: powershell
+      run: |
+        $InnoSetup = Join-Path ${env:PROGRAMFILES(X86)} -ChildPath 'Inno Setup 6\iscc.exe'
+        if (!(Test-Path $InnoSetup)) {
+          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "D:\\is.exe"
+          Start-Process -FilePath "D:\\is.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+        }
+    - name: Install packages
+      shell: bash
+      run: |
+        export PUB_CACHE="$RUNNER_TEMP/.pub-cache"
+        dart pub global activate fastforge
+        echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
+    - name: Build
+      shell: powershell
+      run: |
+        fastforge package --platform=windows --targets=exe,zip
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
+        mkdir out
+        find dist/ -type f \( -name "*.exe" -o -name "*.zip" \) -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          ext="${base##*.}"
+          mv "$f" "out/${NAME}.${ext}"
+        ' sh {} \;
+        ls -l out
+        echo "outdir=out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
