@@ -27,7 +27,7 @@ runs:
       run: |
         fastforge package --platform=linux --targets=deb,appimage
     - name: Make ISO
-      if: ${{ not(contains(inputs.os, 'arm')) }}
+      if: ${{ !(contains(inputs.os, 'arm')) }}
       id: iso
       shell: bash
       run: |
