@@ -16,8 +16,10 @@ jobs:
             target: android
           - os: ubuntu-latest
             target: linux
+            arch: x86_64
           - os: ubuntu-latest-arm
             target: linux
+            arch: arm64
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
@@ -63,11 +65,14 @@ jobs:
         with:
           version: ${{ steps.version.outputs.result }}
           os: ${{ matrix.os }}
-      - id: collect
+          arch: ${{ matrix.arch }}
+      - name: Collect output dir
+        id: collect
         run: |
           echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir }}" >> $GITHUB_OUTPUT
       - name: Create Release
-        if: startsWith(github.ref_name, 'zkool-v')
+        # if: startsWith(github.ref_name, 'zkool-v')
+        tag_name: TEST
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.collect.outputs.outdir }}/*

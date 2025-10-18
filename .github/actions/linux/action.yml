@@ -2,6 +2,8 @@ name: "Build Android"
 inputs:
   os:
     required: true
+  arch:
+    required: true
   version:
     description: release version
     required: true
@@ -35,11 +37,16 @@ runs:
         cd misc
         docker build -t iso_builder -f iso.dockerfile .
         docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
-        mv ZKOOL--x86_64.iso $ISO_NAME
-      env:
-        ISO_NAME: zkool-${{ inputs.version }}.iso
     - name: Move to outdir
       shell: bash
       run: |
-        find . -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec mv {} out/ \;
+        find . -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          ext="${base##*.}"
+          mv "$f" "out/${NAME}.${ext}"
+        ' sh {} \;
         echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
+
