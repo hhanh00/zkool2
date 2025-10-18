@@ -1,0 +1,35 @@
+name: Build and Release Android/FDroid
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - zkool-v*
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+  steps:
+    - name: Install RUST
+      uses: dtolnay/rust-toolchain@stable
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+    - name: Get version number
+      id: version
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq '.version' pubspec.yaml
+    - run: |
+        echo $TARGET
+      env:
+        TARGET: ${{ matrix.target }}
+
