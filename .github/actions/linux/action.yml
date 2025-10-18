@@ -25,6 +25,7 @@ runs:
         chmod +x appimagetool
         sudo mv appimagetool /usr/local/bin/
         mkdir out
+        echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
     - name: Build
       shell: bash
       run: |
