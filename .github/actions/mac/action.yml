@@ -1,0 +1,79 @@
+name: "Build Mac/iOS"
+inputs:
+  version:
+    required: true
+  jks:
+    required: true
+  ios_pwd:
+    required: true
+  mac_pwd:
+    required: true
+  apple_cert_name:
+    required: true
+  apple_id:
+    required: true
+  apple_pwd:
+    required: true
+  apple_team_id:
+    required: true
+outputs:
+  outdir:
+    value: ${{ steps.out.outputs.outdir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Decrypt certs
+      shell: bash
+      run: |
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/macos.cert.enc -out /tmp/cert.p12 -pass pass:$JKS_PASSWORD
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/apple.distrib.p12.enc -out /tmp/apple.distrib.p12 -pass pass:$JKS_PASSWORD
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/ios.mobileprovision.enc -out /tmp/ios.mobileprovision -pass pass:$JKS_PASSWORD
+        mkdir -p $HOME/Library/MobileDevice/Provisioning\ Profiles
+        cp /tmp/ios.mobileprovision $HOME/Library/MobileDevice/Provisioning\ Profiles/
+        pip3 install codemagic-cli-tools
+        ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/apple.distrib.p12 $APPLE_DISTRIB_PASSWORD
+        ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/cert.p12 $APPLE_CERTIFICATE_PASSWORD
+        brew install protobuf
+      env:
+        JKS_PASSWORD: ${{ inputs.jks }}
+        KEYCHAIN_PWD: azB27DoYCFe5kzd3
+        APPLE_DISTRIB_PASSWORD: ${{ inputs.ios_pwd }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ inputs.mac_pwd }}
+    - name: Build
+      shell: bash
+      run: flutter build macos
+    - name: Notarization
+      shell: bash
+      run: ./misc/codesign-notarize.sh
+      env:
+        APPNAME: zkool
+        APPLE_CERTIFICATE_NAME: ${{ inputs.apple_cert_name }}
+        APPLE_ID: ${{ inputs.apple_id }}
+        APPLE_PASSWORD: ${{ inputs.apple_pwd }}
+        APPLE_TEAM_ID: ${{ inputs.apple_team_id }}
+    - name: Package DMG
+      shell: bash
+      run: |
+        python3 -m pip install packaging
+        npm install -g appdmg
+        (cd misc; appdmg app.json app.dmg)
+    - name: Build iOS
+      shell: bash
+      run: |
+        xcode-project use-profiles
+        flutter build ipa --export-options-plist=ios/export_options.plist
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
+        mkdir out
+        find . -type f \( -name "*.ipa" -o -name "*.dmg" \) -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          ext="${base##*.}"
+          mv "$f" "out/${NAME}.${ext}"
+        ' sh {} \;
+        ls -l $PWD/out
+        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
