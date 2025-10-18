@@ -10,6 +10,7 @@ inputs:
 outputs:
   outdir:
     description: release directory
+    value: ${{ steps.out.outputs.outdir }}
 runs:
   using: "composite"
   steps:
@@ -38,6 +39,7 @@ runs:
         docker build -t iso_builder -f iso.dockerfile .
         docker run --rm --privileged -v ".":/iso/out iso_builder bash -c "mkarchiso -w w -o out p"
     - name: Move to outdir
+      id: out
       shell: bash
       run: |
         find . -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
@@ -46,6 +48,7 @@ runs:
           ext="${base##*.}"
           mv "$f" "out/${NAME}.${ext}"
         ' sh {} \;
+        ls -l $PWD/out
         echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
