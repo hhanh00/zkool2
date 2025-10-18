@@ -12,14 +12,16 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: android
-          - os: ubuntu-latest
-            target: linux
-            arch: x86_64
-          - os: ubuntu-24.04-arm
-            target: linux
-            arch: aarch64
+          # - os: ubuntu-latest
+          #   target: android
+          # - os: ubuntu-latest
+          #   target: linux
+          #   arch: x86_64
+          # - os: ubuntu-24.04-arm
+          #   target: linux
+          #   arch: aarch64
+          - os: macos-latest
+            target: mac
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
@@ -66,10 +68,23 @@ jobs:
           version: ${{ steps.version.outputs.result }}
           os: ${{ matrix.os }}
           arch: ${{ matrix.arch }}
+      - name: Build Mac
+        id: build_mac
+        if: ${{ matrix.target == 'mac' }}
+        uses: ./.github/actions/mac
+        with:
+          version: ${{ steps.version.outputs.result }}
+          jks: ${{ secrets.JKS_PASSWORD }}
+          ios_pwd: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          mac_pwd: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          apple_cert_name: ${{ secrets.MACOS_CERTIFICATE_NAME }}
+          apple_id: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
+          apple_pwd: ${{ secrets.MACOS_NOTARIZATION_PWD }}
+          apple_team_id: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
       - name: Collect output dir
         id: collect
         run: |
-          echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir }}" >> $GITHUB_OUTPUT
+          echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir }}" >> $GITHUB_OUTPUT
       - name: Create Release
         # if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
