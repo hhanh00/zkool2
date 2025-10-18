@@ -48,17 +48,21 @@ or better.
 
 ## Features
 
-- supports most zcash keys[^1]
+- supports most [zcash keys](recipe/restore)[^1]
 - works with transparent, sapling and orchard pools[^2],
-- generates diversified shielded addresses and rotates transparent address,
-- manages multiple accounts, folders and wallets[^3],
-- supports multi signature shielded accounts by leveraging the FROST threshold
+- generates [diversified shielded addresses](guide/addresses) and rotates transparent address,
+- manages [multiple accounts](guide/accounts), [folders](recipe/folder) and [wallets](recipe/database)[^3],
+- supports multi signature shielded accounts by leveraging the [FROST](frost/guide) threshold
   signature algorithm
-- connects to mainnet, testnet and regtest, via full nodes[^4] and lightwalletd
+- connects to [mainnet, testnet and regtest](recipe/net), via full nodes[^4] and lightwalletd
   servers[^5]
-- wallets and accounts are interoperable between mobile and desktop versions
-- syncs faster than any other wallet app[^6]
-- encrypts communication over TOR[^7]
+- wallets and accounts are [interoperable](recipe/database) between mobile and desktop versions
+- syncs faster than any other wallet app[^6] with Warp Sync 2
+- [encrypts communication](recipe/tor) over TOR[^7]
+- interfaces with the [Shielded Zcash Ledger](recipe/ledger) app (for Nano S+,
+  NanoX, etc) and can be setup as a [Cold Wallet](recipe/cold)
+- helps you [organize your finances](report/overview) by categories, and generates reports and charts
+- integrates [Trading View charts](guide/other)
 
 It can probably handle any account from any other wallets as long as you have
 the secret key (unless it is Sprout)
