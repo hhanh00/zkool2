@@ -21,11 +21,13 @@ runs:
         sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libudev-dev
         dart pub global activate fastforge
         sudo apt install locate
-        wget -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+        wget -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
         chmod +x appimagetool
         sudo mv appimagetool /usr/local/bin/
         mkdir out
         echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+      env:
+        ARCH: ${{ inputs.arch }}
     - name: Build
       shell: bash
       run: |
