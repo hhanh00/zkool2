@@ -33,6 +33,7 @@ runs:
         pip3 install codemagic-cli-tools
         ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/apple.distrib.p12 $APPLE_DISTRIB_PASSWORD
         ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/cert.p12 $APPLE_CERTIFICATE_PASSWORD
+        brew install protobuf
       env:
         JKS_PASSWORD: ${{ inputs.jks }}
         KEYCHAIN_PWD: azB27DoYCFe5kzd3
