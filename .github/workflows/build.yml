@@ -1,4 +1,4 @@
-name: Build and Release Composite
+name: Build and Release
 
 on:
   workflow_dispatch:
