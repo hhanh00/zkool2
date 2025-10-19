@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.6.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.6.0...zkool-v6.6.1) (2025-10-19)
+
+
+### Bug Fixes
+
+* github actions ([#641](https://github.com/hhanh00/zkool2/issues/641)) ([4c93acd](https://github.com/hhanh00/zkool2/commit/4c93acd185306603ddb559634626d24ba8071fc0))
+
 ## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.1...zkool-v6.6.0) (2025-10-19)
 
 
