@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.1...zkool-v6.6.0) (2025-10-19)
+
+
+### Features
+
+* test release ([1c6639b](https://github.com/hhanh00/zkool2/commit/1c6639b7572839d094a831bedc894aaa9f35d5b6))
+
 ## [6.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.5.1) (2025-10-17)
 
 
