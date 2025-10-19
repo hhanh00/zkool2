@@ -91,11 +91,10 @@ jobs:
         run: |
           echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir || steps.build_windows.outputs.outdir }}" >> $GITHUB_OUTPUT
       - name: Create Release
-        # if: startsWith(github.ref_name, 'zkool-v')
+        if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.collect.outputs.outdir }}/*
           draft: true
-          tag_name: TEST
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
