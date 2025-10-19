@@ -31,7 +31,7 @@ runs:
       shell: bash
       run: |
         mkdir out
-        find dist/ -type f \( -name "*.exe" -o -name "*.zip" \) -exec sh -c '
+        find dist/ -path ./out -prune -type f \( -name "*.exe" -o -name "*.zip" \) -exec sh -c '
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"

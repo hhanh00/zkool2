@@ -45,14 +45,14 @@ runs:
       id: out
       shell: bash
       run: |
-        find . -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
+        find . -path ./out -prune -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"
           mv "$f" "out/${NAME}-${ARCH}.${ext}"
         ' sh {} \;
-        ls -l $PWD/out
-        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+        ls -l out
+        echo "outdir=out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
         ARCH: ${{ inputs.arch }}
