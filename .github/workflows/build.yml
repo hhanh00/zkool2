@@ -38,6 +38,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up Flutter
+        shell: bash
         run: |
           git clone --depth 1 --branch stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
