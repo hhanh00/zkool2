@@ -67,13 +67,13 @@ runs:
       shell: bash
       run: |
         mkdir out
-        find . -type f \( -name "*.ipa" -o -name "*.dmg" \) -exec sh -c '
+        find . -path ./out -prune -o -type f \( -name "*.ipa" -o -name "*.dmg" \) -exec sh -c '
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"
           mv "$f" "out/${NAME}.${ext}"
         ' sh {} \;
-        ls -l $PWD/out
-        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+        ls -l out
+        echo "outdir=out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
