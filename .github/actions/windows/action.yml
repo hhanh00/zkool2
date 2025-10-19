@@ -23,7 +23,9 @@ runs:
         echo "$HOME/AppData/Local/Pub/Cache/bin" >> $GITHUB_PATH
     - name: Build
       shell: bash
-      run: fastforge package --platform=windows --targets=exe,zip
+      run: |
+        echo $PATH
+        fastforge package --platform=windows --targets=exe,zip
     - name: Move to outdir
       id: out
       shell: bash
