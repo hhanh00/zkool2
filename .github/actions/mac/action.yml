@@ -67,7 +67,7 @@ runs:
       shell: bash
       run: |
         mkdir out
-        find . -path ./out -prune -type f \( -name "*.ipa" -o -name "*.dmg" \) -exec sh -c '
+        find . -path ./out -prune -o -type f \( -name "*.ipa" -o -name "*.dmg" \) -exec sh -c '
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"

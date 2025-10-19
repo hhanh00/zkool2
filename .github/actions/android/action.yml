@@ -32,7 +32,7 @@ runs:
       shell: bash
       run: |
         mkdir out
-        find . -path ./out -prune -type f -name "*.apk" -exec sh -c '
+        find . -path ./out -prune -o -type f -name "*.apk" -exec sh -c '
           f="$1"
           base=$(basename "$f")
           newf=$(echo "$base" | sed "s/app/$NAME/g")

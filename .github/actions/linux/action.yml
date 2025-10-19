@@ -45,7 +45,7 @@ runs:
       id: out
       shell: bash
       run: |
-        find . -path ./out -prune -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
+        find . -path ./out -prune -o -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"
