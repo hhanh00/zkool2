@@ -20,7 +20,7 @@ runs:
       shell: bash
       run: |
         flutter pub global activate fastforge
-        echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+        echo "$HOME/AppData/Local/Pub/Cache/bin" >> $GITHUB_PATH
     - name: Build
       shell: bash
       run: fastforge package --platform=windows --targets=exe,zip
