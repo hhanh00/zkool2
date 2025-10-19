@@ -16,3 +16,23 @@ runs:
           Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "D:\\is.exe"
           Start-Process -FilePath "D:\\is.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
         }
+    - name: Install packages
+      shell: bash
+      run: |
+        dart pub global activate fastforge
+        fastforge package --platform=windows --targets=exe,zip
+    - name: Move to outdir
+      id: out
+      shell: bash
+      run: |
+        mkdir out
+        find dist/ -type f \( -name "*.exe" -o -name "*.zip" \) -exec sh -c '
+          f="$1"
+          base=$(basename "$f")
+          ext="${base##*.}"
+          mv "$f" "out/${NAME}.${ext}"
+        ' sh {} \;
+        ls -l $PWD/out
+        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+      env:
+        NAME: zkool-${{ inputs.version }}
