@@ -37,7 +37,7 @@ runs:
           ext="${base##*.}"
           mv "$f" "out/${NAME}.${ext}"
         ' sh {} \;
-        ls -l $PWD/out
-        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+        ls -l out
+        echo "outdir=out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
