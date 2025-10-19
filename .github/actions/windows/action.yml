@@ -19,6 +19,7 @@ runs:
     - name: Install packages
       shell: bash
       run: |
+        echo $PATH
         flutter pub global activate fastforge
         fastforge package --platform=windows --targets=exe,zip
     - name: Move to outdir
