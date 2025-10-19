@@ -23,10 +23,8 @@ runs:
         dart pub global activate fastforge
         echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
     - name: Build
-      shell: bash
+      shell: powershell
       run: |
-        echo $PATH
-        ls -lR "$RUNNER_TEMP/.pub-cache/bin"
         fastforge package --platform=windows --targets=exe,zip
     - name: Move to outdir
       id: out
