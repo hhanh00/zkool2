@@ -32,14 +32,14 @@ runs:
       shell: bash
       run: |
         mkdir out
-        find . -type f -name "*.apk" -exec sh -c '
+        find . -path ./out -prune -o -type f -name "*.apk" -exec sh -c '
           f="$1"
           base=$(basename "$f")
           newf=$(echo "$base" | sed "s/app/$NAME/g")
           mv "$f" "out/${newf}"
         ' sh {} \;
-        ls -l $PWD/out
-        echo "outdir=$PWD/out" >> $GITHUB_OUTPUT
+        ls -l out
+        echo "outdir=out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
     # - name: Upload to Google Play

@@ -195,9 +195,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let recipient = sout.recipient().unwrap();
             // Decrypt the memo so that we can reencrypt it with the
             // randomness
-            let cmu: [u8; 32] = tiu!(sout.cmu().clone());
-            let cv: [u8; 32] = tiu!(sout.cv().clone());
-            let epk: [u8; 32] = tiu!(sout.ephemeral_key().clone());
+            let cmu: [u8; 32] = tiu!(*sout.cmu());
+            let cv: [u8; 32] = tiu!(*sout.cv());
+            let epk: [u8; 32] = tiu!(*sout.ephemeral_key());
             let enc: [u8; 580] = tiu!(sout.enc_ciphertext().clone());
             let cout: [u8; 80] = tiu!(sout.out_ciphertext().clone());
             let cv = ValueCommitment::from_bytes_not_small_order(&cv).unwrap();
@@ -221,7 +221,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 None => {
                     let memo = Memo::Empty;
                     let memo_bytes = memo.encode();
-                    let memo: [u8; 512] = tiu!(memo_bytes.as_array().clone());
+                    let memo: [u8; 512] = tiu!(*memo_bytes.as_array());
                     memo
                 },
             };
