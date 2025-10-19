@@ -1,15 +1,25 @@
 name: "Build Android"
 inputs:
   version:
-    description: release version
+    required: true
+  jks:
     required: true
 outputs:
   outdir:
-    description: release directory
     value: ${{ steps.out.outputs.outdir }}
 runs:
   using: "composite"
   steps:
+    - name: Install android codesign
+      run: |
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/gcp.json.enc -out misc/gcp.json -pass pass:$JKS_PASSWORD
+        echo storePassword=$JKS_PASSWORD > android/key.properties
+        echo keyPassword=$JKS_PASSWORD >> android/key.properties
+        echo keyAlias=zkool >> android/key.properties
+        echo storeFile=zkool-keystore.jks >> android/key.properties
+      env:
+        JKS_PASSWORD: ${{ inputs.jks }}
     - name: Build
       shell: bash
       run: |

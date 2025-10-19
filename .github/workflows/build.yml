@@ -47,22 +47,13 @@ jobs:
         run: |
           RELEASE_VERSION=$(yq '.version' pubspec.yaml)
           echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
-      - name: Install android codesign
-        run: |
-          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
-          openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/gcp.json.enc -out misc/gcp.json -pass pass:$JKS_PASSWORD
-          echo storePassword=$JKS_PASSWORD > android/key.properties
-          echo keyPassword=$JKS_PASSWORD >> android/key.properties
-          echo keyAlias=zkool >> android/key.properties
-          echo storeFile=zkool-keystore.jks >> android/key.properties
-        env:
-          JKS_PASSWORD: ${{ secrets.JKS_PASSWORD }}
       - name: Build Android
         id: build_android
         if: ${{ matrix.target == 'android' }}
         uses: ./.github/actions/android
         with:
           version: ${{ steps.version.outputs.result }}
+          jks: ${{ secrets.JKS_PASSWORD }}
       - name: Build Linux
         id: build_linux
         if: ${{ matrix.target == 'linux' }}
