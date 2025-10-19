@@ -13,6 +13,7 @@ outputs:
     value: ${{ steps.out.outputs.outdir }}
 runs:
   using: "composite"
+  if: ${{ github.event_name != 'pull_request' || inputs.arch == 'aarch64' }}
   steps:
     - name: Install packages
       shell: bash
@@ -33,7 +34,7 @@ runs:
       run: |
         fastforge package --platform=linux --targets=deb,appimage
     - name: Make ISO
-      if: ${{ !(contains(inputs.os, 'arm')) }}
+      if: ${{ inputs.arch == 'x86_64' }}
       id: iso
       shell: bash
       run: |
