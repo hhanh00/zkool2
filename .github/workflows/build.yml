@@ -84,6 +84,7 @@ jobs:
           version: ${{ steps.version.outputs.result }}
       - name: Collect output dir
         id: collect
+        shell: bash
         run: |
           echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir || steps.build_windows.outputs.outdir }}" >> $GITHUB_OUTPUT
       - name: Create Release
