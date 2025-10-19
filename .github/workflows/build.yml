@@ -60,7 +60,7 @@ jobs:
           jks: ${{ secrets.JKS_PASSWORD }}
       - name: Build Linux
         id: build_linux
-        if: ${{ matrix.target == 'linux' && (github.event_name != 'pull_request' || inputs.arch == 'aarch64') }}
+        if: ${{ matrix.target == 'linux' && (github.event_name != 'pull_request' || matrix.arch == 'aarch64') }}
         uses: ./.github/actions/linux
         with:
           version: ${{ steps.version.outputs.result }}
