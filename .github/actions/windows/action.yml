@@ -19,8 +19,9 @@ runs:
     - name: Install packages
       shell: bash
       run: |
-        flutter pub global activate fastforge
-        echo "$HOME/AppData/Local/Pub/Cache/bin" >> $GITHUB_PATH
+        export PUB_CACHE="$RUNNER_TEMP/.pub-cache"
+        dart pub global activate fastforge
+        echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
     - name: Build
       shell: bash
       run: |
