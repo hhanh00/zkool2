@@ -11,6 +11,7 @@ runs:
   using: "composite"
   steps:
     - name: Install android codesign
+      shell: bash
       run: |
         openssl enc -pbkdf2 -aes-256-cbc -salt -d -in android/app/zkool-keystore.jks.enc -out android/app/zkool-keystore.jks -pass pass:$JKS_PASSWORD
         openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/gcp.json.enc -out misc/gcp.json -pass pass:$JKS_PASSWORD
