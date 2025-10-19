@@ -8,6 +8,11 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Install yq
-      shell: bash
-      run: choco -y yq
+    - name: Install Inno-Setup
+      shell: powershell
+      run: |
+        $InnoSetup = Join-Path ${env:PROGRAMFILES(X86)} -ChildPath 'Inno Setup 6\iscc.exe'
+        if (!(Test-Path $InnoSetup)) {
+          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "D:\\is.exe"
+          Start-Process -FilePath "D:\\is.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+        }
