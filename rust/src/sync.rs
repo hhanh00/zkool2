@@ -5,7 +5,8 @@ use crate::{
     api::sync::SyncProgress,
     coin::Network,
     db::{
-        get_account_aindex, get_account_dindex, get_account_hw, select_account_transparent, store_account_transparent_addr
+        get_account_aindex, get_account_dindex, get_account_hw, select_account_transparent,
+        store_account_transparent_addr,
     },
     io::SyncHeight,
     lwd::CompactBlock,
@@ -36,7 +37,6 @@ use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 use crate::ledger::fvk::get_hw_transparent_address;
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 use crate::no_ledger::get_hw_transparent_address;
-
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
@@ -239,6 +239,7 @@ pub async fn shielded_sync(
                     db_tx.commit().await.unwrap();
                     info!("Committing transaction");
                     db_tx = writer_connection.begin().await.unwrap();
+                    check_witness_consistency(&mut db_tx).await?;
                 } else {
                     match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
                         Ok(_) => {}
@@ -251,6 +252,7 @@ pub async fn shielded_sync(
             }
             db_tx.commit().await?;
             info!("[db handler] stopped");
+            check_witness_consistency(&mut writer_connection).await?;
 
             Ok::<_, anyhow::Error>(())
         });
@@ -493,6 +495,36 @@ pub async fn trim_sync_data(
         .await?;
 
     db_tx.commit().await?;
+    Ok(())
+}
+
+pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Result<()> {
+    let notes = sqlx::query(
+    "WITH utxo AS (SELECT * FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE s.id_note IS NULL),
+    db_height AS (SELECT * FROM sync_heights)
+    SELECT u.account, u.pool, u.height, u.value, d.height FROM utxo u
+    JOIN db_height d ON d.account = u.account AND d.pool = u.pool
+    JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
+    AND w.height = d.height
+    AND w.note IS NULL
+    ")
+    .map(|r: SqliteRow| {
+        let account: u32 = r.get(0);
+        let pool: u8 = r.get(1);
+        let height: u32 = r.get(2);
+        let value: u64 = r.get(3);
+        let db_height: u32 = r.get(4);
+        (account, pool, height, value, db_height)
+    })
+    .fetch_all(connection).await?;
+
+    for (account, pool, height, value, db_height) in notes.iter() {
+        info!("Missing witness for note {pool} {height} {value} of account {account} at height {db_height}");
+    }
+    if !notes.is_empty() {
+        anyhow::bail!("Some notes have no witness data. Abort Sync");
+    }
+    info!("Db check passed");
     Ok(())
 }
 
