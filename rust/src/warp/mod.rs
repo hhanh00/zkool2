@@ -24,11 +24,12 @@ pub struct Witness {
     pub value: Hash32,
     pub position: u32,
     pub ommers: Edge,
+    pub anchor: Hash32, // for debugging
 }
 
 impl std::fmt::Display for Witness {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.position, hex::encode(&self.value))
+        write!(f, "{} {} {}", self.position, hex::encode(self.value), hex::encode(self.anchor))
     }
 }
 
