@@ -1,14 +1,14 @@
 use std::marker::PhantomData;
 use std::{collections::HashMap, mem::swap};
 
+use crate::coin::Network;
 use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;
 use rayon::prelude::*;
 use sqlx::{Row, SqliteConnection};
 use tokio::sync::mpsc::Sender;
-use tracing::info;
-use crate::coin::Network;
+use tracing::{enabled, info};
 
 use crate::lwd::{CompactBlock, CompactTx};
 use crate::sync::{Note, Transaction, WarpSyncMessage, UTXO};
@@ -359,7 +359,22 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             key.extend_from_slice(&utxo.nullifier);
             self.utxos.insert(key, utxo);
         }
-        for utxo in self.utxos.values() {
+        let auth_path = self.tree_state.to_auth_path(&self.hasher);
+        let mut root: Option<[u8; 32]> = None;
+        for utxo in self.utxos.values_mut() {
+            if enabled!(target: "warp", tracing::Level::DEBUG) {
+                let w = &mut utxo.witness;
+                let anchor = w.root(&auth_path, &self.hasher);
+                w.anchor = anchor;
+                if let Some(root) = root {
+                    if root != anchor {
+                        tracing::error!("Anchor mismatch for UTXO {utxo:?}");
+                    }
+                }
+                else {
+                    root = Some(anchor);
+                }
+            }
             self.tx_decrypted
                 .send(WarpSyncMessage::Witness(
                     utxo.account,
