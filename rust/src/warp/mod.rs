@@ -26,6 +26,12 @@ pub struct Witness {
     pub ommers: Edge,
 }
 
+impl std::fmt::Display for Witness {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.position, hex::encode(&self.value))
+    }
+}
+
 #[derive(Clone, Default, Encode, Decode, Debug)]
 pub struct BlockHeader {
     pub height: u32,

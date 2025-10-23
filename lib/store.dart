@@ -202,7 +202,6 @@ abstract class AppStoreBase with Store {
 
     final stream = setLogStream();
     stream.listen((m) {
-      logger.i(m);
       log.add(m.message);
       if (m.span == "transaction") {
         toastification.show(
