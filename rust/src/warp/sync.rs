@@ -1,5 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
+use crate::coin::Network;
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
@@ -7,7 +8,6 @@ use thiserror::Error;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::info;
-use crate::coin::Network;
 
 use crate::{
     lwd::CompactBlock,
@@ -35,6 +35,14 @@ pub enum SyncError {
 
 pub type SaplingSync = Synchronizer<shielded::sapling::SaplingProtocol>;
 pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
+
+pub enum BlockMessage {
+    Chunk(Vec<CompactBlock>),
+    SaveHeader(BlockHeader),
+    Cancel,
+    StallAbort,
+    Reorg(Vec<u32>, u32),
+}
 
 #[allow(clippy::too_many_arguments)]
 pub async fn warp_sync(
@@ -91,9 +99,8 @@ pub async fn warp_sync(
 
     // Having a separate task for downloading blocks allows us to
     // parallelize the decryption of blocks with the downloading of new blocks.
-    let tx_decrypted2 = tx_decrypted.clone();
     let account_ids = accounts.iter().map(|(id, _)| *id).collect::<Vec<_>>();
-    let (tx_blocks, mut rx_blocks) = tokio::sync::mpsc::channel::<Vec<CompactBlock>>(2);
+    let (tx_blocks, mut rx_blocks) = tokio::sync::mpsc::channel::<BlockMessage>(2);
     tokio::spawn(async move {
         let mut bs = vec![];
 
@@ -109,13 +116,15 @@ pub async fn warp_sync(
                     info!("Syncing at height {}", current_height);
                     if prev_current_height == current_height {
                         info!("Connection stalled. Aborting...");
+                        let _ = tx_blocks.send(BlockMessage::StallAbort).await;
                         break;
                     }
                     prev_current_height = current_height;
                 }
                 _ = rx_cancel.recv() => {
                     info!("Sync cancelled");
-                    return Err(SyncError::Cancelled);
+                    let _ = tx_blocks.send(BlockMessage::Cancel).await;
+                    break;
                 }
                 m = blocks.next() => {
                     if let Some(block) = m {
@@ -130,9 +139,9 @@ pub async fn warp_sync(
                                 // If that checkpoint is also no longer on the main chain,
                                 // the server will send us block that will not match again and we repeat the process
                                 // of trimming our chain little by little
-                                tx_decrypted2.send(WarpSyncMessage::Rewind(account_ids, current_height - 1)).await.unwrap();
+                                let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
                                 info!("Reorganization detected at block {}", block.height);
-                                return Err(SyncError::Reorg(block.height as u32));
+                                break;
                             }
                         }
                         prev_hash = Some(block.hash.clone());
@@ -144,7 +153,7 @@ pub async fn warp_sync(
                                 hash: block.hash.clone(),
                                 time: block.time,
                             };
-                            let _ = tx_decrypted2.send(WarpSyncMessage::BlockHeader(bh)).await;
+                            let _ = tx_blocks.send(BlockMessage::SaveHeader(bh)).await;
                         }
 
                         for vtx in block.vtx.iter() {
@@ -155,7 +164,7 @@ pub async fn warp_sync(
                         bs.push(block);
 
                         if c >= actions_per_sync as usize && !bs.is_empty() {
-                            tx_blocks.send(bs).await.unwrap();
+                            tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
                             bs = vec![];
                             c = 0;
                         }
@@ -168,29 +177,41 @@ pub async fn warp_sync(
             }
         }
         if !bs.is_empty() {
-            tx_blocks.send(bs).await.unwrap();
+            tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
         }
 
         info!("warp_sync completed");
-        Ok(())
+        Ok::<_, SyncError>(())
     });
 
-    while let Some(bs) = rx_blocks.recv().await {
-        if bs.is_empty() {
-            continue;
+    while let Some(bm) = rx_blocks.recv().await {
+        match bm {
+            BlockMessage::Chunk(bs) => {
+                info!("Processing {} blocks", bs.len());
+                sap_dec.add(&bs).await?;
+                orch_dec.add(&bs).await?;
+                let lcb = bs.last().unwrap();
+                let bh = BlockHeader {
+                    height: lcb.height as u32,
+                    hash: lcb.hash.clone(),
+                    time: lcb.time,
+                };
+                let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
+                let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
+            }
+            BlockMessage::Cancel | BlockMessage::StallAbort => {
+                info!("Cancelling...");
+                break;
+            }
+            BlockMessage::Reorg(accounts, height) => {
+                let _ = tx_decrypted
+                    .send(WarpSyncMessage::Rewind(accounts, height))
+                    .await;
+            }
+            BlockMessage::SaveHeader(bh) => {
+                let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
+            }
         }
-
-        info!("Processing {} blocks", bs.len());
-        sap_dec.add(&bs).await?;
-        orch_dec.add(&bs).await?;
-        let lcb = bs.last().unwrap();
-        let bh = BlockHeader {
-            height: lcb.height as u32,
-            hash: lcb.hash.clone(),
-            time: lcb.time,
-        };
-        let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
-        let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
     }
 
     Ok(())
