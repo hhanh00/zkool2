@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.5.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.1...zkool-v6.5.2) (2025-10-23)
+
+
+### Bug Fixes
+
+* add db check ([#644](https://github.com/hhanh00/zkool2/issues/644)) ([2cf4775](https://github.com/hhanh00/zkool2/commit/2cf4775883d825f45ea537f3e8ac28e9479a9607))
+* add debugging messages ([#647](https://github.com/hhanh00/zkool2/issues/647)) ([213a8b8](https://github.com/hhanh00/zkool2/commit/213a8b855d43157136568e0b77896834faf9bb61))
+* remove out of band abort messages that could mess with the commit ([#646](https://github.com/hhanh00/zkool2/issues/646)) ([a19529f](https://github.com/hhanh00/zkool2/commit/a19529fb58e33b2efa411735c39dc5b6a5a4b925))
+
 ## [6.5.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.0...zkool-v6.5.1) (2025-10-17)
 
 
