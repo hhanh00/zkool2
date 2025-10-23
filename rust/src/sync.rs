@@ -49,6 +49,12 @@ pub struct Transaction {
     pub value: i64,
 }
 
+impl std::fmt::Display for Transaction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "txid {} {} @{}", hex::encode(&self.txid), self.account, self.height)
+    }
+}
+
 #[frb(dart_metadata = ("freezed"))]
 pub struct NoteExtended {
     pub id: u32,
@@ -68,6 +74,12 @@ pub struct UTXO {
     pub witness: Witness,
 
     pub txid: Vec<u8>,
+}
+
+impl std::fmt::Display for UTXO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.account, self.pool, hex::encode(&self.nullifier))
+    }
 }
 
 impl std::fmt::Debug for UTXO {
@@ -93,6 +105,29 @@ pub enum WarpSyncMessage {
     Spend(UTXO),
     Rewind(Vec<u32>, u32),
     Error(SyncError),
+}
+
+impl std::fmt::Display for WarpSyncMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WarpSyncMessage::BlockHeader(block_header) => write!(
+                f,
+                "Header: {} {}",
+                block_header.height,
+                hex::encode(&block_header.hash)
+            ),
+            WarpSyncMessage::Transaction(transaction) => write!(f, "Tx: {transaction}"),
+            WarpSyncMessage::Note(note) => write!(f, "Note: {note}"),
+            WarpSyncMessage::Witness(account, height, cmx, witness) =>
+                write!(f, "Witness for {account} @{height}: {} {witness}", hex::encode(cmx)),
+            WarpSyncMessage::Checkpoint(_, pool, height) =>
+                write!(f, "Checkpoint for {pool} @{height}"),
+            WarpSyncMessage::Commit => write!(f, "Commit"),
+            WarpSyncMessage::Spend(utxo) => write!(f, "Spend {utxo}"),
+            WarpSyncMessage::Rewind(_, height) => write!(f, "Rewind to @{height}"),
+            WarpSyncMessage::Error(sync_error) => write!(f, "SyncError: {sync_error:?}"),
+        }
+    }
 }
 
 #[frb(dart_metadata = ("freezed"))]
@@ -131,6 +166,13 @@ pub struct Note {
     pub ivtx: u32,     // not stored in the database
     pub cmx: Vec<u8>,  // unique identifier for the note
     pub txid: Vec<u8>, // transaction id
+}
+
+impl std::fmt::Display for Note {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {} {} {}", self.account, self.height, self.position, self.pool,
+        hex::encode(&self.nf))
+    }
 }
 
 impl std::fmt::Debug for Note {
@@ -294,6 +336,7 @@ async fn handle_message(
     msg: WarpSyncMessage,
     tx_progress: &Sender<SyncProgress>,
 ) -> Result<()> {
+    tracing::debug!(target: "warp", "Warp Message: {msg}");
     match msg {
         WarpSyncMessage::Transaction(tx) => {
             // ignore duplicate transactions because they could have been created
