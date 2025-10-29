@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -32,25 +31,13 @@ class TxPage extends StatefulWidget {
 class TxPageState extends State<TxPage> {
   String? txId;
   late final TxPlan txPlan = toPlan(package: widget.pczt);
-  bool canBroadcast = false;
+  late bool canBroadcast = !appStore.offline;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend3", [cancelID, sendID4]);
     if (txId != null) {
       tutorialHelper(context, "tutSend4", [txID]);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    Future(() async {
-      final state = await (Connectivity().checkConnectivity());
-      if (!appStore.offline && !state.contains(ConnectivityResult.none)) {
-        canBroadcast = true;
-      }
-      setState(() {});
-    });
   }
 
   @override
