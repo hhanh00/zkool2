@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.5.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.2...zkool-v6.5.3) (2025-10-29)
+
+
+### Bug Fixes
+
+* remove dependency on connectivity_plus and use config setting ([#654](https://github.com/hhanh00/zkool2/issues/654)) ([763de59](https://github.com/hhanh00/zkool2/commit/763de59fb3f4516d24e71f03ff38084b0d28cb4d))
+* transaction export to csv was missing tx without category ([#656](https://github.com/hhanh00/zkool2/issues/656)) ([634bb7e](https://github.com/hhanh00/zkool2/commit/634bb7ea6fc85822867bf0a0e184febbcaba5ba1))
+
 ## [6.5.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.1...zkool-v6.5.2) (2025-10-23)
 
 
