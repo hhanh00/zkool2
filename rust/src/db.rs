@@ -1311,7 +1311,7 @@ pub async fn export_data(
     writer: &mut AsyncWriter<Vec<u8>>,
 ) -> Result<()> {
     let sql = match tpe {
-        0 => "SELECT t.*, c.name FROM transactions t JOIN categories c ON c.id_category = t.category WHERE account = ?1 ORDER BY height",
+        0 => "SELECT t.*, c.name FROM transactions t LEFT JOIN categories c ON c.id_category = t.category WHERE account = ?1 ORDER BY height",
         1 => "SELECT * FROM memos WHERE account = ?1 ORDER BY height",
         2 => "SELECT n.* FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE n.account = ?1 AND s.id_note IS NULL ORDER BY height",
         _ => anyhow::bail!("Invalid exported data type")
