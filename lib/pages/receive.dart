@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -14,24 +15,32 @@ final sweepID = GlobalKey();
 final deriveID = GlobalKey();
 final qrID = GlobalKey();
 
-class ReceivePage extends StatefulWidget {
+class ReceivePage extends ConsumerStatefulWidget {
   const ReceivePage({super.key});
 
   @override
-  State<ReceivePage> createState() => ReceivePageState();
+  ConsumerState<ReceivePage> createState() => ReceivePageState();
 }
 
-class ReceivePageState extends State<ReceivePage> {
+class ReceivePageState extends ConsumerState<ReceivePage> {
+  Account? account;
   Addresses? addresses;
-  int uaPools = appStore.pools & 6; // Exclude transparent pool
+  int uaPools = 0;
 
   @override
   void initState() {
     super.initState();
 
     Future(() async {
-      addresses = await getAddresses(uaPools: uaPools);
-      setState(() {});
+      final selectedAccount = ref.read(selectedAccountProvider)!;
+      final a = await ref.read(accountProvider(selectedAccount.id).future);
+      final pools = a.pool & 6; // Exclude transparent pool
+      final addrs = await getAddresses(uaPools: pools);
+      setState(() {
+        account = a.account;
+        addresses = addrs;
+        uaPools = pools;
+      });
     });
   }
 
@@ -41,9 +50,12 @@ class ReceivePageState extends State<ReceivePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (this.account == null) return LinearProgressIndicator();
+
     Future(tutorial);
-    final addresses = this.addresses;
-    final account = appStore.selectedAccount!;
+
+    final account = this.account!;
+    final addresses = this.addresses!;
 
     return Scaffold(
       appBar: AppBar(
@@ -79,67 +91,65 @@ class ReceivePageState extends State<ReceivePage> {
           ),
         ],
       ),
-      body: addresses == null
-          ? SizedBox.shrink()
-          : SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  children: [
-                    if (addresses.saddr != null || addresses.oaddr != null)
-                      PoolSelect(
-                        enabled: appStore.pools,
-                        initialValue: uaPools,
-                        onChanged: onChangedUAPools,
-                      ),
-                    if (addresses.ua != null) ...[
-                      Gap(8),
-                      ListTile(
-                        title: Text("Unified Address"),
-                        subtitle: CopyableText(addresses.ua!),
-                        trailing: Showcase(
-                          key: qrID,
-                          description: "Show address as a QR Code",
-                          child: IconButton(
-                            icon: Icon(Icons.qr_code),
-                            onPressed: () => onShowQR("Unified Address", addresses.ua!),
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (addresses.oaddr != null)
-                      ListTile(
-                        title: Text("Orchard only Address"),
-                        subtitle: CopyableText(addresses.oaddr!),
-                        trailing: IconButton(
-                          icon: Icon(Icons.qr_code),
-                          onPressed: () => onShowQR("Orchard", addresses.oaddr!),
-                        ),
-                      ),
-                    if (addresses.saddr != null)
-                      ListTile(
-                        title: Text("Sapling Address"),
-                        subtitle: CopyableText(addresses.saddr!),
-                        leading: account.hw != 0 ? IconButton(onPressed: onCheckSapling, icon: Icon(Icons.check)) : null,
-                        trailing: IconButton(
-                          icon: Icon(Icons.qr_code),
-                          onPressed: () => onShowQR("Sapling", addresses.saddr!),
-                        ),
-                      ),
-                    if (addresses.taddr != null)
-                      ListTile(
-                        title: Text("Transparent Address"),
-                        subtitle: CopyableText(addresses.taddr!),
-                        leading: account.hw != 0 ? IconButton(onPressed: onCheckTransparent, icon: Icon(Icons.check)) : null,
-                        trailing: IconButton(
-                          icon: Icon(Icons.qr_code),
-                          onPressed: () => onShowQR("Transparent", addresses.taddr!),
-                        ),
-                      ),
-                  ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            children: [
+              if (addresses.saddr != null || addresses.oaddr != null)
+                PoolSelect(
+                  enabled: uaPools,
+                  initialValue: uaPools,
+                  onChanged: onChangedUAPools,
                 ),
-              ),
-            ),
+              if (addresses.ua != null) ...[
+                Gap(8),
+                ListTile(
+                  title: Text("Unified Address"),
+                  subtitle: CopyableText(addresses.ua!),
+                  trailing: Showcase(
+                    key: qrID,
+                    description: "Show address as a QR Code",
+                    child: IconButton(
+                      icon: Icon(Icons.qr_code),
+                      onPressed: () => onShowQR("Unified Address", addresses.ua!),
+                    ),
+                  ),
+                ),
+              ],
+              if (addresses.oaddr != null)
+                ListTile(
+                  title: Text("Orchard only Address"),
+                  subtitle: CopyableText(addresses.oaddr!),
+                  trailing: IconButton(
+                    icon: Icon(Icons.qr_code),
+                    onPressed: () => onShowQR("Orchard", addresses.oaddr!),
+                  ),
+                ),
+              if (addresses.saddr != null)
+                ListTile(
+                  title: Text("Sapling Address"),
+                  subtitle: CopyableText(addresses.saddr!),
+                  leading: account.hw != 0 ? IconButton(onPressed: onCheckSapling, icon: Icon(Icons.check)) : null,
+                  trailing: IconButton(
+                    icon: Icon(Icons.qr_code),
+                    onPressed: () => onShowQR("Sapling", addresses.saddr!),
+                  ),
+                ),
+              if (addresses.taddr != null)
+                ListTile(
+                  title: Text("Transparent Address"),
+                  subtitle: CopyableText(addresses.taddr!),
+                  leading: account.hw != 0 ? IconButton(onPressed: onCheckTransparent, icon: Icon(Icons.check)) : null,
+                  trailing: IconButton(
+                    icon: Icon(Icons.qr_code),
+                    onPressed: () => onShowQR("Transparent", addresses.taddr!),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -194,7 +204,7 @@ class ReceivePageState extends State<ReceivePage> {
   }
 
   void onSweep() async {
-    await showTransparentScan(context);
+    await showTransparentScan(ref, context);
   }
 }
 

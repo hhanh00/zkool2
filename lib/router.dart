@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:go_router/go_router.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
@@ -27,6 +27,8 @@ import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
+
+part 'router.g.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
@@ -98,8 +100,31 @@ GoRouter router(bool recoveryMode) => GoRouter(
   ],
 );
 
-Widget pinLock(Widget child) => Observer(builder: (context) {
-      appStore.unlocked;
-      appStore.needPin;
-      return (appStore.unlocked == null && appStore.needPin) ? PinLock() : child;
-    },);
+Widget pinLock(Widget child) => child;
+
+// Widget pinLock(Widget child) => Observer(builder: (context) {
+//       appStore.unlocked;
+//       appStore.needPin;
+//       return (appStore.unlocked == null && appStore.needPin) ? PinLock() : child;
+//     },);
+
+@riverpod
+class PinLocked extends _$PinLocked {
+  @override
+  bool build() {
+    final settings = ref.read(appSettingsProvider);
+    return settings.needPin;
+  }
+
+  void unlock() {
+    state = false;
+    Future(() {
+      relock();
+    });
+  }
+
+  void relock() {
+    final settings = ref.read(appSettingsProvider);
+    state = settings.needPin;
+  }
+}

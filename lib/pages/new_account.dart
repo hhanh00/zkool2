@@ -2,6 +2,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -31,14 +32,14 @@ final accountIndexID = GlobalKey();
 final birthID = GlobalKey();
 final accountPoolsID = GlobalKey();
 
-class NewAccountPage extends StatefulWidget {
+class NewAccountPage extends ConsumerStatefulWidget {
   const NewAccountPage({super.key});
 
   @override
-  State<NewAccountPage> createState() => NewAccountPageState();
+  ConsumerState<NewAccountPage> createState() => NewAccountPageState();
 }
 
-class NewAccountPageState extends State<NewAccountPage> {
+class NewAccountPageState extends ConsumerState<NewAccountPage> {
   var name = "";
   var restore = false;
   var key = "";
@@ -273,6 +274,8 @@ class NewAccountPageState extends State<NewAccountPage> {
 
   void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
+      final currentHeight = ref.read(currentHeightProvider);
+
       // Handle the save logic here
       final formData = formKey.currentState?.value;
       final String? name = formData?["name"];
@@ -296,7 +299,7 @@ class NewAccountPageState extends State<NewAccountPage> {
         if (!confirmed) return;
       }
 
-      final bh = birth != null ? int.parse(birth) : appStore.currentHeight;
+      final bh = birth != null ? int.parse(birth) : currentHeight ?? 1;
       AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";
@@ -322,20 +325,21 @@ class NewAccountPageState extends State<NewAccountPage> {
         dialog = null;
         try {
           // ignore errors since it's just caching
-          if (!appStore.offline) await cacheBlockTime(height: bh);
+          final settings = ref.read(appSettingsProvider);
+          if (!settings.offline) await cacheBlockTime(height: bh);
         } on AnyhowException catch (_) {}
 
         await setAccount(account: account);
 
         if ((key.isNotEmpty && await hasTransparentPubKey()) || ledger) {
-          await showTransparentScan(context);
+          await showTransparentScan(ref, context);
         }
 
         final seed = await getAccountSeed(account: account);
         if (mounted && key.isEmpty && seed != null) {
           await showSeed(context, seed.mnemonic);
         }
-        await appStore.loadAccounts();
+        ref.invalidate(getAccountsProvider);
         if (mounted) GoRouter.of(context).pop();
       } on AnyhowException catch (e) {
         await showException(context, e.message);
@@ -365,7 +369,7 @@ class NewAccountPageState extends State<NewAccountPage> {
       if (password != null) {
         await importAccount(passphrase: password, data: data);
         if (mounted) await showMessage(context, "Account imported successfully");
-        await appStore.loadAccounts();
+        ref.invalidate(getAccountsProvider);
       }
     } on AnyhowException catch (e) {
       logger.e(e);

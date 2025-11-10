@@ -4,12 +4,13 @@ import 'dart:convert';
 import 'package:convert/convert.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -20,18 +21,29 @@ final cancelID = GlobalKey();
 final sendID4 = GlobalKey();
 final txID = GlobalKey();
 
-class TxPage extends StatefulWidget {
+class TxPage extends ConsumerStatefulWidget {
   final PcztPackage pczt;
   const TxPage(this.pczt, {super.key});
 
   @override
-  State<TxPage> createState() => TxPageState();
+  ConsumerState<TxPage> createState() => TxPageState();
 }
 
-class TxPageState extends State<TxPage> {
+class TxPageState extends ConsumerState<TxPage> {
   String? txId;
   late final TxPlan txPlan = toPlan(package: widget.pczt);
-  late bool canBroadcast = !appStore.offline;
+  late bool canBroadcast;
+  late Account account;
+  late AccountData details;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(appSettingsProvider);
+    canBroadcast = !settings.offline;
+    account = ref.read(selectedAccountProvider)!;
+    details = ref.read(accountProvider(account.id)).requireValue;
+  }
 
   void tutorial() async {
     tutorialHelper(context, "tutSend3", [cancelID, sendID4]);
@@ -46,8 +58,9 @@ class TxPageState extends State<TxPage> {
 
     Future(tutorial);
 
-    final canSend = (txPlan.canSign || appStore.selectedAccount!.hw != 0) && canBroadcast;
-    final hasFrost = appStore.frostParams != null;
+
+    final canSend = (txPlan.canSign || account.hw != 0) && canBroadcast;
+    final hasFrost = details.frostParams != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -115,7 +128,7 @@ class TxPageState extends State<TxPage> {
       if (!confirmed) return;
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
-        if (appStore.selectedAccount!.hw != 0) {
+        if (account.hw != 0) {
           final c = Completer();
           signLedgerTransaction(pczt: widget.pczt).listen((e) {
             switch (e) {
@@ -223,19 +236,19 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
   );
 }
 
-class MempoolPage extends StatelessWidget {
+class MempoolPage extends ConsumerWidget {
   const MempoolPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: Text("Mempool")),
-      body: Observer(
+      body: Builder(
         builder: (context) {
-          final mempool = appStore.mempoolTxIds;
+          final mempool = ref.watch(mempoolProvider);
           return ListView.builder(
             itemBuilder: (context, index) {
-              final tx = mempool[index];
+              final tx = mempool.unconfirmedTx[index];
               return ListTile(
                 onTap: () => onMempoolTx(context, tx.$1),
                 title: CopyableText(tx.$1),
@@ -243,7 +256,7 @@ class MempoolPage extends StatelessWidget {
                 trailing: Text(tx.$3.toString()),
               );
             },
-            itemCount: mempool.length,
+            itemCount: mempool.unconfirmedTx.length,
           );
         },
       ),

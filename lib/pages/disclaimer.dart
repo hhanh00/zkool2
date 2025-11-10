@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/store.dart';
 
-class DisclaimerPage extends StatefulWidget {
+class DisclaimerPage extends ConsumerStatefulWidget {
   const DisclaimerPage({super.key});
 
   @override
-  State<DisclaimerPage> createState() => _DisclaimerPageState();
+  ConsumerState<DisclaimerPage> createState() => _DisclaimerPageState();
 }
 
-class _DisclaimerPageState extends State<DisclaimerPage> {
+class _DisclaimerPageState extends ConsumerState<DisclaimerPage> {
   final formKey = GlobalKey<FormBuilderState>();
   bool agree = false;
 
@@ -86,7 +87,8 @@ class _DisclaimerPageState extends State<DisclaimerPage> {
   void onContinue() async {
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("disclaimer_accepted", true);
-    appStore.disclaimerAccepted = true;
+    final ap = ref.read(appSettingsProvider.notifier);
+    ap.acceptDisclaimer();
     if (!mounted) return;
     GoRouter.of(context).go("/");
   }

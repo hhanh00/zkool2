@@ -1,57 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/account.dart';
-import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-class TxViewPage extends StatefulWidget {
+class TxViewPage extends ConsumerStatefulWidget {
   final int idTx;
   const TxViewPage(this.idTx, {super.key});
 
   @override
-  State<TxViewPage> createState() => TxViewPageState();
+  ConsumerState<TxViewPage> createState() => TxViewPageState();
 }
 
-class TxViewPageState extends State<TxViewPage> {
-  TxAccount? txDetails;
-  late int? idx;
-  late int idTx = widget.idTx;
+class TxViewPageState extends ConsumerState<TxViewPage> {
+  AccountData? account;
+  int? idx;
 
   @override
   void initState() {
     super.initState();
-    idx = appStore.transactions.indexWhere((tx) => tx.id == idTx);
-    if (idx! < 0) idx = null;
-    Future(refresh);
+    Future(() async {
+      final selectedAccount = ref.read(selectedAccountProvider)!;
+      final account = await ref.read(accountProvider(selectedAccount.id).future);
+      int? idx = account.transactions.indexWhere((tx) => tx.id == widget.idTx);
+      if (idx < 0) throw Error();
+      setState(() {
+        this.idx = idx;
+        this.account = account;
+      });
+    });
   }
 
-  Future<void> refresh() async {
-    final txd = await getTxDetails(idTx: idTx);
-    txDetails = txd;
-    setState(() {});
-  }
+  // Future<void> refresh() async {
+  //   final txd = await getTxDetails(idTx: idTx);
+  //   txDetails = txd;
+  //   setState(() {});
+  // }
 
   @override
   Widget build(BuildContext context) {
-    final txd = txDetails;
+    if (account == null || idx == null) return LinearProgressIndicator();
+
+    final tx = account!.transactions[idx!];
+    final txDetailsAV = ref.watch(getTxDetailsProvider(tx.id));
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Transaction"),
         actions: [
           if (idx != null) IconButton(onPressed: idx! > 0 ? onPrev : null, icon: Icon(Icons.chevron_left)),
-          if (idx != null) IconButton(onPressed: idx! < appStore.transactions.length - 1 ? onNext : null, icon: Icon(Icons.chevron_right)),
+          if (idx != null) IconButton(onPressed: idx! < account!.transactions.length - 1 ? onNext : null, icon: Icon(Icons.chevron_right)),
         ],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [if (txd != null) ...show(txd)],
-        ),
+        child: Builder(builder: (context) {
+          switch (txDetailsAV) {
+            case AsyncLoading(): return LinearProgressIndicator();
+            case AsyncError(:final error):
+              return Text(error.toString(), style: TextStyle(color: Colors.red));
+            case AsyncData(:final value):
+              return Column(
+                children: show(value),
+          );
+          }
+
+        }),
       ),
     );
   }
@@ -66,15 +84,14 @@ class TxViewPageState extends State<TxViewPage> {
 
   Future<void> gotoToTx(int newIdx) async {
     idx = newIdx;
-    idTx = appStore.transactions[newIdx].id;
-    await refresh();
   }
 
   List<Widget> show(TxAccount txd) {
     final t = Theme.of(context).textTheme;
     final amountSpent = txd.spends.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
     final amountReceived = txd.notes.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
-    final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...appStore.categories.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
+    final categoryList = ref.read(getCategoriesProvider).requireValue;
+    final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...categoryList.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
 
     return [
       ListTile(
@@ -113,8 +130,9 @@ class TxViewPageState extends State<TxViewPage> {
             : Text("N/A"),
       ),
       ListTile(
-          title: Text("Category"),
-          subtitle: DropdownMenu(initialSelection: txd.category, onSelected: (v) => onChangeTxCategory(txd.id, v), dropdownMenuEntries: categories),),
+        title: Text("Category"),
+        subtitle: DropdownMenu(initialSelection: txd.category, onSelected: (v) => onChangeTxCategory(txd.id, v), dropdownMenuEntries: categories),
+      ),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand(
@@ -165,8 +183,9 @@ class TxViewPageState extends State<TxViewPage> {
   }
 
   void openBlockExplorer(Uint8List txid) async {
-    final blockExplorer = appStore.blockExplorer;
-    final url = blockExplorer.replaceAll("{net}", appStore.net).replaceAll("{txid}", txIdToString(txid));
+    final settings = ref.read(appSettingsProvider);
+    final blockExplorer = settings.blockExplorer;
+    final url = blockExplorer.replaceAll("{net}", settings.net).replaceAll("{txid}", txIdToString(txid));
     await launchUrl(Uri.parse(url));
   }
 

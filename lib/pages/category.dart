@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-class CategoryPage extends StatefulWidget {
+class CategoryPage extends ConsumerStatefulWidget {
   const CategoryPage({super.key});
 
   @override
-  State<StatefulWidget> createState() => CategoryPageState();
+  ConsumerState<CategoryPage> createState() => CategoryPageState();
 }
 
-class CategoryPageState extends State<CategoryPage> {
+class CategoryPageState extends ConsumerState<CategoryPage> {
   List<(Category, bool)> categories = [];
 
   @override
@@ -28,8 +29,8 @@ class CategoryPageState extends State<CategoryPage> {
   }
 
   Future<void> refresh() async {
-    await appStore.loadCategories();
-    categories = appStore.categories.map((f) => (f, false)).toList();
+    final categoryList = await ref.read(getCategoriesProvider.future);
+    categories = categoryList.map((f) => (f, false)).toList();
     if (mounted) setState(() {});
   }
 
@@ -81,7 +82,7 @@ class CategoryPageState extends State<CategoryPage> {
     if (confirmed) {
       await deleteCategories(ids: selection.map((f) => f.id).toList());
       await refresh();
-      await appStore.loadCategories();
+      ref.invalidate(getCategoriesProvider);
     }
   }
 
