@@ -34,7 +34,8 @@ Future<void> rewindSync({required int height, required int account}) =>
 Future<SyncHeight> getDbHeight() =>
     RustLib.instance.api.crateApiSyncGetDbHeight();
 
-Future<void> getTxDetails() => RustLib.instance.api.crateApiSyncGetTxDetails();
+Future<void> fetchTxDetails() =>
+    RustLib.instance.api.crateApiSyncFetchTxDetails();
 
 Future<void> cacheBlockTime({required int height}) =>
     RustLib.instance.api.crateApiSyncCacheBlockTime(height: height);

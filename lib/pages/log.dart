@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zkool/store.dart';
 
-class LogviewPage extends StatefulWidget {
+class LogviewPage extends ConsumerStatefulWidget {
   const LogviewPage({super.key});
 
   @override
-  State<LogviewPage> createState() => LogviewPageState();
+  ConsumerState<LogviewPage> createState() => LogviewPageState();
 }
 
-class LogviewPageState extends State<LogviewPage> {
+class LogviewPageState extends ConsumerState<LogviewPage> {
   @override
   Widget build(BuildContext context) {
-    return Observer(builder: (context) {
-      appStore.log;
-      final fullLog = appStore.log.join("\n");
+    final log = ref.watch(logProvider);
+    final fullLog = log.join("\n");
 
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text("Log"),
-        ),
-        body: SingleChildScrollView(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: SelectableText(fullLog))),
-      );
-    },);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Log"),
+      ),
+      body: SingleChildScrollView(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: SelectableText(fullLog))),
+    );
   }
 }

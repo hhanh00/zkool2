@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,7 +16,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 final logger = Logger(filter: ProductionFilter());
-final appWatcher = LifecycleWatcher();
+late final LifecycleWatcher appWatcher;
 
 const String appName = "zkool";
 
@@ -23,26 +24,57 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await RustLib.init();
-  await appStore.init();
-  await appStore.loadAppSettings();
   final dataDir = await getApplicationDocumentsDirectory();
   await initDatadir(directory: dataDir.path);
+  // await appStore.init();
+  // await appStore.loadAppSettings();
 
-  appWatcher.init();
-  final r = router(appStore.recovery);
+  // Future<AppSettings> initApp(WidgetRef ref, AppSettings s) async {
+  //   appWatcher = LifecycleWatcher(ref);
+  //   return s;
+  // }
 
-  runApp(ToastificationWrapper(
+  runApp(
+    ToastificationWrapper(
       child: ShowCaseWidget(
-          globalTooltipActions: [
-        const TooltipActionButton(type: TooltipDefaultActionType.skip, textStyle: TextStyle(color: Colors.red), backgroundColor: Colors.transparent),
-        const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
-      ],
-          builder: (context) => MaterialApp.router(
-              routerConfig: r, themeMode: ThemeMode.system, theme: ThemeData.light(), darkTheme: ThemeData.dark(), debugShowCheckedModeBanner: false,),),),);
+        globalTooltipActions: [
+          const TooltipActionButton(type: TooltipDefaultActionType.skip, textStyle: TextStyle(color: Colors.red), backgroundColor: Colors.transparent),
+          const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
+        ],
+        builder: (context) => ProviderScope(
+          child: Consumer(
+            builder: (context, ref, _) {
+              final settings = ref.watch(appSettingsProvider.future);
+              return FutureBuilder(
+                future: settings, // .then((s) => initApp(ref, s)),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) return Text(snapshot.error!.toString());
+                  if (!snapshot.hasData) return SizedBox.shrink();
+                  //   appWatcher.init();
+                  final settings = snapshot.data!;
+                  logger.i(settings);
+                  final r = router(settings.recovery);
+                  return MaterialApp.router(
+                    routerConfig: r,
+                    themeMode: ThemeMode.system,
+                    theme: ThemeData.light(),
+                    darkTheme: ThemeData.dark(),
+                    debugShowCheckedModeBanner: false,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class LifecycleWatcher with WidgetsBindingObserver {
   bool disabled = false;
+  final WidgetRef ref;
+  LifecycleWatcher(this.ref);
 
   void init() {
     WidgetsBinding.instance.addObserver(this);
@@ -57,17 +89,18 @@ class LifecycleWatcher with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      cancelMempoolListener();
-      if (disabled) {
-        disabled = false;
-        return;
-      }
+    // TODO
+    // if (state == AppLifecycleState.resumed) {
+    //   cancelMempoolListener();
+    //   if (disabled) {
+    //     disabled = false;
+    //     return;
+    //   }
 
-      if (appStore.needPin && appStore.unlocked != null && DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
-        lockApp();
-      }
-    }
+    //   if (appStore.needPin && appStore.unlocked != null && DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
+    //     lockApp();
+    //   }
+    // }
   }
 
   Future<Uint8List?> openFile({String? title}) async {
@@ -120,12 +153,13 @@ class PinLockState extends State<PinLock> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text("Locked")),
-        body: Center(
-          child: InkWell(
-            onTap: onUnlock,
-            child: Image.asset("misc/icon.png", width: 200),
-          ),
-        ),);
+      appBar: AppBar(title: Text("Locked")),
+      body: Center(
+        child: InkWell(
+          onTap: onUnlock,
+          child: Image.asset("misc/icon.png", width: 200),
+        ),
+      ),
+    );
   }
 }

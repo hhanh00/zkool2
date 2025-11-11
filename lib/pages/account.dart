@@ -7,7 +7,7 @@ import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -25,14 +25,14 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
-class AccountViewPage extends StatefulWidget {
+class AccountViewPage extends ConsumerStatefulWidget {
   const AccountViewPage({super.key});
 
   @override
-  State<AccountViewPage> createState() => AccountViewPageState();
+  ConsumerState<AccountViewPage> createState() => AccountViewPageState();
 }
 
-class AccountViewPageState extends State<AccountViewPage> {
+class AccountViewPageState extends ConsumerState<AccountViewPage> {
   final logID = GlobalKey(debugLabel: "logID");
   final sync1ID = GlobalKey(debugLabel: "sync1ID");
   final receiveID = GlobalKey(debugLabel: "receiveID");
@@ -42,12 +42,6 @@ class AccountViewPageState extends State<AccountViewPage> {
   final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
   StreamSubscription<SyncProgress>? progressSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    Future(appStore.refresh);
-  }
 
   void tutorial() async {
     tutorialHelper(context, "tutAccount0", [balID, logID, sync1ID, receiveID, sendID]);
@@ -59,13 +53,40 @@ class AccountViewPageState extends State<AccountViewPage> {
 
     Future(tutorial);
 
-    assert(account != null);
+    final selectedAccountAV = ref.watch(selectedAccountProvider);
+    switch (selectedAccountAV) {
+      case AsyncLoading():
+        return LinearProgressIndicator();
+      case AsyncError(:final error):
+        return Text(error.toString());
+      default:
+    }
+    final selectedAccount = selectedAccountAV.requireValue;
+    if (selectedAccount == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => context.go("/"));
+      return SizedBox.shrink();
+    }
+
+    logger.i("$selectedAccount");
+    final accountAV = ref.watch(accountProvider(selectedAccount.id));
+    switch (accountAV) {
+      case AsyncLoading<AccountData>():
+        return LinearProgressIndicator();
+      case AsyncError<AccountData>():
+        return Text(accountAV.error.toString());
+      default:
+    }
+    final account = accountAV.requireValue;
+    logger.i("$account");
+    final b = account.balance;
+    final mempool = ref.watch(mempoolProvider);
+    final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(account!.name),
+          title: Text(account.account.name),
           actions: [
             Showcase(
               key: sync1ID,
@@ -115,76 +136,59 @@ class AccountViewPageState extends State<AccountViewPage> {
           ),
         ),
         body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Observer(
-            builder: (context) {
-              appStore.seqno;
-              final b = appStore.poolBalance;
-
-              return TabBarView(
-                children: [
-                  CustomScrollView(
-                    slivers: [
-                      PinnedHeaderSliver(
-                        child: Container(
-                          color: Theme.of(context).colorScheme.surface,
-                          child: Column(
-                            children: [
-                              Text("Height"),
-                              Gap(8),
-                              Observer(
-                                builder: (context) {
-                                  final height = appStore.heights[account!.id]!;
-                                  return height.buildHero(context);
-                                },
-                              ),
-                              Gap(16),
-                              Text("Balance"),
-                              Gap(8),
-                              BalanceWidget(b, showcase: true),
-                              Gap(8),
-                              Observer(
-                                builder: (context) {
-                                  final unconfirmedAmount = appStore.mempoolAccounts[account!.id];
-                                  return unconfirmedAmount != null
-                                      ? zatToText(
-                                          BigInt.from(unconfirmedAmount),
-                                          prefix: "Unconfirmed: ",
-                                          colored: true,
-                                          selectable: true,
-                                          style: t.bodyLarge,
-                                        )
-                                      : SizedBox.shrink();
-                                },
-                              ),
-                              Gap(8),
-                              Showcase(
-                                key: balID,
-                                description: "Balance across all pools",
-                                child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),
-                              ),
-                              Gap(8),
-                            ],
-                          ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TabBarView(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                    PinnedHeaderSliver(
+                      child: Container(
+                        color: Theme.of(context).colorScheme.surface,
+                        child: Column(
+                          children: [
+                            Text("Height"),
+                            Gap(8),
+                            HeroProgressWidget(account.account),
+                            Gap(16),
+                            Text("Balance"),
+                            Gap(8),
+                            BalanceWidget(b, showcase: true),
+                            Gap(8),
+                            unconfirmedAmount != null
+                                ? zatToText(
+                                    BigInt.from(unconfirmedAmount),
+                                    prefix: "Unconfirmed: ",
+                                    colored: true,
+                                    selectable: true,
+                                    style: t.bodyLarge,
+                                  )
+                                : SizedBox.shrink(),
+                            Gap(8),
+                            Showcase(
+                              key: balID,
+                              description: "Balance across all pools",
+                              child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),
+                            ),
+                            Gap(8),
+                          ],
                         ),
                       ),
-                      ...showTxHistory(appStore.transactions),
-                    ],
-                  ),
-                  showMemos(context, appStore.memos),
-                  showNotes(appStore.notes),
-                ],
-              );
-            },
-          ),
-        ),
+                    ),
+                    ...showTxHistory(account.transactions),
+                  ],
+                ),
+                showMemos(context, account.memos),
+                showNotes(ref, account.notes),
+              ],
+            )),
       ),
     );
   }
 
   void onSync() async {
     try {
-      await appStore.startSynchronize([account!.id], int.parse(appStore.actionsPerSync));
+      final synchronizer = ref.read(synchronizerProvider.notifier);
+      await synchronizer.startSynchronize(ref, [account()]);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -211,21 +215,21 @@ class AccountViewPageState extends State<AccountViewPage> {
     if (filename != null) await showMessage(context, "$filename Saved");
   }
 
-  Account? get account => appStore.selectedAccount;
+  Account account() => ref.read(selectedAccountProvider).requireValue!;
   // the context must be from inside the DefaultTabController, which
   // means it cannot be this widget's context
   int tabIndex(BuildContext context) => DefaultTabController.of(context).index;
 }
 
-class AccountEditPage extends StatefulWidget {
+class AccountEditPage extends ConsumerStatefulWidget {
   final List<Account> accounts;
   const AccountEditPage(this.accounts, {super.key});
 
   @override
-  State<AccountEditPage> createState() => AccountEditPageState();
+  ConsumerState<AccountEditPage> createState() => AccountEditPageState();
 }
 
-class AccountEditPageState extends State<AccountEditPage> {
+class AccountEditPageState extends ConsumerState<AccountEditPage> {
   final nameID2 = GlobalKey(debugLabel: "nameID2");
   final iconID2 = GlobalKey(debugLabel: "iconID2");
   final birthID2 = GlobalKey(debugLabel: "birthID2");
@@ -239,10 +243,21 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
+  List<Folder>? folders;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final folders = await ref.read(getFoldersProvider.future);
+      logger.i(folders);
+      setState(() => this.folders = folders);
+    });
+  }
 
   @override
   void didUpdateWidget(covariant AccountEditPage oldWidget) {
-    accounts = accounts;
+    accounts = widget.accounts;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -252,12 +267,13 @@ class AccountEditPageState extends State<AccountEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (folders == null) return SizedBox.shrink();
     Future(tutorial);
 
     final account = accounts.length == 1 ? accounts.first : null;
     final folder = accounts.first.folder;
     final folderOptions = [DropdownMenuItem(value: 0, child: Text("No Folder"))] +
-        appStore.folders
+        folders!
             .map(
               (f) => DropdownMenuItem(value: f.id, child: Text(f.name)),
             )
@@ -383,7 +399,7 @@ class AccountEditPageState extends State<AccountEditPage> {
           folder: accounts[0].folder.id,
         ),
       );
-      await appStore.loadAccounts();
+      ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
     }
   }
@@ -412,7 +428,7 @@ class AccountEditPageState extends State<AccountEditPage> {
           folder: accounts[0].folder.id,
         ),
       );
-      await appStore.loadAccounts();
+      ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
     }
   }
@@ -428,7 +444,7 @@ class AccountEditPageState extends State<AccountEditPage> {
           folder: accounts[0].folder.id,
         ),
       );
-      await appStore.loadAccounts();
+      ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
     }
   }
@@ -445,8 +461,8 @@ class AccountEditPageState extends State<AccountEditPage> {
           folder: accounts[i].folder.id,
         ),
       );
+      ref.invalidate(accountProvider(accounts[i].id));
     }
-    await appStore.loadAccounts();
     setState(() {});
   }
 
@@ -462,15 +478,16 @@ class AccountEditPageState extends State<AccountEditPage> {
           folder: accounts[i].folder.id,
         ),
       );
+      ref.invalidate(accountProvider(accounts[i].id));
     }
-    await appStore.loadAccounts();
     setState(() {});
   }
 
   void onEditFolder(int? v) async {
     if (v == null) return;
+    final folders = ref.read(getFoldersProvider).requireValue;
     for (var i = 0; i < accounts.length; i++) {
-      accounts[i] = accounts[i].copyWith(folder: appStore.folders.firstWhere((f) => f.id == v, orElse: () => Folder(id: 0, name: "")));
+      accounts[i] = accounts[i].copyWith(folder: folders.firstWhere((f) => f.id == v, orElse: () => Folder(id: 0, name: "")));
       await updateAccount(
         update: AccountUpdate(
           coin: accounts[i].coin,
@@ -478,8 +495,8 @@ class AccountEditPageState extends State<AccountEditPage> {
           folder: v,
         ),
       );
+      ref.invalidate(accountProvider(accounts[i].id));
     }
-    await appStore.loadAccounts();
     setState(() {});
   }
 
@@ -504,7 +521,8 @@ class AccountEditPageState extends State<AccountEditPage> {
     final dbHeight = await getDbHeight();
     await rewindSync(height: dbHeight.height - 60, account: account.id);
     final h = await getDbHeight();
-    appStore.heights[account.id]?.set(h.height, h.time);
+    final ss = ref.read(syncStateAccountProvider(account.id).notifier);
+    ss.updateHeight(h.height, h.time);
   }
 
   void onReset() async {
@@ -515,8 +533,10 @@ class AccountEditPageState extends State<AccountEditPage> {
           "Are you sure you want to reset this account? This will clear all sync data and reset the account to the birth height. You will not lose any funds, but you will need to resync the account",
     );
     if (!confirmed) return;
-    for (var account in accounts) await resetSync(id: account.id);
-    await appStore.loadAccounts();
+    for (var account in accounts) {
+      await resetSync(id: account.id);
+      ref.invalidate(accountProvider(account.id));
+    }
   }
 }
 
@@ -648,16 +668,17 @@ Widget showMemos(BuildContext context, List<Memo> memos) {
   );
 }
 
-Widget showNotes(List<TxNote> notes) {
+Widget showNotes(WidgetRef ref, List<TxNote> notes) {
   final t = Theme.of(navigatorKey.currentContext!);
+  final currentHeight = ref.read(currentHeightProvider);
   return ListView.builder(
     itemCount: notes.length + 1,
     itemBuilder: (context, index) {
       if (index == 0)
         return OverflowBar(
           children: [
-            IconButton(onPressed: () => onLockRecent(context), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
-            IconButton(onPressed: () => onUnlockAll(context), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
+            IconButton(onPressed: () => onLockRecent(ref, context, currentHeight), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
+            IconButton(onPressed: () => onUnlockAll(ref, context), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
           ],
         );
 
@@ -665,7 +686,7 @@ Widget showNotes(List<TxNote> notes) {
       final note = notes[noteIndex];
       return ListTile(
         key: ValueKey(note.id),
-        onTap: () => toggleLock(context, note.id, !note.locked),
+        onTap: () => toggleLock(ref, context, note.id, !note.locked),
         leading: Text("${note.height}"),
         title: Text(poolToString(note.pool)),
         trailing: zatToText(note.value, selectable: false),
@@ -675,29 +696,33 @@ Widget showNotes(List<TxNote> notes) {
   );
 }
 
-void onLockRecent(BuildContext context) async {
+void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async {
+  if (currentHeight == null) return;
   final s = await inputText(context, title: "Enter confirmation threshold");
   final threshold = s?.let((v) => int.tryParse(v));
   if (threshold != null) {
     await lockRecentNotes(
-      height: appStore.currentHeight,
+      height: currentHeight,
       threshold: threshold,
     );
-    await appStore.loadNotes();
+    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+    ref.invalidate(accountProvider(selectedAccount.id));
   }
 }
 
-void onUnlockAll(BuildContext context) async {
+void onUnlockAll(WidgetRef ref, BuildContext context) async {
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
     await unlockAllNotes();
-    await appStore.loadNotes();
+    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+    ref.invalidate(accountProvider(selectedAccount.id));
   }
 }
 
-void toggleLock(BuildContext context, int id, bool locked) async {
+void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
   await lockNote(id: id, locked: locked);
-  await appStore.loadNotes();
+  final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+  ref.invalidate(accountProvider(selectedAccount.id));
 }
 
 class MemoWidget extends StatelessWidget {

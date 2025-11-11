@@ -3,500 +3,827 @@
 part of 'store.dart';
 
 // **************************************************************************
-// StoreGenerator
+// RiverpodGenerator
 // **************************************************************************
 
-// ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-mixin _$ObservableHeight on ObservableHeightBase, Store {
-  Computed<double>? _$progressComputed;
+@ProviderFor(HasDb)
+const hasDbProvider = HasDbProvider._();
 
-  @override
-  double get progress =>
-      (_$progressComputed ??= Computed<double>(() => super.progress,
-              name: 'ObservableHeightBase.progress'))
-          .value;
-
-  late final _$heightAtom =
-      Atom(name: 'ObservableHeightBase.height', context: context);
-
-  @override
-  int get height {
-    _$heightAtom.reportRead();
-    return super.height;
-  }
+final class HasDbProvider extends $NotifierProvider<HasDb, bool> {
+  const HasDbProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'hasDbProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
 
   @override
-  set height(int value) {
-    _$heightAtom.reportWrite(value, super.height, () {
-      super.height = value;
-    });
-  }
+  String debugGetCreateSourceHash() => _$hasDbHash();
 
-  late final _$startAtom =
-      Atom(name: 'ObservableHeightBase.start', context: context);
-
+  @$internal
   @override
-  int get start {
-    _$startAtom.reportRead();
-    return super.start;
-  }
+  HasDb create() => HasDb();
 
-  @override
-  set start(int value) {
-    _$startAtom.reportWrite(value, super.start, () {
-      super.start = value;
-    });
-  }
-
-  late final _$rangeAtom =
-      Atom(name: 'ObservableHeightBase.range', context: context);
-
-  @override
-  int get range {
-    _$rangeAtom.reportRead();
-    return super.range;
-  }
-
-  @override
-  set range(int value) {
-    _$rangeAtom.reportWrite(value, super.range, () {
-      super.range = value;
-    });
-  }
-
-  late final _$ObservableHeightBaseActionController =
-      ActionController(name: 'ObservableHeightBase', context: context);
-
-  @override
-  void begin(int endHeight) {
-    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
-        name: 'ObservableHeightBase.begin');
-    try {
-      return super.begin(endHeight);
-    } finally {
-      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
-  void set(int h, int t) {
-    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
-        name: 'ObservableHeightBase.set');
-    try {
-      return super.set(h, t);
-    } finally {
-      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
-  void done(int endHeight) {
-    final _$actionInfo = _$ObservableHeightBaseActionController.startAction(
-        name: 'ObservableHeightBase.done');
-    try {
-      return super.done(endHeight);
-    } finally {
-      _$ObservableHeightBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
-  String toString() {
-    return '''
-height: ${height},
-start: ${start},
-range: ${range},
-progress: ${progress}
-    ''';
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
   }
 }
 
-mixin _$AppStore on AppStoreBase, Store {
-  late final _$selectedAccountAtom =
-      Atom(name: 'AppStoreBase.selectedAccount', context: context);
+String _$hasDbHash() => r'ef7efd1b03e4e711b6d25b8c20fd8c687ce2b5f0';
 
+abstract class _$HasDb extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
   @override
-  Account? get selectedAccount {
-    _$selectedAccountAtom.reportRead();
-    return super.selectedAccount;
-  }
-
-  @override
-  set selectedAccount(Account? value) {
-    _$selectedAccountAtom.reportWrite(value, super.selectedAccount, () {
-      super.selectedAccount = value;
-    });
-  }
-
-  late final _$selectedFolderAtom =
-      Atom(name: 'AppStoreBase.selectedFolder', context: context);
-
-  @override
-  Folder? get selectedFolder {
-    _$selectedFolderAtom.reportRead();
-    return super.selectedFolder;
-  }
-
-  @override
-  set selectedFolder(Folder? value) {
-    _$selectedFolderAtom.reportWrite(value, super.selectedFolder, () {
-      super.selectedFolder = value;
-    });
-  }
-
-  late final _$accountsAtom =
-      Atom(name: 'AppStoreBase.accounts', context: context);
-
-  @override
-  List<Account> get accounts {
-    _$accountsAtom.reportRead();
-    return super.accounts;
-  }
-
-  @override
-  set accounts(List<Account> value) {
-    _$accountsAtom.reportWrite(value, super.accounts, () {
-      super.accounts = value;
-    });
-  }
-
-  late final _$foldersAtom =
-      Atom(name: 'AppStoreBase.folders', context: context);
-
-  @override
-  List<Folder> get folders {
-    _$foldersAtom.reportRead();
-    return super.folders;
-  }
-
-  @override
-  set folders(List<Folder> value) {
-    _$foldersAtom.reportWrite(value, super.folders, () {
-      super.folders = value;
-    });
-  }
-
-  late final _$categoriesAtom =
-      Atom(name: 'AppStoreBase.categories', context: context);
-
-  @override
-  List<Category> get categories {
-    _$categoriesAtom.reportRead();
-    return super.categories;
-  }
-
-  @override
-  set categories(List<Category> value) {
-    _$categoriesAtom.reportWrite(value, super.categories, () {
-      super.categories = value;
-    });
-  }
-
-  late final _$poolsAtom = Atom(name: 'AppStoreBase.pools', context: context);
-
-  @override
-  int get pools {
-    _$poolsAtom.reportRead();
-    return super.pools;
-  }
-
-  @override
-  set pools(int value) {
-    _$poolsAtom.reportWrite(value, super.pools, () {
-      super.pools = value;
-    });
-  }
-
-  late final _$seqnoAtom = Atom(name: 'AppStoreBase.seqno', context: context);
-
-  @override
-  int get seqno {
-    _$seqnoAtom.reportRead();
-    return super.seqno;
-  }
-
-  @override
-  set seqno(int value) {
-    _$seqnoAtom.reportWrite(value, super.seqno, () {
-      super.seqno = value;
-    });
-  }
-
-  late final _$poolBalanceAtom =
-      Atom(name: 'AppStoreBase.poolBalance', context: context);
-
-  @override
-  PoolBalance get poolBalance {
-    _$poolBalanceAtom.reportRead();
-    return super.poolBalance;
-  }
-
-  @override
-  set poolBalance(PoolBalance value) {
-    _$poolBalanceAtom.reportWrite(value, super.poolBalance, () {
-      super.poolBalance = value;
-    });
-  }
-
-  late final _$transactionsAtom =
-      Atom(name: 'AppStoreBase.transactions', context: context);
-
-  @override
-  List<Tx> get transactions {
-    _$transactionsAtom.reportRead();
-    return super.transactions;
-  }
-
-  @override
-  set transactions(List<Tx> value) {
-    _$transactionsAtom.reportWrite(value, super.transactions, () {
-      super.transactions = value;
-    });
-  }
-
-  late final _$memosAtom = Atom(name: 'AppStoreBase.memos', context: context);
-
-  @override
-  List<Memo> get memos {
-    _$memosAtom.reportRead();
-    return super.memos;
-  }
-
-  @override
-  set memos(List<Memo> value) {
-    _$memosAtom.reportWrite(value, super.memos, () {
-      super.memos = value;
-    });
-  }
-
-  late final _$notesAtom = Atom(name: 'AppStoreBase.notes', context: context);
-
-  @override
-  List<TxNote> get notes {
-    _$notesAtom.reportRead();
-    return super.notes;
-  }
-
-  @override
-  set notes(List<TxNote> value) {
-    _$notesAtom.reportWrite(value, super.notes, () {
-      super.notes = value;
-    });
-  }
-
-  late final _$currentHeightAtom =
-      Atom(name: 'AppStoreBase.currentHeight', context: context);
-
-  @override
-  int get currentHeight {
-    _$currentHeightAtom.reportRead();
-    return super.currentHeight;
-  }
-
-  @override
-  set currentHeight(int value) {
-    _$currentHeightAtom.reportWrite(value, super.currentHeight, () {
-      super.currentHeight = value;
-    });
-  }
-
-  late final _$needPinAtom =
-      Atom(name: 'AppStoreBase.needPin', context: context);
-
-  @override
-  bool get needPin {
-    _$needPinAtom.reportRead();
-    return super.needPin;
-  }
-
-  @override
-  set needPin(bool value) {
-    _$needPinAtom.reportWrite(value, super.needPin, () {
-      super.needPin = value;
-    });
-  }
-
-  late final _$unlockedAtom =
-      Atom(name: 'AppStoreBase.unlocked', context: context);
-
-  @override
-  DateTime? get unlocked {
-    _$unlockedAtom.reportRead();
-    return super.unlocked;
-  }
-
-  @override
-  set unlocked(DateTime? value) {
-    _$unlockedAtom.reportWrite(value, super.unlocked, () {
-      super.unlocked = value;
-    });
-  }
-
-  late final _$offlineAtom =
-      Atom(name: 'AppStoreBase.offline', context: context);
-
-  @override
-  bool get offline {
-    _$offlineAtom.reportRead();
-    return super.offline;
-  }
-
-  @override
-  set offline(bool value) {
-    _$offlineAtom.reportWrite(value, super.offline, () {
-      super.offline = value;
-    });
-  }
-
-  late final _$mempoolRunningAtom =
-      Atom(name: 'AppStoreBase.mempoolRunning', context: context);
-
-  @override
-  bool get mempoolRunning {
-    _$mempoolRunningAtom.reportRead();
-    return super.mempoolRunning;
-  }
-
-  @override
-  set mempoolRunning(bool value) {
-    _$mempoolRunningAtom.reportWrite(value, super.mempoolRunning, () {
-      super.mempoolRunning = value;
-    });
-  }
-
-  late final _$loadTxHistoryAsyncAction =
-      AsyncAction('AppStoreBase.loadTxHistory', context: context);
-
-  @override
-  Future<void> loadTxHistory() {
-    return _$loadTxHistoryAsyncAction.run(() => super.loadTxHistory());
-  }
-
-  late final _$loadMemosAsyncAction =
-      AsyncAction('AppStoreBase.loadMemos', context: context);
-
-  @override
-  Future<void> loadMemos() {
-    return _$loadMemosAsyncAction.run(() => super.loadMemos());
-  }
-
-  late final _$loadNotesAsyncAction =
-      AsyncAction('AppStoreBase.loadNotes', context: context);
-
-  @override
-  Future<void> loadNotes() {
-    return _$loadNotesAsyncAction.run(() => super.loadNotes());
-  }
-
-  late final _$refreshAsyncAction =
-      AsyncAction('AppStoreBase.refresh', context: context);
-
-  @override
-  Future<void> refresh() {
-    return _$refreshAsyncAction.run(() => super.refresh());
-  }
-
-  late final _$loadFoldersAsyncAction =
-      AsyncAction('AppStoreBase.loadFolders', context: context);
-
-  @override
-  Future<void> loadFolders() {
-    return _$loadFoldersAsyncAction.run(() => super.loadFolders());
-  }
-
-  late final _$loadCategoriesAsyncAction =
-      AsyncAction('AppStoreBase.loadCategories', context: context);
-
-  @override
-  Future<void> loadCategories() {
-    return _$loadCategoriesAsyncAction.run(() => super.loadCategories());
-  }
-
-  late final _$AppStoreBaseActionController =
-      ActionController(name: 'AppStoreBase', context: context);
-
-  @override
-  void incSeqno() {
-    final _$actionInfo = _$AppStoreBaseActionController.startAction(
-        name: 'AppStoreBase.incSeqno');
-    try {
-      return super.incSeqno();
-    } finally {
-      _$AppStoreBaseActionController.endAction(_$actionInfo);
-    }
-  }
-
-  @override
-  String toString() {
-    return '''
-selectedAccount: ${selectedAccount},
-selectedFolder: ${selectedFolder},
-accounts: ${accounts},
-folders: ${folders},
-categories: ${categories},
-pools: ${pools},
-seqno: ${seqno},
-poolBalance: ${poolBalance},
-transactions: ${transactions},
-memos: ${memos},
-notes: ${notes},
-currentHeight: ${currentHeight},
-needPin: ${needPin},
-unlocked: ${unlocked},
-offline: ${offline},
-mempoolRunning: ${mempoolRunning}
-    ''';
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<bool, bool>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<bool, bool>, bool, Object?, Object?>;
+    element.handleValue(ref, created);
   }
 }
 
-mixin _$TransparentScannerStore on _TransparentScannerStore, Store {
-  Computed<bool>? _$runningComputed;
+@ProviderFor(SyncStateAccount)
+const syncStateAccountProvider = SyncStateAccountFamily._();
+
+final class SyncStateAccountProvider
+    extends $AsyncNotifierProvider<SyncStateAccount, SyncProgressAccount> {
+  const SyncStateAccountProvider._(
+      {required SyncStateAccountFamily super.from, required int super.argument})
+      : super(
+          retry: null,
+          name: r'syncStateAccountProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
 
   @override
-  bool get running => (_$runningComputed ??= Computed<bool>(() => super.running,
-          name: '_TransparentScannerStore.running'))
-      .value;
-
-  late final _$addressAtom =
-      Atom(name: '_TransparentScannerStore.address', context: context);
-
-  @override
-  String get address {
-    _$addressAtom.reportRead();
-    return super.address;
-  }
-
-  @override
-  set address(String value) {
-    _$addressAtom.reportWrite(value, super.address, () {
-      super.address = value;
-    });
-  }
-
-  late final _$runAsyncAction =
-      AsyncAction('_TransparentScannerStore.run', context: context);
-
-  @override
-  Future<void> run(BuildContext context, int gapLimit,
-      {required void Function() onComplete}) {
-    return _$runAsyncAction
-        .run(() => super.run(context, gapLimit, onComplete: onComplete));
-  }
-
-  late final _$cancelAsyncAction =
-      AsyncAction('_TransparentScannerStore.cancel', context: context);
-
-  @override
-  Future<void> cancel() {
-    return _$cancelAsyncAction.run(() => super.cancel());
-  }
+  String debugGetCreateSourceHash() => _$syncStateAccountHash();
 
   @override
   String toString() {
-    return '''
-address: ${address},
-running: ${running}
-    ''';
+    return r'syncStateAccountProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  SyncStateAccount create() => SyncStateAccount();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SyncStateAccountProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$syncStateAccountHash() => r'f2594ac1579775ef5b129f502254ee980d29b1ba';
+
+final class SyncStateAccountFamily extends $Family
+    with
+        $ClassFamilyOverride<SyncStateAccount, AsyncValue<SyncProgressAccount>,
+            SyncProgressAccount, FutureOr<SyncProgressAccount>, int> {
+  const SyncStateAccountFamily._()
+      : super(
+          retry: null,
+          name: r'syncStateAccountProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  SyncStateAccountProvider call(
+    int accountId,
+  ) =>
+      SyncStateAccountProvider._(argument: accountId, from: this);
+
+  @override
+  String toString() => r'syncStateAccountProvider';
+}
+
+abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
+  late final _$args = ref.$arg as int;
+  int get accountId => _$args;
+
+  FutureOr<SyncProgressAccount> build(
+    int accountId,
+  );
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build(
+      _$args,
+    );
+    final ref =
+        this.ref as $Ref<AsyncValue<SyncProgressAccount>, SyncProgressAccount>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<SyncProgressAccount>, SyncProgressAccount>,
+        AsyncValue<SyncProgressAccount>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(SelectedAccount)
+const selectedAccountProvider = SelectedAccountProvider._();
+
+final class SelectedAccountProvider
+    extends $AsyncNotifierProvider<SelectedAccount, Account?> {
+  const SelectedAccountProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'selectedAccountProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$selectedAccountHash();
+
+  @$internal
+  @override
+  SelectedAccount create() => SelectedAccount();
+}
+
+String _$selectedAccountHash() => r'534a35d7a5729d455b88407867887a989fc5f13c';
+
+abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
+  FutureOr<Account?> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<Account?>, Account?>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<Account?>, Account?>,
+        AsyncValue<Account?>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(SelectedFolder)
+const selectedFolderProvider = SelectedFolderProvider._();
+
+final class SelectedFolderProvider
+    extends $NotifierProvider<SelectedFolder, Folder?> {
+  const SelectedFolderProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'selectedFolderProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$selectedFolderHash();
+
+  @$internal
+  @override
+  SelectedFolder create() => SelectedFolder();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Folder? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Folder?>(value),
+    );
+  }
+}
+
+String _$selectedFolderHash() => r'745eadd2ecba8f4f49e125e11c2255b2d1949317';
+
+abstract class _$SelectedFolder extends $Notifier<Folder?> {
+  Folder? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<Folder?, Folder?>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<Folder?, Folder?>, Folder?, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(getAccounts)
+const getAccountsProvider = GetAccountsProvider._();
+
+final class GetAccountsProvider extends $FunctionalProvider<
+        AsyncValue<List<Account>>, List<Account>, FutureOr<List<Account>>>
+    with $FutureModifier<List<Account>>, $FutureProvider<List<Account>> {
+  const GetAccountsProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getAccountsProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getAccountsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Account>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Account>> create(Ref ref) {
+    return getAccounts(ref);
+  }
+}
+
+String _$getAccountsHash() => r'1a480c593e356312ff67118bbd325b51dd3b49f7';
+
+@ProviderFor(getFolders)
+const getFoldersProvider = GetFoldersProvider._();
+
+final class GetFoldersProvider extends $FunctionalProvider<
+        AsyncValue<List<Folder>>, List<Folder>, FutureOr<List<Folder>>>
+    with $FutureModifier<List<Folder>>, $FutureProvider<List<Folder>> {
+  const GetFoldersProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getFoldersProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getFoldersHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Folder>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Folder>> create(Ref ref) {
+    return getFolders(ref);
+  }
+}
+
+String _$getFoldersHash() => r'f0e35928aa1c400a44939be7758e2306af958e10';
+
+@ProviderFor(getCategories)
+const getCategoriesProvider = GetCategoriesProvider._();
+
+final class GetCategoriesProvider extends $FunctionalProvider<
+        AsyncValue<List<Category>>, List<Category>, FutureOr<List<Category>>>
+    with $FutureModifier<List<Category>>, $FutureProvider<List<Category>> {
+  const GetCategoriesProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getCategoriesProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getCategoriesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Category>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Category>> create(Ref ref) {
+    return getCategories(ref);
+  }
+}
+
+String _$getCategoriesHash() => r'45698dfd3290ba0ea7fd14508581e3d75b280f73';
+
+@ProviderFor(account)
+const accountProvider = AccountFamily._();
+
+final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
+        AccountData, FutureOr<AccountData>>
+    with $FutureModifier<AccountData>, $FutureProvider<AccountData> {
+  const AccountProvider._(
+      {required AccountFamily super.from, required int super.argument})
+      : super(
+          retry: null,
+          name: r'accountProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountHash();
+
+  @override
+  String toString() {
+    return r'accountProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<AccountData> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<AccountData> create(Ref ref) {
+    final argument = this.argument as int;
+    return account(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AccountProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$accountHash() => r'b2d819e89a616085c322e0787617d301c71d460c';
+
+final class AccountFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
+  const AccountFamily._()
+      : super(
+          retry: null,
+          name: r'accountProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  AccountProvider call(
+    int id,
+  ) =>
+      AccountProvider._(argument: id, from: this);
+
+  @override
+  String toString() => r'accountProvider';
+}
+
+@ProviderFor(AppSettingsNotifier)
+const appSettingsProvider = AppSettingsNotifierProvider._();
+
+final class AppSettingsNotifierProvider
+    extends $AsyncNotifierProvider<AppSettingsNotifier, AppSettings> {
+  const AppSettingsNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'appSettingsProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$appSettingsNotifierHash();
+
+  @$internal
+  @override
+  AppSettingsNotifier create() => AppSettingsNotifier();
+}
+
+String _$appSettingsNotifierHash() =>
+    r'de1f279d4215b7e76715812606cff477d0ebba29';
+
+abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
+  FutureOr<AppSettings> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<AppSettings>, AppSettings>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<AppSettings>, AppSettings>,
+        AsyncValue<AppSettings>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(PriceNotifier)
+const priceProvider = PriceNotifierProvider._();
+
+final class PriceNotifierProvider
+    extends $NotifierProvider<PriceNotifier, double?> {
+  const PriceNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'priceProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$priceNotifierHash();
+
+  @$internal
+  @override
+  PriceNotifier create() => PriceNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(double? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<double?>(value),
+    );
+  }
+}
+
+String _$priceNotifierHash() => r'b7a89807a11e82312888aa1c78dc319609ab355e';
+
+abstract class _$PriceNotifier extends $Notifier<double?> {
+  double? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<double?, double?>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<double?, double?>, double?, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(LogNotifier)
+const logProvider = LogNotifierProvider._();
+
+final class LogNotifierProvider
+    extends $NotifierProvider<LogNotifier, List<String>> {
+  const LogNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'logProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$logNotifierHash();
+
+  @$internal
+  @override
+  LogNotifier create() => LogNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<String>>(value),
+    );
+  }
+}
+
+String _$logNotifierHash() => r'1fbcc88f9bce49713c3ab734695e8bd1869f452c';
+
+abstract class _$LogNotifier extends $Notifier<List<String>> {
+  List<String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<List<String>, List<String>>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<List<String>, List<String>>,
+        List<String>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(CurrentHeightNotifier)
+const currentHeightProvider = CurrentHeightNotifierProvider._();
+
+final class CurrentHeightNotifierProvider
+    extends $NotifierProvider<CurrentHeightNotifier, int?> {
+  const CurrentHeightNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'currentHeightProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentHeightNotifierHash();
+
+  @$internal
+  @override
+  CurrentHeightNotifier create() => CurrentHeightNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int?>(value),
+    );
+  }
+}
+
+String _$currentHeightNotifierHash() =>
+    r'f52275d8bff2395996b80041883a8ec0f2df6d0e';
+
+abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
+  int? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<int?, int?>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<int?, int?>, int?, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(MempoolNotifier)
+const mempoolProvider = MempoolNotifierProvider._();
+
+final class MempoolNotifierProvider
+    extends $NotifierProvider<MempoolNotifier, MempoolState> {
+  const MempoolNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'mempoolProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$mempoolNotifierHash();
+
+  @$internal
+  @override
+  MempoolNotifier create() => MempoolNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(MempoolState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<MempoolState>(value),
+    );
+  }
+}
+
+String _$mempoolNotifierHash() => r'ef30b8d13903eecbdd48ca9a1c7426534fef1bde';
+
+abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
+  MempoolState build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<MempoolState, MempoolState>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<MempoolState, MempoolState>,
+        MempoolState,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(SynchronizerNotifier)
+const synchronizerProvider = SynchronizerNotifierProvider._();
+
+final class SynchronizerNotifierProvider
+    extends $NotifierProvider<SynchronizerNotifier, SyncState> {
+  const SynchronizerNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'synchronizerProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$synchronizerNotifierHash();
+
+  @$internal
+  @override
+  SynchronizerNotifier create() => SynchronizerNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SyncState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SyncState>(value),
+    );
+  }
+}
+
+String _$synchronizerNotifierHash() =>
+    r'8a91ed56fa2b7cdb3966f80fa4f4e82d5ec9c7c8';
+
+abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
+  SyncState build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<SyncState, SyncState>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<SyncState, SyncState>, SyncState, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(TransparentScan)
+const transparentScanProvider = TransparentScanProvider._();
+
+final class TransparentScanProvider
+    extends $NotifierProvider<TransparentScan, String> {
+  const TransparentScanProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'transparentScanProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$transparentScanHash();
+
+  @$internal
+  @override
+  TransparentScan create() => TransparentScan();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String>(value),
+    );
+  }
+}
+
+String _$transparentScanHash() => r'bb673d2aff5694408b86415ee471f9eb5252114c';
+
+abstract class _$TransparentScan extends $Notifier<String> {
+  String build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<String, String>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<String, String>, String, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(GetTxDetails)
+const getTxDetailsProvider = GetTxDetailsFamily._();
+
+final class GetTxDetailsProvider
+    extends $AsyncNotifierProvider<GetTxDetails, TxAccount> {
+  const GetTxDetailsProvider._(
+      {required GetTxDetailsFamily super.from, required int super.argument})
+      : super(
+          retry: null,
+          name: r'getTxDetailsProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getTxDetailsHash();
+
+  @override
+  String toString() {
+    return r'getTxDetailsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  GetTxDetails create() => GetTxDetails();
+
+  @override
+  bool operator ==(Object other) {
+    return other is GetTxDetailsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$getTxDetailsHash() => r'228df08f9ccc94e81142f57f41b31ab6f1731805';
+
+final class GetTxDetailsFamily extends $Family
+    with
+        $ClassFamilyOverride<GetTxDetails, AsyncValue<TxAccount>, TxAccount,
+            FutureOr<TxAccount>, int> {
+  const GetTxDetailsFamily._()
+      : super(
+          retry: null,
+          name: r'getTxDetailsProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  GetTxDetailsProvider call(
+    int id,
+  ) =>
+      GetTxDetailsProvider._(argument: id, from: this);
+
+  @override
+  String toString() => r'getTxDetailsProvider';
+}
+
+abstract class _$GetTxDetails extends $AsyncNotifier<TxAccount> {
+  late final _$args = ref.$arg as int;
+  int get id => _$args;
+
+  FutureOr<TxAccount> build(
+    int id,
+  );
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build(
+      _$args,
+    );
+    final ref = this.ref as $Ref<AsyncValue<TxAccount>, TxAccount>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<TxAccount>, TxAccount>,
+        AsyncValue<TxAccount>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
   }
 }

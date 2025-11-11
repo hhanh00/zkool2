@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -23,14 +23,14 @@ final syncID = GlobalKey();
 final accountListID = GlobalKey();
 final avatarID = GlobalKey();
 
-class AccountListPage extends StatefulWidget {
+class AccountListPage extends ConsumerStatefulWidget {
   const AccountListPage({super.key});
 
   @override
-  State<AccountListPage> createState() => AccountListPageState();
+  ConsumerState<AccountListPage> createState() => AccountListPageState();
 }
 
-class AccountListPageState extends State<AccountListPage> with RouteAware {
+class AccountListPageState extends ConsumerState<AccountListPage> with RouteAware {
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
   double? price;
@@ -38,7 +38,8 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   @override
   void initState() {
     super.initState();
-    if (!appStore.disclaimerAccepted) {
+    final settings = ref.read(appSettingsProvider).requireValue;
+    if (!settings.disclaimerAccepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         logger.i("Disclaimer not accepted");
         GoRouter.of(context).push("/disclaimer");
@@ -60,30 +61,38 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
 
   @override
   void didPopNext() {
-    selectAccount(null);
+    final selectedAccount = ref.read(selectedAccountProvider.notifier);
+    selectedAccount.unselect();
     super.didPopNext();
   }
 
   void refreshHeight(bool fetchPrice) async {
-    if (appStore.checkOffline()) return;
+    final settings = ref.read(appSettingsProvider).requireValue;
+    if (settings.offline) return;
     try {
       final height = await getCurrentHeight();
-      appStore.currentHeight = height;
+      final currentHeight = ref.read(currentHeightProvider.notifier);
+      currentHeight.setHeight(height);
       if (fetchPrice) {
         final p = await getCoingeckoPrice();
-        setState(() => price = p);
+        final currentPrice = ref.read(priceProvider.notifier);
+        currentPrice.setPrice(p);
+        setState(() {
+          price = p;
+        });
       }
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
   }
 
-  List<Account> get accounts =>
-      appStore.accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (appStore.selectedFolder?.id ?? 0)).toList();
-
   void tutorial() async {
-    if (!appStore.disclaimerAccepted) return;
+    final settings = ref.read(appSettingsProvider).requireValue;
+    if (!settings.disclaimerAccepted) return;
     tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, heightID]);
+
+    final accounts = await ref.read(getAccountsProvider.future);
+    if (!mounted) return;
     if (accounts.isNotEmpty) tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
   }
 
@@ -91,111 +100,117 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   Widget build(BuildContext context) {
     Future(tutorial);
 
-    return Observer(
-      builder: (context) {
-        final tt = Theme.of(context).textTheme;
-        final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
-        appStore.accounts;
-        appStore.selectedFolder;
+    final tt = Theme.of(context).textTheme;
+    final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
 
-        return Showcase(
-          key: accountListID,
-          description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
-          child: EditableList<Account>(
-            key: listKey,
-            items: accounts,
-            headerBuilder: (context) => [
-              Showcase(
-                key: heightID,
-                description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
-                child: Observer(builder: (context) => ElevatedButton(
-                    onPressed: () => Future(() => refreshHeight(true)),
-                    onLongPress: () => Future(() => refreshHeight(false)),
-                    child: Text("Height: ${appStore.currentHeight}"),
-                  ),
-                ),
+    final accounts = ref.read(getAccountsProvider);
+    final selectedFolder = ref.read(selectedFolderProvider);
+
+    final as = accounts
+        .whenData((accounts) => accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList());
+
+    switch (as) {
+      case AsyncLoading():
+        return LinearProgressIndicator();
+      case AsyncError():
+        return Text(as.error.toString());
+      case AsyncData():
+    }
+
+    final accountList = as.requireValue;
+    final currentHeight = ref.watch(currentHeightProvider);
+    final h = currentHeight != null ? currentHeight.toString() : 'N/A';
+
+    return Showcase(
+      key: accountListID,
+      description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
+      child: EditableList<Account>(
+        key: listKey,
+        items: accountList,
+        headerBuilder: (context) => [
+          Showcase(
+            key: heightID,
+            description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
+            child: ElevatedButton(
+              onPressed: () => Future(() => refreshHeight(true)),
+              onLongPress: () => Future(() => refreshHeight(false)),
+              child: Text("Height: $h"),
+            ),
+          ),
+          const Gap(8),
+          if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
+          const Gap(8),
+        ],
+        builder: (context, index, account, {selected, onSelectChanged}) {
+          final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
+          return Material(
+            key: ValueKey(account.id),
+            child: GestureDetector(
+              child: ListTile(
+                leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                title: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null),
+                subtitle: zatToText(account.balance, selectable: false, style: t.copyWith(fontWeight: FontWeight.w700)),
+                trailing: SmallProgressWidget(account),
               ),
-              const Gap(8),
-              if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
-              const Gap(8),
-            ],
-            builder: (context, index, account, {selected, onSelectChanged}) {
-              final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
-              return Material(
-                key: ValueKey(account.id),
-                child: GestureDetector(
-                  child: ListTile(
-                    leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
-                    title: Text(account.name, style: !account.enabled ? TextStyle(color: Colors.grey) : null),
-                    subtitle: zatToText(account.balance, selectable: false, style: t.copyWith(fontWeight: FontWeight.w700)),
-                    trailing: Observer(
-                      builder: (context) {
-                        final h = appStore.heights[account.id];
-                        return h!.build(context);
-                      },
-                    ),
-                  ),
-                  onTap: () => onOpen(context, account),
-                ),
-              );
-            },
-            title: "Account List",
-            createBuilder: (context) => GoRouter.of(context).push("/account/new"),
-            editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
-            deleteBuilder: (context, accounts) async {
-              final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
-              if (confirmed) {
-                for (var a in accounts) {
-                  await deleteAccount(account: a.id);
-                }
-                await appStore.loadAccounts();
+              onTap: () => onOpen(context, account),
+            ),
+          );
+        },
+        title: "Account List",
+        createBuilder: (context) => GoRouter.of(context).push("/account/new"),
+        editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
+        deleteBuilder: (context, accounts) async {
+          final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
+          if (confirmed) {
+            for (var a in accounts) {
+              await deleteAccount(account: a.id);
+            }
+            ref.invalidate(getAccountsProvider);
+          }
+        },
+        isEqual: (a, b) => a.id == b.id,
+        onReorder: onReorder,
+        buttons: [
+          Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
+          Showcase(
+            key: syncID,
+            description: "Synchronize all enabled accounts or the accounts currently selected",
+            child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (String result) {
+              switch (result) {
+                case "mempool":
+                  onMempool();
+                case "hide":
+                  onHide();
+                case "category":
+                  onCategory();
+                case "folder":
+                  onFolder();
               }
             },
-            isEqual: (a, b) => a.id == b.id,
-            onReorder: onReorder,
-            buttons: [
-              Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
-              Showcase(
-                key: syncID,
-                description: "Synchronize all enabled accounts or the accounts currently selected",
-                child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: "mempool",
+                child: Text("Mempool"),
               ),
-              PopupMenuButton<String>(
-                onSelected: (String result) {
-                  switch (result) {
-                    case "mempool":
-                      onMempool();
-                    case "hide":
-                      onHide();
-                    case "category":
-                      onCategory();
-                    case "folder":
-                      onFolder();
-                  }
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: "mempool",
-                    child: Text("Mempool"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "folder",
-                    child: Text("Folders"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "category",
-                    child: Text("Categories"),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'hide',
-                    child: Text("Show All"),
-                  ),
-                ],
+              const PopupMenuItem<String>(
+                value: "folder",
+                child: Text("Folders"),
+              ),
+              const PopupMenuItem<String>(
+                value: "category",
+                child: Text("Categories"),
+              ),
+              PopupMenuItem<String>(
+                value: 'hide',
+                child: Text("Show All"),
               ),
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -220,34 +235,38 @@ class AccountListPageState extends State<AccountListPage> with RouteAware {
   onSync() async {
     try {
       final listState = listKey.currentState!;
-      List<int> accountIds = [];
+      List<Account> accountToSync = [];
       final hasSelection = listState.selected.any((s) => s);
       if (hasSelection) {
         // if any selection, use the selection, otherwise use the enabled flag
         for (var i = 0; i < listState.selected.length; i++) {
-          if (listState.selected[i]) accountIds.add(accounts[i].id);
+          if (listState.selected[i]) accountToSync.add(listState.items[i]);
         }
       } else {
         // no selection, use the enabled flag
-        for (var a in appStore.accounts) {
-          if (a.enabled) accountIds.add(a.id);
+        final accounts = await ref.read(getAccountsProvider.future);
+        for (var a in accounts) {
+          if (a.enabled) accountToSync.add(a);
         }
       }
-      await appStore.startSynchronize(accountIds, int.parse(appStore.actionsPerSync));
+      final synchronizer = ref.read(synchronizerProvider.notifier);
+      await synchronizer.startSynchronize(ref, accountToSync);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
   }
 
   void onOpen(BuildContext context, Account account) async {
-    await selectAccount(account);
+    final selectAccount = ref.read(selectedAccountProvider.notifier);
+    selectAccount.selectAccount(account);
     if (!context.mounted) return;
     await GoRouter.of(context).push('/account', extra: account);
   }
 
   void onReorder(int oldIndex, int newIndex) async {
-    await reorderAccount(oldPosition: accounts[oldIndex].position, newPosition: accounts[newIndex].position);
-    await appStore.loadAccounts();
+    final listState = listKey.currentState!;
+    await reorderAccount(oldPosition: listState.items[oldIndex].position, newPosition: listState.items[newIndex].position);
+    ref.invalidate(getAccountsProvider);
   }
 
   void onSettings() async {
