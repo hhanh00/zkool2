@@ -191,7 +191,8 @@ class SelectedAccount extends _$SelectedAccount {
     return accounts.firstWhere((a) => a.id == id);
   }
 
-  void selectAccount(Account account) {
+  void selectAccount(Account account) async {
+    await putProp(key: "selected_account", value: "${account.id}");
     state = AsyncData(account);
   }
 
