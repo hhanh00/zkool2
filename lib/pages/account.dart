@@ -56,9 +56,9 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     final selectedAccountAV = ref.watch(selectedAccountProvider);
     switch (selectedAccountAV) {
       case AsyncLoading():
-        return LinearProgressIndicator();
+        return showLoading("Account");
       case AsyncError(:final error):
-        return Text(error.toString());
+        return showError(error);
       default:
     }
     final selectedAccount = selectedAccountAV.requireValue;
@@ -67,7 +67,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
       return SizedBox.shrink();
     }
 
-    logger.i("$selectedAccount");
     final accountAV = ref.watch(accountProvider(selectedAccount.id));
     switch (accountAV) {
       case AsyncLoading<AccountData>():
@@ -77,7 +76,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
       default:
     }
     final account = accountAV.requireValue;
-    logger.i("$account");
     final b = account.balance;
     final mempool = ref.watch(mempoolProvider);
     final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
@@ -229,7 +227,7 @@ class AccountEditPage extends ConsumerStatefulWidget {
   ConsumerState<AccountEditPage> createState() => AccountEditPageState();
 }
 
-class AccountEditPageState extends ConsumerState<AccountEditPage> {
+class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAware {
   final nameID2 = GlobalKey(debugLabel: "nameID2");
   final iconID2 = GlobalKey(debugLabel: "iconID2");
   final birthID2 = GlobalKey(debugLabel: "birthID2");
@@ -246,13 +244,27 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> {
   List<Folder>? folders;
 
   @override
+  void didPop() {
+    super.didPop();
+    ref.invalidate(getAccountsProvider);
+  }
+
+  @override
   void initState() {
     super.initState();
     Future(() async {
       final folders = await ref.read(getFoldersProvider.future);
-      logger.i(folders);
       setState(() => this.folders = folders);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
   }
 
   @override
@@ -399,6 +411,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> {
           folder: accounts[0].folder.id,
         ),
       );
+      ref.invalidate(getAccountsProvider);
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
     }
