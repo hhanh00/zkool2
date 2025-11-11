@@ -91,6 +91,19 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   late String actionsPerSync = widget.settings.actionsPerSync;
 
   @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      dbFullPath = await getFullDatabasePath(databaseName);
+      final packageInfo = await PackageInfo.fromPlatform();
+      final version = packageInfo.version;
+      final buildNumber = packageInfo.buildNumber;
+      versionString = "$version+$buildNumber";
+      setState(() {});
+    });
+  }
+
+  @override
   void didUpdateWidget(covariant SettingsForm oldWidget) {
     super.didUpdateWidget(oldWidget);
     databaseName = widget.settings.dbName;
@@ -102,14 +115,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     blockExplorer = widget.settings.blockExplorer;
     syncInterval = widget.settings.syncInterval;
     actionsPerSync = widget.settings.actionsPerSync;
-    Future(() async {
-      dbFullPath = await getFullDatabasePath(databaseName);
-      final packageInfo = await PackageInfo.fromPlatform();
-      final version = packageInfo.version;
-      final buildNumber = packageInfo.buildNumber;
-      versionString = "$version+$buildNumber";
-      setState(() {});
-    });
   }
 
   void tutorial() async {

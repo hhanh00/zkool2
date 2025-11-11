@@ -95,7 +95,7 @@ final class SyncStateAccountProvider
   }
 }
 
-String _$syncStateAccountHash() => r'f2594ac1579775ef5b129f502254ee980d29b1ba';
+String _$syncStateAccountHash() => r'cb3d58d81b59192492c0aab60de138055b823f7f';
 
 final class SyncStateAccountFamily extends $Family
     with
@@ -154,7 +154,7 @@ final class SelectedAccountProvider
           argument: null,
           retry: null,
           name: r'selectedAccountProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -167,7 +167,7 @@ final class SelectedAccountProvider
   SelectedAccount create() => SelectedAccount();
 }
 
-String _$selectedAccountHash() => r'534a35d7a5729d455b88407867887a989fc5f13c';
+String _$selectedAccountHash() => r'd6dd333c0ab9be24e40c5297cfd936db1cee8c92';
 
 abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
   FutureOr<Account?> build();
@@ -419,7 +419,7 @@ final class AppSettingsNotifierProvider
           argument: null,
           retry: null,
           name: r'appSettingsProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -433,7 +433,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'de1f279d4215b7e76715812606cff477d0ebba29';
+    r'c9b57df502344b44200a18235c22491a01e27106';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -509,7 +509,7 @@ final class LogNotifierProvider
           argument: null,
           retry: null,
           name: r'logProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -530,7 +530,7 @@ final class LogNotifierProvider
   }
 }
 
-String _$logNotifierHash() => r'1fbcc88f9bce49713c3ab734695e8bd1869f452c';
+String _$logNotifierHash() => r'6b5eec2c62a37ad6e6eff3b197288e47e9ea932d';
 
 abstract class _$LogNotifier extends $Notifier<List<String>> {
   List<String> build();
@@ -607,7 +607,7 @@ final class MempoolNotifierProvider
           argument: null,
           retry: null,
           name: r'mempoolProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -628,7 +628,7 @@ final class MempoolNotifierProvider
   }
 }
 
-String _$mempoolNotifierHash() => r'ef30b8d13903eecbdd48ca9a1c7426534fef1bde';
+String _$mempoolNotifierHash() => r'ff011ae23365165090f4f1f8109c8744e9be0b08';
 
 abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
   MempoolState build();
@@ -679,7 +679,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'8a91ed56fa2b7cdb3966f80fa4f4e82d5ec9c7c8';
+    r'9c385b45434d6fa353bc51b6e47bbb8708c9b727';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -705,7 +705,7 @@ final class TransparentScanProvider
           argument: null,
           retry: null,
           name: r'transparentScanProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -726,7 +726,7 @@ final class TransparentScanProvider
   }
 }
 
-String _$transparentScanHash() => r'bb673d2aff5694408b86415ee471f9eb5252114c';
+String _$transparentScanHash() => r'807a1b560af039369f511e780512cb90cd93be82';
 
 abstract class _$TransparentScan extends $Notifier<String> {
   String build();

@@ -186,7 +186,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
   void onSync() async {
     try {
       final synchronizer = ref.read(synchronizerProvider.notifier);
-      await synchronizer.startSynchronize(ref, [account()]);
+      await synchronizer.startSynchronize([account()]);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
