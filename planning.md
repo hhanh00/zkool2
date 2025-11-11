@@ -151,8 +151,14 @@ In order of priority,
 - [x] error when recipient ua only has orchard and warn when only it does not have sapling (won't fix)
 - [x] error when # inputs/outputs > 5
 
-Bug
-- zaddress does not match after we generate a new one
-    - check diversifier index
-    - check diversifier
-- taddress is ok
+- [ ] account creation
+- [ ] account edit/delete
+- [ ] sync
+- [ ] auto sync
+- [ ] send
+- [ ] mempool
+- [ ] pinlock
+- [ ] transparent scan
+- [ ] log
+- [ ] dkg
+- [ ] frost

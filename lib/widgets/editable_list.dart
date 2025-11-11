@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:mobx/mobx.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 final newAccountId = GlobalKey();
@@ -47,7 +46,6 @@ class EditableList<T extends Object> extends StatefulWidget {
 class EditableListState<T extends Object> extends State<EditableList<T>> {
   late List<T> items = widget.items;
   late List<bool> selected = List.generate(widget.items.length, (_) => false);
-  ReactionDisposer? reaction;
 
   @override
   void initState() {
@@ -56,7 +54,6 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
 
   @override
   void dispose() {
-    reaction?.call();
     super.dispose();
   }
 

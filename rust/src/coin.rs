@@ -163,9 +163,7 @@ impl Coin {
                 Ok(Box::new(client))
             }
 
-            _ => {
-                todo!()
-            }
+            _ => unreachable!()
         }
     }
 }

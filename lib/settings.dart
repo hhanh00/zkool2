@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
@@ -25,25 +27,15 @@ final pinLockID = GlobalKey();
 final offlineID = GlobalKey();
 final blockExplorerID = GlobalKey();
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => SettingsPageState();
+  ConsumerState<SettingsPage> createState() => SettingsPageState();
 }
 
-class SettingsPageState extends State<SettingsPage> with RouteAware {
-  final formKey = GlobalKey<FormBuilderState>();
-  String databaseName = appStore.dbName;
-  late String currentDatabaseName = databaseName;
-  bool isLightNode = appStore.isLightNode;
-  bool useTor = appStore.useTor;
-  bool needPin = appStore.needPin;
-  bool offline = appStore.offline;
-  String lwd = appStore.lwd;
-  String blockExplorer = appStore.blockExplorer;
-  String syncInterval = appStore.syncInterval;
-  String actionsPerSync = appStore.actionsPerSync;
+class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
+  AppSettings? settings;
 
   @override
   void didChangeDependencies() {
@@ -57,7 +49,67 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   @override
   void didPop() {
     super.didPop();
-    appStore.autoSync();
+    final settingsNotifier = ref.read(appSettingsProvider.notifier);
+    settings?.let((s) => settingsNotifier.updateSettings(s));
+    // appStore.autoSync();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(appSettingsProvider);
+    switch (s) {
+      case AsyncLoading():
+        return LinearProgressIndicator();
+      case AsyncError(:final error):
+        return Text(error.toString());
+      default:
+    }
+    final settings = s.requireValue;
+    return SettingsForm(settings);
+  }
+}
+
+class SettingsForm extends ConsumerStatefulWidget {
+  final AppSettings settings;
+  const SettingsForm(this.settings, {super.key});
+  @override
+  ConsumerState<SettingsForm> createState() => SettingsFormState();
+}
+
+class SettingsFormState extends ConsumerState<SettingsForm> {
+  final formKey = GlobalKey<FormBuilderState>();
+  late String databaseName = widget.settings.dbName;
+  String dbFullPath = "";
+  String versionString = "";
+  late bool isLightNode = widget.settings.isLightNode;
+  late bool useTor = widget.settings.useTor;
+  late bool needPin = widget.settings.needPin;
+  late bool offline = widget.settings.offline;
+  late String lwd = widget.settings.lwd;
+  late String blockExplorer = widget.settings.blockExplorer;
+  late String syncInterval = widget.settings.syncInterval;
+  late String actionsPerSync = widget.settings.actionsPerSync;
+
+  @override
+  void didUpdateWidget(covariant SettingsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    databaseName = widget.settings.dbName;
+    isLightNode = widget.settings.isLightNode;
+    useTor = widget.settings.useTor;
+    needPin = widget.settings.needPin;
+    offline = widget.settings.offline;
+    lwd = widget.settings.lwd;
+    blockExplorer = widget.settings.blockExplorer;
+    syncInterval = widget.settings.syncInterval;
+    actionsPerSync = widget.settings.actionsPerSync;
+    Future(() async {
+      dbFullPath = await getFullDatabasePath(databaseName);
+      final packageInfo = await PackageInfo.fromPlatform();
+      final version = packageInfo.version;
+      final buildNumber = packageInfo.buildNumber;
+      versionString = "$version+$buildNumber";
+      setState(() {});
+    });
   }
 
   void tutorial() async {
@@ -67,7 +119,6 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-
     Future(tutorial);
 
     return Scaffold(
@@ -75,10 +126,11 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
         title: Text("Settings"),
         actions: [
           Showcase(
-              key: logID,
-              description: "Open the App Log",
-              child: IconButton(tooltip: "View Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),),
-          IconButton(tooltip: "Lock", onPressed: lockApp, icon: Icon(Icons.lock)),
+            key: logID,
+            description: "Open the App Log",
+            child: IconButton(tooltip: "View Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
+          ),
+          IconButton(tooltip: "Lock", onPressed: () => lockApp(ref), icon: Icon(Icons.lock)),
           IconButton(tooltip: "Show Tutorials again", onPressed: () => resetTutorial(context), icon: Icon(Icons.school)),
           IconButton(tooltip: "Database Manager", onPressed: onDatabaseManager, icon: Icon(Icons.folder)),
         ],
@@ -91,93 +143,103 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
             child: Column(
               children: [
                 Showcase(
-                    key: lightnodeID,
-                    description: "Whether the server is a light node or not",
-                    child: FormBuilderSwitch(
-                      name: "light",
-                      title: Text("Light Node"),
-                      initialValue: isLightNode,
-                      onChanged: onChangedIsLightNode,
-                    ),),
+                  key: lightnodeID,
+                  description: "Whether the server is a light node or not",
+                  child: FormBuilderSwitch(
+                    name: "light",
+                    title: Text("Light Node"),
+                    initialValue: isLightNode,
+                    onChanged: onChangedIsLightNode,
+                  ),
+                ),
                 Showcase(
-                    key: lwdID,
-                    description: "Node server to connect to",
-                    child: FormBuilderTextField(
-                      name: "lwd",
-                      decoration: InputDecoration(labelText: "${isLightNode ? 'Light' : 'Full'} Node Server"),
-                      initialValue: lwd,
-                      onChanged: onChangedLWD,
-                    ),),
+                  key: lwdID,
+                  description: "Node server to connect to",
+                  child: FormBuilderTextField(
+                    name: "lwd",
+                    decoration: InputDecoration(labelText: "${isLightNode ? 'Light' : 'Full'} Node Server"),
+                    initialValue: lwd,
+                    onChanged: onChangedLWD,
+                  ),
+                ),
                 if (isLightNode)
                   Showcase(
-                      key: torID,
-                      description: "Use TOR to connect to lightwallet server. Need App Restart",
-                      child: FormBuilderSwitch(
-                        name: "tor",
-                        title: Text("Use TOR"),
-                        initialValue: useTor,
-                        onChanged: onChangedUseTOR,
-                      ),),
+                    key: torID,
+                    description: "Use TOR to connect to lightwallet server. Need App Restart",
+                    child: FormBuilderSwitch(
+                      name: "tor",
+                      title: Text("Use TOR"),
+                      initialValue: useTor,
+                      onChanged: onChangedUseTOR,
+                    ),
+                  ),
                 Showcase(
-                    key: actionsID,
-                    description: "Number actions per synchronization chunk",
-                    child: FormBuilderTextField(
-                      name: "actions_per_sync",
-                      decoration: const InputDecoration(labelText: "Actions per Sync"),
-                      initialValue: actionsPerSync,
-                      onChanged: onChangedActionsPerSync,
-                      validator: FormBuilderValidators.integer(),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    ),),
+                  key: actionsID,
+                  description: "Number actions per synchronization chunk",
+                  child: FormBuilderTextField(
+                    name: "actions_per_sync",
+                    decoration: const InputDecoration(labelText: "Actions per Sync"),
+                    initialValue: actionsPerSync,
+                    onChanged: onChangedActionsPerSync,
+                    validator: FormBuilderValidators.integer(),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                ),
                 Gap(16),
                 Row(
                   children: [
                     Expanded(
-                        child: Showcase(
-                            key: autosyncID,
-                            description: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
-                            child: FormBuilderTextField(
-                              name: "autosync",
-                              decoration: const InputDecoration(labelText: "AutoSync Interval"),
-                              initialValue: syncInterval,
-                              onChanged: onChangedSyncInterval,
-                              validator: FormBuilderValidators.integer(),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            ),),),
+                      child: Showcase(
+                        key: autosyncID,
+                        description: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
+                        child: FormBuilderTextField(
+                          name: "autosync",
+                          decoration: const InputDecoration(labelText: "AutoSync Interval"),
+                          initialValue: syncInterval,
+                          onChanged: onChangedSyncInterval,
+                          validator: FormBuilderValidators.integer(),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        ),
+                      ),
+                    ),
                     Showcase(
-                        key: cancelID,
-                        description: "This will cancel the current sync and disable AutoSync",
-                        child: IconButton(tooltip: "Cancel Sync", onPressed: onCancelSync, icon: Icon(Icons.cancel)),),
+                      key: cancelID,
+                      description: "This will cancel the current sync and disable AutoSync",
+                      child: IconButton(tooltip: "Cancel Sync", onPressed: onCancelSync, icon: Icon(Icons.cancel)),
+                    ),
                   ],
                 ),
                 Gap(8),
                 Showcase(
-                    key: pinLockID,
-                    description: "Ask for device pin when app opens",
-                    child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: needPin, onChanged: onPinLockChanged),),
+                  key: pinLockID,
+                  description: "Ask for device pin when app opens",
+                  child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: needPin, onChanged: onPinLockChanged),
+                ),
                 Gap(8),
                 Showcase(
-                    key: offlineID,
-                    description: "Toggle offline mode",
-                    child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: offline, onChanged: onOfflineChanged),),
+                  key: offlineID,
+                  description: "Toggle offline mode",
+                  child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: offline, onChanged: onOfflineChanged),
+                ),
                 Gap(8),
                 Showcase(
-                    key: blockExplorerID,
-                    description: "Block Explorer URL",
-                    child: FormBuilderTextField(
-                      name: "block_explorer",
-                      decoration: InputDecoration(
-                        label: Text("Block Explorer"),
-                      ),
-                      initialValue: blockExplorer,
-                      onChanged: onChangedBlockExplorer,
-                    ),),
+                  key: blockExplorerID,
+                  description: "Block Explorer URL",
+                  child: FormBuilderTextField(
+                    name: "block_explorer",
+                    decoration: InputDecoration(
+                      label: Text("Block Explorer"),
+                    ),
+                    initialValue: blockExplorer,
+                    onChanged: onChangedBlockExplorer,
+                  ),
+                ),
                 Gap(16),
-                CopyableText(appStore.dbFilepath, style: t.bodySmall),
+                CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
-                if (appStore.versionString != null) Text(appStore.versionString!),
+                Text(versionString),
               ],
             ),
           ),
@@ -201,7 +263,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     final prefs = SharedPreferencesAsync();
     await prefs.setString("database", value);
-    appStore.dbName = value;
+    ref.invalidate(appSettingsProvider);
     setState(() {
       databaseName = value;
     });
@@ -210,8 +272,8 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   void onChangedLWD(String? value) async {
     if (value == null) return;
     await putProp(key: "lwd", value: value);
-    appStore.lwd = value;
-    setLwd(lwd: value, serverType: appStore.isLightNode ? ServerType.lwd : ServerType.zebra);
+    setLwd(lwd: value, serverType: isLightNode ? ServerType.lwd : ServerType.zebra);
+    ref.invalidate(appSettingsProvider);
     setState(() {
       lwd = value;
     });
@@ -220,7 +282,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   void onChangedBlockExplorer(String? value) async {
     if (value == null) return;
     await putProp(key: "block_explorer", value: value);
-    appStore.blockExplorer = value;
+    ref.invalidate(appSettingsProvider);
     setState(() {
       blockExplorer = value;
     });
@@ -229,7 +291,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
   onChangedIsLightNode(bool? value) async {
     if (value == null) return;
     await putProp(key: "is_light_node", value: value.toString());
-    appStore.isLightNode = value;
+    ref.invalidate(appSettingsProvider);
     setLwd(lwd: lwd, serverType: value ? ServerType.lwd : ServerType.zebra);
     setState(() {
       isLightNode = value;
@@ -240,7 +302,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("use_tor", value);
-    appStore.useTor = value;
+    ref.invalidate(appSettingsProvider);
     setUseTor(useTor: value);
     setState(() {
       useTor = value;
@@ -251,7 +313,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("pin_lock", value);
-    appStore.needPin = value;
+    ref.invalidate(appSettingsProvider);
     setState(() {
       needPin = value;
     });
@@ -261,7 +323,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
     if (value == null) return;
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("offline", value);
-    appStore.offline = value;
+    ref.invalidate(appSettingsProvider);
     setState(() {
       offline = value;
     });
@@ -273,7 +335,7 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       return;
     }
     await putProp(key: "actions_per_sync", value: value);
-    appStore.actionsPerSync = value;
+    ref.invalidate(appSettingsProvider);
     setState(() {
       actionsPerSync = value;
     });
@@ -285,15 +347,18 @@ class SettingsPageState extends State<SettingsPage> with RouteAware {
       return;
     }
     await putProp(key: "sync_interval", value: value);
-    appStore.syncInterval = value;
+    ref.invalidate(appSettingsProvider);
     setState(() {
       syncInterval = value;
     });
   }
 
   void onDatabaseManager() async {
-    final confirmed = await confirmDialog(context,
-        title: "Database Manager", message: "The Database Manager will open when you restart the app. Do you want to schedule it now?",);
+    final confirmed = await confirmDialog(
+      context,
+      title: "Database Manager",
+      message: "The Database Manager will open when you restart the app. Do you want to schedule it now?",
+    );
     if (confirmed) {
       final prefs = SharedPreferencesAsync();
       await prefs.setBool("recovery", true);

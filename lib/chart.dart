@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
@@ -246,17 +247,17 @@ class SpendingChartState extends State<SpendingChart> with AutomaticKeepAliveCli
   bool get wantKeepAlive => true;
 }
 
-class CategoryChart extends StatefulWidget {
+class CategoryChart extends ConsumerStatefulWidget {
   final DateTime? from;
   final DateTime? to;
   const CategoryChart({super.key, this.from, this.to});
 
   @override
-  State<StatefulWidget> createState() => CategoryChartState();
+  ConsumerState<CategoryChart> createState() => CategoryChartState();
 }
 
-class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveClientMixin {
-  late final List<DropdownMenuItem<int>> categories;
+class CategoryChartState extends ConsumerState<CategoryChart> with AutomaticKeepAliveClientMixin {
+  late final List<DropdownMenuItem<int>> categoriesMenu;
   int? category = 1;
   bool cumulative = false;
   int epoch = 0;
@@ -265,15 +266,19 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
   @override
   void initState() {
     super.initState();
-    categories = appStore.categories
-        .map(
-          (c) => DropdownMenuItem(
-            value: c.id,
-            child: Text(c.name),
-          ),
-        )
-        .toList();
-    Future(refresh);
+
+    Future(() async {
+      final categories = await ref.read(getCategoriesProvider.future);
+      categoriesMenu = categories
+          .map(
+            (c) => DropdownMenuItem(
+              value: c.id,
+              child: Text(c.name),
+            ),
+          )
+          .toList();
+      await refresh();
+    });
   }
 
   @override
@@ -309,12 +314,14 @@ class CategoryChartState extends State<CategoryChart> with AutomaticKeepAliveCli
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          SizedBox(width: 250, child: DropdownButton<int>(items: categories, value: category, onChanged: onCategoryChanged)),
-          Gap(8),
-          Text("Cumulative"),
-          Checkbox(value: cumulative, onChanged: (v) => setState(() => cumulative = v!)),
-        ],),
+        Row(
+          children: [
+            SizedBox(width: 250, child: DropdownButton<int>(items: categoriesMenu, value: category, onChanged: onCategoryChanged)),
+            Gap(8),
+            Text("Cumulative"),
+            Checkbox(value: cumulative, onChanged: (v) => setState(() => cumulative = v!)),
+          ],
+        ),
         Gap(8),
         Expanded(
           child: InAppWebView(

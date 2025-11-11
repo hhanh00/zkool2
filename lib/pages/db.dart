@@ -4,6 +4,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
@@ -15,14 +16,14 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-class DatabaseManagerPage extends StatefulWidget {
+class DatabaseManagerPage extends ConsumerStatefulWidget {
   const DatabaseManagerPage({super.key});
 
   @override
-  State<StatefulWidget> createState() => DatabaseManagerState();
+  ConsumerState<DatabaseManagerPage> createState() => DatabaseManagerState();
 }
 
-class DatabaseManagerState extends State<DatabaseManagerPage> {
+class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
   List<(String, bool)> dbNames = [];
 
   @override
@@ -78,7 +79,7 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
   bool get hasSelection => selection.isNotEmpty;
 
   void onSelect(String dbName) async {
-    await selectDatabase(dbName);
+    await selectDatabase(ref, dbName);
     await showMessage(context, "Database $dbName selected");
   }
 
@@ -253,10 +254,11 @@ class DatabaseManagerState extends State<DatabaseManagerPage> {
   }
 }
 
-Future<void> selectDatabase(String dbName) async {
+Future<void> selectDatabase(WidgetRef ref, String dbName) async {
   final prefs = SharedPreferencesAsync();
   await prefs.setString("database", dbName);
-  appStore.dbName = dbName;
+  final settings = ref.read(appSettingsProvider.notifier);
+  settings.setDbName(dbName);
 }
 
 Future<(String?, String?)?> showChangeDbPassword(BuildContext context, {required String databaseName}) async {
