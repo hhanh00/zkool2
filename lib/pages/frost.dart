@@ -204,7 +204,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         .where((e) => e.enabled)
         .toList();
     final synchronizer = ref.read(synchronizerProvider.notifier);
-    await synchronizer.startSynchronize(ref, accounts);
+    await synchronizer.startSynchronize(accounts);
 
     final status = doSign();
     status.listen((s) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +24,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
   @override
   void initState() {
     super.initState();
+    runLogListener();
     Future(tryOpenDatabase);
   }
 
@@ -84,9 +87,10 @@ class SplashPageState extends ConsumerState<SplashPage> {
       lwd: settings.lwd,
     );
     setUseTor(useTor: settings.useTor);
-    // final synchronizer = ref.read(synchronizerProvider.notifier);
-    // synchronizer.autoSync(ref);
-    // TODO runMempoolListener();
+    final synchronizer = ref.read(synchronizerProvider.notifier);
+    synchronizer.autoSync();
+    final mempool = ref.read(mempoolProvider.notifier);
+    unawaited(Future(mempool.runMempoolListener));
     setState(() => openDatabaseSuccess = true);
   }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, mem};
 
 use crate::{
     account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
@@ -51,7 +51,13 @@ pub struct Transaction {
 
 impl std::fmt::Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "txid {} {} @{}", hex::encode(&self.txid), self.account, self.height)
+        write!(
+            f,
+            "txid {} {} @{}",
+            hex::encode(&self.txid),
+            self.account,
+            self.height
+        )
     }
 }
 
@@ -78,7 +84,13 @@ pub struct UTXO {
 
 impl std::fmt::Display for UTXO {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.account, self.pool, hex::encode(&self.nullifier))
+        write!(
+            f,
+            "{} {} {}",
+            self.account,
+            self.pool,
+            hex::encode(&self.nullifier)
+        )
     }
 }
 
@@ -118,10 +130,14 @@ impl std::fmt::Display for WarpSyncMessage {
             ),
             WarpSyncMessage::Transaction(transaction) => write!(f, "Tx: {transaction}"),
             WarpSyncMessage::Note(note) => write!(f, "Note: {note}"),
-            WarpSyncMessage::Witness(account, height, cmx, witness) =>
-                write!(f, "Witness for {account} @{height}: {} {witness}", hex::encode(cmx)),
-            WarpSyncMessage::Checkpoint(_, pool, height) =>
-                write!(f, "Checkpoint for {pool} @{height}"),
+            WarpSyncMessage::Witness(account, height, cmx, witness) => write!(
+                f,
+                "Witness for {account} @{height}: {} {witness}",
+                hex::encode(cmx)
+            ),
+            WarpSyncMessage::Checkpoint(_, pool, height) => {
+                write!(f, "Checkpoint for {pool} @{height}")
+            }
             WarpSyncMessage::Commit => write!(f, "Commit"),
             WarpSyncMessage::Spend(utxo) => write!(f, "Spend {utxo}"),
             WarpSyncMessage::Rewind(_, height) => write!(f, "Rewind to @{height}"),
@@ -170,8 +186,15 @@ pub struct Note {
 
 impl std::fmt::Display for Note {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {} {} {}", self.account, self.height, self.position, self.pool,
-        hex::encode(&self.nf))
+        write!(
+            f,
+            "{} {} {} {} {}",
+            self.account,
+            self.height,
+            self.position,
+            self.pool,
+            hex::encode(&self.nf)
+        )
     }
 }
 
@@ -272,27 +295,30 @@ pub async fn shielded_sync(
 
         let mut writer_connection = pool.acquire().await?;
         let network = *network;
+        let mut messages = vec![];
         let db_writer_task = tokio::spawn(async move {
             info!("[db handler] starting");
-            let mut db_tx = writer_connection.begin().await?;
             while let Some(msg) = rx_messages.recv().await {
                 //info!("Received message: {:?}", msg);
                 if let WarpSyncMessage::Commit = msg {
-                    db_tx.commit().await.unwrap();
-                    info!("Committing transaction");
-                    db_tx = writer_connection.begin().await.unwrap();
-                    check_witness_consistency(&mut db_tx).await?;
-                } else {
-                    match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
-                        Ok(_) => {}
-                        Err(e) => {
-                            info!("ERROR HANDLING MESSAGE: {:?}", e);
-                            return Err(e);
+                    let mut db_tx = writer_connection.begin().await.unwrap();
+                    let mut new_messages = vec![];
+                    mem::swap(&mut new_messages, &mut messages);
+                    for msg in new_messages {
+                        match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                info!("ERROR HANDLING MESSAGE: {:?}", e);
+                                return Err(e);
+                            }
                         }
                     }
+                    db_tx.commit().await.unwrap();
+                    info!("Committing transaction");
+                } else {
+                    messages.push(msg);
                 }
             }
-            db_tx.commit().await?;
             info!("[db handler] stopped");
             check_witness_consistency(&mut writer_connection).await?;
 

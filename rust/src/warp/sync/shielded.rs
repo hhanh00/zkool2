@@ -113,7 +113,8 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             .bind(pool)
             .bind(account)
             .bind(height - 1)
-            .map(|row| {
+            .fetch(&mut *connection);
+            while let Some(row) = nfs.try_next().await? {
                 let id_note = row.get::<u32, _>(0);
                 let account = row.get::<u32, _>(1);
                 let position = row.get::<u32, _>(2);
@@ -122,7 +123,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 let cmx = row.get::<Vec<u8>, _>(5);
                 let witness = row.get::<Vec<u8>, _>(6);
                 let (witness, _) = bincode::decode_from_slice(&witness, legacy()).unwrap();
-                UTXO {
+                let utxo = UTXO {
                     id: id_note,
                     pool,
                     account,
@@ -132,10 +133,8 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                     cmx,
                     witness,
                     ..UTXO::default()
-                }
-            })
-            .fetch(&mut *connection);
-            while let Some(utxo) = nfs.try_next().await? {
+                };
+
                 let mut key = account.to_be_bytes().to_vec();
                 key.extend_from_slice(&utxo.nullifier);
                 utxos.insert(key, utxo);
@@ -175,7 +174,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         });
 
         // new notes
-        let mut notes = outputs
+        let mut notes: Vec<(<P as ShieldedProtocol>::Note, Note, &<P as ShieldedProtocol>::NK)> = outputs
             .flat_map_iter(|(height, ivtx, vout, o)| {
                 self.keys.iter().flat_map(move |(account, scope, ivk, nk)| {
                     P::try_decrypt(
@@ -370,8 +369,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                     if root != anchor {
                         tracing::error!("Anchor mismatch for UTXO {utxo:?}");
                     }
-                }
-                else {
+                } else {
                     root = Some(anchor);
                 }
             }

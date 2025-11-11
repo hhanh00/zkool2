@@ -251,7 +251,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
         }
       }
       final synchronizer = ref.read(synchronizerProvider.notifier);
-      await synchronizer.startSynchronize(ref, accountToSync);
+      await synchronizer.startSynchronize(accountToSync);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
