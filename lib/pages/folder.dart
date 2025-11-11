@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-class FolderPage extends StatefulWidget {
+class FolderPage extends ConsumerStatefulWidget {
   const FolderPage({super.key});
 
   @override
-  State<StatefulWidget> createState() => FolderPageState();
+  ConsumerState<FolderPage> createState() => FolderPageState();
 }
 
-class FolderPageState extends State<FolderPage> {
+class FolderPageState extends ConsumerState<FolderPage> {
   List<(Folder, bool)> folders = [];
   int? selectedIndex;
 
@@ -27,15 +28,16 @@ class FolderPageState extends State<FolderPage> {
   }
 
   Future<void> refresh() async {
-    await appStore.loadFolders();
-    if (appStore.selectedFolder != null) {
-      selectedIndex = appStore.folders.indexWhere((f) => f.id == appStore.selectedFolder!.id);
+    final foldrs = await ref.read(getFoldersProvider.future);
+    final selectedFolder = ref.read(selectedFolderProvider);
+    if (selectedFolder != null) {
+      selectedIndex = foldrs.indexWhere((f) => f.id == selectedFolder.id);
       if (selectedIndex == -1) {
         selectedIndex = null;
-        appStore.selectedFolder = null;
+        (ref.read(selectedFolderProvider.notifier)).unselect();
       }
     }
-    folders = appStore.folders.map((f) => (f, false)).toList();
+    folders = foldrs.map((f) => (f, false)).toList();
     if (mounted) setState(() {});
   }
 
@@ -65,12 +67,13 @@ class FolderPageState extends State<FolderPage> {
   }
 
   void onSelect(int index) async {
+    final selectedFolder = ref.read(selectedFolderProvider.notifier);
     if (selectedIndex == index) {
       selectedIndex = null;
-      appStore.selectedFolder = null;
+      selectedFolder.unselect();
     } else {
       selectedIndex = index;
-      appStore.selectedFolder = folders[index].$1;
+      selectedFolder.selectFolder(folders[index].$1);
     }
     setState(() {});
   }
@@ -96,7 +99,7 @@ class FolderPageState extends State<FolderPage> {
     if (confirmed) {
       await deleteFolders(ids: selection.map((f) => f.id).toList());
       await refresh();
-      await appStore.loadAccounts();
+      ref.invalidate(getAccountsProvider);
     }
   }
 

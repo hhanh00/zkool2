@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
@@ -53,21 +55,22 @@ Widget buildDKGPage(
   );
 }
 
-class DKGPage1 extends StatefulWidget {
+class DKGPage1 extends ConsumerStatefulWidget {
   const DKGPage1({super.key});
 
   @override
-  State<StatefulWidget> createState() => DKGPage1State();
+  ConsumerState<DKGPage1> createState() => DKGPage1State();
 }
 
-class DKGPage1State extends State<DKGPage1> {
+class DKGPage1State extends ConsumerState<DKGPage1> {
   final formKey = GlobalKey<FormBuilderState>();
-  late final accounts = appStore.accounts.where((e) => !e.hidden);
+  List<Account> accounts = [];
 
   @override
   void initState() {
     super.initState();
     Future(() async {
+      accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden).toList();
       final dkgInProgress = await hasDkgParams();
       if (dkgInProgress && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -316,14 +319,14 @@ class DKGPage2State extends State<DKGPage2> {
   }
 }
 
-class DKGPage3 extends StatefulWidget {
+class DKGPage3 extends ConsumerStatefulWidget {
   const DKGPage3({super.key});
 
   @override
-  State<StatefulWidget> createState() => DKGPage3State();
+  ConsumerState<DKGPage3> createState() => DKGPage3State();
 }
 
-class DKGPage3State extends State<DKGPage3> {
+class DKGPage3State extends ConsumerState<DKGPage3> {
   String message = "";
   int index = 0;
   Timer? runTimer;
@@ -349,10 +352,12 @@ class DKGPage3State extends State<DKGPage3> {
     final h = await getCurrentHeight();
     if (currentHeight != null && currentHeight == h) return;
     currentHeight = h;
-    final accounts = appStore.accounts.where((e) => e.enabled).map((e) => e.id).toList();
-    await appStore.startSynchronize(
+    final as = await ref.read(getAccountsProvider.future);
+    final accounts = as.where((e) => e.enabled).toList();
+    final synchronizer = ref.read(synchronizerProvider.notifier);
+    await synchronizer.startSynchronize(
+      ref,
       accounts,
-      int.parse(appStore.actionsPerSync),
     );
 
     final status = doDkg();
@@ -384,7 +389,7 @@ class DKGPage3State extends State<DKGPage3> {
         }
         if (s is DKGStatus_SharedAddress) {
           final sharedUA = s.field0;
-          Future(appStore.refresh);
+          ref.invalidate(getAccountsProvider);
           setState(() {
             message = "The shared address is: $sharedUA";
             index = 3;

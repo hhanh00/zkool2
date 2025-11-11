@@ -12,7 +12,6 @@ use zcash_keys::encoding::AddressCodec as _;
 
 use crate::budget::merge_pending_txs;
 use crate::coin::Network;
-use crate::memo::fetch_tx_details;
 use zcash_primitives::legacy::TransparentAddress;
 
 use crate::db::{calculate_balance, store_block_header};
@@ -183,7 +182,7 @@ pub async fn synchronize(
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
-                fetch_tx_details(&network, &mut *connection, &mut client, *account).await?;
+                crate::memo::fetch_tx_details(&network, &mut *connection, &mut client, *account).await?;
             }
 
             info!(
@@ -392,7 +391,7 @@ pub async fn get_db_height() -> Result<SyncHeight> {
 }
 
 #[frb]
-pub async fn get_tx_details() -> Result<()> {
+pub async fn fetch_tx_details() -> Result<()> {
     let c = get_coin!();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;

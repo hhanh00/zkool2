@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -8,23 +9,23 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 
-class InputAmount extends StatefulWidget {
+class InputAmount extends ConsumerStatefulWidget {
   final String name;
   final String? amount;
   final void Function()? onMax;
   const InputAmount({required this.name, this.amount, this.onMax, super.key});
 
   @override
-  State<StatefulWidget> createState() => InputAmountState();
+  ConsumerState<InputAmount> createState() => InputAmountState();
 }
 
-class InputAmountState extends State<InputAmount> {
+class InputAmountState extends ConsumerState<InputAmount> {
   final formFieldKey = GlobalKey<FormBuilderFieldState>();
   final formKey = GlobalKey<FormBuilderState>();
-  double? price = appStore.price;
 
   @override
   Widget build(BuildContext context) {
+    final price = ref.watch(priceProvider);
     return FormBuilderField<String>(
       key: formFieldKey,
       name: widget.name,
@@ -93,8 +94,9 @@ class InputAmountState extends State<InputAmount> {
   void onUpdateFx() async {
     final p = await getCoingeckoPrice();
     setState(() {
-      price = p;
-      formKey.currentState!.fields["fx"]!.didChange(displayPrice(price));
+      final price = ref.read(priceProvider.notifier);
+      price.setPrice(p);
+      formKey.currentState!.fields["fx"]!.didChange(displayPrice(p));
     });
   }
 
@@ -107,8 +109,9 @@ class InputAmountState extends State<InputAmount> {
     if (v == null) return;
     final p = stringToDecimal(v, scale: 3);
     setState(() {
-      price = p.toDecimal().toDouble();
-      appStore.price = price;
+      double pp = p.toDecimal().toDouble();
+      final price = ref.read(priceProvider.notifier);
+      price.setPrice(pp);
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       disableChangeHandlers = true;
@@ -125,6 +128,7 @@ class InputAmountState extends State<InputAmount> {
 
   void onChanged(String? v, {bool interactive = false}) {
     if (disableChangeHandlers || v == null) return;
+    final price = ref.read(priceProvider);
     formFieldKey.currentState!.setValue(v);
     final form = formKey.currentState!;
     if (!interactive) form.fields["zat"]!.didChange(v);
@@ -134,7 +138,7 @@ class InputAmountState extends State<InputAmount> {
         onReset(zat: false);
         formFieldKey.currentState!.reset();
       } else if (price != null) {
-        final usd = stringToZat(v).toDouble() * price! / 1e8;
+        final usd = stringToZat(v).toDouble() * price / 1e8;
         form.fields["fiat"]!.didChange(displayPrice(usd));
       }
       disableChangeHandlers = false;
@@ -143,6 +147,7 @@ class InputAmountState extends State<InputAmount> {
 
   void onFiatChanged(String? v, {bool interactive = false}) {
     if (disableChangeHandlers || v == null) return;
+    final price = ref.read(priceProvider);
     final form = formKey.currentState!;
     if (!interactive) form.fields["fiat"]!.didChange(v);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -151,7 +156,7 @@ class InputAmountState extends State<InputAmount> {
         onReset(fiat: false);
         formFieldKey.currentState!.reset();
       } else if (price != null) {
-        final zat = double.parse(v) / price! * 1e8;
+        final zat = double.parse(v) / price * 1e8;
         final z = zatToString(BigInt.from(zat));
         form.fields["zat"]!.didChange(z);
         formFieldKey.currentState!.setValue(z);

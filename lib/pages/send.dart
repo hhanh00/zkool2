@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
@@ -32,18 +33,19 @@ final sendID2 = GlobalKey();
 final dustChangePolicyID = GlobalKey();
 final categoryID = GlobalKey();
 
-class SendPage extends StatefulWidget {
+class SendPage extends ConsumerStatefulWidget {
   const SendPage({super.key});
 
   @override
-  State<SendPage> createState() => SendPageState();
+  ConsumerState<SendPage> createState() => SendPageState();
 }
 
-class SendPageState extends State<SendPage> {
+class SendPageState extends ConsumerState<SendPage> {
   final formKey = GlobalKey<FormBuilderState>();
   final amountKey = GlobalKey<InputAmountState>();
   List<Recipient> recipients = [];
   bool supportsMemo = false;
+  AccountData? account;
   PoolBalance? pbalance;
   Addresses? addresses;
   int? editingIndex;
@@ -56,18 +58,23 @@ class SendPageState extends State<SendPage> {
   void initState() {
     super.initState();
     Future(() async {
-      final b = await balance();
-      final a = await getAddresses(uaPools: appStore.pools);
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+      final data = (await ref.read(accountProvider(selectedAccount.id).future));
+      final bal = await balance();
+      final addrs = await getAddresses(uaPools: data.pool);
 
       setState(() {
-        pbalance = b;
-        addresses = a;
+        account = data;
+        pbalance = bal;
+        addresses = addrs;
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (account == null) return LinearProgressIndicator();
+
     Future(tutorial);
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
@@ -138,7 +145,7 @@ class SendPageState extends State<SendPage> {
                     ],
                   ],
                 ),
-                if (appStore.notes.any((n) => n.locked))
+                if (account!.notes.any((n) => n.locked))
                   Container(
                     color: cs.secondaryContainer,
                     child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer)),
@@ -382,21 +389,23 @@ final sourceID = GlobalKey();
 final feeSourceID = GlobalKey();
 final sendID3 = GlobalKey();
 
-class Send2Page extends StatefulWidget {
+class Send2Page extends ConsumerStatefulWidget {
   final List<Recipient> recipients;
   const Send2Page(this.recipients, {super.key});
 
   @override
-  State<Send2Page> createState() => Send2PageState();
+  ConsumerState<Send2Page> createState() => Send2PageState();
 }
 
-class Send2PageState extends State<Send2Page> {
+class Send2PageState extends ConsumerState<Send2Page> {
   String? txId;
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
   var recipientPaysFee = false;
   var discardDustChange = true;
   int? category;
   var puri = "";
+  AccountData? account;
+  List<Category>? categories;
   final formKey = GlobalKey<FormBuilderState>();
 
   void tutorial() async {
@@ -408,17 +417,25 @@ class Send2PageState extends State<Send2Page> {
     super.initState();
     Future(() async {
       final uri = await buildPuri(recipients: widget.recipients);
-      setState(() => puri = uri);
+      final categoryList = await ref.read(getCategoriesProvider.future);
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+      final data = (await ref.read(accountProvider(selectedAccount.id).future));
+      setState(() {
+        account = data;
+        puri = uri;
+        categories = categoryList;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (account == null) return LinearProgressIndicator();
     Future(tutorial);
     logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
-    final categories = [
+    final categoryItems = [
       DropdownMenuItem(value: null, child: Text("Unknown")),
-      ...appStore.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+      ...categories!.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
     ];
 
     return Scaffold(
@@ -448,9 +465,9 @@ class Send2PageState extends State<Send2Page> {
                       alignment: Alignment.centerRight,
                       child: FormBuilderField<int>(
                         name: "source pools",
-                        initialValue: hasTex ? 1 : appStore.pools,
+                        initialValue: hasTex ? 1 : account!.pool,
                         builder: (field) =>
-                            PoolSelect(enabled: appStore.pools, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
+                            PoolSelect(enabled: account!.pool, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
                       ),
                     ),
                   ),
@@ -482,7 +499,7 @@ class Send2PageState extends State<Send2Page> {
                   child: FormBuilderDropdown(
                     name: "category",
                     decoration: InputDecoration(label: Text("Category")),
-                    items: categories,
+                    items: categoryItems,
                     initialValue: null,
                     onChanged: (v) => setState(() => category = v),
                   ),
