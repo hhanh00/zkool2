@@ -8,12 +8,12 @@ import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
-import 'package:mobx/mobx.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -336,7 +336,7 @@ Future<bool> authenticate({String? reason}) async {
   try {
     final didAuthenticate =
         await auth.authenticate(localizedReason: reason ?? "Authenticate to continue", options: const AuthenticationOptions(useErrorDialogs: false));
-    if (didAuthenticate) runInAction(() => appStore.unlocked = DateTime.now());
+    // if (didAuthenticate) runInAction(() => appStore.unlocked = DateTime.now());
     return didAuthenticate;
   } on PlatformException catch (e) {
     switch (e.code) {
@@ -385,21 +385,19 @@ class CopyableText extends StatelessWidget {
   }
 }
 
-void lockApp() {
-  runInAction(() {
-    appStore.needPin = true;
-    appStore.unlocked = null;
-  });
+void lockApp(WidgetRef ref) {
+  final settings = ref.read(appSettingsProvider.notifier);
+  settings.setNeedPin(true);
 }
 
 Future<bool> onUnlock() async {
   final authenticated = await authenticate(reason: "Unlock the App");
   if (authenticated) {
-    await runInAction(() async {
-      final prefs = SharedPreferencesAsync();
-      appStore.needPin = await prefs.getBool("pin_lock") ?? appStore.needPin;
-      appStore.unlocked = DateTime.now();
-    });
+    // await runInAction(() async {
+    //   final prefs = SharedPreferencesAsync();
+    //   appStore.needPin = await prefs.getBool("pin_lock") ?? appStore.needPin;
+    //   appStore.unlocked = DateTime.now();
+    // });
   }
   return authenticated;
 }

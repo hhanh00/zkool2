@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/pay.dart';
@@ -17,12 +19,12 @@ import 'package:zkool/utils.dart';
 final coordinatorID = GlobalKey();
 final fundingID2 = GlobalKey();
 
-class FrostPage1 extends StatefulWidget {
+class FrostPage1 extends ConsumerStatefulWidget {
   final PcztPackage pczt;
   const FrostPage1(this.pczt, {super.key});
 
   @override
-  State<FrostPage1> createState() => FrostPage1State();
+  ConsumerState<FrostPage1> createState() => FrostPage1State();
 }
 
 Widget buildFrostPage(BuildContext context,
@@ -48,15 +50,20 @@ Widget buildFrostPage(BuildContext context,
       ],),);
 }
 
-class FrostPage1State extends State<FrostPage1> {
+class FrostPage1State extends ConsumerState<FrostPage1> {
   final formKey = GlobalKey<FormBuilderState>();
-  final frostParams = appStore.frostParams!;
-  late final accounts = appStore.accounts.where((e) => !e.hidden);
+  List<Account> accounts = [];
+  FrostParams? frostParams;
 
   @override
   void initState() {
     super.initState();
     Future(() async {
+      final as = await ref.read(getAccountsProvider.future);
+      accounts = as.where((e) => !e.hidden).toList();
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+      final account = await ref.read(accountProvider(selectedAccount.id).future);
+      frostParams = account.frostParams;
       final signing = await isSigningInProgress();
       if (signing) {
         if (context.mounted) {
@@ -65,6 +72,7 @@ class FrostPage1State extends State<FrostPage1> {
           });
         }
       }
+      setState(() {});
     });
   }
 
@@ -76,6 +84,8 @@ class FrostPage1State extends State<FrostPage1> {
   Widget build(BuildContext context) {
     Future(tutorial);
 
+    if (frostParams == null) return LinearProgressIndicator();
+
     return Scaffold(
         appBar: AppBar(title: const Text("Frost Multi Party Signature")),
         body: FormBuilder(
@@ -83,7 +93,7 @@ class FrostPage1State extends State<FrostPage1> {
             child: Column(children: [
               ListTile(
                   title: Text("Your Participant ID"),
-                  subtitle: Text(frostParams.id.toString()),
+                  subtitle: Text(frostParams!.id.toString()),
                 ),
               Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
@@ -146,14 +156,14 @@ class FrostPage1State extends State<FrostPage1> {
   }
 }
 
-class FrostPage2 extends StatefulWidget {
+class FrostPage2 extends ConsumerStatefulWidget {
   const FrostPage2({super.key});
 
   @override
-  State<FrostPage2> createState() => FrostPage2State();
+  ConsumerState<FrostPage2> createState() => FrostPage2State();
 }
 
-class FrostPage2State extends State<FrostPage2> {
+class FrostPage2State extends ConsumerState<FrostPage2> {
   String message = "";
   Timer? timer;
   int currentIndex = 0;
@@ -189,12 +199,12 @@ class FrostPage2State extends State<FrostPage2> {
     final h = await getCurrentHeight();
     if (currentHeight != null && currentHeight == h) return;
     currentHeight = h;
-    final accounts = appStore.accounts
+    final as = await ref.read(getAccountsProvider.future);
+    final accounts = as
         .where((e) => e.enabled)
-        .map((e) => e.id)
         .toList();
-    await appStore.startSynchronize(
-        accounts, int.parse(appStore.actionsPerSync),);
+    final synchronizer = ref.read(synchronizerProvider.notifier);
+    await synchronizer.startSynchronize(ref, accounts);
 
     final status = doSign();
     status.listen((s) {

@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2091057013;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 860847298;
 
 // Section: executor
 
@@ -1049,6 +1049,41 @@ fn wire__crate__api__account__fetch_transparent_address_tx_count_impl(
         },
     )
 }
+fn wire__crate__api__sync__fetch_tx_details_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "fetch_tx_details",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::sync::fetch_tx_details().await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__transaction__fill_missing_tx_prices_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1780,41 +1815,6 @@ fn wire__crate__api__account__get_tx_details_impl(
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok = crate::api::account::get_tx_details(api_id_tx).await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
-fn wire__crate__api__sync__get_tx_details_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "get_tx_details",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let output_ok = crate::api::sync::get_tx_details().await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5331,55 +5331,55 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__transaction__fill_missing_tx_prices_impl(
+        26 => wire__crate__api__sync__fetch_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__transaction__fill_missing_tx_prices_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__frost__frost_sign_params_default_impl(
+        28 => wire__crate__api__frost__frost_sign_params_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__account__generate_next_change_address_impl(
+        29 => wire__crate__api__account__generate_next_change_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => {
+        30 => {
             wire__crate__api__account__generate_next_dindex_impl(port, ptr, rust_vec_len, data_len)
         }
-        31 => wire__crate__api__account__get_account_fingerprint_impl(
+        32 => wire__crate__api__account__get_account_fingerprint_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__account__get_account_frost_params_impl(
+        33 => wire__crate__api__account__get_account_frost_params_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__account__get_account_pools_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__account__get_account_seed_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
-        37 => {
+        34 => wire__crate__api__account__get_account_pools_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__account__get_account_seed_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
+        38 => {
             wire__crate__api__network__get_coingecko_price_impl(port, ptr, rust_vec_len, data_len)
         }
-        38 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__sync__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
         48 => wire__crate__api__frost__has_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
         49 => wire__crate__api__frost__has_dkg_params_impl(port, ptr, rust_vec_len, data_len),
         50 => wire__crate__api__account__has_transparent_pub_key_impl(
@@ -5462,8 +5462,8 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         2 => wire__crate__api__mempool__Mempool_new_impl(ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
         57 => wire__crate__api__key__is_tex_address_impl(ptr, rust_vec_len, data_len),
         58 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
         59 => wire__crate__api__key__is_valid_fvk_impl(ptr, rust_vec_len, data_len),
