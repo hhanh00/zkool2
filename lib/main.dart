@@ -20,6 +20,8 @@ late final LifecycleWatcher appWatcher;
 
 const String appName = "zkool";
 
+final appKey = GlobalKey();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -52,9 +54,9 @@ Future<void> main() async {
                   if (!snapshot.hasData) return SizedBox.shrink();
                   //   appWatcher.init();
                   final settings = snapshot.data!;
-                  logger.i(settings);
                   final r = router(settings.recovery);
                   return MaterialApp.router(
+                    key: appKey,
                     routerConfig: r,
                     themeMode: ThemeMode.system,
                     theme: ThemeData.light(),

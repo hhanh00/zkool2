@@ -356,7 +356,6 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
     final accounts = as.where((e) => e.enabled).toList();
     final synchronizer = ref.read(synchronizerProvider.notifier);
     await synchronizer.startSynchronize(
-      ref,
       accounts,
     );
 

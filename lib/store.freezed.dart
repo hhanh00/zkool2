@@ -1936,6 +1936,7 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
 
 /// @nodoc
 mixin _$MempoolState {
+  bool get running;
   Map<int, int> get unconfirmedFunds;
   List<(String, String, int)> get unconfirmedTx;
 
@@ -1952,6 +1953,7 @@ mixin _$MempoolState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is MempoolState &&
+            (identical(other.running, running) || other.running == running) &&
             const DeepCollectionEquality()
                 .equals(other.unconfirmedFunds, unconfirmedFunds) &&
             const DeepCollectionEquality()
@@ -1961,12 +1963,13 @@ mixin _$MempoolState {
   @override
   int get hashCode => Object.hash(
       runtimeType,
+      running,
       const DeepCollectionEquality().hash(unconfirmedFunds),
       const DeepCollectionEquality().hash(unconfirmedTx));
 
   @override
   String toString() {
-    return 'MempoolState(unconfirmedFunds: $unconfirmedFunds, unconfirmedTx: $unconfirmedTx)';
+    return 'MempoolState(running: $running, unconfirmedFunds: $unconfirmedFunds, unconfirmedTx: $unconfirmedTx)';
   }
 }
 
@@ -1977,7 +1980,8 @@ abstract mixin class $MempoolStateCopyWith<$Res> {
       _$MempoolStateCopyWithImpl;
   @useResult
   $Res call(
-      {Map<int, int> unconfirmedFunds,
+      {bool running,
+      Map<int, int> unconfirmedFunds,
       List<(String, String, int)> unconfirmedTx});
 }
 
@@ -1993,10 +1997,15 @@ class _$MempoolStateCopyWithImpl<$Res> implements $MempoolStateCopyWith<$Res> {
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? running = null,
     Object? unconfirmedFunds = null,
     Object? unconfirmedTx = null,
   }) {
     return _then(_self.copyWith(
+      running: null == running
+          ? _self.running
+          : running // ignore: cast_nullable_to_non_nullable
+              as bool,
       unconfirmedFunds: null == unconfirmedFunds
           ? _self.unconfirmedFunds
           : unconfirmedFunds // ignore: cast_nullable_to_non_nullable
@@ -2100,7 +2109,7 @@ extension MempoolStatePatterns on MempoolState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(Map<int, int> unconfirmedFunds,
+    TResult Function(bool running, Map<int, int> unconfirmedFunds,
             List<(String, String, int)> unconfirmedTx)?
         $default, {
     required TResult orElse(),
@@ -2108,7 +2117,8 @@ extension MempoolStatePatterns on MempoolState {
     final _that = this;
     switch (_that) {
       case _MempoolState() when $default != null:
-        return $default(_that.unconfirmedFunds, _that.unconfirmedTx);
+        return $default(
+            _that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
       case _:
         return orElse();
     }
@@ -2129,14 +2139,15 @@ extension MempoolStatePatterns on MempoolState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(Map<int, int> unconfirmedFunds,
+    TResult Function(bool running, Map<int, int> unconfirmedFunds,
             List<(String, String, int)> unconfirmedTx)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _MempoolState():
-        return $default(_that.unconfirmedFunds, _that.unconfirmedTx);
+        return $default(
+            _that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
     }
   }
 
@@ -2154,14 +2165,15 @@ extension MempoolStatePatterns on MempoolState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(Map<int, int> unconfirmedFunds,
+    TResult? Function(bool running, Map<int, int> unconfirmedFunds,
             List<(String, String, int)> unconfirmedTx)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _MempoolState() when $default != null:
-        return $default(_that.unconfirmedFunds, _that.unconfirmedTx);
+        return $default(
+            _that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
       case _:
         return null;
     }
@@ -2171,8 +2183,13 @@ extension MempoolStatePatterns on MempoolState {
 /// @nodoc
 
 class _MempoolState implements MempoolState {
-  _MempoolState({required this.unconfirmedFunds, required this.unconfirmedTx});
+  _MempoolState(
+      {required this.running,
+      required this.unconfirmedFunds,
+      required this.unconfirmedTx});
 
+  @override
+  final bool running;
   @override
   final Map<int, int> unconfirmedFunds;
   @override
@@ -2191,6 +2208,7 @@ class _MempoolState implements MempoolState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _MempoolState &&
+            (identical(other.running, running) || other.running == running) &&
             const DeepCollectionEquality()
                 .equals(other.unconfirmedFunds, unconfirmedFunds) &&
             const DeepCollectionEquality()
@@ -2200,12 +2218,13 @@ class _MempoolState implements MempoolState {
   @override
   int get hashCode => Object.hash(
       runtimeType,
+      running,
       const DeepCollectionEquality().hash(unconfirmedFunds),
       const DeepCollectionEquality().hash(unconfirmedTx));
 
   @override
   String toString() {
-    return 'MempoolState(unconfirmedFunds: $unconfirmedFunds, unconfirmedTx: $unconfirmedTx)';
+    return 'MempoolState(running: $running, unconfirmedFunds: $unconfirmedFunds, unconfirmedTx: $unconfirmedTx)';
   }
 }
 
@@ -2218,7 +2237,8 @@ abstract mixin class _$MempoolStateCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {Map<int, int> unconfirmedFunds,
+      {bool running,
+      Map<int, int> unconfirmedFunds,
       List<(String, String, int)> unconfirmedTx});
 }
 
@@ -2235,10 +2255,15 @@ class __$MempoolStateCopyWithImpl<$Res>
   @override
   @pragma('vm:prefer-inline')
   $Res call({
+    Object? running = null,
     Object? unconfirmedFunds = null,
     Object? unconfirmedTx = null,
   }) {
     return _then(_MempoolState(
+      running: null == running
+          ? _self.running
+          : running // ignore: cast_nullable_to_non_nullable
+              as bool,
       unconfirmedFunds: null == unconfirmedFunds
           ? _self.unconfirmedFunds
           : unconfirmedFunds // ignore: cast_nullable_to_non_nullable

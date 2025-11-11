@@ -180,7 +180,7 @@ class HeroProgressWidget extends StatelessWidget {
 
 // AppStore get appStore => AppStoreBase.instance;
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SelectedAccount extends _$SelectedAccount {
   @override
   Future<Account?> build() async {
@@ -267,7 +267,7 @@ sealed class AccountData with _$AccountData {
   }) = _AccountData;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   @override
   Future<AppSettings> build() async {
@@ -358,7 +358,7 @@ sealed class AppSettings with _$AppSettings {
   // FrostParams? frostParams;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class LogNotifier extends _$LogNotifier {
   @override
   List<String> build() {
@@ -387,46 +387,88 @@ Mempool mempool = Mempool();
 @Freezed(makeCollectionsUnmodifiable: false)
 sealed class MempoolState with _$MempoolState {
   factory MempoolState({
+    required bool running,
     required Map<int, int> unconfirmedFunds,
     required List<(String, String, int)> unconfirmedTx,
   }) = _MempoolState;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class MempoolNotifier extends _$MempoolNotifier {
   @override
   MempoolState build() {
-    return MempoolState(unconfirmedFunds: {}, unconfirmedTx: []);
+    return MempoolState(running: false, unconfirmedFunds: {}, unconfirmedTx: []);
   }
+
+  void runMempoolListener() async {
+    final settings = await ref.watch(appSettingsProvider.future);
+    if (settings.offline) return;
+
+    while (true) {
+      try {
+        if (settings.offline) return;
+        state = MempoolState(running: true, unconfirmedFunds: {}, unconfirmedTx: []);
+
+        final height = await getCurrentHeight();
+        final c = Completer();
+        mempool.run(height: height).listen(
+              (msg) {
+                if (msg is MempoolMsg_TxId) {
+                  final txId = msg.field0; // txid hash
+                  final amounts = msg.field1; // list of (account id, name, value unconfirmed)
+                  final size = msg.field2; // size in bytes of the tx
+                  addTx(txId, amounts, size);
+                }
+              },
+              onDone: c.complete,
+              onError: (e) {
+                c.complete();
+              },
+            );
+        await c.future; // wait for the stream to complete
+        await Future.delayed(Duration(seconds: 5));
+      } catch (_) {}
+    }
+  }
+
+  void addTx(String txId, List<(int, String, int)> unconfirmedValues, int size) {
+    final unconfirmed = unconfirmedValues.map((a) => "${a.$2} ${zatToString(BigInt.from(a.$3))}").join(", ");
+    final unconfirmedTx = state.unconfirmedTx;
+    unconfirmedTx.add((txId, unconfirmed, size));
+
+    final unconfirmedFunds = state.unconfirmedFunds;
+    for (var (account, _, amount) in unconfirmedValues) {
+      unconfirmedFunds.update(
+        account,
+        (value) => value + amount,
+        ifAbsent: () => amount,
+      );
+    }
+    state = state.copyWith(unconfirmedTx: unconfirmedTx, unconfirmedFunds: unconfirmedFunds);
+  }
+}
+
+void runLogListener() async {
+  final stream = setLogStream();
+  final scope = ProviderScope.containerOf(appKey.currentContext!);
+  final log = scope.read(logProvider.notifier);
+  stream.listen((m) {
+    log.append(m.message);
+    if (m.span == "transaction") {
+      toastification.show(
+        description: Text(m.message),
+        margin: EdgeInsets.all(8),
+        borderRadius: BorderRadius.circular(8),
+        animationDuration: Durations.long1,
+        autoCloseDuration: Duration(seconds: 3),
+      );
+    }
+  });
 }
 
 // Need a mempool provider to inform accounts
 // that their balance may have changed due to
 // new txs in the mempool
-
-//   Future<void> init() async {
-//     final prefs = SharedPreferencesAsync();
-//     dbName = await prefs.getString("database") ?? appName;
-//     disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? disclaimerAccepted;
-//     final packageInfo = await PackageInfo.fromPlatform();
-//     final version = packageInfo.version;
-//     final buildNumber = packageInfo.buildNumber;
-//     versionString = "$version+$buildNumber";
-
-//     final stream = setLogStream();
-//     stream.listen((m) {
-//       log.add(m.message);
-//       if (m.span == "transaction") {
-//         toastification.show(
-//           description: Text(m.message),
-//           margin: EdgeInsets.all(8),
-//           borderRadius: BorderRadius.circular(8),
-//           animationDuration: Durations.long1,
-//           autoCloseDuration: Duration(seconds: 3),
-//         );
-//       }
-//     });
-//   }
 
 //   // Only settings from SharedPreferences
 //   // This is called before getting the database
@@ -438,68 +480,6 @@ class MempoolNotifier extends _$MempoolNotifier {
 //     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
 //     blockExplorer = await getProp(key: "block_explorer") ?? blockExplorer;
 //   }
-
-//   Future<List<Account>> loadAccounts() async {
-//     final as = await listAccounts();
-//     accounts = as;
-//     for (var a in as) {
-//       final h = heights.putIfAbsent(a.id, () => ObservableHeight());
-//       h.set(a.height, a.time);
-//     }
-//     return as;
-//   }
-
-//   Future<void> loadOtherData() async {
-//     poolBalance = await balance();
-//     pools = await getAccountPools(account: selectedAccount!.id);
-//     frostParams = await getAccountFrostParams();
-//   }
-
-//   @action
-//   Future<void> loadTxHistory() async {
-//     transactions = await listTxHistory();
-//   }
-
-//   @action
-//   Future<void> loadMemos() async {
-//     memos = await listMemos();
-//   }
-
-//   @action
-//   Future<void> loadNotes() async {
-//     notes = await listNotes();
-//   }
-
-//   @action
-//   Future<void> refresh() async {
-//     await loadAccounts();
-//     await loadFolders();
-//     await loadCategories();
-//     if (selectedAccount != null) {
-//       await loadTxHistory();
-//       await loadMemos();
-//       await loadNotes();
-//       await loadOtherData();
-//     }
-//     incSeqno();
-//   }
-
-//   @action
-//   void incSeqno() {
-//     seqno += 1;
-//   }
-
-//   @action
-//   Future<void> loadFolders() async {
-//     folders = await listFolders();
-//   }
-
-//   @action
-//   Future<void> loadCategories() async {
-//     categories = await listCategories();
-//   }
-
-//   bool syncInProgress = false;
 
 @Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
@@ -547,7 +527,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     );
   }
 
-  Future<void> startSynchronize(WidgetRef ref, List<Account> accounts) async {
+  Future<void> startSynchronize(List<Account> accounts) async {
     if (syncInProgress) {
       return;
     }
@@ -580,7 +560,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           update(p.height, p.time);
         },
         onError: (e) {
-          retry(ref, accounts, e);
+          retry(accounts, e);
         },
         onDone: () {
           end();
@@ -596,12 +576,12 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         },
       );
     } on AnyhowException catch (e) {
-      retry(ref, accounts, e);
+      retry(accounts, e);
     }
     return completer.future;
   }
 
-  void retry(WidgetRef ref, List<Account> accounts, AnyhowException e) {
+  void retry(List<Account> accounts, AnyhowException e) {
     syncInProgress = false;
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
@@ -612,15 +592,14 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     retrySyncTimer?.cancel();
     retrySyncTimer = Timer(Duration(seconds: delay), () async {
       await startSynchronize(
-        ref,
         accounts,
       );
       retryCount = 0;
     });
   }
 
-  void autoSync(WidgetRef ref, {bool now = false}) async {
-    final settings = ref.read(appSettingsProvider).requireValue;
+  void autoSync({bool now = false}) async {
+    final settings = await ref.read(appSettingsProvider.future);
     final interval = int.tryParse(settings.syncInterval) ?? 0;
 
     if (settings.offline || interval <= 0) {
@@ -630,17 +609,17 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       final currentHeight = await getCurrentHeight();
       final h = ref.read(currentHeightProvider.notifier);
       if (h.setHeight(currentHeight)) {
-        await checkSyncNeeded(ref, currentHeight, now: now);
+        await checkSyncNeeded(currentHeight, now: now);
       }
     } on AnyhowException catch (e) {
       logger.i(e);
       // ignore
     } finally {
-      if (interval > 0) Timer(Duration(seconds: 15), () => autoSync(ref));
+      if (interval > 0) Timer(Duration(seconds: 15), () => autoSync());
     }
   }
 
-  Future<void> checkSyncNeeded(WidgetRef ref, int currentHeight, {required bool now}) async {
+  Future<void> checkSyncNeeded(int currentHeight, {required bool now}) async {
     final settings = ref.read(appSettingsProvider).requireValue;
     List<Account> accountsToSync = [];
     final accounts = await ref.read(getAccountsProvider.future);
@@ -655,85 +634,13 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     }
     if (accountsToSync.isNotEmpty) {
       await startSynchronize(
-        ref,
         accountsToSync,
       );
     }
   }
 }
 
-//   bool checkOffline() {
-//     if (offline) {
-//       showSnackbar("Zkool is in Offline mode");
-//       return true;
-//     }
-//     return false;
-//   }
-
-//   static AppStore instance = AppStore();
-// }
-
-// void runMempoolListener() async {
-//   final mp = appStore.mempool;
-//   while (true) {
-//     if (appStore.offline) return;
-//     try {
-//       runInAction(() => appStore.mempoolRunning = true);
-//       appStore.mempoolAccounts.clear();
-//       appStore.mempoolTxIds.clear();
-
-//       final height = await getCurrentHeight();
-//       final c = Completer();
-//       mp.run(height: height).listen(
-//             (msg) {
-//               if (msg is MempoolMsg_TxId) {
-//                 final txId = msg.field0;
-//                 final amounts = msg.field1.map((a) => "${a.$2} ${zatToString(BigInt.from(a.$3))}").join(", ");
-//                 final size = msg.field2;
-//                 appStore.mempoolTxIds.add((txId, amounts, size));
-//                 for (var (account, _, amount) in msg.field1) {
-//                   appStore.mempoolAccounts.update(
-//                     account,
-//                     (value) => value + amount,
-//                     ifAbsent: () => amount,
-//                   );
-//                 }
-//               }
-//             },
-//             onDone: c.complete,
-//             onError: (e) {
-//               c.complete();
-//             },
-//           );
-//       await c.future; // wait for the stream to complete
-//       await Future.delayed(Duration(seconds: 5));
-//     } catch (_) {}
-//   }
-// }
-
-// void cancelMempoolListener() async {
-//   await appStore.mempool.cancel();
-// }
-
-// Future<void> selectAccount(Account? account) async {
-//   if (account != null) {
-//     await setAccount(account: account.id);
-//     await putProp(key: "selected_account", value: account.id.toString());
-//     appStore.selectedAccount = account;
-//   } else {
-//     await putProp(key: "selected_account", value: "");
-//   }
-// }
-
-// Future<int?> getSelectedAccount() async {
-//   final s = await getProp(key: "selected_account");
-//   if (s == null || s == "") return null;
-//   return int.parse(s);
-// }
-
-// class TransparentScannerStore = _TransparentScannerStore with _$TransparentScannerStore;
-
-@riverpod
+@Riverpod(keepAlive: true)
 class TransparentScan extends _$TransparentScan {
   int gapLimit = 40;
   StreamSubscription? progressSubscription;
