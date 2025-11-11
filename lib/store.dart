@@ -51,7 +51,6 @@ class SyncStateAccount extends _$SyncStateAccount {
   @override
   Future<SyncProgressAccount> build(int accountId) async {
     final accounts = await ref.watch(getAccountsProvider.future);
-    logger.i("$accountId ${accounts.length}");
     final account = accounts.firstWhere((a) => a.id == accountId);
     final ss = ref.watch(synchronizerProvider);
     if (ss.accounts.any((a) => a.id == account.id)) {
@@ -144,7 +143,7 @@ class SmallProgressWidget extends StatelessWidget {
   final Account account;
   const SmallProgressWidget(this.account, {super.key});
   @override
-  Widget build(BuildContext context) => ProgressWidget(account, builder: (context, status, style) => Text("${status.height}", style: style));
+  Widget build(BuildContext context) => ProgressWidget(account, width: 80, builder: (context, status, style) => Text("${status.height}", style: style));
 }
 
 class HeroProgressWidget extends StatelessWidget {
@@ -328,43 +327,6 @@ class PriceNotifier extends _$PriceNotifier {
   }
 }
 
-// return ProgressWidget(
-//   status: status,
-//   width: 80,
-//   child: Text(status.height.toString(), style: style),
-// );
-
-// class AppStore = AppStoreBase with _$AppStore;
-
-// abstract class AppStoreBase with Store {
-//   bool loaded = false;
-//   String net = "mainnet";
-//   @observable
-//   Account? selectedAccount;
-//   @observable
-//   Folder? selectedFolder;
-//   @observable
-//   List<Account> accounts = [];
-//   @observable
-//   List<Folder> folders = [];
-//   @observable
-//   List<Category> categories = [];
-//   @observable
-//   int pools = 7;
-//   @observable
-//   int seqno = 0;
-//   @observable
-//   PoolBalance poolBalance = PoolBalance(field0: Uint64List.fromList([0, 0, 0]));
-//   @observable
-//   List<Tx> transactions = [];
-//   @observable
-//   List<Memo> memos = [];
-//   @observable
-//   List<TxNote> notes = [];
-//   Map<int, ObservableHeight> heights = {};
-//   @observable
-//   int currentHeight = 0;
-
 @freezed
 sealed class AppSettings with _$AppSettings {
   factory AppSettings({
@@ -538,7 +500,7 @@ class MempoolNotifier extends _$MempoolNotifier {
 
 //   bool syncInProgress = false;
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
   bool syncInProgress = false;
   Timer? retrySyncTimer;

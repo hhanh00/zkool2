@@ -63,7 +63,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     }
     final selectedAccount = selectedAccountAV.requireValue;
     if (selectedAccount == null) {
-      context.go("/");
+      WidgetsBinding.instance.addPostFrameCallback((_) => context.go("/"));
       return SizedBox.shrink();
     }
 
@@ -243,10 +243,21 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> {
 
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
+  List<Folder>? folders;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final folders = await ref.read(getFoldersProvider.future);
+      logger.i(folders);
+      setState(() => this.folders = folders);
+    });
+  }
 
   @override
   void didUpdateWidget(covariant AccountEditPage oldWidget) {
-    accounts = accounts;
+    accounts = widget.accounts;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -256,15 +267,13 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (folders == null) return SizedBox.shrink();
     Future(tutorial);
 
     final account = accounts.length == 1 ? accounts.first : null;
     final folder = accounts.first.folder;
-    final foldersAV = ref.read(getFoldersProvider);
-    if (foldersAV is AsyncLoading) return LinearProgressIndicator();
-    final folders = foldersAV.requireValue;
     final folderOptions = [DropdownMenuItem(value: 0, child: Text("No Folder"))] +
-        folders
+        folders!
             .map(
               (f) => DropdownMenuItem(value: f.id, child: Text(f.name)),
             )

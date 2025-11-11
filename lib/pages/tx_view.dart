@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/account.dart';
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -20,6 +21,7 @@ class TxViewPage extends ConsumerStatefulWidget {
 class TxViewPageState extends ConsumerState<TxViewPage> {
   AccountData? account;
   int? idx;
+  List<Category>? categoryList;
 
   @override
   void initState() {
@@ -29,18 +31,14 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
       final account = await ref.read(accountProvider(selectedAccount.id).future);
       int? idx = account.transactions.indexWhere((tx) => tx.id == widget.idTx);
       if (idx < 0) throw Error();
+      final categoryList = await ref.read(getCategoriesProvider.future);
       setState(() {
         this.idx = idx;
         this.account = account;
+        this.categoryList = categoryList;
       });
     });
   }
-
-  // Future<void> refresh() async {
-  //   final txd = await getTxDetails(idTx: idTx);
-  //   txDetails = txd;
-  //   setState(() {});
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +88,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     final t = Theme.of(context).textTheme;
     final amountSpent = txd.spends.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
     final amountReceived = txd.notes.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
-    final categoryList = ref.read(getCategoriesProvider).requireValue;
-    final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...categoryList.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
+    final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...categoryList!.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
 
     return [
       ListTile(

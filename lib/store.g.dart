@@ -95,7 +95,7 @@ final class SyncStateAccountProvider
   }
 }
 
-String _$syncStateAccountHash() => r'47d643e6ee5cbb1805ef9fdd4db3efb3a85018ec';
+String _$syncStateAccountHash() => r'f2594ac1579775ef5b129f502254ee980d29b1ba';
 
 final class SyncStateAccountFamily extends $Family
     with
@@ -386,7 +386,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'7102f2ab7e2a987605f8add47baae238a48aa07c';
+String _$accountHash() => r'b2d819e89a616085c322e0787617d301c71d460c';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -657,7 +657,7 @@ final class SynchronizerNotifierProvider
           argument: null,
           retry: null,
           name: r'synchronizerProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -679,7 +679,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'9c2723ecee0ecd1178a1bd679782cbb7e7d40ea8';
+    r'8a91ed56fa2b7cdb3966f80fa4f4e82d5ec9c7c8';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
