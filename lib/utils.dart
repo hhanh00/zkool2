@@ -31,7 +31,7 @@ final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP 
 
 final int zatsPerZec = 100000000;
 
-String doubleToString(double v, { required int decimals }) {
+String doubleToString(double v, {required int decimals}) {
   final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: decimals);
   return formatter.format(v);
 }
@@ -200,8 +200,14 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
   return confirmed;
 }
 
-Future<String?> inputPassword(BuildContext context,
-    {required String title, String? btnCancelText, String? message, bool repeated = false, bool required = false,}) async {
+Future<String?> inputPassword(
+  BuildContext context, {
+  required String title,
+  String? btnCancelText,
+  String? message,
+  bool repeated = false,
+  bool required = false,
+}) async {
   final formKey = GlobalKey<FormBuilderState>();
   final password = await inputData<String?>(
     context,
@@ -401,6 +407,12 @@ Future<bool> onUnlock() async {
   }
   return authenticated;
 }
+
+Widget showLoading(String area) =>
+    Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $area...", style: TextStyle(fontSize: 17))));
+
+Widget showError(Object error) =>
+    Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $error...", style: TextStyle(fontSize: 21, color: Colors.red))));
 
 extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);
