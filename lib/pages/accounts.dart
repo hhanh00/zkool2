@@ -7,7 +7,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -41,7 +40,6 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     final settings = ref.read(appSettingsProvider).requireValue;
     if (!settings.disclaimerAccepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        logger.i("Disclaimer not accepted");
         GoRouter.of(context).push("/disclaimer");
       });
     }
@@ -61,8 +59,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
 
   @override
   void didPopNext() {
-    final selectedAccount = ref.read(selectedAccountProvider.notifier);
-    selectedAccount.unselect();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final selectedAccount = ref.read(selectedAccountProvider.notifier);
+      selectedAccount.unselect();
+    });
     super.didPopNext();
   }
 
@@ -103,21 +103,22 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     final tt = Theme.of(context).textTheme;
     final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
 
-    final accounts = ref.read(getAccountsProvider);
-    final selectedFolder = ref.read(selectedFolderProvider);
+    final accounts = ref.watch(getAccountsProvider);
+    final selectedFolder = ref.watch(selectedFolderProvider);
 
     final as = accounts
         .whenData((accounts) => accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList());
 
+    final List<Account> accountList;
     switch (as) {
       case AsyncLoading():
-        return LinearProgressIndicator();
+        return showLoading("Account List");
       case AsyncError():
-        return Text(as.error.toString());
-      case AsyncData():
+        return showError(as.error.toString());
+      case AsyncData(:final value):
+        accountList = value;
     }
 
-    final accountList = as.requireValue;
     final currentHeight = ref.watch(currentHeightProvider);
     final h = currentHeight != null ? currentHeight.toString() : 'N/A';
 
