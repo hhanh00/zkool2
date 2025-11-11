@@ -325,7 +325,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         dialog = null;
         try {
           // ignore errors since it's just caching
-          final settings = ref.read(appSettingsProvider);
+          final settings = ref.read(appSettingsProvider).requireValue;
           if (!settings.offline) await cacheBlockTime(height: bh);
         } on AnyhowException catch (_) {}
 

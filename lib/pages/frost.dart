@@ -61,7 +61,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
     Future(() async {
       final as = await ref.read(getAccountsProvider.future);
       accounts = as.where((e) => !e.hidden).toList();
-      final selectedAccount = ref.read(selectedAccountProvider)!;
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final account = await ref.read(accountProvider(selectedAccount.id).future);
       frostParams = account.frostParams;
       final signing = await isSigningInProgress();

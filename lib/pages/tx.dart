@@ -39,9 +39,9 @@ class TxPageState extends ConsumerState<TxPage> {
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     canBroadcast = !settings.offline;
-    account = ref.read(selectedAccountProvider)!;
+    account = ref.read(selectedAccountProvider).requireValue!;
     details = ref.read(accountProvider(account.id)).requireValue;
   }
 

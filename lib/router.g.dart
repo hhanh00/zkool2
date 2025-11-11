@@ -40,7 +40,7 @@ final class PinLockedProvider extends $NotifierProvider<PinLocked, bool> {
   }
 }
 
-String _$pinLockedHash() => r'b1f500b7b64de7dbad44b4d2dbe047afe6894e81';
+String _$pinLockedHash() => r'78740f5216ccb26634002865a739b6979672e1d0';
 
 abstract class _$PinLocked extends $Notifier<bool> {
   bool build();

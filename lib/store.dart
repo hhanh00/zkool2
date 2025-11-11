@@ -25,6 +25,16 @@ import 'package:zkool/utils.dart';
 part 'store.g.dart';
 part 'store.freezed.dart';
 
+@riverpod
+class HasDb extends _$HasDb {
+  @override
+  bool build() => false;
+
+  void setHasDb() {
+    state = true;
+  }
+}
+
 @freezed
 sealed class SyncState with _$SyncState {
   factory SyncState({
@@ -39,10 +49,11 @@ sealed class SyncState with _$SyncState {
 @riverpod
 class SyncStateAccount extends _$SyncStateAccount {
   @override
-  SyncProgressAccount build(int accountId) {
-    final accounts = ref.read(getAccountsProvider).requireValue;
+  Future<SyncProgressAccount> build(int accountId) async {
+    final accounts = await ref.watch(getAccountsProvider.future);
+    logger.i("$accountId ${accounts.length}");
     final account = accounts.firstWhere((a) => a.id == accountId);
-    final ss = ref.read(synchronizerProvider);
+    final ss = ref.watch(synchronizerProvider);
     if (ss.accounts.any((a) => a.id == account.id)) {
       return SyncProgressAccount(
         account: account,
@@ -63,7 +74,7 @@ class SyncStateAccount extends _$SyncStateAccount {
   }
 
   void updateHeight(int height, int time) {
-    state = state.copyWith(height: height, time: time);
+    state = state.whenData((s) => s.copyWith(height: height, time: time));
   }
 }
 
@@ -95,7 +106,15 @@ class ProgressWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ss = ref.watch(syncStateAccountProvider(account.id));
+    final ssAV = ref.watch(syncStateAccountProvider(account.id));
+    switch (ssAV) {
+      case AsyncLoading():
+        return SizedBox.shrink();
+      case AsyncError(:final error):
+        return Text("Sync State $error");
+      default:
+    }
+    final ss = ssAV.requireValue;
     final t = Theme.of(context);
     final timestamp = DateTime.fromMillisecondsSinceEpoch(ss.time * 1000);
     final syncAge = DateTime.now().difference(timestamp);
@@ -131,6 +150,7 @@ class SmallProgressWidget extends StatelessWidget {
 class HeroProgressWidget extends StatelessWidget {
   final Account account;
   const HeroProgressWidget(this.account, {super.key});
+
   @override
   Widget build(BuildContext context) => ProgressWidget(
         account,
@@ -164,16 +184,20 @@ class HeroProgressWidget extends StatelessWidget {
 @riverpod
 class SelectedAccount extends _$SelectedAccount {
   @override
-  Account? build() {
-    return null;
+  Future<Account?> build() async {
+    final accounts = await ref.read(getAccountsProvider.future);
+    final s = await getProp(key: "selected_account");
+    if (s == null || s == "") return null;
+    final id = int.parse(s);
+    return accounts.firstWhere((a) => a.id == id);
   }
 
   void selectAccount(Account account) {
-    state = account;
+    state = AsyncData(account);
   }
 
   void unselect() {
-    state = null;
+    state = AsyncData(null);
   }
 }
 
@@ -195,44 +219,38 @@ class SelectedFolder extends _$SelectedFolder {
 
 @riverpod
 Future<List<Account>> getAccounts(Ref ref) async {
-  return <Account>[];
+  return await listAccounts();
 }
 
 @riverpod
 Future<List<Folder>> getFolders(Ref ref) async {
-  return <Folder>[];
+  return await listFolders();
 }
 
 @riverpod
 Future<List<Category>> getCategories(Ref ref) async {
-  return <Category>[];
+  return await listCategories();
 }
 
 @riverpod
 Future<AccountData> account(Ref ref, int id) async {
+  final accounts = await ref.watch(getAccountsProvider.future);
+  final account = accounts.firstWhere((a) => a.id == id);
+  final poolBalance = await balance();
+  final pool = await getAccountPools(account: id);
+  final frostParams = await getAccountFrostParams();
+  final transactions = await listTxHistory();
+  final memos = await listMemos();
+  final notes = await listNotes();
+
   return AccountData(
-    account: Account(
-      coin: 0,
-      id: 0,
-      name: '',
-      aindex: 0,
-      birth: 0,
-      folder: Folder(id: 0, name: ''),
-      position: 1,
-      hidden: true,
-      saved: true,
-      enabled: true,
-      internal: false,
-      hw: 0,
-      height: 1,
-      time: 0,
-      balance: BigInt.zero,
-    ),
-    balance: PoolBalance(field0: Uint64List.fromList([0, 0, 0])),
-    pool: 7,
-    transactions: [],
-    memos: [],
-    notes: [],
+    account: account,
+    balance: poolBalance,
+    pool: pool,
+    transactions: transactions,
+    memos: memos,
+    notes: notes,
+    frostParams: frostParams,
   );
 }
 
@@ -252,30 +270,51 @@ sealed class AccountData with _$AccountData {
 @riverpod
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   @override
-  AppSettings build() {
-    return AppSettings(needPin: false, pinUnlockedAt: DateTime.now(), offline: false);
-  }
-
-  void acceptDisclaimer() {
-    state = state.copyWith(disclaimerAccepted: true);
-  }
-
-  void unlock() {
-    state = state.copyWith(
+  Future<AppSettings> build() async {
+    final prefs = SharedPreferencesAsync();
+    String dbName = await prefs.getString("database") ?? appName;
+    bool disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
+    bool isLightNode = await prefs.getBool("is_light_node") ?? true;
+    bool needPin = await prefs.getBool("pin_lock") ?? false;
+    bool offline = await prefs.getBool("offline") ?? false;
+    bool useTor = await prefs.getBool("use_tor") ?? false;
+    bool recovery = await prefs.getBool("recovery") ?? false;
+    return AppSettings(
+      dbName: dbName,
+      disclaimerAccepted: disclaimerAccepted,
+      needPin: needPin,
       pinUnlockedAt: DateTime.now(),
+      offline: offline,
+      isLightNode: isLightNode,
+      useTor: useTor,
+      recovery: recovery,
     );
   }
 
+  void acceptDisclaimer() {
+    state = state.whenData((s) => s.copyWith(disclaimerAccepted: true));
+  }
+
+  void unlock() {
+    state = state.whenData((s) => s.copyWith(
+          pinUnlockedAt: DateTime.now(),
+        ));
+  }
+
   void setNeedPin(bool needPin) {
-    state = state.copyWith(needPin: needPin);
+    state = state.whenData((s) => s.copyWith(needPin: needPin));
   }
 
   void setOffline(bool offline) {
-    state = state.copyWith(offline: offline);
+    state = state.whenData((s) => s.copyWith(offline: offline));
   }
 
   void setDbName(String dbName) {
-    state = state.copyWith(dbName: dbName);
+    state = state.whenData((s) => s.copyWith(dbName: dbName));
+  }
+
+  void updateSettings(AppSettings newSettings) {
+    state = state.whenData((_) => newSettings);
   }
 }
 
@@ -330,7 +369,6 @@ class PriceNotifier extends _$PriceNotifier {
 sealed class AppSettings with _$AppSettings {
   factory AppSettings({
     @Default(appName) String dbName,
-    @Default("") String dbFilepath,
     @Default("mainnet") String net,
     @Default(true) bool isLightNode,
     @Default("https://zec.rocks") String lwd,
@@ -429,14 +467,6 @@ class MempoolNotifier extends _$MempoolNotifier {
 
 //   // Only settings from SharedPreferences
 //   // This is called before getting the database
-//   Future<void> loadAppSettings() async {
-//     final prefs = SharedPreferencesAsync();
-//     isLightNode = await prefs.getBool("is_light_node") ?? isLightNode;
-//     needPin = await prefs.getBool("pin_lock") ?? needPin;
-//     offline = await prefs.getBool("offline") ?? offline;
-//     useTor = await prefs.getBool("use_tor") ?? useTor;
-//     recovery = await prefs.getBool("recovery") ?? recovery;
-//   }
 
 //   Future<void> loadSettings() async {
 //     net = await getNetworkName();
@@ -559,7 +589,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       return;
     }
 
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
 
     final completer = Completer<void>();
@@ -627,7 +657,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   }
 
   void autoSync(WidgetRef ref, {bool now = false}) async {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     final interval = int.tryParse(settings.syncInterval) ?? 0;
 
     if (settings.offline || interval <= 0) {
@@ -648,7 +678,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   }
 
   Future<void> checkSyncNeeded(WidgetRef ref, int currentHeight, {required bool now}) async {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     List<Account> accountsToSync = [];
     final accounts = await ref.read(getAccountsProvider.future);
     for (var account in accounts) {
@@ -790,6 +820,6 @@ class TransparentScan extends _$TransparentScan {
 class GetTxDetails extends _$GetTxDetails {
   @override
   Future<TxAccount> build(int id) async {
-   return await getTxDetails(idTx: id);
+    return await getTxDetails(idTx: id);
   }
 }

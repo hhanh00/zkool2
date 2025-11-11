@@ -9,11 +9,57 @@ part of 'store.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(HasDb)
+const hasDbProvider = HasDbProvider._();
+
+final class HasDbProvider extends $NotifierProvider<HasDb, bool> {
+  const HasDbProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'hasDbProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$hasDbHash();
+
+  @$internal
+  @override
+  HasDb create() => HasDb();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$hasDbHash() => r'ef7efd1b03e4e711b6d25b8c20fd8c687ce2b5f0';
+
+abstract class _$HasDb extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<bool, bool>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<bool, bool>, bool, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
 @ProviderFor(SyncStateAccount)
 const syncStateAccountProvider = SyncStateAccountFamily._();
 
 final class SyncStateAccountProvider
-    extends $NotifierProvider<SyncStateAccount, SyncProgressAccount> {
+    extends $AsyncNotifierProvider<SyncStateAccount, SyncProgressAccount> {
   const SyncStateAccountProvider._(
       {required SyncStateAccountFamily super.from, required int super.argument})
       : super(
@@ -38,14 +84,6 @@ final class SyncStateAccountProvider
   @override
   SyncStateAccount create() => SyncStateAccount();
 
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SyncProgressAccount value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SyncProgressAccount>(value),
-    );
-  }
-
   @override
   bool operator ==(Object other) {
     return other is SyncStateAccountProvider && other.argument == argument;
@@ -57,12 +95,12 @@ final class SyncStateAccountProvider
   }
 }
 
-String _$syncStateAccountHash() => r'f40094cf4bf2fe9500a9003d49eb5e8700ef10d8';
+String _$syncStateAccountHash() => r'47d643e6ee5cbb1805ef9fdd4db3efb3a85018ec';
 
 final class SyncStateAccountFamily extends $Family
     with
-        $ClassFamilyOverride<SyncStateAccount, SyncProgressAccount,
-            SyncProgressAccount, SyncProgressAccount, int> {
+        $ClassFamilyOverride<SyncStateAccount, AsyncValue<SyncProgressAccount>,
+            SyncProgressAccount, FutureOr<SyncProgressAccount>, int> {
   const SyncStateAccountFamily._()
       : super(
           retry: null,
@@ -81,11 +119,11 @@ final class SyncStateAccountFamily extends $Family
   String toString() => r'syncStateAccountProvider';
 }
 
-abstract class _$SyncStateAccount extends $Notifier<SyncProgressAccount> {
+abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
   late final _$args = ref.$arg as int;
   int get accountId => _$args;
 
-  SyncProgressAccount build(
+  FutureOr<SyncProgressAccount> build(
     int accountId,
   );
   @$mustCallSuper
@@ -94,10 +132,11 @@ abstract class _$SyncStateAccount extends $Notifier<SyncProgressAccount> {
     final created = build(
       _$args,
     );
-    final ref = this.ref as $Ref<SyncProgressAccount, SyncProgressAccount>;
+    final ref =
+        this.ref as $Ref<AsyncValue<SyncProgressAccount>, SyncProgressAccount>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<SyncProgressAccount, SyncProgressAccount>,
-        SyncProgressAccount,
+        AnyNotifier<AsyncValue<SyncProgressAccount>, SyncProgressAccount>,
+        AsyncValue<SyncProgressAccount>,
         Object?,
         Object?>;
     element.handleValue(ref, created);
@@ -108,7 +147,7 @@ abstract class _$SyncStateAccount extends $Notifier<SyncProgressAccount> {
 const selectedAccountProvider = SelectedAccountProvider._();
 
 final class SelectedAccountProvider
-    extends $NotifierProvider<SelectedAccount, Account?> {
+    extends $AsyncNotifierProvider<SelectedAccount, Account?> {
   const SelectedAccountProvider._()
       : super(
           from: null,
@@ -126,27 +165,22 @@ final class SelectedAccountProvider
   @$internal
   @override
   SelectedAccount create() => SelectedAccount();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Account? value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<Account?>(value),
-    );
-  }
 }
 
-String _$selectedAccountHash() => r'b37697d30f5675cfe3c5e83772a1d9e72cf9f475';
+String _$selectedAccountHash() => r'534a35d7a5729d455b88407867887a989fc5f13c';
 
-abstract class _$SelectedAccount extends $Notifier<Account?> {
-  Account? build();
+abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
+  FutureOr<Account?> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<Account?, Account?>;
+    final ref = this.ref as $Ref<AsyncValue<Account?>, Account?>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<Account?, Account?>, Account?, Object?, Object?>;
+        AnyNotifier<AsyncValue<Account?>, Account?>,
+        AsyncValue<Account?>,
+        Object?,
+        Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -230,7 +264,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
   }
 }
 
-String _$getAccountsHash() => r'a5009cb946095d5d165abfe91b152a86d03b2c27';
+String _$getAccountsHash() => r'1a480c593e356312ff67118bbd325b51dd3b49f7';
 
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
@@ -264,7 +298,7 @@ final class GetFoldersProvider extends $FunctionalProvider<
   }
 }
 
-String _$getFoldersHash() => r'ed216df049823b1c8da1e1bc08cc6f650f520fc3';
+String _$getFoldersHash() => r'f0e35928aa1c400a44939be7758e2306af958e10';
 
 @ProviderFor(getCategories)
 const getCategoriesProvider = GetCategoriesProvider._();
@@ -298,7 +332,7 @@ final class GetCategoriesProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCategoriesHash() => r'f5873059077115662988cf08580baf23b13e3681';
+String _$getCategoriesHash() => r'45698dfd3290ba0ea7fd14508581e3d75b280f73';
 
 @ProviderFor(account)
 const accountProvider = AccountFamily._();
@@ -378,7 +412,7 @@ final class AccountFamily extends $Family
 const appSettingsProvider = AppSettingsNotifierProvider._();
 
 final class AppSettingsNotifierProvider
-    extends $NotifierProvider<AppSettingsNotifier, AppSettings> {
+    extends $AsyncNotifierProvider<AppSettingsNotifier, AppSettings> {
   const AppSettingsNotifierProvider._()
       : super(
           from: null,
@@ -396,28 +430,23 @@ final class AppSettingsNotifierProvider
   @$internal
   @override
   AppSettingsNotifier create() => AppSettingsNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(AppSettings value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<AppSettings>(value),
-    );
-  }
 }
 
 String _$appSettingsNotifierHash() =>
-    r'96283353cfea5b370a8152d24f609b4da0329679';
+    r'de1f279d4215b7e76715812606cff477d0ebba29';
 
-abstract class _$AppSettingsNotifier extends $Notifier<AppSettings> {
-  AppSettings build();
+abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
+  FutureOr<AppSettings> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<AppSettings, AppSettings>;
+    final ref = this.ref as $Ref<AsyncValue<AppSettings>, AppSettings>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AppSettings, AppSettings>, AppSettings, Object?, Object?>;
+        AnyNotifier<AsyncValue<AppSettings>, AppSettings>,
+        AsyncValue<AppSettings>,
+        Object?,
+        Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -650,7 +679,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'2463400832975227eae9567852f16ca00c39cf47';
+    r'9c2723ecee0ecd1178a1bd679782cbb7e7d40ea8';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

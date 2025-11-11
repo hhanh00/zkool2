@@ -32,7 +32,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
     super.initState();
 
     Future(() async {
-      final selectedAccount = ref.read(selectedAccountProvider)!;
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final a = await ref.read(accountProvider(selectedAccount.id).future);
       final pools = a.pool & 6; // Exclude transparent pool
       final addrs = await getAddresses(uaPools: pools);

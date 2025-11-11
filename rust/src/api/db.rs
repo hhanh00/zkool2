@@ -10,8 +10,13 @@ pub async fn open_database(db_filepath: &str, password: Option<String>) -> Resul
         (c.server_type.clone(), c.url.clone(), c.use_tor)
     };
     let coin = Coin::new(server_type, &lwd, use_tor, db_filepath, password).await?;
+    tracing::info!("Open DB");
+
     let mut c = crate::coin::COIN.lock().unwrap();
     *c = coin;
+    assert!(c.pool.is_some());
+
+    tracing::info!("/Open DB");
 
     Ok(())
 }

@@ -1275,7 +1275,6 @@ class __$AccountDataCopyWithImpl<$Res> implements _$AccountDataCopyWith<$Res> {
 /// @nodoc
 mixin _$AppSettings {
   String get dbName;
-  String get dbFilepath;
   String get net;
   bool get isLightNode;
   String get lwd;
@@ -1303,8 +1302,6 @@ mixin _$AppSettings {
         (other.runtimeType == runtimeType &&
             other is AppSettings &&
             (identical(other.dbName, dbName) || other.dbName == dbName) &&
-            (identical(other.dbFilepath, dbFilepath) ||
-                other.dbFilepath == dbFilepath) &&
             (identical(other.net, net) || other.net == net) &&
             (identical(other.isLightNode, isLightNode) ||
                 other.isLightNode == isLightNode) &&
@@ -1332,7 +1329,6 @@ mixin _$AppSettings {
   int get hashCode => Object.hash(
       runtimeType,
       dbName,
-      dbFilepath,
       net,
       isLightNode,
       lwd,
@@ -1349,7 +1345,7 @@ mixin _$AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, dbFilepath: $dbFilepath, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, versionString: $versionString, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, versionString: $versionString, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
   }
 }
 
@@ -1361,7 +1357,6 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
   @useResult
   $Res call(
       {String dbName,
-      String dbFilepath,
       String net,
       bool isLightNode,
       String lwd,
@@ -1390,7 +1385,6 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
   @override
   $Res call({
     Object? dbName = null,
-    Object? dbFilepath = null,
     Object? net = null,
     Object? isLightNode = null,
     Object? lwd = null,
@@ -1409,10 +1403,6 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
       dbName: null == dbName
           ? _self.dbName
           : dbName // ignore: cast_nullable_to_non_nullable
-              as String,
-      dbFilepath: null == dbFilepath
-          ? _self.dbFilepath
-          : dbFilepath // ignore: cast_nullable_to_non_nullable
               as String,
       net: null == net
           ? _self.net
@@ -1563,7 +1553,6 @@ extension AppSettingsPatterns on AppSettings {
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
             String dbName,
-            String dbFilepath,
             String net,
             bool isLightNode,
             String lwd,
@@ -1585,7 +1574,6 @@ extension AppSettingsPatterns on AppSettings {
       case _AppSettings() when $default != null:
         return $default(
             _that.dbName,
-            _that.dbFilepath,
             _that.net,
             _that.isLightNode,
             _that.lwd,
@@ -1621,7 +1609,6 @@ extension AppSettingsPatterns on AppSettings {
   TResult when<TResult extends Object?>(
     TResult Function(
             String dbName,
-            String dbFilepath,
             String net,
             bool isLightNode,
             String lwd,
@@ -1642,7 +1629,6 @@ extension AppSettingsPatterns on AppSettings {
       case _AppSettings():
         return $default(
             _that.dbName,
-            _that.dbFilepath,
             _that.net,
             _that.isLightNode,
             _that.lwd,
@@ -1675,7 +1661,6 @@ extension AppSettingsPatterns on AppSettings {
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
             String dbName,
-            String dbFilepath,
             String net,
             bool isLightNode,
             String lwd,
@@ -1696,7 +1681,6 @@ extension AppSettingsPatterns on AppSettings {
       case _AppSettings() when $default != null:
         return $default(
             _that.dbName,
-            _that.dbFilepath,
             _that.net,
             _that.isLightNode,
             _that.lwd,
@@ -1721,7 +1705,6 @@ extension AppSettingsPatterns on AppSettings {
 class _AppSettings implements AppSettings {
   _AppSettings(
       {this.dbName = appName,
-      this.dbFilepath = "",
       this.net = "mainnet",
       this.isLightNode = true,
       this.lwd = "https://zec.rocks",
@@ -1740,9 +1723,6 @@ class _AppSettings implements AppSettings {
   @override
   @JsonKey()
   final String dbName;
-  @override
-  @JsonKey()
-  final String dbFilepath;
   @override
   @JsonKey()
   final String net;
@@ -1794,8 +1774,6 @@ class _AppSettings implements AppSettings {
         (other.runtimeType == runtimeType &&
             other is _AppSettings &&
             (identical(other.dbName, dbName) || other.dbName == dbName) &&
-            (identical(other.dbFilepath, dbFilepath) ||
-                other.dbFilepath == dbFilepath) &&
             (identical(other.net, net) || other.net == net) &&
             (identical(other.isLightNode, isLightNode) ||
                 other.isLightNode == isLightNode) &&
@@ -1823,7 +1801,6 @@ class _AppSettings implements AppSettings {
   int get hashCode => Object.hash(
       runtimeType,
       dbName,
-      dbFilepath,
       net,
       isLightNode,
       lwd,
@@ -1840,7 +1817,7 @@ class _AppSettings implements AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, dbFilepath: $dbFilepath, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, versionString: $versionString, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, versionString: $versionString, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
   }
 }
 
@@ -1854,7 +1831,6 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
   @useResult
   $Res call(
       {String dbName,
-      String dbFilepath,
       String net,
       bool isLightNode,
       String lwd,
@@ -1883,7 +1859,6 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
   @pragma('vm:prefer-inline')
   $Res call({
     Object? dbName = null,
-    Object? dbFilepath = null,
     Object? net = null,
     Object? isLightNode = null,
     Object? lwd = null,
@@ -1902,10 +1877,6 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
       dbName: null == dbName
           ? _self.dbName
           : dbName // ignore: cast_nullable_to_non_nullable
-              as String,
-      dbFilepath: null == dbFilepath
-          ? _self.dbFilepath
-          : dbFilepath // ignore: cast_nullable_to_non_nullable
               as String,
       net: null == net
           ? _self.net

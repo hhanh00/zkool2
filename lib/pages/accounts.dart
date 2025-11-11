@@ -38,7 +38,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     if (!settings.disclaimerAccepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         logger.i("Disclaimer not accepted");
@@ -67,7 +67,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void refreshHeight(bool fetchPrice) async {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
     try {
       final height = await getCurrentHeight();
@@ -87,7 +87,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void tutorial() async {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     if (!settings.disclaimerAccepted) return;
     tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, heightID]);
 

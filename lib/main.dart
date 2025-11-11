@@ -29,10 +29,10 @@ Future<void> main() async {
   // await appStore.init();
   // await appStore.loadAppSettings();
 
-  Future<bool> initApp(WidgetRef ref) async {
-    appWatcher = LifecycleWatcher(ref);
-    return true;
-  }
+  // Future<AppSettings> initApp(WidgetRef ref, AppSettings s) async {
+  //   appWatcher = LifecycleWatcher(ref);
+  //   return s;
+  // }
 
   runApp(
     ToastificationWrapper(
@@ -43,23 +43,27 @@ Future<void> main() async {
         ],
         builder: (context) => ProviderScope(
           child: Consumer(
-            builder: (context, ref, _) => FutureBuilder(
-              future: initApp(ref),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) return Text(snapshot.error!.toString());
-                if (!snapshot.hasData) return LinearProgressIndicator();
-                //   appWatcher.init();
-                final settings = ref.read(appSettingsProvider);
-                final r = router(settings.recovery);
-                return MaterialApp.router(
-                  routerConfig: r,
-                  themeMode: ThemeMode.system,
-                  theme: ThemeData.light(),
-                  darkTheme: ThemeData.dark(),
-                  debugShowCheckedModeBanner: false,
-                );
-              },
-            ),
+            builder: (context, ref, _) {
+              final settings = ref.watch(appSettingsProvider.future);
+              return FutureBuilder(
+                future: settings, // .then((s) => initApp(ref, s)),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) return Text(snapshot.error!.toString());
+                  if (!snapshot.hasData) return SizedBox.shrink();
+                  //   appWatcher.init();
+                  final settings = snapshot.data!;
+                  logger.i(settings);
+                  final r = router(settings.recovery);
+                  return MaterialApp.router(
+                    routerConfig: r,
+                    themeMode: ThemeMode.system,
+                    theme: ThemeData.light(),
+                    darkTheme: ThemeData.dark(),
+                    debugShowCheckedModeBanner: false,
+                  );
+                },
+              );
+            },
           ),
         ),
       ),

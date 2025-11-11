@@ -53,21 +53,31 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
     Future(tutorial);
 
-    final selectedAccount = ref.watch(selectedAccountProvider);
+    final selectedAccountAV = ref.watch(selectedAccountProvider);
+    switch (selectedAccountAV) {
+      case AsyncLoading():
+        return LinearProgressIndicator();
+      case AsyncError(:final error):
+        return Text(error.toString());
+      default:
+    }
+    final selectedAccount = selectedAccountAV.requireValue;
     if (selectedAccount == null) {
       context.go("/");
       return SizedBox.shrink();
     }
 
+    logger.i("$selectedAccount");
     final accountAV = ref.watch(accountProvider(selectedAccount.id));
     switch (accountAV) {
       case AsyncLoading<AccountData>():
         return LinearProgressIndicator();
       case AsyncError<AccountData>():
         return Text(accountAV.error.toString());
-      case AsyncData<AccountData>():
+      default:
     }
     final account = accountAV.requireValue;
+    logger.i("$account");
     final b = account.balance;
     final mempool = ref.watch(mempoolProvider);
     final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
@@ -205,7 +215,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     if (filename != null) await showMessage(context, "$filename Saved");
   }
 
-  Account account() => ref.read(selectedAccountProvider)!;
+  Account account() => ref.read(selectedAccountProvider).requireValue!;
   // the context must be from inside the DefaultTabController, which
   // means it cannot be this widget's context
   int tabIndex(BuildContext context) => DefaultTabController.of(context).index;
@@ -686,8 +696,8 @@ void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async
       height: currentHeight,
       threshold: threshold,
     );
-    final selectedAccount = ref.read(selectedAccountProvider);
-    ref.invalidate(accountProvider(selectedAccount!.id));
+    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+    ref.invalidate(accountProvider(selectedAccount.id));
   }
 }
 
@@ -695,15 +705,15 @@ void onUnlockAll(WidgetRef ref, BuildContext context) async {
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
     await unlockAllNotes();
-    final selectedAccount = ref.read(selectedAccountProvider);
-    ref.invalidate(accountProvider(selectedAccount!.id));
+    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+    ref.invalidate(accountProvider(selectedAccount.id));
   }
 }
 
 void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
   await lockNote(id: id, locked: locked);
-  final selectedAccount = ref.read(selectedAccountProvider);
-  ref.invalidate(accountProvider(selectedAccount!.id));
+  final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+  ref.invalidate(accountProvider(selectedAccount.id));
 }
 
 class MemoWidget extends StatelessWidget {

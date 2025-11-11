@@ -6,7 +6,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/pages/db.dart';
@@ -112,7 +111,7 @@ Widget pinLock(Widget child) => child;
 class PinLocked extends _$PinLocked {
   @override
   bool build() {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     return settings.needPin;
   }
 
@@ -124,7 +123,7 @@ class PinLocked extends _$PinLocked {
   }
 
   void relock() {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     state = settings.needPin;
   }
 }

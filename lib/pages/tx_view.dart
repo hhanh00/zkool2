@@ -25,7 +25,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   void initState() {
     super.initState();
     Future(() async {
-      final selectedAccount = ref.read(selectedAccountProvider)!;
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final account = await ref.read(accountProvider(selectedAccount.id).future);
       int? idx = account.transactions.indexWhere((tx) => tx.id == widget.idTx);
       if (idx < 0) throw Error();
@@ -183,7 +183,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   }
 
   void openBlockExplorer(Uint8List txid) async {
-    final settings = ref.read(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider).requireValue;
     final blockExplorer = settings.blockExplorer;
     final url = blockExplorer.replaceAll("{net}", settings.net).replaceAll("{txid}", txIdToString(txid));
     await launchUrl(Uri.parse(url));

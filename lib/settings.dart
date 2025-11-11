@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
@@ -34,32 +35,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
-  final formKey = GlobalKey<FormBuilderState>();
-  late String databaseName;
-  // late String currentDatabaseName = databaseName;
-  late bool isLightNode;
-  late bool useTor;
-  late bool needPin;
-  late bool offline;
-  late String lwd;
-  late String blockExplorer;
-  late String syncInterval;
-  late String actionsPerSync;
-
-  @override
-  void initState() {
-    super.initState();
-    final settings = ref.read(appSettingsProvider);
-    databaseName = settings.dbName;
-    isLightNode = settings.isLightNode;
-    useTor = settings.useTor;
-    needPin = settings.needPin;
-    offline = settings.offline;
-    lwd = settings.lwd;
-    blockExplorer = settings.blockExplorer;
-    syncInterval = settings.syncInterval;
-    actionsPerSync = settings.actionsPerSync;
-  }
+  AppSettings? settings;
 
   @override
   void didChangeDependencies() {
@@ -73,7 +49,67 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
   @override
   void didPop() {
     super.didPop();
+    final settingsNotifier = ref.read(appSettingsProvider.notifier);
+    settings?.let((s) => settingsNotifier.updateSettings(s));
     // appStore.autoSync();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(appSettingsProvider);
+    switch (s) {
+      case AsyncLoading():
+        return LinearProgressIndicator();
+      case AsyncError(:final error):
+        return Text(error.toString());
+      default:
+    }
+    final settings = s.requireValue;
+    return SettingsForm(settings);
+  }
+}
+
+class SettingsForm extends ConsumerStatefulWidget {
+  final AppSettings settings;
+  const SettingsForm(this.settings, {super.key});
+  @override
+  ConsumerState<SettingsForm> createState() => SettingsFormState();
+}
+
+class SettingsFormState extends ConsumerState<SettingsForm> {
+  final formKey = GlobalKey<FormBuilderState>();
+  late String databaseName = widget.settings.dbName;
+  String dbFullPath = "";
+  String versionString = "";
+  late bool isLightNode = widget.settings.isLightNode;
+  late bool useTor = widget.settings.useTor;
+  late bool needPin = widget.settings.needPin;
+  late bool offline = widget.settings.offline;
+  late String lwd = widget.settings.lwd;
+  late String blockExplorer = widget.settings.blockExplorer;
+  late String syncInterval = widget.settings.syncInterval;
+  late String actionsPerSync = widget.settings.actionsPerSync;
+
+  @override
+  void didUpdateWidget(covariant SettingsForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    databaseName = widget.settings.dbName;
+    isLightNode = widget.settings.isLightNode;
+    useTor = widget.settings.useTor;
+    needPin = widget.settings.needPin;
+    offline = widget.settings.offline;
+    lwd = widget.settings.lwd;
+    blockExplorer = widget.settings.blockExplorer;
+    syncInterval = widget.settings.syncInterval;
+    actionsPerSync = widget.settings.actionsPerSync;
+    Future(() async {
+      dbFullPath = await getFullDatabasePath(databaseName);
+      final packageInfo = await PackageInfo.fromPlatform();
+      final version = packageInfo.version;
+      final buildNumber = packageInfo.buildNumber;
+      versionString = "$version+$buildNumber";
+      setState(() {});
+    });
   }
 
   void tutorial() async {
@@ -83,8 +119,6 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final settings = ref.watch(appSettingsProvider);
-
     Future(tutorial);
 
     return Scaffold(
@@ -203,9 +237,9 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
                   ),
                 ),
                 Gap(16),
-                CopyableText(settings.dbFilepath, style: t.bodySmall),
+                CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
-                Text(settings.versionString ?? ""),
+                Text(versionString),
               ],
             ),
           ),
@@ -238,8 +272,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
   void onChangedLWD(String? value) async {
     if (value == null) return;
     await putProp(key: "lwd", value: value);
-    final settings = ref.read(appSettingsProvider);
-    setLwd(lwd: value, serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra);
+    setLwd(lwd: value, serverType: isLightNode ? ServerType.lwd : ServerType.zebra);
     ref.invalidate(appSettingsProvider);
     setState(() {
       lwd = value;

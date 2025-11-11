@@ -58,8 +58,8 @@ class SendPageState extends ConsumerState<SendPage> {
   void initState() {
     super.initState();
     Future(() async {
-      final selectedAccount = ref.read(selectedAccountProvider);
-      final data = (await ref.read(accountProvider(selectedAccount!.id).future));
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+      final data = (await ref.read(accountProvider(selectedAccount.id).future));
       final bal = await balance();
       final addrs = await getAddresses(uaPools: data.pool);
 
@@ -418,8 +418,8 @@ class Send2PageState extends ConsumerState<Send2Page> {
     Future(() async {
       final uri = await buildPuri(recipients: widget.recipients);
       final categoryList = await ref.read(getCategoriesProvider.future);
-      final selectedAccount = ref.read(selectedAccountProvider);
-      final data = (await ref.read(accountProvider(selectedAccount!.id).future));
+      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+      final data = (await ref.read(accountProvider(selectedAccount.id).future));
       setState(() {
         account = data;
         puri = uri;
