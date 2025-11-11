@@ -1,16 +1,13 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:gap/gap.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -339,7 +336,6 @@ sealed class AppSettings with _$AppSettings {
     @Default("30") String syncInterval, // in blocks
     @Default("10000") String actionsPerSync,
     @Default(false) bool disclaimerAccepted,
-    String? versionString,
     @Default(false) bool useTor,
     @Default(false) bool recovery,
     required bool needPin,
