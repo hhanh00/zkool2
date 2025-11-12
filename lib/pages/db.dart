@@ -257,8 +257,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
 Future<void> selectDatabase(WidgetRef ref, String dbName) async {
   final prefs = SharedPreferencesAsync();
   await prefs.setString("database", dbName);
-  final settings = ref.read(appSettingsProvider.notifier);
-  settings.setDbName(dbName);
+  ref.invalidate(appSettingsProvider);
 }
 
 Future<(String?, String?)?> showChangeDbPassword(BuildContext context, {required String databaseName}) async {

@@ -433,7 +433,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'c9b57df502344b44200a18235c22491a01e27106';
+    r'f81720935584e7aea9e9c9db3f6fa62c24c8dfd7';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -628,7 +628,7 @@ final class MempoolNotifierProvider
   }
 }
 
-String _$mempoolNotifierHash() => r'ff011ae23365165090f4f1f8109c8744e9be0b08';
+String _$mempoolNotifierHash() => r'f8e7f474fc2801444f2e2c343f1dc43eb0846693';
 
 abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
   MempoolState build();

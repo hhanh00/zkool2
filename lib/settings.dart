@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -38,6 +39,15 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
   AppSettings? settings;
 
   @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final settings = await ref.read(appSettingsProvider.future);
+      setState(() => this.settings = settings);
+    });
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
@@ -47,74 +57,56 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
   }
 
   @override
-  void didPop() {
-    super.didPop();
-    final settingsNotifier = ref.read(appSettingsProvider.notifier);
-    settings?.let((s) => settingsNotifier.updateSettings(s));
-    // appStore.autoSync();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final s = ref.watch(appSettingsProvider);
-    switch (s) {
-      case AsyncLoading():
-        return LinearProgressIndicator();
-      case AsyncError(:final error):
-        return Text(error.toString());
-      default:
-    }
-    final settings = s.requireValue;
-    return SettingsForm(settings);
+    if (settings == null) return SizedBox.expand();
+    return SettingsForm(
+      settings!,
+      onChanged: (settings) async {
+        logger.i(settings);
+        final prefs = SharedPreferencesAsync();
+        await prefs.setString("database", settings.dbName);
+        await putProp(key: "is_light_node", value: settings.isLightNode.toString());
+        await putProp(key: "lwd", value: settings.lwd);
+        await putProp(key: "block_explorer", value: settings.blockExplorer);
+        await putProp(key: "actions_per_sync", value: settings.actionsPerSync);
+        await putProp(key: "sync_interval", value: settings.syncInterval);
+        await prefs.setBool("pin_lock", settings.needPin);
+        await prefs.setBool("offline", settings.offline);
+        await prefs.setBool("use_tor", settings.useTor);
+        setLwd(lwd: settings.lwd, serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra);
+        setUseTor(useTor: settings.useTor);
+        ref.invalidate(appSettingsProvider);
+      },
+    );
   }
 }
 
 class SettingsForm extends ConsumerStatefulWidget {
-  final AppSettings settings;
-  const SettingsForm(this.settings, {super.key});
+  final void Function(AppSettings) onChanged;
+  final AppSettings settings; // original settings
+  const SettingsForm(this.settings, {super.key, required this.onChanged});
   @override
   ConsumerState<SettingsForm> createState() => SettingsFormState();
 }
 
 class SettingsFormState extends ConsumerState<SettingsForm> {
   final formKey = GlobalKey<FormBuilderState>();
-  late String databaseName = widget.settings.dbName;
+  late AppSettings settings = widget.settings; // updated settings
+
   String dbFullPath = "";
   String versionString = "";
-  late bool isLightNode = widget.settings.isLightNode;
-  late bool useTor = widget.settings.useTor;
-  late bool needPin = widget.settings.needPin;
-  late bool offline = widget.settings.offline;
-  late String lwd = widget.settings.lwd;
-  late String blockExplorer = widget.settings.blockExplorer;
-  late String syncInterval = widget.settings.syncInterval;
-  late String actionsPerSync = widget.settings.actionsPerSync;
 
   @override
   void initState() {
     super.initState();
     Future(() async {
-      dbFullPath = await getFullDatabasePath(databaseName);
+      dbFullPath = await getFullDatabasePath(settings.dbName);
       final packageInfo = await PackageInfo.fromPlatform();
       final version = packageInfo.version;
       final buildNumber = packageInfo.buildNumber;
       versionString = "$version+$buildNumber";
       setState(() {});
     });
-  }
-
-  @override
-  void didUpdateWidget(covariant SettingsForm oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    databaseName = widget.settings.dbName;
-    isLightNode = widget.settings.isLightNode;
-    useTor = widget.settings.useTor;
-    needPin = widget.settings.needPin;
-    offline = widget.settings.offline;
-    lwd = widget.settings.lwd;
-    blockExplorer = widget.settings.blockExplorer;
-    syncInterval = widget.settings.syncInterval;
-    actionsPerSync = widget.settings.actionsPerSync;
   }
 
   void tutorial() async {
@@ -153,7 +145,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   child: FormBuilderSwitch(
                     name: "light",
                     title: Text("Light Node"),
-                    initialValue: isLightNode,
+                    initialValue: settings.isLightNode,
                     onChanged: onChangedIsLightNode,
                   ),
                 ),
@@ -162,19 +154,19 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   description: "Node server to connect to",
                   child: FormBuilderTextField(
                     name: "lwd",
-                    decoration: InputDecoration(labelText: "${isLightNode ? 'Light' : 'Full'} Node Server"),
-                    initialValue: lwd,
+                    decoration: InputDecoration(labelText: "${settings.isLightNode ? 'Light' : 'Full'} Node Server"),
+                    initialValue: settings.lwd,
                     onChanged: onChangedLWD,
                   ),
                 ),
-                if (isLightNode)
+                if (settings.isLightNode)
                   Showcase(
                     key: torID,
                     description: "Use TOR to connect to lightwallet server. Need App Restart",
                     child: FormBuilderSwitch(
                       name: "tor",
                       title: Text("Use TOR"),
-                      initialValue: useTor,
+                      initialValue: settings.useTor,
                       onChanged: onChangedUseTOR,
                     ),
                   ),
@@ -184,7 +176,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   child: FormBuilderTextField(
                     name: "actions_per_sync",
                     decoration: const InputDecoration(labelText: "Actions per Sync"),
-                    initialValue: actionsPerSync,
+                    initialValue: settings.actionsPerSync,
                     onChanged: onChangedActionsPerSync,
                     validator: FormBuilderValidators.integer(),
                     keyboardType: TextInputType.number,
@@ -201,7 +193,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                         child: FormBuilderTextField(
                           name: "autosync",
                           decoration: const InputDecoration(labelText: "AutoSync Interval"),
-                          initialValue: syncInterval,
+                          initialValue: settings.syncInterval,
                           onChanged: onChangedSyncInterval,
                           validator: FormBuilderValidators.integer(),
                           keyboardType: TextInputType.number,
@@ -220,13 +212,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Showcase(
                   key: pinLockID,
                   description: "Ask for device pin when app opens",
-                  child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: needPin, onChanged: onPinLockChanged),
+                  child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: settings.needPin, onChanged: onPinLockChanged),
                 ),
                 Gap(8),
                 Showcase(
                   key: offlineID,
                   description: "Toggle offline mode",
-                  child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: offline, onChanged: onOfflineChanged),
+                  child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: settings.offline, onChanged: onOfflineChanged),
                 ),
                 Gap(8),
                 Showcase(
@@ -237,7 +229,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     decoration: InputDecoration(
                       label: Text("Block Explorer"),
                     ),
-                    initialValue: blockExplorer,
+                    initialValue: settings.blockExplorer,
                     onChanged: onChangedBlockExplorer,
                   ),
                 ),
@@ -266,71 +258,57 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   void onChangedDatabaseName(String? value) async {
     if (value == null) return;
-    final prefs = SharedPreferencesAsync();
-    await prefs.setString("database", value);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      databaseName = value;
+      settings = settings.copyWith(dbName: value);
+      widget.onChanged(settings);
     });
   }
 
   void onChangedLWD(String? value) async {
     if (value == null) return;
-    await putProp(key: "lwd", value: value);
-    setLwd(lwd: value, serverType: isLightNode ? ServerType.lwd : ServerType.zebra);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      lwd = value;
+      settings = settings.copyWith(lwd: value);
+      widget.onChanged(settings);
     });
   }
 
   void onChangedBlockExplorer(String? value) async {
     if (value == null) return;
-    await putProp(key: "block_explorer", value: value);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      blockExplorer = value;
+      settings = settings.copyWith(blockExplorer: value);
+      widget.onChanged(settings);
     });
   }
 
   onChangedIsLightNode(bool? value) async {
     if (value == null) return;
-    await putProp(key: "is_light_node", value: value.toString());
-    ref.invalidate(appSettingsProvider);
-    setLwd(lwd: lwd, serverType: value ? ServerType.lwd : ServerType.zebra);
     setState(() {
-      isLightNode = value;
+      settings = settings.copyWith(isLightNode: value);
+      widget.onChanged(settings);
     });
   }
 
   onChangedUseTOR(bool? value) async {
     if (value == null) return;
-    final prefs = SharedPreferencesAsync();
-    await prefs.setBool("use_tor", value);
-    ref.invalidate(appSettingsProvider);
-    setUseTor(useTor: value);
     setState(() {
-      useTor = value;
+      settings = settings.copyWith(useTor: value);
+      widget.onChanged(settings);
     });
   }
 
   onPinLockChanged(bool? value) async {
     if (value == null) return;
-    final prefs = SharedPreferencesAsync();
-    await prefs.setBool("pin_lock", value);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      needPin = value;
+      settings = settings.copyWith(needPin: value);
+      widget.onChanged(settings);
     });
   }
 
   onOfflineChanged(bool? value) async {
     if (value == null) return;
-    final prefs = SharedPreferencesAsync();
-    await prefs.setBool("offline", value);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      offline = value;
+      settings = settings.copyWith(offline: value);
+      widget.onChanged(settings);
     });
   }
 
@@ -339,10 +317,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (int.tryParse(value) == null) {
       return;
     }
-    await putProp(key: "actions_per_sync", value: value);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      actionsPerSync = value;
+      settings = settings.copyWith(actionsPerSync: value);
+      widget.onChanged(settings);
     });
   }
 
@@ -351,10 +328,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (int.tryParse(value) == null) {
       return;
     }
-    await putProp(key: "sync_interval", value: value);
-    ref.invalidate(appSettingsProvider);
     setState(() {
-      syncInterval = value;
+      settings = settings.copyWith(syncInterval: value);
+      widget.onChanged(settings);
     });
   }
 
