@@ -7,12 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
-import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 final logger = Logger(filter: ProductionFilter());
@@ -28,45 +28,32 @@ Future<void> main() async {
   await RustLib.init();
   final dataDir = await getApplicationDocumentsDirectory();
   await initDatadir(directory: dataDir.path);
-  // await appStore.init();
-  // await appStore.loadAppSettings();
+  final prefs = SharedPreferencesAsync();
+  final recovery = await prefs.getBool("recovery") ?? false;
+  final r = router(recovery);
 
   // Future<AppSettings> initApp(WidgetRef ref, AppSettings s) async {
   //   appWatcher = LifecycleWatcher(ref);
   //   return s;
   // }
-
   runApp(
-    ToastificationWrapper(
-      child: ShowCaseWidget(
-        globalTooltipActions: [
-          const TooltipActionButton(type: TooltipDefaultActionType.skip, textStyle: TextStyle(color: Colors.red), backgroundColor: Colors.transparent),
-          const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
-        ],
-        builder: (context) => ProviderScope(
-          child: Consumer(
-            builder: (context, ref, _) {
-              final settings = ref.read(appSettingsProvider.future);
-              return FutureBuilder(
-                future: settings, // .then((s) => initApp(ref, s)),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) return Text(snapshot.error!.toString());
-                  if (!snapshot.hasData) return SizedBox.expand();
-                  //   appWatcher.init();
-                  final settings = snapshot.data!;
-                  final r = router(settings.recovery);
-                  return MaterialApp.router(
-                    key: appKey,
-                    routerConfig: r,
-                    themeMode: ThemeMode.system,
-                    theme: ThemeData.light(),
-                    darkTheme: ThemeData.dark(),
-                    debugShowCheckedModeBanner: false,
-                  );
-                },
-              );
-            },
-          ),
+    ProviderScope(
+      child: ToastificationWrapper(
+        child: ShowCaseWidget(
+          globalTooltipActions: [
+            const TooltipActionButton(type: TooltipDefaultActionType.skip, textStyle: TextStyle(color: Colors.red), backgroundColor: Colors.transparent),
+            const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
+          ],
+          builder: (context) {
+            return MaterialApp.router(
+              key: appKey,
+              routerConfig: r,
+              themeMode: ThemeMode.system,
+              theme: ThemeData.light(),
+              darkTheme: ThemeData.dark(),
+              debugShowCheckedModeBanner: false,
+            );
+          },
         ),
       ),
     ),

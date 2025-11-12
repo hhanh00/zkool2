@@ -60,7 +60,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
     logger.i("tryOpenDatabase");
     String? password;
     while (true) {
-      final settings = ref.read(appSettingsProvider).requireValue;
+      final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
       final dbFilepath = await getFullDatabasePath(dbName);
       logger.i('dbFilepath: $dbFilepath');
