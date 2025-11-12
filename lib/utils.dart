@@ -393,7 +393,7 @@ class CopyableText extends StatelessWidget {
 
 void lockApp(WidgetRef ref) {
   final settings = ref.read(appSettingsProvider.notifier);
-  settings.setNeedPin(true);
+  // TODO: settings.setNeedPin(true);
 }
 
 Future<bool> onUnlock() async {

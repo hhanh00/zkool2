@@ -31,7 +31,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     if (openDatabaseSuccess != null) {
-      final settings = ref.watch(appSettingsProvider).requireValue;
+      final settings = ref.read(appSettingsProvider).requireValue;
       if (!settings.disclaimerAccepted) {
         WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/disclaimer"));
       } else {

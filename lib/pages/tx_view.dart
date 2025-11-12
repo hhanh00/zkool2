@@ -58,15 +58,15 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
       body: SingleChildScrollView(
         child: Builder(builder: (context) {
           switch (txDetailsAV) {
-            case AsyncLoading(): return LinearProgressIndicator();
+            case AsyncLoading():
+              return showLoading("Tx Details");
             case AsyncError(:final error):
-              return Text(error.toString(), style: TextStyle(color: Colors.red));
+              return showError(error);
             case AsyncData(:final value):
               return Column(
                 children: show(value),
-          );
+              );
           }
-
         }),
       ),
     );

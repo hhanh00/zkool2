@@ -162,3 +162,4 @@ In order of priority,
 - [ ] log
 - [ ] dkg
 - [ ] frost
+- [x] settings
