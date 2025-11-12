@@ -1282,7 +1282,6 @@ mixin _$AppSettings {
   String get syncInterval; // in blocks
   String get actionsPerSync;
   bool get disclaimerAccepted;
-  String? get versionString;
   bool get useTor;
   bool get recovery;
   bool get needPin;
@@ -1314,8 +1313,6 @@ mixin _$AppSettings {
                 other.actionsPerSync == actionsPerSync) &&
             (identical(other.disclaimerAccepted, disclaimerAccepted) ||
                 other.disclaimerAccepted == disclaimerAccepted) &&
-            (identical(other.versionString, versionString) ||
-                other.versionString == versionString) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
             (identical(other.recovery, recovery) ||
                 other.recovery == recovery) &&
@@ -1336,7 +1333,6 @@ mixin _$AppSettings {
       syncInterval,
       actionsPerSync,
       disclaimerAccepted,
-      versionString,
       useTor,
       recovery,
       needPin,
@@ -1345,7 +1341,7 @@ mixin _$AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, versionString: $versionString, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
   }
 }
 
@@ -1364,7 +1360,6 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       String syncInterval,
       String actionsPerSync,
       bool disclaimerAccepted,
-      String? versionString,
       bool useTor,
       bool recovery,
       bool needPin,
@@ -1392,7 +1387,6 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? syncInterval = null,
     Object? actionsPerSync = null,
     Object? disclaimerAccepted = null,
-    Object? versionString = freezed,
     Object? useTor = null,
     Object? recovery = null,
     Object? needPin = null,
@@ -1432,10 +1426,6 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
           ? _self.disclaimerAccepted
           : disclaimerAccepted // ignore: cast_nullable_to_non_nullable
               as bool,
-      versionString: freezed == versionString
-          ? _self.versionString
-          : versionString // ignore: cast_nullable_to_non_nullable
-              as String?,
       useTor: null == useTor
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
@@ -1560,7 +1550,6 @@ extension AppSettingsPatterns on AppSettings {
             String syncInterval,
             String actionsPerSync,
             bool disclaimerAccepted,
-            String? versionString,
             bool useTor,
             bool recovery,
             bool needPin,
@@ -1581,7 +1570,6 @@ extension AppSettingsPatterns on AppSettings {
             _that.syncInterval,
             _that.actionsPerSync,
             _that.disclaimerAccepted,
-            _that.versionString,
             _that.useTor,
             _that.recovery,
             _that.needPin,
@@ -1616,7 +1604,6 @@ extension AppSettingsPatterns on AppSettings {
             String syncInterval,
             String actionsPerSync,
             bool disclaimerAccepted,
-            String? versionString,
             bool useTor,
             bool recovery,
             bool needPin,
@@ -1636,7 +1623,6 @@ extension AppSettingsPatterns on AppSettings {
             _that.syncInterval,
             _that.actionsPerSync,
             _that.disclaimerAccepted,
-            _that.versionString,
             _that.useTor,
             _that.recovery,
             _that.needPin,
@@ -1668,7 +1654,6 @@ extension AppSettingsPatterns on AppSettings {
             String syncInterval,
             String actionsPerSync,
             bool disclaimerAccepted,
-            String? versionString,
             bool useTor,
             bool recovery,
             bool needPin,
@@ -1688,7 +1673,6 @@ extension AppSettingsPatterns on AppSettings {
             _that.syncInterval,
             _that.actionsPerSync,
             _that.disclaimerAccepted,
-            _that.versionString,
             _that.useTor,
             _that.recovery,
             _that.needPin,
@@ -1704,54 +1688,40 @@ extension AppSettingsPatterns on AppSettings {
 
 class _AppSettings implements AppSettings {
   _AppSettings(
-      {this.dbName = appName,
-      this.net = "mainnet",
-      this.isLightNode = true,
-      this.lwd = "https://zec.rocks",
-      this.blockExplorer =
-          "https://{net}.zcashexplorer.app/transactions/{txid}",
-      this.syncInterval = "30",
-      this.actionsPerSync = "10000",
-      this.disclaimerAccepted = false,
-      this.versionString,
-      this.useTor = false,
-      this.recovery = false,
+      {required this.dbName,
+      required this.net,
+      required this.isLightNode,
+      required this.lwd,
+      required this.blockExplorer,
+      required this.syncInterval,
+      required this.actionsPerSync,
+      required this.disclaimerAccepted,
+      required this.useTor,
+      required this.recovery,
       required this.needPin,
       required this.pinUnlockedAt,
       required this.offline});
 
   @override
-  @JsonKey()
   final String dbName;
   @override
-  @JsonKey()
   final String net;
   @override
-  @JsonKey()
   final bool isLightNode;
   @override
-  @JsonKey()
   final String lwd;
   @override
-  @JsonKey()
   final String blockExplorer;
   @override
-  @JsonKey()
   final String syncInterval;
 // in blocks
   @override
-  @JsonKey()
   final String actionsPerSync;
   @override
-  @JsonKey()
   final bool disclaimerAccepted;
   @override
-  final String? versionString;
-  @override
-  @JsonKey()
   final bool useTor;
   @override
-  @JsonKey()
   final bool recovery;
   @override
   final bool needPin;
@@ -1786,8 +1756,6 @@ class _AppSettings implements AppSettings {
                 other.actionsPerSync == actionsPerSync) &&
             (identical(other.disclaimerAccepted, disclaimerAccepted) ||
                 other.disclaimerAccepted == disclaimerAccepted) &&
-            (identical(other.versionString, versionString) ||
-                other.versionString == versionString) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
             (identical(other.recovery, recovery) ||
                 other.recovery == recovery) &&
@@ -1808,7 +1776,6 @@ class _AppSettings implements AppSettings {
       syncInterval,
       actionsPerSync,
       disclaimerAccepted,
-      versionString,
       useTor,
       recovery,
       needPin,
@@ -1817,7 +1784,7 @@ class _AppSettings implements AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, versionString: $versionString, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline)';
   }
 }
 
@@ -1838,7 +1805,6 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       String syncInterval,
       String actionsPerSync,
       bool disclaimerAccepted,
-      String? versionString,
       bool useTor,
       bool recovery,
       bool needPin,
@@ -1866,7 +1832,6 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? syncInterval = null,
     Object? actionsPerSync = null,
     Object? disclaimerAccepted = null,
-    Object? versionString = freezed,
     Object? useTor = null,
     Object? recovery = null,
     Object? needPin = null,
@@ -1906,10 +1871,6 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
           ? _self.disclaimerAccepted
           : disclaimerAccepted // ignore: cast_nullable_to_non_nullable
               as bool,
-      versionString: freezed == versionString
-          ? _self.versionString
-          : versionString // ignore: cast_nullable_to_non_nullable
-              as String?,
       useTor: null == useTor
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable

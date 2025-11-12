@@ -113,8 +113,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     switch (as) {
       case AsyncLoading():
         return showLoading("Account List");
-      case AsyncError():
-        return showError(as.error.toString());
+      case AsyncError(:final error):
+        return showError(error);
       case AsyncData(:final value):
         accountList = value;
     }

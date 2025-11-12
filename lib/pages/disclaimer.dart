@@ -87,8 +87,7 @@ class _DisclaimerPageState extends ConsumerState<DisclaimerPage> {
   void onContinue() async {
     final prefs = SharedPreferencesAsync();
     await prefs.setBool("disclaimer_accepted", true);
-    final ap = ref.read(appSettingsProvider.notifier);
-    ap.acceptDisclaimer();
+    ref.invalidate(appSettingsProvider);
     if (!mounted) return;
     GoRouter.of(context).go("/");
   }
