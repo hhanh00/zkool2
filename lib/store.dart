@@ -105,9 +105,9 @@ class ProgressWidget extends ConsumerWidget {
     final ssAV = ref.watch(syncStateAccountProvider(account.id));
     switch (ssAV) {
       case AsyncLoading():
-        return SizedBox.shrink();
+        return showLoading("Sync State");
       case AsyncError(:final error):
-        return Text("Sync State $error");
+        return showError(error);
       default:
     }
     final ss = ssAV.requireValue;
@@ -268,50 +268,42 @@ sealed class AccountData with _$AccountData {
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   @override
   Future<AppSettings> build() async {
+    final hasDb = ref.watch(hasDbProvider);
     final prefs = SharedPreferencesAsync();
     String dbName = await prefs.getString("database") ?? appName;
-    bool disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
-    bool isLightNode = await prefs.getBool("is_light_node") ?? true;
-    bool needPin = await prefs.getBool("pin_lock") ?? false;
-    bool offline = await prefs.getBool("offline") ?? false;
-    bool useTor = await prefs.getBool("use_tor") ?? false;
-    bool recovery = await prefs.getBool("recovery") ?? false;
+    final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
+    final needPin = await prefs.getBool("pin_lock") ?? false;
+    final offline = await prefs.getBool("offline") ?? false;
+    final useTor = await prefs.getBool("use_tor") ?? false;
+    final recovery = await prefs.getBool("recovery") ?? false;
+
+    final net = hasDb ? await getNetworkName() : "mainnet";
+    final isLightNode = hasDb ? await getProp(key: "is_light_node") : "true";
+    final lwd = hasDb ? await getProp(key: "lwd") : "https://zec.rocks";
+    final syncInterval = hasDb ? await getProp(key: "sync_interval") : "30";
+    final actionsPerSync = hasDb ? await getProp(key: "actions_per_sync") : "10000";
+    final blockExplorer = hasDb ? await getProp(key: "block_explorer") : "https://{net}.zcashexplorer.app/transactions/{txid}";
     return AppSettings(
       dbName: dbName,
+      net: net,
+      isLightNode: isLightNode! == "true",
+      lwd: lwd!,
       disclaimerAccepted: disclaimerAccepted,
       needPin: needPin,
       pinUnlockedAt: DateTime.now(),
       offline: offline,
-      isLightNode: isLightNode,
       useTor: useTor,
       recovery: recovery,
+      syncInterval: syncInterval!,
+      actionsPerSync: actionsPerSync!,
+      blockExplorer: blockExplorer!,
     );
-  }
-
-  void acceptDisclaimer() {
-    state = state.whenData((s) => s.copyWith(disclaimerAccepted: true));
   }
 
   void unlock() {
     state = state.whenData((s) => s.copyWith(
           pinUnlockedAt: DateTime.now(),
         ));
-  }
-
-  void setNeedPin(bool needPin) {
-    state = state.whenData((s) => s.copyWith(needPin: needPin));
-  }
-
-  void setOffline(bool offline) {
-    state = state.whenData((s) => s.copyWith(offline: offline));
-  }
-
-  void setDbName(String dbName) {
-    state = state.whenData((s) => s.copyWith(dbName: dbName));
-  }
-
-  void updateSettings(AppSettings newSettings) {
-    state = state.whenData((_) => newSettings);
   }
 }
 
@@ -328,30 +320,20 @@ class PriceNotifier extends _$PriceNotifier {
 @freezed
 sealed class AppSettings with _$AppSettings {
   factory AppSettings({
-    @Default(appName) String dbName,
-    @Default("mainnet") String net,
-    @Default(true) bool isLightNode,
-    @Default("https://zec.rocks") String lwd,
-    @Default("https://{net}.zcashexplorer.app/transactions/{txid}") String blockExplorer,
-    @Default("30") String syncInterval, // in blocks
-    @Default("10000") String actionsPerSync,
-    @Default(false) bool disclaimerAccepted,
-    @Default(false) bool useTor,
-    @Default(false) bool recovery,
+    required String dbName,
+    required String net,
+    required bool isLightNode,
+    required String lwd,
+    required String blockExplorer,
+    required String syncInterval, // in blocks
+    required String actionsPerSync,
+    required bool disclaimerAccepted,
+    required bool useTor,
+    required bool recovery,
     required bool needPin,
     required DateTime pinUnlockedAt,
     required bool offline,
   }) = _AppSettings;
-
-  // TransparentScannerStore transparentScanner = TransparentScannerStore();
-
-  // ObservableList<String> log = ObservableList.of([]);
-  // @observable
-  // bool mempoolRunning = false;
-  // ObservableMap<int, int> mempoolAccounts = ObservableMap.of({});
-  // ObservableList<(String, String, int)> mempoolTxIds = ObservableList.of([]);
-
-  // FrostParams? frostParams;
 }
 
 @Riverpod(keepAlive: true)
@@ -397,7 +379,7 @@ class MempoolNotifier extends _$MempoolNotifier {
   }
 
   void runMempoolListener() async {
-    final settings = await ref.watch(appSettingsProvider.future);
+    final settings = await ref.read(appSettingsProvider.future);
     if (settings.offline) return;
 
     while (true) {

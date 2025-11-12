@@ -46,12 +46,12 @@ Future<void> main() async {
         builder: (context) => ProviderScope(
           child: Consumer(
             builder: (context, ref, _) {
-              final settings = ref.watch(appSettingsProvider.future);
+              final settings = ref.read(appSettingsProvider.future);
               return FutureBuilder(
                 future: settings, // .then((s) => initApp(ref, s)),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) return Text(snapshot.error!.toString());
-                  if (!snapshot.hasData) return SizedBox.shrink();
+                  if (!snapshot.hasData) return SizedBox.expand();
                   //   appWatcher.init();
                   final settings = snapshot.data!;
                   final r = router(settings.recovery);

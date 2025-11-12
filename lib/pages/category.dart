@@ -55,7 +55,7 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
         },
         itemCount: categories.length,
         separatorBuilder: (BuildContext context, int index) =>
-            (index < categories.length - 1 && categories[index].$1.isIncome != categories[index + 1].$1.isIncome) ? Divider() : SizedBox.shrink(),
+            (index < categories.length - 1 && categories[index].$1.isIncome != categories[index + 1].$1.isIncome) ? Divider() : SizedBox.expand(),
       ),
     );
   }

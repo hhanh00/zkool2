@@ -56,7 +56,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     final selectedAccountAV = ref.watch(selectedAccountProvider);
     switch (selectedAccountAV) {
       case AsyncLoading():
-        return showLoading("Account");
+        return showLoading("Selected Account");
       case AsyncError(:final error):
         return showError(error);
       default:
@@ -64,15 +64,15 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     final selectedAccount = selectedAccountAV.requireValue;
     if (selectedAccount == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => context.go("/"));
-      return SizedBox.shrink();
+      return SizedBox.expand();
     }
 
     final accountAV = ref.watch(accountProvider(selectedAccount.id));
     switch (accountAV) {
-      case AsyncLoading<AccountData>():
-        return LinearProgressIndicator();
-      case AsyncError<AccountData>():
-        return Text(accountAV.error.toString());
+      case AsyncLoading():
+        return showLoading("Account");
+      case AsyncError(:final error):
+        return showError(error);
       default:
     }
     final account = accountAV.requireValue;
@@ -279,7 +279,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
 
   @override
   Widget build(BuildContext context) {
-    if (folders == null) return SizedBox.shrink();
+    if (folders == null) return SizedBox.expand();
     Future(tutorial);
 
     final account = accounts.length == 1 ? accounts.first : null;
