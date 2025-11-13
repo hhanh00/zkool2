@@ -78,10 +78,12 @@ class SplashPageState extends ConsumerState<SplashPage> {
     }
     final hasDb = ref.read(hasDbProvider.notifier);
     hasDb.setHasDb();
+    ref.invalidate(appSettingsProvider);
     final account = await ref.read(selectedAccountProvider.future);
     if (account != null) await setAccount(account: account.id);
 
-    final settings = ref.read(appSettingsProvider).requireValue;
+    final settings = await ref.read(appSettingsProvider.future);
+    logger.i("LWD ${settings.lwd}");
     setLwd(
       serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra,
       lwd: settings.lwd,
