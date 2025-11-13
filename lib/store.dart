@@ -190,6 +190,7 @@ class SelectedAccount extends _$SelectedAccount {
 
   void selectAccount(Account account) async {
     await putProp(key: "selected_account", value: "${account.id}");
+    await setAccount(account: account.id);
     state = AsyncData(account);
   }
 
@@ -277,26 +278,26 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final useTor = await prefs.getBool("use_tor") ?? false;
     final recovery = await prefs.getBool("recovery") ?? false;
 
-    final net = hasDb ? await getNetworkName() : "mainnet";
-    final isLightNode = hasDb ? await getProp(key: "is_light_node") : "true";
-    final lwd = hasDb ? await getProp(key: "lwd") : "https://zec.rocks";
-    final syncInterval = hasDb ? await getProp(key: "sync_interval") : "30";
-    final actionsPerSync = hasDb ? await getProp(key: "actions_per_sync") : "10000";
-    final blockExplorer = hasDb ? await getProp(key: "block_explorer") : "https://{net}.zcashexplorer.app/transactions/{txid}";
+    final net = (hasDb ? await getNetworkName() : null) ?? "mainnet";
+    final isLightNode = (hasDb ? await getProp(key: "is_light_node") : null) ?? "true";
+    final lwd = (hasDb ? await getProp(key: "lwd") : null) ?? "https://zec.rocks";
+    final syncInterval = (hasDb ? await getProp(key: "sync_interval") : null) ?? "30";
+    final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync") : null) ?? "10000";
+    final blockExplorer = (hasDb ? await getProp(key: "block_explorer") : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
     return AppSettings(
       dbName: dbName,
       net: net,
-      isLightNode: isLightNode! == "true",
-      lwd: lwd!,
+      isLightNode: isLightNode == "true",
+      lwd: lwd,
       disclaimerAccepted: disclaimerAccepted,
       needPin: needPin,
       pinUnlockedAt: DateTime.now(),
       offline: offline,
       useTor: useTor,
       recovery: recovery,
-      syncInterval: syncInterval!,
-      actionsPerSync: actionsPerSync!,
-      blockExplorer: blockExplorer!,
+      syncInterval: syncInterval,
+      actionsPerSync: actionsPerSync,
+      blockExplorer: blockExplorer,
     );
   }
 

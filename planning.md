@@ -151,15 +151,16 @@ In order of priority,
 - [x] error when recipient ua only has orchard and warn when only it does not have sapling (won't fix)
 - [x] error when # inputs/outputs > 5
 
-- [ ] account creation
+- [x] account creation
 - [ ] account edit/delete
-- [ ] sync
+- [x] sync
 - [ ] auto sync
-- [ ] send
-- [ ] mempool
+- [x] send
+- [x] mempool
 - [ ] pinlock
-- [ ] transparent scan
+- [?] transparent scan
 - [ ] log
 - [ ] dkg
 - [ ] frost
 - [x] settings
+- [x] changing accounts
