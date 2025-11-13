@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -21,7 +22,7 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
     animType: AnimType.rightSlide,
     body: FormBuilder(
       key: formKey,
-      child: Builder(builder: (context) {
+      child: Consumer(builder: (context, ref, _) {
         final address = ref.watch(transparentScanProvider);
         return Column(
           children: [
@@ -37,7 +38,7 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
               ]),
             ),
             Gap(32),
-            if (scanner.running)
+            if (address.isNotEmpty)
               Column(
                 children: [
                   LinearProgressIndicator(),
@@ -51,8 +52,8 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
     ),
     btnCancelOnPress: () {},
     btnOkOnPress: () {},
-    btnOk: Builder(
-      builder: (context) {
+    btnOk: Consumer(
+      builder: (context, ref, _) {
         final address = ref.watch(transparentScanProvider);
         return address.isNotEmpty
             ? AnimatedButton(
@@ -74,6 +75,7 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
                     final scanner = ref.read(transparentScanProvider.notifier);
                     final gapLimitStr = form.fields["gap"]!.value as String? ?? "";
                     final gapLimit = int.parse(gapLimitStr);
+                    logger.i("TScan $gapLimit");
                     await scanner.run(
                       context,
                       gapLimit,
