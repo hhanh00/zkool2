@@ -244,7 +244,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
           argument: null,
           retry: null,
           name: r'getAccountsProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -264,7 +264,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
   }
 }
 
-String _$getAccountsHash() => r'1a480c593e356312ff67118bbd325b51dd3b49f7';
+String _$getAccountsHash() => r'1a1f7a62f22675b5d9e388a48c8dad3f8079c65e';
 
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
@@ -433,7 +433,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'f81720935584e7aea9e9c9db3f6fa62c24c8dfd7';
+    r'c3adae42334c1ad5a106ddd7aa0bf8a9c15d49a0';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();

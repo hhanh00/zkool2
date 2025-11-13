@@ -214,7 +214,7 @@ class SelectedFolder extends _$SelectedFolder {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<List<Account>> getAccounts(Ref ref) async {
   return await listAccounts();
 }
