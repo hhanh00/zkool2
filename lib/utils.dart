@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:decimal/intl.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
 import 'package:path_provider/path_provider.dart';
@@ -392,18 +395,13 @@ class CopyableText extends StatelessWidget {
 }
 
 void lockApp(WidgetRef ref) {
-  final settings = ref.read(appSettingsProvider.notifier);
-  // TODO: settings.setNeedPin(true);
+  ref.read(lifecycleProvider.notifier).lock();
 }
 
-Future<bool> onUnlock() async {
+Future<bool> onUnlock(WidgetRef ref) async {
   final authenticated = await authenticate(reason: "Unlock the App");
   if (authenticated) {
-    // await runInAction(() async {
-    //   final prefs = SharedPreferencesAsync();
-    //   appStore.needPin = await prefs.getBool("pin_lock") ?? appStore.needPin;
-    //   appStore.unlocked = DateTime.now();
-    // });
+    ref.read(lifecycleProvider.notifier).unlock();
   }
   return authenticated;
 }
@@ -413,6 +411,33 @@ Widget showLoading(String area) =>
 
 Widget showError(Object error) =>
     Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $error...", style: TextStyle(fontSize: 21, color: Colors.red))));
+
+Future<Uint8List?> openFile({String? title}) async {
+  final files = await FilePicker.platform.pickFiles(
+    dialogTitle: title,
+  );
+  if (files != null) {
+    final file = files.files.first;
+    final encryptedFile = File(file.path!);
+    final data = encryptedFile.readAsBytesSync();
+    return data;
+  }
+  return null;
+}
+
+Future<XFile?> pickImage() async {
+  final picker = ImagePicker();
+  final icon = await picker.pickImage(source: ImageSource.gallery);
+  return icon;
+}
+
+Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) async {
+  return await FilePicker.platform.saveFile(
+    dialogTitle: title,
+    fileName: fileName,
+    bytes: data,
+  );
+}
 
 extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);

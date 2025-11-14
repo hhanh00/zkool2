@@ -167,7 +167,7 @@ final class SelectedAccountProvider
   SelectedAccount create() => SelectedAccount();
 }
 
-String _$selectedAccountHash() => r'd6dd333c0ab9be24e40c5297cfd936db1cee8c92';
+String _$selectedAccountHash() => r'82dc4076f335db195f29c7da71ce784f29459ded';
 
 abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
   FutureOr<Account?> build();
@@ -433,7 +433,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'c3adae42334c1ad5a106ddd7aa0bf8a9c15d49a0';
+    r'0a7b74b006d3439e61d46b54bd28332e046ee4cf';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -822,6 +822,47 @@ abstract class _$GetTxDetails extends $AsyncNotifier<TxAccount> {
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<TxAccount>, TxAccount>,
         AsyncValue<TxAccount>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(Lifecycle)
+const lifecycleProvider = LifecycleProvider._();
+
+final class LifecycleProvider extends $AsyncNotifierProvider<Lifecycle, bool> {
+  const LifecycleProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'lifecycleProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$lifecycleHash();
+
+  @$internal
+  @override
+  Lifecycle create() => Lifecycle();
+}
+
+String _$lifecycleHash() => r'e59aaf2a8d414ab65425a718723c24e2d902e7e0';
+
+abstract class _$Lifecycle extends $AsyncNotifier<bool> {
+  FutureOr<bool> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<bool>, bool>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<bool>, bool>,
+        AsyncValue<bool>,
         Object?,
         Object?>;
     element.handleValue(ref, created);

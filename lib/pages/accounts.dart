@@ -271,7 +271,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void onSettings() async {
-    final authenticated = await onUnlock();
+    final authenticated = await onUnlock(ref);
     if (!mounted) return;
     if (authenticated) {
       await GoRouter.of(context).push('/settings');

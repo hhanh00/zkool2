@@ -672,3 +672,47 @@ class GetTxDetails extends _$GetTxDetails {
     return await getTxDetails(idTx: id);
   }
 }
+
+@Riverpod(keepAlive: true)
+class Lifecycle extends _$Lifecycle {
+  DateTime unlockTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  Future<bool> build() async {
+    final settings = await ref.watch(appSettingsProvider.future);
+    return settings.needPin;
+  }
+
+  void unlock() {
+    unlockTime = DateTime.now();
+    state = AsyncData(false);
+  }
+
+  void lock() {
+    unlockTime = DateTime.fromMillisecondsSinceEpoch(0);
+    state = AsyncData(true);
+  }
+
+  void check() {
+    if (DateTime.now().difference(unlockTime).inSeconds > 30) {
+      state = AsyncData(false);
+    }
+  }
+}
+
+class LifecycleWatcher with WidgetsBindingObserver {
+  bool disabled = false;
+  final WidgetRef ref;
+  LifecycleWatcher(this.ref);
+
+  void init() {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(lifecycleProvider.notifier).check();
+    }
+  }
+}
