@@ -139,14 +139,14 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     final databaseName = selection.first;
     final db = File(await getFullDatabasePath(databaseName));
     final data = await db.readAsBytes();
-    final res = await appWatcher.saveFile(title: "Save Database", fileName: "$databaseName.db", data: data);
+    final res = await saveFile(title: "Save Database", fileName: "$databaseName.db", data: data);
     if (!mounted) return;
     if (res != null) await showMessage(context, "Database saved");
   }
 
   void onOpenDatabase() async {
     final databaseName = selection.first;
-    final data = await appWatcher.openFile(title: "Open Database");
+    final data = await openFile(title: "Open Database");
     if (data == null) return;
     if (!mounted) return;
     final confirmed = await confirmDialog(

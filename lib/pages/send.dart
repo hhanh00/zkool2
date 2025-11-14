@@ -200,7 +200,7 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   void onLoad() async {
-    final data = await appWatcher.openFile(title: "Please select a transaction to sign");
+    final data = await openFile(title: "Please select a transaction to sign");
     if (data == null) return;
     final pczt = await unpackTransaction(bytes: data);
     if (!mounted) return;
