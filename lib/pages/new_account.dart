@@ -349,7 +349,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   }
 
   void onEdit() async {
-    final icon = await appWatcher.pickImage();
+    final icon = await pickImage();
     if (icon != null) {
       final bytes = await icon.readAsBytes();
       setState(() => iconBytes = bytes);
@@ -358,7 +358,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
 
   onImport() async {
     try {
-      final data = await appWatcher.openFile(title: "Please select an encrypted account file for import");
+      final data = await openFile(title: "Please select an encrypted account file for import");
       if (data == null) return;
       if (!mounted) return;
       final password = await inputPassword(
