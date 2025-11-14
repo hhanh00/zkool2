@@ -70,13 +70,14 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
   void initState() {
     super.initState();
     Future(() async {
-      accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden).toList();
+      final accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden).toList();
       final dkgInProgress = await hasDkgParams();
       if (dkgInProgress && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           GoRouter.of(context).pushReplacement("/dkg2");
         });
       }
+      setState(() => this.accounts = accounts);
     });
   }
 
