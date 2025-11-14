@@ -21,7 +21,10 @@ use orchard::{
     Note,
 };
 use ripemd::{Digest as _, Ripemd160};
-use sapling_crypto::{zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey}, PaymentAddress};
+use sapling_crypto::{
+    zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey},
+    PaymentAddress,
+};
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
@@ -344,10 +347,11 @@ pub async fn generate_next_dindex(
     account: u32,
 ) -> Result<u32> {
     let mut db_tx = connection.begin().await?;
-    let (aindex, mut dindex,): (u32, u32) = sqlx::query_as("SELECT aindex, dindex FROM accounts WHERE id_account = ?")
-        .bind(account)
-        .fetch_one(&mut *db_tx)
-        .await?;
+    let (aindex, mut dindex): (u32, u32) =
+        sqlx::query_as("SELECT aindex, dindex FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(&mut *db_tx)
+            .await?;
     let hw = get_account_hw(&mut db_tx, account).await?;
     // Next Sapling address. Some dindex must be skipped because they do not
     // correspond to a valid sapling address
@@ -364,10 +368,10 @@ pub async fn generate_next_dindex(
             address.encode(network)
         };
         sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
-        .bind(account)
-        .bind(&address)
-        .execute(&mut *db_tx)
-        .await?;
+            .bind(account)
+            .bind(&address)
+            .execute(&mut *db_tx)
+            .await?;
     } else {
         // without sapling, any dindex is ok, just increment
         dindex += 1;
@@ -857,4 +861,26 @@ pub async fn has_transparent_pub_key(
         .await?
         .flatten();
     Ok(r.is_some())
+}
+
+pub async fn has_pool(connection: &mut SqliteConnection, account: u32, pool: u8) -> Result<bool> {
+    let has_pool = match pool {
+        0 => sqlx::query("SELECT 1 FROM transparent_accounts WHERE account = ?1")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?
+            .is_some(),
+        1 => sqlx::query("SELECT 1 FROM sapling_accounts WHERE account = ?1")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?
+            .is_some(),
+        2 => sqlx::query("SELECT 1 FROM orchard_accounts WHERE account = ?1")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?
+            .is_some(),
+        _ => unreachable!(),
+    };
+    Ok(has_pool)
 }

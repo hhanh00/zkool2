@@ -152,15 +152,17 @@ In order of priority,
 - [x] error when # inputs/outputs > 5
 
 - [x] account creation
-- [ ] account edit/delete
+- [x] account edit/delete
 - [x] sync
-- [ ] auto sync
+- [x] auto sync
 - [x] send
 - [x] mempool
-- [ ] pinlock
-- [?] transparent scan
-- [ ] log
+- [x] transparent scan
+- [x] log
 - [ ] dkg
 - [ ] frost
+- [ ] pinlock
 - [x] settings
 - [x] changing accounts
+
+AppWatcher?
