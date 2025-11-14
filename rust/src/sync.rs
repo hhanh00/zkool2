@@ -1,7 +1,7 @@
 use std::{collections::HashSet, mem};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height, has_pool},
     api::sync::SyncProgress,
     coin::Network,
     db::{
@@ -442,16 +442,18 @@ async fn handle_message(
         }
         WarpSyncMessage::Checkpoint(accounts, pool, height) => {
             for a in accounts {
-                sqlx::query(
-                    "INSERT INTO sync_heights (pool, account, height)
-                        VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET height = excluded.height",
-                )
-                .bind(pool)
-                .bind(a)
-                .bind(height)
-                .execute(&mut **db_tx)
-                .await?;
-                info!("Checkpoint for account: {}, height: {}", a, height);
+                if has_pool(db_tx, a, pool).await? {
+                    sqlx::query(
+                        "UPDATE sync_heights SET height = ?3
+                        WHERE account = ?1 AND pool = ?2",
+                    )
+                    .bind(a)
+                    .bind(pool)
+                    .bind(height)
+                    .execute(&mut **db_tx)
+                    .await?;
+                    info!("Checkpoint for account: {}, height: {}", a, height);
+                }
                 let _ = tx_progress.send(SyncProgress { height, time: 0 }).await;
             }
         }
