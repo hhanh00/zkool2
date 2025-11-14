@@ -1,10 +1,5 @@
-import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +11,6 @@ import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/utils.dart';
 
 final logger = Logger(filter: ProductionFilter());
-late final LifecycleWatcher appWatcher;
 
 const String appName = "zkool";
 
@@ -60,83 +54,20 @@ Future<void> main() async {
   );
 }
 
-class LifecycleWatcher with WidgetsBindingObserver {
-  bool disabled = false;
-  final WidgetRef ref;
-  LifecycleWatcher(this.ref);
-
-  void init() {
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  // Disables the pin lock on the next resume
-  // Used when the app opens a platform dialog (open/save file)
-  // to prevent asking for the pin when the dialog closes
-  void temporaryDisableLock() {
-    disabled = true;
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // TODO
-    // if (state == AppLifecycleState.resumed) {
-    //   cancelMempoolListener();
-    //   if (disabled) {
-    //     disabled = false;
-    //     return;
-    //   }
-
-    //   if (appStore.needPin && appStore.unlocked != null && DateTime.now().difference(appStore.unlocked!).inSeconds >= 5) {
-    //     lockApp();
-    //   }
-    // }
-  }
-
-  Future<Uint8List?> openFile({String? title}) async {
-    temporaryDisableLock();
-    final files = await FilePicker.platform.pickFiles(
-      dialogTitle: title,
-    );
-    if (files != null) {
-      final file = files.files.first;
-      final encryptedFile = File(file.path!);
-      final data = encryptedFile.readAsBytesSync();
-      return data;
-    }
-    return null;
-  }
-
-  Future<XFile?> pickImage() async {
-    temporaryDisableLock();
-    final picker = ImagePicker();
-    final icon = await picker.pickImage(source: ImageSource.gallery);
-    return icon;
-  }
-
-  Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) async {
-    temporaryDisableLock();
-    return await FilePicker.platform.saveFile(
-      dialogTitle: title,
-      fileName: fileName,
-      bytes: data,
-    );
-  }
-}
-
-class PinLock extends StatefulWidget {
+class PinLock extends ConsumerStatefulWidget {
   const PinLock({
     super.key,
   });
 
   @override
-  State<StatefulWidget> createState() => PinLockState();
+  ConsumerState<PinLock> createState() => PinLockState();
 }
 
-class PinLockState extends State<PinLock> {
+class PinLockState extends ConsumerState<PinLock> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => onUnlock());
+    WidgetsBinding.instance.addPostFrameCallback((_) => onUnlock(ref));
   }
 
   @override
@@ -145,7 +76,7 @@ class PinLockState extends State<PinLock> {
       appBar: AppBar(title: Text("Locked")),
       body: Center(
         child: InkWell(
-          onTap: onUnlock,
+          onTap: () => onUnlock(ref),
           child: Image.asset("misc/icon.png", width: 200),
         ),
       ),

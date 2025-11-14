@@ -208,7 +208,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
   void onExport(int index) async {
     final data = await getExportedData(type: index);
-    final filename = await appWatcher.saveFile(data: utf8.encode(data));
+    final filename = await saveFile(data: utf8.encode(data));
     if (!mounted) return;
     if (filename != null) await showMessage(context, "$filename Saved");
   }
@@ -418,7 +418,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   }
 
   void onEditIcon() async {
-    final icon = await appWatcher.pickImage();
+    final icon = await pickImage();
     var changed = false;
     Uint8List? bytes;
     if (icon != null) {
@@ -518,7 +518,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     final password = await inputPassword(context, title: "Export Account", message: "File Password", repeated: true, required: true);
     if (password != null) {
       final res = await exportAccount(id: account.id, passphrase: password);
-      await appWatcher.saveFile(title: "Please select an output file for the encrypted account:", fileName: "${account.name}.bin", data: res);
+      await saveFile(title: "Please select an output file for the encrypted account:", fileName: "${account.name}.bin", data: res);
     }
   }
 
