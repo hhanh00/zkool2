@@ -9,7 +9,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
@@ -182,7 +181,7 @@ class TxPageState extends ConsumerState<TxPage> {
       }
       final pcztData = await packTransaction(pczt: pczt);
       final prefix = txPlan.canSign ? "signed" : "unsigned";
-      await appWatcher.saveFile(
+      await saveFile(
         title: "Please select an output file for the unsigned transaction",
         fileName: "$prefix-tx.bin",
         data: pcztData,
