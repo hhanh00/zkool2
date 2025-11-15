@@ -9,6 +9,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -82,9 +83,12 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
 
   @override
   Widget build(BuildContext context) {
-    Future(tutorial);
+    if (frostParams == null) return SizedBox.expand();
 
-    if (frostParams == null) return LinearProgressIndicator();
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
+    Future(tutorial);
 
     return Scaffold(
         appBar: AppBar(title: const Text("Frost Multi Party Signature")),

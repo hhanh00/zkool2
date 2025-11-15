@@ -695,15 +695,15 @@ class Lifecycle extends _$Lifecycle {
 
   void check() {
     if (DateTime.now().difference(unlockTime).inSeconds > 30) {
-      state = AsyncData(false);
+      state = AsyncData(true);
     }
   }
 }
 
 class LifecycleWatcher with WidgetsBindingObserver {
+  static LifecycleWatcher instance = LifecycleWatcher();
+
   bool disabled = false;
-  final WidgetRef ref;
-  LifecycleWatcher(this.ref);
 
   void init() {
     WidgetsBinding.instance.addObserver(this);
@@ -712,7 +712,8 @@ class LifecycleWatcher with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ref.read(lifecycleProvider.notifier).check();
+      final scope = ProviderScope.containerOf(appKey.currentContext!);
+      scope.read(lifecycleProvider.notifier).check();
     }
   }
 }

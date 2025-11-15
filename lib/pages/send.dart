@@ -75,6 +75,9 @@ class SendPageState extends ConsumerState<SendPage> {
   Widget build(BuildContext context) {
     if (account == null) return LinearProgressIndicator();
 
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     Future(tutorial);
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
@@ -430,8 +433,13 @@ class Send2PageState extends ConsumerState<Send2Page> {
 
   @override
   Widget build(BuildContext context) {
-    if (account == null) return LinearProgressIndicator();
+    if (account == null) return SizedBox.expand();
+
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     Future(tutorial);
+
     logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
     final categoryItems = [
       DropdownMenuItem(value: null, child: Text("Unknown")),

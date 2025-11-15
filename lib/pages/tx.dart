@@ -9,6 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
@@ -53,6 +54,9 @@ class TxPageState extends ConsumerState<TxPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     final t = Theme.of(context).textTheme;
 
     Future(tutorial);
@@ -240,6 +244,9 @@ class MempoolPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     return Scaffold(
       appBar: AppBar(title: Text("Mempool")),
       body: Builder(

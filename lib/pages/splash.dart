@@ -25,6 +25,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
   void initState() {
     super.initState();
     runLogListener();
+    LifecycleWatcher.instance.init();
     Future(tryOpenDatabase);
   }
 
