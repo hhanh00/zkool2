@@ -51,6 +51,9 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     Future(tutorial);
 
     final selectedAccountAV = ref.watch(selectedAccountProvider);
@@ -279,6 +282,9 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     if (folders == null) return SizedBox.expand();
     Future(tutorial);
 
@@ -769,7 +775,7 @@ class MemoWidget extends StatelessWidget {
   }
 }
 
-class ViewingKeysPage extends StatefulWidget {
+class ViewingKeysPage extends ConsumerStatefulWidget {
   // the viewing keys page is opened from the edit account page
   // and the account is passed as an argument
   // because the selected account may be different
@@ -777,10 +783,10 @@ class ViewingKeysPage extends StatefulWidget {
   const ViewingKeysPage(this.account, {super.key});
 
   @override
-  State<ViewingKeysPage> createState() => ViewingKeysPageState();
+  ConsumerState<ViewingKeysPage> createState() => ViewingKeysPageState();
 }
 
-class ViewingKeysPageState extends State<ViewingKeysPage> {
+class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   int pools = 7;
   String? uvk;
   String? fingerprint;
@@ -802,6 +808,9 @@ class ViewingKeysPageState extends State<ViewingKeysPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Viewing Keys'),

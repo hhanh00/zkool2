@@ -9,6 +9,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -91,6 +92,9 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     Future(tutorial);
 
     return Scaffold(
@@ -232,14 +236,14 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
   }
 }
 
-class DKGPage2 extends StatefulWidget {
+class DKGPage2 extends ConsumerStatefulWidget {
   const DKGPage2({super.key});
 
   @override
-  State<StatefulWidget> createState() => DKGPage2State();
+  ConsumerState<DKGPage2> createState() => DKGPage2State();
 }
 
-class DKGPage2State extends State<DKGPage2> {
+class DKGPage2State extends ConsumerState<DKGPage2> {
   final formKey = GlobalKey<FormBuilderState>();
   List<String> addresses = [];
 
@@ -260,6 +264,9 @@ class DKGPage2State extends State<DKGPage2> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("DKG Addresses"),

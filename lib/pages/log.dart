@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
 
 class LogviewPage extends ConsumerStatefulWidget {
@@ -12,6 +13,9 @@ class LogviewPage extends ConsumerStatefulWidget {
 class LogviewPageState extends ConsumerState<LogviewPage> {
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     final log = ref.watch(logProvider);
     final fullLog = log.join("\n");
 

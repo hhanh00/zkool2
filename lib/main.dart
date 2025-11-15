@@ -64,11 +64,11 @@ class PinLock extends ConsumerStatefulWidget {
 }
 
 class PinLockState extends ConsumerState<PinLock> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => onUnlock(ref));
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addPostFrameCallback((_) => onUnlock(ref));
+  // }
 
   @override
   Widget build(BuildContext context) {
