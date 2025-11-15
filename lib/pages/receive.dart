@@ -51,7 +51,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (this.account == null) return SizedBox.expand();
+    if (this.account == null) return blank(context);
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
 

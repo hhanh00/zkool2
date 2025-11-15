@@ -62,7 +62,6 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
     return SettingsForm(
       settings!,
       onChanged: (settings) async {
-        logger.i(settings);
         final prefs = SharedPreferencesAsync();
         await prefs.setString("database", settings.dbName);
         await putProp(key: "is_light_node", value: settings.isLightNode.toString());

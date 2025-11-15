@@ -548,6 +548,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           syncProgressSubscription = null;
           Timer.run(() async {
             ref.invalidate(getAccountsProvider);
+            ref.invalidate(accountProvider);
             showSnackbar("Synchronization Completed");
             logger.i("Synchronization Completed");
             completer.complete();

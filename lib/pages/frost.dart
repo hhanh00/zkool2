@@ -83,7 +83,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
 
   @override
   Widget build(BuildContext context) {
-    if (frostParams == null) return SizedBox.expand();
+    if (frostParams == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
