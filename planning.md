@@ -159,10 +159,8 @@ In order of priority,
 - [x] mempool
 - [x] transparent scan
 - [x] log
-- [ ] dkg
+- [x] dkg
 - [ ] frost
-- [ ] pinlock
+- [x] pinlock
 - [x] settings
 - [x] changing accounts
-
-AppWatcher?
