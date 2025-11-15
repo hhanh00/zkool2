@@ -1,5 +1,27 @@
 # Changelog
 
+## [6.5.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.2...zkool-v6.5.3) (2025-11-15)
+
+
+### Bug Fixes
+
+* account navigation ([#658](https://github.com/hhanh00/zkool2/issues/658)) ([5a5ee28](https://github.com/hhanh00/zkool2/commit/5a5ee28b76a50b4816ae1daf4beca83cb7d96d53))
+* app resize ([#661](https://github.com/hhanh00/zkool2/issues/661)) ([de91895](https://github.com/hhanh00/zkool2/commit/de918954d3997f088ab466e7d30044262e21381e))
+* app state notification system mobx -&gt; riverpod ([#657](https://github.com/hhanh00/zkool2/issues/657)) ([b060512](https://github.com/hhanh00/zkool2/commit/b060512c0b55389027827d792e5abceccfa57a41))
+* appsettings ([#660](https://github.com/hhanh00/zkool2/issues/660)) ([6e59339](https://github.com/hhanh00/zkool2/commit/6e59339ab831a6150f0331c64b444bfd0d8081c3))
+* autosync & mempool ([#659](https://github.com/hhanh00/zkool2/issues/659)) ([ee7f63d](https://github.com/hhanh00/zkool2/commit/ee7f63d05546f8e6c457de079ea0f89304e6070e))
+* change of lwd ([#662](https://github.com/hhanh00/zkool2/issues/662)) ([e53c4b0](https://github.com/hhanh00/zkool2/commit/e53c4b0e6234d780dd389a5b360189bba5d06a8e))
+* lock pin ([#665](https://github.com/hhanh00/zkool2/issues/665)) ([157ab79](https://github.com/hhanh00/zkool2/commit/157ab792f7340372557bf55892a0c6175bb9dc24))
+* pinlock on rest of the pages ([#666](https://github.com/hhanh00/zkool2/issues/666)) ([65a5c4f](https://github.com/hhanh00/zkool2/commit/65a5c4f878ff764a712ab361e2e62c0f7012956a))
+* remove dependency on connectivity_plus and use config setting ([#654](https://github.com/hhanh00/zkool2/issues/654)) ([763de59](https://github.com/hhanh00/zkool2/commit/763de59fb3f4516d24e71f03ff38084b0d28cb4d))
+* remove some ui glitch ([#668](https://github.com/hhanh00/zkool2/issues/668)) ([267a5e1](https://github.com/hhanh00/zkool2/commit/267a5e19fe69a2bdedc1a84787ef0cc6eb1aadfc))
+* small ui bug ([#672](https://github.com/hhanh00/zkool2/issues/672)) ([6f3e080](https://github.com/hhanh00/zkool2/commit/6f3e080963d13bbccde2d1ed0f6179982f20d8fc))
+* sync missing last chunk of messages ([#670](https://github.com/hhanh00/zkool2/issues/670)) ([a6588c1](https://github.com/hhanh00/zkool2/commit/a6588c185a2528a0edb537f367fe3c9fd8163352))
+* synced_height was getting inserted for missing pools ([#664](https://github.com/hhanh00/zkool2/issues/664)) ([82fe69e](https://github.com/hhanh00/zkool2/commit/82fe69e1145358972cde4b6393a2b8ca96155ea3))
+* transaction export to csv was missing tx without category ([#656](https://github.com/hhanh00/zkool2/issues/656)) ([634bb7e](https://github.com/hhanh00/zkool2/commit/634bb7ea6fc85822867bf0a0e184febbcaba5ba1))
+* transparent sweep ([#663](https://github.com/hhanh00/zkool2/issues/663)) ([4d3e224](https://github.com/hhanh00/zkool2/commit/4d3e22469db48b909aa3e1f25ace90979f9fe3cf))
+* UI bugs ([#671](https://github.com/hhanh00/zkool2/issues/671)) ([4ffcde0](https://github.com/hhanh00/zkool2/commit/4ffcde0014d907c8774b728ebbd2fc5e1d016205))
+
 ## [6.5.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.1...zkool-v6.5.2) (2025-10-23)
 
 
