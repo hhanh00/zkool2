@@ -406,6 +406,8 @@ Future<bool> onUnlock(WidgetRef ref) async {
   return authenticated;
 }
 
+Widget blank(BuildContext context) => SizedBox.expand(child: Container(color: Theme.of(context).colorScheme.surface));
+
 Widget showLoading(String area) =>
     Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $area...", style: TextStyle(fontSize: 17))));
 

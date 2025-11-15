@@ -41,7 +41,23 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
   final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
+  AccountData? account;
   StreamSubscription<SyncProgress>? progressSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final selectedAccount = await ref.read(selectedAccountProvider.future);
+      if (selectedAccount == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => context.go("/"));
+        return blank(context);
+      }
+
+      final account = await ref.read(accountProvider(selectedAccount.id).future);
+      setState(() => this.account = account);
+    });
+  }
 
   void tutorial() async {
     tutorialHelper(context, "tutAccount0", [balID, logID, sync1ID, receiveID, sendID]);
@@ -49,45 +65,24 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
+    final t = Theme.of(context);
+    final tt = t.textTheme;
+    if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
 
     Future(tutorial);
 
-    final selectedAccountAV = ref.watch(selectedAccountProvider);
-    switch (selectedAccountAV) {
-      case AsyncLoading():
-        return showLoading("Selected Account");
-      case AsyncError(:final error):
-        return showError(error);
-      default:
-    }
-    final selectedAccount = selectedAccountAV.requireValue;
-    if (selectedAccount == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => context.go("/"));
-      return SizedBox.expand();
-    }
-
-    final accountAV = ref.watch(accountProvider(selectedAccount.id));
-    switch (accountAV) {
-      case AsyncLoading():
-        return showLoading("Account");
-      case AsyncError(:final error):
-        return showError(error);
-      default:
-    }
-    final account = accountAV.requireValue;
-    final b = account.balance;
+    final b = account!.balance;
     final mempool = ref.watch(mempoolProvider);
-    final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
+    final unconfirmedAmount = mempool.unconfirmedFunds[account!.account.id];
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(account.account.name),
+          title: Text(account!.account.name),
           actions: [
             Showcase(
               key: sync1ID,
@@ -149,7 +144,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
                           children: [
                             Text("Height"),
                             Gap(8),
-                            HeroProgressWidget(account.account),
+                            HeroProgressWidget(account!.account),
                             Gap(16),
                             Text("Balance"),
                             Gap(8),
@@ -161,25 +156,25 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
                                     prefix: "Unconfirmed: ",
                                     colored: true,
                                     selectable: true,
-                                    style: t.bodyLarge,
+                                    style: tt.bodyLarge,
                                   )
                                 : SizedBox.shrink(),
                             Gap(8),
                             Showcase(
                               key: balID,
                               description: "Balance across all pools",
-                              child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: t.titleLarge!),
+                              child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: tt.titleLarge!),
                             ),
                             Gap(8),
                           ],
                         ),
                       ),
                     ),
-                    ...showTxHistory(account.transactions),
+                    ...showTxHistory(account!.transactions),
                   ],
                 ),
-                showMemos(context, account.memos),
-                showNotes(ref, account.notes),
+                showMemos(context, account!.memos),
+                showNotes(ref, account!.notes),
               ],
             )),
       ),
@@ -189,7 +184,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
   void onSync() async {
     try {
       final synchronizer = ref.read(synchronizerProvider.notifier);
-      await synchronizer.startSynchronize([account()]);
+      await synchronizer.startSynchronize([account!.account]);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -216,7 +211,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     if (filename != null) await showMessage(context, "$filename Saved");
   }
 
-  Account account() => ref.read(selectedAccountProvider).requireValue!;
   // the context must be from inside the DefaultTabController, which
   // means it cannot be this widget's context
   int tabIndex(BuildContext context) => DefaultTabController.of(context).index;
