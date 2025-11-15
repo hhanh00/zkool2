@@ -160,7 +160,10 @@ In order of priority,
 - [x] transparent scan
 - [x] log
 - [x] dkg
-- [ ] frost
+- [x] frost
 - [x] pinlock
 - [x] settings
 - [x] changing accounts
+
+- [ ] no update after sync
+- [ ] ui glitches
