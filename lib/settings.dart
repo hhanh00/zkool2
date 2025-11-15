@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -58,7 +57,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    if (settings == null) return SizedBox.expand();
+    if (settings == null) return blank(context);
     return SettingsForm(
       settings!,
       onChanged: (settings) async {
