@@ -1,0 +1,39 @@
+[package]
+name = "auto_import"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "auto_import"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.97"
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+bip39 = "2.1.0"
+zcash_keys = { version = "0.10", features = ["sapling", "orchard", "transparent-inputs"] }
+zcash_primitives = { version = "0.24", features = ["transparent-inputs"] }
+zcash_protocol = { version = "0.6", features = ["local-consensus"] }
+zcash_transparent = { version = "0.4", features = ["transparent-inputs"] }
+zcash_address = "0.9"
+zcash_encoding = "0.3"
+orchard = { version = "0.11", features = ["unstable-frost"] }
+sapling-crypto = "0.5"
+clap = { version = "4.0", features = ["derive"] }
+hex = "0.4"
+ripemd = "0.1"
+sha2 = "0.10"
+bip32 = { version = "0.6.0-pre.1", default-features = false }
+libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"] }
+
+[patch.crates-io]
+orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
+zcash_note_encryption = { git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29" }
+sapling-crypto = { git = "https://github.com/zcash/sapling-crypto.git", rev = "0475817b60fced17ec59b0c9412d2b2d29ef529f" }
+zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_transparent = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
