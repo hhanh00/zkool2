@@ -61,6 +61,9 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     Future(tutorial);
 
     final ib = iconBytes;
