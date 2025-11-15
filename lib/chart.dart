@@ -5,18 +5,19 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-class ChartPage extends StatefulWidget {
+class ChartPage extends ConsumerStatefulWidget {
   const ChartPage({super.key});
 
   @override
-  State<StatefulWidget> createState() => ChartPageState();
+  ConsumerState<ChartPage> createState() => ChartPageState();
 }
 
-class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixin {
+class ChartPageState extends ConsumerState<ChartPage> with SingleTickerProviderStateMixin {
   final formKey = GlobalKey<FormBuilderState>();
   final List<Map<String, dynamic>> data = [];
   late final tabController = TabController(length: 2, vsync: this);
@@ -25,6 +26,9 @@ class ChartPageState extends State<ChartPage> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     return Scaffold(
       appBar: AppBar(title: Text("Charts")),
       body: Padding(

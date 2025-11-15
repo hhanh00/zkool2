@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -42,7 +43,10 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (account == null || idx == null) return LinearProgressIndicator();
+    if (account == null || idx == null) return SizedBox.expand();
+
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
 
     final tx = account!.transactions[idx!];
     final txDetailsAV = ref.watch(getTxDetailsProvider(tx.id));

@@ -7,6 +7,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -99,6 +100,9 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   @override
   Widget build(BuildContext context) {
     Future(tutorial);
+
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
 
     final tt = Theme.of(context).textTheme;
     final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
