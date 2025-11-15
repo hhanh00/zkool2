@@ -319,6 +319,19 @@ pub async fn shielded_sync(
                     messages.push(msg);
                 }
             }
+
+            let mut db_tx = writer_connection.begin().await.unwrap();
+            for msg in messages {
+                match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        info!("ERROR HANDLING MESSAGE: {:?}", e);
+                        return Err(e);
+                    }
+                }
+            }
+            db_tx.commit().await.unwrap();
+
             info!("[db handler] stopped");
             check_witness_consistency(&mut writer_connection).await?;
 
@@ -362,7 +375,7 @@ async fn handle_message(
     msg: WarpSyncMessage,
     tx_progress: &Sender<SyncProgress>,
 ) -> Result<()> {
-    tracing::debug!(target: "warp", "Warp Message: {msg}");
+    tracing::info!(target: "warp", "Warp Message: {msg}");
     match msg {
         WarpSyncMessage::Transaction(tx) => {
             // ignore duplicate transactions because they could have been created
