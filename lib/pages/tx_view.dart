@@ -43,7 +43,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (account == null || idx == null) return SizedBox.expand();
+    if (account == null || idx == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
