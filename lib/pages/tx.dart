@@ -32,17 +32,24 @@ class TxPage extends ConsumerStatefulWidget {
 class TxPageState extends ConsumerState<TxPage> {
   String? txId;
   late final TxPlan txPlan = toPlan(package: widget.pczt);
-  late bool canBroadcast;
-  late Account account;
-  late AccountData details;
+  bool canBroadcast = false;
+  Account? account;
+  AccountData? details;
 
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(appSettingsProvider).requireValue;
-    canBroadcast = !settings.offline;
-    account = ref.read(selectedAccountProvider).requireValue!;
-    details = ref.read(accountProvider(account.id)).requireValue;
+    Future(() async {
+      final settings = ref.read(appSettingsProvider).requireValue;
+      final canBroadcast = !settings.offline;
+      final account = await ref.read(selectedAccountProvider.future);
+      final details = await ref.read(accountProvider(account!.id).future);
+      setState(() {
+        this.account = account;
+        this.details = details;
+        this.canBroadcast = canBroadcast;
+      });
+    });
   }
 
   void tutorial() async {
@@ -57,13 +64,13 @@ class TxPageState extends ConsumerState<TxPage> {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
 
+    if (account == null) return blank(context);
     final t = Theme.of(context).textTheme;
 
     Future(tutorial);
 
-
-    final canSend = (txPlan.canSign || account.hw != 0) && canBroadcast;
-    final hasFrost = details.frostParams != null;
+    final canSend = (txPlan.canSign || account!.hw != 0) && canBroadcast;
+    final hasFrost = details!.frostParams != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -131,7 +138,7 @@ class TxPageState extends ConsumerState<TxPage> {
       if (!confirmed) return;
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
-        if (account.hw != 0) {
+        if (account!.hw != 0) {
           final c = Completer();
           signLedgerTransaction(pczt: widget.pczt).listen((e) {
             switch (e) {
