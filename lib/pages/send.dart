@@ -73,7 +73,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (account == null) return LinearProgressIndicator();
+    if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
@@ -433,7 +433,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
 
   @override
   Widget build(BuildContext context) {
-    if (account == null) return SizedBox.expand();
+    if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value == true) return PinLock();
