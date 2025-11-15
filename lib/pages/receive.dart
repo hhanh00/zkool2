@@ -4,6 +4,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
@@ -50,7 +51,9 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (this.account == null) return LinearProgressIndicator();
+    if (this.account == null) return SizedBox.expand();
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
 
     Future(tutorial);
 
@@ -208,13 +211,16 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   }
 }
 
-class TransparentAddressesPage extends StatelessWidget {
+class TransparentAddressesPage extends ConsumerWidget {
   final List<TAddressTxCount> txCounts;
 
   const TransparentAddressesPage({super.key, required this.txCounts});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value == true) return PinLock();
+
     return Scaffold(
       appBar: AppBar(title: Text("Transparent Addresses")),
       body: ListView.builder(
