@@ -252,6 +252,13 @@ Future<AccountData> account(Ref ref, int id) async {
   );
 }
 
+@riverpod
+Future<AccountData?> getCurrentAccount(Ref ref) async {
+  final selectedAccount = await ref.watch(selectedAccountProvider.future);
+  if (selectedAccount == null) return null;
+  return await ref.watch(accountProvider(selectedAccount.id).future);
+}
+
 @freezed
 sealed class AccountData with _$AccountData {
   factory AccountData({
