@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.5.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.3...zkool-v6.5.4) (2025-11-16)
+
+
+### Bug Fixes
+
+* remove aab because of out of disk space issues ([f2dc689](https://github.com/hhanh00/zkool2/commit/f2dc6892ed93d82fecab75f52fc3e28e9b625494))
+
 ## [6.5.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.2...zkool-v6.5.3) (2025-11-15)
 
 
