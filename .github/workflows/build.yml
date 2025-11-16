@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: macos-latest
             target: android
           - os: ubuntu-latest
             target: linux
@@ -44,6 +44,7 @@ jobs:
       - name: Set up Flutter
         shell: bash
         run: |
+          df -h
           git clone --depth 1 --branch stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
       - name: Get version number
@@ -90,6 +91,7 @@ jobs:
         id: collect
         shell: bash
         run: |
+          df -h
           echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir || steps.build_windows.outputs.outdir }}" >> $GITHUB_OUTPUT
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
