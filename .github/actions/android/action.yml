@@ -26,7 +26,6 @@ runs:
       run: |
         echo "Building zkool version: ${RELEASE_VERSION}"
         flutter build apk --split-per-abi
-        flutter build aab
     - name: Move to outdir
       id: out
       shell: bash
