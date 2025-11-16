@@ -41,23 +41,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
   final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
-  AccountData? account;
   StreamSubscription<SyncProgress>? progressSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    Future(() async {
-      final selectedAccount = await ref.read(selectedAccountProvider.future);
-      if (selectedAccount == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => context.go("/"));
-        return blank(context);
-      }
-
-      final account = await ref.read(accountProvider(selectedAccount.id).future);
-      setState(() => this.account = account);
-    });
-  }
 
   void tutorial() async {
     tutorialHelper(context, "tutAccount0", [balID, logID, sync1ID, receiveID, sendID]);
@@ -65,6 +49,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
   @override
   Widget build(BuildContext context) {
+    final accountAV = ref.watch(getCurrentAccountProvider);
+    switch (accountAV) {
+      case AsyncLoading():
+        return blank(context);
+      case AsyncError(:final error):
+        return showError(error);
+      default:
+    }
+    final account = accountAV.value;
+
     final t = Theme.of(context);
     final tt = t.textTheme;
     if (account == null) return blank(context);
@@ -74,20 +68,20 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
     Future(tutorial);
 
-    final b = account!.balance;
+    final b = account.balance;
     final mempool = ref.watch(mempoolProvider);
-    final unconfirmedAmount = mempool.unconfirmedFunds[account!.account.id];
+    final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(account!.account.name),
+          title: Text(account.account.name),
           actions: [
             Showcase(
               key: sync1ID,
               description: "Synchronize only this account",
-              child: IconButton(tooltip: "Sync this account", onPressed: onSync, icon: Icon(Icons.sync)),
+              child: IconButton(tooltip: "Sync this account", onPressed: () => onSync(account), icon: Icon(Icons.sync)),
             ),
             Showcase(
               key: receiveID,
@@ -144,7 +138,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
                           children: [
                             Text("Height"),
                             Gap(8),
-                            HeroProgressWidget(account!.account),
+                            HeroProgressWidget(account.account),
                             Gap(16),
                             Text("Balance"),
                             Gap(8),
@@ -170,21 +164,21 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
                         ),
                       ),
                     ),
-                    ...showTxHistory(account!.transactions),
+                    ...showTxHistory(account.transactions),
                   ],
                 ),
-                showMemos(context, account!.memos),
-                showNotes(ref, account!.notes),
+                showMemos(context, account.memos),
+                showNotes(ref, account.notes),
               ],
             )),
       ),
     );
   }
 
-  void onSync() async {
+  void onSync(AccountData account) async {
     try {
       final synchronizer = ref.read(synchronizerProvider.notifier);
-      await synchronizer.startSynchronize([account!.account]);
+      await synchronizer.startSynchronize([account.account]);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }

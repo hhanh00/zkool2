@@ -408,6 +408,40 @@ final class AccountFamily extends $Family
   String toString() => r'accountProvider';
 }
 
+@ProviderFor(getCurrentAccount)
+const getCurrentAccountProvider = GetCurrentAccountProvider._();
+
+final class GetCurrentAccountProvider extends $FunctionalProvider<
+        AsyncValue<AccountData?>, AccountData?, FutureOr<AccountData?>>
+    with $FutureModifier<AccountData?>, $FutureProvider<AccountData?> {
+  const GetCurrentAccountProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getCurrentAccountProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getCurrentAccountHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<AccountData?> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<AccountData?> create(Ref ref) {
+    return getCurrentAccount(ref);
+  }
+}
+
+String _$getCurrentAccountHash() => r'9df871476932b560af1bea1f5d66754c4664e028';
+
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
 
@@ -679,7 +713,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'9c385b45434d6fa353bc51b6e47bbb8708c9b727';
+    r'045975f5d0b8c42acf4c5796e1c6a70e08bbed31';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -851,7 +885,7 @@ final class LifecycleProvider extends $AsyncNotifierProvider<Lifecycle, bool> {
   Lifecycle create() => Lifecycle();
 }
 
-String _$lifecycleHash() => r'e59aaf2a8d414ab65425a718723c24e2d902e7e0';
+String _$lifecycleHash() => r'6e596c7d9d1b6b91e2fb3383305631171728112d';
 
 abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   FutureOr<bool> build();
