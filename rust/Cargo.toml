@@ -3,6 +3,11 @@ edition = "2021"
 name = "rlz"
 version = "0.1.0"
 
+[[bin]]
+name = "ledger-recover"
+path = "src/ledger/recover.rs"
+required-features = ["bip32-ed25519"]
+
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
 
@@ -17,6 +22,8 @@ log = "0.4"
 rand = "0.6"
 rand_core = "0.6"
 thiserror = "2.0"
+
+hmac = {version = "0.12", optional = true}
 
 futures = "0.3"
 sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
@@ -69,6 +76,7 @@ prost = "0.13.5"
 ripemd = "0.1"
 rustls = {version = "0.23", default-features = false, features = ["ring"]}
 sapling-crypto = "0.5"
+zip32 = "0.2"
 secp256k1 = "0.29"
 sha2 = "0.10"
 tonic = {version = "0.13.0", features = ["tls-webpki-roots"]}
@@ -106,6 +114,7 @@ tonic-build = "0.13"
 
 [features]
 zemu = []
+bip32-ed25519 = ["hmac"]
 
 [patch.crates-io]
 orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
