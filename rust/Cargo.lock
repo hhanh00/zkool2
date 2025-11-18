@@ -5070,6 +5070,7 @@ dependencies = [
  "halo2_proofs",
  "hex",
  "hidapi",
+ "hmac 0.12.1",
  "hyper-util",
  "incrementalmerkletree",
  "itertools",
@@ -5114,6 +5115,7 @@ dependencies = [
  "zcash_proofs",
  "zcash_protocol",
  "zcash_transparent",
+ "zip32",
  "zip321",
  "zstd",
 ]
