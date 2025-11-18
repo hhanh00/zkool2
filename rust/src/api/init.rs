@@ -30,9 +30,9 @@ pub fn init_app() {
     tracing::info!("Rust logging initialized");
 }
 
-type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
+pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
 
-fn default_layer<S>() -> BoxedLayer<S>
+pub fn default_layer<S>() -> BoxedLayer<S>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
@@ -43,7 +43,7 @@ where
         .boxed()
 }
 
-fn env_layer<S>() -> BoxedLayer<S>
+pub fn env_layer<S>() -> BoxedLayer<S>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
