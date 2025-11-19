@@ -32,7 +32,11 @@ use crate::{
     bip38,
     coin::Network,
     db::{
-        get_account_dindex, init_account_orchard, init_account_sapling, init_account_transparent, store_account_hw, store_account_metadata, store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk, store_account_sapling_vk, store_account_seed, store_account_transparent_addr, store_account_transparent_sk, store_account_transparent_vk, update_dindex, LEDGER_CODE
+        get_account_dindex, init_account_orchard, init_account_sapling, init_account_transparent,
+        store_account_hw, store_account_metadata, store_account_orchard_sk,
+        store_account_orchard_vk, store_account_sapling_sk, store_account_sapling_vk,
+        store_account_seed, store_account_transparent_addr, store_account_transparent_sk,
+        store_account_transparent_vk, update_dindex, LEDGER_CODE,
     },
     get_coin,
     io::{decrypt, encrypt},
@@ -42,9 +46,15 @@ use crate::{
 };
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use crate::ledger::fvk::{get_hw_sapling_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
+use crate::ledger::fvk::{
+    get_hw_sapling_address, get_hw_transparent_address, show_sapling_address,
+    show_transparent_address,
+};
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-use crate::no_ledger::{get_hw_sapling_address, get_hw_transparent_address, show_sapling_address, show_transparent_address};
+use crate::no_ledger::{
+    get_hw_sapling_address, get_hw_transparent_address, show_sapling_address,
+    show_transparent_address,
+};
 
 #[frb]
 pub async fn get_account_pools(account: u32) -> Result<u8> {
@@ -307,34 +317,37 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
     if na.ledger {
+        store_account_hw(&mut db_tx, account, LEDGER_CODE, na.aindex).await?;
         // we must do sapling derivation first to know a valid dindex
         // because in sapling some indices are invalid
-        init_account_sapling(&network, &mut db_tx, account, birth).await?;
-        store_account_hw(&mut db_tx, account, LEDGER_CODE).await?;
-        let fvk = get_hw_fvk(&network, LEDGER_CODE, na.aindex).await?;
-        let mut dfvk = fvk.to_bytes().to_vec();
-        dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
-        let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
-        // We should get the default address dindex by using the get_div_list
-        // api but it is currently not working
-        // instead, we "assume" the dindex = 0 is the default sapling address
-        // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
         let dindex = 0;
-        let address = get_hw_sapling_address(&network, na.aindex).await?;
-        store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
-
-        init_account_transparent(&mut db_tx, account, birth).await?;
-        let (pk, taddr) = get_hw_transparent_address(&network, na.aindex, 0, dindex).await?;
-        store_account_transparent_addr(
-            &mut db_tx,
-            account,
-            0,
-            dindex,
-            None,
-            &pk,
-            &taddr.encode(&c.network),
-        )
-        .await?;
+        if pools & 2 != 0 {
+            init_account_sapling(&network, &mut db_tx, account, birth).await?;
+            let fvk = get_hw_fvk(&network, LEDGER_CODE, na.aindex).await?;
+            let mut dfvk = fvk.to_bytes().to_vec();
+            dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
+            let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
+            // We should get the default address dindex by using the get_div_list
+            // api but it is currently not working
+            // instead, we "assume" the dindex = 0 is the default sapling address
+            // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
+            let address = get_hw_sapling_address(&network, na.aindex).await?;
+            store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
+        }
+        if pools & 1 != 0 {
+            init_account_transparent(&mut db_tx, account, birth).await?;
+            let (pk, taddr) = get_hw_transparent_address(&network, na.aindex, 0, dindex).await?;
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                dindex,
+                None,
+                &pk,
+                &taddr.encode(&c.network),
+            )
+            .await?;
+        }
         update_dindex(&mut db_tx, account, dindex, true).await?;
     } else if is_valid_phrase(&key) {
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
@@ -397,8 +410,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         }
 
         update_dindex(&mut db_tx, account, dindex, true).await?;
-    }
-    else if is_valid_transparent_key(&key) {
+    } else if is_valid_transparent_key(&key) {
         init_account_transparent(&mut db_tx, account, birth).await?;
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
             let xsk = AccountPrivKey::from_extended_privkey(xsk);
@@ -464,8 +476,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
             )
             .await?;
         }
-    }
-    else if is_valid_sapling_key(&network, &key) {
+    } else if is_valid_sapling_key(&network, &key) {
         init_account_sapling(&network, &mut db_tx, account, birth).await?;
         let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
             network.hrp_sapling_extended_spending_key(),
@@ -496,8 +507,7 @@ pub async fn new_account(na: &NewAccount) -> Result<u32> {
         };
         let dindex: u32 = di.try_into()?;
         update_dindex(&mut db_tx, account, dindex, true).await?;
-    }
-    else if is_valid_ufvk(&network, &key) {
+    } else if is_valid_ufvk(&network, &key) {
         let uvk =
             UnifiedFullViewingKey::decode(&network, &key).map_err(|_| anyhow!("Invalid Key"))?;
         let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
