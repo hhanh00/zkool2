@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -185,7 +186,7 @@ class SelectedAccount extends _$SelectedAccount {
     final s = await getProp(key: "selected_account");
     if (s == null || s == "") return null;
     final id = int.parse(s);
-    return accounts.firstWhere((a) => a.id == id);
+    return accounts.firstWhereOrNull((a) => a.id == id);
   }
 
   void selectAccount(Account account) async {
@@ -701,8 +702,12 @@ class Lifecycle extends _$Lifecycle {
     state = AsyncData(true);
   }
 
-  void check() {
-    if (DateTime.now().difference(unlockTime).inSeconds > 30) {
+  void check() async {
+    final settings = await ref.read(appSettingsProvider.future);
+    if (!settings.needPin) {
+      state = AsyncData(false);
+    }
+    else if (DateTime.now().difference(unlockTime).inSeconds > 30) {
       state = AsyncData(true);
     }
   }

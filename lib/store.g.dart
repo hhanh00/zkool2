@@ -167,7 +167,7 @@ final class SelectedAccountProvider
   SelectedAccount create() => SelectedAccount();
 }
 
-String _$selectedAccountHash() => r'82dc4076f335db195f29c7da71ce784f29459ded';
+String _$selectedAccountHash() => r'195a58226d229c3f9663fd8fc599d8bf0d93bd9b';
 
 abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
   FutureOr<Account?> build();
@@ -440,7 +440,7 @@ final class GetCurrentAccountProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCurrentAccountHash() => r'9df871476932b560af1bea1f5d66754c4664e028';
+String _$getCurrentAccountHash() => r'd96b535adcd641dbfc5444f924a82c621d592e56';
 
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
@@ -885,7 +885,7 @@ final class LifecycleProvider extends $AsyncNotifierProvider<Lifecycle, bool> {
   Lifecycle create() => Lifecycle();
 }
 
-String _$lifecycleHash() => r'6e596c7d9d1b6b91e2fb3383305631171728112d';
+String _$lifecycleHash() => r'cfa7f3a7aaeefb3e94042ed4f38eaea1e08b3fef';
 
 abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   FutureOr<bool> build();
