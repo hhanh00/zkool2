@@ -69,7 +69,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
     isFvk = isValidFvk(fvk: key);
-    final keyPools = getKeyPools(key: key);
+    final keyPools = ledger ? 3 : getKeyPools(key: key); // 3 is T+S
 
     return Scaffold(
       appBar: AppBar(
@@ -138,7 +138,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                   ),
                 ),
                 Gap(16),
-                Showcase(
+                if (!ledger) Showcase(
                   key: internalID,
                   description: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                   child: FormBuilderSwitch(
@@ -197,7 +197,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                     ],
                   ),
                 Gap(16),
-                if (restore && isSeed)
+                if (restore && isSeed && !ledger)
                   Showcase(
                     key: passphraseID,
                     description: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
