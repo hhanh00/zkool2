@@ -353,6 +353,8 @@ Future<bool> authenticate({String? reason}) async {
         return true; // no passcode set
       case auth_error.notEnrolled:
         return true; // no fingerprint enrolled
+      case auth_error.notAvailable:
+        return true; // don't require if the device doesn't support it
       default:
         showSnackbar("Authentication denied: ${e.code} - ${e.message}");
         return false;
