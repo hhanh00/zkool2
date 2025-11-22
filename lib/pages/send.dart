@@ -203,9 +203,15 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   void onLoad() async {
-    final data = await openFile(title: "Please select a transaction to sign");
-    if (data == null) return;
-    final pczt = await unpackTransaction(bytes: data);
+    final appSettings = await ref.read(appSettingsProvider.future);
+    List<int>? data;
+    if (appSettings.qrSettings.enabled) {
+      data = await GoRouter.of(context).push<List<int>>("/scan_animated_qr");
+    } else {
+      data = await openFile(title: "Please select a transaction to sign");
+      if (data == null) return;
+    }
+    final pczt = await unpackTransaction(bytes: data!);
     if (!mounted) return;
     GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
   }

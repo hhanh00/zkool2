@@ -292,6 +292,20 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final syncInterval = (hasDb ? await getProp(key: "sync_interval") : null) ?? "30";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync") : null) ?? "10000";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer") : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
+
+    final qrEnabled = (hasDb ? await getProp(key: "qr_enabled") : null) ?? "false";
+    final qrSize = (hasDb ? await getProp(key: "qr_size") : null) ?? "20";
+    final qrEC = (hasDb ? await getProp(key: "qr_ecLevel") : null) ?? "1";
+    final qrDelay = (hasDb ? await getProp(key: "qr_delay") : null) ?? "500";
+    final qrRepair = (hasDb ? await getProp(key: "qr_repair") : null) ?? "2";
+    final qrSettings = QRSettings(
+      enabled: qrEnabled == "true",
+      size: double.parse(qrSize),
+      ecLevel: int.parse(qrEC),
+      delay: int.parse(qrDelay),
+      repair: int.parse(qrRepair),
+    );
+
     return AppSettings(
       dbName: dbName,
       net: net,
@@ -306,6 +320,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       syncInterval: syncInterval,
       actionsPerSync: actionsPerSync,
       blockExplorer: blockExplorer,
+      qrSettings: qrSettings,
     );
   }
 
@@ -342,6 +357,7 @@ sealed class AppSettings with _$AppSettings {
     required bool needPin,
     required DateTime pinUnlockedAt,
     required bool offline,
+    required QRSettings qrSettings,
   }) = _AppSettings;
 }
 
@@ -706,8 +722,7 @@ class Lifecycle extends _$Lifecycle {
     final settings = await ref.read(appSettingsProvider.future);
     if (!settings.needPin) {
       state = AsyncData(false);
-    }
-    else if (DateTime.now().difference(unlockTime).inSeconds > 30) {
+    } else if (DateTime.now().difference(unlockTime).inSeconds > 30) {
       state = AsyncData(true);
     }
   }
@@ -729,4 +744,15 @@ class LifecycleWatcher with WidgetsBindingObserver {
       scope.read(lifecycleProvider.notifier).check();
     }
   }
+}
+
+@freezed
+sealed class QRSettings with _$QRSettings {
+  factory QRSettings({
+    required bool enabled,
+    required double size,
+    required int ecLevel,
+    required int delay,
+    required int repair,
+  }) = _QRSettings;
 }

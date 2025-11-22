@@ -25,6 +25,7 @@ final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
 final pinLockID = GlobalKey();
 final offlineID = GlobalKey();
+final useQRID = GlobalKey();
 final blockExplorerID = GlobalKey();
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -71,6 +72,11 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString());
+        await putProp(key: "qr_size", value: settings.qrSettings.size.toString());
+        await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString());
+        await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString());
+        await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString());
         setLwd(lwd: settings.lwd, serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra);
         setUseTor(useTor: settings.useTor);
         ref.invalidate(appSettingsProvider);
@@ -108,7 +114,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID, blockExplorerID]);
+    tutorialHelper(
+        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID, useQRID, blockExplorerID]);
   }
 
   @override
@@ -231,6 +238,15 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     onChanged: onChangedBlockExplorer,
                   ),
                 ),
+                Gap(8),
+                Showcase(
+                  key: useQRID,
+                  description: "Use QR Codes for file transmission between devices",
+                  child: Row(children: [
+                    Expanded(child: Text("File Transmission via QR Codes")),
+                    SizedBox(width: 40, child: IconButton(onPressed: onQR, icon: Icon(Icons.chevron_right)))
+                  ]),
+                ),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
@@ -294,6 +310,15 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
+  onQR() async {
+    await GoRouter.of(context).push("/settings/qr", extra: (QRSettings qrSettings) {
+      setState(() {
+        settings = settings.copyWith(qrSettings: qrSettings);
+        widget.onChanged(settings);
+      });
+    });
+  }
+
   onPinLockChanged(bool? value) async {
     if (value == null) return;
     setState(() {
@@ -342,6 +367,161 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       final prefs = SharedPreferencesAsync();
       await prefs.setBool("recovery", true);
       await showMessage(context, "Restart the app to enter the database manager");
+    }
+  }
+}
+
+typedef VoidFunction<T> = void Function(T);
+
+class SettingsQRPage extends ConsumerStatefulWidget {
+  final VoidFunction<QRSettings> onClose;
+  const SettingsQRPage({required this.onClose, super.key});
+
+  @override
+  ConsumerState<SettingsQRPage> createState() => SettingsQRPageState();
+}
+
+class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware {
+  final formKey = GlobalKey<FormBuilderState>();
+  QRSettings? settings;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPop() {
+    super.didPop();
+    onPop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settingsAR = ref.watch(appSettingsProvider);
+    switch (settingsAR) {
+      case AsyncLoading():
+        return showLoading("QR Code Settings");
+      case AsyncError(:final error):
+        return showError(error);
+      default:
+    }
+    final settings = settingsAR.value!.qrSettings;
+    final t = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(title: Text("Settings")),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+          child: FormBuilder(
+            key: formKey,
+            child: Column(
+              children: [
+                Card(
+                  elevation: 1,
+                  margin: EdgeInsets.all(8),
+                  child: Padding(
+                    padding: EdgeInsetsGeometry.all(8),
+                    child: Column(
+                      children: [
+                        Text("QR Codes", style: t.titleMedium),
+                        Gap(16),
+                        FormBuilderSwitch(name: "enabled", initialValue: settings.enabled, title: Text("Enabled")),
+                        Gap(8),
+                        FormBuilderSlider(
+                          name: "size",
+                          decoration: InputDecoration(
+                            label: Text("QR Code Size"),
+                          ),
+                          initialValue: settings.size,
+                          min: 10,
+                          max: 40,
+                          divisions: 30,
+                        ),
+                        Gap(16),
+                        FormBuilderSlider(
+                          name: "ecLevel",
+                          decoration: InputDecoration(
+                            label: Text("Error Correction Level"),
+                            helper: Text(
+                              "higher ECL is more robust but takes more space",
+                            ),
+                          ),
+                          initialValue: settings.ecLevel.toDouble(),
+                          min: 0,
+                          max: 3,
+                          divisions: 3,
+                        ),
+                        Gap(16),
+                        FormBuilderTextField(
+                          name: "delay",
+                          decoration: InputDecoration(
+                            label: Text("Duration between QR codes (ms)"),
+                          ),
+                          initialValue: settings.delay.toString(),
+                          validator: FormBuilderValidators.integer(),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Card(
+                  elevation: 1,
+                  child: Padding(
+                    padding: EdgeInsetsGeometry.all(8),
+                    child: Column(
+                      children: [
+                        Text("Fountain Codes", style: t.titleMedium),
+                        Gap(8),
+                        FormBuilderTextField(
+                          name: "repair",
+                          decoration: InputDecoration(
+                            label: Text("Repair Packets"),
+                          ),
+                          initialValue: settings.repair.toString(),
+                          validator: FormBuilderValidators.integer(),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void onPop() {
+    final form = formKey.currentState!;
+    if (form.validate()) {
+      final fields = form.fields;
+      final enabled = fields["enabled"]!.value as bool;
+      final size = fields["size"]!.value as double;
+      final ecLevel = fields["ecLevel"]!.value as double;
+      final delay = int.parse(fields["delay"]!.value as String);
+      final repair = int.parse(fields["repair"]!.value as String);
+      final settings = QRSettings(
+        enabled: enabled,
+        size: size,
+        ecLevel: ecLevel.toInt(),
+        delay: delay,
+        repair: repair,
+      );
+      widget.onClose(settings);
     }
   }
 }
