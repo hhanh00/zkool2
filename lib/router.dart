@@ -15,6 +15,7 @@ import 'package:zkool/pages/frost.dart';
 import 'package:zkool/pages/log.dart';
 import 'package:zkool/pages/market.dart';
 import 'package:zkool/pages/new_account.dart';
+import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/splash.dart';
@@ -103,6 +104,9 @@ GoRouter router(bool recoveryMode) => GoRouter(
         GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
         GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
         GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
+        GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
+        GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
+
       ],
     );
 
