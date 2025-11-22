@@ -92,7 +92,10 @@ GoRouter router(bool recoveryMode) => GoRouter(
     GoRoute(path: '/dkg3', builder: (context, state) => pinLock(DKGPage3())),
     GoRoute(path: '/frost1', builder: (context, state) => pinLock(FrostPage1(state.extra as PcztPackage))),
     GoRoute(path: '/frost2', builder: (context, state) => pinLock(FrostPage2())),
-    GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage())),
+    GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage()),
+    routes: [
+      GoRoute(path: 'qr', builder: (context, state) => pinLock(SettingsQRPage())),
+    ]),
     GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
     GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
     GoRoute(path: '/chart', builder: (context, state) => ChartPage()),

@@ -25,6 +25,7 @@ final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
 final pinLockID = GlobalKey();
 final offlineID = GlobalKey();
+final useQRID = GlobalKey();
 final blockExplorerID = GlobalKey();
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -68,6 +69,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "block_explorer", value: settings.blockExplorer);
         await putProp(key: "actions_per_sync", value: settings.actionsPerSync);
         await putProp(key: "sync_interval", value: settings.syncInterval);
+        await putProp(key: "use_qr", value: settings.useQR.toString());
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
@@ -108,7 +110,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID, blockExplorerID]);
+    tutorialHelper(
+        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID, useQRID, blockExplorerID]);
   }
 
   @override
@@ -231,6 +234,15 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     onChanged: onChangedBlockExplorer,
                   ),
                 ),
+                Gap(8),
+                Showcase(
+                  key: useQRID,
+                  description: "Use QR Codes for file transmission between devices",
+                  child: Row(children: [
+                    Expanded(child: Text("File Transmission via QR Codes")),
+                    SizedBox(width: 40, child: IconButton(onPressed: onQR, icon: Icon(Icons.chevron_right)))
+                  ]),
+                ),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
@@ -294,6 +306,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
+  onQR() async {
+    await GoRouter.of(context).push("/settings/qr");
+  }
+
+  onChangedUseQR(bool? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(useQR: value);
+      widget.onChanged(settings);
+    });
+  }
+
   onPinLockChanged(bool? value) async {
     if (value == null) return;
     setState(() {
@@ -343,5 +367,119 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       await prefs.setBool("recovery", true);
       await showMessage(context, "Restart the app to enter the database manager");
     }
+  }
+}
+
+class SettingsQRPage extends ConsumerStatefulWidget {
+  const SettingsQRPage({super.key});
+
+  @override
+  ConsumerState<SettingsQRPage> createState() => SettingsQRPageState();
+}
+
+class SettingsQRPageState extends ConsumerState<SettingsQRPage> {
+  final formKey = GlobalKey<FormBuilderState>();
+  QRSettings? settings;
+
+  @override
+  void activate() {
+    // TODO: implement activate
+    super.activate();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (settings == null) return showLoading("QR Code Settings");
+    final s = settings!;
+    final t = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(title: Text("Settings")),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+          child: FormBuilder(
+            key: formKey,
+            child: Column(
+              children: [
+                Card(
+                  elevation: 1,
+                  margin: EdgeInsets.all(8),
+                  child: Padding(
+                    padding: EdgeInsetsGeometry.all(8),
+                    child: Column(
+                      children: [
+                        Text("QR Codes", style: t.titleMedium),
+                        Gap(16),
+                        FormBuilderSlider(
+                          name: "type",
+                          decoration: InputDecoration(
+                            label: Text("QR Code Size"),
+                          ),
+                          initialValue: s.size,
+                          min: 10,
+                          max: 40,
+                          divisions: 30,
+                        ),
+                        Gap(16),
+                        FormBuilderSlider(
+                          name: "error_level",
+                          decoration: InputDecoration(
+                            label: Text("Error Correction Level"),
+                            helper: Text(
+                              "higher ECL is more robust but takes more space",
+                            ),
+                          ),
+                          initialValue: s.ecLevel.toDouble(),
+                          min: 0,
+                          max: 3,
+                          divisions: 3,
+                        ),
+                        Gap(16),
+                        FormBuilderTextField(
+                          name: "delay",
+                          decoration: InputDecoration(
+                            label: Text("Duration between QR codes (ms)"),
+                          ),
+                          initialValue: s.delay.toString(),
+                          validator: FormBuilderValidators.integer(),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Card(
+                  elevation: 1,
+                  child: Padding(
+                    padding: EdgeInsetsGeometry.all(8),
+                    child: Column(
+                      children: [
+                        Text("Fountain Codes", style: t.titleMedium),
+                        Gap(8),
+                        FormBuilderTextField(
+                          name: "repair",
+                          decoration: InputDecoration(
+                            label: Text("Repair Packets"),
+                          ),
+                          initialValue: s.repair.toString(),
+                          validator: FormBuilderValidators.integer(),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

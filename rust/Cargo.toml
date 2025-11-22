@@ -42,6 +42,9 @@ hyper-util = {version = "0.1", features = ["tokio"]}
 tower = "0.5"
 rayon = "1.10"
 
+qrcode = "0.14.1"
+raptorq = "2.0.0"
+
 zcash_address = "0.9"
 zcash_encoding = "0.3"
 zcash_keys = {version = "0.10", features = ["sapling", "orchard", "transparent-inputs"]}
