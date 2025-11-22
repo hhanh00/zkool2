@@ -10,6 +10,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
@@ -192,11 +193,14 @@ class TxPageState extends ConsumerState<TxPage> {
       }
       final pcztData = await packTransaction(pczt: pczt);
       final prefix = txPlan.canSign ? "signed" : "unsigned";
-      await saveFile(
+      final path = await saveFile(
         title: "Please select an output file for the unsigned transaction",
         fileName: "$prefix-tx.bin",
         data: pcztData,
       );
+      final appSettings = await ref.read(appSettingsProvider.future);
+      if (path != null && appSettings.qrSettings.enabled)
+        await showAnimatedQR(context, ref, path);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);

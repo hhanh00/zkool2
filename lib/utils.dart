@@ -414,7 +414,7 @@ Widget showLoading(String area) =>
     Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $area...", style: TextStyle(fontSize: 17))));
 
 Widget showError(Object error) =>
-    Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $error...", style: TextStyle(fontSize: 21, color: Colors.red))));
+    Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Error $error...", style: TextStyle(fontSize: 21, color: Colors.red))));
 
 Future<Uint8List?> openFile({String? title}) async {
   final files = await FilePicker.platform.pickFiles(

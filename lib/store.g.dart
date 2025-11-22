@@ -467,7 +467,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'0a7b74b006d3439e61d46b54bd28332e046ee4cf';
+    r'f78af760b6b2361425da85b0a957f9ac0bea3b63';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -885,7 +885,7 @@ final class LifecycleProvider extends $AsyncNotifierProvider<Lifecycle, bool> {
   Lifecycle create() => Lifecycle();
 }
 
-String _$lifecycleHash() => r'cfa7f3a7aaeefb3e94042ed4f38eaea1e08b3fef';
+String _$lifecycleHash() => r'56c133a3eb74b3d00892770f1b0f0bfe1bbd4350';
 
 abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   FutureOr<bool> build();

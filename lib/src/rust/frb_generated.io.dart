@@ -12,6 +12,7 @@ import 'api/key.dart';
 import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
+import 'api/raptor.dart';
 import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
@@ -142,6 +143,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PcztPackage dco_decode_box_autoadd_pczt_package(dynamic raw);
 
   @protected
+  RaptorQParams dco_decode_box_autoadd_raptor_q_params(dynamic raw);
+
+  @protected
   Seed dco_decode_box_autoadd_seed(dynamic raw);
 
   @protected
@@ -191,6 +195,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Folder> dco_decode_list_folder(dynamic raw);
+
+  @protected
+  List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
 
   @protected
   List<Memo> dco_decode_list_memo(dynamic raw);
@@ -301,6 +308,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PoolBalance dco_decode_pool_balance(dynamic raw);
+
+  @protected
+  RaptorQParams dco_decode_raptor_q_params(dynamic raw);
 
   @protected
   Receivers dco_decode_receivers(dynamic raw);
@@ -494,6 +504,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PcztPackage sse_decode_box_autoadd_pczt_package(SseDeserializer deserializer);
 
   @protected
+  RaptorQParams sse_decode_box_autoadd_raptor_q_params(
+      SseDeserializer deserializer);
+
+  @protected
   Seed sse_decode_box_autoadd_seed(SseDeserializer deserializer);
 
   @protected
@@ -543,6 +557,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Folder> sse_decode_list_folder(SseDeserializer deserializer);
+
+  @protected
+  List<Uint8List> sse_decode_list_list_prim_u_8_strict(
+      SseDeserializer deserializer);
 
   @protected
   List<Memo> sse_decode_list_memo(SseDeserializer deserializer);
@@ -656,6 +674,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PoolBalance sse_decode_pool_balance(SseDeserializer deserializer);
+
+  @protected
+  RaptorQParams sse_decode_raptor_q_params(SseDeserializer deserializer);
 
   @protected
   Receivers sse_decode_receivers(SseDeserializer deserializer);
@@ -855,6 +876,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       PcztPackage self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_raptor_q_params(
+      RaptorQParams self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_seed(Seed self, SseSerializer serializer);
 
   @protected
@@ -906,6 +931,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_folder(List<Folder> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_list_prim_u_8_strict(
+      List<Uint8List> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_memo(List<Memo> self, SseSerializer serializer);
@@ -1030,6 +1059,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_pool_balance(PoolBalance self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_raptor_q_params(RaptorQParams self, SseSerializer serializer);
 
   @protected
   void sse_encode_receivers(Receivers self, SseSerializer serializer);
