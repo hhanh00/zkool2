@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.6.0...zkool-v6.7.0) (2025-11-22)
+
+
+### Features
+
+* QR code transmission ([#680](https://github.com/hhanh00/zkool2/issues/680)) ([62a041d](https://github.com/hhanh00/zkool2/commit/62a041dac700636fecf1bb9f38bae2d8ababdcae))
+
 ## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.2...zkool-v6.6.0) (2025-11-19)
 
 
