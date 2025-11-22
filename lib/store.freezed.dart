@@ -1287,7 +1287,6 @@ mixin _$AppSettings {
   bool get needPin;
   DateTime get pinUnlockedAt;
   bool get offline;
-  bool get useQR;
   QRSettings get qrSettings;
 
   /// Create a copy of AppSettings
@@ -1322,7 +1321,6 @@ mixin _$AppSettings {
             (identical(other.pinUnlockedAt, pinUnlockedAt) ||
                 other.pinUnlockedAt == pinUnlockedAt) &&
             (identical(other.offline, offline) || other.offline == offline) &&
-            (identical(other.useQR, useQR) || other.useQR == useQR) &&
             (identical(other.qrSettings, qrSettings) ||
                 other.qrSettings == qrSettings));
   }
@@ -1343,12 +1341,11 @@ mixin _$AppSettings {
       needPin,
       pinUnlockedAt,
       offline,
-      useQR,
       qrSettings);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, useQR: $useQR, qrSettings: $qrSettings)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, qrSettings: $qrSettings)';
   }
 }
 
@@ -1372,7 +1369,6 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       bool needPin,
       DateTime pinUnlockedAt,
       bool offline,
-      bool useQR,
       QRSettings qrSettings});
 
   $QRSettingsCopyWith<$Res> get qrSettings;
@@ -1403,7 +1399,6 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? needPin = null,
     Object? pinUnlockedAt = null,
     Object? offline = null,
-    Object? useQR = null,
     Object? qrSettings = null,
   }) {
     return _then(_self.copyWith(
@@ -1458,10 +1453,6 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
       offline: null == offline
           ? _self.offline
           : offline // ignore: cast_nullable_to_non_nullable
-              as bool,
-      useQR: null == useQR
-          ? _self.useQR
-          : useQR // ignore: cast_nullable_to_non_nullable
               as bool,
       qrSettings: null == qrSettings
           ? _self.qrSettings
@@ -1586,7 +1577,6 @@ extension AppSettingsPatterns on AppSettings {
             bool needPin,
             DateTime pinUnlockedAt,
             bool offline,
-            bool useQR,
             QRSettings qrSettings)?
         $default, {
     required TResult orElse(),
@@ -1608,7 +1598,6 @@ extension AppSettingsPatterns on AppSettings {
             _that.needPin,
             _that.pinUnlockedAt,
             _that.offline,
-            _that.useQR,
             _that.qrSettings);
       case _:
         return orElse();
@@ -1644,7 +1633,6 @@ extension AppSettingsPatterns on AppSettings {
             bool needPin,
             DateTime pinUnlockedAt,
             bool offline,
-            bool useQR,
             QRSettings qrSettings)
         $default,
   ) {
@@ -1665,7 +1653,6 @@ extension AppSettingsPatterns on AppSettings {
             _that.needPin,
             _that.pinUnlockedAt,
             _that.offline,
-            _that.useQR,
             _that.qrSettings);
     }
   }
@@ -1698,7 +1685,6 @@ extension AppSettingsPatterns on AppSettings {
             bool needPin,
             DateTime pinUnlockedAt,
             bool offline,
-            bool useQR,
             QRSettings qrSettings)?
         $default,
   ) {
@@ -1719,7 +1705,6 @@ extension AppSettingsPatterns on AppSettings {
             _that.needPin,
             _that.pinUnlockedAt,
             _that.offline,
-            _that.useQR,
             _that.qrSettings);
       case _:
         return null;
@@ -1744,7 +1729,6 @@ class _AppSettings implements AppSettings {
       required this.needPin,
       required this.pinUnlockedAt,
       required this.offline,
-      required this.useQR,
       required this.qrSettings});
 
   @override
@@ -1774,8 +1758,6 @@ class _AppSettings implements AppSettings {
   final DateTime pinUnlockedAt;
   @override
   final bool offline;
-  @override
-  final bool useQR;
   @override
   final QRSettings qrSettings;
 
@@ -1812,7 +1794,6 @@ class _AppSettings implements AppSettings {
             (identical(other.pinUnlockedAt, pinUnlockedAt) ||
                 other.pinUnlockedAt == pinUnlockedAt) &&
             (identical(other.offline, offline) || other.offline == offline) &&
-            (identical(other.useQR, useQR) || other.useQR == useQR) &&
             (identical(other.qrSettings, qrSettings) ||
                 other.qrSettings == qrSettings));
   }
@@ -1833,12 +1814,11 @@ class _AppSettings implements AppSettings {
       needPin,
       pinUnlockedAt,
       offline,
-      useQR,
       qrSettings);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, useQR: $useQR, qrSettings: $qrSettings)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, disclaimerAccepted: $disclaimerAccepted, useTor: $useTor, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, qrSettings: $qrSettings)';
   }
 }
 
@@ -1864,7 +1844,6 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       bool needPin,
       DateTime pinUnlockedAt,
       bool offline,
-      bool useQR,
       QRSettings qrSettings});
 
   @override
@@ -1896,7 +1875,6 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? needPin = null,
     Object? pinUnlockedAt = null,
     Object? offline = null,
-    Object? useQR = null,
     Object? qrSettings = null,
   }) {
     return _then(_AppSettings(
@@ -1951,10 +1929,6 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
       offline: null == offline
           ? _self.offline
           : offline // ignore: cast_nullable_to_non_nullable
-              as bool,
-      useQR: null == useQR
-          ? _self.useQR
-          : useQR // ignore: cast_nullable_to_non_nullable
               as bool,
       qrSettings: null == qrSettings
           ? _self.qrSettings
@@ -2318,6 +2292,7 @@ class __$MempoolStateCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$QRSettings {
+  bool get enabled;
   double get size;
   int get ecLevel;
   int get delay;
@@ -2335,6 +2310,7 @@ mixin _$QRSettings {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is QRSettings &&
+            (identical(other.enabled, enabled) || other.enabled == enabled) &&
             (identical(other.size, size) || other.size == size) &&
             (identical(other.ecLevel, ecLevel) || other.ecLevel == ecLevel) &&
             (identical(other.delay, delay) || other.delay == delay) &&
@@ -2342,11 +2318,12 @@ mixin _$QRSettings {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, size, ecLevel, delay, repair);
+  int get hashCode =>
+      Object.hash(runtimeType, enabled, size, ecLevel, delay, repair);
 
   @override
   String toString() {
-    return 'QRSettings(size: $size, ecLevel: $ecLevel, delay: $delay, repair: $repair)';
+    return 'QRSettings(enabled: $enabled, size: $size, ecLevel: $ecLevel, delay: $delay, repair: $repair)';
   }
 }
 
@@ -2356,7 +2333,7 @@ abstract mixin class $QRSettingsCopyWith<$Res> {
           QRSettings value, $Res Function(QRSettings) _then) =
       _$QRSettingsCopyWithImpl;
   @useResult
-  $Res call({double size, int ecLevel, int delay, int repair});
+  $Res call({bool enabled, double size, int ecLevel, int delay, int repair});
 }
 
 /// @nodoc
@@ -2371,12 +2348,17 @@ class _$QRSettingsCopyWithImpl<$Res> implements $QRSettingsCopyWith<$Res> {
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? enabled = null,
     Object? size = null,
     Object? ecLevel = null,
     Object? delay = null,
     Object? repair = null,
   }) {
     return _then(_self.copyWith(
+      enabled: null == enabled
+          ? _self.enabled
+          : enabled // ignore: cast_nullable_to_non_nullable
+              as bool,
       size: null == size
           ? _self.size
           : size // ignore: cast_nullable_to_non_nullable
@@ -2488,14 +2470,16 @@ extension QRSettingsPatterns on QRSettings {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(double size, int ecLevel, int delay, int repair)?
+    TResult Function(
+            bool enabled, double size, int ecLevel, int delay, int repair)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _QRSettings() when $default != null:
-        return $default(_that.size, _that.ecLevel, _that.delay, _that.repair);
+        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay,
+            _that.repair);
       case _:
         return orElse();
     }
@@ -2516,12 +2500,15 @@ extension QRSettingsPatterns on QRSettings {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(double size, int ecLevel, int delay, int repair) $default,
+    TResult Function(
+            bool enabled, double size, int ecLevel, int delay, int repair)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _QRSettings():
-        return $default(_that.size, _that.ecLevel, _that.delay, _that.repair);
+        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay,
+            _that.repair);
     }
   }
 
@@ -2539,13 +2526,15 @@ extension QRSettingsPatterns on QRSettings {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(double size, int ecLevel, int delay, int repair)?
+    TResult? Function(
+            bool enabled, double size, int ecLevel, int delay, int repair)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _QRSettings() when $default != null:
-        return $default(_that.size, _that.ecLevel, _that.delay, _that.repair);
+        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay,
+            _that.repair);
       case _:
         return null;
     }
@@ -2556,11 +2545,14 @@ extension QRSettingsPatterns on QRSettings {
 
 class _QRSettings implements QRSettings {
   _QRSettings(
-      {required this.size,
+      {required this.enabled,
+      required this.size,
       required this.ecLevel,
       required this.delay,
       required this.repair});
 
+  @override
+  final bool enabled;
   @override
   final double size;
   @override
@@ -2583,6 +2575,7 @@ class _QRSettings implements QRSettings {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _QRSettings &&
+            (identical(other.enabled, enabled) || other.enabled == enabled) &&
             (identical(other.size, size) || other.size == size) &&
             (identical(other.ecLevel, ecLevel) || other.ecLevel == ecLevel) &&
             (identical(other.delay, delay) || other.delay == delay) &&
@@ -2590,11 +2583,12 @@ class _QRSettings implements QRSettings {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, size, ecLevel, delay, repair);
+  int get hashCode =>
+      Object.hash(runtimeType, enabled, size, ecLevel, delay, repair);
 
   @override
   String toString() {
-    return 'QRSettings(size: $size, ecLevel: $ecLevel, delay: $delay, repair: $repair)';
+    return 'QRSettings(enabled: $enabled, size: $size, ecLevel: $ecLevel, delay: $delay, repair: $repair)';
   }
 }
 
@@ -2606,7 +2600,7 @@ abstract mixin class _$QRSettingsCopyWith<$Res>
       __$QRSettingsCopyWithImpl;
   @override
   @useResult
-  $Res call({double size, int ecLevel, int delay, int repair});
+  $Res call({bool enabled, double size, int ecLevel, int delay, int repair});
 }
 
 /// @nodoc
@@ -2621,12 +2615,17 @@ class __$QRSettingsCopyWithImpl<$Res> implements _$QRSettingsCopyWith<$Res> {
   @override
   @pragma('vm:prefer-inline')
   $Res call({
+    Object? enabled = null,
     Object? size = null,
     Object? ecLevel = null,
     Object? delay = null,
     Object? repair = null,
   }) {
     return _then(_QRSettings(
+      enabled: null == enabled
+          ? _self.enabled
+          : enabled // ignore: cast_nullable_to_non_nullable
+              as bool,
       size: null == size
           ? _self.size
           : size // ignore: cast_nullable_to_non_nullable

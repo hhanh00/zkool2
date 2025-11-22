@@ -33,74 +33,78 @@ final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 GoRouter router(bool recoveryMode) => GoRouter(
-  initialLocation: recoveryMode ? '/database_manager' : '/splash',
-  observers: [routeObserver],
-  navigatorKey: navigatorKey,
-  routes: [
-    GoRoute(path: '/', builder: (context, state) => pinLock(AccountListPage()), routes: [
-      GoRoute(
-        path: 'account',
-        builder: (context, state) => pinLock(AccountViewPage()),
-      ),
-    ],),
-    GoRoute(
-      path: '/account/edit',
-      builder: (context, state) => pinLock(AccountEditPage(state.extra as List<Account>)),
-    ),
-    GoRoute(
-      path: '/account/new',
-      builder: (context, state) => pinLock(NewAccountPage()),
-    ),
-    GoRoute(
-      path: '/viewing_keys',
-      builder: (context, state) => pinLock(ViewingKeysPage(state.extra as int)),
-    ),
-    GoRoute(
-      path: '/receive',
-      builder: (context, state) => pinLock(ReceivePage()),
-    ),
-    GoRoute(
-      path: '/transparent_addresses',
-      builder: (context, state) => pinLock(TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>)),
-    ),
-    GoRoute(
-      path: '/send',
-      builder: (context, state) => pinLock(SendPage()),
-    ),
-    GoRoute(
-      path: '/send2',
-      builder: (context, state) => pinLock(Send2Page(state.extra as List<Recipient>)),
-    ),
-    GoRoute(path: '/tx', builder: (context, state) => pinLock(TxPage(state.extra as PcztPackage))),
+      initialLocation: recoveryMode ? '/database_manager' : '/splash',
+      observers: [routeObserver],
+      navigatorKey: navigatorKey,
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => pinLock(AccountListPage()),
+          routes: [
+            GoRoute(
+              path: 'account',
+              builder: (context, state) => pinLock(AccountViewPage()),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/account/edit',
+          builder: (context, state) => pinLock(AccountEditPage(state.extra as List<Account>)),
+        ),
+        GoRoute(
+          path: '/account/new',
+          builder: (context, state) => pinLock(NewAccountPage()),
+        ),
+        GoRoute(
+          path: '/viewing_keys',
+          builder: (context, state) => pinLock(ViewingKeysPage(state.extra as int)),
+        ),
+        GoRoute(
+          path: '/receive',
+          builder: (context, state) => pinLock(ReceivePage()),
+        ),
+        GoRoute(
+          path: '/transparent_addresses',
+          builder: (context, state) => pinLock(TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>)),
+        ),
+        GoRoute(
+          path: '/send',
+          builder: (context, state) => pinLock(SendPage()),
+        ),
+        GoRoute(
+          path: '/send2',
+          builder: (context, state) => pinLock(Send2Page(state.extra as List<Recipient>)),
+        ),
+        GoRoute(path: '/tx', builder: (context, state) => pinLock(TxPage(state.extra as PcztPackage))),
         GoRoute(path: '/tx_view', builder: (context, state) => pinLock(TxViewPage(state.extra as int))),
-    GoRoute(path: '/log', builder: (context, state) => pinLock(LogviewPage())),
-    GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
-    GoRoute(
-        path: '/qr',
-        builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>;
-          return pinLock(QRPage(text: args["text"], title: args["title"]));
-        },),
-    GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
-    GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
-    GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
-    GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
-    GoRoute(path: '/folders', builder: (context, state) => FolderPage()),
-    GoRoute(path: '/categories', builder: (context, state) => CategoryPage()),
-    GoRoute(path: '/dkg1', builder: (context, state) => pinLock(DKGPage1())),
-    GoRoute(path: '/dkg2', builder: (context, state) => pinLock(DKGPage2())),
-    GoRoute(path: '/dkg3', builder: (context, state) => pinLock(DKGPage3())),
-    GoRoute(path: '/frost1', builder: (context, state) => pinLock(FrostPage1(state.extra as PcztPackage))),
-    GoRoute(path: '/frost2', builder: (context, state) => pinLock(FrostPage2())),
-    GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage()),
-    routes: [
-      GoRoute(path: 'qr', builder: (context, state) => pinLock(SettingsQRPage())),
-    ]),
-    GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
-    GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
-    GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
-  ],
-);
+        GoRoute(path: '/log', builder: (context, state) => pinLock(LogviewPage())),
+        GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
+        GoRoute(
+          path: '/qr',
+          builder: (context, state) {
+            final args = state.extra as Map<String, dynamic>;
+            return pinLock(QRPage(text: args["text"], title: args["title"]));
+          },
+        ),
+        GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
+        GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
+        GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
+        GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
+        GoRoute(path: '/folders', builder: (context, state) => FolderPage()),
+        GoRoute(path: '/categories', builder: (context, state) => CategoryPage()),
+        GoRoute(path: '/dkg1', builder: (context, state) => pinLock(DKGPage1())),
+        GoRoute(path: '/dkg2', builder: (context, state) => pinLock(DKGPage2())),
+        GoRoute(path: '/dkg3', builder: (context, state) => pinLock(DKGPage3())),
+        GoRoute(path: '/frost1', builder: (context, state) => pinLock(FrostPage1(state.extra as PcztPackage))),
+        GoRoute(path: '/frost2', builder: (context, state) => pinLock(FrostPage2())),
+        GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage()), routes: [
+          GoRoute(path: 'qr', builder: (context, state) => pinLock(SettingsQRPage(onClose: state.extra as VoidFunction<QRSettings>))),
+        ]),
+        GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
+        GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
+        GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
+      ],
+    );
 
 Widget pinLock(Widget child) => child;
 

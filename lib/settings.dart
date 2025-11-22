@@ -69,10 +69,14 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "block_explorer", value: settings.blockExplorer);
         await putProp(key: "actions_per_sync", value: settings.actionsPerSync);
         await putProp(key: "sync_interval", value: settings.syncInterval);
-        await putProp(key: "use_qr", value: settings.useQR.toString());
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString());
+        await putProp(key: "qr_size", value: settings.qrSettings.size.toString());
+        await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString());
+        await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString());
+        await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString());
         setLwd(lwd: settings.lwd, serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra);
         setUseTor(useTor: settings.useTor);
         ref.invalidate(appSettingsProvider);
@@ -307,14 +311,11 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   onQR() async {
-    await GoRouter.of(context).push("/settings/qr");
-  }
-
-  onChangedUseQR(bool? value) async {
-    if (value == null) return;
-    setState(() {
-      settings = settings.copyWith(useQR: value);
-      widget.onChanged(settings);
+    await GoRouter.of(context).push("/settings/qr", extra: (QRSettings qrSettings) {
+      setState(() {
+        settings = settings.copyWith(qrSettings: qrSettings);
+        widget.onChanged(settings);
+      });
     });
   }
 
@@ -370,27 +371,46 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 }
 
+typedef VoidFunction<T> = void Function(T);
+
 class SettingsQRPage extends ConsumerStatefulWidget {
-  const SettingsQRPage({super.key});
+  final VoidFunction<QRSettings> onClose;
+  const SettingsQRPage({required this.onClose, super.key});
 
   @override
   ConsumerState<SettingsQRPage> createState() => SettingsQRPageState();
 }
 
-class SettingsQRPageState extends ConsumerState<SettingsQRPage> {
+class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware {
   final formKey = GlobalKey<FormBuilderState>();
   QRSettings? settings;
 
   @override
-  void activate() {
-    // TODO: implement activate
-    super.activate();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPop() {
+    super.didPop();
+    onPop();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (settings == null) return showLoading("QR Code Settings");
-    final s = settings!;
+    final settingsAR = ref.watch(appSettingsProvider);
+    switch (settingsAR) {
+      case AsyncLoading():
+        return showLoading("QR Code Settings");
+      case AsyncError(:final error):
+        return showError(error);
+      default:
+    }
+    final settings = settingsAR.value!.qrSettings;
     final t = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text("Settings")),
@@ -410,26 +430,28 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> {
                       children: [
                         Text("QR Codes", style: t.titleMedium),
                         Gap(16),
+                        FormBuilderSwitch(name: "enabled", initialValue: settings.enabled, title: Text("Enabled")),
+                        Gap(8),
                         FormBuilderSlider(
-                          name: "type",
+                          name: "size",
                           decoration: InputDecoration(
                             label: Text("QR Code Size"),
                           ),
-                          initialValue: s.size,
+                          initialValue: settings.size,
                           min: 10,
                           max: 40,
                           divisions: 30,
                         ),
                         Gap(16),
                         FormBuilderSlider(
-                          name: "error_level",
+                          name: "ecLevel",
                           decoration: InputDecoration(
                             label: Text("Error Correction Level"),
                             helper: Text(
                               "higher ECL is more robust but takes more space",
                             ),
                           ),
-                          initialValue: s.ecLevel.toDouble(),
+                          initialValue: settings.ecLevel.toDouble(),
                           min: 0,
                           max: 3,
                           divisions: 3,
@@ -440,7 +462,7 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> {
                           decoration: InputDecoration(
                             label: Text("Duration between QR codes (ms)"),
                           ),
-                          initialValue: s.delay.toString(),
+                          initialValue: settings.delay.toString(),
                           validator: FormBuilderValidators.integer(),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
@@ -464,7 +486,7 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> {
                           decoration: InputDecoration(
                             label: Text("Repair Packets"),
                           ),
-                          initialValue: s.repair.toString(),
+                          initialValue: settings.repair.toString(),
                           validator: FormBuilderValidators.integer(),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
@@ -481,5 +503,25 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> {
         ),
       ),
     );
+  }
+
+  void onPop() {
+    final form = formKey.currentState!;
+    if (form.validate()) {
+      final fields = form.fields;
+      final enabled = fields["enabled"]!.value as bool;
+      final size = fields["size"]!.value as double;
+      final ecLevel = fields["ecLevel"]!.value as double;
+      final delay = int.parse(fields["delay"]!.value as String);
+      final repair = int.parse(fields["repair"]!.value as String);
+      final settings = QRSettings(
+        enabled: enabled,
+        size: size,
+        ecLevel: ecLevel.toInt(),
+        delay: delay,
+        repair: repair,
+      );
+      widget.onClose(settings);
+    }
   }
 }
