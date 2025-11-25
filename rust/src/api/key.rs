@@ -4,8 +4,7 @@ use rand_core::{OsRng, RngCore as _};
 use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::{
-    get_coin,
-    key::{is_valid_sapling_key, is_valid_transparent_key},
+    api::coin::Coin, key::{is_valid_sapling_key, is_valid_transparent_key}
 };
 
 #[frb(sync)]
@@ -22,14 +21,12 @@ pub fn is_valid_phrase(phrase: &str) -> bool {
 }
 
 #[frb(sync)]
-pub fn is_valid_fvk(fvk: &str) -> bool {
-    let c = get_coin!();
+pub fn is_valid_fvk(fvk: &str, c: &Coin) -> bool {
     crate::key::is_valid_ufvk(&c.network, fvk)
 }
 
 #[frb(sync)]
-pub fn is_valid_key(key: &str) -> bool {
-    let c = get_coin!();
+pub fn is_valid_key(key: &str, c: &Coin) -> bool {
     let network = &c.network;
 
     if crate::key::is_valid_phrase(key) {
@@ -62,14 +59,12 @@ pub fn is_valid_address(address: &str) -> bool {
 }
 
 #[frb(sync)]
-pub fn is_valid_transparent_address(address: &str) -> bool {
-    let c = get_coin!();
+pub fn is_valid_transparent_address(address: &str, c: &Coin) -> bool {
     crate::key::is_valid_transparent_address(&c.network, address)
 }
 
 #[frb(sync)]
-pub fn is_tex_address(address: &str) -> bool {
-    let c = get_coin!();
+pub fn is_tex_address(address: &str, c: &Coin) -> bool {
     let Some(address) = zcash_keys::address::Address::decode(&c.network, address) else {
         return false;
     };
@@ -81,8 +76,7 @@ pub fn is_tex_address(address: &str) -> bool {
 }
 
 #[frb(sync)]
-pub fn get_key_pools(key: &str) -> Result<u8> {
-    let c = get_coin!();
+pub fn get_key_pools(key: &str, c: &Coin) -> Result<u8> {
     let network = &c.network;
 
     if crate::key::is_valid_phrase(key) {

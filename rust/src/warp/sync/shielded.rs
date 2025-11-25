@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::{collections::HashMap, mem::swap};
 
-use crate::coin::Network;
+use crate::api::coin::Network;
 use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;

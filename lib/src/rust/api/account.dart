@@ -3,147 +3,158 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import '../account.dart';
 import '../frb_generated.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'account.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `derive_sapling_address`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
-Future<int> getAccountPools({required int account}) =>
-    RustLib.instance.api.crateApiAccountGetAccountPools(account: account);
+Future<int> getAccountPools({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountPools(account: account, c: c);
 
-Future<String> getAccountUfvk({required int account, required int pools}) =>
+Future<String> getAccountUfvk(
+        {required int account, required int pools, required Coin c}) =>
     RustLib.instance.api
-        .crateApiAccountGetAccountUfvk(account: account, pools: pools);
+        .crateApiAccountGetAccountUfvk(account: account, pools: pools, c: c);
 
-Future<Seed?> getAccountSeed({required int account}) =>
-    RustLib.instance.api.crateApiAccountGetAccountSeed(account: account);
+Future<Seed?> getAccountSeed({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountSeed(account: account, c: c);
 
-Future<String?> getAccountFingerprint({required int account}) =>
-    RustLib.instance.api.crateApiAccountGetAccountFingerprint(account: account);
+Future<String?> getAccountFingerprint(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetAccountFingerprint(account: account, c: c);
 
-String uaFromUfvk({required String ufvk, int? di}) =>
-    RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di);
+String uaFromUfvk({required String ufvk, int? di, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di, c: c);
 
-Receivers receiversFromUa({required String ua}) =>
-    RustLib.instance.api.crateApiAccountReceiversFromUa(ua: ua);
+Receivers receiversFromUa({required String ua, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountReceiversFromUa(ua: ua, c: c);
 
-Future<List<Account>> listAccounts() =>
-    RustLib.instance.api.crateApiAccountListAccounts();
+Future<List<Account>> listAccounts({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListAccounts(c: c);
 
-Future<void> updateAccount({required AccountUpdate update}) =>
-    RustLib.instance.api.crateApiAccountUpdateAccount(update: update);
+Future<void> updateAccount({required AccountUpdate update, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountUpdateAccount(update: update, c: c);
 
-Future<void> deleteAccount({required int account}) =>
-    RustLib.instance.api.crateApiAccountDeleteAccount(account: account);
+Future<void> deleteAccount({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountDeleteAccount(account: account, c: c);
 
 Future<void> reorderAccount(
-        {required int oldPosition, required int newPosition}) =>
+        {required int oldPosition,
+        required int newPosition,
+        required Coin c}) =>
     RustLib.instance.api.crateApiAccountReorderAccount(
-        oldPosition: oldPosition, newPosition: newPosition);
+        oldPosition: oldPosition, newPosition: newPosition, c: c);
 
-Future<void> setAccount({required int account}) =>
-    RustLib.instance.api.crateApiAccountSetAccount(account: account);
+Future<int> newAccount({required NewAccount na, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountNewAccount(na: na, c: c);
 
-Future<int> newAccount({required NewAccount na}) =>
-    RustLib.instance.api.crateApiAccountNewAccount(na: na);
+Future<bool> hasTransparentPubKey({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountHasTransparentPubKey(c: c);
 
-Future<bool> hasTransparentPubKey() =>
-    RustLib.instance.api.crateApiAccountHasTransparentPubKey();
+Future<int> generateNextDindex({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGenerateNextDindex(c: c);
 
-Future<int> generateNextDindex() =>
-    RustLib.instance.api.crateApiAccountGenerateNextDindex();
+Future<String?> generateNextChangeAddress({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGenerateNextChangeAddress(c: c);
 
-Future<String?> generateNextChangeAddress() =>
-    RustLib.instance.api.crateApiAccountGenerateNextChangeAddress();
+Future<void> resetSync({required int id, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountResetSync(id: id, c: c);
 
-Future<void> resetSync({required int id}) =>
-    RustLib.instance.api.crateApiAccountResetSync(id: id);
+Future<void> removeAccount({required int accountId, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountRemoveAccount(accountId: accountId, c: c);
 
-Future<void> removeAccount({required int accountId}) =>
-    RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId);
+Future<List<Tx>> listTxHistory({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListTxHistory(c: c);
 
-Future<List<Tx>> listTxHistory() =>
-    RustLib.instance.api.crateApiAccountListTxHistory();
+Future<List<Memo>> listMemos({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListMemos(c: c);
 
-Future<List<Memo>> listMemos() =>
-    RustLib.instance.api.crateApiAccountListMemos();
+Future<Addresses> getAddresses({required int uaPools, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools, c: c);
 
-Future<Addresses> getAddresses({required int uaPools}) =>
-    RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools);
+Future<TxAccount> getTxDetails({required int idTx, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx, c: c);
 
-Future<TxAccount> getTxDetails({required int idTx}) =>
-    RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx);
+Future<List<TxNote>> listNotes({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListNotes(c: c);
 
-Future<List<TxNote>> listNotes() =>
-    RustLib.instance.api.crateApiAccountListNotes();
+Future<void> lockNote(
+        {required int id, required bool locked, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked, c: c);
 
-Future<void> lockNote({required int id, required bool locked}) =>
-    RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked);
-
-Future<List<TAddressTxCount>> fetchTransparentAddressTxCount() =>
-    RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount();
+Future<List<TAddressTxCount>> fetchTransparentAddressTxCount(
+        {required Coin c}) =>
+    RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount(c: c);
 
 Future<Uint8List> exportAccount(
-        {required int id, required String passphrase}) =>
+        {required int id, required String passphrase, required Coin c}) =>
     RustLib.instance.api
-        .crateApiAccountExportAccount(id: id, passphrase: passphrase);
+        .crateApiAccountExportAccount(id: id, passphrase: passphrase, c: c);
 
 Future<void> importAccount(
-        {required String passphrase, required List<int> data}) =>
+        {required String passphrase,
+        required List<int> data,
+        required Coin c}) =>
     RustLib.instance.api
-        .crateApiAccountImportAccount(passphrase: passphrase, data: data);
+        .crateApiAccountImportAccount(passphrase: passphrase, data: data, c: c);
 
-Future<void> printKeys({required int id}) =>
-    RustLib.instance.api.crateApiAccountPrintKeys(id: id);
+Future<void> printKeys({required int id, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountPrintKeys(id: id, c: c);
 
-Future<FrostParams?> getAccountFrostParams() =>
-    RustLib.instance.api.crateApiAccountGetAccountFrostParams();
+Future<FrostParams?> getAccountFrostParams({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountFrostParams(c: c);
 
-Future<List<Folder>> listFolders() =>
-    RustLib.instance.api.crateApiAccountListFolders();
+Future<List<Folder>> listFolders({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListFolders(c: c);
 
-Future<Folder> createNewFolder({required String name}) =>
-    RustLib.instance.api.crateApiAccountCreateNewFolder(name: name);
+Future<Folder> createNewFolder({required String name, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountCreateNewFolder(name: name, c: c);
 
-Future<void> renameFolder({required int id, required String name}) =>
-    RustLib.instance.api.crateApiAccountRenameFolder(id: id, name: name);
+Future<void> renameFolder(
+        {required int id, required String name, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountRenameFolder(id: id, name: name, c: c);
 
-Future<void> deleteFolders({required List<int> ids}) =>
-    RustLib.instance.api.crateApiAccountDeleteFolders(ids: ids);
+Future<void> deleteFolders({required List<int> ids, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountDeleteFolders(ids: ids, c: c);
 
-Future<List<Category>> listCategories() =>
-    RustLib.instance.api.crateApiAccountListCategories();
+Future<List<Category>> listCategories({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListCategories(c: c);
 
-Future<int> createNewCategory({required Category category}) =>
-    RustLib.instance.api.crateApiAccountCreateNewCategory(category: category);
-
-Future<void> renameCategory({required Category category}) =>
-    RustLib.instance.api.crateApiAccountRenameCategory(category: category);
-
-Future<void> deleteCategories({required List<int> ids}) =>
-    RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids);
-
-Future<String> getExportedData({required int type}) =>
-    RustLib.instance.api.crateApiAccountGetExportedData(type: type);
-
-Future<void> lockRecentNotes({required int height, required int threshold}) =>
+Future<int> createNewCategory({required Category category, required Coin c}) =>
     RustLib.instance.api
-        .crateApiAccountLockRecentNotes(height: height, threshold: threshold);
+        .crateApiAccountCreateNewCategory(category: category, c: c);
 
-Future<void> unlockAllNotes() =>
-    RustLib.instance.api.crateApiAccountUnlockAllNotes();
+Future<void> renameCategory({required Category category, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountRenameCategory(category: category, c: c);
 
-Future<BigInt> maxSpendable() =>
-    RustLib.instance.api.crateApiAccountMaxSpendable();
+Future<void> deleteCategories({required List<int> ids, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids, c: c);
 
-Future<String> showLedgerSaplingAddress() =>
-    RustLib.instance.api.crateApiAccountShowLedgerSaplingAddress();
+Future<String> getExportedData({required int type, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetExportedData(type: type, c: c);
 
-Future<String> showLedgerTransparentAddress() =>
-    RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress();
+Future<void> lockRecentNotes(
+        {required int height, required int threshold, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountLockRecentNotes(
+        height: height, threshold: threshold, c: c);
+
+Future<void> unlockAllNotes({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountUnlockAllNotes(c: c);
+
+Future<BigInt> maxSpendable({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountMaxSpendable(c: c);
+
+Future<String> showLedgerSaplingAddress({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountShowLedgerSaplingAddress(c: c);
+
+Future<String> showLedgerTransparentAddress({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress(c: c);
 
 @freezed
 sealed class Account with _$Account {
@@ -356,4 +367,204 @@ sealed class Tx with _$Tx {
     int? tpe,
     String? category,
   }) = _Tx;
+}
+
+class TxAccount {
+  final int id;
+  final int account;
+  final Uint8List txid;
+  final int height;
+  final int time;
+  final double? price;
+  final int? category;
+  final List<TxNote> notes;
+  final List<TxSpend> spends;
+  final List<TxOutput> outputs;
+  final List<TxMemo> memos;
+
+  const TxAccount({
+    required this.id,
+    required this.account,
+    required this.txid,
+    required this.height,
+    required this.time,
+    this.price,
+    this.category,
+    required this.notes,
+    required this.spends,
+    required this.outputs,
+    required this.memos,
+  });
+
+  static Future<TxAccount> default_() =>
+      RustLib.instance.api.crateApiAccountTxAccountDefault();
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      account.hashCode ^
+      txid.hashCode ^
+      height.hashCode ^
+      time.hashCode ^
+      price.hashCode ^
+      category.hashCode ^
+      notes.hashCode ^
+      spends.hashCode ^
+      outputs.hashCode ^
+      memos.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxAccount &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          account == other.account &&
+          txid == other.txid &&
+          height == other.height &&
+          time == other.time &&
+          price == other.price &&
+          category == other.category &&
+          notes == other.notes &&
+          spends == other.spends &&
+          outputs == other.outputs &&
+          memos == other.memos;
+}
+
+class TxMemo {
+  final int? note;
+  final int? output;
+  final int pool;
+  final String? memo;
+
+  const TxMemo({
+    this.note,
+    this.output,
+    required this.pool,
+    this.memo,
+  });
+
+  static Future<TxMemo> default_() =>
+      RustLib.instance.api.crateApiAccountTxMemoDefault();
+
+  @override
+  int get hashCode =>
+      note.hashCode ^ output.hashCode ^ pool.hashCode ^ memo.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxMemo &&
+          runtimeType == other.runtimeType &&
+          note == other.note &&
+          output == other.output &&
+          pool == other.pool &&
+          memo == other.memo;
+}
+
+class TxNote {
+  final int id;
+  final int pool;
+  final int height;
+  final BigInt value;
+  final bool locked;
+
+  const TxNote({
+    required this.id,
+    required this.pool,
+    required this.height,
+    required this.value,
+    required this.locked,
+  });
+
+  static Future<TxNote> default_() =>
+      RustLib.instance.api.crateApiAccountTxNoteDefault();
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      pool.hashCode ^
+      height.hashCode ^
+      value.hashCode ^
+      locked.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxNote &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          pool == other.pool &&
+          height == other.height &&
+          value == other.value &&
+          locked == other.locked;
+}
+
+class TxOutput {
+  final int id;
+  final int pool;
+  final int height;
+  final BigInt value;
+  final String address;
+
+  const TxOutput({
+    required this.id,
+    required this.pool,
+    required this.height,
+    required this.value,
+    required this.address,
+  });
+
+  static Future<TxOutput> default_() =>
+      RustLib.instance.api.crateApiAccountTxOutputDefault();
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      pool.hashCode ^
+      height.hashCode ^
+      value.hashCode ^
+      address.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxOutput &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          pool == other.pool &&
+          height == other.height &&
+          value == other.value &&
+          address == other.address;
+}
+
+class TxSpend {
+  final int id;
+  final int pool;
+  final int height;
+  final BigInt value;
+
+  const TxSpend({
+    required this.id,
+    required this.pool,
+    required this.height,
+    required this.value,
+  });
+
+  static Future<TxSpend> default_() =>
+      RustLib.instance.api.crateApiAccountTxSpendDefault();
+
+  @override
+  int get hashCode =>
+      id.hashCode ^ pool.hashCode ^ height.hashCode ^ value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TxSpend &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          pool == other.pool &&
+          height == other.height &&
+          value == other.value;
 }

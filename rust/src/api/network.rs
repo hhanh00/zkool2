@@ -2,27 +2,14 @@ use anyhow::Result;
 use flutter_rust_bridge::frb;
 use serde::Deserialize;
 
-use crate::{coin::ServerType, get_coin};
+use crate::api::coin::Coin;
 
 #[frb]
 pub async fn init_datadir(directory: &str) -> Result<()> {
-    crate::coin::init_datadir(directory).await
+    crate::api::coin::init_datadir(directory).await
 }
 
-#[frb(sync)]
-pub fn set_lwd(server_type: ServerType, lwd: &str) {
-    let mut coin = crate::coin::COIN.lock().unwrap();
-    coin.set_url(server_type, lwd);
-}
-
-#[frb(sync)]
-pub fn set_use_tor(use_tor: bool) {
-    let mut coin = crate::coin::COIN.lock().unwrap();
-    coin.set_use_tor(use_tor);
-}
-
-pub async fn get_current_height() -> Result<u32> {
-    let c = crate::get_coin!();
+pub async fn get_current_height(c: &Coin) -> Result<u32> {
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
     Ok(height as u32)
@@ -39,8 +26,7 @@ pub async fn get_coingecko_price() -> Result<f64> {
 }
 
 #[frb]
-pub async fn get_network_name() -> String {
-    let c = get_coin!();
+pub async fn get_network_name(c: &Coin) -> String {
     c.get_name().to_string()
 }
 

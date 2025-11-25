@@ -4,14 +4,15 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'mempool.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run_mempool`
 
-Future<Uint8List> getMempoolTx({required String txId}) =>
-    RustLib.instance.api.crateApiMempoolGetMempoolTx(txId: txId);
+Future<Uint8List> getMempoolTx({required String txId, required Coin c}) =>
+    RustLib.instance.api.crateApiMempoolGetMempoolTx(txId: txId, c: c);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Mempool>>
 abstract class Mempool implements RustOpaqueInterface {
@@ -19,7 +20,7 @@ abstract class Mempool implements RustOpaqueInterface {
 
   factory Mempool() => RustLib.instance.api.crateApiMempoolMempoolNew();
 
-  Stream<MempoolMsg> run({required int height});
+  Stream<MempoolMsg> run({required int height, required Coin c});
 }
 
 @freezed

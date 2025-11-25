@@ -1,14 +1,15 @@
 import 'package:convert/convert.dart';
 import 'package:intl/intl.dart';
+import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/utils.dart';
 
-String? validKey(String? key, {bool restore = false}) {
+String? validKey(String? key, {required Coin c, bool restore = false}) {
   if ((key == null || key.isEmpty)) {
     return restore ? "Key is required" : null;
   }
-  if (!isValidKey(key: key)) {
+  if (!isValidKey(key: key, c: c)) {
     return "Invalid Key";
   }
   return null;

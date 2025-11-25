@@ -1,8 +1,9 @@
-use std::sync::{LazyLock, OnceLock};
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
 use arti_client::TorClient;
+use flutter_rust_bridge::frb;
 use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -21,44 +22,34 @@ use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::zebra::ZebraClient;
 use crate::Client;
 
-#[macro_export]
-macro_rules! setup {
-    ($account: expr) => {{
-        let mut coin = $crate::coin::COIN.lock().unwrap();
-        coin.account = $account;
-    }};
-}
-
-#[macro_export]
-macro_rules! get_coin {
-    () => {{
-        let c = $crate::coin::COIN.lock().unwrap();
-        c.clone()
-    }};
-}
-
 #[derive(Clone)]
 pub struct Coin {
     pub coin: u8,
     pub account: u32,
     pub network: Network,
     pub db_filepath: String,
-    pub pool: Option<SqlitePool>,
+    pub(crate) pool: Option<SqlitePool>,
     pub url: String,
     pub server_type: ServerType,
     pub use_tor: bool,
 }
 
 impl Coin {
-    pub async fn new(
-        server_type: ServerType,
-        url: &str,
-        use_tor: bool,
-        db_filepath: &str,
+    pub async fn open_database(
+        self,
+        db_filepath: String,
         password: Option<String>,
     ) -> Result<Coin> {
+        let Coin {
+            account,
+            url,
+            server_type,
+            use_tor,
+            ..
+        } = self;
+
         // Create a connection pool
-        let options = get_connect_options(db_filepath, password);
+        let options = get_connect_options(&db_filepath, password);
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
             .idle_timeout(std::time::Duration::from_secs(30))
@@ -101,12 +92,12 @@ impl Coin {
 
         Ok(Coin {
             coin,
-            account: 0,
+            account,
             network,
-            db_filepath: db_filepath.to_string(),
+            db_filepath,
             pool: Some(pool),
             server_type,
-            url: url.to_string(),
+            url,
             use_tor,
         })
     }
@@ -120,26 +111,109 @@ impl Coin {
         }
     }
 
-    pub fn get_pool(&self) -> &SqlitePool {
+    pub(crate) fn get_pool(&self) -> &SqlitePool {
         let pool = self.pool.as_ref().expect("Connection pool not initialized");
         pool
     }
 
-    pub async fn get_connection(&self) -> Result<PoolConnection<Sqlite>, sqlx::Error> {
+    pub(crate) async fn get_connection(&self) -> Result<PoolConnection<Sqlite>, sqlx::Error> {
         let pool = self.pool.as_ref().expect("Connection pool not initialized");
         pool.acquire().await
     }
 
-    pub fn set_url(&mut self, server_type: ServerType, url: &str) {
-        self.url = url.to_string();
-        self.server_type = server_type;
+    #[frb]
+    pub fn set_account(self, account: u32) -> Result<Self> {
+        let Coin {
+            coin,
+            network,
+            db_filepath,
+            pool,
+            url,
+            server_type,
+            use_tor,
+            ..
+        } = self;
+        Ok(Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            url,
+            server_type,
+            use_tor,
+        })
     }
 
-    pub fn set_use_tor(&mut self, use_tor: bool) {
-        self.use_tor = use_tor;
+    pub fn set_url(self, server_type: ServerType, url: String) -> Result<Self> {
+        let Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            use_tor,
+            ..
+        } = self;
+        Ok(Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            url,
+            server_type,
+            use_tor,
+        })
     }
 
-    pub async fn client(&self) -> Result<Client> {
+    pub fn set_use_tor(self, use_tor: bool) -> Result<Coin> {
+        let Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            url,
+            server_type,
+            ..
+        } = self;
+        Ok(Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            url,
+            server_type,
+            use_tor,
+        })
+    }
+
+    #[frb(sync)]
+    pub fn set_lwd(self, server_type: ServerType, url: String) -> Result<Self> {
+        let Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            use_tor,
+            ..
+        } = self;
+        Ok(Coin {
+            coin,
+            account,
+            network,
+            db_filepath,
+            pool,
+            url,
+            server_type,
+            use_tor,
+        })
+    }
+
+    pub(crate) async fn client(&self) -> Result<Client> {
         match self.server_type {
             ServerType::Lwd if self.use_tor => {
                 let channel = connect_over_tor(&self.url).await?;
@@ -163,7 +237,7 @@ impl Coin {
                 Ok(Box::new(client))
             }
 
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -219,8 +293,9 @@ pub enum ServerType {
     Zebra = 1,
 }
 
-impl Default for Coin {
-    fn default() -> Self {
+impl Coin {
+    #[frb(sync)]
+    pub fn new() -> Self {
         Coin {
             coin: 0,
             account: 0,
@@ -273,7 +348,7 @@ impl Parameters for Network {
     }
 }
 
-pub const fn _regtest() -> LocalNetwork {
+pub(crate) const fn _regtest() -> LocalNetwork {
     LocalNetwork {
         overwinter: Some(BlockHeight::from_u32(1)),
         sapling: Some(BlockHeight::from_u32(1)),
@@ -296,16 +371,15 @@ pub async fn get_tor_client() -> &'static Mutex<TorClient<PreferredRuntime>> {
         let data_dir = DATADIR.get().expect("Data dir should have been set");
         data_dir.clone()
     };
-    let tor = TOR.get_or_init(|| async {
-        let tor_client = build_tor(&data_dir).await.unwrap();
-        Mutex::new(tor_client)
-    }).await;
+    let tor = TOR
+        .get_or_init(|| async {
+            let tor_client = build_tor(&data_dir).await.unwrap();
+            Mutex::new(tor_client)
+        })
+        .await;
     tor
 }
 
 pub static TOR: OnceCell<Mutex<TorClient<PreferredRuntime>>> = OnceCell::const_new();
 pub static DATADIR: OnceLock<String> = OnceLock::new();
 pub static REGTEST: Network = Network::Regtest(_regtest());
-
-pub static COIN: LazyLock<std::sync::Mutex<Coin>> =
-    LazyLock::new(|| std::sync::Mutex::new(Coin::default()));

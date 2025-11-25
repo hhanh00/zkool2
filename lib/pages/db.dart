@@ -130,7 +130,9 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     if (res != null) {
       final (name, password) = res;
       final dbFilepath = await getFullDatabasePath(name);
-      await openDatabase(dbFilepath: dbFilepath, password: password);
+      final c = ref.read(coinContextProvider);
+      final c2 = await c.openDatabase(dbFilepath: dbFilepath, password: password);
+      ref.read(coinContextProvider.notifier).set(coin: c2);
       await refresh();
     }
   }

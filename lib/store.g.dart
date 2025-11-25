@@ -55,6 +55,52 @@ abstract class _$HasDb extends $Notifier<bool> {
   }
 }
 
+@ProviderFor(CoinContext)
+const coinContextProvider = CoinContextProvider._();
+
+final class CoinContextProvider extends $NotifierProvider<CoinContext, Coin> {
+  const CoinContextProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'coinContextProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$coinContextHash();
+
+  @$internal
+  @override
+  CoinContext create() => CoinContext();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Coin value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Coin>(value),
+    );
+  }
+}
+
+String _$coinContextHash() => r'3d564b64b7d5d0de3d0d2e822ef09b6ff04d9edb';
+
+abstract class _$CoinContext extends $Notifier<Coin> {
+  Coin build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<Coin, Coin>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<Coin, Coin>, Coin, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
 @ProviderFor(SyncStateAccount)
 const syncStateAccountProvider = SyncStateAccountFamily._();
 
@@ -167,7 +213,7 @@ final class SelectedAccountProvider
   SelectedAccount create() => SelectedAccount();
 }
 
-String _$selectedAccountHash() => r'195a58226d229c3f9663fd8fc599d8bf0d93bd9b';
+String _$selectedAccountHash() => r'86bb0031a1a2cc6edbf47c842794af113f1f6dc2';
 
 abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
   FutureOr<Account?> build();
@@ -264,7 +310,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
   }
 }
 
-String _$getAccountsHash() => r'1a1f7a62f22675b5d9e388a48c8dad3f8079c65e';
+String _$getAccountsHash() => r'408dd4a161efa518fd5350ae27f1ea5d3eddf91d';
 
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
@@ -298,7 +344,7 @@ final class GetFoldersProvider extends $FunctionalProvider<
   }
 }
 
-String _$getFoldersHash() => r'f0e35928aa1c400a44939be7758e2306af958e10';
+String _$getFoldersHash() => r'2c0c41c5f0695b24ae724017eb63d2e039cc2acb';
 
 @ProviderFor(getCategories)
 const getCategoriesProvider = GetCategoriesProvider._();
@@ -332,7 +378,7 @@ final class GetCategoriesProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCategoriesHash() => r'45698dfd3290ba0ea7fd14508581e3d75b280f73';
+String _$getCategoriesHash() => r'81e196d9df171b2c841487a81305f52773905d96';
 
 @ProviderFor(account)
 const accountProvider = AccountFamily._();
@@ -386,7 +432,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'b2d819e89a616085c322e0787617d301c71d460c';
+String _$accountHash() => r'9594c3daf455e8f1905a6fbf6d26727e69ed579c';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -467,7 +513,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'f78af760b6b2361425da85b0a957f9ac0bea3b63';
+    r'fdae0c93e8453c1fcbe44c8ce812d6bdeb8db9ed';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -662,7 +708,7 @@ final class MempoolNotifierProvider
   }
 }
 
-String _$mempoolNotifierHash() => r'f8e7f474fc2801444f2e2c343f1dc43eb0846693';
+String _$mempoolNotifierHash() => r'816175bdec71589f96b6623d35cfb8aad60d7837';
 
 abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
   MempoolState build();
@@ -713,7 +759,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'045975f5d0b8c42acf4c5796e1c6a70e08bbed31';
+    r'56bfd5d266a17e0da9fbc0be7afa3559f634e7e1';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -760,7 +806,7 @@ final class TransparentScanProvider
   }
 }
 
-String _$transparentScanHash() => r'807a1b560af039369f511e780512cb90cd93be82';
+String _$transparentScanHash() => r'550050f25e966a0eec3b5c1bea6955df5b76a962';
 
 abstract class _$TransparentScan extends $Notifier<String> {
   String build();
@@ -815,7 +861,7 @@ final class GetTxDetailsProvider
   }
 }
 
-String _$getTxDetailsHash() => r'228df08f9ccc94e81142f57f41b31ab6f1731805';
+String _$getTxDetailsHash() => r'4f15b77e50e66ecfb895bc53a2e5c5cf017689e0';
 
 final class GetTxDetailsFamily extends $Family
     with

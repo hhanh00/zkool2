@@ -2,7 +2,7 @@ use anyhow::Result;
 use flutter_rust_bridge::frb;
 use tokio_util::sync::CancellationToken;
 
-use crate::{frb_generated::StreamSink, get_coin, sync::transparent_sweep};
+use crate::{api::coin::Coin, frb_generated::StreamSink, sync::transparent_sweep};
 
 #[frb(opaque)]
 pub struct TransparentScanner {
@@ -19,9 +19,8 @@ impl TransparentScanner {
     pub async fn run(&mut self, address_stream: StreamSink<String>,
         end_height: u32,
         gap_limit: u32,
-
+        c: &Coin,
     ) -> Result<()> {
-        let c = get_coin!();
         let connection = c.get_connection().await?;
         let client = c.client().await?;
         transparent_sweep(

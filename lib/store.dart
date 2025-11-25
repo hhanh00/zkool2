@@ -10,8 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
@@ -30,6 +30,22 @@ class HasDb extends _$HasDb {
 
   void setHasDb() {
     state = true;
+  }
+}
+
+@Riverpod(keepAlive: true)
+class CoinContext extends _$CoinContext {
+  @override
+  Coin build() {
+    return Coin();
+  }
+
+  void setAccount({required int account}) {
+    state.account = account;
+  }
+
+  void set({required Coin coin}) {
+    state = coin;
   }
 }
 
@@ -182,16 +198,18 @@ class HeroProgressWidget extends StatelessWidget {
 class SelectedAccount extends _$SelectedAccount {
   @override
   Future<Account?> build() async {
+    final c = ref.watch(coinContextProvider);
     final accounts = await ref.read(getAccountsProvider.future);
-    final s = await getProp(key: "selected_account");
+    final s = await getProp(key: "selected_account", c: c);
     if (s == null || s == "") return null;
     final id = int.parse(s);
     return accounts.firstWhereOrNull((a) => a.id == id);
   }
 
   void selectAccount(Account account) async {
-    await putProp(key: "selected_account", value: "${account.id}");
-    await setAccount(account: account.id);
+    final c = ref.read(coinContextProvider);
+    await putProp(key: "selected_account", value: "${account.id}", c: c);
+    ref.read(coinContextProvider.notifier).setAccount(account: account.id);
     state = AsyncData(account);
   }
 
@@ -218,29 +236,33 @@ class SelectedFolder extends _$SelectedFolder {
 
 @Riverpod(keepAlive: true)
 Future<List<Account>> getAccounts(Ref ref) async {
-  return await listAccounts();
+  final c = ref.read(coinContextProvider);
+  return await listAccounts(c: c);
 }
 
 @riverpod
 Future<List<Folder>> getFolders(Ref ref) async {
-  return await listFolders();
+  final c = ref.read(coinContextProvider);
+  return await listFolders(c: c);
 }
 
 @riverpod
 Future<List<Category>> getCategories(Ref ref) async {
-  return await listCategories();
+  final c = ref.read(coinContextProvider);
+  return await listCategories(c: c);
 }
 
 @riverpod
 Future<AccountData> account(Ref ref, int id) async {
+  final c = ref.watch(coinContextProvider);
   final accounts = await ref.watch(getAccountsProvider.future);
   final account = accounts.firstWhere((a) => a.id == id);
-  final poolBalance = await balance();
-  final pool = await getAccountPools(account: id);
-  final frostParams = await getAccountFrostParams();
-  final transactions = await listTxHistory();
-  final memos = await listMemos();
-  final notes = await listNotes();
+  final poolBalance = await balance(c: c);
+  final pool = await getAccountPools(account: id, c: c);
+  final frostParams = await getAccountFrostParams(c: c);
+  final transactions = await listTxHistory(c: c);
+  final memos = await listMemos(c: c);
+  final notes = await listNotes(c: c);
 
   return AccountData(
     account: account,
@@ -277,6 +299,7 @@ sealed class AccountData with _$AccountData {
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   @override
   Future<AppSettings> build() async {
+    final c = ref.watch(coinContextProvider);
     final hasDb = ref.watch(hasDbProvider);
     final prefs = SharedPreferencesAsync();
     String dbName = await prefs.getString("database") ?? appName;
@@ -286,18 +309,18 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final useTor = await prefs.getBool("use_tor") ?? false;
     final recovery = await prefs.getBool("recovery") ?? false;
 
-    final net = (hasDb ? await getNetworkName() : null) ?? "mainnet";
-    final isLightNode = (hasDb ? await getProp(key: "is_light_node") : null) ?? "true";
-    final lwd = (hasDb ? await getProp(key: "lwd") : null) ?? "https://zec.rocks";
-    final syncInterval = (hasDb ? await getProp(key: "sync_interval") : null) ?? "30";
-    final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync") : null) ?? "10000";
-    final blockExplorer = (hasDb ? await getProp(key: "block_explorer") : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
+    final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
+    final isLightNode = (hasDb ? await getProp(key: "is_light_node", c: c) : null) ?? "true";
+    final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? "https://zec.rocks";
+    final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
+    final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
+    final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
 
-    final qrEnabled = (hasDb ? await getProp(key: "qr_enabled") : null) ?? "false";
-    final qrSize = (hasDb ? await getProp(key: "qr_size") : null) ?? "20";
-    final qrEC = (hasDb ? await getProp(key: "qr_ecLevel") : null) ?? "1";
-    final qrDelay = (hasDb ? await getProp(key: "qr_delay") : null) ?? "500";
-    final qrRepair = (hasDb ? await getProp(key: "qr_repair") : null) ?? "2";
+    final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
+    final qrSize = (hasDb ? await getProp(key: "qr_size", c: c) : null) ?? "20";
+    final qrEC = (hasDb ? await getProp(key: "qr_ecLevel", c: c) : null) ?? "1";
+    final qrDelay = (hasDb ? await getProp(key: "qr_delay", c: c) : null) ?? "500";
+    final qrRepair = (hasDb ? await getProp(key: "qr_repair", c: c) : null) ?? "2";
     final qrSettings = QRSettings(
       enabled: qrEnabled == "true",
       size: double.parse(qrSize),
@@ -404,6 +427,7 @@ class MempoolNotifier extends _$MempoolNotifier {
   }
 
   void runMempoolListener() async {
+    final c = ref.read(coinContextProvider);
     final settings = await ref.read(appSettingsProvider.future);
     if (settings.offline) return;
 
@@ -412,9 +436,9 @@ class MempoolNotifier extends _$MempoolNotifier {
         if (settings.offline) return;
         state = MempoolState(running: true, unconfirmedFunds: {}, unconfirmedTx: []);
 
-        final height = await getCurrentHeight();
-        final c = Completer();
-        mempool.run(height: height).listen(
+        final height = await getCurrentHeight(c: c);
+        final comp = Completer();
+        mempool.run(height: height, c: c).listen(
               (msg) {
                 if (msg is MempoolMsg_TxId) {
                   final txId = msg.field0; // txid hash
@@ -423,12 +447,12 @@ class MempoolNotifier extends _$MempoolNotifier {
                   addTx(txId, amounts, size);
                 }
               },
-              onDone: c.complete,
+              onDone: comp.complete,
               onError: (e) {
-                c.complete();
+                comp.complete();
               },
             );
-        await c.future; // wait for the stream to complete
+        await comp.future; // wait for the stream to complete
         await Future.delayed(Duration(seconds: 5));
       } catch (_) {}
     }
@@ -535,6 +559,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       return;
     }
 
+    final c = ref.read(coinContextProvider);
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
 
@@ -545,7 +570,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       syncInProgress = true;
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
-      final currentHeight = await getCurrentHeight();
+      final currentHeight = await getCurrentHeight(c: c);
 
       begin(accounts, currentHeight);
 
@@ -555,6 +580,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         actionsPerSync: int.parse(settings.actionsPerSync),
         transparentLimit: 100, // scan the last 100 known transparent addresses
         checkpointAge: 200,
+        c: c,
       ); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
       syncProgressSubscription = progress.listen(
@@ -610,7 +636,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       return;
     }
     try {
-      final currentHeight = await getCurrentHeight();
+      final c = ref.read(coinContextProvider);
+      final currentHeight = await getCurrentHeight(c: c);
       final h = ref.read(currentHeightProvider.notifier);
       if (h.setHeight(currentHeight)) {
         await checkSyncNeeded(currentHeight, now: now);
@@ -658,10 +685,11 @@ class TransparentScan extends _$TransparentScan {
   bool get running => state.isNotEmpty;
 
   Future<void> run(BuildContext context, int gapLimit, {required void Function() onComplete}) async {
+    final c = ref.read(coinContextProvider);
     final sc = await TransparentScanner.newInstance();
     scanner = sc;
-    final endHeight = await getCurrentHeight();
-    final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit);
+    final endHeight = await getCurrentHeight(c: c);
+    final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, c: c);
     progressSubscription = sub.listen(
       (a) {
         state = a;
@@ -694,7 +722,8 @@ class TransparentScan extends _$TransparentScan {
 class GetTxDetails extends _$GetTxDetails {
   @override
   Future<TxAccount> build(int id) async {
-    return await getTxDetails(idTx: id);
+    final c = ref.watch(coinContextProvider);
+    return await getTxDetails(idTx: id, c: c);
   }
 }
 

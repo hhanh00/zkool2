@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sapling_crypto::keys::FullViewingKey;
 
-use crate::{coin::Network, db::LEDGER_CODE};
+use crate::{api::coin::Network, db::LEDGER_CODE};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))] {

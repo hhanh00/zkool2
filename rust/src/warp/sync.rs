@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
-use crate::coin::Network;
+use crate::api::coin::Network;
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};

@@ -31,8 +31,9 @@ class TxPage extends ConsumerStatefulWidget {
 }
 
 class TxPageState extends ConsumerState<TxPage> {
+  late final c = ref.read(coinContextProvider);
   String? txId;
-  late final TxPlan txPlan = toPlan(package: widget.pczt);
+  late final TxPlan txPlan = toPlan(package: widget.pczt, c: c);
   bool canBroadcast = false;
   Account? account;
   AccountData? details;
@@ -140,20 +141,21 @@ class TxPageState extends ConsumerState<TxPage> {
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
-          final c = Completer();
-          signLedgerTransaction(pczt: widget.pczt).listen((e) {
+          final comp = Completer();
+          signLedgerTransaction(pczt: widget.pczt, c: c).listen((e) {
             switch (e) {
               case SigningEvent_Progress p:
                 showSnackbar(p.field0);
               case SigningEvent_Result r:
                 pczt = r.field0;
-                c.complete();
+                comp.complete();
             }
           });
-          await c.future;
+          await comp.future;
         } else {
           pczt = await signTransaction(
             pczt: widget.pczt,
+            c: c,
           );
         }
       }
@@ -162,6 +164,7 @@ class TxPageState extends ConsumerState<TxPage> {
       final result = await broadcastTransaction(
         height: txPlan.height,
         txBytes: txBytes,
+        c: c,
       );
       try {
         final txid = jsonDecode(result) as String;
@@ -171,6 +174,7 @@ class TxPageState extends ConsumerState<TxPage> {
           txid: txidHex,
           price: pczt.price,
           category: pczt.category,
+          c: c,
         );
         await showMessage(context, txid);
         showSnackbar("Transaction broadcasted successfully");
@@ -189,6 +193,7 @@ class TxPageState extends ConsumerState<TxPage> {
       if (txPlan.canSign) {
         pczt = await signTransaction(
           pczt: widget.pczt,
+          c: c,
         );
       }
       final pcztData = await packTransaction(pczt: pczt);
@@ -267,7 +272,7 @@ class MempoolPage extends ConsumerWidget {
             itemBuilder: (context, index) {
               final tx = mempool.unconfirmedTx[index];
               return ListTile(
-                onTap: () => onMempoolTx(context, tx.$1),
+                onTap: () => onMempoolTx(context, ref, tx.$1),
                 title: CopyableText(tx.$1),
                 subtitle: Text(tx.$2),
                 trailing: Text(tx.$3.toString()),
@@ -280,8 +285,9 @@ class MempoolPage extends ConsumerWidget {
     );
   }
 
-  onMempoolTx(BuildContext context, String txId) async {
-    final mempoolTx = await getMempoolTx(txId: txId);
+  onMempoolTx(BuildContext context, WidgetRef ref, String txId) async {
+    final c = ref.read(coinContextProvider);
+    final mempoolTx = await getMempoolTx(txId: txId, c: c);
     if (!context.mounted) return;
     await GoRouter.of(context).push("/mempool_view", extra: mempoolTx);
   }
