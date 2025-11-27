@@ -29,6 +29,7 @@ use crate::{
 };
 use secp256k1::{PublicKey, SecretKey};
 use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
+use zcash_transparent::address::TransparentAddress;
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address};
@@ -53,7 +54,6 @@ use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{
     address::UnifiedAddress, encoding::AddressCodec as _, keys::UnifiedAddressRequest,
 };
-use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::{NetworkConstants, NetworkUpgrade, Parameters};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,

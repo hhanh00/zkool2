@@ -45,17 +45,18 @@ rayon = "1.10"
 qrcode = "0.14.1"
 raptorq = "2.0.0"
 
-zcash_address = "0.9"
+zcash_address = "0.10"
 zcash_encoding = "0.3"
-zcash_keys = {version = "0.10", features = ["sapling", "orchard", "transparent-inputs"]}
+zcash_keys = {version = "0.12", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.4"
-zcash_primitives = {version = "0.24", features = ["transparent-inputs"]}
-zcash_proofs = {version = "0.24", features = ["bundled-prover"]}
-zcash_protocol = {version = "0.6", features = ["local-consensus"]}
-zcash_transparent = {version = "0.4", features = ["transparent-inputs"]}
-pczt = { version = "0.3", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
+zcash_script = "0.4"
+zcash_primitives = {version = "0.26", features = ["transparent-inputs"]}
+zcash_proofs = {version = "0.26", features = ["bundled-prover"]}
+zcash_protocol = {version = "0.7", features = ["local-consensus"]}
+zcash_transparent = {version = "0.6", features = ["transparent-inputs"]}
+pczt = { version = "0.5", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
 orchard = {version = "0.11", features = ["unstable-frost"]}
-zip321 = "0.5"
+zip321 = "0.6"
 
 reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}
 frost-rerandomized = "2.1.0"
@@ -125,15 +126,15 @@ orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e
 zcash_note_encryption = { git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29" }
 
 sapling-crypto = { git = "https://github.com/zcash/sapling-crypto.git", rev = "0475817b60fced17ec59b0c9412d2b2d29ef529f" }
-zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zcash_proofs = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zcash_transparent = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
-zip321 = { git = "https://github.com/hhanh00/librustzcash.git", rev = "0621a88485c947909664d0d94a1b8b2c3ebf21e2" }
+zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zcash_proofs = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zcash_transparent = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+zip321 = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
 
 # sapling-crypto = { path = "../../sapling-crypto" }
 # zcash_address = { path = "../../librustzcash/components/zcash_address" }

@@ -4,7 +4,6 @@ use anyhow::Result;
 use blake2b_simd::{Params, State};
 use byteorder::WriteBytesExt;
 use pczt::Pczt;
-use zcash_primitives::legacy::Script;
 
 pub fn create_hasher(perso: &[u8]) -> State {
     Params::new().hash_length(32).personal(perso).to_state()
@@ -44,8 +43,9 @@ pub fn amount_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
 pub fn script_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxTrScriptsHash");
     for tin in pczt.transparent().inputs() {
-        let script = Script(tin.script_pubkey().to_vec());
-        script.write(&mut hasher)?;
+        let script = tin.script_pubkey();
+        hasher.update(&[script.len() as u8]);
+        hasher.update(script);
     }
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
@@ -63,7 +63,9 @@ pub fn output_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxIdOutputsHash");
     for tout in pczt.transparent().outputs() {
         hasher.update(&tout.value().to_le_bytes());
-        Script(tout.script_pubkey().to_vec()).write(&mut hasher)?;
+        let script = tout.script_pubkey();
+        hasher.update(&[script.len() as u8]);
+        hasher.update(script);
     }
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }
@@ -74,7 +76,9 @@ pub fn txin_hasher(pczt: &Pczt, index: usize) -> Result<[u8; 32]> {
     hasher.update(tin.prevout_txid());
     hasher.update(&tin.prevout_index().to_le_bytes());
     hasher.update(&tin.value().to_le_bytes());
-    Script(tin.script_pubkey().to_vec()).write(&mut hasher)?;
+    let script = tin.script_pubkey();
+    hasher.update(&[script.len() as u8]);
+    hasher.update(script);
     hasher.update(&tin.sequence().unwrap_or(0xFFFFFFFF).to_le_bytes());
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
 }

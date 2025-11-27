@@ -58,7 +58,7 @@ impl Coin {
 
         let mut connection = pool.acquire().await?;
 
-        let coin = crate::db::get_prop(&mut *connection, "coin")
+        let coin = crate::db::get_prop(&mut connection, "coin")
             .await?
             .unwrap_or("0".to_string());
         let coin = coin.parse::<u8>()?;
@@ -211,7 +211,7 @@ impl Coin {
 
 async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<SqlitePool> {
     // Create a connection pool
-    let options = get_connect_options(&db_filepath, password);
+    let options = get_connect_options(db_filepath, password);
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .idle_timeout(std::time::Duration::from_secs(30))
