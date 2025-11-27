@@ -25,7 +25,7 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
 #[frb]
 pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin) -> Result<PcztPackage> {
     let account = c.account;
-    let network = &c.network;
+    let network = &c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
@@ -58,7 +58,7 @@ pub async fn sign_transaction(pczt: &PcztPackage, c: &Coin) -> Result<PcztPackag
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage, c: &Coin) -> Result<()> {
     let connection = c.get_connection().await?;
-    crate::ledger::builder::sign_ledger_transaction(c.network, sink, connection, c.account, pczt).await
+    crate::ledger::builder::sign_ledger_transaction(c.network(), sink, connection, c.account, pczt).await
 }
 
 #[frb]
@@ -112,7 +112,7 @@ pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8], c: &Coin) -> Re
 
 #[frb(sync)]
 pub fn to_plan(package: &PcztPackage, c: &Coin) -> Result<TxPlan> {
-    TxPlan::from_package(&c.network, package)
+    TxPlan::from_package(&c.network(), package)
 }
 
 #[frb]

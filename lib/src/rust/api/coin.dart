@@ -5,65 +5,56 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'coin.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `_regtest`, `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `activation_height`, `clone`, `clone`, `clone`, `fmt`, `network_type`
+// These functions are ignored because they are not marked as `pub`: `_regtest`, `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `try_open`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `activation_height`, `clone`, `clone`, `fmt`, `network_type`
 
 Future<void> initDatadir({required String directory}) =>
     RustLib.instance.api.crateApiCoinInitDatadir(directory: directory);
 
 Future<void> getTorClient() => RustLib.instance.api.crateApiCoinGetTorClient();
 
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>
-abstract class Coin implements RustOpaqueInterface {
-  int get account;
-
-  int get coin;
-
-  String get dbFilepath;
-
-  Network get network;
-
-  ServerType get serverType;
-
-  String get url;
-
-  bool get useTor;
-
-  set account(int account);
-
-  set coin(int coin);
-
-  set dbFilepath(String dbFilepath);
-
-  set network(Network network);
-
-  set serverType(ServerType serverType);
-
-  set url(String url);
-
-  set useTor(bool useTor);
-
-  Future<void> getName();
-
-  factory Coin() => RustLib.instance.api.crateApiCoinCoinNew();
-
-  Future<Coin> openDatabase({required String dbFilepath, String? password});
-
-  Future<Coin> setAccount({required int account});
-
-  Coin setLwd({required ServerType serverType, required String url});
-
-  Future<Coin> setUrl({required ServerType serverType, required String url});
-
-  Future<Coin> setUseTor({required bool useTor});
-}
-
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Network>>
 abstract class Network implements RustOpaqueInterface {}
 
-enum ServerType {
-  lwd,
-  zebra,
-  ;
+@freezed
+sealed class Coin with _$Coin {
+  const Coin._();
+  const factory Coin.raw({
+    required int coin,
+    required int account,
+    required String dbFilepath,
+    required String url,
+    required int serverType,
+    required bool useTor,
+  }) = _Coin;
+  Future<void> getName() => RustLib.instance.api.crateApiCoinCoinGetName(
+        that: this,
+      );
+
+  Future<Network> network() => RustLib.instance.api.crateApiCoinCoinNetwork(
+        that: this,
+      );
+
+  factory Coin() => RustLib.instance.api.crateApiCoinCoinNew();
+
+  Future<Coin> openDatabase({required String dbFilepath, String? password}) =>
+      RustLib.instance.api.crateApiCoinCoinOpenDatabase(
+          that: this, dbFilepath: dbFilepath, password: password);
+
+  Future<Coin> setAccount({required int account}) => RustLib.instance.api
+      .crateApiCoinCoinSetAccount(that: this, account: account);
+
+  Coin setLwd({required int serverType, required String url}) =>
+      RustLib.instance.api
+          .crateApiCoinCoinSetLwd(that: this, serverType: serverType, url: url);
+
+  Future<Coin> setUrl({required int serverType, required String url}) =>
+      RustLib.instance.api
+          .crateApiCoinCoinSetUrl(that: this, serverType: serverType, url: url);
+
+  Future<Coin> setUseTor({required bool useTor}) => RustLib.instance.api
+      .crateApiCoinCoinSetUseTor(that: this, useTor: useTor);
 }

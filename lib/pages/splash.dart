@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -75,6 +74,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
         }
       }
     }
+    ref.read(coinContextProvider.notifier).set(coin: c);
     final hasDb = ref.read(hasDbProvider.notifier);
     hasDb.setHasDb();
     ref.invalidate(appSettingsProvider);
@@ -84,7 +84,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
     final settings = await ref.read(appSettingsProvider.future);
     logger.i("LWD ${settings.lwd}");
     c = c.setLwd(
-      serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra,
+      serverType: settings.isLightNode ? 0 : 1,
       url: settings.lwd,
     );
     c = await c.setUseTor(useTor: settings.useTor);

@@ -57,7 +57,7 @@ pub async fn init_dkg(c: &Coin) -> Result<()> {
         .expect("Funding account not set");
     let dkg_params = get_dkg_params(&mut *connection, account).await?;
     get_mailbox_account(
-        &c.network,
+        &c.network(),
         &mut *connection,
         account,
         dkg_params.id,
@@ -88,7 +88,7 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
         .await?
         .expect("Funding account not set");
 
-    let r = crate::frost::dkg::do_dkg(&c.network, &mut connection, account, &mut client, height, status.clone()).await;
+    let r = crate::frost::dkg::do_dkg(&c.network(), &mut connection, account, &mut client, height, status.clone()).await;
     if let Err(e) = r {
         let _ = status.add_error(e);
     }
@@ -174,7 +174,7 @@ pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> 
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
     let r = crate::frost::sign::do_sign(
-        &c.network,
+        &c.network(),
         &mut *connection,
         c.account,
         &mut client,

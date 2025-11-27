@@ -77,7 +77,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString(), c: c);
         await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString(), c: c);
         await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
-        c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra);
+        c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
         ref.read(coinContextProvider.notifier).set(coin: c);
         ref.invalidate(appSettingsProvider);

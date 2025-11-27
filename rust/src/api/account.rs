@@ -43,7 +43,7 @@ pub async fn get_account_pools(account: u32, c: &Coin) -> Result<u8> {
 
     let dindex = get_account_dindex(&mut connection, account).await?;
     let tkeys = crate::db::select_account_transparent(&mut connection, account, dindex).await?;
-    let skeys = crate::db::select_account_sapling(&c.network, &mut connection, account).await?;
+    let skeys = crate::db::select_account_sapling(&c.network(), &mut connection, account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, account).await?;
 
     let mut pools = 0;
@@ -61,7 +61,7 @@ pub async fn get_account_pools(account: u32, c: &Coin) -> Result<u8> {
 
 #[frb]
 pub async fn get_account_ufvk(account: u32, pools: u8, c: &Coin) -> Result<String> {
-    let network = c.network;
+    let network = c.network();
     let mut connection = c.get_connection().await?;
 
     let ufvk = crate::key::get_account_ufvk(&network, &mut connection, account, pools).await?;
@@ -91,7 +91,7 @@ pub async fn get_account_fingerprint(account: u32, c: &Coin) -> Result<Option<St
 
 #[frb(sync)]
 pub fn ua_from_ufvk(ufvk: &str, di: Option<u32>, c: &Coin) -> Result<String> {
-    let network = c.network;
+    let network = c.network();
 
     let ufvk = UnifiedFullViewingKey::decode(&network, ufvk).map_err(|_| anyhow!("Invalid Key"))?;
     let ua = match di {
@@ -107,7 +107,7 @@ pub fn ua_from_ufvk(ufvk: &str, di: Option<u32>, c: &Coin) -> Result<String> {
 
 #[frb(sync)]
 pub fn receivers_from_ua(ua: &str, c: &Coin) -> Result<Receivers> {
-    let network = c.network;
+    let network = c.network();
 
     let (net, ua) = zcash_address::unified::Address::decode(ua)?;
     if net != network.network_type() {
@@ -236,7 +236,7 @@ pub async fn reorder_account(old_position: u32, new_position: u32, c: &Coin) -> 
 #[frb]
 pub async fn new_account(na: &NewAccount, c: &Coin) -> Result<u32> {
     let mut connection = c.get_connection().await?;
-    crate::account::new_account(&c.network, &mut connection, na).await
+    crate::account::new_account(&c.network(), &mut connection, na).await
 }
 
 #[frb]
@@ -250,21 +250,21 @@ pub async fn has_transparent_pub_key(c: &Coin) -> Result<bool> {
 pub async fn generate_next_dindex(c: &Coin) -> Result<u32> {
     let mut connection = c.get_connection().await?;
 
-    crate::account::generate_next_dindex(&c.network, &mut connection, c.account).await
+    crate::account::generate_next_dindex(&c.network(), &mut connection, c.account).await
 }
 
 #[frb]
 pub async fn generate_next_change_address(c: &Coin) -> Result<Option<String>> {
     let mut connection = c.get_connection().await?;
 
-    crate::account::generate_next_change_address(&c.network, &mut connection, c.account).await
+    crate::account::generate_next_change_address(&c.network(), &mut connection, c.account).await
 }
 
 #[frb]
 pub async fn reset_sync(id: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
 
-    crate::account::reset_sync(&c.network, &mut connection, id).await
+    crate::account::reset_sync(&c.network(), &mut connection, id).await
 }
 
 #[frb(dart_metadata = ("freezed"))]
@@ -376,7 +376,7 @@ pub async fn get_addresses(ua_pools: u8, c: &Coin) -> Result<Addresses> {
     let dindex = crate::db::get_account_dindex(&mut connection, c.account).await?;
 
     let tkeys = crate::db::select_account_transparent(&mut connection, c.account, dindex).await?;
-    let skeys = crate::db::select_account_sapling(&c.network, &mut connection, c.account).await?;
+    let skeys = crate::db::select_account_sapling(&c.network(), &mut connection, c.account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, c.account).await?;
 
     let taddr = tkeys
@@ -399,14 +399,15 @@ pub async fn get_addresses(ua_pools: u8, c: &Coin) -> Result<Addresses> {
         if ua_pools & 1 != 0 { taddr } else { None },
     );
 
+    let network = c.network();
     // final fallback if we have a transparent address from a BIP 38 secret key
-    let taddr = taddr.map(|x| x.encode(&c.network)).or(tkeys.address);
+    let taddr = taddr.map(|x| x.encode(&network)).or(tkeys.address);
 
     let addresses = Addresses {
         taddr,
-        saddr: saddr.map(|x| x.encode(&c.network)),
-        oaddr: ua_orchard.map(|x| x.encode(&c.network)),
-        ua: ua.map(|x| x.encode(&c.network)),
+        saddr: saddr.map(|x| x.encode(&network)),
+        oaddr: ua_orchard.map(|x| x.encode(&network)),
+        ua: ua.map(|x| x.encode(&network)),
     };
 
     Ok(addresses)
@@ -466,6 +467,7 @@ pub async fn import_account(passphrase: &str, data: &[u8], c: &Coin) -> Result<(
 
 #[frb]
 pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
+    let network = c.network();
     let mut connection = c.get_connection().await?;
 
     let (seed, aindex) = sqlx::query(
@@ -521,7 +523,7 @@ pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
     let seed = memo.to_seed("");
 
     let usk =
-        UnifiedSpendingKey::from_seed(&c.network, &seed, AccountId::try_from(aindex).unwrap())?;
+        UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(aindex).unwrap())?;
     let uvk = usk.to_unified_full_viewing_key();
     if uvk.sapling().is_some() {
         println!("Has Sapling");
@@ -529,7 +531,7 @@ pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
     if uvk.orchard().is_some() {
         println!("Has Orchard");
     }
-    let uvk = uvk.encode(&c.network);
+    let uvk = uvk.encode(&network);
     println!("Unified Full Viewing Key: {}", uvk);
 
     Ok(())
@@ -651,14 +653,14 @@ pub async fn max_spendable(c: &Coin) -> Result<u64> {
 #[frb]
 pub async fn show_ledger_sapling_address(c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let r = show_sapling_address(&c.network, &mut connection, c.account).await?;
+    let r = show_sapling_address(&c.network(), &mut connection, c.account).await?;
     Ok(r)
 }
 
 #[frb]
 pub async fn show_ledger_transparent_address(c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let r = show_transparent_address(&c.network, &mut connection, c.account).await?;
+    let r = show_transparent_address(&c.network(), &mut connection, c.account).await?;
     Ok(r)
 }
 

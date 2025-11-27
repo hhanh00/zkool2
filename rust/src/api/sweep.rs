@@ -24,7 +24,7 @@ impl TransparentScanner {
         let connection = c.get_connection().await?;
         let client = c.client().await?;
         transparent_sweep(
-            &c.network,
+            &c.network(),
             connection,
             client,
             c.account,

@@ -62,8 +62,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   @override
   void didPopNext() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final selectedAccount = ref.read(selectedAccountProvider.notifier);
-      selectedAccount.unselect();
+      final c = ref.read(coinContextProvider.notifier);
+      c.setAccount(account: 0);
     });
     super.didPopNext();
   }
@@ -264,8 +264,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void onOpen(BuildContext context, Account account) async {
-    final selectAccount = ref.read(selectedAccountProvider.notifier);
-    selectAccount.selectAccount(account);
+    final c = ref.read(coinContextProvider.notifier);
+    await c.setAccount(account: account.id);
     if (!context.mounted) return;
     await GoRouter.of(context).push('/account', extra: account);
   }

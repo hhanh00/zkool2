@@ -47,7 +47,7 @@ pub async fn synchronize(
         *cancel = Some(tx_cancel.clone());
     }
 
-    let network = c.network;
+    let network = c.network();
     let mut connection = c.get_connection().await?;
     let progress2 = progress.clone();
 
@@ -121,7 +121,7 @@ pub async fn synchronize(
                 continue;
             }
 
-            let pool = c.get_pool();
+            let pool = c.get_pool()?;
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
@@ -150,7 +150,7 @@ pub async fn synchronize(
 
             shielded_sync(
                 &network,
-                pool,
+                &pool,
                 &mut client,
                 &accounts_to_sync,
                 start_height,
@@ -378,7 +378,7 @@ pub async fn cancel_sync() -> Result<()> {
 #[frb]
 pub async fn rewind_sync(height: u32, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::sync::rewind_sync(&c.network, &mut *connection, account, height).await
+    crate::sync::rewind_sync(&c.network(), &mut *connection, account, height).await
 }
 
 #[frb]
@@ -391,7 +391,7 @@ pub async fn get_db_height(c: &Coin) -> Result<SyncHeight> {
 pub async fn fetch_tx_details(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::memo::fetch_tx_details(&c.network, &mut *connection, &mut client, c.account).await?;
+    crate::memo::fetch_tx_details(&c.network(), &mut *connection, &mut client, c.account).await?;
     Ok(())
 }
 
@@ -399,7 +399,7 @@ pub async fn fetch_tx_details(c: &Coin) -> Result<()> {
 pub async fn cache_block_time(height: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    let block = client.block(&c.network, height).await?;
+    let block = client.block(&c.network(), height).await?;
     let bh = BlockHeader {
         height,
         hash: block.hash,

@@ -33,15 +33,15 @@ class HasDb extends _$HasDb {
   }
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 class CoinContext extends _$CoinContext {
   @override
   Coin build() {
     return Coin();
   }
 
-  void setAccount({required int account}) {
-    state.account = account;
+  Future<void> setAccount({required int account}) async {
+    state = await state.setAccount(account: account);
   }
 
   void set({required Coin coin}) {
@@ -194,28 +194,13 @@ class HeroProgressWidget extends StatelessWidget {
 
 // AppStore get appStore => AppStoreBase.instance;
 
-@Riverpod(keepAlive: true)
-class SelectedAccount extends _$SelectedAccount {
-  @override
-  Future<Account?> build() async {
-    final c = ref.watch(coinContextProvider);
-    final accounts = await ref.read(getAccountsProvider.future);
-    final s = await getProp(key: "selected_account", c: c);
-    if (s == null || s == "") return null;
-    final id = int.parse(s);
-    return accounts.firstWhereOrNull((a) => a.id == id);
-  }
-
-  void selectAccount(Account account) async {
-    final c = ref.read(coinContextProvider);
-    await putProp(key: "selected_account", value: "${account.id}", c: c);
-    ref.read(coinContextProvider.notifier).setAccount(account: account.id);
-    state = AsyncData(account);
-  }
-
-  void unselect() {
-    state = AsyncData(null);
-  }
+@riverpod
+Future<Account?> selectedAccount(Ref ref) async {
+  final c = ref.watch(coinContextProvider);
+  final account = c.account;
+  final accounts = await ref.watch(getAccountsProvider.future);
+  final acc = accounts.firstWhereOrNull((a) => a.id == account);
+  return acc;
 }
 
 @riverpod
@@ -236,19 +221,20 @@ class SelectedFolder extends _$SelectedFolder {
 
 @Riverpod(keepAlive: true)
 Future<List<Account>> getAccounts(Ref ref) async {
-  final c = ref.read(coinContextProvider);
-  return await listAccounts(c: c);
+  final c = ref.watch(coinContextProvider);
+  final as = await listAccounts(c: c);
+  return as;
 }
 
 @riverpod
 Future<List<Folder>> getFolders(Ref ref) async {
-  final c = ref.read(coinContextProvider);
+  final c = ref.watch(coinContextProvider);
   return await listFolders(c: c);
 }
 
 @riverpod
 Future<List<Category>> getCategories(Ref ref) async {
-  final c = ref.read(coinContextProvider);
+  final c = ref.watch(coinContextProvider);
   return await listCategories(c: c);
 }
 
@@ -308,14 +294,12 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
     final recovery = await prefs.getBool("recovery") ?? false;
-
     final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
     final isLightNode = (hasDb ? await getProp(key: "is_light_node", c: c) : null) ?? "true";
     final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? "https://zec.rocks";
     final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
-
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
     final qrSize = (hasDb ? await getProp(key: "qr_size", c: c) : null) ?? "20";
     final qrEC = (hasDb ? await getProp(key: "qr_ecLevel", c: c) : null) ?? "1";

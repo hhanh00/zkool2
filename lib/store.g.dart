@@ -65,7 +65,7 @@ final class CoinContextProvider extends $NotifierProvider<CoinContext, Coin> {
           argument: null,
           retry: null,
           name: r'coinContextProvider',
-          isAutoDispose: false,
+          isAutoDispose: true,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -86,7 +86,7 @@ final class CoinContextProvider extends $NotifierProvider<CoinContext, Coin> {
   }
 }
 
-String _$coinContextHash() => r'3d564b64b7d5d0de3d0d2e822ef09b6ff04d9edb';
+String _$coinContextHash() => r'91fe80147d177da21a579189e818d3167a7d45da';
 
 abstract class _$CoinContext extends $Notifier<Coin> {
   Coin build();
@@ -189,18 +189,19 @@ abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
   }
 }
 
-@ProviderFor(SelectedAccount)
+@ProviderFor(selectedAccount)
 const selectedAccountProvider = SelectedAccountProvider._();
 
-final class SelectedAccountProvider
-    extends $AsyncNotifierProvider<SelectedAccount, Account?> {
+final class SelectedAccountProvider extends $FunctionalProvider<
+        AsyncValue<Account?>, Account?, FutureOr<Account?>>
+    with $FutureModifier<Account?>, $FutureProvider<Account?> {
   const SelectedAccountProvider._()
       : super(
           from: null,
           argument: null,
           retry: null,
           name: r'selectedAccountProvider',
-          isAutoDispose: false,
+          isAutoDispose: true,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -210,26 +211,16 @@ final class SelectedAccountProvider
 
   @$internal
   @override
-  SelectedAccount create() => SelectedAccount();
-}
+  $FutureProviderElement<Account?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
-String _$selectedAccountHash() => r'86bb0031a1a2cc6edbf47c842794af113f1f6dc2';
-
-abstract class _$SelectedAccount extends $AsyncNotifier<Account?> {
-  FutureOr<Account?> build();
-  @$mustCallSuper
   @override
-  void runBuild() {
-    final created = build();
-    final ref = this.ref as $Ref<AsyncValue<Account?>, Account?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<Account?>, Account?>,
-        AsyncValue<Account?>,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
+  FutureOr<Account?> create(Ref ref) {
+    return selectedAccount(ref);
   }
 }
+
+String _$selectedAccountHash() => r'730f32748a616d776d3781bb7c627e095f779c4c';
 
 @ProviderFor(SelectedFolder)
 const selectedFolderProvider = SelectedFolderProvider._();
@@ -310,7 +301,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
   }
 }
 
-String _$getAccountsHash() => r'408dd4a161efa518fd5350ae27f1ea5d3eddf91d';
+String _$getAccountsHash() => r'e138917076ad4320221afed7995cdd1cdcf2c795';
 
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
@@ -344,7 +335,7 @@ final class GetFoldersProvider extends $FunctionalProvider<
   }
 }
 
-String _$getFoldersHash() => r'2c0c41c5f0695b24ae724017eb63d2e039cc2acb';
+String _$getFoldersHash() => r'5a55b95e2e52415b9ee7208ddca359f635e36acf';
 
 @ProviderFor(getCategories)
 const getCategoriesProvider = GetCategoriesProvider._();
@@ -378,7 +369,7 @@ final class GetCategoriesProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCategoriesHash() => r'81e196d9df171b2c841487a81305f52773905d96';
+String _$getCategoriesHash() => r'ff720b53a6f29d3cc907abf278f14e2fc7ffc7e5';
 
 @ProviderFor(account)
 const accountProvider = AccountFamily._();
@@ -432,7 +423,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'9594c3daf455e8f1905a6fbf6d26727e69ed579c';
+String _$accountHash() => r'b1721de913b181b9f5494ee198f75ca1cb669ed5';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -486,7 +477,7 @@ final class GetCurrentAccountProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCurrentAccountHash() => r'd96b535adcd641dbfc5444f924a82c621d592e56';
+String _$getCurrentAccountHash() => r'4ca02cd09206c1f1d925f0ceda73551ebcdd8e60';
 
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
@@ -513,7 +504,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'fdae0c93e8453c1fcbe44c8ce812d6bdeb8db9ed';
+    r'499cb7998a7fc5b975dfc906d1386daf87cf8ef0';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();

@@ -14,7 +14,7 @@ async fn run_mempool(
     let mut connection = c.get_connection().await?;
     let r = crate::mempool::run_mempool(
         mempool_sink,
-        &c.network,
+        &c.network(),
         &mut connection,
         &mut c.client().await?,
         height,
@@ -77,7 +77,7 @@ impl Mempool {
 #[frb]
 pub async fn get_mempool_tx(tx_id: &str, c: &Coin) -> Result<Vec<u8>> {
     let mut client = c.client().await?;
-    let tx = crate::mempool::get_mempool_tx(&c.network, &mut client, tx_id).await?;
+    let tx = crate::mempool::get_mempool_tx(&c.network(), &mut client, tx_id).await?;
     let mut tx_bytes = vec![];
     tx.write(&mut tx_bytes)?;
 
