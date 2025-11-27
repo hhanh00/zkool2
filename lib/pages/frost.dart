@@ -28,7 +28,7 @@ class FrostPage1 extends ConsumerStatefulWidget {
   ConsumerState<FrostPage1> createState() => FrostPage1State();
 }
 
-Widget buildFrostPage(BuildContext context,
+Widget buildFrostPage(BuildContext context, WidgetRef ref,
     {required int index, required bool finished, required Widget child,}) {
   return Scaffold(
       appBar:
@@ -40,7 +40,7 @@ Widget buildFrostPage(BuildContext context,
                 },
                 icon: Icon(Icons.close),)
             : IconButton(
-                onPressed: () => onCancel(context),
+                onPressed: () => onCancel(context, ref),
                 icon: const Icon(Icons.cancel),),
       ],),
       body: CustomScrollView(slivers: [
@@ -52,6 +52,7 @@ Widget buildFrostPage(BuildContext context,
 }
 
 class FrostPage1State extends ConsumerState<FrostPage1> {
+  late final c = ref.read(coinContextProvider);
   final formKey = GlobalKey<FormBuilderState>();
   List<Account> accounts = [];
   FrostParams? frostParams;
@@ -65,7 +66,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final account = await ref.read(accountProvider(selectedAccount.id).future);
       frostParams = account.frostParams;
-      final signing = await isSigningInProgress();
+      final signing = await isSigningInProgress(c: c);
       if (signing) {
         if (context.mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -153,7 +154,8 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
       await initSign(
           pczt: widget.pczt,
           coordinator: coordinator,
-          fundingAccount: fundingAccount,);
+          fundingAccount: fundingAccount,
+          c: c);
       if (!mounted) return;
       await GoRouter.of(context).pushReplacement("/frost2");
     }
@@ -168,6 +170,7 @@ class FrostPage2 extends ConsumerStatefulWidget {
 }
 
 class FrostPage2State extends ConsumerState<FrostPage2> {
+  late final c = ref.read(coinContextProvider);
   String message = "";
   Timer? timer;
   int currentIndex = 0;
@@ -191,7 +194,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return buildFrostPage(context,
+    return buildFrostPage(context, ref,
         index: currentIndex,
         finished: finished,
         child: Column(children: [Text(message, style: t.bodyLarge)]),);
@@ -200,7 +203,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   int? currentHeight;
 
   void runFrost() async {
-    final h = await getCurrentHeight();
+    final h = await getCurrentHeight(c: c);
     if (currentHeight != null && currentHeight == h) return;
     currentHeight = h;
     final as = await ref.read(getAccountsProvider.future);
@@ -210,7 +213,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     final synchronizer = ref.read(synchronizerProvider.notifier);
     await synchronizer.startSynchronize(accounts);
 
-    final status = doSign();
+    final status = doSign(c: c);
     status.listen((s) {
       if (s is SigningStatus_WaitingForCommitments) {
         setState(() {
@@ -308,12 +311,13 @@ class FrostSteps extends StatelessWidget {
   }
 }
 
-void onCancel(BuildContext context) async {
+void onCancel(BuildContext context, WidgetRef ref) async {
+  final c = ref.read(coinContextProvider);
   final confirmed = await confirmDialog(context,
       title: "Cancel Multi Signature",
       message: "Are you sure you want to cancel the multi signature process?",);
   if (!confirmed) return;
-  await resetSign();
+  await resetSign(c: c);
   if (!context.mounted) return;
   GoRouter.of(context).pop();
 }

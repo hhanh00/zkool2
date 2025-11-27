@@ -5,11 +5,10 @@ use orchard::keys::{FullViewingKey, Scope};
 use sqlx::SqliteConnection;
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
-use crate::coin::Network;
 
 use crate::{
-    account::get_orchard_vk,
-    api::account::{get_account_seed, new_account, NewAccount},
+    account::{get_account_seed, get_orchard_vk, new_account},
+    api::{account::NewAccount, coin::Network},
 };
 
 /// Get (and create if needed) the private mailbox address for
@@ -76,7 +75,7 @@ pub async fn get_mailbox_account(
                     internal: true,
                     ledger: false,
                 };
-                let mailbox_account = new_account(&na).await?;
+                let mailbox_account = new_account(network, &mut *connection, &na).await?;
                 let fvk = get_orchard_vk(&mut *connection, mailbox_account)
                     .await?
                     .expect("Mailbox account should have orchard");
@@ -92,7 +91,7 @@ pub async fn get_mailbox_account(
                 .bind(ua)
                 .execute(&mut *connection)
                 .await?;
-                let seed = get_account_seed(mailbox_account)
+                let seed = get_account_seed(&mut *connection, mailbox_account)
                     .await?
                     .expect("Seed should be set");
                 sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
@@ -171,7 +170,7 @@ pub async fn get_coordinator_broadcast_account(
                     internal: true,
                     ledger: false,
                 };
-                new_account(&na).await?;
+                new_account(network, &mut *connection, &na).await?;
                 // Loop again to retrieve the account
             }
             Some((account, xvk)) => {

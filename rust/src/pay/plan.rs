@@ -53,7 +53,7 @@ use crate::{
         get_sapling_vk,
     },
     api::pay::{DustChangePolicy, PcztPackage},
-    coin::Network,
+    api::coin::Network,
     db::{get_account_dindex, get_account_hw, select_account_transparent},
     pay::{
         error::Error,
@@ -495,7 +495,7 @@ pub async fn plan_transaction(
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder
                             .add_transparent_input(pubkey, utxo, coin)
-                            .map_err(|e| anyhow!(e))?;
+                            .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
                         tsk_dindex.push((pubkey, scope, dindex, taddress));
                     }
                     1 => {
@@ -600,7 +600,7 @@ pub async fn plan_transaction(
                 );
                 builder
                     .add_transparent_output(&to, value)
-                    .map_err(|e| anyhow!(e))?;
+                    .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;

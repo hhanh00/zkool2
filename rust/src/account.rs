@@ -1,17 +1,43 @@
+use std::str::FromStr as _;
+
+use crate::ledger::fvk::get_hw_sapling_address;
 use crate::{
-    api::account::{Category, Folder},
-    coin::Network,
-    db::{get_account_hw, select_account_transparent},
+    api::ledger::get_hw_fvk,
+    bip38,
+    api::coin::Network,
+    db::{
+        init_account_orchard, init_account_sapling, init_account_transparent,
+        store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
+        store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
+        store_account_transparent_sk, store_account_transparent_vk, update_dindex,
+    },
+    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    tiu,
 };
+use crate::{
+    api::{
+        account::{
+            Category, Folder, NewAccount, Seed, TxAccount, TxMemo, TxNote, TxOutput, TxSpend,
+        },
+        key::generate_seed,
+    },
+    db::{
+        get_account_hw, select_account_transparent, store_account_hw, store_account_metadata,
+        LEDGER_CODE,
+    },
+    pay::pool::ALL_POOLS,
+};
+use secp256k1::{PublicKey, SecretKey};
+use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address};
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address};
 
-use anyhow::{Ok, Result};
+use anyhow::{anyhow, Result};
 use bincode::config::legacy;
-use bip32::PrivateKey;
+use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use jubjub::Fr;
 use orchard::{
     keys::FullViewingKey,
@@ -21,25 +47,293 @@ use orchard::{
     Note,
 };
 use ripemd::{Digest as _, Ripemd160};
-use sapling_crypto::{
-    zip32::{DiversifiableFullViewingKey, ExtendedSpendingKey},
-    PaymentAddress,
-};
+use sapling_crypto::{zip32::DiversifiableFullViewingKey, PaymentAddress};
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
-use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
+use zcash_keys::{
+    address::UnifiedAddress, encoding::AddressCodec as _, keys::UnifiedAddressRequest,
+};
 use zcash_primitives::legacy::TransparentAddress;
-use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
+use zcash_protocol::consensus::{NetworkConstants, NetworkUpgrade, Parameters};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
+use zip32::{fingerprint::SeedFingerprint, AccountId};
 
 use crate::{
     api::account::FrostParams,
-    db::store_account_transparent_addr,
     sync::trim_sync_data,
     warp::{AuthPath, Witness, MERKLE_DEPTH},
 };
+
+pub async fn new_account(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    na: &NewAccount,
+) -> Result<u32> {
+    let mut db_tx = connection.begin().await?;
+
+    let birth = na.birth.unwrap_or_else(|| {
+        network
+            .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
+            .unwrap()
+            .into()
+    });
+
+    let account = store_account_metadata(
+        &mut db_tx,
+        &na.name,
+        &na.icon,
+        &na.fingerprint,
+        birth,
+        na.use_internal,
+        na.internal,
+    )
+    .await?;
+
+    let mut key = na.key.clone();
+    if key.is_empty() && !na.ledger {
+        key = generate_seed()?;
+    }
+
+    let pools = na.pools.unwrap_or(ALL_POOLS);
+
+    if na.ledger {
+        store_account_hw(&mut db_tx, account, LEDGER_CODE, na.aindex).await?;
+        // we must do sapling derivation first to know a valid dindex
+        // because in sapling some indices are invalid
+        let dindex = 0;
+        if pools & 2 != 0 {
+            init_account_sapling(network, &mut db_tx, account, birth).await?;
+            let fvk = get_hw_fvk(network, LEDGER_CODE, na.aindex).await?;
+            let mut dfvk = fvk.to_bytes().to_vec();
+            dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
+            let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
+            // We should get the default address dindex by using the get_div_list
+            // api but it is currently not working
+            // instead, we "assume" the dindex = 0 is the default sapling address
+            // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
+            let address = get_hw_sapling_address(network, na.aindex).await?;
+            store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
+        }
+        if pools & 1 != 0 {
+            init_account_transparent(&mut db_tx, account, birth).await?;
+            let (pk, taddr) = get_hw_transparent_address(network, na.aindex, 0, dindex).await?;
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                dindex,
+                None,
+                &pk,
+                &taddr.encode(network),
+            )
+            .await?;
+        }
+        update_dindex(&mut db_tx, account, dindex, true).await?;
+    } else if is_valid_phrase(&key) {
+        let seed_phrase = bip39::Mnemonic::from_str(&key)?;
+        let passphrase = na.passphrase.clone().unwrap_or_default();
+        let seed = seed_phrase.to_seed(&passphrase);
+        let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        store_account_seed(
+            &mut db_tx,
+            account,
+            &key,
+            &passphrase,
+            &seed_fingerprint,
+            na.aindex,
+        )
+        .await?;
+        let usk = UnifiedSpendingKey::from_seed(
+            &network,
+            &seed,
+            AccountId::try_from(na.aindex).unwrap(),
+        )?;
+        let uvk = usk.to_unified_full_viewing_key();
+        let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+        let dindex: u32 = di.try_into()?;
+
+        if pools & 1 != 0 {
+            init_account_transparent(&mut db_tx, account, birth).await?;
+            let tsk = usk.transparent();
+            store_account_transparent_sk(&mut db_tx, account, tsk).await?;
+            let tvk = &tsk.to_account_pubkey();
+            store_account_transparent_vk(&mut db_tx, account, tvk).await?;
+            let sk = derive_transparent_sk(tsk, 0, dindex)?;
+            let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                dindex,
+                Some(sk),
+                &pk,
+                &taddr.encode(&network),
+            )
+            .await?;
+        }
+
+        if pools & 2 != 0 {
+            init_account_sapling(network, &mut db_tx, account, birth).await?;
+            let sxsk = usk.sapling();
+            store_account_sapling_sk(&mut db_tx, account, sxsk).await?;
+            let sxvk = sxsk.to_diversifiable_full_viewing_key();
+            let address = derive_sapling_address(network, &sxvk, dindex);
+            store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
+        }
+
+        if pools & 4 != 0 {
+            init_account_orchard(network, &mut db_tx, account, birth).await?;
+            let oxsk = usk.orchard();
+            store_account_orchard_sk(&mut db_tx, account, oxsk).await?;
+            let oxvk = FullViewingKey::from(oxsk);
+            store_account_orchard_vk(&mut db_tx, account, &oxvk).await?;
+        }
+
+        update_dindex(&mut db_tx, account, dindex, true).await?;
+    } else if is_valid_transparent_key(&key) {
+        init_account_transparent(&mut db_tx, account, birth).await?;
+        if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
+            let xsk = AccountPrivKey::from_extended_privkey(xsk);
+            store_account_transparent_sk(&mut db_tx, account, &xsk).await?;
+            let xvk = xsk.to_account_pubkey();
+            store_account_transparent_vk(&mut db_tx, account, &xvk).await?;
+            let sk = derive_transparent_sk(&xsk, 0, 0)?;
+            let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                0,
+                Some(sk),
+                &pk,
+                &address.encode(&network),
+            )
+            .await?;
+        } else if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
+            // No AccountPubKey::from_extended_pubkey, we need to use the bytes
+            let mut buf = xvk.attrs().chain_code.to_vec();
+            buf.extend_from_slice(&xvk.to_bytes());
+            let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
+            store_account_transparent_vk(&mut db_tx, account, &xvk).await?;
+            let (pk, address) = derive_transparent_address(&xvk, 0, 0)?;
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                0,
+                None,
+                &pk,
+                &address.encode(&network),
+            )
+            .await?;
+        } else if let Ok(sk) = bip38::import_tsk(&key) {
+            let secp = secp256k1::Secp256k1::new();
+            let pk = sk.public_key(&secp);
+            let tpk = pk.serialize().to_vec();
+            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
+            let addr = TransparentAddress::PublicKeyHash(pkh);
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                0,
+                Some(sk.to_bytes().to_vec()),
+                &tpk,
+                &addr.encode(&network),
+            )
+            .await?;
+        } else if let Ok((_, tpk)) = bech32::decode(&key) {
+            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
+            let addr = TransparentAddress::PublicKeyHash(pkh);
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                0,
+                None,
+                &tpk,
+                &addr.encode(&network),
+            )
+            .await?;
+        }
+    } else if is_valid_sapling_key(network, &key) {
+        init_account_sapling(network, &mut db_tx, account, birth).await?;
+        let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
+            network.hrp_sapling_extended_spending_key(),
+            &key,
+        ) {
+            store_account_sapling_sk(&mut db_tx, account, &xsk).await?;
+            let xvk = xsk.to_diversifiable_full_viewing_key();
+            let (di, address) = xvk.default_address();
+            let address = address.encode(&network);
+            store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
+            di
+        } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
+            network.hrp_sapling_extended_full_viewing_key(),
+            &key,
+        ) {
+            let (di, address) = xvk.default_address();
+            let address = address.encode(&network);
+            store_account_sapling_vk(
+                &mut db_tx,
+                account,
+                &xvk.to_diversifiable_full_viewing_key(),
+                &address,
+            )
+            .await?;
+            di
+        } else {
+            return Err(anyhow!("Invalid Sapling Key"));
+        };
+        let dindex: u32 = di.try_into()?;
+        update_dindex(&mut db_tx, account, dindex, true).await?;
+    } else if is_valid_ufvk(network, &key) {
+        let uvk =
+            UnifiedFullViewingKey::decode(&network, &key).map_err(|_| anyhow!("Invalid Key"))?;
+        let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+        let dindex: u32 = di.try_into()?;
+
+        match uvk.transparent() {
+            Some(tvk) if pools & 1 != 0 => {
+                init_account_transparent(&mut db_tx, account, birth).await?;
+                store_account_transparent_vk(&mut db_tx, account, tvk).await?;
+                let (pk, address) = derive_transparent_address(tvk, 0, dindex)?;
+                store_account_transparent_addr(
+                    &mut db_tx,
+                    account,
+                    0,
+                    dindex,
+                    None,
+                    &pk,
+                    &address.encode(&network),
+                )
+                .await?;
+            }
+            _ => {}
+        }
+        match uvk.sapling() {
+            Some(sxvk) if pools & 2 != 0 => {
+                init_account_sapling(network, &mut db_tx, account, birth).await?;
+                let address = ua.sapling().unwrap();
+                let address = address.encode(&network);
+                store_account_sapling_vk(&mut db_tx, account, sxvk, &address).await?;
+            }
+            _ => {}
+        }
+        match uvk.orchard() {
+            Some(ovk) if pools & 4 != 0 => {
+                init_account_orchard(network, &mut db_tx, account, birth).await?;
+                store_account_orchard_vk(&mut db_tx, account, ovk).await?;
+            }
+            _ => {}
+        }
+        update_dindex(&mut db_tx, account, dindex, true).await?;
+    }
+    db_tx.commit().await?;
+    Ok(account)
+}
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
     let scope = match scope {
@@ -67,6 +361,28 @@ pub fn derive_transparent_address(
     let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(tpk)).into();
     let addr = TransparentAddress::PublicKeyHash(pkh);
     Ok((tpk.to_vec(), addr))
+}
+
+pub async fn get_account_seed(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<Seed>> {
+    let seed = sqlx::query("SELECT seed, passphrase, aindex FROM accounts WHERE id_account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let mnemonic: Option<String> = row.get(0);
+            let phrase: Option<String> = row.get(1);
+            let aindex: u32 = row.get(2);
+            let phrase = phrase.unwrap_or_default();
+            mnemonic.map(|mnemonic| Seed {
+                mnemonic,
+                phrase,
+                aindex,
+            })
+        })
+        .fetch_one(&mut *connection)
+        .await?;
+    Ok(seed)
 }
 
 pub async fn get_sapling_sk(
@@ -675,55 +991,6 @@ pub async fn get_account_frost_params(
     Ok(frost)
 }
 
-#[derive(Default, Debug)]
-pub struct TxAccount {
-    pub id: u32,
-    pub account: u32,
-    pub txid: Vec<u8>,
-    pub height: u32,
-    pub time: u32,
-    pub price: Option<f64>,
-    pub category: Option<u32>,
-    pub notes: Vec<TxNote>,
-    pub spends: Vec<TxSpend>,
-    pub outputs: Vec<TxOutput>,
-    pub memos: Vec<TxMemo>,
-}
-
-#[derive(Default, Debug)]
-pub struct TxNote {
-    pub id: u32,
-    pub pool: u8,
-    pub height: u32,
-    pub value: u64,
-    pub locked: bool,
-}
-
-#[derive(Default, Debug)]
-pub struct TxSpend {
-    pub id: u32,
-    pub pool: u8,
-    pub height: u32,
-    pub value: u64,
-}
-
-#[derive(Default, Debug)]
-pub struct TxOutput {
-    pub id: u32,
-    pub pool: u8,
-    pub height: u32,
-    pub value: u64,
-    pub address: String,
-}
-
-#[derive(Default, Debug)]
-pub struct TxMemo {
-    pub note: Option<u32>,
-    pub output: Option<u32>,
-    pub pool: u8,
-    pub memo: Option<String>,
-}
-
 pub async fn list_folders(connection: &mut SqliteConnection) -> Result<Vec<Folder>> {
     let folders = sqlx::query("SELECT id_folder, name FROM folders ORDER BY name")
         .map(|r: SqliteRow| Folder {
@@ -883,4 +1150,13 @@ pub async fn has_pool(connection: &mut SqliteConnection, account: u32, pool: u8)
         _ => unreachable!(),
     };
     Ok(has_pool)
+}
+
+fn derive_sapling_address(
+    network: &Network,
+    sxvk: &DiversifiableFullViewingKey,
+    dindex: u32,
+) -> String {
+    let address = sxvk.address(dindex.into()).unwrap();
+    address.encode(network)
 }

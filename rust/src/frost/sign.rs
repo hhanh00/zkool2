@@ -38,7 +38,7 @@ use crate::{
         frost::{FrostSignParams, SigningStatus},
         pay::PcztPackage,
         sync::SYNCING,
-    }, coin::Network, frb_generated::StreamSink, frost::{
+    }, api::coin::Network, frb_generated::StreamSink, frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::{delete_frost_state, get_dkg_params, publish},
     }, pay::{

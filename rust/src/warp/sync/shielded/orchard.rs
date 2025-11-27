@@ -4,7 +4,7 @@ use orchard::{
     Note,
 };
 use sqlx::SqliteConnection;
-use crate::coin::Network;
+use crate::api::coin::Network;
 
 use crate::{
     lwd::{CompactOrchardAction, CompactTx},

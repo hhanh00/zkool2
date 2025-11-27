@@ -14,6 +14,7 @@ class CategoryPage extends ConsumerStatefulWidget {
 }
 
 class CategoryPageState extends ConsumerState<CategoryPage> {
+  late final c = ref.read(coinContextProvider);
   List<(Category, bool)> categories = [];
 
   @override
@@ -63,7 +64,7 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
   void onNew() async {
     final category = await categoryForm(Category(id: 0, name: "", isIncome: false), title: "New Category");
     if (category != null) {
-      await createNewCategory(category: category);
+      await createNewCategory(category: category, c: c);
       await refresh();
     }
   }
@@ -71,7 +72,7 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
   void onEdit() async {
     final category = await categoryForm(selection.first, title: "Edit Category");
     if (category != null) {
-      await renameCategory(category: category);
+      await renameCategory(category: category, c: c);
       await refresh();
     }
   }
@@ -80,7 +81,7 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
     final confirmed =
         await confirmDialog(context, title: "Do you want to delete these categories?", message: "Transactions assigned to these categories will be kept.");
     if (confirmed) {
-      await deleteCategories(ids: selection.map((f) => f.id).toList());
+      await deleteCategories(ids: selection.map((f) => f.id).toList(), c: c);
       await refresh();
       ref.invalidate(getCategoriesProvider);
     }

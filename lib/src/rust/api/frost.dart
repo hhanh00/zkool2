@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import '../lib.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'pay.dart';
@@ -19,40 +20,53 @@ Future<void> setDkgParams(
         required int id,
         required int n,
         required int t,
-        required int fundingAccount}) =>
+        required int fundingAccount,
+        required Coin c}) =>
     RustLib.instance.api.crateApiFrostSetDkgParams(
-        name: name, id: id, n: n, t: t, fundingAccount: fundingAccount);
+        name: name, id: id, n: n, t: t, fundingAccount: fundingAccount, c: c);
 
-Future<bool> hasDkgParams() => RustLib.instance.api.crateApiFrostHasDkgParams();
+Future<bool> hasDkgParams({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostHasDkgParams(c: c);
 
-Future<void> initDkg() => RustLib.instance.api.crateApiFrostInitDkg();
+Future<void> initDkg({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostInitDkg(c: c);
 
-Future<bool> hasDkgAddresses() =>
-    RustLib.instance.api.crateApiFrostHasDkgAddresses();
+Future<bool> hasDkgAddresses({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostHasDkgAddresses(c: c);
 
-Stream<DKGStatus> doDkg() => RustLib.instance.api.crateApiFrostDoDkg();
+Stream<DKGStatus> doDkg({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostDoDkg(c: c);
 
-Future<List<String>> getDkgAddresses() =>
-    RustLib.instance.api.crateApiFrostGetDkgAddresses();
+Future<List<String>> getDkgAddresses({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostGetDkgAddresses(c: c);
 
-Future<void> setDkgAddress({required int id, required String address}) =>
-    RustLib.instance.api.crateApiFrostSetDkgAddress(id: id, address: address);
+Future<void> setDkgAddress(
+        {required int id, required String address, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiFrostSetDkgAddress(id: id, address: address, c: c);
 
-Future<void> cancelDkg() => RustLib.instance.api.crateApiFrostCancelDkg();
+Future<void> cancelDkg({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostCancelDkg(c: c);
 
-Future<void> resetSign() => RustLib.instance.api.crateApiFrostResetSign();
+Future<void> resetSign({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostResetSign(c: c);
 
 Future<void> initSign(
         {required int coordinator,
         required int fundingAccount,
-        required PcztPackage pczt}) =>
+        required PcztPackage pczt,
+        required Coin c}) =>
     RustLib.instance.api.crateApiFrostInitSign(
-        coordinator: coordinator, fundingAccount: fundingAccount, pczt: pczt);
+        coordinator: coordinator,
+        fundingAccount: fundingAccount,
+        pczt: pczt,
+        c: c);
 
-Future<bool> isSigningInProgress() =>
-    RustLib.instance.api.crateApiFrostIsSigningInProgress();
+Future<bool> isSigningInProgress({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
 
-Stream<SigningStatus> doSign() => RustLib.instance.api.crateApiFrostDoSign();
+Stream<SigningStatus> doSign({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostDoSign(c: c);
 
 @freezed
 sealed class DKGStatus with _$DKGStatus {
