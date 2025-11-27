@@ -1,19 +1,8 @@
 use std::fs;
 
-use crate::{coin::Coin, get_coin};
+use crate::api::coin::Coin;
 use anyhow::Result;
 use flutter_rust_bridge::frb;
-
-pub async fn open_database(db_filepath: &str, password: Option<String>) -> Result<()> {
-    let (server_type, lwd, use_tor) = {
-        let c = get_coin!();
-        (c.server_type.clone(), c.url.clone(), c.use_tor)
-    };
-    let coin = Coin::new(server_type, &lwd, use_tor, db_filepath, password).await?;
-    let mut c = crate::coin::COIN.lock().unwrap();
-    *c = coin;
-    Ok(())
-}
 
 #[frb]
 pub async fn change_db_password(
@@ -26,16 +15,14 @@ pub async fn change_db_password(
 }
 
 #[frb]
-pub async fn get_prop(key: &str) -> Result<Option<String>> {
-    let coin = get_coin!();
-    let mut connection = coin.get_connection().await?;
+pub async fn get_prop(key: &str, c: &Coin) -> Result<Option<String>> {
+    let mut connection = c.get_connection().await?;
     crate::db::get_prop(&mut connection, key).await
 }
 
 #[frb]
-pub async fn put_prop(key: &str, value: &str) -> Result<()> {
-    let coin = get_coin!();
-    let mut connection = coin.get_connection().await?;
+pub async fn put_prop(key: &str, value: &str, c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
     crate::db::put_prop(&mut connection, key, value).await
 }
 

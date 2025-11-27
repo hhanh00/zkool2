@@ -4,11 +4,8 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-
-Future<void> openDatabase({required String dbFilepath, String? password}) =>
-    RustLib.instance.api
-        .crateApiDbOpenDatabase(dbFilepath: dbFilepath, password: password);
 
 Future<void> changeDbPassword(
         {required String dbFilepath,
@@ -21,11 +18,12 @@ Future<void> changeDbPassword(
         oldPassword: oldPassword,
         newPassword: newPassword);
 
-Future<String?> getProp({required String key}) =>
-    RustLib.instance.api.crateApiDbGetProp(key: key);
+Future<String?> getProp({required String key, required Coin c}) =>
+    RustLib.instance.api.crateApiDbGetProp(key: key, c: c);
 
-Future<void> putProp({required String key, required String value}) =>
-    RustLib.instance.api.crateApiDbPutProp(key: key, value: value);
+Future<void> putProp(
+        {required String key, required String value, required Coin c}) =>
+    RustLib.instance.api.crateApiDbPutProp(key: key, value: value, c: c);
 
 Future<List<String>> listDbNames({required String dir}) =>
     RustLib.instance.api.crateApiDbListDbNames(dir: dir);

@@ -11,7 +11,7 @@ use zcash_keys::encoding::AddressCodec;
 use zcash_primitives::legacy::TransparentAddress;
 use zcash_primitives::transaction::Transaction;
 
-use crate::coin::Network;
+use crate::api::coin::Network;
 use crate::db::LEDGER_CODE;
 use crate::ledger::{APDUCommand, Device, LEDGER_ZEMU};
 use crate::Client;
@@ -305,76 +305,9 @@ pub async fn sign_transaction(
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Cursor, Read};
-
-    use byteorder::ReadBytesExt;
-
-    use crate::{
-        coin::{Coin, Network, ServerType},
-        ledger::{APDUCommand, LEDGER_ZEMU},
-    };
+    use crate::ledger::{APDUCommand, LEDGER_ZEMU};
 
     use super::*;
-
-    #[tokio::test]
-    async fn test_get_trusted_inputs() -> anyhow::Result<()> {
-        let mut txid =
-            hex::decode("339df469e5b5e0259e214a1c653cdcb28c2c2e9664c5b5df5d518974950c36e1")?;
-        txid.reverse();
-        let coin = Coin::new(ServerType::Lwd, "https://zec.rocks", false, "test.db", None).await?;
-        let mut client = coin.client().await?;
-        let (_, tx) = client.transaction(&Network::Main, &txid).await?;
-        let payload = super::get_trusted_input(&tx, 0)?;
-
-        LEDGER_ZEMU
-            .lock()
-            .await
-            .clone()
-            .unwrap()
-            .long_execute(
-                &APDUCommand {
-                    cla: 0xE0,
-                    ins: 0x42,
-                    p1: 0,
-                    p2: 0,
-                    data: vec![],
-                },
-                &payload,
-            )
-            .await?;
-        Ok(())
-    }
-
-    // This is for the Transparent Only Ledger app
-    #[allow(dead_code)]
-    #[tokio::test]
-    async fn get_pk() -> anyhow::Result<()> {
-        let get_pk = APDUCommand {
-            cla: 0xE0,
-            ins: 0x40,
-            p1: 0,
-            p2: 0,
-            data: hex::decode("058000002C80000085800000000000000000000000").unwrap(),
-        };
-        let rep = LEDGER_ZEMU
-            .lock()
-            .await
-            .clone()
-            .unwrap()
-            .execute(get_pk)
-            .await?;
-        println!("{}", rep.retcode);
-        let mut data = Cursor::new(&rep.data);
-        let pk_len = data.read_u8()? as usize;
-        let mut pk = vec![0u8; pk_len];
-        data.read_exact(&mut pk)?;
-        let address_len = data.read_u8()? as usize;
-        let mut address = vec![0u8; address_len];
-        data.read_exact(&mut address)?;
-        let address = String::from_utf8(address)?;
-        println!("{address}");
-        Ok(())
-    }
 
     #[tokio::test]
     pub async fn test_raw() -> Result<()> {

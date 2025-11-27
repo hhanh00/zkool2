@@ -12,6 +12,7 @@ class FolderPage extends ConsumerStatefulWidget {
 }
 
 class FolderPageState extends ConsumerState<FolderPage> {
+  late final c = ref.read(coinContextProvider);
   List<(Folder, bool)> folders = [];
   int? selectedIndex;
 
@@ -81,7 +82,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
   void onNew() async {
     final folderName = await inputText(context, title: "New Folder");
     if (folderName != null) {
-      await createNewFolder(name: folderName);
+      await createNewFolder(name: folderName, c: c);
       await refresh();
     }
   }
@@ -89,7 +90,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
   void onEdit() async {
     final folderName = await inputText(context, title: "Rename Folder");
     if (folderName != null) {
-      await renameFolder(id: selection.first.id, name: folderName);
+      await renameFolder(id: selection.first.id, name: folderName, c: c);
       await refresh();
     }
   }
@@ -97,7 +98,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
   void onDelete() async {
     final confirmed = await confirmDialog(context, title: "Do you want to delete these folders?", message: "Accounts assigned to these folders will be kept.");
     if (confirmed) {
-      await deleteFolders(ids: selection.map((f) => f.id).toList());
+      await deleteFolders(ids: selection.map((f) => f.id).toList(), c: c);
       await refresh();
       ref.invalidate(getAccountsProvider);
     }

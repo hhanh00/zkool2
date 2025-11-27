@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use crate::{coin::Network, db::get_account_dindex};
+use crate::{api::coin::Network, db::get_account_dindex};
 use anyhow::Result;
 use bech32::Hrp;
 use bip32::{ChildNumber, ExtendedKeyAttrs, ExtendedPrivateKey, ExtendedPublicKey, Prefix};

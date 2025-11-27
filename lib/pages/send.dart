@@ -41,6 +41,7 @@ class SendPage extends ConsumerStatefulWidget {
 }
 
 class SendPageState extends ConsumerState<SendPage> {
+  late final c = ref.read(coinContextProvider);
   final formKey = GlobalKey<FormBuilderState>();
   final amountKey = GlobalKey<InputAmountState>();
   List<Recipient> recipients = [];
@@ -58,10 +59,11 @@ class SendPageState extends ConsumerState<SendPage> {
   void initState() {
     super.initState();
     Future(() async {
+      final c = ref.read(coinContextProvider);
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final data = (await ref.read(accountProvider(selectedAccount.id).future));
-      final bal = await balance();
-      final addrs = await getAddresses(uaPools: data.pool);
+      final bal = await balance(c: c);
+      final addrs = await getAddresses(uaPools: data.pool, c: c);
 
       setState(() {
         account = data;
@@ -79,6 +81,7 @@ class SendPageState extends ConsumerState<SendPage> {
     if (pinlock.value == true) return PinLock();
 
     Future(tutorial);
+    final c = ref.read(coinContextProvider);
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
@@ -105,7 +108,7 @@ class SendPageState extends ConsumerState<SendPage> {
         )
         .toList();
 
-    supportsMemo = address.isNotEmpty && validAddress(address) == null && !isValidTransparentAddress(address: address);
+    supportsMemo = address.isNotEmpty && validAddress(address) == null && !isValidTransparentAddress(address: address, c: c);
     return Scaffold(
       appBar: AppBar(
         title: Text("Recipient"),
@@ -218,7 +221,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
   void onMax() async {
     final form = formKey.currentState!;
-    final total = await maxSpendable();
+    final total = await maxSpendable(c: c);
     form.fields['amount']?.didChange(zatToString(total));
   }
 
@@ -256,6 +259,7 @@ class SendPageState extends ConsumerState<SendPage> {
           ),
         ],
         options: options,
+        c: c,
       );
 
       GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
@@ -275,6 +279,7 @@ class SendPageState extends ConsumerState<SendPage> {
       final pczt = await prepare(
         recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))],
         options: options,
+        c: c,
       );
 
       GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
@@ -407,8 +412,9 @@ class Send2Page extends ConsumerStatefulWidget {
 }
 
 class Send2PageState extends ConsumerState<Send2Page> {
+  late final c = ref.read(coinContextProvider);
   String? txId;
-  late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address));
+  late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
   var recipientPaysFee = false;
   var discardDustChange = true;
   int? category;
@@ -559,6 +565,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,
+        c: c,
       );
 
       await GoRouter.of(navigatorKey.currentContext!).push("/tx", extra: pczt);

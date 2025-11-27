@@ -3,18 +3,18 @@ use flutter_rust_bridge::frb;
 use tokio::runtime::Runtime;
 pub use tokio_util::sync::CancellationToken;
 
-use crate::{frb_generated::StreamSink, get_coin};
+use crate::{api::coin::Coin, frb_generated::StreamSink};
 
 async fn run_mempool(
     mempool_sink: StreamSink<MempoolMsg>,
     height: u32,
     cancel_token: CancellationToken,
+    c: &Coin
 ) -> Result<()> {
-    let c = get_coin!();
     let mut connection = c.get_connection().await?;
     let r = crate::mempool::run_mempool(
         mempool_sink,
-        &c.network,
+        &c.network(),
         &mut connection,
         &mut c.client().await?,
         height,
@@ -55,11 +55,11 @@ impl Mempool {
         }
     }
 
-    pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, height: u32) -> Result<()> {
+    pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, height: u32, c: Coin) -> Result<()> {
         let ct = CancellationToken::new();
         self.cancel_token = Some(ct.clone());
         self.runtime.spawn(async move {
-            if let Err(e) = run_mempool(mempool_sink, height, ct).await {
+            if let Err(e) = run_mempool(mempool_sink, height, ct, &c).await {
                 tracing::error!("Error running mempool: {}", e);
             }
         });
@@ -75,10 +75,9 @@ impl Mempool {
 }
 
 #[frb]
-pub async fn get_mempool_tx(tx_id: &str) -> Result<Vec<u8>> {
-    let c = get_coin!();
+pub async fn get_mempool_tx(tx_id: &str, c: &Coin) -> Result<Vec<u8>> {
     let mut client = c.client().await?;
-    let tx = crate::mempool::get_mempool_tx(&c.network, &mut client, tx_id).await?;
+    let tx = crate::mempool::get_mempool_tx(&c.network(), &mut client, tx_id).await?;
     let mut tx_bytes = vec![];
     tx.write(&mut tx_bytes)?;
 

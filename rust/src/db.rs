@@ -22,9 +22,9 @@ use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::sync::PoolBalance;
-use crate::coin::Network;
+use crate::api::coin::Network;
 use crate::sync::BlockHeader;
-use crate::{account::TxNote, tiu};
+use crate::{api::account::TxNote, tiu};
 
 pub const DB_VERSION: u16 = 7;
 
