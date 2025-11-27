@@ -19,7 +19,7 @@ use zcash_protocol::consensus::MainNetwork;
 
 use crate::{
     api::pay::PcztPackage,
-    coin::{Coin, Network, ServerType},
+    api::coin::Network,
     ledger::{
         hashers::{
             create_hasher, header_hasher, orchard_hasher, output_hasher, prevout_hasher,
@@ -380,11 +380,6 @@ pub async fn sign_transparent() -> LedgerResult<()> {
         let mut tx_bytes = vec![];
         tx.write(&mut tx_bytes).unwrap();
         println!("{}", hex::encode(&tx_bytes));
-
-        let coin = Coin::new(ServerType::Lwd, "https://zec.rocks", false, "test.db", None).await?;
-        let mut client = coin.client().await?;
-        let rep = client.post_transaction(*expiration, &tx_bytes).await?;
-        println!("{rep}");
     }
     Ok(())
 }

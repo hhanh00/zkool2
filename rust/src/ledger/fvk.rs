@@ -9,7 +9,7 @@ use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::NetworkConstants;
 
 use crate::{
-    account::get_sapling_address, coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
+    account::get_sapling_address, api::coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {

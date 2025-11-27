@@ -33,7 +33,7 @@ use zcash_protocol::{consensus::NetworkConstants, memo::Memo};
 
 use crate::{
     api::pay::{PcztPackage, SigningEvent},
-    coin::Network,
+    api::coin::Network,
     db::get_account_aindex,
     frb_generated::StreamSink,
     ledger::{

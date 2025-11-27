@@ -3,7 +3,7 @@ use std::{collections::HashSet, mem};
 use crate::{
     account::{derive_transparent_address, derive_transparent_sk, get_birth_height, has_pool},
     api::sync::SyncProgress,
-    coin::Network,
+    api::coin::Network,
     db::{
         get_account_aindex, get_account_dindex, get_account_hw, select_account_transparent,
         store_account_transparent_addr,

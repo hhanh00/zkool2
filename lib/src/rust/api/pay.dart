@@ -6,6 +6,7 @@
 import '../frb_generated.dart';
 import '../lib.dart';
 import '../pay.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'pay.freezed.dart';
@@ -17,15 +18,18 @@ Future<String> buildPuri({required List<Recipient> recipients}) =>
 
 Future<PcztPackage> prepare(
         {required List<Recipient> recipients,
-        required PaymentOptions options}) =>
+        required PaymentOptions options,
+        required Coin c}) =>
     RustLib.instance.api
-        .crateApiPayPrepare(recipients: recipients, options: options);
+        .crateApiPayPrepare(recipients: recipients, options: options, c: c);
 
-Future<PcztPackage> signTransaction({required PcztPackage pczt}) =>
-    RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt);
+Future<PcztPackage> signTransaction(
+        {required PcztPackage pczt, required Coin c}) =>
+    RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt, c: c);
 
-Stream<SigningEvent> signLedgerTransaction({required PcztPackage pczt}) =>
-    RustLib.instance.api.crateApiPaySignLedgerTransaction(pczt: pczt);
+Stream<SigningEvent> signLedgerTransaction(
+        {required PcztPackage pczt, required Coin c}) =>
+    RustLib.instance.api.crateApiPaySignLedgerTransaction(pczt: pczt, c: c);
 
 Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);
@@ -37,23 +41,25 @@ Future<PcztPackage> unpackTransaction({required List<int> bytes}) =>
     RustLib.instance.api.crateApiPayUnpackTransaction(bytes: bytes);
 
 Future<String> broadcastTransaction(
-        {required int height, required List<int> txBytes}) =>
-    RustLib.instance.api
-        .crateApiPayBroadcastTransaction(height: height, txBytes: txBytes);
+        {required int height, required List<int> txBytes, required Coin c}) =>
+    RustLib.instance.api.crateApiPayBroadcastTransaction(
+        height: height, txBytes: txBytes, c: c);
 
-TxPlan toPlan({required PcztPackage package}) =>
-    RustLib.instance.api.crateApiPayToPlan(package: package);
+TxPlan toPlan({required PcztPackage package, required Coin c}) =>
+    RustLib.instance.api.crateApiPayToPlan(package: package, c: c);
 
-Future<String> send({required int height, required List<int> data}) =>
-    RustLib.instance.api.crateApiPaySend(height: height, data: data);
+Future<String> send(
+        {required int height, required List<int> data, required Coin c}) =>
+    RustLib.instance.api.crateApiPaySend(height: height, data: data, c: c);
 
 Future<void> storePendingTx(
         {required int height,
         required List<int> txid,
         double? price,
-        int? category}) =>
+        int? category,
+        required Coin c}) =>
     RustLib.instance.api.crateApiPayStorePendingTx(
-        height: height, txid: txid, price: price, category: category);
+        height: height, txid: txid, price: price, category: category, c: c);
 
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
 
-use crate::{frb_generated::StreamSink, pay::{plan::plan_transaction, Recipient, TxPlan}};
+use crate::{api::coin::Coin, frb_generated::StreamSink, pay::{Recipient, TxPlan, plan::plan_transaction}};
 use flutter_rust_bridge::frb;
 
 pub enum DustChangePolicy {
@@ -23,10 +23,9 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
 }
 
 #[frb]
-pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Result<PcztPackage> {
-    let c = crate::get_coin!();
+pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin) -> Result<PcztPackage> {
     let account = c.account;
-    let network = &c.network;
+    let network = &c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
@@ -46,8 +45,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions) -> Resul
 }
 
 #[frb]
-pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
-    let c = crate::get_coin!();
+pub async fn sign_transaction(pczt: &PcztPackage, c: &Coin) -> Result<PcztPackage> {
     let account = c.account;
     let mut connection = c.get_connection().await?;
 
@@ -58,10 +56,9 @@ pub async fn sign_transaction(pczt: &PcztPackage) -> Result<PcztPackage> {
 
 #[frb]
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage) -> Result<()> {
-    let c = crate::get_coin!();
+pub async fn sign_ledger_transaction(sink: StreamSink<SigningEvent>, pczt: PcztPackage, c: &Coin) -> Result<()> {
     let connection = c.get_connection().await?;
-    crate::ledger::builder::sign_ledger_transaction(c.network, sink, connection, c.account, pczt).await
+    crate::ledger::builder::sign_ledger_transaction(c.network(), sink, connection, c.account, pczt).await
 }
 
 #[frb]
@@ -106,8 +103,7 @@ pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
 }
 
 #[frb]
-pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8]) -> Result<String> {
-    let c = crate::get_coin!();
+pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8], c: &Coin) -> Result<String> {
     let mut client = c.client().await?;
 
     let tx = crate::pay::send(&mut client, height, tx_bytes).await?;
@@ -115,14 +111,12 @@ pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8]) -> Result<Strin
 }
 
 #[frb(sync)]
-pub fn to_plan(package: &PcztPackage) -> Result<TxPlan> {
-    let c = crate::get_coin!();
-    TxPlan::from_package(&c.network, package)
+pub fn to_plan(package: &PcztPackage, c: &Coin) -> Result<TxPlan> {
+    TxPlan::from_package(&c.network(), package)
 }
 
 #[frb]
-pub async fn send(height: u32, data: &[u8]) -> Result<String> {
-    let c = crate::get_coin!();
+pub async fn send(height: u32, data: &[u8], c: &Coin) -> Result<String> {
     let mut client = c.client().await?;
 
     let tx = crate::pay::send(&mut client, height, data).await?;
@@ -131,8 +125,7 @@ pub async fn send(height: u32, data: &[u8]) -> Result<String> {
 
 #[frb]
 pub async fn store_pending_tx(height: u32, txid: &[u8],
-    price: Option<f64>, category: Option<u32>) -> Result<()> {
-    let c = crate::get_coin!();
+    price: Option<f64>, category: Option<u32>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::store_pending_tx(&mut connection, c.account, height, txid, price, category).await?;
 
