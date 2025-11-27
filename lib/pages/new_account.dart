@@ -40,6 +40,7 @@ class NewAccountPage extends ConsumerStatefulWidget {
 }
 
 class NewAccountPageState extends ConsumerState<NewAccountPage> {
+  late final c = ref.read(coinContextProvider);
   var name = "";
   var restore = false;
   var key = "";
@@ -68,8 +69,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
 
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
-    isFvk = isValidFvk(fvk: key);
-    final keyPools = ledger ? 3 : getKeyPools(key: key); // 3 is T+S
+    isFvk = isValidFvk(fvk: key, c: c);
+    final keyPools = ledger ? 3 : getKeyPools(key: key, c: c); // 3 is T+S
 
     return Scaffold(
       appBar: AppBar(
@@ -179,7 +180,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                             decoration: const InputDecoration(
                               labelText: "Key (Seed Phrase, Private Key, or Viewing Key)",
                             ),
-                            validator: (s) => validKey(s, restore: restore),
+                            validator: (s) => validKey(s, restore: restore, c: c),
                             initialValue: key,
                             onChanged: (v) => setState(() => key = v!),
                           ),
@@ -323,22 +324,23 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             internal: false,
             ledger: ledger,
           ),
+          c: c
         );
         dialog.dismiss();
         dialog = null;
         try {
           // ignore errors since it's just caching
           final settings = ref.read(appSettingsProvider).requireValue;
-          if (!settings.offline) await cacheBlockTime(height: bh);
+          if (!settings.offline) await cacheBlockTime(height: bh, c: c);
         } on AnyhowException catch (_) {}
 
-        await setAccount(account: account);
+        ref.read(coinContextProvider.notifier).setAccount(account: account);
 
-        if ((key.isNotEmpty && await hasTransparentPubKey()) || ledger) {
+        if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
           await showTransparentScan(ref, context);
         }
 
-        final seed = await getAccountSeed(account: account);
+        final seed = await getAccountSeed(account: account, c: c);
         if (mounted && key.isEmpty && seed != null) {
           await showSeed(context, seed.mnemonic);
         }
@@ -370,7 +372,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         message: "File Password",
       );
       if (password != null) {
-        await importAccount(passphrase: password, data: data);
+        await importAccount(passphrase: password, data: data, c: c);
         if (mounted) await showMessage(context, "Account imported successfully");
         ref.invalidate(getAccountsProvider);
       }

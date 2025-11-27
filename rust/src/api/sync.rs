@@ -11,7 +11,7 @@ use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
 
 use crate::budget::merge_pending_txs;
-use crate::coin::Network;
+use crate::api::coin::{Coin, Network};
 use zcash_primitives::legacy::TransparentAddress;
 
 use crate::db::{calculate_balance, store_block_header};
@@ -20,7 +20,7 @@ use crate::sync::{
     get_heights_without_time, prune_old_checkpoints, recover_from_partial_sync, BlockHeader,
 };
 use crate::Client;
-use crate::{frb_generated::StreamSink, get_coin, sync::shielded_sync};
+use crate::{frb_generated::StreamSink, sync::shielded_sync};
 // use tokio_stream::StreamExt as _;
 
 #[frb]
@@ -31,6 +31,7 @@ pub async fn synchronize(
     actions_per_sync: u32,
     transparent_limit: u32,
     checkpoint_age: u32,
+    c: &Coin,
 ) -> Result<()> {
     if accounts.is_empty() {
         return Ok(());
@@ -46,8 +47,7 @@ pub async fn synchronize(
         *cancel = Some(tx_cancel.clone());
     }
 
-    let c = get_coin!();
-    let network = c.network;
+    let network = c.network();
     let mut connection = c.get_connection().await?;
     let progress2 = progress.clone();
 
@@ -121,7 +121,7 @@ pub async fn synchronize(
                 continue;
             }
 
-            let pool = c.get_pool();
+            let pool = c.get_pool()?;
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
@@ -150,7 +150,7 @@ pub async fn synchronize(
 
             shielded_sync(
                 &network,
-                pool,
+                &pool,
                 &mut client,
                 &accounts_to_sync,
                 start_height,
@@ -359,8 +359,7 @@ pub(crate) async fn transparent_sync(
 }
 
 #[frb]
-pub async fn balance() -> Result<PoolBalance> {
-    let c = get_coin!();
+pub async fn balance(c: &Coin) -> Result<PoolBalance> {
     let mut connection = c.get_connection().await?;
     let account = c.account;
 
@@ -377,34 +376,30 @@ pub async fn cancel_sync() -> Result<()> {
 }
 
 #[frb]
-pub async fn rewind_sync(height: u32, account: u32) -> Result<()> {
-    let c = get_coin!();
+pub async fn rewind_sync(height: u32, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::sync::rewind_sync(&c.network, &mut *connection, account, height).await
+    crate::sync::rewind_sync(&c.network(), &mut *connection, account, height).await
 }
 
 #[frb]
-pub async fn get_db_height() -> Result<SyncHeight> {
-    let c = get_coin!();
+pub async fn get_db_height(c: &Coin) -> Result<SyncHeight> {
     let mut connection = c.get_connection().await?;
     crate::sync::get_db_height(&mut *connection, c.account).await
 }
 
 #[frb]
-pub async fn fetch_tx_details() -> Result<()> {
-    let c = get_coin!();
+pub async fn fetch_tx_details(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::memo::fetch_tx_details(&c.network, &mut *connection, &mut client, c.account).await?;
+    crate::memo::fetch_tx_details(&c.network(), &mut *connection, &mut client, c.account).await?;
     Ok(())
 }
 
 #[frb]
-pub async fn cache_block_time(height: u32) -> Result<()> {
-    let c = get_coin!();
+pub async fn cache_block_time(height: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    let block = client.block(&c.network, height).await?;
+    let block = client.block(&c.network(), height).await?;
     let bh = BlockHeader {
         height,
         hash: block.hash,

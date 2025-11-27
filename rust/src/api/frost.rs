@@ -4,17 +4,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 
 use crate::{
-    frb_generated::StreamSink,
-    frost::{db::get_mailbox_account, dkg::get_dkg_params},
-    get_coin,
+    api::coin::Coin, frb_generated::StreamSink, frost::{db::get_mailbox_account, dkg::get_dkg_params}
 };
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
 
 #[frb]
-pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u32) -> Result<()> {
-    let c = get_coin!();
+pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
@@ -43,8 +40,7 @@ pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u
 }
 
 #[frb]
-pub async fn has_dkg_params() -> Result<bool> {
-    let c = get_coin!();
+pub async fn has_dkg_params(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     let exists =
         sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
@@ -54,15 +50,14 @@ pub async fn has_dkg_params() -> Result<bool> {
 }
 
 #[frb]
-pub async fn init_dkg() -> Result<()> {
-    let c = get_coin!();
+pub async fn init_dkg(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut *connection)
         .await?
         .expect("Funding account not set");
     let dkg_params = get_dkg_params(&mut *connection, account).await?;
     get_mailbox_account(
-        &c.network,
+        &c.network(),
         &mut *connection,
         account,
         dkg_params.id,
@@ -74,8 +69,7 @@ pub async fn init_dkg() -> Result<()> {
 }
 
 #[frb]
-pub async fn has_dkg_addresses() -> Result<bool> {
-    let c = get_coin!();
+pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut *connection)
         .await?
@@ -86,8 +80,7 @@ pub async fn has_dkg_addresses() -> Result<bool> {
 }
 
 #[frb]
-pub async fn do_dkg(status: StreamSink<DKGStatus>) -> Result<()> {
-    let c = get_coin!();
+pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
@@ -95,15 +88,14 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>) -> Result<()> {
         .await?
         .expect("Funding account not set");
 
-    let r = crate::frost::dkg::do_dkg(&c.network, &mut connection, account, &mut client, height, status.clone()).await;
+    let r = crate::frost::dkg::do_dkg(&c.network(), &mut connection, account, &mut client, height, status.clone()).await;
     if let Err(e) = r {
         let _ = status.add_error(e);
     }
     Ok(())
 }
 
-pub async fn get_dkg_addresses() -> Result<Vec<String>> {
-    let c = get_coin!();
+pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection)
         .await?
@@ -113,8 +105,7 @@ pub async fn get_dkg_addresses() -> Result<Vec<String>> {
     Ok(addresses)
 }
 
-pub async fn set_dkg_address(id: u16, address: &str) -> Result<()> {
-    let c = get_coin!();
+pub async fn set_dkg_address(id: u16, address: &str, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection)
         .await?
@@ -124,8 +115,7 @@ pub async fn set_dkg_address(id: u16, address: &str) -> Result<()> {
 }
 
 #[frb]
-pub async fn cancel_dkg() -> Result<()> {
-    let c = get_coin!();
+pub async fn cancel_dkg(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection).await?;
     crate::frost::dkg::cancel_dkg(&mut connection, account).await
@@ -161,34 +151,30 @@ pub enum DKGStatus {
 }
 
 #[frb]
-pub async fn reset_sign() -> Result<()> {
-    let c = get_coin!();
+pub async fn reset_sign(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::frost::sign::reset_sign(&mut *connection).await
 }
 
 #[frb]
-pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackage) -> Result<()> {
-    let c = get_coin!();
+pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackage, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::frost::sign::init_sign(&mut *connection, c.account, funding_account, coordinator, pczt).await
 }
 
 #[frb]
-pub async fn is_signing_in_progress() -> Result<bool> {
-    let c = get_coin!();
+pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     crate::frost::sign::is_signing_in_progress(&mut *connection).await
 }
 
 #[frb]
-pub async fn do_sign(status: StreamSink<SigningStatus>) -> Result<()> {
-    let c = get_coin!();
+pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
     let r = crate::frost::sign::do_sign(
-        &c.network,
+        &c.network(),
         &mut *connection,
         c.account,
         &mut client,

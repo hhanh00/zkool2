@@ -14,7 +14,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::{async_trait, Request};
 use zcash_protocol::consensus::{BlockHeight, BranchId};
 
-use crate::{coin::Network, lwd::*, GRPCClient};
+use crate::{api::coin::Network, lwd::*, GRPCClient};
 
 #[derive(Clone)]
 pub struct ZebraClient {

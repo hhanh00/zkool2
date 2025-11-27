@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import '../io.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `transparent_sync`
@@ -15,30 +16,34 @@ Stream<SyncProgress> synchronize(
         required int currentHeight,
         required int actionsPerSync,
         required int transparentLimit,
-        required int checkpointAge}) =>
+        required int checkpointAge,
+        required Coin c}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
         currentHeight: currentHeight,
         actionsPerSync: actionsPerSync,
         transparentLimit: transparentLimit,
-        checkpointAge: checkpointAge);
+        checkpointAge: checkpointAge,
+        c: c);
 
-Future<PoolBalance> balance() => RustLib.instance.api.crateApiSyncBalance();
+Future<PoolBalance> balance({required Coin c}) =>
+    RustLib.instance.api.crateApiSyncBalance(c: c);
 
 Future<void> cancelSync() => RustLib.instance.api.crateApiSyncCancelSync();
 
-Future<void> rewindSync({required int height, required int account}) =>
+Future<void> rewindSync(
+        {required int height, required int account, required Coin c}) =>
     RustLib.instance.api
-        .crateApiSyncRewindSync(height: height, account: account);
+        .crateApiSyncRewindSync(height: height, account: account, c: c);
 
-Future<SyncHeight> getDbHeight() =>
-    RustLib.instance.api.crateApiSyncGetDbHeight();
+Future<SyncHeight> getDbHeight({required Coin c}) =>
+    RustLib.instance.api.crateApiSyncGetDbHeight(c: c);
 
-Future<void> fetchTxDetails() =>
-    RustLib.instance.api.crateApiSyncFetchTxDetails();
+Future<void> fetchTxDetails({required Coin c}) =>
+    RustLib.instance.api.crateApiSyncFetchTxDetails(c: c);
 
-Future<void> cacheBlockTime({required int height}) =>
-    RustLib.instance.api.crateApiSyncCacheBlockTime(height: height);
+Future<void> cacheBlockTime({required int height, required Coin c}) =>
+    RustLib.instance.api.crateApiSyncCacheBlockTime(height: height, c: c);
 
 class PoolBalance {
   final Uint64List field0;

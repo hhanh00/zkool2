@@ -3,8 +3,8 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import '../coin.dart';
 import '../frb_generated.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Usd`, `ZcashUSD`
@@ -12,18 +12,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Future<void> initDatadir({required String directory}) =>
     RustLib.instance.api.crateApiNetworkInitDatadir(directory: directory);
 
-void setLwd({required ServerType serverType, required String lwd}) =>
-    RustLib.instance.api
-        .crateApiNetworkSetLwd(serverType: serverType, lwd: lwd);
-
-void setUseTor({required bool useTor}) =>
-    RustLib.instance.api.crateApiNetworkSetUseTor(useTor: useTor);
-
-Future<int> getCurrentHeight() =>
-    RustLib.instance.api.crateApiNetworkGetCurrentHeight();
+Future<int> getCurrentHeight({required Coin c}) =>
+    RustLib.instance.api.crateApiNetworkGetCurrentHeight(c: c);
 
 Future<double> getCoingeckoPrice() =>
     RustLib.instance.api.crateApiNetworkGetCoingeckoPrice();
 
-Future<String> getNetworkName() =>
-    RustLib.instance.api.crateApiNetworkGetNetworkName();
+Future<String> getNetworkName({required Coin c}) =>
+    RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);

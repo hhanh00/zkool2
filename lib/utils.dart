@@ -236,7 +236,6 @@ Future<String?> inputPassword(
               obscureText: true,
               validator: (v) {
                 final password = formKey.currentState!.fields["password"]!.value as String?;
-                print("$password $v");
                 if (password != v) return "Passwords do not match";
                 return null;
               },

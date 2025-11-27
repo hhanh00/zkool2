@@ -7,7 +7,6 @@ use crate::{lwd::CompactBlock, zebra::LwdServer};
 pub mod account;
 pub mod api;
 pub mod bip38;
-pub mod coin;
 pub mod db;
 mod frb_generated;
 pub mod frost;

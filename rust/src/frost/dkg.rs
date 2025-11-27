@@ -19,15 +19,11 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
 
 use crate::{
-    account::get_orchard_vk, api::{
-        account::{delete_account, get_account_seed},
-        frost::{DKGParams, DKGStatus},
-        sync::SYNCING,
-    }, coin::Network, db::{init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
-        plan::{extract_transaction, plan_transaction, sign_transaction},
-        pool::ALL_POOLS,
-        Recipient,
-    }, Client
+    Client, account::{get_account_seed, get_orchard_vk}, api::{
+        frost::{DKGParams, DKGStatus}, sync::SYNCING
+    }, api::coin::Network, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
+        Recipient, plan::{extract_transaction, plan_transaction, sign_transaction}, pool::ALL_POOLS
+    }
 };
 
 pub async fn set_dkg_address(
@@ -346,7 +342,7 @@ async fn dkg_finalize(
     sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
         .execute(&mut *connection)
         .await?;
-    let seed = get_account_seed(mailbox_account)
+    let seed = get_account_seed(&mut *connection, mailbox_account)
         .await?
         .expect("mailbox seed not found")
         .mnemonic;
@@ -355,8 +351,8 @@ async fn dkg_finalize(
         .bind(frost_account)
         .execute(&mut *connection)
         .await?;
-    delete_account(mailbox_account).await?;
-    delete_account(broadcast_account).await?;
+    crate::db::delete_account(&mut *connection, mailbox_account).await?;
+    crate::db::delete_account(&mut *connection, broadcast_account).await?;
     Ok(())
 }
 
@@ -573,7 +569,7 @@ pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()>
     .fetch_all(&mut *connection)
     .await?;
     for (frost_account,) in frost_accounts {
-        delete_account(frost_account).await?;
+        delete_account(&mut *connection, frost_account).await?;
     }
 
     Ok(())

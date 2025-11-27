@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
-import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
@@ -23,6 +22,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   AccountData? account;
   int? idx;
   List<Category>? categoryList;
+  late final c = ref.read(coinContextProvider);
 
   @override
   void initState() {
@@ -192,10 +192,10 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
   void onPriceChanged(int id, String? v) async {
     final price = v?.let(((v) => v.isNotEmpty ? NumberFormat().parse(v).toDouble() : null));
-    await setTxPrice(id: id, price: price);
+    await setTxPrice(id: id, price: price, c: c);
   }
 
   void onChangeTxCategory(int id, int? category) async {
-    await setTxCategory(id: id, category: category);
+    await setTxCategory(id: id, category: category, c: c);
   }
 }

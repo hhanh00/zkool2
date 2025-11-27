@@ -31,6 +31,7 @@ class AccountListPage extends ConsumerStatefulWidget {
 }
 
 class AccountListPageState extends ConsumerState<AccountListPage> with RouteAware {
+  late final c = ref.read(coinContextProvider);
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
   double? price;
@@ -61,8 +62,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   @override
   void didPopNext() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final selectedAccount = ref.read(selectedAccountProvider.notifier);
-      selectedAccount.unselect();
+      final c = ref.read(coinContextProvider.notifier);
+      c.setAccount(account: 0);
     });
     super.didPopNext();
   }
@@ -71,7 +72,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
     try {
-      final height = await getCurrentHeight();
+      final height = await getCurrentHeight(c: c);
       final currentHeight = ref.read(currentHeightProvider.notifier);
       currentHeight.setHeight(height);
       if (fetchPrice) {
@@ -107,6 +108,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     final tt = Theme.of(context).textTheme;
     final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
 
+    final c = ref.read(coinContextProvider);
     final accounts = ref.watch(getAccountsProvider);
     final selectedFolder = ref.watch(selectedFolderProvider);
 
@@ -168,7 +170,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
           final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
           if (confirmed) {
             for (var a in accounts) {
-              await deleteAccount(account: a.id);
+              await deleteAccount(account: a.id, c: c);
             }
             ref.invalidate(getAccountsProvider);
           }
@@ -262,15 +264,19 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void onOpen(BuildContext context, Account account) async {
-    final selectAccount = ref.read(selectedAccountProvider.notifier);
-    selectAccount.selectAccount(account);
+    final c = ref.read(coinContextProvider.notifier);
+    await c.setAccount(account: account.id);
     if (!context.mounted) return;
     await GoRouter.of(context).push('/account', extra: account);
   }
 
   void onReorder(int oldIndex, int newIndex) async {
     final listState = listKey.currentState!;
-    await reorderAccount(oldPosition: listState.items[oldIndex].position, newPosition: listState.items[newIndex].position);
+    await reorderAccount(
+      oldPosition: listState.items[oldIndex].position,
+      newPosition: listState.items[newIndex].position,
+      c: c,
+    );
     ref.invalidate(getAccountsProvider);
   }
 

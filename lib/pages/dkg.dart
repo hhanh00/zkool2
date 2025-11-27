@@ -24,7 +24,8 @@ final thresholdID = GlobalKey();
 final fundingID = GlobalKey();
 
 Widget buildDKGPage(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   required int index,
   required bool finished,
   required Widget child,
@@ -39,7 +40,7 @@ Widget buildDKGPage(
                 icon: const Icon(Icons.close),
               )
             : IconButton(
-                onPressed: () => onCancel(context),
+                onPressed: () => onCancel(context, ref),
                 icon: const Icon(Icons.cancel),
               ),
       ],
@@ -64,6 +65,7 @@ class DKGPage1 extends ConsumerStatefulWidget {
 }
 
 class DKGPage1State extends ConsumerState<DKGPage1> {
+  late final c = ref.read(coinContextProvider);
   final formKey = GlobalKey<FormBuilderState>();
   List<Account> accounts = [];
 
@@ -72,7 +74,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
     super.initState();
     Future(() async {
       final accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden).toList();
-      final dkgInProgress = await hasDkgParams();
+      final dkgInProgress = await hasDkgParams(c: c);
       if (dkgInProgress && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           GoRouter.of(context).pushReplacement("/dkg2");
@@ -102,7 +104,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
         title: const Text("Distributed Key Generation"),
         actions: [
           IconButton(
-            onPressed: () => onCancel(context),
+            onPressed: () => onCancel(context, ref),
             icon: const Icon(Icons.cancel),
           ),
         ],
@@ -229,6 +231,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
         n: participants,
         t: threshold,
         fundingAccount: account,
+        c: c,
       );
       if (!context.mounted) return;
       await GoRouter.of(context).push("/dkg2");
@@ -244,6 +247,7 @@ class DKGPage2 extends ConsumerStatefulWidget {
 }
 
 class DKGPage2State extends ConsumerState<DKGPage2> {
+  late final c = ref.read(coinContextProvider);
   final formKey = GlobalKey<FormBuilderState>();
   List<String> addresses = [];
 
@@ -251,10 +255,10 @@ class DKGPage2State extends ConsumerState<DKGPage2> {
   void initState() {
     super.initState();
     Future(() async {
-      await initDkg();
-      final addresses = await getDkgAddresses();
+      await initDkg(c: c);
+      final addresses = await getDkgAddresses(c: c);
       setState(() => this.addresses = addresses);
-      if (await hasDkgAddresses()) {
+      if (await hasDkgAddresses(c: c)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           GoRouter.of(context).pushReplacement("/dkg3");
         });
@@ -272,7 +276,7 @@ class DKGPage2State extends ConsumerState<DKGPage2> {
         title: const Text("DKG Addresses"),
         actions: [
           IconButton(
-            onPressed: () => onCancel(context),
+            onPressed: () => onCancel(context, ref),
             icon: const Icon(Icons.cancel),
           ),
         ],
@@ -319,7 +323,7 @@ class DKGPage2State extends ConsumerState<DKGPage2> {
     if (form.saveAndValidate()) {
       for (var i = 0; i < addresses.length; i++) {
         final address = form.fields["$i"]!.value as String;
-        await setDkgAddress(id: i + 1, address: address);
+        await setDkgAddress(id: i + 1, address: address, c: c);
       }
       if (!context.mounted) return;
       await GoRouter.of(context).pushReplacement("/dkg3");
@@ -335,6 +339,7 @@ class DKGPage3 extends ConsumerStatefulWidget {
 }
 
 class DKGPage3State extends ConsumerState<DKGPage3> {
+  late final c = ref.read(coinContextProvider);
   String message = "";
   int index = 0;
   Timer? runTimer;
@@ -357,7 +362,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   }
 
   Future<void> runDkg() async {
-    final h = await getCurrentHeight();
+    final h = await getCurrentHeight(c: c);
     if (currentHeight != null && currentHeight == h) return;
     currentHeight = h;
     final as = await ref.read(getAccountsProvider.future);
@@ -367,7 +372,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       accounts,
     );
 
-    final status = doDkg();
+    final status = doDkg(c: c);
     status.listen(
       (s) {
         if (s is DKGStatus_PublishRound1Pkg) {
@@ -417,6 +422,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
     final t = Theme.of(context).textTheme;
     return buildDKGPage(
       context,
+      ref,
       index: index,
       finished: finished,
       child: CopyableText(message, style: t.bodyLarge),
@@ -460,14 +466,15 @@ class DKGSteps extends StatelessWidget {
 
 void onClose(BuildContext context) => GoRouter.of(context).go("/");
 
-void onCancel(BuildContext context) async {
+void onCancel(BuildContext context, WidgetRef ref) async {
   final confirmed = await confirmDialog(
     context,
     title: "Cancel DKG",
     message: "Are you sure you want to cancel the DKG process?",
   );
   if (confirmed) {
-    await cancelDkg();
+    final c = ref.read(coinContextProvider);
+    await cancelDkg(c: c);
     if (!context.mounted) return;
     GoRouter.of(context).pop();
   }

@@ -4,10 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/db.dart';
-import 'package:zkool/src/rust/api/network.dart';
-import 'package:zkool/src/rust/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -60,13 +56,14 @@ class SplashPageState extends ConsumerState<SplashPage> {
   void tryOpenDatabase() async {
     logger.i("tryOpenDatabase");
     String? password;
+    var c = ref.read(coinContextProvider);
     while (true) {
       final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
       final dbFilepath = await getFullDatabasePath(dbName);
       logger.i('dbFilepath: $dbFilepath');
       try {
-        await openDatabase(dbFilepath: dbFilepath, password: password);
+        c = await c.openDatabase(dbFilepath: dbFilepath, password: password);
         break;
       } catch (e) {
         logger.e(e);
@@ -77,19 +74,20 @@ class SplashPageState extends ConsumerState<SplashPage> {
         }
       }
     }
+    ref.read(coinContextProvider.notifier).set(coin: c);
     final hasDb = ref.read(hasDbProvider.notifier);
     hasDb.setHasDb();
     ref.invalidate(appSettingsProvider);
     final account = await ref.read(selectedAccountProvider.future);
-    if (account != null) await setAccount(account: account.id);
+    if (account != null) c = await c.setAccount(account: account.id);
 
     final settings = await ref.read(appSettingsProvider.future);
     logger.i("LWD ${settings.lwd}");
-    setLwd(
-      serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra,
-      lwd: settings.lwd,
+    c = c.setLwd(
+      serverType: settings.isLightNode ? 0 : 1,
+      url: settings.lwd,
     );
-    setUseTor(useTor: settings.useTor);
+    c = await c.setUseTor(useTor: settings.useTor);
     final synchronizer = ref.read(synchronizerProvider.notifier);
     synchronizer.autoSync();
     final mempool = ref.read(mempoolProvider.notifier);

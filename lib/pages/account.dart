@@ -17,7 +17,6 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
-import 'package:zkool/src/rust/account.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
@@ -41,6 +40,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
 
   final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
+  late final c = ref.read(coinContextProvider);
   StreamSubscription<SyncProgress>? progressSubscription;
 
   void tutorial() async {
@@ -195,11 +195,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
   void onUpdateAllTxPrices() async {
     final confirmed =
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
-    if (confirmed) await fillMissingTxPrices();
+    if (confirmed) await fillMissingTxPrices(c: c);
   }
 
   void onExport(int index) async {
-    final data = await getExportedData(type: index);
+    final data = await getExportedData(type: index, c: c);
     final filename = await saveFile(data: utf8.encode(data));
     if (!mounted) return;
     if (filename != null) await showMessage(context, "$filename Saved");
@@ -230,6 +230,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   final resetID = GlobalKey(debugLabel: "resetID");
   final folderID = GlobalKey(debugLabel: "folderID");
 
+  late final c = ref.read(coinContextProvider);
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
   List<Folder>? folders;
@@ -404,6 +405,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           name: name,
           folder: accounts[0].folder.id,
         ),
+        c: c,
       );
       ref.invalidate(getAccountsProvider);
       ref.invalidate(accountProvider(accounts[0].id));
@@ -434,6 +436,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           icon: bytes,
           folder: accounts[0].folder.id,
         ),
+        c: c,
       );
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
@@ -450,6 +453,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           birth: int.parse(birth),
           folder: accounts[0].folder.id,
         ),
+        c: c,
       );
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
@@ -467,6 +471,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           enabled: v,
           folder: accounts[i].folder.id,
         ),
+        c: c,
       );
       ref.invalidate(accountProvider(accounts[i].id));
     }
@@ -484,6 +489,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           hidden: v,
           folder: accounts[i].folder.id,
         ),
+        c: c,
       );
       ref.invalidate(accountProvider(accounts[i].id));
     }
@@ -501,6 +507,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           id: accounts[i].id,
           folder: v,
         ),
+        c: c,
       );
       ref.invalidate(accountProvider(accounts[i].id));
     }
@@ -511,7 +518,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     final account = accounts.first;
     final password = await inputPassword(context, title: "Export Account", message: "File Password", repeated: true, required: true);
     if (password != null) {
-      final res = await exportAccount(id: account.id, passphrase: password);
+      final res = await exportAccount(id: account.id, passphrase: password, c: c);
       await saveFile(title: "Please select an output file for the encrypted account:", fileName: "${account.name}.bin", data: res);
     }
   }
@@ -525,9 +532,9 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
     );
     if (!confirmed) return;
-    final dbHeight = await getDbHeight();
-    await rewindSync(height: dbHeight.height - 60, account: account.id);
-    final h = await getDbHeight();
+    final dbHeight = await getDbHeight(c: c);
+    await rewindSync(height: dbHeight.height - 60, account: account.id, c: c);
+    final h = await getDbHeight(c: c);
     final ss = ref.read(syncStateAccountProvider(account.id).notifier);
     ss.updateHeight(h.height, h.time);
   }
@@ -541,7 +548,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     );
     if (!confirmed) return;
     for (var account in accounts) {
-      await resetSync(id: account.id);
+      await resetSync(id: account.id, c: c);
       ref.invalidate(accountProvider(account.id));
     }
   }
@@ -705,12 +712,14 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes) {
 
 void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async {
   if (currentHeight == null) return;
+  final c = ref.read(coinContextProvider);
   final s = await inputText(context, title: "Enter confirmation threshold");
   final threshold = s?.let((v) => int.tryParse(v));
   if (threshold != null) {
     await lockRecentNotes(
       height: currentHeight,
       threshold: threshold,
+      c: c,
     );
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
     ref.invalidate(accountProvider(selectedAccount.id));
@@ -718,16 +727,18 @@ void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async
 }
 
 void onUnlockAll(WidgetRef ref, BuildContext context) async {
+  final c = ref.read(coinContextProvider);
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
-    await unlockAllNotes();
+    await unlockAllNotes(c: c);
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
     ref.invalidate(accountProvider(selectedAccount.id));
   }
 }
 
 void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
-  await lockNote(id: id, locked: locked);
+  final c = ref.read(coinContextProvider);
+  await lockNote(id: id, locked: locked, c: c);
   final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
   ref.invalidate(accountProvider(selectedAccount.id));
 }
@@ -775,6 +786,7 @@ class ViewingKeysPage extends ConsumerStatefulWidget {
 }
 
 class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
+  late final c = ref.read(coinContextProvider);
   int pools = 7;
   String? uvk;
   String? fingerprint;
@@ -786,9 +798,9 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   void initState() {
     super.initState();
     Future(() async {
-      fingerprint = await getAccountFingerprint(account: widget.account);
-      seed = await getAccountSeed(account: widget.account);
-      accountPools = await getAccountPools(account: widget.account);
+      fingerprint = await getAccountFingerprint(account: widget.account, c: c);
+      seed = await getAccountSeed(account: widget.account, c: c);
+      accountPools = await getAccountPools(account: widget.account, c: c);
       setState(() {});
     });
     Future(() => onPoolChanged(pools));
@@ -835,7 +847,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   onPoolChanged(int? v) async {
     if (v == null) return;
     try {
-      final uuvk = await getAccountUfvk(account: widget.account, pools: v);
+      final uuvk = await getAccountUfvk(account: widget.account, pools: v, c: c);
       setState(() {
         pools = v;
         uvk = uuvk;

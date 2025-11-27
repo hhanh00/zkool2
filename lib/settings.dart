@@ -9,10 +9,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/router.dart';
+import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
-import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/coin.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -36,6 +35,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
+  late Coin c = ref.read(coinContextProvider);
   AppSettings? settings;
 
   @override
@@ -64,21 +64,22 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
       onChanged: (settings) async {
         final prefs = SharedPreferencesAsync();
         await prefs.setString("database", settings.dbName);
-        await putProp(key: "is_light_node", value: settings.isLightNode.toString());
-        await putProp(key: "lwd", value: settings.lwd);
-        await putProp(key: "block_explorer", value: settings.blockExplorer);
-        await putProp(key: "actions_per_sync", value: settings.actionsPerSync);
-        await putProp(key: "sync_interval", value: settings.syncInterval);
+        await putProp(key: "is_light_node", value: settings.isLightNode.toString(), c: c);
+        await putProp(key: "lwd", value: settings.lwd, c: c);
+        await putProp(key: "block_explorer", value: settings.blockExplorer, c: c);
+        await putProp(key: "actions_per_sync", value: settings.actionsPerSync, c: c);
+        await putProp(key: "sync_interval", value: settings.syncInterval, c: c);
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
-        await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString());
-        await putProp(key: "qr_size", value: settings.qrSettings.size.toString());
-        await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString());
-        await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString());
-        await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString());
-        setLwd(lwd: settings.lwd, serverType: settings.isLightNode ? ServerType.lwd : ServerType.zebra);
-        setUseTor(useTor: settings.useTor);
+        await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
+        await putProp(key: "qr_size", value: settings.qrSettings.size.toString(), c: c);
+        await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString(), c: c);
+        await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString(), c: c);
+        await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
+        c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
+        c = await c.setUseTor(useTor: settings.useTor);
+        ref.read(coinContextProvider.notifier).set(coin: c);
         ref.invalidate(appSettingsProvider);
       },
     );
