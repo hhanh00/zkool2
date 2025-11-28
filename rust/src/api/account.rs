@@ -15,9 +15,9 @@ use zcash_keys::{
     encoding::AddressCodec,
     keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
-use zcash_primitives::{
-    consensus::Parameters as ZkParams, legacy::TransparentAddress, zip32::AccountId,
-};
+use zcash_transparent::address::TransparentAddress;
+use zip32::AccountId;
+use zcash_protocol::consensus::Parameters as ZkParams;
 
 use crate::{
     account::derive_transparent_address,

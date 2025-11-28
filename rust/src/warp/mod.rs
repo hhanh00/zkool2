@@ -128,4 +128,4 @@ pub struct TransparentSK {
 }
 
 pub use decrypter::{try_orchard_decrypt, try_sapling_decrypt};
-use zcash_primitives::legacy::TransparentAddress;
+use zcash_transparent::address::TransparentAddress;

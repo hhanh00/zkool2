@@ -5,8 +5,8 @@ use sapling_crypto::{keys::FullViewingKey, PaymentAddress};
 use secp256k1::PublicKey;
 use sqlx::SqliteConnection;
 use zcash_keys::encoding::AddressCodec;
-use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::NetworkConstants;
+use zcash_transparent::address::TransparentAddress;
 
 use crate::{
     account::get_sapling_address, api::coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow

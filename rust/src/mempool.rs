@@ -11,9 +11,9 @@ use tokio_util::sync::CancellationToken;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
 use zcash_primitives::{
-    legacy::TransparentAddress,
     transaction::{Authorized, Transaction, TransactionData},
 };
+use zcash_transparent::address::TransparentAddress;
 use crate::api::coin::Network;
 
 use crate::Client;
@@ -162,7 +162,7 @@ pub async fn decode_raw_transaction(
             notes.extend(spent_amount);
         }
         for v in tbundle.vout.iter() {
-            if let Some(vout_address) = v.script_pubkey().address() {
+            if let Some(vout_address) = v.recipient_address() {
                 if let Some((account, name, _)) = tkeys.iter().find(|(_, _, a)| a == &vout_address)
                 {
                     let n = MempoolNote {

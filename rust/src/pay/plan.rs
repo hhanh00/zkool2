@@ -27,7 +27,6 @@ use tracing::{debug, event, info, span, Level};
 use zcash_address::ZcashAddress;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::{
-    legacy::TransparentAddress,
     transaction::{
         builder::{BuildConfig, Builder},
         fees::zip317::FeeRule,
@@ -40,8 +39,7 @@ use zcash_protocol::{
     value::Zatoshis,
 };
 use zcash_transparent::{
-    bundle::{OutPoint, TxOut},
-    pczt::Bip32Derivation,
+    address::TransparentAddress, bundle::{OutPoint, TxOut}, pczt::Bip32Derivation
 };
 use zip321::{Payment, TransactionRequest};
 
@@ -490,7 +488,7 @@ pub async fn plan_transaction(
                         let pkh: [u8; 20] =
                             Ripemd160::digest(Sha256::digest(pubkey.serialize())).into();
                         let addr = TransparentAddress::PublicKeyHash(pkh);
-                        let coin = TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script());
+                        let coin = TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder

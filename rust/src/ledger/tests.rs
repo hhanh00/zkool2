@@ -9,9 +9,10 @@ use pczt::{
 };
 use secp256k1::{ecdsa::Signature, PublicKey};
 use sqlx::{Acquire, SqlitePool};
+use zcash_script::script::Evaluable;
 use std::{fs::File, io::BufReader};
 use zcash_keys::encoding::AddressCodec as _;
-use zcash_primitives::legacy::{Script, TransparentAddress};
+use zcash_transparent::address::TransparentAddress;
 
 use sapling_crypto::{keys::FullViewingKey, Diversifier, PaymentAddress};
 use zcash_address::unified::{self, Encoding, Ufvk};
@@ -224,7 +225,9 @@ pub async fn sign_transparent() -> LedgerResult<()> {
         data.write_u32::<LE>(0x80000000)?;
         data.write_u32::<LE>(0)?; // scope
         data.write_u32::<LE>(0)?; // dindex
-        address.script().write(&mut data)?;
+        let script = address.script();
+        data.write_u8(script.byte_len() as u8)?;
+        data.write_all(&script.to_bytes())?;
         data.write_u64::<LE>(*tin.value())?;
         assert_eq!(data.len(), 54);
         buffers.push(data);
@@ -232,7 +235,9 @@ pub async fn sign_transparent() -> LedgerResult<()> {
 
     for tout in tbundle.outputs() {
         let mut data = vec![];
-        Script(tout.script_pubkey().to_vec()).write(&mut data)?;
+        let script = tout.script_pubkey();
+        data.write_u8(script.len() as u8)?;
+        data.write_all(script)?;
         data.write_u64::<LE>(*tout.value())?;
         assert_eq!(data.len(), 34);
         buffers.push(data);
