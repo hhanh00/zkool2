@@ -27,10 +27,6 @@ Future<PcztPackage> signTransaction(
         {required PcztPackage pczt, required Coin c}) =>
     RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt, c: c);
 
-Stream<SigningEvent> signLedgerTransaction(
-        {required PcztPackage pczt, required Coin c}) =>
-    RustLib.instance.api.crateApiPaySignLedgerTransaction(pczt: pczt, c: c);
-
 Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);
 

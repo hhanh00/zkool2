@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -630031502;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1609636081;
 
 // Section: executor
 
@@ -4186,7 +4186,7 @@ fn wire__crate__api__account__show_ledger_transparent_address_impl(
         },
     )
 }
-fn wire__crate__api__pay__sign_ledger_transaction_impl(
+fn wire__crate__api__ledger__sign_ledger_transaction_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -4212,15 +4212,18 @@ fn wire__crate__api__pay__sign_ledger_transaction_impl(
                 crate::api::pay::SigningEvent,
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
-            let api_pczt = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
+            let api_package = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::pay::sign_ledger_transaction(api_sink, api_pczt, &api_c)
-                                .await?;
+                        let output_ok = crate::api::ledger::sign_ledger_transaction(
+                            api_sink,
+                            api_package,
+                            &api_c,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6197,9 +6200,12 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        111 => {
-            wire__crate__api__pay__sign_ledger_transaction_impl(port, ptr, rust_vec_len, data_len)
-        }
+        111 => wire__crate__api__ledger__sign_ledger_transaction_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         112 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
         113 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
         114 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),

@@ -33,10 +33,7 @@ use tracing::info;
 use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use crate::ledger::fvk::get_hw_transparent_address;
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-use crate::no_ledger::get_hw_transparent_address;
+use crate::api::ledger::get_hw_transparent_address;
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
