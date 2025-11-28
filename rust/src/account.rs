@@ -1,8 +1,7 @@
 use std::str::FromStr as _;
 
-use crate::ledger::fvk::get_hw_sapling_address;
 use crate::{
-    api::ledger::get_hw_fvk,
+    api::ledger::{get_hw_sapling_address, get_hw_transparent_address, get_hw_fvk, get_hw_next_diversifier_address},
     bip38,
     api::coin::Network,
     db::{
@@ -30,11 +29,6 @@ use crate::{
 use secp256k1::{PublicKey, SecretKey};
 use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
 use zcash_transparent::address::TransparentAddress;
-
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use crate::ledger::fvk::{get_hw_next_diversifier_address, get_hw_transparent_address};
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-use crate::no_ledger::{get_hw_next_diversifier_address, get_hw_transparent_address};
 
 use anyhow::{anyhow, Result};
 use bincode::config::legacy;
