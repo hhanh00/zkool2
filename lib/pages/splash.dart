@@ -88,6 +88,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
       url: settings.lwd,
     );
     c = await c.setUseTor(useTor: settings.useTor);
+    ref.read(coinContextProvider.notifier).set(coin: c);
     final synchronizer = ref.read(synchronizerProvider.notifier);
     synchronizer.autoSync();
     final mempool = ref.read(mempoolProvider.notifier);
