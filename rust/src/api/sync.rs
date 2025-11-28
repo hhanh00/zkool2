@@ -3,6 +3,7 @@ use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Connection as _, Row};
+use zcash_transparent::address::TransparentAddress;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use tokio::sync::mpsc::channel;
@@ -12,7 +13,6 @@ use zcash_keys::encoding::AddressCodec as _;
 
 use crate::budget::merge_pending_txs;
 use crate::api::coin::{Coin, Network};
-use zcash_primitives::legacy::TransparentAddress;
 
 use crate::db::{calculate_balance, store_block_header};
 use crate::io::SyncHeight;
