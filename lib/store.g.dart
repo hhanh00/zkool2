@@ -86,7 +86,7 @@ final class CoinContextProvider extends $NotifierProvider<CoinContext, Coin> {
   }
 }
 
-String _$coinContextHash() => r'91fe80147d177da21a579189e818d3167a7d45da';
+String _$coinContextHash() => r'91273110574fa3fe4e8412e92c99d1cb4fff0997';
 
 abstract class _$CoinContext extends $Notifier<Coin> {
   Coin build();
@@ -301,7 +301,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
   }
 }
 
-String _$getAccountsHash() => r'e138917076ad4320221afed7995cdd1cdcf2c795';
+String _$getAccountsHash() => r'0b15066a7f8a3dfccb92626b55f4de7c5fac850b';
 
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
@@ -423,7 +423,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'b1721de913b181b9f5494ee198f75ca1cb669ed5';
+String _$accountHash() => r'9594c3daf455e8f1905a6fbf6d26727e69ed579c';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -477,7 +477,7 @@ final class GetCurrentAccountProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCurrentAccountHash() => r'4ca02cd09206c1f1d925f0ceda73551ebcdd8e60';
+String _$getCurrentAccountHash() => r'd96b535adcd641dbfc5444f924a82c621d592e56';
 
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
@@ -504,7 +504,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'499cb7998a7fc5b975dfc906d1386daf87cf8ef0';
+    r'fdae0c93e8453c1fcbe44c8ce812d6bdeb8db9ed';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
