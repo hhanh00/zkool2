@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.7.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.6.0...zkool-v6.7.0) (2025-11-28)
+
+
+### Features
+
+* QR code transmission ([#680](https://github.com/hhanh00/zkool2/issues/680)) ([62a041d](https://github.com/hhanh00/zkool2/commit/62a041dac700636fecf1bb9f38bae2d8ababdcae))
+
+
+### Bug Fixes
+
+* ledger build ([#686](https://github.com/hhanh00/zkool2/issues/686)) ([6219c0f](https://github.com/hhanh00/zkool2/commit/6219c0fa5bf495c47cea62ccb5f2c972181fb21d))
+* missing update of lwd url ([#684](https://github.com/hhanh00/zkool2/issues/684)) ([70de7d0](https://github.com/hhanh00/zkool2/commit/70de7d01ad49fec5f545381648f05212ff36ac6b))
+* pass coin as parameter ([#682](https://github.com/hhanh00/zkool2/issues/682)) ([5e4d291](https://github.com/hhanh00/zkool2/commit/5e4d2910ebdd953cfef30a10212e0f2d9207bd3d))
+* support for NU6.1 ([#683](https://github.com/hhanh00/zkool2/issues/683)) ([0560901](https://github.com/hhanh00/zkool2/commit/0560901ca7df6655b636ccc7ad0db12995e4e49d))
+
 ## [6.6.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.5.2...zkool-v6.6.0) (2025-11-19)
 
 
