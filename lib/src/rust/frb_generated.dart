@@ -9,6 +9,7 @@ import 'api/db.dart';
 import 'api/frost.dart';
 import 'api/init.dart';
 import 'api/key.dart';
+import 'api/ledger.dart';
 import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
@@ -86,7 +87,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -630031502;
+  int get rustContentHash => -1609636081;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -382,8 +383,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiAccountShowLedgerTransparentAddress({required Coin c});
 
-  Stream<SigningEvent> crateApiPaySignLedgerTransaction(
-      {required PcztPackage pczt, required Coin c});
+  Stream<SigningEvent> crateApiLedgerSignLedgerTransaction(
+      {required PcztPackage package, required Coin c});
 
   Future<PcztPackage> crateApiPaySignTransaction(
       {required PcztPackage pczt, required Coin c});
@@ -3523,8 +3524,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Stream<SigningEvent> crateApiPaySignLedgerTransaction(
-      {required PcztPackage pczt, required Coin c}) {
+  Stream<SigningEvent> crateApiLedgerSignLedgerTransaction(
+      {required PcztPackage package, required Coin c}) {
     final sink = RustStreamSink<SigningEvent>();
     unawaited(
       handler.executeNormal(
@@ -3532,7 +3533,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           callFfi: (port_) {
             final serializer = SseSerializer(generalizedFrbRustBinding);
             sse_encode_StreamSink_signing_event_Sse(sink, serializer);
-            sse_encode_box_autoadd_pczt_package(pczt, serializer);
+            sse_encode_box_autoadd_pczt_package(package, serializer);
             sse_encode_box_autoadd_coin(c, serializer);
             pdeCallFfi(generalizedFrbRustBinding, serializer,
                 funcId: 111, port: port_);
@@ -3541,8 +3542,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             decodeSuccessData: sse_decode_unit,
             decodeErrorData: sse_decode_AnyhowException,
           ),
-          constMeta: kCrateApiPaySignLedgerTransactionConstMeta,
-          argValues: [sink, pczt, c],
+          constMeta: kCrateApiLedgerSignLedgerTransactionConstMeta,
+          argValues: [sink, package, c],
           apiImpl: this,
         ),
       ),
@@ -3550,10 +3551,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return sink.stream;
   }
 
-  TaskConstMeta get kCrateApiPaySignLedgerTransactionConstMeta =>
+  TaskConstMeta get kCrateApiLedgerSignLedgerTransactionConstMeta =>
       const TaskConstMeta(
         debugName: "sign_ledger_transaction",
-        argNames: ["sink", "pczt", "c"],
+        argNames: ["sink", "package", "c"],
       );
 
   @override

@@ -12,6 +12,7 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/ledger.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -142,7 +143,7 @@ class TxPageState extends ConsumerState<TxPage> {
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
           final comp = Completer();
-          signLedgerTransaction(pczt: widget.pczt, c: c).listen((e) {
+          signLedgerTransaction(package: widget.pczt, c: c).listen((e) {
             switch (e) {
               case SigningEvent_Progress p:
                 showSnackbar(p.field0);
