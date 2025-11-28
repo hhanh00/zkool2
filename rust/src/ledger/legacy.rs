@@ -8,8 +8,8 @@ use byteorder::{ReadBytesExt, LE};
 use pczt::Pczt;
 use sqlx::SqliteConnection;
 use zcash_keys::encoding::AddressCodec;
-use zcash_primitives::legacy::TransparentAddress;
 use zcash_primitives::transaction::Transaction;
+use zcash_transparent::address::TransparentAddress;
 
 use crate::api::coin::Network;
 use crate::db::LEDGER_CODE;

@@ -6,7 +6,6 @@ use secp256k1::SecretKey;
 use tracing::{debug, info};
 use tracing_subscriber::{Registry, layer::SubscriberExt, util::SubscriberInitExt};
 use zcash_keys::encoding::{encode_extended_spending_key, AddressCodec};
-use zcash_primitives::{legacy::TransparentAddress, zip32::ChildIndex};
 use zcash_protocol::{
     consensus::{MainNetwork, NetworkConstants},
     constants::mainnet::HRP_SAPLING_EXTENDED_SPENDING_KEY,
@@ -14,6 +13,8 @@ use zcash_protocol::{
 
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha512};
+use zcash_transparent::address::TransparentAddress;
+use zip32::ChildIndex;
 
 type HmacSha256 = Hmac<Sha256>;
 type HmacSha512 = Hmac<Sha512>;

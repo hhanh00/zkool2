@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqliteConnection;
-use zcash_primitives::zip32::Scope;
+use zip32::Scope;
 use crate::api::coin::Network;
 
 use crate::{

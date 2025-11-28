@@ -27,7 +27,8 @@ use sqlx::{pool::PoolConnection, Sqlite, SqliteConnection};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
 use zcash_note_encryption::{try_output_recovery_with_ovk, Domain, EphemeralKeyBytes};
-use zcash_primitives::legacy::{Script, TransparentAddress};
+use zcash_script::script::Evaluable;
+use zcash_transparent::address::TransparentAddress;
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{consensus::NetworkConstants, memo::Memo};
 
@@ -144,7 +145,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             data.write_u32::<LE>(aindex | 0x80000000)?;
             data.write_u32::<LE>(scope)?;
             data.write_u32::<LE>(dindex)?;
-            address.script().write(&mut data)?;
+            let address_script = address.script();
+            data.write_u8(address_script.byte_len() as u8)?;
+            data.write_all(&address_script.to_bytes())?;
             data.write_u64::<LE>(*tin.value())?;
             assert_eq!(data.len(), 54);
             buffers.push(data);
@@ -160,7 +163,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             touts.push(pczt_tout);
 
             let mut data = vec![];
-            Script(tout.script_pubkey().to_vec()).write(&mut data)?;
+            let output_script = tout.script_pubkey();
+            data.write_u8(output_script.len() as u8)?;
+            data.write_all(output_script)?;
             data.write_u64::<LE>(*tout.value())?;
             assert_eq!(data.len(), 34);
             buffers.push(data);
@@ -461,7 +466,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let mut data = vec![];
             data.write_all(tin.prevout_txid())?;
             data.write_u32::<LE>(*tin.prevout_index())?;
-            Script(tin.script_pubkey().to_vec()).write(&mut data)?;
+            let input_script = tin.script_pubkey();
+            data.write_u8(input_script.len() as u8)?;
+            data.write_all(input_script)?;
             data.write_u64::<LE>(*tin.value())?;
             data.write_u32::<LE>(tin.sequence().unwrap_or(0xFFFFFFFFu32))?;
             assert_eq!(data.len(), 74);

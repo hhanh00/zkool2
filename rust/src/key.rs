@@ -12,8 +12,8 @@ use zcash_keys::{
     encoding::{decode_extended_full_viewing_key, decode_extended_spending_key, AddressCodec as _},
     keys::UnifiedFullViewingKey,
 };
-use zcash_primitives::legacy::TransparentAddress;
 use zcash_protocol::consensus::NetworkConstants as _;
+use zcash_transparent::address::TransparentAddress;
 
 use crate::{
     bip38,

@@ -5,6 +5,7 @@ use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
 use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
+use zcash_transparent::address::TransparentAddress;
 use crate::api::coin::Network;
 
 pub mod error;
@@ -104,10 +105,11 @@ impl TxPlan {
                 }
                 for o in bundle.outputs().iter() {
                     let script_pubkey = o.script_pubkey();
+                    let address = TransparentAddress::from_script_pubkey(script_pubkey).unwrap();
                     outputs.push(TxPlanOut {
                         pool: 0,
                         amount: o.value().into_u64(),
-                        address: script_pubkey.address().unwrap().encode(network),
+                        address: address.encode(network),
                     });
                     fee -= o.value().into_u64() as i64;
                 }
