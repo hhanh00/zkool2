@@ -9,6 +9,7 @@ import 'api/db.dart';
 import 'api/frost.dart';
 import 'api/init.dart';
 import 'api/key.dart';
+import 'api/ledger.dart';
 import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';

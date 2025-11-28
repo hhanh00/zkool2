@@ -31,12 +31,12 @@ pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullVie
     Ok(fvk)
 }
 
-pub async fn get_hw_next_diversifier_address(
+pub async fn get_hw_next_diversifier_address<D: Device>(
+    ledger: &D,
     network: &Network,
     aindex: u32,
     dindex: u32,
 ) -> LedgerResult<(u32, String)> {
-    let ledger = connect_ledger().await?;
     let mut data = vec![];
     let aindex = aindex | 0x8000_0000u32;
     data.write_u32::<LE>(aindex)?;
@@ -89,11 +89,11 @@ pub async fn get_hw_next_diversifier_address(
     )))
 }
 
-pub async fn get_hw_sapling_address(
+pub async fn get_hw_sapling_address<D: Device>(
+    ledger: &D,
     network: &Network,
     aindex: u32,
 ) -> LedgerResult<String> {
-    let ledger = connect_ledger().await?;
     let aindex = aindex | 0x80000000u32;
     let get_zaddress = APDUCommand {
         cla: 0x85,
@@ -111,13 +111,13 @@ pub async fn get_hw_sapling_address(
     Ok(address.encode(network))
 }
 
-pub async fn get_hw_transparent_address(
+pub async fn get_hw_transparent_address<D: Device>(
+    ledger: &D,
     network: &Network,
     aindex: u32,
     scope: u32,
     dindex: u32,
 ) -> LedgerResult<(Vec<u8>, TransparentAddress)> {
-    let ledger = connect_ledger().await?;
     let mut data = vec![];
     let coin_type = network.coin_type();
     data.write_u32::<LE>(0x8000_0000u32 | 44)?;

@@ -23,8 +23,6 @@ pub mod zebra;
 pub mod budget;
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub mod ledger;
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-pub mod no_ledger;
 
 pub type Hash32 = [u8; 32];
 pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;

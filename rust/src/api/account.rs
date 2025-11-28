@@ -21,20 +21,9 @@ use zcash_protocol::consensus::Parameters as ZkParams;
 
 use crate::{
     account::derive_transparent_address,
-    api::coin::Coin,
+    api::{coin::Coin, ledger::{show_sapling_address, show_transparent_address}},
     db::get_account_dindex,
     io::{decrypt, encrypt},
-};
-
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-use crate::ledger::fvk::{
-    show_sapling_address,
-    show_transparent_address,
-};
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-use crate::no_ledger::{
-    show_sapling_address,
-    show_transparent_address,
 };
 
 #[frb]
