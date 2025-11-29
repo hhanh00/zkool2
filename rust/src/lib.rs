@@ -2,7 +2,7 @@ use lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use tokio_stream::wrappers::ReceiverStream;
 use zcash_primitives::transaction::Transaction;
 
-use crate::{lwd::CompactBlock, zebra::LwdServer};
+use crate::{lwd::CompactBlock, net::zebra::LwdServer};
 
 pub mod account;
 pub mod api;
@@ -17,9 +17,9 @@ pub mod lwd;
 pub mod memo;
 pub mod mempool;
 pub mod pay;
+pub mod net;
 pub mod sync;
 pub mod warp;
-pub mod zebra;
 pub mod budget;
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub mod ledger;

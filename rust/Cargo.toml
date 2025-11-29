@@ -30,7 +30,6 @@ sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migra
 tokio = {version = "1", features = ["rt", "rt-multi-thread", "macros"]}
 tokio-util = "0.7"
 tokio-stream = "0.1"
-reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
 serde = "1.0"
 serde_json = "1.0"
 serde_with = {version = "3.14.1", features = ["hex"]}
@@ -41,6 +40,7 @@ tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
 hyper-util = {version = "0.1", features = ["tokio"]}
 tower = "0.5"
 rayon = "1.10"
+reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
 
 qrcode = "0.14.1"
 raptorq = "2.0.0"
