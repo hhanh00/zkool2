@@ -20,7 +20,7 @@ use zcash_protocol::local_consensus::LocalNetwork;
 
 use crate::db::{create_schema, migrate_sapling_addresses};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
-use crate::zebra::ZebraClient;
+use crate::net::zebra::ZebraClient;
 use crate::{Client, IntoAnyhow};
 
 
