@@ -2,7 +2,7 @@ use lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use tokio_stream::wrappers::ReceiverStream;
 use zcash_primitives::transaction::Transaction;
 
-use crate::{lwd::CompactBlock, net::zebra::LwdServer};
+use crate::{lwd::CompactBlock, net::LwdServer};
 
 pub mod account;
 pub mod api;
