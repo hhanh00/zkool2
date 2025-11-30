@@ -1,4 +1,5 @@
 use std::{
+    pin::Pin,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -6,38 +7,54 @@ use std::{
 use anyhow::{Context, Result};
 use arti_client::{TorClient, TorClientConfig};
 use httparse::Status;
+use reqwest::Url;
 use rustls::{crypto::ring::default_provider, pki_types::ServerName, ClientConfig, RootCertStore};
 use serde_json::{json, Value};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_rustls::TlsConnector;
 use webpki_roots::TLS_SERVER_ROOTS;
 
-use crate::{
-    api::coin::get_tor_client,
-    IntoAnyhow,
-};
+use crate::{api::coin::get_tor_client, IntoAnyhow};
+
+trait AsyncRW: AsyncRead + AsyncWrite {}
+impl<T: AsyncRead + AsyncWrite + Send> AsyncRW for T {}
 
 pub struct TorHttpClient {
+    ssl: bool,
     host: String,
     port: u16,
-    uri: String,
+    path: String,
     tls_config: Arc<ClientConfig>,
 }
 
 impl TorHttpClient {
-    pub fn new(host: &str, port: u16, uri: &str) -> Self {
+    pub fn new(url: &str) -> Result<Self> {
+        let url = Url::parse(url).anyhow()?;
+        let host = url.domain().ok_or(anyhow::anyhow!("Not domain"))?;
+        let port = url
+            .port_or_known_default()
+            .ok_or(anyhow::anyhow!("No known port"))?;
+        let path = url.path();
+        let scheme = url.scheme();
+        let ssl = match scheme {
+            "http" => false,
+            "https" => true,
+            _ => anyhow::bail!("Unsupported URL scheme"),
+        };
+        // host: &str, port: u16, uri: &str
         let root_cert_store = RootCertStore::from_iter(TLS_SERVER_ROOTS.iter().cloned());
 
         let tls_config = ClientConfig::builder()
             .with_root_certificates(root_cert_store)
             .with_no_client_auth(); // We don't need client certificates for standard web browsing
 
-        Self {
+        Ok(Self {
+            ssl,
             host: host.to_string(),
             port,
-            uri: uri.to_string(),
+            path: path.to_string(),
             tls_config: Arc::new(tls_config),
-        }
+        })
     }
 
     pub async fn post_tor(&self, method: &str, params: Value) -> Result<Value> {
@@ -50,10 +67,15 @@ impl TorHttpClient {
 
         let stream = tor_client.connect((host, self.port)).await?;
 
-        let mut tls_stream = connector
-            .connect(server_name, stream)
-            .await
-            .context("TLS handshake failed over Tor stream")?;
+        let mut stream: Pin<Box<dyn AsyncRW + Send>> = if self.ssl {
+            let tls_stream = connector
+                .connect(server_name, stream)
+                .await
+                .context("TLS handshake failed over Tor stream")?;
+            Box::pin(tls_stream)
+        } else {
+            Box::pin(stream)
+        };
 
         let id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         let params = serde_json::to_string(&params)?;
@@ -62,16 +84,18 @@ impl TorHttpClient {
             "id": id,
             "method": method.to_string(),
             "params": params,
-        }).to_string();
+        })
+        .to_string();
 
-        tls_stream
-            .write_all(format!("POST /{} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{request_json}", self.uri, self.host).as_bytes())
+        stream
+            .write_all(format!("POST /{} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{request_json}",
+            self.path, self.host).as_bytes())
             .await?;
 
-        tls_stream.flush().await?;
+        stream.flush().await?;
 
         let mut buf = Vec::new();
-        tls_stream.read_to_end(&mut buf).await?;
+        stream.read_to_end(&mut buf).await?;
 
         let mut headers = [httparse::EMPTY_HEADER; 64];
         let mut rep = httparse::Response::new(&mut headers);
