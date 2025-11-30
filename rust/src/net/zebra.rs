@@ -1,258 +1,193 @@
 #![allow(unused_variables)]
 
-use std::io::Read;
+use std::{
+    io::Read,
+    pin::Pin,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-use anyhow::Result;
-use futures::Stream;
+use anyhow::{Context, Result};
+use arti_client::TorClient;
+use httparse::Status;
+use reqwest::Url;
+use rustls::{pki_types::ServerName, ClientConfig, RootCertStore};
+use serde::Deserialize;
 use serde_json::{json, Value};
-use tracing::info;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio_rustls::TlsConnector;
+use tor_rtcompat::PreferredRuntime;
+use webpki_roots::TLS_SERVER_ROOTS;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
 use zcash_primitives::{block::BlockHeader, transaction::Transaction};
 
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{async_trait, Request};
+use tonic::async_trait;
 use zcash_protocol::consensus::{BlockHeight, BranchId};
 
-use crate::{api::coin::Network, lwd::*, GRPCClient};
+use crate::{
+    IntoAnyhow, api::coin::{Network, TOR}, lwd::*, net::LwdServer
+};
 
 #[derive(Clone)]
 pub struct ZebraClient {
     url: String,
     client: reqwest::Client,
+
+    ssl: bool,
+    host: String,
+    port: u16,
+    path: String,
+    tls_config: Arc<ClientConfig>,
 }
 
 impl ZebraClient {
-    pub fn new(network: &Network, url: &str) -> Self {
+    pub fn new(network: &Network, url: &str) -> Result<Self> {
         let client = reqwest::Client::new();
-        Self {
+
+        let url = Url::parse(url).anyhow()?;
+        let host = url.domain().ok_or(anyhow::anyhow!("Not domain"))?;
+        let port = url
+            .port_or_known_default()
+            .ok_or(anyhow::anyhow!("No known port"))?;
+        let path = url.path();
+        let scheme = url.scheme();
+        let ssl = match scheme {
+            "http" => false,
+            "https" => true,
+            _ => anyhow::bail!("Unsupported URL scheme"),
+        };
+        // host: &str, port: u16, uri: &str
+        let root_cert_store = RootCertStore::from_iter(TLS_SERVER_ROOTS.iter().cloned());
+
+        let tls_config = ClientConfig::builder()
+            .with_root_certificates(root_cert_store)
+            .with_no_client_auth(); // We don't need client certificates for standard web browsing
+
+        Ok(Self {
             url: url.to_string(),
             client,
+            ssl,
+            host: host.to_string(),
+            port,
+            path: path.to_string(),
+            tls_config: Arc::new(tls_config),
+        })
+    }
+}
+
+trait AsyncRW: AsyncRead + AsyncWrite {}
+impl<T: AsyncRead + AsyncWrite + Send> AsyncRW for T {}
+
+macro_rules! jsonrpc {
+    ($client: ident, $method: literal, $params: tt, $ret: ty) => {
+        {
+            let id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let req = json!({
+                "id": id.to_string(),
+                "jsonrpc": "1.0",
+                "method": $method,
+                "params": $params,
+            });
+            $client.jsonrpc_impl::<$ret>(req).await
         }
-    }
+    };
 }
 
-#[async_trait]
-pub trait LwdServer: Send {
-    async fn latest_height(&mut self) -> Result<u32>;
-    async fn block(&mut self, network: &Network, height: u32) -> Result<CompactBlock>;
-
-    type CompactBlockStream: Stream<Item = CompactBlock>;
-    async fn block_range(
-        &mut self,
-        network: &Network,
-        start: u32,
-        end: u32,
-    ) -> Result<Self::CompactBlockStream>;
-
-    async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)>;
-    async fn post_transaction(&mut self, height: u32, tx: &[u8]) -> Result<String>;
-
-    type TransactionStream: Stream<Item = (u32, Transaction, usize)>;
-    async fn taddress_txs(
-        &mut self,
-        network: &Network,
-        taddress: &str,
-        start: u32,
-        end: u32,
-    ) -> Result<Self::TransactionStream>;
-
-    async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream>;
-
-    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)>;
-}
-
-#[async_trait]
-impl LwdServer for GRPCClient {
-    async fn latest_height(&mut self) -> Result<u32> {
-        let block_id = self
-            .get_latest_block(Request::new(ChainSpec {}))
-            .await?
-            .into_inner();
-        Ok(block_id.height as u32)
+impl ZebraClient {
+    pub async fn jsonrpc_impl<R>(
+        &self,
+        req: Value,
+    ) -> Result<R>
+    where
+        R: for<'de> Deserialize<'de>,
+    {
+        let rep = if let Some(tor_client) = TOR.get() {
+            let tor = &*tor_client.lock().await;
+            self.post_tor(tor, req).await?
+        } else {
+            self.client
+                .post(&self.url)
+                .json(&req)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<Value>()
+                .await?
+        };
+        let res: R = serde_json::from_value(rep["result"].clone())?;
+        Ok(res)
     }
 
-    async fn block(&mut self, network: &Network, height: u32) -> Result<CompactBlock> {
-        let block = self
-            .get_block(Request::new(BlockId {
-                height: height as u64,
-                hash: vec![],
-            }))
-            .await?
-            .into_inner();
-        Ok(block)
-    }
+    pub async fn post_tor(
+        &self,
+        tor_client: &TorClient<PreferredRuntime>,
+        req: Value,
+    ) -> Result<Value> {
+        let connector = TlsConnector::from(self.tls_config.clone());
 
-    type CompactBlockStream = ReceiverStream<CompactBlock>;
-    async fn block_range(
-        &mut self,
-        network: &Network,
-        start: u32,
-        end: u32,
-    ) -> Result<Self::CompactBlockStream> {
-        info!("Fetching block range from {} to {}", start, end);
-        let mut blocks = self
-            .get_block_range(Request::new(BlockRange {
-                start: Some(BlockId {
-                    height: start as u64,
-                    hash: vec![],
-                }),
-                end: Some(BlockId {
-                    height: end as u64,
-                    hash: vec![],
-                }),
-                spam_filter_threshold: 0,
-            }))
-            .await?
-            .into_inner();
-        let (tx, rx) = tokio::sync::mpsc::channel::<CompactBlock>(10);
-        tokio::spawn(async move {
-            while let Some(block) = blocks.message().await? {
-                tx.send(block).await?;
-            }
-            Ok::<_, anyhow::Error>(())
-        });
-        Ok(ReceiverStream::new(rx))
-    }
+        let host = self.host.clone();
+        let server_name: ServerName = host.clone().try_into().anyhow()?;
 
-    async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)> {
-        let rtx = self
-            .get_transaction(Request::new(TxFilter {
-                hash: txid.to_vec(),
-                ..Default::default()
-            }))
-            .await?
-            .into_inner();
-        let height = rtx.height as u32;
-        let branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
-        let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
-        Ok((height, tx))
-    }
+        let stream = tor_client.connect((host, self.port)).await?;
 
-    async fn post_transaction(&mut self, height: u32, tx: &[u8]) -> Result<String> {
-        let rep = self
-            .send_transaction(Request::new(RawTransaction {
-                data: tx.to_vec(),
-                height: height as u64,
-            }))
-            .await?
-            .into_inner();
-        Ok(rep.error_message)
-    }
+        let mut stream: Pin<Box<dyn AsyncRW + Send>> = if self.ssl {
+            let tls_stream = connector
+                .connect(server_name, stream)
+                .await
+                .context("TLS handshake failed over Tor stream")?;
+            Box::pin(tls_stream)
+        } else {
+            Box::pin(stream)
+        };
 
-    type TransactionStream = ReceiverStream<(u32, Transaction, usize)>;
-    async fn taddress_txs(
-        &mut self,
-        network: &Network,
-        taddress: &str,
-        start: u32,
-        end: u32,
-    ) -> Result<Self::TransactionStream> {
-        let mut txs = self
-            .get_taddress_txids(Request::new(TransparentAddressBlockFilter {
-                address: taddress.to_string(),
-                range: Some(BlockRange {
-                    start: Some(BlockId {
-                        height: start as u64,
-                        hash: vec![],
-                    }),
-                    end: Some(BlockId {
-                        height: end as u64,
-                        hash: vec![],
-                    }),
-                    spam_filter_threshold: 0,
-                }),
-            }))
-            .await?
-            .into_inner();
-        let network = *network;
-        let (sender, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
-        tokio::spawn(async move {
-            while let Some(rtx) = txs.message().await? {
-                let len = rtx.data.len();
-                let branch_id =
-                    BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
-                let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
-                sender.send((rtx.height as u32, tx, len)).await?;
-            }
-            Ok::<_, anyhow::Error>(())
-        });
-        Ok(ReceiverStream::new(rx))
-    }
+        let request_json = req.to_string();
 
-    async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream> {
-        let mut txs = self
-            .get_mempool_stream(Request::new(Empty {}))
-            .await?
-            .into_inner();
-        let network = *network;
-        let (sender, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
-        tokio::spawn(async move {
-            while let Some(rtx) = txs.message().await? {
-                let len = rtx.data.len();
-                let branch_id =
-                    BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
-                let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
-                sender.send((rtx.height as u32, tx, len)).await?;
-            }
-            Ok::<_, anyhow::Error>(())
-        });
-        Ok(ReceiverStream::new(rx))
-    }
+        stream
+            .write_all(format!("POST /{} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{request_json}",
+            self.path, self.host).as_bytes())
+            .await?;
 
-    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)> {
-        let state = self
-            .get_tree_state(Request::new(BlockId {
-                height: height as u64,
-                hash: vec![],
-            }))
-            .await?
-            .into_inner();
-        let sapling_tree =
-            hex::decode(&state.sapling_tree).expect("Failed to decode sapling tree hex");
-        let orchard_tree =
-            hex::decode(&state.orchard_tree).expect("Failed to decode sapling tree hex");
-        Ok((sapling_tree, orchard_tree))
+        stream.flush().await?;
+
+        let mut buf = Vec::new();
+        stream.read_to_end(&mut buf).await?;
+
+        let mut headers = [httparse::EMPTY_HEADER; 64];
+        let mut rep = httparse::Response::new(&mut headers);
+        let Status::Complete(offset) = rep.parse(&buf)? else {
+            anyhow::bail!("Invalid HTTP response")
+        };
+        let body = String::from_utf8_lossy(&buf[offset..]);
+
+        let body: Value = serde_json::from_str(&body)?;
+        if let Some(error) = body.pointer("/error") {
+            anyhow::bail!(
+                "JSON RPC error: {}",
+                error.pointer("/message").unwrap().as_str().unwrap()
+            )
+        }
+        let result = body.pointer("/result").unwrap();
+
+        Ok(result.clone())
     }
 }
 
 #[async_trait]
 impl LwdServer for ZebraClient {
     async fn latest_height(&mut self) -> Result<u32> {
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getblockcount",
-                "params": []
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        let block_count = rep["result"].as_u64().unwrap_or_default();
+        let block_count = jsonrpc!(self, "getblockcount", (), u32)?;
         Ok(block_count as u32)
     }
 
     async fn block(&mut self, network: &Network, height: u32) -> Result<CompactBlock> {
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getblock",
-                "params": [height.to_string(), 0]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        let block_hex = rep["result"].as_str().unwrap_or_default();
+        let block_hex = jsonrpc!(
+            self,
+            "getblock",
+            [height.to_string(), 0],
+            String
+        )?;
         let block_bytes = hex::decode(block_hex)
             .map_err(|e| anyhow::anyhow!("Failed to decode block hex: {}", e))?;
         let branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
@@ -262,41 +197,25 @@ impl LwdServer for ZebraClient {
 
     async fn post_transaction(&mut self, height: u32, tx: &[u8]) -> Result<String> {
         let tx_hex = hex::encode(tx);
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "sendrawtransaction",
-                "params": [tx_hex]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        Ok(rep["result"].as_str().unwrap_or_default().to_string())
+        let rep = jsonrpc!(
+            self,
+            "sendrawtransaction",
+            [tx_hex],
+            String
+        )?;
+        Ok(rep)
     }
 
     async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)> {
         let mut txid = txid.to_vec();
         txid.reverse();
         let tx_hex = hex::encode(txid);
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getrawtransaction",
-                "params": [tx_hex, 1]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
+        let rep = jsonrpc!(
+            self,
+            "getrawtransaction",
+            [tx_hex, 1],
+            Value
+        )?;
         let data = rep["result"]["hex"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No data field"))?
@@ -342,20 +261,7 @@ impl LwdServer for ZebraClient {
             "start": start,
             "end": end
         });
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getaddresstxids",
-                "params": [req]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
+        let rep = jsonrpc!(self, "getaddresstxids", [req], Value)?;
         let txids = rep["result"]
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?;
@@ -392,21 +298,12 @@ impl LwdServer for ZebraClient {
     }
 
     async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)> {
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "z_gettreestate",
-                "params": [height.to_string()]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        let res = &rep["result"];
+        let res = jsonrpc!(
+            self,
+            "z_gettreestate",
+            [height.to_string()],
+            Value
+        )?;
         let sapling_tree = res["sapling"]["commitments"]["finalState"]
             .as_str()
             .ok_or_else(|| {

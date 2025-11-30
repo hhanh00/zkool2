@@ -200,7 +200,7 @@ impl Coin {
             }
 
             1 => {
-                let client = ZebraClient::new(&self.network(), &self.url);
+                let client = ZebraClient::new(&self.network(), &self.url)?;
                 Ok(Box::new(client))
             }
 
