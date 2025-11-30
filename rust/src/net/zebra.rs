@@ -1,9 +1,13 @@
 #![allow(unused_variables)]
 
-use std::io::Read;
+use std::{
+    io::Read,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use anyhow::Result;
 use futures::Stream;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use tracing::info;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
@@ -216,43 +220,58 @@ impl LwdServer for GRPCClient {
     }
 }
 
+pub async fn jsonrpc_impl<R>(
+    client: &reqwest::Client,
+    url: &str,
+    method: &str,
+    params: Value,
+) -> Result<R>
+where
+    R: for<'de> Deserialize<'de>,
+{
+    let id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let rep = client
+        .post(url)
+        .json(&params)
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<Value>()
+        .await?;
+    let block_count: R = serde_json::from_value(rep["result"].clone())?;
+    Ok(block_count)
+}
+
+macro_rules! jsonrpc {
+    ($client: expr, $url: expr, $method: literal, $params: tt, $ret: ty) => {
+        {
+            let id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+            let p = json!({
+                "id": id.to_string(),
+                "jsonrpc": "1.0",
+                "method": $method,
+                "params": $params,
+            });
+            jsonrpc_impl::<$ret>(&$client, &$url, $method, p).await
+        }
+    };
+}
+
 #[async_trait]
 impl LwdServer for ZebraClient {
     async fn latest_height(&mut self) -> Result<u32> {
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getblockcount",
-                "params": []
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        let block_count = rep["result"].as_u64().unwrap_or_default();
+        let block_count = jsonrpc!(self.client, self.url, "getblockcount", (), u32)?;
         Ok(block_count as u32)
     }
 
     async fn block(&mut self, network: &Network, height: u32) -> Result<CompactBlock> {
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getblock",
-                "params": [height.to_string(), 0]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        let block_hex = rep["result"].as_str().unwrap_or_default();
+        let block_hex = jsonrpc!(
+            self.client,
+            self.url,
+            "getblock",
+            [height.to_string(), 0],
+            String
+        )?;
         let block_bytes = hex::decode(block_hex)
             .map_err(|e| anyhow::anyhow!("Failed to decode block hex: {}", e))?;
         let branch_id = BranchId::for_height(network, BlockHeight::from_u32(height));
@@ -262,41 +281,27 @@ impl LwdServer for ZebraClient {
 
     async fn post_transaction(&mut self, height: u32, tx: &[u8]) -> Result<String> {
         let tx_hex = hex::encode(tx);
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "sendrawtransaction",
-                "params": [tx_hex]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        Ok(rep["result"].as_str().unwrap_or_default().to_string())
+        let rep = jsonrpc!(
+            self.client,
+            self.url,
+            "sendrawtransaction",
+            [tx_hex],
+            String
+        )?;
+        Ok(rep)
     }
 
     async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)> {
         let mut txid = txid.to_vec();
         txid.reverse();
         let tx_hex = hex::encode(txid);
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getrawtransaction",
-                "params": [tx_hex, 1]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
+        let rep = jsonrpc!(
+            self.client,
+            self.url,
+            "getrawtransaction",
+            [tx_hex, 1],
+            Value
+        )?;
         let data = rep["result"]["hex"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No data field"))?
@@ -342,20 +347,13 @@ impl LwdServer for ZebraClient {
             "start": start,
             "end": end
         });
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "getaddresstxids",
-                "params": [req]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
+        let rep = jsonrpc!(
+            self.client,
+            self.url,
+            "getaddresstxids",
+            [req],
+            Value
+        )?;
         let txids = rep["result"]
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?;
@@ -392,21 +390,13 @@ impl LwdServer for ZebraClient {
     }
 
     async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)> {
-        let rep = self
-            .client
-            .post(&self.url)
-            .json(&json!({
-                "id": "0",
-                "jsonrpc": "1.0",
-                "method": "z_gettreestate",
-                "params": [height.to_string()]
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Value>()
-            .await?;
-        let res = &rep["result"];
+        let res = jsonrpc!(
+            self.client,
+            self.url,
+            "z_gettreestate",
+            [height.to_string()],
+            Value
+        )?;
         let sapling_tree = res["sapling"]["commitments"]["finalState"]
             .as_str()
             .ok_or_else(|| {
