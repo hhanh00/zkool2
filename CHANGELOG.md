@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.0...zkool-v6.8.0) (2025-12-02)
+
+
+### Features
+
+* derive Ledger sapling from seed ([#696](https://github.com/hhanh00/zkool2/issues/696)) ([14a72f7](https://github.com/hhanh00/zkool2/commit/14a72f7c8b67137ba8afae0aa4248183a3a59936))
+
+
+### Bug Fixes
+
+* http over tor ([#688](https://github.com/hhanh00/zkool2/issues/688)) ([cec2d29](https://github.com/hhanh00/zkool2/commit/cec2d29cdc2c5c2759dde65e9137cc654cb954d4))
+* show warning when using ledger because of NU6.1 ([#691](https://github.com/hhanh00/zkool2/issues/691)) ([8b27cf3](https://github.com/hhanh00/zkool2/commit/8b27cf38911ddfaed0c0994885c422b5396f895f))
+
 ## [6.7.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.0...zkool-v6.7.1) (2025-12-02)
 
 
