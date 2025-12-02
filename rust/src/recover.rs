@@ -1,19 +1,13 @@
 use anyhow::Result;
-use bip32::ChildNumber;
 use bip39::Mnemonic;
-use rlz::api::init::{default_layer, env_layer};
-use secp256k1::SecretKey;
-use tracing::{debug, info};
-use tracing_subscriber::{Registry, layer::SubscriberExt, util::SubscriberInitExt};
-use zcash_keys::encoding::{encode_extended_spending_key, AddressCodec};
+use sapling_crypto::zip32::ExtendedSpendingKey;
+use tracing::debug;
 use zcash_protocol::{
     consensus::{MainNetwork, NetworkConstants},
-    constants::mainnet::HRP_SAPLING_EXTENDED_SPENDING_KEY,
 };
 
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha512};
-use zcash_transparent::address::TransparentAddress;
 use zip32::ChildIndex;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -160,43 +154,12 @@ fn add_scalar_inplace_mul8(out: &mut [u8; 32], b: &[u8], a: &[u8]) {
     add_scalar_inplace(out, &tmp, a);
 }
 
-pub fn main() -> Result<()> {
-    let _ = env_logger::builder().try_init();
-    let _ = Registry::default()
-        .with(default_layer())
-        .with(env_layer())
-        .try_init();
-
-    let args: Vec<_> = std::env::args().collect();
-    let aindex = args[1].parse::<u32>()?;
-    let mnemonic =
-        std::env::var("SEED").expect("Expect SEED env variable to contain the seed phrase");
-    // info!("{mnemonic}");
-    // Use BIP32 derivation with ED25519 curve
-    // and path 2C'/85'/0'/0'/0'
-
-    let mnemonic = Mnemonic::parse(&mnemonic)?;
+pub async fn recover_ledger_seed(mnemonic: &str, aindex: u32) -> Result<ExtendedSpendingKey> {
+    let mnemonic = Mnemonic::parse(mnemonic)?;
     let seed = mnemonic.to_seed("");
 
     let coin_type = MainNetwork.coin_type();
     const H: u32 = 0x8000_0000;
-    let extsk = bip32::ExtendedPrivateKey::<SecretKey>::new(seed).unwrap();
-    let extsk = extsk
-        .derive_child(ChildNumber(44 | H))
-        .unwrap()
-        .derive_child(ChildNumber(coin_type | H))
-        .unwrap()
-        .derive_child(ChildNumber(aindex | H))
-        .unwrap()
-        .derive_child(ChildNumber(0))
-        .unwrap()
-        .derive_child(ChildNumber(0))
-        .unwrap();
-    let pk = extsk.public_key();
-    let taddress = TransparentAddress::from_pubkey(pk.public_key());
-    let taddress_str = taddress.encode(&MainNetwork);
-    info!("TAddress: {taddress_str}");
-
     let path = [0x2C | H, coin_type | H, H, H, H];
     let zip32_seed: [u8; 32] = derive_ed25519_private_key(seed, &path)?;
 
@@ -207,15 +170,8 @@ pub fn main() -> Result<()> {
         .derive_child(ChildIndex::hardened(32))
         .derive_child(ChildIndex::hardened(coin_type))
         .derive_child(ChildIndex::hardened(aindex));
-    let fvk = extsk.to_diversifiable_full_viewing_key();
-    info!("FVK: {}", hex::encode(fvk.fvk().to_bytes()));
-    let extsk_str = encode_extended_spending_key(HRP_SAPLING_EXTENDED_SPENDING_KEY, &extsk);
-    let (_, pa) = extsk.default_address();
-    let pa_str = pa.encode(&MainNetwork);
-    info!("Address: {pa_str}");
-    info!("Secret Key: {extsk_str}");
 
-    Ok(())
+    Ok(extsk)
 }
 
 fn derive_ed25519_private_key(seed: [u8; 64], path: &[u32]) -> Result<[u8; 32]> {

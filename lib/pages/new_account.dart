@@ -167,7 +167,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                     onChanged: (v) => setState(() => ledger = v ?? false),
                   ),
                 Gap(16),
-                if (restore && !ledger)
+                if (restore)
                   Row(
                     children: [
                       Expanded(
