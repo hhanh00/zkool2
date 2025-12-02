@@ -23,6 +23,7 @@ pub mod warp;
 pub mod budget;
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub mod ledger;
+pub mod recover;
 
 pub type Hash32 = [u8; 32];
 pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;
