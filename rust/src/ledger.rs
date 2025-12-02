@@ -17,6 +17,7 @@ pub mod error;
 pub mod fvk;
 pub mod hashers;
 pub mod legacy;
+pub mod recover;
 
 pub type LedgerError = error::Error;
 pub type LedgerResult<T> = std::result::Result<T, LedgerError>;
