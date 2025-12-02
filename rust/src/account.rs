@@ -106,7 +106,7 @@ pub async fn new_account(
         if pools & 2 != 0 {
             init_account_sapling(network, &mut db_tx, account, birth).await?;
             if has_seed {
-                let sxsk = crate::ledger::recover::recover_ledger_seed(&key, na.aindex).await?;
+                let sxsk = crate::recover::recover_ledger_seed(&key, na.aindex).await?;
                 store_account_sapling_sk(&mut db_tx, account, &sxsk).await?;
                 let sxvk = sxsk.to_diversifiable_full_viewing_key();
                 let (di, _) = sxvk.default_address();
