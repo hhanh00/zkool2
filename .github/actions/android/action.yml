@@ -42,11 +42,11 @@ runs:
         echo "outdir=out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
-    # - name: Upload to Google Play
-    #   if: startsWith(github.ref_name, 'zkool-v')
-    #   uses: r0adkll/upload-google-play@v1
-    #   with:
-    #     packageName: cc.methyl.zkool
-    #     releaseFiles: ./build/app/outputs/bundle/release/app-release.aab
-    #     track: internal
-    #     serviceAccountJson: misc/gcp.json
+    - name: Upload to Google Play
+      if: startsWith(github.ref_name, 'zkool-v')
+      uses: r0adkll/upload-google-play@v1
+      with:
+        packageName: cc.methyl.zkool
+        releaseFiles: ./build/app/outputs/bundle/release/app-release.aab
+        track: internal
+        serviceAccountJson: misc/gcp.json
