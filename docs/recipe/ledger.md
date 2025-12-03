@@ -2,6 +2,20 @@
 title: Ledger
 ---
 
+# Disclaimer
+
+Until further notice, the Zcash Shielded App on the Ledger Store is broken because of the Network Upgrade NU6.1
+
+::: warning
+**DO NOT USE SHIELDED FUNDS! THE LEDGER CANNOT SIGN SHIELDED
+TRANSACTIONS.**
+:::
+
+If you have locked funds, you cannot use your seed phrase in another wallet
+because of their custom address derivation algorithm. However, starting from
+version 6.8, Zkool restores a Ledger seed phrase *when you toggle the H/W
+Ledger switch*.
+
 ## Requirements
 
 Zkool is compatible with the Ledger NanoS+, NanoX, Stax, and later.

@@ -106,6 +106,17 @@ for Zcash. The first account has index 0. The second has
 index 1 and so on so forth. If you are restoring the first
 account, leave the field blank (or enter 0).
 
+::: important
+If you are importing a key from Zashi, Zingo, Zcashd
+or any wallet that follows the ZIP-316, you must
+check the option "Use Internal Change".
+:::
+
+ZIP-316 mandates that the change goes to an address
+different from the regular receiving address. It keeps
+the history of the main address clear of change outputs
+but can make synchronization take twice as long.
+
 ### Birth Height
 The Birth Height is the block height when the account
 was created.
