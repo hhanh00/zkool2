@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.8.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.0...zkool-v6.8.1) (2025-12-20)
+
+
+### Bug Fixes
+
+* update dependencies ([#702](https://github.com/hhanh00/zkool2/issues/702)) ([8e0788b](https://github.com/hhanh00/zkool2/commit/8e0788bacf8bf8d80575d48b3ee594f28bdec4f6))
+
 ## [6.8.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.7.0...zkool-v6.8.0) (2025-12-03)
 
 
