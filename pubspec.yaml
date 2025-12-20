@@ -24,6 +24,7 @@ dependencies:
   go_router: ^14.8.1
   flutter_riverpod: ^3.0.3
   riverpod_annotation: any
+  rive: ^0.13.20
   hooks_riverpod: ^3.0.3
   gap: ^3.0.1
   flutter_form_builder: ^10.0.1
@@ -31,7 +32,7 @@ dependencies:
   freezed_annotation: any
 
   path_provider: ^2.1.5
-  file_picker: ^10.1.2
+  file_picker: ^10.3.8
 
   collection: ^1.19.1
   image_picker: ^1.1.2
