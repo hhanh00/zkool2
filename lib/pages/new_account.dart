@@ -180,7 +180,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                             decoration: const InputDecoration(
                               labelText: "Key (Seed Phrase, Private Key, or Viewing Key)",
                             ),
-                            validator: (s) => validKey(s, restore: restore, c: c),
+                            validator: (s) => validKey(s, restore: restore && !ledger, c: c),
                             initialValue: key,
                             onChanged: (v) => setState(() => key = v!),
                           ),
