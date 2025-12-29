@@ -403,15 +403,15 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
 
   @override
   Widget build(BuildContext context) {
-    final settingsAR = ref.watch(appSettingsProvider);
-    switch (settingsAR) {
-      case AsyncLoading():
-        return showLoading("QR Code Settings");
-      case AsyncError(:final error):
-        return showError(error);
-      default:
+    final AppSettings settings;
+    try {
+      final settingsAV = ref.watch(appSettingsProvider);
+      ensureAV(context, settingsAV);
+      settings = settingsAV.requireValue;
+    } on Widget catch (w) {
+      return w;
     }
-    final settings = settingsAR.value!.qrSettings;
+    final qrSettings = settings.qrSettings;
     final t = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text("Settings")),
@@ -431,14 +431,14 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
                       children: [
                         Text("QR Codes", style: t.titleMedium),
                         Gap(16),
-                        FormBuilderSwitch(name: "enabled", initialValue: settings.enabled, title: Text("Enabled")),
+                        FormBuilderSwitch(name: "enabled", initialValue: qrSettings.enabled, title: Text("Enabled")),
                         Gap(8),
                         FormBuilderSlider(
                           name: "size",
                           decoration: InputDecoration(
                             label: Text("QR Code Size"),
                           ),
-                          initialValue: settings.size,
+                          initialValue: qrSettings.size,
                           min: 10,
                           max: 40,
                           divisions: 30,
@@ -452,7 +452,7 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
                               "higher ECL is more robust but takes more space",
                             ),
                           ),
-                          initialValue: settings.ecLevel.toDouble(),
+                          initialValue: qrSettings.ecLevel.toDouble(),
                           min: 0,
                           max: 3,
                           divisions: 3,
@@ -463,7 +463,7 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
                           decoration: InputDecoration(
                             label: Text("Duration between QR codes (ms)"),
                           ),
-                          initialValue: settings.delay.toString(),
+                          initialValue: qrSettings.delay.toString(),
                           validator: FormBuilderValidators.integer(),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
@@ -487,7 +487,7 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
                           decoration: InputDecoration(
                             label: Text("Repair Packets"),
                           ),
-                          initialValue: settings.repair.toString(),
+                          initialValue: qrSettings.repair.toString(),
                           validator: FormBuilderValidators.integer(),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
