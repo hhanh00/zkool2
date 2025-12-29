@@ -109,20 +109,15 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
 
     final c = ref.read(coinContextProvider);
-    final accounts = ref.watch(getAccountsProvider);
     final selectedFolder = ref.watch(selectedFolderProvider);
 
-    final as = accounts
-        .whenData((accounts) => accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList());
-
     final List<Account> accountList;
-    switch (as) {
-      case AsyncLoading():
-        return showLoading("Account List");
-      case AsyncError(:final error):
-        return showError(error);
-      case AsyncData(:final value):
-        accountList = value;
+    try {
+      final accountsAV = ref.watch(getAccountsProvider);
+      ensureAV(context, accountsAV);
+      accountList = accountsAV.requireValue.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList();
+    } on Widget catch (w) {
+      return w;
     }
 
     final currentHeight = ref.watch(currentHeightProvider);

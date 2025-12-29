@@ -50,15 +50,14 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
   @override
   Widget build(BuildContext context) {
-    final accountAV = ref.watch(getCurrentAccountProvider);
-    switch (accountAV) {
-      case AsyncLoading():
-        return blank(context);
-      case AsyncError(:final error):
-        return showError(error);
-      default:
+    final AccountData? account;
+    try {
+      final accountAV = ref.watch(getCurrentAccountProvider);
+      ensureAV(context, accountAV);
+      account = accountAV.value;
+    } on Widget catch (w) {
+      return w;
     }
-    final account = accountAV.value;
 
     final t = Theme.of(context);
     final tt = t.textTheme;
@@ -80,7 +79,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           Showcase(
             key: sync1ID,
             description: "Synchronize only this account",
-            child: IconButton(tooltip: "Sync this account", onPressed: () => onSync(account), icon: Icon(Icons.sync)),
+            child: IconButton(tooltip: "Sync this account", onPressed: () => onSync(account!), icon: Icon(Icons.sync)),
           ),
           Showcase(
             key: receiveID,
