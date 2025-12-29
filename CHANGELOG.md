@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.8.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.1...zkool-v6.8.2) (2025-12-29)
+
+
+### Bug Fixes
+
+* new account from ledger ([#704](https://github.com/hhanh00/zkool2/issues/704)) ([4529d7f](https://github.com/hhanh00/zkool2/commit/4529d7f8699e656f93d7378e5dca69e7a808e37b))
+* remove Ledger NU6.1 warning since the app was updated ([#707](https://github.com/hhanh00/zkool2/issues/707)) ([f78135b](https://github.com/hhanh00/zkool2/commit/f78135bd7915236678a6a0c088723b2de468cd72))
+* spending sapling internal notes ([#706](https://github.com/hhanh00/zkool2/issues/706)) ([30f7eb6](https://github.com/hhanh00/zkool2/commit/30f7eb63e8856eedd011fe0552ad1cdc0cbe42de))
+
 ## [6.8.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.0...zkool-v6.8.1) (2025-12-20)
 
 
