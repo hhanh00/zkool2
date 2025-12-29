@@ -6,7 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_windows
   flutter_inappwebview_windows
   local_auth_windows
-  rive_native
+  rive_common
   url_launcher_windows
 )
 

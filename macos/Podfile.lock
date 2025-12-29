@@ -19,7 +19,7 @@ PODS:
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - rive_native (0.0.1):
+  - rive_common (0.0.1):
     - FlutterMacOS
   - rlz (0.0.1):
     - FlutterMacOS
@@ -38,7 +38,7 @@ DEPENDENCIES:
   - mobile_scanner (from `Flutter/ephemeral/.symlinks/plugins/mobile_scanner/darwin`)
   - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
-  - rive_native (from `Flutter/ephemeral/.symlinks/plugins/rive_native/macos`)
+  - rive_common (from `Flutter/ephemeral/.symlinks/plugins/rive_common/macos`)
   - rlz (from `Flutter/ephemeral/.symlinks/plugins/rlz/macos`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
   - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
@@ -64,8 +64,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
   path_provider_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
-  rive_native:
-    :path: Flutter/ephemeral/.symlinks/plugins/rive_native/macos
+  rive_common:
+    :path: Flutter/ephemeral/.symlinks/plugins/rive_common/macos
   rlz:
     :path: Flutter/ephemeral/.symlinks/plugins/rlz/macos
   shared_preferences_foundation:
@@ -83,7 +83,7 @@ SPEC CHECKSUMS:
   OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   package_info_plus: f0052d280d17aa382b932f399edf32507174e870
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
-  rive_native: ca6867a346588838584c59edfa4d02bc63ca0965
+  rive_common: ea79040f86acf053a2d5a75a2506175ee39796a5
   rlz: c93f8cd30b41e61cd7b1cff62b4aa859ffb6124e
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   url_launcher_macos: f87a979182d112f911de6820aefddaf56ee9fbfd

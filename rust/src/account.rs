@@ -1,20 +1,15 @@
 use std::str::FromStr as _;
 
 use crate::{
-    api::coin::Network,
-    api::ledger::{
+    api::{coin::Network, ledger::{
         get_hw_fvk, get_hw_next_diversifier_address, get_hw_sapling_address,
         get_hw_transparent_address,
-    },
-    bip38,
-    db::{
+    }}, bip38, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
         store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
-    },
-    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    tiu,
+    }, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, pay::plan::sapling_dfvk_to_fvk, tiu
 };
 use crate::{
     api::{
@@ -449,12 +444,12 @@ pub async fn get_sapling_note(
     connection: &mut SqliteConnection,
     id: u32,
     height: u32,
-    fvk: &sapling_crypto::keys::FullViewingKey,
+    dfvk: &DiversifiableFullViewingKey,
     edge: &AuthPath,
     empty_roots: &AuthPath,
-) -> Result<(sapling_crypto::Note, sapling_crypto::MerklePath)> {
+) -> Result<(sapling_crypto::Note, u32, sapling_crypto::MerklePath)> {
     let r = sqlx::query(
-        "SELECT position, diversifier, value, rcm, witness FROM notes
+        "SELECT position, diversifier, value, rcm, witness, scope FROM notes
         JOIN witnesses w ON notes.id_note = w.note
         WHERE id_note = ? AND w.height = ?",
     )
@@ -466,8 +461,10 @@ pub async fn get_sapling_note(
         let value: u64 = row.get::<i64, _>(2) as u64;
         let rcm: Vec<u8> = row.get(3);
         let witness: Vec<u8> = row.get(4);
+        let scope: u32 = row.get(5);
 
         let diversifier = sapling_crypto::Diversifier(diversifier.try_into().unwrap());
+        let fvk = sapling_dfvk_to_fvk(scope, dfvk);
         let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
 
         let value = sapling_crypto::value::NoteValue::from_raw(value);
@@ -489,7 +486,7 @@ pub async fn get_sapling_note(
         let merkle_path =
             sapling_crypto::MerklePath::from_parts(mp, (witness.position as u64).into()).unwrap();
 
-        (note, merkle_path)
+        (note, scope, merkle_path)
     })
     .fetch_one(connection)
     .await?;
