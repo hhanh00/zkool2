@@ -19,18 +19,16 @@ use pczt::{
 };
 use rand_core::{OsRng, RngCore};
 use ripemd::Ripemd160;
-use sapling_crypto::PaymentAddress;
+use sapling_crypto::{keys::FullViewingKey, zip32::DiversifiableFullViewingKey, PaymentAddress};
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::{debug, event, info, span, Level};
 use zcash_address::ZcashAddress;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
-use zcash_primitives::{
-    transaction::{
-        builder::{BuildConfig, Builder},
-        fees::zip317::FeeRule,
-    },
+use zcash_primitives::transaction::{
+    builder::{BuildConfig, Builder},
+    fees::zip317::FeeRule,
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
@@ -39,7 +37,9 @@ use zcash_protocol::{
     value::Zatoshis,
 };
 use zcash_transparent::{
-    address::TransparentAddress, bundle::{OutPoint, TxOut}, pczt::Bip32Derivation
+    address::TransparentAddress,
+    bundle::{OutPoint, TxOut},
+    pczt::Bip32Derivation,
 };
 use zip321::{Payment, TransactionRequest};
 
@@ -50,8 +50,8 @@ use crate::{
         get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
         get_sapling_vk,
     },
-    api::pay::{DustChangePolicy, PcztPackage},
     api::coin::Network,
+    api::pay::{DustChangePolicy, PcztPackage},
     db::{get_account_dindex, get_account_hw, select_account_transparent},
     pay::{
         error::Error,
@@ -435,10 +435,10 @@ pub async fn plan_transaction(
     let ero = empty_roots(&OrchardHasher::default());
 
     let svk = get_sapling_vk(connection, account).await?;
-    let svk = svk.as_ref().map(|svk| svk.fvk());
     let ovk = get_orchard_vk(connection, account).await?;
 
     let mut tsk_dindex = vec![];
+    let mut s_scope = vec![];
 
     event!(Level::INFO, "Adding Inputs");
 
@@ -488,7 +488,8 @@ pub async fn plan_transaction(
                         let pkh: [u8; 20] =
                             Ripemd160::digest(Sha256::digest(pubkey.serialize())).into();
                         let addr = TransparentAddress::PublicKeyHash(pkh);
-                        let coin = TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
+                        let coin =
+                            TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder
@@ -497,7 +498,7 @@ pub async fn plan_transaction(
                         tsk_dindex.push((pubkey, scope, dindex, taddress));
                     }
                     1 => {
-                        let (note, merkle_path) = get_sapling_note(
+                        let (note, scope, merkle_path) = get_sapling_note(
                             connection,
                             *id,
                             h.height,
@@ -515,11 +516,10 @@ pub async fn plan_transaction(
                             "Adding sapling input {}",
                             hex::encode(note.cmu().to_bytes())
                         );
-                        builder.add_sapling_spend::<Infallible>(
-                            svk.unwrap().clone(),
-                            note,
-                            merkle_path,
-                        )?;
+                        let dfvk = svk.as_ref().unwrap();
+                        let fvk = sapling_dfvk_to_fvk(scope, dfvk);
+                        builder.add_sapling_spend::<Infallible>(fvk, note, merkle_path)?;
+                        s_scope.push(scope);
                     }
                     2 => {
                         let (note, merkle_path) = get_orchard_note(
@@ -608,7 +608,7 @@ pub async fn plan_transaction(
                     to_zec(value.into())
                 );
                 builder.add_sapling_output::<Infallible>(
-                    svk.as_ref().map(|svk| svk.ovk),
+                    svk.as_ref().map(|svk| svk.to_ovk(Scope::External)),
                     to,
                     value,
                     memo,
@@ -664,18 +664,26 @@ pub async fn plan_transaction(
 
     let updater = updater
         .update_sapling_with(|mut u| {
-            let mut i = 0;
+            for (c_input, scope) in s_scope.iter().enumerate() {
+                let bundle_index = sapling_meta.spend_index(c_input).unwrap();
+                u.update_spend_with(bundle_index, |mut u| {
+                    u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
+                    Ok(())
+                })?;
+            }
+
+            let mut c_output = 0;
             for o in outputs.iter() {
                 let pool = o.pool_mask.to_best_pool().unwrap();
                 if pool != 1 {
                     continue;
                 }
-                let bundle_index = sapling_meta.output_index(i).unwrap();
+                let bundle_index = sapling_meta.output_index(c_output).unwrap();
                 u.update_output_with(bundle_index, |mut u| {
                     u.set_user_address(o.recipient.address.clone());
                     Ok(())
                 })?;
-                i += 1;
+                c_output += 1;
             }
 
             Ok(())
@@ -725,6 +733,15 @@ pub async fn plan_transaction(
     Ok(pczt_package)
 }
 
+pub fn sapling_dfvk_to_fvk(scope: u32, dfvk: &DiversifiableFullViewingKey) -> FullViewingKey {
+    let fvk = if scope == 0 {
+        dfvk.fvk().clone()
+    } else {
+        dfvk.to_internal_fvk()
+    };
+    fvk
+}
+
 fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
     let text_memo = recipient
         .user_memo
@@ -768,12 +785,26 @@ pub async fn sign_transaction(
 
     let updater = Updater::new(pczt);
     let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
+    let internal_pgk = ssk
+        .clone()
+        .map(|ssk| ssk.derive_internal().expsk.proof_generation_key());
     let updater = updater
         .update_sapling_with(|mut u| {
             for bundle_index in sapling_indices.iter() {
+                let spend = &u.bundle().spends()[*bundle_index];
+                let scope =
+                    u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
                 u.update_spend_with(*bundle_index, |mut u| {
-                    u.set_proof_generation_key(pgk.clone().expect("proof_generation_key"))
+                    if scope == 0 {
+                        u.set_proof_generation_key(pgk.clone().expect("proof_generation_key"))
+                            .unwrap();
+                    } else {
+                        u.set_proof_generation_key(
+                            internal_pgk.clone().expect("internal_proof_generation_key"),
+                        )
                         .unwrap();
+                    }
+
                     Ok(())
                 })
                 .unwrap();
@@ -786,6 +817,7 @@ pub async fn sign_transaction(
 
     let mut signer = Signer::new(pczt.clone()).unwrap();
     let tbundle = pczt.transparent();
+    let sbundle = pczt.sapling();
     for index in 0..n_spends[0] {
         debug!("signing transparent {index}");
         let inp = &tbundle.inputs()[index];
@@ -820,6 +852,15 @@ pub async fn sign_transaction(
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {
         debug!("signing sapling {index}");
+        let spend = &sbundle.spends()[*bundle_index];
+        let scope = u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
+        let ssk = ssk.as_ref().map(|ssk| {
+            if scope == 0 {
+                ssk.clone()
+            } else {
+                ssk.derive_internal()
+            }
+        });
         let Some(sk) = ssk.as_ref().map(|sk| &sk.expsk.ask) else {
             return Err(Error::NoSigningKey.into());
         };
