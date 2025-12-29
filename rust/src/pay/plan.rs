@@ -43,7 +43,6 @@ use zcash_transparent::{
 };
 use zip321::{Payment, TransactionRequest};
 
-use super::pool::ALL_SHIELDED_POOLS;
 use crate::{
     account::{
         derive_transparent_sk, generate_next_change_address, get_account_full_address,
@@ -1065,16 +1064,8 @@ pub async fn get_effective_src_pools(
     Ok(src_pool_mask)
 }
 
-pub fn get_change_pool(src_pool_mask: PoolMask, dest_pool_mask: PoolMask) -> u8 {
-    let dest_pool_mask = dest_pool_mask.intersect(&PoolMask(ALL_SHIELDED_POOLS));
-    // Determine which pool to use for the change
-    // If the source pools and the destinations pools intersect, pick
-    // the best pool from the intersection
-    let common_pools = src_pool_mask.intersect(&dest_pool_mask);
-    if common_pools != PoolMask::empty() {
-        return common_pools.to_best_pool().unwrap();
-    }
-    // Otherwise pick the best pool from the source pools
+pub fn get_change_pool(src_pool_mask: PoolMask, _dest_pool_mask: PoolMask) -> u8 {
+    // pick the best pool from the source pools
     // because it can minimize the fees and reduce the amount going
     // through the turnstile
     src_pool_mask.to_best_pool().unwrap()
