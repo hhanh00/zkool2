@@ -49,31 +49,27 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     if (pinlock.value == true) return PinLock();
 
     final tx = account!.transactions[idx!];
-    final txDetailsAV = ref.watch(getTxDetailsProvider(tx.id));
+    final TxAccount txDetails;
+    try {
+      final txDetailsAV = ref.watch(getTxDetailsProvider(tx.id));
+      ensureAV(context, txDetailsAV);
+      txDetails = txDetailsAV.requireValue;
+    } on Widget catch (w) {
+      return w;
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Transaction"),
-        actions: [
-          if (idx != null) IconButton(onPressed: idx! > 0 ? onPrev : null, icon: Icon(Icons.chevron_left)),
-          if (idx != null) IconButton(onPressed: idx! < account!.transactions.length - 1 ? onNext : null, icon: Icon(Icons.chevron_right)),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Builder(builder: (context) {
-          switch (txDetailsAV) {
-            case AsyncLoading():
-              return showLoading("Tx Details");
-            case AsyncError(:final error):
-              return showError(error);
-            case AsyncData(:final value):
-              return Column(
-                children: show(value),
-              );
-          }
-        }),
-      ),
-    );
+        appBar: AppBar(
+          title: Text("Transaction"),
+          actions: [
+            if (idx != null) IconButton(onPressed: idx! > 0 ? onPrev : null, icon: Icon(Icons.chevron_left)),
+            if (idx != null) IconButton(onPressed: idx! < account!.transactions.length - 1 ? onNext : null, icon: Icon(Icons.chevron_right)),
+          ],
+        ),
+        body: SingleChildScrollView(
+            child: Column(
+          children: show(txDetails),
+        )));
   }
 
   Future<void> onPrev() async {
