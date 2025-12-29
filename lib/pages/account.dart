@@ -31,12 +31,13 @@ class AccountViewPage extends ConsumerStatefulWidget {
   ConsumerState<AccountViewPage> createState() => AccountViewPageState();
 }
 
-class AccountViewPageState extends ConsumerState<AccountViewPage> {
+class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTickerProviderStateMixin {
   final logID = GlobalKey(debugLabel: "logID");
   final sync1ID = GlobalKey(debugLabel: "sync1ID");
   final receiveID = GlobalKey(debugLabel: "receiveID");
   final sendID = GlobalKey(debugLabel: "sendID");
   final balID = GlobalKey(debugLabel: "balID");
+  late final tabController = TabController(length: 3, vsync: this);
 
   final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
@@ -72,106 +73,105 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> {
     final mempool = ref.watch(mempoolProvider);
     final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(account.account.name),
-          actions: [
-            Showcase(
-              key: sync1ID,
-              description: "Synchronize only this account",
-              child: IconButton(tooltip: "Sync this account", onPressed: () => onSync(account), icon: Icon(Icons.sync)),
-            ),
-            Showcase(
-              key: receiveID,
-              description: "Show the account receiving addresses",
-              child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),
-            ),
-            Showcase(
-              key: sendID,
-              description: "Send funds to one or many addresses",
-              child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (String result) {
-                switch (result) {
-                  case "update_fx":
-                    onUpdateAllTxPrices();
-                  case "charts":
-                    GoRouter.of(context).push("/chart");
-                  default:
-                    onExport(int.parse(result));
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: "update_fx",
-                  child: Text("Fetch Tx Prices"),
-                ),
-                PopupMenuItem<String>(
-                  value: tabIndex(context).toString(),
-                  child: Text("Export ${tabNames[tabIndex(context)]}"),
-                ),
-                if (!Platform.isLinux)
-                  const PopupMenuItem<String>(
-                    value: "charts",
-                    child: Text("Charts"),
-                  ),
-              ],
-            ),
-          ],
-          bottom: TabBar(
-            tabs: tabNames.map((n) => Tab(text: n)).toList(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(account.account.name),
+        actions: [
+          Showcase(
+            key: sync1ID,
+            description: "Synchronize only this account",
+            child: IconButton(tooltip: "Sync this account", onPressed: () => onSync(account), icon: Icon(Icons.sync)),
           ),
+          Showcase(
+            key: receiveID,
+            description: "Show the account receiving addresses",
+            child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),
+          ),
+          Showcase(
+            key: sendID,
+            description: "Send funds to one or many addresses",
+            child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (String result) {
+              switch (result) {
+                case "update_fx":
+                  onUpdateAllTxPrices();
+                case "charts":
+                  GoRouter.of(context).push("/chart");
+                default:
+                  onExport(int.parse(result));
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: "update_fx",
+                child: Text("Fetch Tx Prices"),
+              ),
+              PopupMenuItem<String>(
+                value: tabIndex(context).toString(),
+                child: Text("Export ${tabNames[tabIndex(context)]}"),
+              ),
+              if (!Platform.isLinux)
+                const PopupMenuItem<String>(
+                  value: "charts",
+                  child: Text("Charts"),
+                ),
+            ],
+          ),
+        ],
+        bottom: TabBar(
+          controller: tabController,
+          tabs: tabNames.map((n) => Tab(text: n)).toList(),
         ),
-        body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TabBarView(
-              children: [
-                CustomScrollView(
-                  slivers: [
-                    PinnedHeaderSliver(
-                      child: Container(
-                        color: Theme.of(context).colorScheme.surface,
-                        child: Column(
-                          children: [
-                            Text("Height"),
-                            Gap(8),
-                            HeroProgressWidget(account.account),
-                            Gap(16),
-                            Text("Balance"),
-                            Gap(8),
-                            BalanceWidget(b, showcase: true),
-                            Gap(8),
-                            unconfirmedAmount != null
-                                ? zatToText(
-                                    BigInt.from(unconfirmedAmount),
-                                    prefix: "Unconfirmed: ",
-                                    colored: true,
-                                    selectable: true,
-                                    style: tt.bodyLarge,
-                                  )
-                                : SizedBox.shrink(),
-                            Gap(8),
-                            Showcase(
-                              key: balID,
-                              description: "Balance across all pools",
-                              child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: tt.titleLarge!),
-                            ),
-                            Gap(8),
-                          ],
-                        ),
+      ),
+      body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TabBarView(
+            controller: tabController,
+            children: [
+              CustomScrollView(
+                slivers: [
+                  PinnedHeaderSliver(
+                    child: Container(
+                      color: Theme.of(context).colorScheme.surface,
+                      child: Column(
+                        children: [
+                          Text("Height"),
+                          Gap(8),
+                          HeroProgressWidget(account.account),
+                          Gap(16),
+                          Text("Balance"),
+                          Gap(8),
+                          BalanceWidget(b, showcase: true),
+                          Gap(8),
+                          unconfirmedAmount != null
+                              ? zatToText(
+                                  BigInt.from(unconfirmedAmount),
+                                  prefix: "Unconfirmed: ",
+                                  colored: true,
+                                  selectable: true,
+                                  style: tt.bodyLarge,
+                                )
+                              : SizedBox.shrink(),
+                          Gap(8),
+                          Showcase(
+                            key: balID,
+                            description: "Balance across all pools",
+                            child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: tt.titleLarge!),
+                          ),
+                          Gap(8),
+                        ],
                       ),
                     ),
-                    ...showTxHistory(account.transactions),
-                  ],
-                ),
-                showMemos(context, account.memos),
-                showNotes(ref, account.notes),
-              ],
-            )),
-      ),
+                  ),
+                  ...showTxHistory(account.transactions),
+                ],
+              ),
+              showMemos(context, account.memos),
+              showNotes(ref, account.notes),
+            ],
+          )),
     );
   }
 
