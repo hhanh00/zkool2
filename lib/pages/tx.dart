@@ -142,10 +142,6 @@ class TxPageState extends ConsumerState<TxPage> {
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
-          final confirmed = await confirmDialog(context, title: "LEDGER SAPLING",
-            message: """Ledger Shielded DOES NOT SUPPORT the current network upgrade yet.\n
-            Funds sent to the sapling address cannot be spent until it is resolved""");
-          if (!confirmed) return;
           final comp = Completer();
           signLedgerTransaction(package: widget.pczt, c: c).listen((e) {
             switch (e) {
