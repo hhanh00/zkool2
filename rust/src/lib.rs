@@ -24,6 +24,8 @@ pub mod budget;
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub mod ledger;
 pub mod recover;
+#[cfg(feature = "graphql")]
+pub mod graphql;
 
 pub type Hash32 = [u8; 32];
 pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;

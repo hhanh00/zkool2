@@ -6,6 +6,11 @@ version = "0.1.0"
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
 
+[[bin]]
+name = "zkool_graphql"
+path = "src/graphql-cli.rs"
+required-features = ["graphql"]
+
 [dependencies]
 flutter_rust_bridge = "=2.11.1"
 
@@ -20,68 +25,68 @@ thiserror = "2.0"
 
 hmac = "0.12"
 
+csv-async = "1.3.1"
 futures = "0.3"
-sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
-tokio = {version = "1", features = ["full"]}
-tokio-util = "0.7"
-tokio-stream = "0.1"
-tokio-rustls = "0.26"
 serde = "1.0"
 serde_json = "1.0"
 serde_with = {version = "3.14.1", features = ["hex"]}
-csv-async = "1.3.1"
+sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
+tokio = {version = "1", features = ["full"]}
+tokio-rustls = "0.26"
+tokio-stream = "0.1"
+tokio-util = "0.7"
 webpki-roots = "1.0.2"
 
 arti-client = {version = "0.31", features = ["tokio", "native-tls", "onion-service-client"]}
-tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
+httparse = "1.10.1"
 hyper-util = {version = "0.1", features = ["tokio"]}
-tower = "0.5"
 rayon = "1.10"
 reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
-httparse = "1.10.1"
+tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
+tower = "0.5"
 
 qrcode = "0.14.1"
 raptorq = "2.0.0"
 
+orchard = {version = "0.11", features = ["unstable-frost"]}
+pczt = {version = "0.5", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"]}
 zcash_address = "0.10"
 zcash_encoding = "0.3"
 zcash_keys = {version = "0.12", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.4"
-zcash_script = "0.4"
 zcash_primitives = {version = "0.26", features = ["transparent-inputs"]}
 zcash_proofs = {version = "0.26", features = ["bundled-prover"]}
 zcash_protocol = {version = "0.7", features = ["local-consensus"]}
+zcash_script = "0.4"
 zcash_transparent = {version = "0.6", features = ["transparent-inputs"]}
-pczt = { version = "0.5", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"] }
-orchard = {version = "0.11", features = ["unstable-frost"]}
 zip321 = "0.6"
 
-reddsa = {git="https://github.com/ZcashFoundation/reddsa.git", rev="975f9ca835c4b9196c81608e55192b0f711e951d", features=["frost"]}
 frost-rerandomized = "2.1.0"
-redjubjub = "0.8"
 incrementalmerkletree = "0.8"
+reddsa = {git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d", features = ["frost"]}
+redjubjub = "0.8"
 
 bincode = {version = "2.0", features = ["serde"]}
 byteorder = "1.5"
 #postcard = "1.1"
+bech32 = "0.11"
 bip32 = {version = "0.6.0-pre.1", default-features = false}
 blake2b_simd = "1.0"
 bs58 = "0.5"
-bech32 = "0.11"
 chacha20 = "0.9"
 fpdec = "0.11"
+group = "0.13"
 halo2_gadgets = "0.3"
 halo2_proofs = "0.3"
-group = "0.13"
 jubjub = "0.10"
 prost = "0.13.5"
 ripemd = "0.1"
 rustls = {version = "0.23", default-features = false, features = ["ring"]}
 sapling-crypto = "0.5"
-zip32 = "0.2"
 secp256k1 = "0.29"
 sha2 = "0.10"
 tonic = {version = "0.13.0", features = ["tls-webpki-roots"]}
+zip32 = "0.2"
 
 itertools = "0.14"
 tracing = "0.1"
@@ -90,9 +95,13 @@ tracing-subscriber = {version = "0.3", features = ["env-filter", "fmt", "json"]}
 age = "0.11.1"
 zstd = "0.13.3"
 
-libsqlite3-sys = { version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"] }
-ledger-transport = "0.10.0"
 cfg-if = "1.0.3"
+ledger-transport = "0.10.0"
+libsqlite3-sys = {version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"]}
+
+juniper = {version = "0.17", optional = true}
+juniper_rocket = {version = "0.10", optional = true}
+rocket = {version = "0.5", optional = true}
 
 [target.'cfg(target_os = "macos")'.dependencies]
 hidapi = "2.6.3"
@@ -115,23 +124,24 @@ rand = "0.6"
 tonic-build = "0.13"
 
 [features]
+graphql = ["juniper", "juniper_rocket", "rocket"]
 zemu = []
 
 [patch.crates-io]
-orchard = { git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66" }
+orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66"}
 
-zcash_note_encryption = { git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29" }
+zcash_note_encryption = {git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29"}
 
-sapling-crypto = { git = "https://github.com/zcash/sapling-crypto.git", rev = "0475817b60fced17ec59b0c9412d2b2d29ef529f" }
-zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zcash_proofs = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zcash_transparent = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
-zip321 = { git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1" }
+pczt = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+sapling-crypto = {git = "https://github.com/zcash/sapling-crypto.git", rev = "0475817b60fced17ec59b0c9412d2b2d29ef529f"}
+zcash_address = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zcash_encoding = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zcash_keys = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zcash_primitives = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zcash_proofs = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zcash_protocol = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zcash_transparent = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
+zip321 = {git = "https://github.com/hhanh00/librustzcash.git", rev = "27c170eee23d51cc2d5ee1bf161a12042fd387a1"}
 
 # sapling-crypto = { path = "../../sapling-crypto" }
 # zcash_address = { path = "../../librustzcash/components/zcash_address" }
