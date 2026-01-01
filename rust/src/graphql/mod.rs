@@ -1,16 +1,17 @@
-use sqlx::SqlitePool;
+use crate::api::coin::Coin;
 
 pub mod data;
 pub mod query;
+pub mod mutation;
 
 pub struct Context {
-    pub db: SqlitePool,
+    pub coin: Coin,
 }
 
 impl Context {
-    pub fn new(pool: SqlitePool) -> Self {
+    pub fn new(coin: Coin) -> Self {
         Self {
-            db: pool,
+            coin,
         }
     }
 }

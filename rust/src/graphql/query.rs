@@ -16,7 +16,7 @@ impl Query {
     }
 
     async fn accounts(context: &Context) -> FieldResult<Vec<Account>> {
-        let mut conn = context.db.acquire().await?;
+        let mut conn = context.coin.get_connection().await?;
         let accounts = query(
             "SELECT id_account, name, seed, passphrase, aindex, dindex, birth
             FROM accounts ORDER BY id_account",
@@ -28,7 +28,7 @@ impl Query {
     }
 
     async fn accounts_by_name(name: String, context: &Context) -> FieldResult<Vec<Account>> {
-        let mut conn = context.db.acquire().await?;
+        let mut conn = context.coin.get_connection().await?;
         let accounts = query(
             "SELECT id_account, name, seed, passphrase, aindex, dindex, birth FROM accounts
             WHERE name = ?1",
@@ -44,7 +44,7 @@ impl Query {
         id_account: i32,
         context: &Context,
     ) -> FieldResult<Vec<Transaction>> {
-        let mut conn = context.db.acquire().await?;
+        let mut conn = context.coin.get_connection().await?;
         let transactions = query(
             "SELECT id_tx, txid, height, time, value, fee FROM transactions
         WHERE account = ?1 ORDER BY height DESC",
@@ -60,7 +60,7 @@ impl Query {
         id_transaction: i32,
         context: &Context,
     ) -> FieldResult<Vec<String>> {
-        let mut conn = context.db.acquire().await?;
+        let mut conn = context.coin.get_connection().await?;
         let memos = query(
             "SELECT memo_text FROM memos
             WHERE tx = ?1 AND memo_text IS NOT NULL ORDER BY id_memo",
@@ -76,7 +76,7 @@ impl Query {
         id_account: i32,
         context: &Context,
     ) -> FieldResult<Balance> {
-        let mut conn = context.db.acquire().await?;
+        let mut conn = context.coin.get_connection().await?;
         let height = get_sync_height(&mut conn, id_account as u32)
             .await?
             .unwrap_or_default();

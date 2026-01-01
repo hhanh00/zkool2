@@ -1,21 +1,14 @@
 use anyhow::Result;
-use juniper::{EmptyMutation, EmptySubscription, RootNode};
-use rlz::graphql::{query::Query, Context};
+use juniper::{EmptySubscription, RootNode};
+use rlz::api::coin::Coin;
+use rlz::graphql::{query::Query, mutation::Mutation, Context};
 use rocket::{Config, State, routes, response::content::RawHtml};
 
-type Schema = RootNode<Query, EmptyMutation<Context>, EmptySubscription<Context>>;
-
-use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::SqlitePool;
+type Schema = RootNode<Query, Mutation, EmptySubscription<Context>>;
 
 #[rocket::get("/graphiql")]
 fn graphiql() -> RawHtml<String> {
     juniper_rocket::graphiql_source("/graphql", None)
-}
-
-#[rocket::get("/playground")]
-fn playground() -> RawHtml<String> {
-    juniper_rocket::playground_source("/graphql", None)
 }
 
 #[rocket::get("/graphql?<request..>")]
@@ -40,22 +33,20 @@ async fn post_graphql(
 async fn main() -> Result<()> {
     let config = Config::figment();
     let db_path: String = config.extract_inner("custom.db_path")?;
-    let options = SqliteConnectOptions::new()
-        .filename(db_path)
-        .create_if_missing(true);
-    let pool = SqlitePool::connect_with(options).await?;
-    let context = Context::new(pool);
+    let coin = Coin::new();
+    let coin = coin.open_database(db_path, None).await?;
+    let context = Context::new(coin);
 
     rocket::build()
         .manage(context)
         .manage(Schema::new(
             Query {},
-            EmptyMutation::new(),
+            Mutation {},
             EmptySubscription::new(),
         ))
         .mount(
             "/",
-            routes![graphiql, playground, get_graphql, post_graphql],
+            routes![graphiql, get_graphql, post_graphql],
         )
         .launch()
         .await
