@@ -85,7 +85,12 @@ impl LwdServer for GRPCClient {
             }))
             .await?
             .into_inner();
-        Ok(rep.error_message)
+        let m = if rep.error_code == 0 {
+            rep.error_message.trim_matches('"').to_string()
+        } else {
+            rep.error_message
+        };
+        Ok(m)
     }
 
     type TransactionStream = ReceiverStream<(u32, Transaction, usize)>;
