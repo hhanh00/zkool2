@@ -1,8 +1,8 @@
 use anyhow::Result;
 use juniper::{EmptySubscription, RootNode};
 use rlz::api::coin::Coin;
-use rlz::graphql::{query::Query, mutation::Mutation, Context};
-use rocket::{Config, State, routes, response::content::RawHtml};
+use rlz::graphql::{mutation::Mutation, query::Query, Context};
+use rocket::{response::content::RawHtml, routes, Config, State};
 
 type Schema = RootNode<Query, Mutation, EmptySubscription<Context>>;
 
@@ -31,23 +31,20 @@ async fn post_graphql(
 
 #[rocket::main]
 async fn main() -> Result<()> {
+    rustls::crypto::ring::default_provider().install_default().unwrap();
     let config = Config::figment();
     let db_path: String = config.extract_inner("custom.db_path")?;
-    let coin = Coin::new();
-    let coin = coin.open_database(db_path, None).await?;
+    let lwd_url: String = config.extract_inner("custom.lwd_url")?;
+    let coin = Coin::new()
+        .open_database(db_path, None)
+        .await?
+        .set_lwd(0, lwd_url)?;
     let context = Context::new(coin);
 
     rocket::build()
         .manage(context)
-        .manage(Schema::new(
-            Query {},
-            Mutation {},
-            EmptySubscription::new(),
-        ))
-        .mount(
-            "/",
-            routes![graphiql, get_graphql, post_graphql],
-        )
+        .manage(Schema::new(Query {}, Mutation {}, EmptySubscription::new()))
+        .mount("/", routes![graphiql, get_graphql, post_graphql])
         .launch()
         .await
         .expect("server to launch");
