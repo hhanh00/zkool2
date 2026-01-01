@@ -26,6 +26,7 @@ pub struct UpdateAccount {
 )]
 impl Mutation {
     async fn create_account(new_account: NewAccount, context: &Context) -> FieldResult<i32> {
+        let height = crate::api::network::get_current_height(&context.coin).await?;
         let na = crate::api::account::NewAccount {
             name: new_account.name,
             restore: false,
@@ -34,7 +35,7 @@ impl Mutation {
             fingerprint: None,
             icon: None,
             aindex: new_account.aindex as u32,
-            birth: new_account.birth.map(|v| v as u32),
+            birth: new_account.birth.map(|v| v as u32).or(Some(height)),
             pools: new_account.pools.map(|v| v as u8),
             use_internal: new_account.use_internal,
             folder: String::new(),
