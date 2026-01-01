@@ -31,3 +31,11 @@ pub struct Balance {
     pub sapling: BigDecimal,
     pub orchard: BigDecimal,
 }
+
+#[derive(GraphQLObject)]
+pub struct Addresses {
+    pub ua: Option<String>,
+    pub transparent: Option<String>,
+    pub sapling: Option<String>,
+    pub orchard: Option<String>,
+}
