@@ -644,6 +644,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bigdecimal"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d6867f1565b3aad85681f1015055b087fcfd840d6aeee6eee7f2da317603695"
+dependencies = [
+ "autocfg 1.5.0",
+ "libm",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "binascii"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3461,6 +3474,8 @@ dependencies = [
  "arcstr",
  "async-trait",
  "auto_enums",
+ "bigdecimal",
+ "chrono",
  "compact_str",
  "derive_more",
  "fnv",
@@ -3468,7 +3483,9 @@ dependencies = [
  "indexmap 2.11.0",
  "itertools",
  "juniper_codegen",
+ "num-bigint",
  "ref-cast",
+ "ryu",
  "serde",
  "static_assertions",
 ]
@@ -5419,6 +5436,7 @@ dependencies = [
  "anyhow",
  "arti-client",
  "bech32 0.11.0",
+ "bigdecimal",
  "bincode",
  "bip32",
  "bip39",

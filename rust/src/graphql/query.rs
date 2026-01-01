@@ -1,5 +1,8 @@
-use crate::graphql::data::Account;
+use crate::graphql::data::{Account, Transaction};
 use crate::graphql::Context;
+use bigdecimal::num_bigint::BigInt;
+use bigdecimal::{BigDecimal, FromPrimitive};
+use chrono::DateTime;
 use juniper::{graphql_object, FieldResult};
 use sqlx::{query, sqlite::SqliteRow, Row};
 pub struct Query {}
@@ -15,7 +18,7 @@ impl Query {
         let mut conn = context.db.acquire().await?;
         let accounts = query(
             "SELECT id_account, name, seed, passphrase, aindex, dindex, birth
-            FROM accounts",
+            FROM accounts ORDER BY id_account",
         )
         .map(row_to_account)
         .fetch_all(&mut *conn)
@@ -34,6 +37,22 @@ impl Query {
         .fetch_all(&mut *conn)
         .await?;
         Ok(accounts)
+    }
+
+    pub async fn transactions_by_account(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<Vec<Transaction>> {
+        let mut conn = context.db.acquire().await?;
+        let transactions = query(
+            "SELECT id_tx, txid, height, time, value, fee FROM transactions
+        WHERE account = ?1 ORDER BY height DESC",
+        )
+        .bind(id_account)
+        .map(row_to_transaction)
+        .fetch_all(&mut *conn)
+        .await?;
+        Ok(transactions)
     }
 }
 
@@ -54,4 +73,33 @@ fn row_to_account(r: SqliteRow) -> Account {
         dindex,
         birth,
     }
+}
+
+fn row_to_transaction(r: SqliteRow) -> Transaction {
+    let id: i32 = r.get(0);
+    let mut txid: Vec<u8> = r.get(1);
+    let height: i32 = r.get(2);
+    let time: i32 = r.get(3);
+    let value: i64 = r.get(4);
+    let fee: i64 = r.get(5);
+    txid.reverse();
+    let txid = hex::encode(&txid);
+    let time = DateTime::from_timestamp_millis(time as i64 * 1000)
+        .unwrap()
+        .naive_local();
+    let value = zats_to_zec(value);
+    let fee = zats_to_zec(fee);
+    Transaction {
+        id,
+        txid,
+        height,
+        time,
+        value,
+        fee,
+    }
+}
+
+pub fn zats_to_zec(zats: i64) -> bigdecimal::BigDecimal {
+    let digits = BigInt::from_i64(zats).unwrap();
+    BigDecimal::from_bigint(digits, 8)
 }
