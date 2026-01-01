@@ -1,18 +1,18 @@
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Error, Result};
 use flutter_rust_bridge::frb;
 use futures::TryStreamExt as _;
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Connection as _, Row};
-use zcash_transparent::address::TransparentAddress;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use tokio::sync::mpsc::channel;
 use tokio::sync::{broadcast, Mutex};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec as _;
+use zcash_transparent::address::TransparentAddress;
 
-use crate::budget::merge_pending_txs;
 use crate::api::coin::{Coin, Network};
+use crate::budget::merge_pending_txs;
 
 use crate::db::{calculate_balance, store_block_header};
 use crate::io::SyncHeight;
@@ -26,6 +26,47 @@ use crate::{frb_generated::StreamSink, sync::shielded_sync};
 #[frb]
 pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
+    accounts: Vec<u32>,
+    current_height: u32,
+    actions_per_sync: u32,
+    transparent_limit: u32,
+    checkpoint_age: u32,
+    c: &Coin,
+) -> Result<()> {
+    synchronize_impl(
+        progress,
+        accounts,
+        current_height,
+        actions_per_sync,
+        transparent_limit,
+        checkpoint_age,
+        c,
+    )
+    .await
+}
+
+pub trait Sink<T>: Clone {
+    fn add(&self, value: T);
+    fn add_error(&self, e: Error);
+}
+
+impl Sink<SyncProgress> for StreamSink<SyncProgress> {
+    fn add(&self, value: SyncProgress) {
+        let _ = self.add(value);
+    }
+
+    fn add_error(&self, error: Error) {
+        let _ = self.add_error(error);
+    }
+}
+
+impl<T> Sink<T> for () {
+    fn add(&self, _value: T) {}
+    fn add_error(&self, _error: Error) {}
+}
+
+pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
+    progress: S,
     accounts: Vec<u32>,
     current_height: u32,
     actions_per_sync: u32,
@@ -53,12 +94,12 @@ pub async fn synchronize(
 
     let checkpoint_cutoff = current_height.saturating_sub(checkpoint_age);
     for account in accounts.iter() {
-        prune_old_checkpoints(&mut *connection, *account, checkpoint_cutoff).await?;
+        prune_old_checkpoints(&mut connection, *account, checkpoint_cutoff).await?;
     }
 
     let mut account_use_internal = HashMap::<u32, bool>::new();
     let res = async {
-        recover_from_partial_sync(&mut *connection, &accounts).await?;
+        recover_from_partial_sync(&mut connection, &accounts).await?;
 
         // Get account heights
         let mut account_heights = HashMap::new();
@@ -93,7 +134,7 @@ pub async fn synchronize(
 
         tokio::spawn(async move {
             while let Some(p) = rx_progress.recv().await {
-                let _ = progress.add(p);
+                progress.add(p);
             }
         });
 
@@ -138,7 +179,7 @@ pub async fn synchronize(
                 .collect::<Vec<_>>();
             transparent_sync(
                 &network,
-                &mut *connection,
+                &mut connection,
                 &mut client,
                 &account_ids,
                 start_height,
@@ -162,7 +203,7 @@ pub async fn synchronize(
             .await?;
 
             let heights_without_time =
-                get_heights_without_time(&mut *connection, start_height, end_height).await?;
+                get_heights_without_time(&mut connection, start_height, end_height).await?;
             for h in heights_without_time {
                 let block = client.block(&network, h).await?;
                 let time = block.time;
@@ -176,13 +217,14 @@ pub async fn synchronize(
                     hash: block.hash,
                     time: block.time,
                 };
-                store_block_header(&mut *connection, &block_header).await?;
+                store_block_header(&mut connection, &block_header).await?;
             }
 
             // Update our local map as well for the next iteration
             for (account, _) in &accounts_to_sync {
                 account_heights.insert(*account, end_height);
-                crate::memo::fetch_tx_details(&network, &mut *connection, &mut client, *account).await?;
+                crate::memo::fetch_tx_details(&network, &mut connection, &mut client, *account)
+                    .await?;
             }
 
             info!(
@@ -192,7 +234,7 @@ pub async fn synchronize(
         }
 
         for account in accounts.iter() {
-            merge_pending_txs(&mut *connection, *account, current_height).await?;
+            merge_pending_txs(&mut connection, *account, current_height).await?;
         }
 
         Ok::<_, anyhow::Error>(())
@@ -202,7 +244,7 @@ pub async fn synchronize(
         Ok(_) => {}
         Err(e) => {
             info!("Error during sync: {:?}", e);
-            let _ = progress2.add_error(e);
+            progress2.add_error(e);
         }
     }
 

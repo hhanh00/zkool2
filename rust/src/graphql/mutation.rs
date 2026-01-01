@@ -69,8 +69,24 @@ impl Mutation {
         Ok(true)
     }
 
-    // async fn synchronize(id_accounts: Vec<i32>, context: &Context) -> FieldResult<bool> {
-    //     crate::api::sync::synchronize(progress, accounts, current_height, actions_per_sync, transparent_limit, checkpoint_age, c)
-    //     Ok(true)
-    // }
+    async fn reset_account(id_account: i32, context: &Context) -> FieldResult<bool> {
+        crate::api::account::reset_sync(id_account as u32, &context.coin).await?;
+        Ok(true)
+    }
+
+    async fn synchronize(id_accounts: Vec<i32>, context: &Context) -> FieldResult<bool> {
+        let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
+        let current_height = crate::api::network::get_current_height(&context.coin).await?;
+        crate::api::sync::synchronize_impl(
+            (),
+            id_accounts,
+            current_height,
+            100_000,
+            40,
+            10_000,
+            &context.coin,
+        )
+        .await?;
+        Ok(true)
+    }
 }
