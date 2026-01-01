@@ -21,8 +21,8 @@ use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
 use crate::api::account::{Account, Memo, Tx};
-use crate::api::sync::PoolBalance;
 use crate::api::coin::Network;
+use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
 use crate::{api::account::TxNote, tiu};
 
@@ -1027,6 +1027,17 @@ pub async fn reorder_account(
 
     tx.commit().await?;
     Ok(())
+}
+
+pub async fn get_sync_height(conn: &mut SqliteConnection, account: u32) -> Result<Option<u32>> {
+    let (h,): (Option<u32>,) = sqlx::query_as(
+        "SELECT MIN(height) FROM sync_heights
+    WHERE account = ?1",
+    )
+    .bind(account)
+    .fetch_one(conn)
+    .await?;
+    Ok(h)
 }
 
 pub async fn calculate_balance(pool: &mut SqliteConnection, account: u32) -> Result<PoolBalance> {
