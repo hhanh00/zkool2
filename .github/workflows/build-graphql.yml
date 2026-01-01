@@ -1,0 +1,35 @@
+name: Build and Release GraphQL Server
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+    - main
+  push:
+    tags:
+      - zkool-v*
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install RUST
+        uses: dtolnay/rust-toolchain@stable
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build zkool_graphql
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libudev-dev
+          cd rust
+          cargo build --release --bin zkool_graphql --features=graphql
+      - name: Create Release
+        if: startsWith(github.ref_name, 'zkool-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./rust/target/release/zkool_graphql
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
