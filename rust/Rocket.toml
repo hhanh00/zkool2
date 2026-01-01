@@ -7,3 +7,4 @@ bytes = "64 kB"
 
 [default.custom]
 db_path = "zkool.db"
+lwd_url = "https://zec.rocks"

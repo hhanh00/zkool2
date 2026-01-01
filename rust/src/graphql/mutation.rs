@@ -14,6 +14,12 @@ pub struct NewAccount {
     pub use_internal: bool,
 }
 
+#[derive(GraphQLInputObject)]
+pub struct UpdateAccount {
+    pub name: Option<String>,
+    pub birth: Option<i32>,
+}
+
 #[graphql_object]
 #[graphql(
     context = Context,
@@ -38,4 +44,33 @@ impl Mutation {
         let id_account = crate::api::account::new_account(&na, &context.coin).await?;
         Ok(id_account as i32)
     }
+
+    async fn edit_account(
+        id_account: i32,
+        update_account: UpdateAccount,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        let ua = crate::api::account::AccountUpdate {
+            coin: 0,
+            id: id_account as u32,
+            name: update_account.name,
+            icon: None,
+            birth: update_account.birth.map(|v| v as u32),
+            folder: 0,
+            hidden: None,
+            enabled: None,
+        };
+        crate::api::account::update_account(&ua, &context.coin).await?;
+        Ok(true)
+    }
+
+    async fn delete_account(id_account: i32, context: &Context) -> FieldResult<bool> {
+        crate::api::account::delete_account(id_account as u32, &context.coin).await?;
+        Ok(true)
+    }
+
+    // async fn synchronize(id_accounts: Vec<i32>, context: &Context) -> FieldResult<bool> {
+    //     crate::api::sync::synchronize(progress, accounts, current_height, actions_per_sync, transparent_limit, checkpoint_age, c)
+    //     Ok(true)
+    // }
 }
