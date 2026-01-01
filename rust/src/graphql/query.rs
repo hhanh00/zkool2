@@ -89,6 +89,11 @@ impl Query {
         };
         Ok(balance)
     }
+
+    async fn current_height(context: &Context) -> FieldResult<i32> {
+        let height = crate::api::network::get_current_height(&context.coin).await?;
+        Ok(height as i32)
+    }
 }
 
 fn row_to_account(r: SqliteRow) -> Account {
