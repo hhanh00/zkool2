@@ -466,6 +466,7 @@ class TxNote {
   final int id;
   final int pool;
   final int height;
+  final int tx;
   final BigInt value;
   final bool locked;
 
@@ -473,6 +474,7 @@ class TxNote {
     required this.id,
     required this.pool,
     required this.height,
+    required this.tx,
     required this.value,
     required this.locked,
   });
@@ -485,6 +487,7 @@ class TxNote {
       id.hashCode ^
       pool.hashCode ^
       height.hashCode ^
+      tx.hashCode ^
       value.hashCode ^
       locked.hashCode;
 
@@ -496,6 +499,7 @@ class TxNote {
           id == other.id &&
           pool == other.pool &&
           height == other.height &&
+          tx == other.tx &&
           value == other.value &&
           locked == other.locked;
 }
