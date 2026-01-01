@@ -1,4 +1,9 @@
-use crate::graphql::Context;
+use crate::{
+    api::pay::DustChangePolicy,
+    graphql::{query::zec_to_zats, Context},
+    pay::plan::{extract_transaction, sign_transaction},
+};
+use bigdecimal::BigDecimal;
 use juniper::{graphql_object, FieldResult, GraphQLInputObject};
 
 pub struct Mutation {}
@@ -18,6 +23,20 @@ pub struct NewAccount {
 pub struct UpdateAccount {
     pub name: Option<String>,
     pub birth: Option<i32>,
+}
+
+#[derive(GraphQLInputObject)]
+pub struct Recipient {
+    pub address: String,
+    pub amount: BigDecimal,
+    pub memo: Option<String>,
+}
+
+#[derive(GraphQLInputObject)]
+pub struct Payment {
+    pub recipients: Vec<Recipient>,
+    pub src_pools: Option<i32>,
+    pub recipient_pays_fee: Option<bool>,
 }
 
 #[graphql_object]
@@ -89,5 +108,41 @@ impl Mutation {
         )
         .await?;
         Ok(true)
+    }
+
+    async fn pay(id_account: i32, payment: Payment, context: &Context) -> FieldResult<String> {
+        let height = crate::api::network::get_current_height(&context.coin).await?;
+        let mut recipients = vec![];
+        for r in payment.recipients {
+            recipients.push(crate::pay::Recipient {
+                address: r.address,
+                amount: zec_to_zats(r.amount)? as u64,
+                pools: None,
+                user_memo: r.memo,
+                memo_bytes: None,
+                price: None,
+            });
+        }
+        let network = context.coin.network();
+        let mut connection = context.coin.get_connection().await?;
+        let mut client = context.coin.client().await?;
+
+        let pczt = crate::pay::plan::plan_transaction(
+            &network,
+            &mut connection,
+            &mut client,
+            id_account as u32,
+            payment.src_pools.unwrap_or(7) as u8,
+            &recipients,
+            false,
+            payment.recipient_pays_fee.unwrap_or_default(),
+            DustChangePolicy::Discard,
+            None,
+        )
+        .await?;
+        let signed_pczt = sign_transaction(&mut connection, id_account as u32, &pczt).await?;
+        let tx_bytes = extract_transaction(&signed_pczt).await?;
+        let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
+        Ok(txid)
     }
 }

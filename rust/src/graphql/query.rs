@@ -94,9 +94,13 @@ impl Query {
     ) -> FieldResult<Addresses> {
         let mut conn = context.coin.get_connection().await?;
         let ua_pools = pools.unwrap_or(7) as u8;
-        let addresses =
-            crate::account::get_addresses(&context.coin.network(), &mut conn, id_account as u32, ua_pools)
-                .await?;
+        let addresses = crate::account::get_addresses(
+            &context.coin.network(),
+            &mut conn,
+            id_account as u32,
+            ua_pools,
+        )
+        .await?;
         let addresses = Addresses {
             ua: addresses.ua,
             transparent: addresses.taddr,
@@ -158,4 +162,13 @@ fn row_to_transaction(r: SqliteRow) -> Transaction {
 pub fn zats_to_zec(zats: i64) -> bigdecimal::BigDecimal {
     let digits = BigInt::from_i64(zats).unwrap();
     BigDecimal::from_bigint(digits, 8)
+}
+
+pub fn zec_to_zats(zec: bigdecimal::BigDecimal) -> FieldResult<i64> {
+    let (digit, _) = zec.with_scale(8).into_bigint_and_scale();
+    let digits = digit.to_u64_digits().1;
+    if digits.len() > 1 {
+        return Err("Invalid amount".into());
+    }
+    Ok(digits[0] as i64)
 }
