@@ -1,4 +1,5 @@
-use crate::graphql::data::{Account, Transaction};
+use crate::db::{calculate_balance, get_sync_height};
+use crate::graphql::data::{Account, Balance, Transaction};
 use crate::graphql::Context;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -69,6 +70,24 @@ impl Query {
         .fetch_all(&mut *conn)
         .await?;
         Ok(memos)
+    }
+
+    pub async fn balance_by_account(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<Balance> {
+        let mut conn = context.db.acquire().await?;
+        let height = get_sync_height(&mut conn, id_account as u32)
+            .await?
+            .unwrap_or_default();
+        let b = calculate_balance(&mut conn, id_account as u32).await?;
+        let balance = Balance {
+            height: height as i32,
+            transparent: zats_to_zec(b.0[0] as i64),
+            sapling: zats_to_zec(b.0[1] as i64),
+            orchard: zats_to_zec(b.0[2] as i64),
+        };
+        Ok(balance)
     }
 }
 
