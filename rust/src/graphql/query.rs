@@ -54,6 +54,22 @@ impl Query {
         .await?;
         Ok(transactions)
     }
+
+    pub async fn memos_by_transaction(
+        id_transaction: i32,
+        context: &Context,
+    ) -> FieldResult<Vec<String>> {
+        let mut conn = context.db.acquire().await?;
+        let memos = query(
+            "SELECT memo_text FROM memos
+            WHERE tx = ?1 AND memo_text IS NOT NULL ORDER BY id_memo",
+        )
+        .bind(id_transaction)
+        .map(|r: SqliteRow| r.get::<String, _>(0))
+        .fetch_all(&mut *conn)
+        .await?;
+        Ok(memos)
+    }
 }
 
 fn row_to_account(r: SqliteRow) -> Account {
