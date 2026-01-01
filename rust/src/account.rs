@@ -1,7 +1,7 @@
 use std::str::FromStr as _;
 
 use crate::{
-    api::{coin::Network, ledger::{
+    api::{account::Addresses, coin::Network, ledger::{
         get_hw_fvk, get_hw_next_diversifier_address, get_hw_sapling_address,
         get_hw_transparent_address,
     }}, bip38, db::{
@@ -805,6 +805,46 @@ async fn get_transparent_keys(
         None => (None, None),
     };
     Ok((xsk, xvk))
+}
+
+pub async fn get_addresses(network: &Network, connection: &mut SqliteConnection, account: u32, ua_pools: u8) -> Result<Addresses> {
+    let dindex = crate::db::get_account_dindex(connection, account).await?;
+
+    let tkeys = crate::db::select_account_transparent(connection, account, dindex).await?;
+    let skeys = crate::db::select_account_sapling(network, connection, account).await?;
+    let okeys = crate::db::select_account_orchard(connection, account).await?;
+
+    let taddr = tkeys
+        .xvk
+        .as_ref()
+        .map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap().1);
+
+    let dindex = dindex as u64;
+    let saddr = skeys.address;
+    let oaddr = okeys
+        .xvk
+        .as_ref()
+        .map(|xvk| xvk.address_at(dindex, orchard::keys::Scope::External));
+
+    let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None);
+
+    let ua = UnifiedAddress::from_receivers(
+        if ua_pools & 4 != 0 { oaddr } else { None },
+        if ua_pools & 2 != 0 { saddr } else { None },
+        if ua_pools & 1 != 0 { taddr } else { None },
+    );
+
+    // final fallback if we have a transparent address from a BIP 38 secret key
+    let taddr = taddr.map(|x| x.encode(&network)).or(tkeys.address);
+
+    let addresses = Addresses {
+        taddr,
+        saddr: saddr.map(|x| x.encode(&network)),
+        oaddr: ua_orchard.map(|x| x.encode(&network)),
+        ua: ua.map(|x| x.encode(&network)),
+    };
+
+    Ok(addresses)
 }
 
 pub async fn reset_sync(

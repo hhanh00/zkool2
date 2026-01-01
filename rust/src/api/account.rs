@@ -5,7 +5,6 @@ use bip32::Prefix;
 use bip39::Mnemonic;
 use csv_async::AsyncWriter;
 use flutter_rust_bridge::frb;
-use orchard::keys::Scope;
 use sapling_crypto::PaymentAddress;
 use sqlx::{sqlite::SqliteRow, Row};
 use tracing::info;
@@ -20,7 +19,6 @@ use zip32::AccountId;
 use zcash_protocol::consensus::Parameters as ZkParams;
 
 use crate::{
-    account::derive_transparent_address,
     api::{coin::Coin, ledger::{show_sapling_address, show_transparent_address}},
     db::get_account_dindex,
     io::{decrypt, encrypt},
@@ -361,45 +359,7 @@ pub async fn list_memos(c: &Coin) -> Result<Vec<Memo>> {
 #[frb]
 pub async fn get_addresses(ua_pools: u8, c: &Coin) -> Result<Addresses> {
     let mut connection = c.get_connection().await?;
-
-    let dindex = crate::db::get_account_dindex(&mut connection, c.account).await?;
-
-    let tkeys = crate::db::select_account_transparent(&mut connection, c.account, dindex).await?;
-    let skeys = crate::db::select_account_sapling(&c.network(), &mut connection, c.account).await?;
-    let okeys = crate::db::select_account_orchard(&mut connection, c.account).await?;
-
-    let taddr = tkeys
-        .xvk
-        .as_ref()
-        .map(|xvk| derive_transparent_address(xvk, 0, dindex).unwrap().1);
-
-    let dindex = dindex as u64;
-    let saddr = skeys.address;
-    let oaddr = okeys
-        .xvk
-        .as_ref()
-        .map(|xvk| xvk.address_at(dindex, Scope::External));
-
-    let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None);
-
-    let ua = UnifiedAddress::from_receivers(
-        if ua_pools & 4 != 0 { oaddr } else { None },
-        if ua_pools & 2 != 0 { saddr } else { None },
-        if ua_pools & 1 != 0 { taddr } else { None },
-    );
-
-    let network = c.network();
-    // final fallback if we have a transparent address from a BIP 38 secret key
-    let taddr = taddr.map(|x| x.encode(&network)).or(tkeys.address);
-
-    let addresses = Addresses {
-        taddr,
-        saddr: saddr.map(|x| x.encode(&network)),
-        oaddr: ua_orchard.map(|x| x.encode(&network)),
-        ua: ua.map(|x| x.encode(&network)),
-    };
-
-    Ok(addresses)
+    crate::account::get_addresses(&c.network(), &mut connection, c.account, ua_pools).await
 }
 
 pub struct Addresses {

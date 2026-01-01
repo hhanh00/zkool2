@@ -1,5 +1,5 @@
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Balance, Transaction};
+use crate::graphql::data::{Account, Addresses, Balance, Transaction};
 use crate::graphql::Context;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -72,10 +72,7 @@ impl Query {
         Ok(memos)
     }
 
-    pub async fn balance_by_account(
-        id_account: i32,
-        context: &Context,
-    ) -> FieldResult<Balance> {
+    pub async fn balance_by_account(id_account: i32, context: &Context) -> FieldResult<Balance> {
         let mut conn = context.coin.get_connection().await?;
         let height = get_sync_height(&mut conn, id_account as u32)
             .await?
@@ -88,6 +85,25 @@ impl Query {
             orchard: zats_to_zec(b.0[2] as i64),
         };
         Ok(balance)
+    }
+
+    async fn address_by_account(
+        id_account: i32,
+        pools: Option<i32>,
+        context: &Context,
+    ) -> FieldResult<Addresses> {
+        let mut conn = context.coin.get_connection().await?;
+        let ua_pools = pools.unwrap_or(7) as u8;
+        let addresses =
+            crate::account::get_addresses(&context.coin.network(), &mut conn, id_account as u32, ua_pools)
+                .await?;
+        let addresses = Addresses {
+            ua: addresses.ua,
+            transparent: addresses.taddr,
+            sapling: addresses.saddr,
+            orchard: addresses.oaddr,
+        };
+        Ok(addresses)
     }
 
     async fn current_height(context: &Context) -> FieldResult<i32> {
