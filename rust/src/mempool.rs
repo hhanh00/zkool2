@@ -16,10 +16,22 @@ use zcash_primitives::{
 use zcash_transparent::address::TransparentAddress;
 use crate::api::coin::Network;
 
-use crate::Client;
+use crate::{Client, Sink};
 
 pub async fn run_mempool(
     mempool_tx: StreamSink<MempoolMsg>,
+    network: &Network,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    height: u32,
+    cancel_token: CancellationToken,
+) -> Result<()> {
+    run_mempool_impl(mempool_tx, network, connection, client, height,
+    cancel_token).await
+}
+
+pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
+    mempool_tx: S,
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
@@ -106,8 +118,7 @@ pub async fn run_mempool(
                                 (account, name, note_values.iter().sum::<i64>())
                             })
                             .collect::<Vec<_>>();
-
-                        let _ = mempool_tx.add(MempoolMsg::TxId(tx_hash, amounts, len as u32));
+                        mempool_tx.send(MempoolMsg::TxId(tx_hash, amounts, len as u32)).await;
                     }
                     None => {
                         break;
