@@ -4935,14 +4935,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxNote dco_decode_tx_note(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return TxNote(
       id: dco_decode_u_32(arr[0]),
       pool: dco_decode_u_8(arr[1]),
       height: dco_decode_u_32(arr[2]),
-      value: dco_decode_u_64(arr[3]),
-      locked: dco_decode_bool(arr[4]),
+      tx: dco_decode_u_32(arr[3]),
+      value: dco_decode_u_64(arr[4]),
+      locked: dco_decode_bool(arr[5]),
     );
   }
 
@@ -6200,12 +6201,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_id = sse_decode_u_32(deserializer);
     var var_pool = sse_decode_u_8(deserializer);
     var var_height = sse_decode_u_32(deserializer);
+    var var_tx = sse_decode_u_32(deserializer);
     var var_value = sse_decode_u_64(deserializer);
     var var_locked = sse_decode_bool(deserializer);
     return TxNote(
         id: var_id,
         pool: var_pool,
         height: var_height,
+        tx: var_tx,
         value: var_value,
         locked: var_locked);
   }
@@ -7333,6 +7336,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.id, serializer);
     sse_encode_u_8(self.pool, serializer);
     sse_encode_u_32(self.height, serializer);
+    sse_encode_u_32(self.tx, serializer);
     sse_encode_u_64(self.value, serializer);
     sse_encode_bool(self.locked, serializer);
   }

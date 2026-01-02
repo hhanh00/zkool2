@@ -1,5 +1,5 @@
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, Balance, Transaction};
+use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction};
 use crate::graphql::Context;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -110,6 +110,21 @@ impl Query {
         Ok(addresses)
     }
 
+    async fn notes_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<Note>> {
+        let mut conn = context.coin.get_connection().await?;
+        let notes = crate::db::get_notes(&mut conn, id_account as u32).await?;
+        let notes: Vec<_> = notes
+            .into_iter()
+            .map(|n| Note {
+                height: n.height as i32,
+                pool: n.pool as i32,
+                tx: n.tx as i32,
+                value: zats_to_zec(n.value as i64),
+            })
+            .collect();
+        Ok(notes)
+    }
+
     async fn current_height(context: &Context) -> FieldResult<i32> {
         let height = crate::api::network::get_current_height(&context.coin).await?;
         Ok(height as i32)
@@ -172,3 +187,11 @@ pub fn zec_to_zats(zec: bigdecimal::BigDecimal) -> FieldResult<i64> {
     }
     Ok(digits[0] as i64)
 }
+
+// TODO
+// notes
+// new diversified address
+// new transparent address
+// list transparent addresses
+// list transactions from height
+// balance at height
