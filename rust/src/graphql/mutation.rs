@@ -1,6 +1,7 @@
 use crate::{
+    account::generate_next_dindex,
     api::pay::DustChangePolicy,
-    graphql::{query::zec_to_zats, Context},
+    graphql::{Context, data::Addresses, query::zec_to_zats},
     pay::plan::{extract_transaction, sign_transaction},
 };
 use bigdecimal::BigDecimal;
@@ -144,5 +145,21 @@ impl Mutation {
         let tx_bytes = extract_transaction(&signed_pczt).await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
         Ok(txid)
+    }
+
+    async fn new_addresses(id_account: i32, context: &Context) -> FieldResult<Addresses> {
+        let network = context.coin.network();
+        let mut conn = context.coin.get_connection().await?;
+        generate_next_dindex(&network, &mut conn, id_account as u32).await?;
+        let addresses =
+            crate::account::get_addresses(&context.coin.network(), &mut conn, id_account as u32, 7)
+                .await?;
+        let addresses = Addresses {
+            ua: addresses.ua,
+            transparent: addresses.taddr,
+            sapling: addresses.saddr,
+            orchard: addresses.oaddr,
+        };
+        Ok(addresses)
     }
 }
