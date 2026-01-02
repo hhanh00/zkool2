@@ -1,4 +1,4 @@
-use anyhow::{Context as _, Error, Result};
+use anyhow::{Context as _, Result};
 use flutter_rust_bridge::frb;
 use sqlx::SqliteConnection;
 use sqlx::{Row, sqlite::SqliteRow};
@@ -15,8 +15,7 @@ use crate::budget::merge_pending_txs;
 
 use crate::db::store_block_header;
 use crate::io::SyncHeight;
-use crate::Client;
-use crate::frb_generated::StreamSink;
+use crate::{Client, Sink};
 use std::{collections::HashSet, mem};
 
 use crate::{
@@ -219,26 +218,6 @@ impl std::fmt::Debug for Note {
     }
 }
 
-pub trait Sink<V>: Clone {
-    fn add(&self, value: V);
-    fn add_error(&self, e: Error);
-}
-
-impl Sink<SyncProgress> for StreamSink<SyncProgress> {
-    fn add(&self, value: SyncProgress) {
-        let _ = self.add(value);
-    }
-
-    fn add_error(&self, error: Error) {
-        let _ = self.add_error(error);
-    }
-}
-
-impl<T> Sink<T> for () {
-    fn add(&self, _value: T) {}
-    fn add_error(&self, _error: Error) {}
-}
-
 pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
     progress: S,
     accounts: Vec<u32>,
@@ -308,7 +287,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
         tokio::spawn(async move {
             while let Some(p) = rx_progress.recv().await {
-                progress.add(p);
+                let _ = progress.send(p).await;
             }
         });
 
@@ -418,7 +397,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         Ok(_) => {}
         Err(e) => {
             info!("Error during sync: {:?}", e);
-            progress2.add_error(e);
+            progress2.send_error(e).await;
         }
     }
 
