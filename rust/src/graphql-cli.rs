@@ -1,6 +1,7 @@
 use anyhow::Result;
 use juniper::{EmptySubscription, RootNode};
 use rlz::api::coin::Coin;
+use rlz::graphql::mutation::run_mempool;
 use rlz::graphql::{mutation::Mutation, query::Query, Context};
 use rocket::{response::content::RawHtml, routes, Config, State};
 
@@ -40,6 +41,7 @@ async fn main() -> Result<()> {
         .await?
         .set_lwd(0, lwd_url)?;
     let context = Context::new(coin);
+    tokio::spawn(run_mempool(context.clone()));
 
     rocket::build()
         .manage(context)

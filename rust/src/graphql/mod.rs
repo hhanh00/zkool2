@@ -4,6 +4,7 @@ pub mod data;
 pub mod query;
 pub mod mutation;
 
+#[derive(Clone)]
 pub struct Context {
     pub coin: Coin,
 }
