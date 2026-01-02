@@ -47,3 +47,10 @@ pub struct Note {
     pub tx: i32,
     pub value: BigDecimal,
 }
+
+#[derive(GraphQLObject)]
+pub struct UnconfirmedTx {
+    pub txid: String,
+    pub value: BigDecimal,
+}
+

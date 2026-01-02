@@ -1,8 +1,9 @@
+use anyhow::Error;
 use lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use tokio_stream::wrappers::ReceiverStream;
 use zcash_primitives::transaction::Transaction;
 
-use crate::{lwd::CompactBlock, net::LwdServer};
+use crate::{frb_generated::StreamSink, lwd::CompactBlock, net::LwdServer};
 
 pub mod account;
 pub mod api;
@@ -52,4 +53,24 @@ where
     fn anyhow(self) -> Result<T, anyhow::Error> {
         self.map_err(anyhow::Error::new)
     }
+}
+
+pub trait Sink<V>: Clone {
+    fn send(&self, value: V) -> impl std::future::Future<Output = ()> + Send;
+    fn send_error(&self, e: Error) -> impl std::future::Future<Output = ()> + Send;
+}
+
+impl <T: Clone + frb_generated::SseEncode + Send + Sync> Sink<T> for StreamSink<T> {
+    async fn send(&self, value: T) {
+        let _ = self.add(value);
+    }
+
+    async fn send_error(&self, error: Error) {
+        let _ = self.add_error(error);
+    }
+}
+
+impl<T: Send + Sync> Sink<T> for () {
+    async fn send(&self, _value: T) {}
+    async fn send_error(&self, _error: Error) {}
 }
