@@ -42,14 +42,17 @@ impl Query {
 
     pub async fn transactions_by_account(
         id_account: i32,
+        height: Option<i32>,
         context: &Context,
     ) -> FieldResult<Vec<Transaction>> {
+        let height = height.unwrap_or_default();
         let mut conn = context.coin.get_connection().await?;
         let transactions = query(
             "SELECT id_tx, txid, height, time, value, fee FROM transactions
-        WHERE account = ?1 ORDER BY height DESC",
+            WHERE account = ?1 AND height >= ?2 ORDER BY height DESC",
         )
         .bind(id_account)
+        .bind(height)
         .map(row_to_transaction)
         .fetch_all(&mut *conn)
         .await?;
@@ -72,14 +75,15 @@ impl Query {
         Ok(memos)
     }
 
-    pub async fn balance_by_account(id_account: i32, context: &Context) -> FieldResult<Balance> {
+    pub async fn balance_by_account(id_account: i32, height: Option<i32>, context: &Context) -> FieldResult<Balance> {
+        let height = height.map(|h| h as u32);
         let mut conn = context.coin.get_connection().await?;
-        let height = get_sync_height(&mut conn, id_account as u32)
-            .await?
-            .unwrap_or_default();
-        let b = calculate_balance(&mut conn, id_account as u32).await?;
+        let current_height = get_sync_height(&mut conn, id_account as u32)
+            .await?;
+        let height = height.or(current_height);
+        let b = calculate_balance(&mut conn, id_account as u32, height).await?;
         let balance = Balance {
-            height: height as i32,
+            height: height.map(|h| h as i32),
             transparent: zats_to_zec(b.0[0] as i64),
             sapling: zats_to_zec(b.0[1] as i64),
             orchard: zats_to_zec(b.0[2] as i64),
@@ -189,9 +193,5 @@ pub fn zec_to_zats(zec: bigdecimal::BigDecimal) -> FieldResult<i64> {
 }
 
 // TODO
-// notes
-// new diversified address
-// new transparent address
-// list transparent addresses
 // list transactions from height
 // balance at height

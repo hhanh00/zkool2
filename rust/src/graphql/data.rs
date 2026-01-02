@@ -26,7 +26,7 @@ pub struct Transaction {
 
 #[derive(GraphQLObject)]
 pub struct Balance {
-    pub height: i32,
+    pub height: Option<i32>,
     pub transparent: BigDecimal,
     pub sapling: BigDecimal,
     pub orchard: BigDecimal,
