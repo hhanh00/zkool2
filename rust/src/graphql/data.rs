@@ -39,3 +39,11 @@ pub struct Addresses {
     pub sapling: Option<String>,
     pub orchard: Option<String>,
 }
+
+#[derive(GraphQLObject)]
+pub struct Note {
+    pub height: i32,
+    pub pool: i32,
+    pub tx: i32,
+    pub value: BigDecimal,
+}

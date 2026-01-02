@@ -926,7 +926,7 @@ pub async fn get_tx_details(
     .await?;
 
     let notes = sqlx::query(
-        "SELECT id_note, pool, height, value, locked FROM notes
+        "SELECT id_note, pool, height, tx, value, locked FROM notes
         WHERE account = ? AND tx = ?",
     )
     .bind(account)
@@ -935,12 +935,14 @@ pub async fn get_tx_details(
         let id_note: u32 = row.get(0);
         let pool: u8 = row.get(1);
         let height: u32 = row.get(2);
-        let value: u64 = row.get(3);
-        let locked: bool = row.get(4);
+        let tx: u32 = row.get(3);
+        let value: u64 = row.get(4);
+        let locked: bool = row.get(5);
         TxNote {
             id: id_note,
             pool,
             height,
+            tx,
             value,
             locked,
         }
