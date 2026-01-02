@@ -1040,13 +1040,15 @@ pub async fn get_sync_height(conn: &mut SqliteConnection, account: u32) -> Resul
     Ok(h)
 }
 
-pub async fn calculate_balance(pool: &mut SqliteConnection, account: u32) -> Result<PoolBalance> {
+pub async fn calculate_balance(pool: &mut SqliteConnection, account: u32, height: Option<u32>) -> Result<PoolBalance> {
     let mut balance = PoolBalance(vec![0, 0, 0]);
+    let height = height.unwrap_or(u32::MAX);
 
     let mut rows = sqlx::query("
-    WITH N AS (SELECT value, pool FROM notes WHERE account = ?1 UNION ALL SELECT value, pool FROM spends WHERE account = ?1)
-    SELECT pool, SUM(value) FROM N GROUP BY pool")
+    WITH N AS (SELECT value, pool, height FROM notes WHERE account = ?1 UNION ALL SELECT value, pool, height FROM spends WHERE account = ?1)
+    SELECT pool, SUM(value) FROM N WHERE height <= ?2 GROUP BY pool")
         .bind(account)
+        .bind(height)
         .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<i64, _>(1)))
         .fetch(pool);
     while let Some((pool, value)) = rows.try_next().await? {

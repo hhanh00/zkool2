@@ -37,7 +37,7 @@ pub async fn balance(c: &Coin) -> Result<PoolBalance> {
     let mut connection = c.get_connection().await?;
     let account = c.account;
 
-    calculate_balance(&mut *connection, account).await
+    calculate_balance(&mut *connection, account, None).await
 }
 
 #[frb]
