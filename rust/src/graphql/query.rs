@@ -1,5 +1,6 @@
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction};
+use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
+use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::Context;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -75,11 +76,14 @@ impl Query {
         Ok(memos)
     }
 
-    pub async fn balance_by_account(id_account: i32, height: Option<i32>, context: &Context) -> FieldResult<Balance> {
+    pub async fn balance_by_account(
+        id_account: i32,
+        height: Option<i32>,
+        context: &Context,
+    ) -> FieldResult<Balance> {
         let height = height.map(|h| h as u32);
         let mut conn = context.coin.get_connection().await?;
-        let current_height = get_sync_height(&mut conn, id_account as u32)
-            .await?;
+        let current_height = get_sync_height(&mut conn, id_account as u32).await?;
         let height = height.or(current_height);
         let b = calculate_balance(&mut conn, id_account as u32, height).await?;
         let balance = Balance {
@@ -112,6 +116,21 @@ impl Query {
             orchard: addresses.oaddr,
         };
         Ok(addresses)
+    }
+
+    async fn unconfirmed_by_account(id_account: i32) -> FieldResult<Vec<UnconfirmedTx>> {
+        let mempool = MEMPOOL.lock().await;
+        if let Some(unconfirmed_txs) = mempool.unconfirmed.get(&(id_account as u32)) {
+            let txs: Vec<_> = unconfirmed_txs
+                .iter()
+                .map(|(txid, value)| UnconfirmedTx {
+                    txid: txid.clone(),
+                    value: value.clone(),
+                })
+                .collect();
+            return Ok(txs)
+        }
+        Ok(vec![])
     }
 
     async fn notes_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<Note>> {

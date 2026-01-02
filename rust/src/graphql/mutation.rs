@@ -1,11 +1,20 @@
+use std::{collections::HashMap, sync::LazyLock};
+
 use crate::{
     account::generate_next_dindex,
-    api::pay::DustChangePolicy,
-    graphql::{Context, data::Addresses, query::zec_to_zats},
+    api::{mempool::MempoolMsg, pay::DustChangePolicy},
+    graphql::{
+        data::Addresses,
+        query::{zats_to_zec, zec_to_zats},
+        Context,
+    },
     pay::plan::{extract_transaction, sign_transaction},
+    Sink,
 };
 use bigdecimal::BigDecimal;
 use juniper::{graphql_object, FieldResult, GraphQLInputObject};
+use tokio::sync::{mpsc::Sender, Mutex};
+use tokio_util::sync::CancellationToken;
 
 pub struct Mutation {}
 
@@ -163,3 +172,71 @@ impl Mutation {
         Ok(addresses)
     }
 }
+
+impl<T: Send + Sync> Sink<T> for Sender<T> {
+    async fn send(&self, value: T) {
+        let _ = tokio::sync::mpsc::Sender::send(self, value).await;
+    }
+
+    async fn send_error(&self, e: anyhow::Error) {
+        tracing::error!("Error: {e}");
+    }
+}
+
+pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
+    let coin = context.coin.clone();
+    let network = &coin.network();
+    loop {
+        let coin = context.coin.clone();
+        let mut conn = coin.get_connection().await?;
+        let mut client = coin.client().await?;
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<MempoolMsg>(10);
+        tokio::spawn(async move {
+            while let Some(msg) = rx.recv().await {
+                match msg {
+                    MempoolMsg::TxId(txid, items, _) => {
+                        for (account, _, value) in items {
+                            let mut mempool = MEMPOOL.lock().await;
+                            let e = mempool.unconfirmed.entry(account);
+                            let e = e.or_insert_with(HashMap::new);
+                            e.insert(txid.clone(), zats_to_zec(value));
+                        }
+                    }
+                }
+            }
+        });
+
+        let runner = async move {
+            {
+                let mut mempool = MEMPOOL.lock().await;
+                mempool.unconfirmed.clear();
+            }
+            let height = crate::api::network::get_current_height(&coin).await?;
+            let cancel_token = CancellationToken::new();
+
+            crate::mempool::run_mempool_impl(
+                tx,
+                network,
+                &mut conn,
+                &mut client,
+                height,
+                cancel_token,
+            )
+            .await?;
+            Ok::<_, anyhow::Error>(())
+        };
+        match runner.await {
+            Ok(_) => {}
+            Err(error) => {
+                tracing::error!("Error: {error}");
+            }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct Mempool {
+    pub unconfirmed: HashMap<u32, HashMap<String, BigDecimal>>,
+}
+
+pub static MEMPOOL: LazyLock<Mutex<Mempool>> = LazyLock::new(|| Mutex::new(Mempool::default()));

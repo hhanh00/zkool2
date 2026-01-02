@@ -32,6 +32,7 @@ async fn run_mempool(
 }
 
 #[frb]
+#[derive(Clone)]
 pub enum MempoolMsg {
     TxId(String, Vec<(u32, String, i64)>, u32),
 }
