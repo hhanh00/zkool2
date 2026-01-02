@@ -97,7 +97,7 @@ impl Mutation {
     async fn synchronize(id_accounts: Vec<i32>, context: &Context) -> FieldResult<bool> {
         let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        crate::api::sync::synchronize_impl(
+        crate::sync::synchronize_impl(
             (),
             id_accounts,
             current_height,

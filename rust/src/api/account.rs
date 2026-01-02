@@ -633,6 +633,7 @@ pub struct TxNote {
     pub id: u32,
     pub pool: u8,
     pub height: u32,
+    pub tx: u32,
     pub value: u64,
     pub locked: bool,
 }
