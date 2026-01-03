@@ -4,9 +4,10 @@ use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::Context;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
-use chrono::DateTime;
-use juniper::{graphql_object, FieldResult};
+use chrono::{DateTime, NaiveDateTime};
+use juniper::{FieldError, FieldResult, graphql_object};
 use sqlx::{query, sqlite::SqliteRow, Row};
+
 pub struct Query {}
 
 #[graphql_object]
@@ -41,6 +42,23 @@ impl Query {
         Ok(accounts)
     }
 
+    pub async fn account_by_id(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<Account> {
+        let mut conn = context.coin.get_connection().await?;
+        let account = query(
+            "SELECT id_account, name, seed, passphrase, aindex, dindex, birth FROM accounts
+            WHERE id_account = ?1",
+        )
+        .bind(id_account)
+        .map(row_to_account)
+        .fetch_optional(&mut *conn)
+        .await?
+        .ok_or(anyhow::anyhow!("Unknown account"))?;
+        Ok(account)
+    }
+
     pub async fn transactions_by_account(
         id_account: i32,
         height: Option<i32>,
@@ -49,7 +67,7 @@ impl Query {
         let height = height.unwrap_or_default();
         let mut conn = context.coin.get_connection().await?;
         let transactions = query(
-            "SELECT id_tx, txid, height, time, value, fee FROM transactions
+            "SELECT account, id_tx, txid, height, time, value, fee FROM transactions
             WHERE account = ?1 AND height >= ?2 ORDER BY height DESC",
         )
         .bind(id_account)
@@ -58,6 +76,27 @@ impl Query {
         .fetch_all(&mut *conn)
         .await?;
         Ok(transactions)
+    }
+
+    pub async fn transaction_by_id(
+        id_account: i32,
+        txid: String,
+        context: &Context,
+    ) -> FieldResult<Transaction> {
+        let mut txid = hex::decode(&txid)?;
+        txid.reverse();
+        let mut conn = context.coin.get_connection().await?;
+        let transaction = query(
+            "SELECT account, id_tx, txid, height, time, value, fee FROM transactions
+            WHERE account = ?1 AND txid = ?2 ORDER BY height DESC",
+        )
+        .bind(id_account)
+        .bind(&txid)
+        .map(row_to_transaction)
+        .fetch_optional(&mut *conn)
+        .await?
+        .ok_or(FieldError::new("Unknown txid", juniper::Value::Null))?;
+        Ok(transaction)
     }
 
     pub async fn memos_by_transaction(
@@ -154,6 +193,63 @@ impl Query {
     }
 }
 
+#[graphql_object]
+impl Account {
+    pub fn id(&self) -> i32 { self.id }
+    pub fn name(&self) -> String { self.name.clone() }
+    pub fn seed(&self) -> Option<String> { self.seed.clone() }
+    pub fn passphrase(&self) -> Option<String> { self.passphrase.clone() }
+    pub fn aindex(&self) -> i32 { self.aindex }
+    pub fn dindex(&self) -> i32 { self.dindex }
+    pub fn birth(&self) -> i32 { self.birth }
+
+    pub async fn transactions(&self, context: &Context) -> FieldResult<Vec<Transaction>> {
+        let txs = Query::transactions_by_account(self.id, None, context).await?;
+        Ok(txs)
+    }
+}
+
+#[graphql_object]
+impl Transaction {
+    pub fn id(&self) -> i32 { self.id }
+    pub fn txid(&self) -> String { self.txid.clone() }
+    pub fn account(&self) -> i32 { self.account }
+    pub fn height(&self) -> i32 { self.height }
+    pub fn time(&self) -> NaiveDateTime { self.time }
+    pub fn value(&self) -> BigDecimal { self.value.clone() }
+    pub fn fee(&self) -> BigDecimal { self.fee.clone() }
+
+    pub async fn notes(&self, context: &Context) -> FieldResult<Vec<Note>> {
+        let mut conn = context.coin.get_connection().await?;
+        let mut txid = hex::decode(&self.txid)?;
+        txid.reverse();
+        let notes = crate::db::get_notes_txid(&mut conn, self.account as u32, &txid).await?;
+        let notes: Vec<_> = notes
+            .into_iter()
+            .map(|n| Note {
+                height: n.height as i32,
+                pool: n.pool as i32,
+                tx: n.tx as i32,
+                value: zats_to_zec(n.value as i64),
+            })
+            .collect();
+        Ok(notes)
+    }
+
+    pub async fn memos(&self, context: &Context) -> FieldResult<Vec<String>> {
+        let mut conn = context.coin.get_connection().await?;
+        let mut txid = hex::decode(&self.txid)?;
+        txid.reverse();
+        let memos = crate::db::get_memos_txid(&mut conn, self.account as u32, &txid).await?;
+        let memos: Vec<_> = memos
+            .into_iter()
+            .filter_map(|m| m.memo)
+            .collect();
+        Ok(memos)
+    }
+
+}
+
 fn row_to_account(r: SqliteRow) -> Account {
     let id: i32 = r.get(0);
     let name: String = r.get(1);
@@ -174,12 +270,13 @@ fn row_to_account(r: SqliteRow) -> Account {
 }
 
 fn row_to_transaction(r: SqliteRow) -> Transaction {
-    let id: i32 = r.get(0);
-    let mut txid: Vec<u8> = r.get(1);
-    let height: i32 = r.get(2);
-    let time: i32 = r.get(3);
-    let value: i64 = r.get(4);
-    let fee: i64 = r.get(5);
+    let account: i32 = r.get(0);
+    let id: i32 = r.get(1);
+    let mut txid: Vec<u8> = r.get(2);
+    let height: i32 = r.get(3);
+    let time: i32 = r.get(4);
+    let value: i64 = r.get(5);
+    let fee: i64 = r.get(6);
     txid.reverse();
     let txid = hex::encode(&txid);
     let time = DateTime::from_timestamp_millis(time as i64 * 1000)
@@ -188,6 +285,7 @@ fn row_to_transaction(r: SqliteRow) -> Transaction {
     let value = zats_to_zec(value);
     let fee = zats_to_zec(fee);
     Transaction {
+        account,
         id,
         txid,
         height,

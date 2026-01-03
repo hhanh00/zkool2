@@ -1040,7 +1040,11 @@ pub async fn get_sync_height(conn: &mut SqliteConnection, account: u32) -> Resul
     Ok(h)
 }
 
-pub async fn calculate_balance(pool: &mut SqliteConnection, account: u32, height: Option<u32>) -> Result<PoolBalance> {
+pub async fn calculate_balance(
+    pool: &mut SqliteConnection,
+    account: u32,
+    height: Option<u32>,
+) -> Result<PoolBalance> {
     let mut balance = PoolBalance(vec![0, 0, 0]);
     let height = height.unwrap_or(u32::MAX);
 
@@ -1092,39 +1096,60 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
     Ok(transactions)
 }
 
-pub async fn fetch_memos(pool: &mut SqliteConnection, account: u32) -> Result<Vec<Memo>> {
+pub async fn get_memos(pool: &mut SqliteConnection, account: u32) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
         "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
         FROM memos m JOIN transactions t ON m.tx = t.id_tx
         WHERE m.account = ? ORDER BY m.height DESC",
     )
     .bind(account)
-    .map(|row: SqliteRow| {
-        let id: u32 = row.get(0);
-        let height: u32 = row.get(1);
-        let tx: u32 = row.get(2);
-        let pool: u8 = row.get(3);
-        let vout: u32 = row.get(4);
-        let note: Option<u32> = row.get(5);
-        let time: u32 = row.get(6);
-        let memo_text: Option<String> = row.get(7);
-        let memo_bytes: Vec<u8> = row.get(8);
-        Memo {
-            id,
-            id_tx: tx,
-            id_note: note,
-            height,
-            pool,
-            vout,
-            time,
-            memo: memo_text,
-            memo_bytes,
-        }
-    })
+    .map(row_to_memo)
     .fetch_all(pool)
     .await?;
 
     Ok(memos)
+}
+
+pub async fn get_memos_txid(
+    pool: &mut SqliteConnection,
+    account: u32,
+    txid: &[u8],
+) -> Result<Vec<Memo>> {
+    let memos = sqlx::query(
+        "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
+        FROM memos m JOIN transactions t ON m.tx = t.id_tx
+        WHERE m.account = ?1 AND t.txid = ?2",
+    )
+    .bind(account)
+    .bind(txid)
+    .map(row_to_memo)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(memos)
+}
+
+fn row_to_memo(row: SqliteRow) -> Memo {
+    let id: u32 = row.get(0);
+    let height: u32 = row.get(1);
+    let tx: u32 = row.get(2);
+    let pool: u8 = row.get(3);
+    let vout: u32 = row.get(4);
+    let note: Option<u32> = row.get(5);
+    let time: u32 = row.get(6);
+    let memo_text: Option<String> = row.get(7);
+    let memo_bytes: Vec<u8> = row.get(8);
+    Memo {
+        id,
+        id_tx: tx,
+        id_note: note,
+        height,
+        pool,
+        vout,
+        time,
+        memo: memo_text,
+        memo_bytes,
+    }
 }
 
 pub async fn get_account_aindex(connection: &mut SqliteConnection, account: u32) -> Result<u32> {
@@ -1159,27 +1184,52 @@ pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Resul
 	   WHERE n.account = ? AND s.id_note IS NULL ORDER BY n.height DESC",
     )
     .bind(account)
-    .map(|row: SqliteRow| {
-        let id_note: u32 = row.get(0);
-        let height: u32 = row.get(1);
-        let pool: u8 = row.get(2);
-        let tx: u32 = row.get(3);
-        let value: u64 = row.get(4);
-        let locked: bool = row.get(5);
-
-        TxNote {
-            id: id_note,
-            height,
-            pool,
-            tx,
-            value,
-            locked,
-        }
-    })
+    .map(row_to_note)
     .fetch_all(&mut *connection)
     .await?;
 
     Ok(notes)
+}
+
+pub async fn get_notes_txid(
+    connection: &mut SqliteConnection,
+    account: u32,
+    txid: &[u8],
+) -> Result<Vec<TxNote>> {
+    // Return all notes for a given transaction
+    // including the ones that may be spent
+    let notes = sqlx::query(
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.value, n.locked
+       FROM notes n
+       JOIN transactions t ON n.tx = t.id_tx
+	   WHERE n.account = ?1
+       AND t.txid = ?2",
+    )
+    .bind(account)
+    .bind(txid)
+    .map(row_to_note)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    Ok(notes)
+}
+
+fn row_to_note(row: SqliteRow) -> TxNote {
+    let id_note: u32 = row.get(0);
+    let height: u32 = row.get(1);
+    let pool: u8 = row.get(2);
+    let tx: u32 = row.get(3);
+    let value: u64 = row.get(4);
+    let locked: bool = row.get(5);
+
+    TxNote {
+        id: id_note,
+        height,
+        pool,
+        tx,
+        value,
+        locked,
+    }
 }
 
 pub async fn lock_note(
