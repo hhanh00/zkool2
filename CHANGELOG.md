@@ -1,5 +1,31 @@
 # Changelog
 
+## [6.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.2...zkool-v6.9.0) (2026-01-03)
+
+
+### Features
+
+* graphql query account main data ([#711](https://github.com/hhanh00/zkool2/issues/711)) ([0ea90e8](https://github.com/hhanh00/zkool2/commit/0ea90e8e2382a74401aaa2fedb0100c3266c4600))
+* **graphql:** account_by_id, transaction_by_id, and connections ([#724](https://github.com/hhanh00/zkool2/issues/724)) ([e9d2a77](https://github.com/hhanh00/zkool2/commit/e9d2a77600aee480b857ab393ed7b3d9e77edc6d))
+* **graphql:** balance of account ([#715](https://github.com/hhanh00/zkool2/issues/715)) ([cd6ec77](https://github.com/hhanh00/zkool2/commit/cd6ec773f2f4e35a18d8348914acd47176c97741))
+* **graphql:** CI ([#713](https://github.com/hhanh00/zkool2/issues/713)) ([9468580](https://github.com/hhanh00/zkool2/commit/9468580cfcdc1a40f04639dd8a0514ecb5ba6155))
+* **graphql:** create_account ([#716](https://github.com/hhanh00/zkool2/issues/716)) ([11785de](https://github.com/hhanh00/zkool2/commit/11785de7ecc4b273a52d3ddab69339392f8e0fb0))
+* **graphql:** edit/delete account, current_height ([#717](https://github.com/hhanh00/zkool2/issues/717)) ([2ae3514](https://github.com/hhanh00/zkool2/commit/2ae3514408ed79aa9b585ff40805375353a51388))
+* **graphql:** get_addresses ([#719](https://github.com/hhanh00/zkool2/issues/719)) ([3261996](https://github.com/hhanh00/zkool2/commit/3261996352bc89d45debdea47219c1e2b9ec788b))
+* **graphql:** list notes ([#721](https://github.com/hhanh00/zkool2/issues/721)) ([4fe48f9](https://github.com/hhanh00/zkool2/commit/4fe48f9b1e7c4f8ac96f13856f55b349cb000936))
+* **graphql:** memos_by_transaction ([#714](https://github.com/hhanh00/zkool2/issues/714)) ([3c4bcaa](https://github.com/hhanh00/zkool2/commit/3c4bcaa01c2f4cdce791d7754411c64a3b16d535))
+* **graphql:** mempool monitoring, unconfirmed txs ([#723](https://github.com/hhanh00/zkool2/issues/723)) ([9157906](https://github.com/hhanh00/zkool2/commit/91579064e6a8a71def507163faa063df3470847b))
+* **graphql:** new addresses, get balance at height ([#722](https://github.com/hhanh00/zkool2/issues/722)) ([e92f29f](https://github.com/hhanh00/zkool2/commit/e92f29f10a4cefe32085ba524908714810170eb9))
+* **graphql:** send funds ([#720](https://github.com/hhanh00/zkool2/issues/720)) ([1ffc3a9](https://github.com/hhanh00/zkool2/commit/1ffc3a9a6bad6f3ae48575f825a0208bae979fbf))
+* **graphql:** synchronize ([#718](https://github.com/hhanh00/zkool2/issues/718)) ([9f97237](https://github.com/hhanh00/zkool2/commit/9f9723750a60197fe95994aed078ca11930a9d89))
+* **graphql:** transactions_by_account ([#712](https://github.com/hhanh00/zkool2/issues/712)) ([fed31e1](https://github.com/hhanh00/zkool2/commit/fed31e19fe04ea566b380d1a9f96a5d8908b7e3f))
+* use the best source pool for the change ([#708](https://github.com/hhanh00/zkool2/issues/708)) ([af130e1](https://github.com/hhanh00/zkool2/commit/af130e10a5bd7425a5a336d9600de9ab52fb48a9))
+
+
+### Bug Fixes
+
+* use helper fn to ensure that data is loaded ([#710](https://github.com/hhanh00/zkool2/issues/710)) ([1caa053](https://github.com/hhanh00/zkool2/commit/1caa053447adea9ba3e06072afa020059458256c))
+
 ## [6.8.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.1...zkool-v6.8.2) (2025-12-29)
 
 
