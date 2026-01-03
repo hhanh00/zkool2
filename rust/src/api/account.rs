@@ -352,7 +352,7 @@ pub struct Memo {
 #[frb]
 pub async fn list_memos(c: &Coin) -> Result<Vec<Memo>> {
     let mut connection = c.get_connection().await?;
-    let memos = crate::db::fetch_memos(&mut connection, c.account).await?;
+    let memos = crate::db::get_memos(&mut connection, c.account).await?;
     Ok(memos)
 }
 

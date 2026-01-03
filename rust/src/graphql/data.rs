@@ -2,8 +2,6 @@ use juniper::GraphQLObject;
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 
-#[derive(GraphQLObject)]
-#[graphql(description = "A Zcash wallet account")]
 pub struct Account {
     pub id: i32,
     pub name: String,
@@ -14,10 +12,10 @@ pub struct Account {
     pub birth: i32,
 }
 
-#[derive(GraphQLObject)]
 pub struct Transaction {
     pub id: i32,
     pub txid: String,
+    pub account: i32,
     pub height: i32,
     pub time: NaiveDateTime,
     pub value: BigDecimal,
