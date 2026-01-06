@@ -20,6 +20,7 @@ mixin _$Coin {
   String get url;
   int get serverType;
   bool get useTor;
+  int get pollingInterval;
 
   /// Create a copy of Coin
   /// with the given fields replaced by the non-null parameter values.
@@ -40,16 +41,18 @@ mixin _$Coin {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.serverType, serverType) ||
                 other.serverType == serverType) &&
-            (identical(other.useTor, useTor) || other.useTor == useTor));
+            (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.pollingInterval, pollingInterval) ||
+                other.pollingInterval == pollingInterval));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor);
+  int get hashCode => Object.hash(runtimeType, coin, account, dbFilepath, url,
+      serverType, useTor, pollingInterval);
 
   @override
   String toString() {
-    return 'Coin(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor)';
+    return 'Coin(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor, pollingInterval: $pollingInterval)';
   }
 }
 
@@ -64,7 +67,8 @@ abstract mixin class $CoinCopyWith<$Res> {
       String dbFilepath,
       String url,
       int serverType,
-      bool useTor});
+      bool useTor,
+      int pollingInterval});
 }
 
 /// @nodoc
@@ -85,6 +89,7 @@ class _$CoinCopyWithImpl<$Res> implements $CoinCopyWith<$Res> {
     Object? url = null,
     Object? serverType = null,
     Object? useTor = null,
+    Object? pollingInterval = null,
   }) {
     return _then(_self.copyWith(
       coin: null == coin
@@ -111,6 +116,10 @@ class _$CoinCopyWithImpl<$Res> implements $CoinCopyWith<$Res> {
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
               as bool,
+      pollingInterval: null == pollingInterval
+          ? _self.pollingInterval
+          : pollingInterval // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -207,7 +216,7 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor)?
+            int serverType, bool useTor, int pollingInterval)?
         raw,
     required TResult orElse(),
   }) {
@@ -215,7 +224,7 @@ extension CoinPatterns on Coin {
     switch (_that) {
       case _Coin() when raw != null:
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor);
+            _that.serverType, _that.useTor, _that.pollingInterval);
       case _:
         return orElse();
     }
@@ -237,14 +246,14 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(int coin, int account, String dbFilepath,
-            String url, int serverType, bool useTor)
+            String url, int serverType, bool useTor, int pollingInterval)
         raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin():
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor);
+            _that.serverType, _that.useTor, _that.pollingInterval);
     }
   }
 
@@ -263,14 +272,14 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor)?
+            int serverType, bool useTor, int pollingInterval)?
         raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin() when raw != null:
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor);
+            _that.serverType, _that.useTor, _that.pollingInterval);
       case _:
         return null;
     }
@@ -286,7 +295,8 @@ class _Coin extends Coin {
       required this.dbFilepath,
       required this.url,
       required this.serverType,
-      required this.useTor})
+      required this.useTor,
+      required this.pollingInterval})
       : super._();
 
   @override
@@ -301,6 +311,8 @@ class _Coin extends Coin {
   final int serverType;
   @override
   final bool useTor;
+  @override
+  final int pollingInterval;
 
   /// Create a copy of Coin
   /// with the given fields replaced by the non-null parameter values.
@@ -322,16 +334,18 @@ class _Coin extends Coin {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.serverType, serverType) ||
                 other.serverType == serverType) &&
-            (identical(other.useTor, useTor) || other.useTor == useTor));
+            (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.pollingInterval, pollingInterval) ||
+                other.pollingInterval == pollingInterval));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor);
+  int get hashCode => Object.hash(runtimeType, coin, account, dbFilepath, url,
+      serverType, useTor, pollingInterval);
 
   @override
   String toString() {
-    return 'Coin.raw(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor)';
+    return 'Coin.raw(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor, pollingInterval: $pollingInterval)';
   }
 }
 
@@ -347,7 +361,8 @@ abstract mixin class _$CoinCopyWith<$Res> implements $CoinCopyWith<$Res> {
       String dbFilepath,
       String url,
       int serverType,
-      bool useTor});
+      bool useTor,
+      int pollingInterval});
 }
 
 /// @nodoc
@@ -368,6 +383,7 @@ class __$CoinCopyWithImpl<$Res> implements _$CoinCopyWith<$Res> {
     Object? url = null,
     Object? serverType = null,
     Object? useTor = null,
+    Object? pollingInterval = null,
   }) {
     return _then(_Coin(
       coin: null == coin
@@ -394,6 +410,10 @@ class __$CoinCopyWithImpl<$Res> implements _$CoinCopyWith<$Res> {
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
               as bool,
+      pollingInterval: null == pollingInterval
+          ? _self.pollingInterval
+          : pollingInterval // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
