@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1609636081;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -659458947;
 
 // Section: executor
 
@@ -826,7 +826,7 @@ fn wire__crate__api__coin__coin_set_lwd_impl(
         },
     )
 }
-fn wire__crate__api__coin__coin_set_url_impl(
+fn wire__crate__api__coin__coin_set_polling_interval_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -834,7 +834,7 @@ fn wire__crate__api__coin__coin_set_url_impl(
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_set_url",
+            debug_name: "coin_set_polling_interval",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -849,14 +849,15 @@ fn wire__crate__api__coin__coin_set_url_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_server_type = <u8>::sse_decode(&mut deserializer);
-            let api_url = <String>::sse_decode(&mut deserializer);
+            let api_polling_interval = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || {
-                        let output_ok =
-                            crate::api::coin::Coin::set_url(api_that, api_server_type, api_url)?;
+                        let output_ok = crate::api::coin::Coin::set_polling_interval(
+                            api_that,
+                            api_polling_interval,
+                        )?;
                         Ok(output_ok)
                     })(),
                 )
@@ -4974,6 +4975,7 @@ impl SseDecode for crate::api::coin::Coin {
         let mut var_url = <String>::sse_decode(deserializer);
         let mut var_serverType = <u8>::sse_decode(deserializer);
         let mut var_useTor = <bool>::sse_decode(deserializer);
+        let mut var_pollingInterval = <u32>::sse_decode(deserializer);
         return crate::api::coin::Coin {
             coin: var_coin,
             account: var_account,
@@ -4981,6 +4983,7 @@ impl SseDecode for crate::api::coin::Coin {
             url: var_url,
             server_type: var_serverType,
             use_tor: var_useTor,
+            polling_interval: var_pollingInterval,
         };
     }
 }
@@ -6063,7 +6066,12 @@ fn pde_ffi_dispatcher_primary_impl(
         15 => wire__crate__api__coin__coin_network_impl(port, ptr, rust_vec_len, data_len),
         17 => wire__crate__api__coin__coin_open_database_impl(port, ptr, rust_vec_len, data_len),
         18 => wire__crate__api__coin__coin_set_account_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__coin__coin_set_url_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__coin__coin_set_polling_interval_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         21 => wire__crate__api__coin__coin_set_use_tor_impl(port, ptr, rust_vec_len, data_len),
         22 => {
             wire__crate__api__account__create_new_category_impl(port, ptr, rust_vec_len, data_len)
@@ -6416,6 +6424,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::coin::Coin {
             self.url.into_into_dart().into_dart(),
             self.server_type.into_into_dart().into_dart(),
             self.use_tor.into_into_dart().into_dart(),
+            self.polling_interval.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -7292,6 +7301,7 @@ impl SseEncode for crate::api::coin::Coin {
         <String>::sse_encode(self.url, serializer);
         <u8>::sse_encode(self.server_type, serializer);
         <bool>::sse_encode(self.use_tor, serializer);
+        <u32>::sse_encode(self.polling_interval, serializer);
     }
 }
 

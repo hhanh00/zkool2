@@ -87,7 +87,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1609636081;
+  int get rustContentHash => -659458947;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -151,8 +151,8 @@ abstract class RustLibApi extends BaseApi {
   Coin crateApiCoinCoinSetLwd(
       {required Coin that, required int serverType, required String url});
 
-  Future<Coin> crateApiCoinCoinSetUrl(
-      {required Coin that, required int serverType, required String url});
+  Future<Coin> crateApiCoinCoinSetPollingInterval(
+      {required Coin that, required int pollingInterval});
 
   Future<Coin> crateApiCoinCoinSetUseTor(
       {required Coin that, required bool useTor});
@@ -998,15 +998,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<Coin> crateApiCoinCoinSetUrl(
-      {required Coin that, required int serverType, required String url}) {
+  Future<Coin> crateApiCoinCoinSetPollingInterval(
+      {required Coin that, required int pollingInterval}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_coin(that, serializer);
-          sse_encode_u_8(serverType, serializer);
-          sse_encode_String(url, serializer);
+          sse_encode_u_32(pollingInterval, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 20, port: port_);
         },
@@ -1014,16 +1013,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_coin,
           decodeErrorData: sse_decode_AnyhowException,
         ),
-        constMeta: kCrateApiCoinCoinSetUrlConstMeta,
-        argValues: [that, serverType, url],
+        constMeta: kCrateApiCoinCoinSetPollingIntervalConstMeta,
+        argValues: [that, pollingInterval],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiCoinCoinSetUrlConstMeta => const TaskConstMeta(
-        debugName: "coin_set_url",
-        argNames: ["that", "serverType", "url"],
+  TaskConstMeta get kCrateApiCoinCoinSetPollingIntervalConstMeta =>
+      const TaskConstMeta(
+        debugName: "coin_set_polling_interval",
+        argNames: ["that", "pollingInterval"],
       );
 
   @override
@@ -4268,8 +4268,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Coin dco_decode_coin(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return Coin.raw(
       coin: dco_decode_u_8(arr[0]),
       account: dco_decode_u_32(arr[1]),
@@ -4277,6 +4277,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       url: dco_decode_String(arr[3]),
       serverType: dco_decode_u_8(arr[4]),
       useTor: dco_decode_bool(arr[5]),
+      pollingInterval: dco_decode_u_32(arr[6]),
     );
   }
 
@@ -5389,13 +5390,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_url = sse_decode_String(deserializer);
     var var_serverType = sse_decode_u_8(deserializer);
     var var_useTor = sse_decode_bool(deserializer);
+    var var_pollingInterval = sse_decode_u_32(deserializer);
     return Coin.raw(
         coin: var_coin,
         account: var_account,
         dbFilepath: var_dbFilepath,
         url: var_url,
         serverType: var_serverType,
-        useTor: var_useTor);
+        useTor: var_useTor,
+        pollingInterval: var_pollingInterval);
   }
 
   @protected
@@ -6678,6 +6681,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.url, serializer);
     sse_encode_u_8(self.serverType, serializer);
     sse_encode_bool(self.useTor, serializer);
+    sse_encode_u_32(self.pollingInterval, serializer);
   }
 
   @protected
