@@ -3449,20 +3449,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "juniper_hyper"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "114ffcee2eb237c48c5681c46dba7228255e69662c38b5d12f6ad19a5eb8b961"
-dependencies = [
- "derive_more",
- "http-body-util",
- "hyper 1.7.0",
- "juniper",
- "serde_json",
- "url",
-]
-
-[[package]]
 name = "juniper_subscriptions"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5375,7 +5361,7 @@ dependencies = [
  "itertools",
  "jubjub",
  "juniper",
- "juniper_hyper",
+ "juniper_graphql_ws",
  "juniper_warp",
  "ledger-transport",
  "ledger-transport-zemu",
