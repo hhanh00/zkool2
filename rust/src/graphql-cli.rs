@@ -3,15 +3,15 @@ use std::sync::Arc;
 use anyhow::Result;
 use figment::providers::{Format, Toml};
 use figment::Figment;
-use juniper::{EmptySubscription, RootNode};
+use juniper::RootNode;
 use juniper_graphql_ws::ConnectionConfig;
 use rlz::api::coin::Coin;
 use rlz::graphql::mutation::run_mempool;
-use rlz::graphql::{mutation::Mutation, query::Query, Context};
+use rlz::graphql::{mutation::Mutation, query::Query, subs::Subscription, Context};
 use warp::Filter;
 use warp::http::Response;
 
-type Schema = RootNode<Query, Mutation, EmptySubscription<Context>>;
+type Schema = RootNode<Query, Mutation, Subscription>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,12 +36,9 @@ async fn main() -> Result<()> {
 
     let context = Context::new(coin);
     tokio::spawn(run_mempool(context.clone()));
+    tokio::spawn(rlz::graphql::subs::test_event_pub(1));
 
-    let schema = Schema::new(Query {}, Mutation {}, EmptySubscription::default());
-
-    // let context_extractor = warp::any()
-    //     .and(context)
-    //     .map(|c| c);
+    let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 
     let c = context.clone();
     let context_extractor = warp::any()
