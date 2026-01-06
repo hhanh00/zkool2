@@ -1,4 +1,7 @@
-use juniper::GraphQLObject;
+use std::pin::Pin;
+
+use futures::Stream;
+use juniper::{FieldResult, GraphQLEnum, GraphQLObject};
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 
@@ -52,3 +55,17 @@ pub struct UnconfirmedTx {
     pub value: BigDecimal,
 }
 
+#[derive(Clone, GraphQLObject)]
+pub struct Event {
+    pub r#type: EventType,
+    pub height: i32,
+    pub txid: String,
+}
+
+#[derive(Clone, GraphQLEnum)]
+pub enum EventType {
+    Block,
+    Tx,
+}
+
+pub type EventStream = Pin<Box<dyn Stream<Item = FieldResult<Event>> + Send>>;
