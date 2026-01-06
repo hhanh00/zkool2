@@ -10,6 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'mempool.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run_mempool`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 Future<Uint8List> getMempoolTx({required String txId, required Coin c}) =>
     RustLib.instance.api.crateApiMempoolGetMempoolTx(txId: txId, c: c);

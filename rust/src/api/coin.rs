@@ -33,6 +33,7 @@ pub struct Coin {
     pub url: String,
     pub server_type: u8,
     pub use_tor: bool,
+    pub polling_interval: u32,
 }
 
 impl Coin {
@@ -42,13 +43,6 @@ impl Coin {
         password: Option<String>,
     ) -> Result<Coin> {
         let network = self.network();
-        let Coin {
-            account,
-            url,
-            server_type,
-            use_tor,
-            ..
-        } = self;
 
         let pool = try_open(&db_filepath, &password).await?;
         {
@@ -67,11 +61,8 @@ impl Coin {
 
         Ok(Coin {
             coin,
-            account,
             db_filepath,
-            server_type,
-            url,
-            use_tor,
+            ..self
         })
     }
 
@@ -106,77 +97,33 @@ impl Coin {
 
     #[frb]
     pub fn set_account(self, account: u32) -> Result<Self> {
-        let Coin {
-            coin,
-            db_filepath,
-            url,
-            server_type,
-            use_tor,
-            ..
-        } = self;
         Ok(Coin {
-            coin,
             account,
-            db_filepath,
-            url,
-            server_type,
-            use_tor,
+            ..self
         })
     }
 
-    pub fn set_url(self, server_type: u8, url: String) -> Result<Self> {
-        let Coin {
-            coin,
-            account,
-            db_filepath,
-            use_tor,
-            ..
-        } = self;
-        Ok(Coin {
-            coin,
-            account,
-            db_filepath,
-            url,
-            server_type,
-            use_tor,
-        })
-    }
-
+    #[frb]
     pub fn set_use_tor(self, use_tor: bool) -> Result<Coin> {
-        let Coin {
-            coin,
-            account,
-            db_filepath,
-            url,
-            server_type,
-            ..
-        } = self;
         Ok(Coin {
-            coin,
-            account,
-            db_filepath,
-            url,
-            server_type,
             use_tor,
+            ..self
         })
     }
 
     #[frb(sync)]
     pub fn set_lwd(self, server_type: u8, url: String) -> Result<Self> {
-        let Coin {
-            coin,
-            account,
-            db_filepath,
-            use_tor,
-            ..
-        } = self;
         Ok(Coin {
-            coin,
-            account,
-            db_filepath,
             url,
             server_type,
-            use_tor,
+            ..self
+        })
+    }
+
+    pub fn set_polling_interval(self, polling_interval: u32) -> Result<Self> {
+        Ok(Coin {
+            polling_interval,
+            ..self
         })
     }
 
@@ -296,6 +243,7 @@ impl Coin {
             server_type: 0,
             url: String::new(),
             use_tor: false,
+            polling_interval: 0,
         }
     }
 }
