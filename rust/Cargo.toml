@@ -101,7 +101,7 @@ libsqlite3-sys = {version = "0.30", features = ["bundled-sqlcipher-vendored-open
 
 juniper = {version = "0.17", optional = true, features = ["bigdecimal", "chrono"]}
 juniper_warp = {version = "0.9", optional = true, features = ["subscriptions"]}
-juniper_hyper = {version = "0.10", optional = true}
+juniper_graphql_ws = {version = "0.5", optional = true}
 warp = {version = "0.4", optional = true, features = ["server", "websocket"]}
 bigdecimal = {version = "0.4", optional = true}
 chrono = {version = "0.4", optional = true}
@@ -128,7 +128,7 @@ rand = "0.6"
 tonic-build = "0.13"
 
 [features]
-graphql = ["juniper", "juniper_warp", "bigdecimal", "chrono", "figment"]
+graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "warp", "bigdecimal", "chrono", "figment"]
 zemu = []
 
 [patch.crates-io]
