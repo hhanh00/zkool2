@@ -4,8 +4,9 @@ use crate::{
     account::generate_next_dindex,
     api::{mempool::MempoolMsg, pay::DustChangePolicy},
     graphql::{
-        data::Addresses,
+        data::{Addresses, Event, EventType},
         query::{zats_to_zec, zec_to_zats},
+        subs::SUBS,
         Context,
     },
     pay::plan::{extract_transaction, sign_transaction},
@@ -196,10 +197,41 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                 match msg {
                     MempoolMsg::TxId(txid, items, _) => {
                         for (account, _, value) in items {
-                            let mut mempool = MEMPOOL.lock().await;
-                            let e = mempool.unconfirmed.entry(account);
-                            let e = e.or_insert_with(HashMap::new);
-                            e.insert(txid.clone(), zats_to_zec(value));
+                            {
+                                let mut mempool = MEMPOOL.lock().await;
+                                let e = mempool.unconfirmed.entry(account);
+                                let e = e.or_insert_with(HashMap::new);
+                                e.insert(txid.clone(), zats_to_zec(value));
+                            }
+                            {
+                                let account = account as i32;
+                                let ss = SUBS.lock().await;
+                                if let Some(subs) = ss.get(&account) {
+                                    for s in subs {
+                                        let _ = s
+                                            .send(Ok(Event {
+                                                r#type: EventType::Tx,
+                                                txid: txid.clone(),
+                                                ..Event::default()
+                                            }))
+                                            .await;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    MempoolMsg::BlockHeight(height) => {
+                        let ss = SUBS.lock().await;
+                        for subs in ss.values() {
+                            for s in subs {
+                                let _ = s
+                                    .send(Ok(Event {
+                                        r#type: EventType::Block,
+                                        height: height as i32,
+                                        ..Event::default()
+                                    }))
+                                    .await;
+                            }
                         }
                     }
                 }
@@ -211,18 +243,10 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                 let mut mempool = MEMPOOL.lock().await;
                 mempool.unconfirmed.clear();
             }
-            let height = crate::api::network::get_current_height(&coin).await?;
             let cancel_token = CancellationToken::new();
 
-            crate::mempool::run_mempool_impl(
-                tx,
-                network,
-                &mut conn,
-                &mut client,
-                height,
-                cancel_token,
-            )
-            .await?;
+            crate::mempool::run_mempool_impl(tx, network, &mut conn, &mut client, cancel_token)
+                .await?;
             Ok::<_, anyhow::Error>(())
         };
         match runner.await {

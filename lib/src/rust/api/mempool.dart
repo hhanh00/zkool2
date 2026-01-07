@@ -21,13 +21,16 @@ abstract class Mempool implements RustOpaqueInterface {
 
   factory Mempool() => RustLib.instance.api.crateApiMempoolMempoolNew();
 
-  Stream<MempoolMsg> run({required int height, required Coin c});
+  Stream<MempoolMsg> run({required Coin c});
 }
 
 @freezed
 sealed class MempoolMsg with _$MempoolMsg {
   const MempoolMsg._();
 
+  const factory MempoolMsg.blockHeight(
+    int field0,
+  ) = MempoolMsg_BlockHeight;
   const factory MempoolMsg.txId(
     String field0,
     List<(int, String, PlatformInt64)> field1,

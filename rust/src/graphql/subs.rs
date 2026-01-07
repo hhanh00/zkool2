@@ -1,4 +1,3 @@
-use std::time::Duration;
 use std::{collections::HashMap, sync::LazyLock};
 
 use juniper::{graphql_subscription, FieldResult};
@@ -6,7 +5,6 @@ use tokio::sync::mpsc;
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio_stream::wrappers::ReceiverStream;
 
-use crate::graphql::data::EventType;
 use crate::graphql::{
     data::{Event, EventStream},
     Context,
@@ -23,25 +21,6 @@ impl Subscription {
         e.push(tx);
 
         Box::pin(ReceiverStream::new(rx))
-    }
-}
-
-pub async fn test_event_pub(id_account: i32) {
-    let mut height = 0;
-    loop {
-        let subs = SUBS.lock().await;
-        if let Some(ss) = subs.get(&id_account) {
-            for s in ss {
-                let _ = s.send(Ok(Event {
-                    r#type: EventType::Block,
-                    height,
-                    txid: "".to_string(),
-                }))
-                .await;
-            }
-        }
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        height += 1;
     }
 }
 
