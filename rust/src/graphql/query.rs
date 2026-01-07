@@ -1,3 +1,9 @@
+use anyhow::{Error, Result};
+use dataloader::cached::Loader;
+use sqlx::SqlitePool;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
@@ -5,7 +11,7 @@ use crate::graphql::Context;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDateTime};
-use juniper::{FieldError, FieldResult, graphql_object};
+use juniper::{graphql_object, FieldError, FieldResult};
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 pub struct Query {}
@@ -42,10 +48,7 @@ impl Query {
         Ok(accounts)
     }
 
-    pub async fn account_by_id(
-        id_account: i32,
-        context: &Context,
-    ) -> FieldResult<Account> {
+    pub async fn account_by_id(id_account: i32, context: &Context) -> FieldResult<Account> {
         let mut conn = context.coin.get_connection().await?;
         let account = query(
             "SELECT id_account, name, seed, passphrase, aindex, dindex, birth FROM accounts
@@ -167,7 +170,7 @@ impl Query {
                     value: value.clone(),
                 })
                 .collect();
-            return Ok(txs)
+            return Ok(txs);
         }
         Ok(vec![])
     }
@@ -195,13 +198,27 @@ impl Query {
 
 #[graphql_object]
 impl Account {
-    pub fn id(&self) -> i32 { self.id }
-    pub fn name(&self) -> String { self.name.clone() }
-    pub fn seed(&self) -> Option<String> { self.seed.clone() }
-    pub fn passphrase(&self) -> Option<String> { self.passphrase.clone() }
-    pub fn aindex(&self) -> i32 { self.aindex }
-    pub fn dindex(&self) -> i32 { self.dindex }
-    pub fn birth(&self) -> i32 { self.birth }
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn seed(&self) -> Option<String> {
+        self.seed.clone()
+    }
+    pub fn passphrase(&self) -> Option<String> {
+        self.passphrase.clone()
+    }
+    pub fn aindex(&self) -> i32 {
+        self.aindex
+    }
+    pub fn dindex(&self) -> i32 {
+        self.dindex
+    }
+    pub fn birth(&self) -> i32 {
+        self.birth
+    }
 
     pub async fn transactions(&self, context: &Context) -> FieldResult<Vec<Transaction>> {
         let txs = Query::transactions_by_account(self.id, None, context).await?;
@@ -211,13 +228,27 @@ impl Account {
 
 #[graphql_object]
 impl Transaction {
-    pub fn id(&self) -> i32 { self.id }
-    pub fn txid(&self) -> String { self.txid.clone() }
-    pub fn account(&self) -> i32 { self.account }
-    pub fn height(&self) -> i32 { self.height }
-    pub fn time(&self) -> NaiveDateTime { self.time }
-    pub fn value(&self) -> BigDecimal { self.value.clone() }
-    pub fn fee(&self) -> BigDecimal { self.fee.clone() }
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+    pub fn txid(&self) -> String {
+        self.txid.clone()
+    }
+    pub fn account(&self) -> i32 {
+        self.account
+    }
+    pub fn height(&self) -> i32 {
+        self.height
+    }
+    pub fn time(&self) -> NaiveDateTime {
+        self.time
+    }
+    pub fn value(&self) -> BigDecimal {
+        self.value.clone()
+    }
+    pub fn fee(&self) -> BigDecimal {
+        self.fee.clone()
+    }
 
     pub async fn notes(&self, context: &Context) -> FieldResult<Vec<Note>> {
         let mut conn = context.coin.get_connection().await?;
@@ -241,13 +272,30 @@ impl Transaction {
         let mut txid = hex::decode(&self.txid)?;
         txid.reverse();
         let memos = crate::db::get_memos_txid(&mut conn, self.account as u32, &txid).await?;
-        let memos: Vec<_> = memos
-            .into_iter()
-            .filter_map(|m| m.memo)
-            .collect();
+        let memos: Vec<_> = memos.into_iter().filter_map(|m| m.memo).collect();
         Ok(memos)
     }
+}
 
+#[graphql_object]
+impl Note {
+    pub fn height(&self) -> i32 {
+        self.height
+    }
+    pub fn pool(&self) -> i32 {
+        self.pool
+    }
+    pub fn value(&self) -> BigDecimal {
+        self.value.clone()
+    }
+    pub async fn tx(&self, context: &Context) -> FieldResult<Transaction> {
+        context
+            .tx_loader
+            .try_load(self.tx)
+            .await
+            .map_err(|_| anyhow::anyhow!("No tx exists for ID {}", self.tx))?
+            .map_err(|err| FieldError::new(err.to_string(), juniper::Value::Null))
+    }
 }
 
 fn row_to_account(r: SqliteRow) -> Account {
@@ -309,6 +357,45 @@ pub fn zec_to_zats(zec: bigdecimal::BigDecimal) -> FieldResult<i64> {
     Ok(digits[0] as i64)
 }
 
-// TODO
-// list transactions from height
-// balance at height
+pub struct TxDataLoader {}
+
+pub struct TxBatcher {
+    pub pool: SqlitePool,
+}
+
+impl dataloader::BatchFn<i32, Result<Transaction, Arc<Error>>> for TxBatcher {
+    async fn load(&mut self, keys: &[i32]) -> HashMap<i32, Result<Transaction, Arc<Error>>> {
+        let f = async move {
+            let mut conn = self.pool.acquire().await?;
+            query("CREATE TEMP TABLE tmp_ids (id INTEGER PRIMARY KEY)")
+                .execute(&mut *conn)
+                .await?;
+            for id in keys {
+                query("INSERT INTO tmp_ids(id) VALUES (?1)")
+                    .bind(*id)
+                    .execute(&mut *conn)
+                    .await?;
+            }
+            let txs = query(
+                "SELECT account, id_tx, txid, height, time, value, fee FROM transactions t
+            JOIN tmp_ids i ON t.id_tx = i.id",
+            )
+            .map(row_to_transaction)
+            .fetch_all(&mut *conn)
+            .await?;
+            let txs: HashMap<i32, Result<Transaction, Arc<Error>>> =
+                txs.into_iter().map(|tx| (tx.id, Ok(tx))).collect();
+            tracing::info!("{txs:?}");
+            Ok::<_, anyhow::Error>(txs)
+        };
+
+        let txs = f.await.unwrap();
+        txs
+    }
+}
+
+pub type TxLoader = Loader<i32, Result<Transaction, Arc<anyhow::Error>>, TxBatcher>;
+
+pub fn new_tx_loader(pool: SqlitePool) -> TxLoader {
+    TxLoader::new(TxBatcher { pool }).with_yield_count(100)
+}
