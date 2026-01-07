@@ -26,14 +26,25 @@ This creates the executable `zkool_graphql` in the `target/release` directory.
 
 ## Configuration
 
-:::important
-You MUST have a configuration file `zkool.toml`.
-:::
-
-It needs to specify the path to the database file (which will be automatically
-created) and the URL to the LightwalletD server.
+The config file needs to specify the path to the database file (which will be
+automatically created), the URL to the LightwalletD server and the listening port.
 
 ```toml
 db_path = "zkool.db"
 lwd_url = "https://zec.rocks"
+port = 8000
+```
+
+Alternatively, you can specify another config file or set the values on the
+command line.
+
+```text
+Usage: zkool_graphql [OPTIONS]
+
+Options:
+  -c, --config-path <CONFIG_PATH>
+  -d, --db-path <DB_PATH>
+  -l, --lwd-url <LWD_URL>
+  -p, --port <PORT>
+  -h, --help                       Print help
 ```
