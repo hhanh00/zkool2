@@ -71,6 +71,23 @@ export default defineUserConfig({
         ],
       },
       {
+        text: "GraphQL",
+        prefix: "/graphql/",
+        children: [
+          "api",
+          "build",
+          "graphiql",
+          "account",
+          "sync",
+          "balance",
+          "history",
+          "receive",
+          "payments",
+          "unconfirmed",
+          "notifications",
+        ],
+      },
+      {
         text: "Zcash tech",
         prefix: "/tech/",
         children: [
