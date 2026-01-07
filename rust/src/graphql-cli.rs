@@ -26,9 +26,8 @@ async fn main() -> Result<()> {
     let config = Figment::new().merge(Toml::file("zkool.toml"));
     let db_path: String = config.extract_inner("db_path")?;
     let lwd_url: String = config.extract_inner("lwd_url")?;
-    let polling_interval: u32 = config.extract_inner("polling_interval")?;
     let port: u16 = config.extract_inner("port").unwrap_or(8000);
-    tracing::info!("db_path {db_path} lwd_url {lwd_url} polling_interval {polling_interval}");
+    tracing::info!("db_path {db_path} lwd_url {lwd_url}");
     let coin = Coin::new()
         .open_database(db_path, None)
         .await?

@@ -33,7 +33,6 @@ pub struct Coin {
     pub url: String,
     pub server_type: u8,
     pub use_tor: bool,
-    pub polling_interval: u32,
 }
 
 impl Coin {
@@ -120,20 +119,13 @@ impl Coin {
         })
     }
 
-    pub fn set_polling_interval(self, polling_interval: u32) -> Result<Self> {
-        Ok(Coin {
-            polling_interval,
-            ..self
-        })
-    }
-
     pub(crate) async fn client(&self) -> Result<Client> {
         match self.server_type {
             0 if self.use_tor => {
                 let channel = connect_over_tor(&self.url).await?;
 
                 let client = CompactTxStreamerClient::new(channel);
-                Ok(Box::new(client))
+                Ok(Box::new(client) as Client)
             }
 
             0 if !self.use_tor => {
@@ -143,12 +135,12 @@ impl Coin {
                     channel = channel.tls_config(tls)?;
                 }
                 let client = CompactTxStreamerClient::connect(channel).await?;
-                Ok(Box::new(client))
+                Ok(Box::new(client) as Client)
             }
 
             1 => {
                 let client = ZebraClient::new(&self.network(), &self.url)?;
-                Ok(Box::new(client))
+                Ok(Box::new(client) as Client)
             }
 
             _ => unreachable!(),
@@ -243,7 +235,6 @@ impl Coin {
             server_type: 0,
             url: String::new(),
             use_tor: false,
-            polling_interval: 0,
         }
     }
 }
