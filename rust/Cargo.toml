@@ -106,6 +106,7 @@ warp = {version = "0.4", optional = true, features = ["server", "websocket"]}
 bigdecimal = {version = "0.4", optional = true}
 chrono = {version = "0.4", optional = true}
 figment = {version = "0.10", optional = true}
+dataloader = {version = "0.18", optional = true}
 
 [target.'cfg(target_os = "macos")'.dependencies]
 hidapi = "2.6.3"
@@ -128,7 +129,7 @@ rand = "0.6"
 tonic-build = "0.13"
 
 [features]
-graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "warp", "bigdecimal", "chrono", "figment"]
+graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "bigdecimal", "chrono", "figment"]
 zemu = []
 
 [patch.crates-io]
