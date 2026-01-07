@@ -7,7 +7,6 @@ use crate::{api::coin::Coin, frb_generated::StreamSink};
 
 async fn run_mempool(
     mempool_sink: StreamSink<MempoolMsg>,
-    height: u32,
     cancel_token: CancellationToken,
     c: &Coin
 ) -> Result<()> {
@@ -17,7 +16,6 @@ async fn run_mempool(
         &c.network(),
         &mut connection,
         &mut c.client().await?,
-        height,
         cancel_token,
     )
     .await;
@@ -34,6 +32,7 @@ async fn run_mempool(
 #[frb]
 #[derive(Clone)]
 pub enum MempoolMsg {
+    BlockHeight(u32),
     TxId(String, Vec<(u32, String, i64)>, u32),
 }
 
@@ -56,11 +55,11 @@ impl Mempool {
         }
     }
 
-    pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, height: u32, c: Coin) -> Result<()> {
+    pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, c: Coin) -> Result<()> {
         let ct = CancellationToken::new();
         self.cancel_token = Some(ct.clone());
         self.runtime.spawn(async move {
-            if let Err(e) = run_mempool(mempool_sink, height, ct, &c).await {
+            if let Err(e) = run_mempool(mempool_sink, ct, &c).await {
                 tracing::error!("Error running mempool: {}", e);
             }
         });

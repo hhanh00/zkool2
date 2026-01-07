@@ -103,7 +103,7 @@ abstract class RustLibApi extends BaseApi {
   Mempool crateApiMempoolMempoolNew();
 
   Stream<MempoolMsg> crateApiMempoolMempoolRun(
-      {required Mempool that, required int height, required Coin c});
+      {required Mempool that, required Coin c});
 
   Future<void> crateApiSweepTransparentScannerCancel(
       {required TransparentScanner that});
@@ -511,7 +511,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Stream<MempoolMsg> crateApiMempoolMempoolRun(
-      {required Mempool that, required int height, required Coin c}) {
+      {required Mempool that, required Coin c}) {
     final mempoolSink = RustStreamSink<MempoolMsg>();
     unawaited(
       handler.executeNormal(
@@ -521,7 +521,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
                 that, serializer);
             sse_encode_StreamSink_mempool_msg_Sse(mempoolSink, serializer);
-            sse_encode_u_32(height, serializer);
             sse_encode_box_autoadd_coin(c, serializer);
             pdeCallFfi(generalizedFrbRustBinding, serializer,
                 funcId: 3, port: port_);
@@ -531,7 +530,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             decodeErrorData: sse_decode_AnyhowException,
           ),
           constMeta: kCrateApiMempoolMempoolRunConstMeta,
-          argValues: [that, mempoolSink, height, c],
+          argValues: [that, mempoolSink, c],
           apiImpl: this,
         ),
       ),
@@ -541,7 +540,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiMempoolMempoolRunConstMeta => const TaskConstMeta(
         debugName: "Mempool_run",
-        argNames: ["that", "mempoolSink", "height", "c"],
+        argNames: ["that", "mempoolSink", "c"],
       );
 
   @override
@@ -4558,6 +4557,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     switch (raw[0]) {
       case 0:
+        return MempoolMsg_BlockHeight(
+          dco_decode_u_32(raw[1]),
+        );
+      case 1:
         return MempoolMsg_TxId(
           dco_decode_String(raw[1]),
           dco_decode_list_record_u_32_string_i_64(raw[2]),
@@ -5784,6 +5787,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var tag_ = sse_decode_i_32(deserializer);
     switch (tag_) {
       case 0:
+        var var_field0 = sse_decode_u_32(deserializer);
+        return MempoolMsg_BlockHeight(var_field0);
+      case 1:
         var var_field0 = sse_decode_String(deserializer);
         var var_field1 = sse_decode_list_record_u_32_string_i_64(deserializer);
         var var_field2 = sse_decode_u_32(deserializer);
@@ -7004,12 +7010,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_mempool_msg(MempoolMsg self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     switch (self) {
+      case MempoolMsg_BlockHeight(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_u_32(field0, serializer);
       case MempoolMsg_TxId(
           field0: final field0,
           field1: final field1,
           field2: final field2
         ):
-        sse_encode_i_32(0, serializer);
+        sse_encode_i_32(1, serializer);
         sse_encode_String(field0, serializer);
         sse_encode_list_record_u_32_string_i_64(field1, serializer);
         sse_encode_u_32(field2, serializer);
@@ -7455,9 +7464,8 @@ class MempoolImpl extends RustOpaque implements Mempool {
         that: this,
       );
 
-  Stream<MempoolMsg> run({required int height, required Coin c}) =>
-      RustLib.instance.api
-          .crateApiMempoolMempoolRun(that: this, height: height, c: c);
+  Stream<MempoolMsg> run({required Coin c}) =>
+      RustLib.instance.api.crateApiMempoolMempoolRun(that: this, c: c);
 }
 
 @sealed
