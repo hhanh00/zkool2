@@ -33,6 +33,7 @@ pub struct Balance {
     pub transparent: BigDecimal,
     pub sapling: BigDecimal,
     pub orchard: BigDecimal,
+    pub total: BigDecimal,
 }
 
 #[derive(GraphQLObject)]
