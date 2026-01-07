@@ -9,7 +9,6 @@ use rlz::api::coin::Coin;
 use rlz::graphql::mutation::run_mempool;
 use rlz::graphql::{mutation::Mutation, query::Query, subs::Subscription, Context};
 use warp::Filter;
-use warp::http::Response;
 
 type Schema = RootNode<Query, Mutation, Subscription>;
 
@@ -42,16 +41,6 @@ async fn main() -> Result<()> {
     let context_extractor = warp::any()
     .map(move || context.clone());
 
-    let homepage = warp::path::end().map(|| {
-        Response::builder()
-            .header("content-type", "text/html")
-            .body(
-                "<html><h1>juniper_warp/subscription example</h1>\
-                       <div>visit <a href=\"/graphiql\">GraphiQL</a></div>\
-                       <div>visit <a href=\"/playground\">GraphQL Playground</a></div>\
-                 </html>",
-            )
-    });
     let schema = Arc::new(schema);
 
     let routes = (warp::post()
@@ -71,8 +60,7 @@ async fn main() -> Result<()> {
         .and(juniper_warp::graphiql_filter(
             "/graphql",
             Some("/subscriptions"),
-        )))
-    .or(homepage);
+        )));
 
     tracing::info!("Listening on 127.0.0.1:{port}");
     warp::serve(routes).run(([127, 0, 0, 1], port)).await;

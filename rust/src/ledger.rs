@@ -1,16 +1,21 @@
 use std::sync::LazyLock;
-use std::{io::Write, sync::Arc};
+use std::io::Write;
 
 use byteorder::{WriteBytesExt, BE};
 use hidapi::{self, HidApi, HidDevice};
-use ledger_transport::Exchange;
-#[cfg(target_os = "macos")]
-use ledger_transport_zemu::TransportZemuHttp;
 use tokio::runtime::Builder;
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tonic::async_trait;
 
 use crate::IntoAnyhow;
+
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "macos")] {
+        use std::sync::Arc;
+        use ledger_transport_zemu::TransportZemuHttp;
+        use ledger_transport::Exchange;
+    }
+}
 
 pub mod builder;
 pub mod error;
@@ -304,7 +309,7 @@ impl Device for LedgerDeviceZEMU {
     }
 
     #[cfg(not(target_os = "macos"))]
-    async fn execute(&self, command: APDUCommand) -> LedgerResult<APDUAnswer> {
+    async fn execute(&self, _command: APDUCommand) -> LedgerResult<APDUAnswer> {
         unimplemented!()
     }
 }
