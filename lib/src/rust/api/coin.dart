@@ -29,7 +29,6 @@ sealed class Coin with _$Coin {
     required String url,
     required int serverType,
     required bool useTor,
-    required int pollingInterval,
   }) = _Coin;
   Future<void> getName() => RustLib.instance.api.crateApiCoinCoinGetName(
         that: this,
@@ -51,10 +50,6 @@ sealed class Coin with _$Coin {
   Coin setLwd({required int serverType, required String url}) =>
       RustLib.instance.api
           .crateApiCoinCoinSetLwd(that: this, serverType: serverType, url: url);
-
-  Future<Coin> setPollingInterval({required int pollingInterval}) =>
-      RustLib.instance.api.crateApiCoinCoinSetPollingInterval(
-          that: this, pollingInterval: pollingInterval);
 
   Future<Coin> setUseTor({required bool useTor}) => RustLib.instance.api
       .crateApiCoinCoinSetUseTor(that: this, useTor: useTor);
