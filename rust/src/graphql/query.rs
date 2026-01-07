@@ -128,11 +128,13 @@ impl Query {
         let current_height = get_sync_height(&mut conn, id_account as u32).await?;
         let height = height.or(current_height);
         let b = calculate_balance(&mut conn, id_account as u32, height).await?;
+        let total = b.0[0] + b.0[1] + b.0[2];
         let balance = Balance {
             height: height.map(|h| h as i32),
             transparent: zats_to_zec(b.0[0] as i64),
             sapling: zats_to_zec(b.0[1] as i64),
             orchard: zats_to_zec(b.0[2] as i64),
+            total: zats_to_zec(total as i64),
         };
         Ok(balance)
     }
