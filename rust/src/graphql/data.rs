@@ -55,16 +55,16 @@ pub struct UnconfirmedTx {
     pub value: BigDecimal,
 }
 
-#[derive(Clone, GraphQLObject)]
+#[derive(Clone, GraphQLObject, Default)]
 pub struct Event {
     pub r#type: EventType,
     pub height: i32,
     pub txid: String,
 }
 
-#[derive(Clone, GraphQLEnum)]
+#[derive(Clone, GraphQLEnum, Default)]
 pub enum EventType {
-    Block,
+    #[default] Block,
     Tx,
 }
 

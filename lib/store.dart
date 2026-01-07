@@ -420,9 +420,8 @@ class MempoolNotifier extends _$MempoolNotifier {
         if (settings.offline) return;
         state = MempoolState(running: true, unconfirmedFunds: {}, unconfirmedTx: []);
 
-        final height = await getCurrentHeight(c: c);
         final comp = Completer();
-        mempool.run(height: height, c: c).listen(
+        mempool.run(c: c).listen(
               (msg) {
                 if (msg is MempoolMsg_TxId) {
                   final txId = msg.field0; // txid hash

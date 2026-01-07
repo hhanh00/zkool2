@@ -1,3 +1,4 @@
+use crate::api::coin::Network;
 use crate::lwd::{CompactOrchardAction, CompactSaplingOutput};
 use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
 use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
@@ -10,11 +11,8 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::COMPACT_NOTE_SIZE;
-use zcash_primitives::{
-    transaction::{Authorized, Transaction, TransactionData},
-};
+use zcash_primitives::transaction::{Authorized, Transaction, TransactionData};
 use zcash_transparent::address::TransparentAddress;
-use crate::api::coin::Network;
 
 use crate::{Client, Sink};
 
@@ -23,11 +21,9 @@ pub async fn run_mempool(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
-    height: u32,
     cancel_token: CancellationToken,
 ) -> Result<()> {
-    run_mempool_impl(mempool_tx, network, connection, client, height,
-    cancel_token).await
+    run_mempool_impl(mempool_tx, network, connection, client, cancel_token).await
 }
 
 pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
@@ -35,7 +31,6 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
-    height: u32,
     cancel_token: CancellationToken,
 ) -> Result<()> {
     let transparent_accounts = sqlx::query(
@@ -84,48 +79,53 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
     .await
     .context("orchard_accounts")?;
 
-    let mut mempool_txs = client.mempool_stream(network).await?;
+    'outer: loop {
+        let height = client.latest_height().await?;
+        mempool_tx.send(MempoolMsg::BlockHeight(height)).await;
 
-    loop {
-        tokio::select! {
-            _ = cancel_token.cancelled() => {
-                break;
-            }
-            r = mempool_txs.next() => {
-                match r {
-                    Some((_, tx, len)) => {
-                        let txid = tx.txid();
-                        let tx_hash = txid.to_string();
+        let mut mempool_txs = client.mempool_stream(network).await?;
 
-                        let tx_data = tx.into_data();
+        loop {
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    break 'outer;
+                }
+                r = mempool_txs.next() => {
+                    match r {
+                        Some((_, tx, len)) => {
+                            let txid = tx.txid();
+                            let tx_hash = txid.to_string();
 
-                        let notes = decode_raw_transaction(
-                            network,
-                            connection,
-                            height,
-                            &transparent_accounts,
-                            &sapling_accounts,
-                            &orchard_accounts,
-                            &tx_data,
-                        ).await?;
-                        let a = notes
-                            .iter()
-                            .map(|n| ((n.account, n.name.clone()), n.value))
-                            .into_group_map();
-                        let amounts = a
-                            .into_iter()
-                            .map(|((account, name), note_values)| {
-                                (account, name, note_values.iter().sum::<i64>())
-                            })
-                            .collect::<Vec<_>>();
-                        mempool_tx.send(MempoolMsg::TxId(tx_hash, amounts, len as u32)).await;
-                    }
-                    None => {
-                        break;
+                            let tx_data = tx.into_data();
+
+                            let notes = decode_raw_transaction(
+                                network,
+                                connection,
+                                height,
+                                &transparent_accounts,
+                                &sapling_accounts,
+                                &orchard_accounts,
+                                &tx_data,
+                            ).await?;
+                            let a = notes
+                                .iter()
+                                .map(|n| ((n.account, n.name.clone()), n.value))
+                                .into_group_map();
+                            let amounts = a
+                                .into_iter()
+                                .map(|((account, name), note_values)| {
+                                    (account, name, note_values.iter().sum::<i64>())
+                                })
+                                .collect::<Vec<_>>();
+                            mempool_tx.send(MempoolMsg::TxId(tx_hash, amounts, len as u32)).await;
+                        }
+                        None => {
+                            break;
+                        }
                     }
                 }
-            }
 
+            }
         }
     }
     Ok(())

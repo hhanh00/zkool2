@@ -355,9 +355,11 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             )
             .await?;
 
+            info!("heights_without_time");
             let heights_without_time =
                 get_heights_without_time(&mut connection, start_height, end_height).await?;
             for h in heights_without_time {
+                info!("fetch block @{h}");
                 let block = client.block(&network, h).await?;
                 let time = block.time;
                 sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0")
@@ -1125,7 +1127,7 @@ pub async fn get_heights_without_time(
     let synced_heights_without_time = sqlx::query(
         "SELECT sh.height FROM sync_heights sh
         LEFT JOIN headers h ON sh.height = h.height
-        WHERE h.time IS NULL",
+        WHERE h.time IS NULL AND sh.height > 0",
     )
     .map(|row: SqliteRow| {
         let height: u32 = row.get(0);

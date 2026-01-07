@@ -36,7 +36,6 @@ async fn main() -> Result<()> {
 
     let context = Context::new(coin);
     tokio::spawn(run_mempool(context.clone()));
-    tokio::spawn(rlz::graphql::subs::test_event_pub(1));
 
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 
