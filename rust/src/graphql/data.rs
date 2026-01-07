@@ -5,6 +5,7 @@ use juniper::{FieldResult, GraphQLEnum, GraphQLObject};
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 
+#[derive(Clone, Debug)]
 pub struct Account {
     pub id: i32,
     pub name: String,
@@ -15,6 +16,7 @@ pub struct Account {
     pub birth: i32,
 }
 
+#[derive(Clone, Debug)]
 pub struct Transaction {
     pub id: i32,
     pub txid: String,
@@ -41,7 +43,7 @@ pub struct Addresses {
     pub orchard: Option<String>,
 }
 
-#[derive(GraphQLObject)]
+#[derive(Clone, Debug)]
 pub struct Note {
     pub height: i32,
     pub pool: i32,
