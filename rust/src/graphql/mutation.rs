@@ -162,7 +162,7 @@ impl Mutation {
         let mut conn = context.coin.get_connection().await?;
         generate_next_dindex(&network, &mut conn, id_account as u32).await?;
         let addresses =
-            crate::account::get_addresses(&context.coin.network(), &mut conn, id_account as u32, 7)
+            crate::account::get_addresses(&context.coin.network(), &mut conn, id_account as u32, 6)
                 .await?;
         let addresses = Addresses {
             ua: addresses.ua,

@@ -145,7 +145,7 @@ impl Query {
         context: &Context,
     ) -> FieldResult<Addresses> {
         let mut conn = context.coin.get_connection().await?;
-        let ua_pools = pools.unwrap_or(7) as u8;
+        let ua_pools = pools.unwrap_or(6) as u8;
         let addresses = crate::account::get_addresses(
             &context.coin.network(),
             &mut conn,
