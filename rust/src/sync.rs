@@ -226,13 +226,13 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
     transparent_limit: u32,
     checkpoint_age: u32,
     c: &Coin,
-) -> Result<()> {
+) -> Result<u32> {
     if accounts.is_empty() {
-        return Ok(());
+        return Ok(current_height);
     }
 
     let Ok(_guard) = SYNCING.try_lock() else {
-        return Ok(());
+        return Ok(current_height);
     };
 
     let (tx_cancel, _rx_cancel) = broadcast::channel::<()>(1);
@@ -408,7 +408,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         *cancel = None;
     }
 
-    Ok(())
+    Ok(current_height)
 }
 
 #[allow(clippy::too_many_arguments)]
