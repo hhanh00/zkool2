@@ -48,3 +48,12 @@ Options:
   -p, --port <PORT>
   -h, --help                       Print help
 ```
+
+## Using Testnet or Regtest
+
+To use the testnet, name the database with `testnet` in it.
+For regtest, name the database with `regtest` in it.
+
+:::important
+You must also use a lightwalletd that connects to the proper network.
+:::
