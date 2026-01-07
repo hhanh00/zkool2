@@ -19,7 +19,7 @@ pub async fn synchronize(
     transparent_limit: u32,
     checkpoint_age: u32,
     c: &Coin,
-) -> Result<()> {
+) -> Result<u32> {
     crate::sync::synchronize_impl(
         progress,
         accounts,

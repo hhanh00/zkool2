@@ -3644,7 +3644,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
                 funcId: 114, port: port_);
           },
           codec: SseCodec(
-            decodeSuccessData: sse_decode_unit,
+            decodeSuccessData: sse_decode_u_32,
             decodeErrorData: sse_decode_AnyhowException,
           ),
           constMeta: kCrateApiSyncSynchronizeConstMeta,
