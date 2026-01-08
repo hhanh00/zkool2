@@ -1,16 +1,30 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use figment::providers::{Format, Toml};
+use clap::Parser;
+use figment::providers::{Format, Serialized, Toml};
 use figment::Figment;
 use juniper::RootNode;
 use juniper_graphql_ws::ConnectionConfig;
 use rlz::api::coin::Coin;
 use rlz::graphql::mutation::run_mempool;
 use rlz::graphql::{mutation::Mutation, query::Query, subs::Subscription, Context};
+use serde::{Deserialize, Serialize};
 use warp::Filter;
 
 type Schema = RootNode<Query, Mutation, Subscription>;
+
+#[derive(Parser, Serialize, Deserialize, Debug)]
+pub struct Config {
+    #[clap(short, long, value_parser)]
+    pub config_path: Option<String>,
+    #[clap(short, long, value_parser)]
+    pub db_path: Option<String>,
+    #[clap(short, long, value_parser)]
+    pub lwd_url: Option<String>,
+    #[clap(short, long, value_parser)]
+    pub port: Option<u16>,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,12 +35,24 @@ async fn main() -> Result<()> {
         .with_ansi(false)
         .compact()
         .finish();
+    let c = Config::parse();
+    let config_path = c.config_path.clone().unwrap_or("zkool.toml".to_string());
     let _ = tracing::subscriber::set_global_default(subscriber);
-    let config = Figment::new().merge(Toml::file("zkool.toml"));
-    let db_path: String = config.extract_inner("db_path")?;
-    let lwd_url: String = config.extract_inner("lwd_url")?;
-    let port: u16 = config.extract_inner("port").unwrap_or(8000);
-    tracing::info!("db_path {db_path} lwd_url {lwd_url}");
+    let config: Config = Figment::new()
+        .merge(Serialized::defaults(c))
+        .merge(Toml::file(&config_path))
+        .extract()?;
+    let Config {
+        db_path,
+        lwd_url,
+        port,
+        ..
+    } = config;
+    let db_path = db_path.unwrap_or("zkool.db".to_string());
+    let lwd_url = lwd_url.unwrap_or("https://zec.rocks".to_string());
+    let port = port.unwrap_or(8000);
+
+    tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
     let coin = Coin::new()
         .open_database(db_path, None)
         .await?
@@ -38,8 +64,7 @@ async fn main() -> Result<()> {
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 
     let c = context.clone();
-    let context_extractor = warp::any()
-    .map(move || context.clone());
+    let context_extractor = warp::any().map(move || context.clone());
 
     let schema = Arc::new(schema);
 
