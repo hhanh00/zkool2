@@ -3,15 +3,21 @@ use dataloader::cached::Loader;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;
+use zcash_keys::address::UnifiedAddress;
+use zcash_keys::encoding::AddressCodec;
+use zcash_keys::keys::UnifiedFullViewingKey;
 
+use crate::api::coin::Network;
 use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::Context;
+use crate::tiu;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult};
+use orchard::keys::Scope;
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 pub struct Query {}
@@ -178,23 +184,60 @@ impl Query {
     }
 
     async fn notes_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<Note>> {
+        let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
+        let ufvk = crate::key::get_account_ufvk(&network, &mut conn, id_account as u32, 7).await?;
+        let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
+
         let notes = crate::db::get_notes(&mut conn, id_account as u32).await?;
-        let notes: Vec<_> = notes
-            .into_iter()
-            .map(|n| Note {
-                height: n.height as i32,
-                pool: n.pool as i32,
-                tx: n.tx as i32,
-                value: zats_to_zec(n.value as i64),
-            })
-            .collect();
+        let notes: Vec<_> = notes.into_iter().map(|n| resolve_note(&network, &ufvk, n)).collect();
         Ok(notes)
     }
 
     async fn current_height(context: &Context) -> FieldResult<i32> {
         let height = crate::api::network::get_current_height(&context.coin).await?;
         Ok(height as i32)
+    }
+}
+
+fn resolve_note(network: &Network, ufvk: &UnifiedFullViewingKey, n: crate::api::account::TxNote) -> Note {
+    let address = match n.pool {
+        1 => {
+            let div = n.diversifier.as_ref().unwrap().clone();
+            let d = sapling_crypto::keys::Diversifier(tiu!(div));
+            let sfvk = ufvk.sapling().unwrap();
+            let address = if n.scope == 0 {
+                sfvk.diversified_address(d)
+            } else {
+                sfvk.diversified_change_address(d)
+            }
+            .unwrap();
+            Some(address.encode(&network))
+        }
+        2 => {
+            let div = n.diversifier.as_ref().unwrap().clone();
+            let d = orchard::keys::Diversifier::from_bytes(tiu!(div));
+            let ofvk = ufvk.orchard().unwrap();
+            let scope = if n.scope == 0 {
+                Scope::External
+            } else {
+                Scope::Internal
+            };
+            let address = ofvk.address(d, scope);
+            let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+            Some(ua.encode(&network))
+        }
+        _ => None,
+    };
+
+    Note {
+        height: n.height as i32,
+        pool: n.pool as i32,
+        tx: n.tx as i32,
+        scope: n.scope as i32,
+        diversifier: n.diversifier.map(|d| hex::encode(&d)).unwrap_or_default(),
+        address: address.unwrap_or_default(),
+        value: zats_to_zec(n.value as i64),
     }
 }
 
@@ -254,17 +297,15 @@ impl Transaction {
 
     pub async fn notes(&self, context: &Context) -> FieldResult<Vec<Note>> {
         let mut conn = context.coin.get_connection().await?;
+        let network = context.coin.network();
+        let ufvk = crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
+        let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
         let mut txid = hex::decode(&self.txid)?;
         txid.reverse();
         let notes = crate::db::get_notes_txid(&mut conn, self.account as u32, &txid).await?;
         let notes: Vec<_> = notes
             .into_iter()
-            .map(|n| Note {
-                height: n.height as i32,
-                pool: n.pool as i32,
-                tx: n.tx as i32,
-                value: zats_to_zec(n.value as i64),
-            })
+            .map(|n| resolve_note(&network, &ufvk, n))
             .collect();
         Ok(notes)
     }
@@ -289,6 +330,15 @@ impl Note {
     }
     pub fn value(&self) -> BigDecimal {
         self.value.clone()
+    }
+    pub fn address(&self) -> String {
+        self.address.clone()
+    }
+    pub fn scope(&self) -> i32 {
+        self.scope
+    }
+    pub fn diversifier(&self) -> String {
+        self.diversifier.clone()
     }
     pub async fn tx(&self, context: &Context) -> FieldResult<Transaction> {
         context
