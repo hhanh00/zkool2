@@ -5852,6 +5852,8 @@ impl SseDecode for crate::api::account::TxNote {
         let mut var_pool = <u8>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_tx = <u32>::sse_decode(deserializer);
+        let mut var_scope = <u8>::sse_decode(deserializer);
+        let mut var_diversifier = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_value = <u64>::sse_decode(deserializer);
         let mut var_locked = <bool>::sse_decode(deserializer);
         return crate::api::account::TxNote {
@@ -5859,6 +5861,8 @@ impl SseDecode for crate::api::account::TxNote {
             pool: var_pool,
             height: var_height,
             tx: var_tx,
+            scope: var_scope,
+            diversifier: var_diversifier,
             value: var_value,
             locked: var_locked,
         };
@@ -6952,6 +6956,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TxNote {
             self.pool.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
             self.tx.into_into_dart().into_dart(),
+            self.scope.into_into_dart().into_dart(),
+            self.diversifier.into_into_dart().into_dart(),
             self.value.into_into_dart().into_dart(),
             self.locked.into_into_dart().into_dart(),
         ]
@@ -7978,6 +7984,8 @@ impl SseEncode for crate::api::account::TxNote {
         <u8>::sse_encode(self.pool, serializer);
         <u32>::sse_encode(self.height, serializer);
         <u32>::sse_encode(self.tx, serializer);
+        <u8>::sse_encode(self.scope, serializer);
+        <Option<Vec<u8>>>::sse_encode(self.diversifier, serializer);
         <u64>::sse_encode(self.value, serializer);
         <bool>::sse_encode(self.locked, serializer);
     }

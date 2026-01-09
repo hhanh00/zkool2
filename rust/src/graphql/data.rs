@@ -50,6 +50,9 @@ pub struct Note {
     pub pool: i32,
     pub tx: i32,
     pub value: BigDecimal,
+    pub scope: i32,
+    pub diversifier: String,
+    pub address: String,
 }
 
 #[derive(GraphQLObject)]
