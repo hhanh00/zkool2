@@ -1178,7 +1178,7 @@ pub async fn get_account_hw(connection: &mut SqliteConnection, account: u32) -> 
 
 pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
     let notes = sqlx::query(
-        "SELECT n.id_note, n.height, n.pool, n.tx, n.value, n.locked
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked
        FROM notes n LEFT JOIN spends s
 	   ON n.id_note = s.id_note
 	   WHERE n.account = ? AND s.id_note IS NULL ORDER BY n.height DESC",
@@ -1219,14 +1219,18 @@ fn row_to_note(row: SqliteRow) -> TxNote {
     let height: u32 = row.get(1);
     let pool: u8 = row.get(2);
     let tx: u32 = row.get(3);
-    let value: u64 = row.get(4);
-    let locked: bool = row.get(5);
+    let scope: u8 = row.get(4);
+    let diversifier: Option<Vec<u8>> = row.get(5);
+    let value: u64 = row.get(6);
+    let locked: bool = row.get(7);
 
     TxNote {
         id: id_note,
         height,
         pool,
         tx,
+        scope,
+        diversifier,
         value,
         locked,
     }
