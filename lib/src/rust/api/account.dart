@@ -467,6 +467,8 @@ class TxNote {
   final int pool;
   final int height;
   final int tx;
+  final int scope;
+  final Uint8List? diversifier;
   final BigInt value;
   final bool locked;
 
@@ -475,6 +477,8 @@ class TxNote {
     required this.pool,
     required this.height,
     required this.tx,
+    required this.scope,
+    this.diversifier,
     required this.value,
     required this.locked,
   });
@@ -488,6 +492,8 @@ class TxNote {
       pool.hashCode ^
       height.hashCode ^
       tx.hashCode ^
+      scope.hashCode ^
+      diversifier.hashCode ^
       value.hashCode ^
       locked.hashCode;
 
@@ -500,6 +506,8 @@ class TxNote {
           pool == other.pool &&
           height == other.height &&
           tx == other.tx &&
+          scope == other.scope &&
+          diversifier == other.diversifier &&
           value == other.value &&
           locked == other.locked;
 }
