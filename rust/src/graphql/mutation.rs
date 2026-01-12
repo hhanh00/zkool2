@@ -1,16 +1,9 @@
 use std::{collections::HashMap, sync::LazyLock};
 
 use crate::{
-    account::generate_next_dindex,
-    api::{mempool::MempoolMsg, pay::DustChangePolicy},
-    graphql::{
-        data::{Addresses, Event, EventType},
-        query::{zats_to_zec, zec_to_zats},
-        subs::SUBS,
-        Context,
-    },
-    pay::plan::{extract_transaction, sign_transaction},
-    Sink,
+    Sink, account::generate_next_dindex, api::{mempool::MempoolMsg}, graphql::{
+        Context, data::{Addresses, Event, EventType}, query::{prepare_tx, zats_to_zec}, subs::SUBS
+    }, pay::plan::{extract_transaction, sign_transaction}
 };
 use bigdecimal::BigDecimal;
 use juniper::{graphql_object, FieldResult, GraphQLInputObject};
@@ -122,35 +115,11 @@ impl Mutation {
     }
 
     async fn pay(id_account: i32, payment: Payment, context: &Context) -> FieldResult<String> {
-        let height = crate::api::network::get_current_height(&context.coin).await?;
-        let mut recipients = vec![];
-        for r in payment.recipients {
-            recipients.push(crate::pay::Recipient {
-                address: r.address,
-                amount: zec_to_zats(r.amount)? as u64,
-                pools: None,
-                user_memo: r.memo,
-                memo_bytes: None,
-                price: None,
-            });
-        }
-        let network = context.coin.network();
-        let mut connection = context.coin.get_connection().await?;
-        let mut client = context.coin.client().await?;
-
-        let pczt = crate::pay::plan::plan_transaction(
-            &network,
-            &mut connection,
-            &mut client,
-            id_account as u32,
-            payment.src_pools.unwrap_or(7) as u8,
-            &recipients,
-            false,
-            payment.recipient_pays_fee.unwrap_or_default(),
-            DustChangePolicy::Discard,
-            None,
-        )
-        .await?;
+        let coin = &context.coin;
+        let pczt = prepare_tx(id_account, payment, coin).await?;
+        let mut connection = coin.get_connection().await?;
+        let mut client = coin.client().await?;
+        let height = client.latest_height().await?;
         let signed_pczt = sign_transaction(&mut connection, id_account as u32, &pczt).await?;
         let tx_bytes = extract_transaction(&signed_pczt).await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;

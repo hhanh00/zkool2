@@ -3,6 +3,7 @@ use crate::{api::pay::PcztPackage, Client};
 use anyhow::Result;
 use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
+use serde::{Serialize, Deserialize};
 use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_transparent::address::TransparentAddress;
@@ -74,6 +75,7 @@ impl InputNote {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct TxPlan {
     pub height: u32,
     pub inputs: Vec<TxPlanIn>,
@@ -172,11 +174,13 @@ impl TxPlan {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct TxPlanIn {
     pub pool: u8,
     pub amount: Option<u64>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct TxPlanOut {
     pub pool: u8,
     pub amount: u64,
