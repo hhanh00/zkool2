@@ -2355,7 +2355,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_u_16(coordinator, serializer);
+          sse_encode_u_8(coordinator, serializer);
           sse_encode_u_32(fundingAccount, serializer);
           sse_encode_box_autoadd_pczt_package(pczt, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
@@ -4320,7 +4320,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (arr.length != 2)
       throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
     return FrostSignParams(
-      coordinator: dco_decode_u_16(arr[0]),
+      coordinator: dco_decode_u_8(arr[0]),
       fundingAccount: dco_decode_u_32(arr[1]),
     );
   }
@@ -5433,7 +5433,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_coordinator = sse_decode_u_16(deserializer);
+    var var_coordinator = sse_decode_u_8(deserializer);
     var var_fundingAccount = sse_decode_u_32(deserializer);
     return FrostSignParams(
         coordinator: var_coordinator, fundingAccount: var_fundingAccount);
@@ -6717,7 +6717,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_frost_sign_params(
       FrostSignParams self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_16(self.coordinator, serializer);
+    sse_encode_u_8(self.coordinator, serializer);
     sse_encode_u_32(self.fundingAccount, serializer);
   }
 

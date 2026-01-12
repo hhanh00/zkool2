@@ -1,9 +1,10 @@
-use anyhow::anyhow;
+use bincode::config;
 use juniper::{FieldError, FieldResult};
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 use crate::{
     api::{coin::Coin, frost::get_funding_account},
+    frost::dkg::{in_dkg, in_frost},
     graphql::{data::DKGStatus, Context},
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
@@ -61,9 +62,14 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
     let mut client = coin.client().await?;
     let height = client.latest_height().await?;
     tracing::info!("new_block {height}");
-    let Some(account) = get_funding_account(&mut connection).await? else {
+
+    let in_dkg = in_dkg(&mut connection).await?;
+    let in_frost = in_frost(&mut connection).await?;
+    if !in_dkg && !in_frost {
         return Ok(());
-    };
+    }
+
+    let account = get_funding_account(&mut connection).await?;
     tracing::info!("funding: {account}");
     let mut frost_accounts =
         query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
@@ -81,6 +87,39 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
         &coin,
     )
     .await?;
+
+    if in_dkg {
+        crate::frost::dkg::do_dkg_impl(
+            &coin.network(),
+            &mut connection,
+            account,
+            &mut client,
+            height,
+            (),
+        )
+        .await?;
+    }
+
+    if in_frost {
+        crate::frost::sign::do_sign_impl(
+            &coin.network(),
+            &mut connection,
+            account,
+            &mut client,
+            height,
+            (),
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
+    let coin = &context.coin;
+    let mut connection = coin.get_connection().await?;
+    let mut client = coin.client().await?;
+    let height = client.latest_height().await?;
+    let account = get_funding_account(&mut connection).await?;
     crate::frost::dkg::do_dkg_impl(
         &coin.network(),
         &mut connection,
@@ -90,24 +129,26 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
         (),
     )
     .await?;
-    Ok(())
+    Ok(true)
 }
 
-pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
+pub async fn frost_sign(
+    id_coordinator: i32,
+    id_account: i32,
+    pczt: String,
+    context: &Context,
+) -> FieldResult<bool> {
     let coin = &context.coin;
     let mut connection = coin.get_connection().await?;
-    let mut client = coin.client().await?;
-    let height = client.latest_height().await?;
-    let account = get_funding_account(&mut connection)
-        .await?
-        .ok_or(anyhow!("No messaging account"))?;
-    crate::frost::dkg::do_dkg_impl(
-        &coin.network(),
-        &mut connection,
-        account,
-        &mut client,
-        height,
-        (),
+    let funding_account = get_funding_account(&mut *connection).await?;
+    let pczt = hex::decode(&pczt)?;
+    let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
+    crate::frost::sign::init_sign(
+        &mut *connection,
+        id_account as u32,
+        funding_account,
+        id_coordinator as u8,
+        &pczt,
     )
     .await?;
     Ok(true)
