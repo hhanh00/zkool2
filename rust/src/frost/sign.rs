@@ -69,7 +69,7 @@ pub async fn reset_sign(connection: &mut SqliteConnection) -> Result<()> {
 
 pub async fn init_sign(
     connection: &mut SqliteConnection,
-    _account: u32,
+    account: u32,
     funding_account: u32,
     coordinator: u8,
     pczt: &PcztPackage,
@@ -80,6 +80,7 @@ pub async fn init_sign(
         .execute(&mut *connection)
         .await?;
     let params = FrostSignParams {
+        account,
         coordinator,
         funding_account,
     };
@@ -90,24 +91,29 @@ pub async fn init_sign(
     .bind(&params)
     .execute(&mut *connection)
     .await?;
+    sqlx::query(
+        "INSERT INTO props(key, value) VALUES ('dkg_funding', ?) ON CONFLICT DO NOTHING",
+    )
+    .bind(funding_account)
+    .execute(&mut *connection)
+    .await?;
+
     Ok(())
 }
 
 pub async fn do_sign(
     network: &Network,
     connection: &mut SqliteConnection,
-    account: u32,
     client: &mut Client,
     height: u32,
     status: StreamSink<SigningStatus>,
 ) -> Result<()> {
-    do_sign_impl(network, connection, account, client, height, status).await
+    do_sign_impl(network, connection, client, height, status).await
 }
 
 pub async fn do_sign_impl(
     network: &Network,
     connection: &mut SqliteConnection,
-    account: u32,
     client: &mut Client,
     height: u32,
     status: impl Sink<SigningStatus>,
@@ -124,6 +130,7 @@ pub async fn do_sign_impl(
 
     let birth_height = height - 10000;
     let params = get_sign_params(&mut *connection).await?;
+    let account = params.account;
     let coordinator_address =
         get_coordinator_address(connection, account, params.coordinator).await?;
     let dkg_params = get_dkg_params(connection, account).await?;

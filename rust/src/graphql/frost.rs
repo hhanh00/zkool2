@@ -65,6 +65,7 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
 
     let in_dkg = in_dkg(&mut connection).await?;
     let in_frost = in_frost(&mut connection).await?;
+    tracing::info!("in_dkg {in_dkg} in_frost {in_frost}");
     if !in_dkg && !in_frost {
         return Ok(());
     }
@@ -104,7 +105,6 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
         crate::frost::sign::do_sign_impl(
             &coin.network(),
             &mut connection,
-            account,
             &mut client,
             height,
             (),
@@ -135,18 +135,18 @@ pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
 pub async fn frost_sign(
     id_coordinator: i32,
     id_account: i32,
+    message_account: i32,
     pczt: String,
     context: &Context,
 ) -> FieldResult<bool> {
     let coin = &context.coin;
     let mut connection = coin.get_connection().await?;
-    let funding_account = get_funding_account(&mut *connection).await?;
     let pczt = hex::decode(&pczt)?;
     let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
     crate::frost::sign::init_sign(
         &mut *connection,
         id_account as u32,
-        funding_account,
+        message_account as u32,
         id_coordinator as u8,
         &pczt,
     )

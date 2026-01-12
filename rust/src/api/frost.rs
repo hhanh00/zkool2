@@ -184,7 +184,6 @@ pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> 
     let r = crate::frost::sign::do_sign(
         &c.network(),
         &mut *connection,
-        c.account,
         &mut client,
         height,
         status.clone(),
@@ -199,6 +198,7 @@ pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FrostSignParams {
+    pub account: u32,
     pub coordinator: u8,
     pub funding_account: u32,
 }
