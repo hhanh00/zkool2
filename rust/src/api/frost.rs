@@ -14,29 +14,7 @@ use super::pay::PcztPackage;
 pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    let height = client.latest_height().await?;
-    let birth_height = height - 10000;
-
-    sqlx::query(
-        "INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, '', ?)",
-    )
-    .bind(funding_account)
-    .bind(id)
-    .bind(n)
-    .bind(t)
-    .bind(birth_height)
-    .execute(&mut *connection)
-    .await?;
-    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_name', ?1)")
-        .bind(name)
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_funding', ?1)")
-        .bind(funding_account)
-        .execute(&mut *connection)
-        .await?;
-
-    Ok(())
+    crate::frost::dkg::set_dkg_params(&c.network(), &mut connection, &mut client, name, id, n, t, funding_account).await
 }
 
 #[frb]
@@ -105,7 +83,7 @@ pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
     Ok(addresses)
 }
 
-pub async fn set_dkg_address(id: u16, address: &str, c: &Coin) -> Result<()> {
+pub async fn set_dkg_address(id: u8, address: &str, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection)
         .await?
@@ -121,7 +99,7 @@ pub async fn cancel_dkg(c: &Coin) -> Result<()> {
     crate::frost::dkg::cancel_dkg(&mut connection, account).await
 }
 
-async fn get_funding_account(connection: &mut SqliteConnection) -> Result<Option<u32>> {
+pub async fn get_funding_account(connection: &mut SqliteConnection) -> Result<Option<u32>> {
     let rs = sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
         .fetch_optional(&mut *connection)
         .await?;
@@ -138,7 +116,7 @@ pub struct DKGParams {
     pub birth_height: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DKGStatus {
     WaitParams,
     WaitAddresses(Vec<String>),
