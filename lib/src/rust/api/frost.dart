@@ -13,7 +13,7 @@ part 'frost.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `get_funding_account`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<void> setDkgParams(
         {required String name,
@@ -90,6 +90,7 @@ sealed class DKGStatus with _$DKGStatus {
 sealed class FrostSignParams with _$FrostSignParams {
   const FrostSignParams._();
   const factory FrostSignParams({
+    required int account,
     required int coordinator,
     required int fundingAccount,
   }) = _FrostSignParams;
