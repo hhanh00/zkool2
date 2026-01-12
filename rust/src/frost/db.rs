@@ -18,7 +18,7 @@ pub async fn get_mailbox_account(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
-    self_id: u16,
+    self_id: u8,
     birth_height: u32,
 ) -> Result<(u32, String)> {
     let mut retry = 0;

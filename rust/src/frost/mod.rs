@@ -18,7 +18,7 @@ pub type PK2Map = BTreeMap<Identifier, round2::Package>;
 
 #[derive(Encode, Decode)]
 pub struct FrostMessage {
-    pub from_id: u16,
+    pub from_id: u8,
     pub data: Vec<u8>,
 }
 
