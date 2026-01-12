@@ -12,7 +12,6 @@ use reddsa::frost::redpallas::keys::{
     dkg::{self, round1, round2},
     EvenY,
 };
-use serde_json::Value;
 use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
@@ -526,7 +525,7 @@ pub async fn publish(
         crate::api::pay::DustChangePolicy::Discard,
         None,
     )
-    .await?;
+    .await.unwrap();
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
     let result = crate::pay::send(client, height, &txb).await?;
