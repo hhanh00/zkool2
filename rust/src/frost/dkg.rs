@@ -18,7 +18,11 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
 
 use crate::{
-    Client, Sink, account::{get_account_seed, get_orchard_vk}, api::{coin::Network, frost::{DKGParams, DKGStatus}, sync::SYNCING}, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
+    Client, Sink, account::{get_account_seed, get_orchard_vk}, api::{
+        coin::Network,
+        frost::{DKGParams, DKGStatus, get_funding_account},
+        sync::SYNCING,
+    }, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
         Recipient, plan::{extract_transaction, plan_transaction, sign_transaction}, pool::ALL_POOLS
     }
 };
@@ -121,11 +125,7 @@ async fn get_spkg2(
 
 /// Get the round 1 public packages from the database
 /// and return them as a BTreeMap
-async fn get_ppkg1(
-    connection: &mut SqliteConnection,
-    account: u32,
-    self_id: u8,
-) -> Result<PK1Map> {
+async fn get_ppkg1(connection: &mut SqliteConnection, account: u32, self_id: u8) -> Result<PK1Map> {
     let mut pkg1map: PK1Map = BTreeMap::new();
 
     let pkgs = sqlx::query(
@@ -250,11 +250,14 @@ pub async fn do_dkg_impl(
         get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
 
     let Some(spkg1) = get_spkg1(connection, account).await? else {
-        let (spkg1, ppkg1) =
-            dkg::part1::<_>((self_id as u16).try_into().unwrap(), n as u16, t as u16, OsRng)?;
+        let (spkg1, ppkg1) = dkg::part1::<_>(
+            (self_id as u16).try_into().unwrap(),
+            n as u16,
+            t as u16,
+            OsRng,
+        )?;
         // in round 1, every other participant receives the same public package from us
-        status
-            .send(DKGStatus::PublishRound1Pkg).await;
+        status.send(DKGStatus::PublishRound1Pkg).await;
         publish_round1(
             network,
             connection,
@@ -267,8 +270,7 @@ pub async fn do_dkg_impl(
             &ppkg1,
         )
         .await?;
-        status
-            .send(DKGStatus::WaitRound1Pkg).await;
+        status.send(DKGStatus::WaitRound1Pkg).await;
         return Ok(());
     };
 
@@ -276,8 +278,7 @@ pub async fn do_dkg_impl(
     let ppkg1s = get_ppkg1(connection, account, self_id).await?;
     info!("Round 1 packages: {}", ppkg1s.len());
     if ppkg1s.len() != n as usize - 1 {
-        status
-            .send(DKGStatus::WaitRound1Pkg).await;
+        status.send(DKGStatus::WaitRound1Pkg).await;
         return Ok(());
     }
 
@@ -285,22 +286,19 @@ pub async fn do_dkg_impl(
 
     let Some(spkg2) = get_spkg2(connection, account).await? else {
         let (spkg2, ppkg2s) = dkg::part2(spkg1, &ppkg1s)?;
-        status
-            .send(DKGStatus::PublishRound2Pkg).await;
+        status.send(DKGStatus::PublishRound2Pkg).await;
         publish_round2(
             network, connection, account, self_id, client, height, &addresses, &spkg2, &ppkg2s,
         )
         .await?;
-        status
-            .send(DKGStatus::WaitRound2Pkg).await;
+        status.send(DKGStatus::WaitRound2Pkg).await;
         return Ok(());
     };
     process_memos(connection, account, mailbox_account, 2, b"DK21").await?;
     let ppkg2s = get_ppkg2(connection, account).await?;
     info!("Round 2 packages: {}", ppkg2s.len());
     if ppkg2s.len() != n as usize - 1 {
-        status
-            .send(DKGStatus::WaitRound2Pkg).await;
+        status.send(DKGStatus::WaitRound2Pkg).await;
         return Ok(());
     }
 
@@ -364,8 +362,7 @@ pub async fn do_dkg_impl(
     )
     .await?;
 
-    status
-        .send(DKGStatus::SharedAddress(sua)).await;
+    status.send(DKGStatus::SharedAddress(sua)).await;
 
     cancel_dkg(connection, account).await?;
     Ok(())
@@ -525,7 +522,8 @@ pub async fn publish(
         crate::api::pay::DustChangePolicy::Discard,
         None,
     )
-    .await.unwrap();
+    .await
+    .unwrap();
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
     let result = crate::pay::send(client, height, &txb).await?;
@@ -579,10 +577,30 @@ async fn process_memos(
 }
 
 pub async fn in_dkg(connection: &mut SqliteConnection) -> Result<bool> {
+    // we are in DKG if
+    // - we have dkg props
+    // - we have a funding account
+    // - we have the addresses of all the participants
     let exists = sqlx::query("SELECT 1 FROM props WHERE key LIKE 'dkg_%'")
-    .fetch_optional(connection)
+        .fetch_optional(&mut *connection)
+        .await?;
+    if exists.is_none() {
+        return Ok(false);
+    }
+    let account = get_funding_account(&mut *connection).await?;
+    let (n, ) = sqlx::query_as::<_, (u32, )>("SELECT n FROM dkg_params WHERE account = ?1")
+        .bind(account)
+        .fetch_optional(&mut *connection)
+        .await?.unwrap_or_default();
+    if n == 0 { return Ok(false); }
+    let (n_addresses,): (u32,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM dkg_packages WHERE account = ?1
+        AND round = 0 AND public = 1",
+    )
+    .bind(account)
+    .fetch_one(&mut *connection)
     .await?;
-    Ok(exists.is_some())
+    Ok(n_addresses == n)
 }
 
 pub async fn cancel_dkg(connection: &mut SqliteConnection, account: u32) -> Result<()> {
@@ -606,8 +624,8 @@ pub async fn cancel_dkg(connection: &mut SqliteConnection, account: u32) -> Resu
 
 pub async fn in_frost(connection: &mut SqliteConnection) -> Result<bool> {
     let exists = sqlx::query("SELECT 1 FROM props WHERE key LIKE 'frost_%'")
-    .fetch_optional(connection)
-    .await?;
+        .fetch_optional(connection)
+        .await?;
     Ok(exists.is_some())
 }
 
@@ -620,6 +638,9 @@ pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()>
         .execute(&mut *connection)
         .await?;
     sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'")
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
         .execute(&mut *connection)
         .await?;
     let frost_accounts = sqlx::query_as::<_, (u32,)>(
