@@ -28,7 +28,7 @@ use secp256k1::{PublicKey, SecretKey};
 use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
 use zcash_transparent::address::TransparentAddress;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Context, Result, anyhow};
 use bincode::config::legacy;
 use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use jubjub::Fr;
@@ -489,7 +489,8 @@ pub async fn get_sapling_note(
         (note, scope, merkle_path)
     })
     .fetch_one(connection)
-    .await?;
+    .await
+    .context("retrieve sinput")?;
 
     Ok(r)
 }
@@ -552,7 +553,7 @@ pub async fn get_orchard_note(
         (scope, position, diversifier, value, rcm, rho, witness)
     })
     .fetch_one(connection)
-    .await?;
+    .await.context("retrieve oinput")?;
 
     let scope = scope.unwrap_or(0);
     let scope = match scope {
