@@ -4317,11 +4317,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FrostSignParams dco_decode_frost_sign_params(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return FrostSignParams(
-      coordinator: dco_decode_u_8(arr[0]),
-      fundingAccount: dco_decode_u_32(arr[1]),
+      account: dco_decode_u_32(arr[0]),
+      coordinator: dco_decode_u_8(arr[1]),
+      fundingAccount: dco_decode_u_32(arr[2]),
     );
   }
 
@@ -5433,10 +5434,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_account = sse_decode_u_32(deserializer);
     var var_coordinator = sse_decode_u_8(deserializer);
     var var_fundingAccount = sse_decode_u_32(deserializer);
     return FrostSignParams(
-        coordinator: var_coordinator, fundingAccount: var_fundingAccount);
+        account: var_account,
+        coordinator: var_coordinator,
+        fundingAccount: var_fundingAccount);
   }
 
   @protected
@@ -6717,6 +6721,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_frost_sign_params(
       FrostSignParams self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.account, serializer);
     sse_encode_u_8(self.coordinator, serializer);
     sse_encode_u_32(self.fundingAccount, serializer);
   }
