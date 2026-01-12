@@ -186,6 +186,10 @@ impl Mutation {
     pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
         crate::graphql::frost::do_dkg(context).await
     }
+
+    pub async fn frost_sign(id_coordinator: i32, id_account: i32, pczt: String, context: &Context) -> FieldResult<bool> {
+        crate::graphql::frost::frost_sign(id_coordinator, id_account, pczt, context).await
+    }
 }
 
 impl<T: Send + Sync> Sink<T> for Sender<T> {

@@ -2658,7 +2658,7 @@ fn wire__crate__api__frost__init_sign_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_coordinator = <u16>::sse_decode(&mut deserializer);
+            let api_coordinator = <u8>::sse_decode(&mut deserializer);
             let api_funding_account = <u32>::sse_decode(&mut deserializer);
             let api_pczt = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
@@ -5031,7 +5031,7 @@ impl SseDecode for crate::api::account::FrostParams {
 impl SseDecode for crate::api::frost::FrostSignParams {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_coordinator = <u16>::sse_decode(deserializer);
+        let mut var_coordinator = <u8>::sse_decode(deserializer);
         let mut var_fundingAccount = <u32>::sse_decode(deserializer);
         return crate::api::frost::FrostSignParams {
             coordinator: var_coordinator,
@@ -7347,7 +7347,7 @@ impl SseEncode for crate::api::account::FrostParams {
 impl SseEncode for crate::api::frost::FrostSignParams {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u16>::sse_encode(self.coordinator, serializer);
+        <u8>::sse_encode(self.coordinator, serializer);
         <u32>::sse_encode(self.funding_account, serializer);
     }
 }
