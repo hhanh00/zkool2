@@ -264,6 +264,7 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                                     .await;
                             }
                         }
+                        let _ = crate::graphql::frost::new_block(coin.clone()).await;
                     }
                 }
             }
