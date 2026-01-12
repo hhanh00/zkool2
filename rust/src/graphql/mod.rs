@@ -1,6 +1,7 @@
 use crate::{api::coin::Coin, graphql::query::{TxLoader, new_tx_loader}};
 
 pub mod data;
+pub mod frost;
 pub mod query;
 pub mod mutation;
 pub mod subs;
