@@ -13,6 +13,7 @@ use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{
     Account, Addresses, Balance, DKGStatus, Note, Transaction, UnconfirmedTx,
 };
+use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::Context;
 use crate::pay::TxPlan;
@@ -23,7 +24,6 @@ use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult};
 use orchard::keys::Scope;
 use sqlx::{query, sqlite::SqliteRow, Row};
-use crate::graphql::mutation::Payment;
 
 pub struct Query {}
 
@@ -207,23 +207,50 @@ impl Query {
         Ok(height as i32)
     }
 
-    async fn prepare_send(id_account: i32, payment: Payment, context: &Context) -> FieldResult<String> {
+    async fn prepare_send(
+        id_account: i32,
+        payment: Payment,
+        context: &Context,
+    ) -> FieldResult<String> {
         let tx = prepare_tx(id_account, payment, &context.coin).await?;
         let txbin = bincode::encode_to_vec(&tx, bincode::config::standard())?;
         let txhex = hex::encode(&txbin);
         Ok(txhex)
     }
 
-    async fn decode_pczt(pczt: String, context: &Context) -> FieldResult<String> {
+    async fn decode_pczt(pczt: String, context: &Context) -> FieldResult<UnsignedTx> {
         let pczt = hex::decode(&pczt)?;
-        let (pczt, _) = bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
+        let (pczt, _) =
+            bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
         let tx_plan = TxPlan::from_package(&context.coin.network(), &pczt)?;
-        let v = serde_json::to_string(&tx_plan)?;
-        Ok(v)
+        let unsigned = tx_plan.to_unsigned_tx();
+        Ok(unsigned)
     }
 }
 
-pub async fn prepare_tx(id_account: i32, payment: Payment, coin: &Coin) -> FieldResult<crate::api::pay::PcztPackage> {
+impl TxPlan {
+    pub fn to_unsigned_tx(self) -> UnsignedTx {
+        let recipients: Vec<_> = self
+            .outputs
+            .into_iter()
+            .map(|o| Output {
+                address: o.address,
+                amount: zats_to_zec(o.amount as i64),
+            })
+            .collect();
+        let fee = zats_to_zec(self.fee as i64);
+        UnsignedTx {
+            recipients,
+            fee,
+        }
+    }
+}
+
+pub async fn prepare_tx(
+    id_account: i32,
+    payment: Payment,
+    coin: &Coin,
+) -> FieldResult<crate::api::pay::PcztPackage> {
     let mut recipients = vec![];
     for r in payment.recipients {
         recipients.push(crate::pay::Recipient {
