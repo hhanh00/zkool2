@@ -61,17 +61,27 @@ pub struct UnconfirmedTx {
     pub value: BigDecimal,
 }
 
+#[derive(Clone, GraphQLEnum)]
+pub enum DKGStatus {
+    Waiting,
+    Round1,
+    Round2,
+    Completed,
+}
+
 #[derive(Clone, GraphQLObject, Default)]
 pub struct Event {
     pub r#type: EventType,
     pub height: i32,
     pub txid: String,
+    pub dkg_account: i32,
 }
 
 #[derive(Clone, GraphQLEnum, Default)]
 pub enum EventType {
     #[default] Block,
     Tx,
+    DKG,
 }
 
 pub type EventStream = Pin<Box<dyn Stream<Item = FieldResult<Event>> + Send>>;

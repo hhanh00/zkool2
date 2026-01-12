@@ -39,8 +39,8 @@ async fn main() -> Result<()> {
     let config_path = c.config_path.clone().unwrap_or("zkool.toml".to_string());
     let _ = tracing::subscriber::set_global_default(subscriber);
     let config: Config = Figment::new()
-        .merge(Serialized::defaults(c))
         .merge(Toml::file(&config_path))
+        .merge(Serialized::defaults(c))
         .extract()?;
     let Config {
         db_path,
