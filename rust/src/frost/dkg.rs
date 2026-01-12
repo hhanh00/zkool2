@@ -19,17 +19,51 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
 
 use crate::{
-    Client, account::{get_account_seed, get_orchard_vk}, api::{
-        frost::{DKGParams, DKGStatus}, sync::SYNCING
-    }, api::coin::Network, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
+    Client, Sink, account::{get_account_seed, get_orchard_vk}, api::{coin::Network, frost::{DKGParams, DKGStatus}, sync::SYNCING}, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
         Recipient, plan::{extract_transaction, plan_transaction, sign_transaction}, pool::ALL_POOLS
     }
 };
 
+#[allow(clippy::too_many_arguments)]
+pub async fn set_dkg_params(
+    _network: &Network,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    name: &str,
+    id: u8,
+    n: u8,
+    t: u8,
+    funding_account: u32,
+) -> Result<()> {
+    let height = client.latest_height().await?;
+    let birth_height = height - 10000;
+
+    sqlx::query(
+        "INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, '', ?)",
+    )
+    .bind(funding_account)
+    .bind(id)
+    .bind(n)
+    .bind(t)
+    .bind(birth_height)
+    .execute(&mut *connection)
+    .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_name', ?1)")
+        .bind(name)
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_funding', ?1)")
+        .bind(funding_account)
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn set_dkg_address(
     connection: &mut SqliteConnection,
     account: u32,
-    id: u16,
+    id: u8,
     address: &str,
 ) -> Result<()> {
     sqlx::query(
@@ -46,7 +80,10 @@ pub async fn set_dkg_address(
 
 /// Get the round 1 secret package from the database
 ///
-async fn get_spkg1(connection: &mut SqliteConnection, account: u32) -> Result<Option<round1::SecretPackage>> {
+async fn get_spkg1(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<round1::SecretPackage>> {
     let spkg = sqlx::query(
         "SELECT data FROM dkg_packages WHERE
             account = ? AND public = 0 AND round = 1",
@@ -64,7 +101,10 @@ async fn get_spkg1(connection: &mut SqliteConnection, account: u32) -> Result<Op
 
 /// Get the round 2 secret package from the database
 ///
-async fn get_spkg2(connection: &mut SqliteConnection, account: u32) -> Result<Option<round2::SecretPackage>> {
+async fn get_spkg2(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<round2::SecretPackage>> {
     let spkg = sqlx::query(
         "SELECT data FROM dkg_packages WHERE
             account = ? AND public = 0 AND round = 2",
@@ -82,7 +122,11 @@ async fn get_spkg2(connection: &mut SqliteConnection, account: u32) -> Result<Op
 
 /// Get the round 1 public packages from the database
 /// and return them as a BTreeMap
-async fn get_ppkg1(connection: &mut SqliteConnection, account: u32, self_id: u16) -> Result<PK1Map> {
+async fn get_ppkg1(
+    connection: &mut SqliteConnection,
+    account: u32,
+    self_id: u16,
+) -> Result<PK1Map> {
     let mut pkg1map: PK1Map = BTreeMap::new();
 
     let pkgs = sqlx::query(
@@ -132,7 +176,11 @@ async fn get_ppkg2(connection: &mut SqliteConnection, account: u32) -> Result<PK
     Ok(pkg2map)
 }
 
-pub async fn have_all_addresses(connection: &mut SqliteConnection, account: u32, n: u8) -> Result<bool> {
+pub async fn have_all_addresses(
+    connection: &mut SqliteConnection,
+    account: u32,
+    n: u8,
+) -> Result<bool> {
     let addresses = get_addresses(&mut *connection, account, n).await?;
     let have_all_addresses = addresses.iter().all(|a| !a.is_empty());
     Ok(have_all_addresses)
@@ -168,6 +216,17 @@ pub async fn do_dkg(
     height: u32,
     status: StreamSink<DKGStatus>,
 ) -> Result<()> {
+    do_dkg_impl(network, connection, account, client, height, status).await
+}
+
+pub async fn do_dkg_impl(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    client: &mut Client,
+    height: u32,
+    status: impl Sink<DKGStatus>,
+) -> Result<()> {
     info!("dkg: {account}");
 
     let guard = SYNCING.try_lock();
@@ -196,8 +255,7 @@ pub async fn do_dkg(
             dkg::part1::<_>(self_id.try_into().unwrap(), n as u16, t as u16, OsRng)?;
         // in round 1, every other participant receives the same public package from us
         status
-            .add(DKGStatus::PublishRound1Pkg)
-            .map_err(anyhow::Error::msg)?;
+            .send(DKGStatus::PublishRound1Pkg).await;
         publish_round1(
             network,
             connection,
@@ -211,8 +269,7 @@ pub async fn do_dkg(
         )
         .await?;
         status
-            .add(DKGStatus::WaitRound1Pkg)
-            .map_err(anyhow::Error::msg)?;
+            .send(DKGStatus::WaitRound1Pkg).await;
         return Ok(());
     };
 
@@ -221,8 +278,7 @@ pub async fn do_dkg(
     info!("Round 1 packages: {}", ppkg1s.len());
     if ppkg1s.len() != n as usize - 1 {
         status
-            .add(DKGStatus::WaitRound1Pkg)
-            .map_err(anyhow::Error::msg)?;
+            .send(DKGStatus::WaitRound1Pkg).await;
         return Ok(());
     }
 
@@ -231,15 +287,13 @@ pub async fn do_dkg(
     let Some(spkg2) = get_spkg2(connection, account).await? else {
         let (spkg2, ppkg2s) = dkg::part2(spkg1, &ppkg1s)?;
         status
-            .add(DKGStatus::PublishRound2Pkg)
-            .map_err(anyhow::Error::msg)?;
+            .send(DKGStatus::PublishRound2Pkg).await;
         publish_round2(
             network, connection, account, self_id, client, height, &addresses, &spkg2, &ppkg2s,
         )
         .await?;
         status
-            .add(DKGStatus::WaitRound2Pkg)
-            .map_err(anyhow::Error::msg)?;
+            .send(DKGStatus::WaitRound2Pkg).await;
         return Ok(());
     };
     process_memos(connection, account, mailbox_account, 2, b"DK21").await?;
@@ -247,8 +301,7 @@ pub async fn do_dkg(
     info!("Round 2 packages: {}", ppkg2s.len());
     if ppkg2s.len() != n as usize - 1 {
         status
-            .add(DKGStatus::WaitRound2Pkg)
-            .map_err(anyhow::Error::msg)?;
+            .send(DKGStatus::WaitRound2Pkg).await;
         return Ok(());
     }
 
@@ -313,8 +366,7 @@ pub async fn do_dkg(
     .await?;
 
     status
-        .add(DKGStatus::SharedAddress(sua))
-        .map_err(anyhow::Error::msg)?;
+        .send(DKGStatus::SharedAddress(sua)).await;
 
     cancel_dkg(connection, Some(account)).await?;
     Ok(())
@@ -371,7 +423,7 @@ async fn publish_round1(
     let mut tx = connection.begin().await?;
     sqlx::query(
         "INSERT INTO dkg_packages(account, public, round, from_id, data)
-        VALUES (?, FALSE, 1, ?, ?) ON CONFLICT DO NOTHING",
+        VALUES (?, FALSE, 1, ?, ?)",
     )
     .bind(account)
     .bind(self_id)
@@ -478,11 +530,8 @@ pub async fn publish(
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
     let result = crate::pay::send(client, height, &txb).await?;
-    // Check the result is a TXID and not an error json
-    let value = serde_json::from_str::<Value>(&result)?;
-    let value = value.as_str().ok_or(anyhow::anyhow!("Not a TXID String"))?;
-    hex::decode(value)?;
-    Ok(value.to_string())
+    hex::decode(&result)?;
+    Ok(result)
 }
 
 async fn process_memos(
@@ -502,18 +551,17 @@ async fn process_memos(
                 if pkg_bytes.len() < 4 || pkg_bytes[0..4] != *prefix {
                     return None;
                 }
-                if let Ok((pkg, _)) = bincode::decode_from_slice::<FrostMessage, _>(
-                    &pkg_bytes[4..],
-                    config::legacy(),
-                )
-                .context("Failed to decode DKGRound1Package")
+                if let Ok((pkg, _)) =
+                    bincode::decode_from_slice::<FrostMessage, _>(&pkg_bytes[4..], config::legacy())
+                        .context("Failed to decode DKGRound1Package")
                 {
                     return Some(pkg);
                 }
             }
             None
         })
-        .fetch_all(&mut *connection).await?;
+        .fetch_all(&mut *connection)
+        .await?;
 
     for msg in msgs.into_iter().flatten() {
         sqlx::query(

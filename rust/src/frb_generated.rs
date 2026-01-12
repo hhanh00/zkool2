@@ -3890,7 +3890,7 @@ fn wire__crate__api__frost__set_dkg_address_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <u16>::sse_decode(&mut deserializer);
+            let api_id = <u8>::sse_decode(&mut deserializer);
             let api_address = <String>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();

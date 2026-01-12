@@ -172,6 +172,37 @@ impl Mutation {
         };
         Ok(addresses)
     }
+
+    pub async fn dkg_start(
+        name: String,
+        threshold: i32,
+        participants: i32,
+        message_account: i32,
+        id_participant: i32,
+        context: &Context,
+    ) -> FieldResult<String> {
+        crate::graphql::frost::dkg_start(
+            name,
+            threshold,
+            participants,
+            message_account,
+            id_participant,
+            context,
+        )
+        .await
+    }
+
+    pub async fn dkg_cancel(context: &Context) -> FieldResult<bool> {
+        crate::graphql::frost::dkg_cancel(context).await
+    }
+
+    pub async fn dkg_set_address(id_participant: i32, address: String, context: &Context) -> FieldResult<bool> {
+        crate::graphql::frost::dkg_set_address(id_participant, address, context).await
+    }
+
+    pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
+        crate::graphql::frost::do_dkg(context).await
+    }
 }
 
 impl<T: Send + Sync> Sink<T> for Sender<T> {
