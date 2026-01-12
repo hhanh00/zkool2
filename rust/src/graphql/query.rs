@@ -7,11 +7,15 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_keys::encoding::AddressCodec;
 use zcash_keys::keys::UnifiedFullViewingKey;
 
-use crate::api::coin::Network;
+use crate::api::coin::{Coin, Network};
+use crate::api::pay::{DustChangePolicy, PcztPackage};
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, Balance, DKGStatus, Note, Transaction, UnconfirmedTx};
+use crate::graphql::data::{
+    Account, Addresses, Balance, DKGStatus, Note, Transaction, UnconfirmedTx,
+};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::Context;
+use crate::pay::TxPlan;
 use crate::tiu;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -19,6 +23,7 @@ use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult};
 use orchard::keys::Scope;
 use sqlx::{query, sqlite::SqliteRow, Row};
+use crate::graphql::mutation::Payment;
 
 pub struct Query {}
 
@@ -190,7 +195,10 @@ impl Query {
         let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
 
         let notes = crate::db::get_notes(&mut conn, id_account as u32).await?;
-        let notes: Vec<_> = notes.into_iter().map(|n| resolve_note(&network, &ufvk, n)).collect();
+        let notes: Vec<_> = notes
+            .into_iter()
+            .map(|n| resolve_note(&network, &ufvk, n))
+            .collect();
         Ok(notes)
     }
 
@@ -198,9 +206,60 @@ impl Query {
         let height = crate::api::network::get_current_height(&context.coin).await?;
         Ok(height as i32)
     }
+
+    async fn prepare_send(id_account: i32, payment: Payment, context: &Context) -> FieldResult<String> {
+        let tx = prepare_tx(id_account, payment, &context.coin).await?;
+        let txbin = bincode::encode_to_vec(&tx, bincode::config::standard())?;
+        let txhex = hex::encode(&txbin);
+        Ok(txhex)
+    }
+
+    async fn decode_pczt(pczt: String, context: &Context) -> FieldResult<String> {
+        let pczt = hex::decode(&pczt)?;
+        let (pczt, _) = bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
+        let tx_plan = TxPlan::from_package(&context.coin.network(), &pczt)?;
+        let v = serde_json::to_string(&tx_plan)?;
+        Ok(v)
+    }
 }
 
-fn resolve_note(network: &Network, ufvk: &UnifiedFullViewingKey, n: crate::api::account::TxNote) -> Note {
+pub async fn prepare_tx(id_account: i32, payment: Payment, coin: &Coin) -> FieldResult<crate::api::pay::PcztPackage> {
+    let mut recipients = vec![];
+    for r in payment.recipients {
+        recipients.push(crate::pay::Recipient {
+            address: r.address,
+            amount: zec_to_zats(r.amount)? as u64,
+            pools: None,
+            user_memo: r.memo,
+            memo_bytes: None,
+            price: None,
+        });
+    }
+    let network = coin.network();
+    let mut connection = coin.get_connection().await?;
+    let mut client = coin.client().await?;
+
+    let pczt = crate::pay::plan::plan_transaction(
+        &network,
+        &mut connection,
+        &mut client,
+        id_account as u32,
+        payment.src_pools.unwrap_or(7) as u8,
+        &recipients,
+        false,
+        payment.recipient_pays_fee.unwrap_or_default(),
+        DustChangePolicy::Discard,
+        None,
+    )
+    .await?;
+    Ok(pczt)
+}
+
+fn resolve_note(
+    network: &Network,
+    ufvk: &UnifiedFullViewingKey,
+    n: crate::api::account::TxNote,
+) -> Note {
     let address = match n.pool {
         1 => {
             let div = n.diversifier.as_ref().unwrap().clone();
@@ -302,7 +361,8 @@ impl Transaction {
     pub async fn notes(&self, context: &Context) -> FieldResult<Vec<Note>> {
         let mut conn = context.coin.get_connection().await?;
         let network = context.coin.network();
-        let ufvk = crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
+        let ufvk =
+            crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
         let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
         let mut txid = hex::decode(&self.txid)?;
         txid.reverse();
