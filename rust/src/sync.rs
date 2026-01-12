@@ -39,6 +39,8 @@ use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 use crate::api::ledger::get_hw_transparent_address;
 
+pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
+
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Default, Debug)]
 pub struct Transaction {
