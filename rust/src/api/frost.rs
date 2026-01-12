@@ -4,17 +4,36 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 
 use crate::{
-    api::coin::Coin, frb_generated::StreamSink, frost::{db::get_mailbox_account, dkg::get_dkg_params}
+    api::coin::Coin,
+    frb_generated::StreamSink,
+    frost::{db::get_mailbox_account, dkg::get_dkg_params},
 };
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
 
 #[frb]
-pub async fn set_dkg_params(name: &str, id: u8, n: u8, t: u8, funding_account: u32, c: &Coin) -> Result<()> {
+pub async fn set_dkg_params(
+    name: &str,
+    id: u8,
+    n: u8,
+    t: u8,
+    funding_account: u32,
+    c: &Coin,
+) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::frost::dkg::set_dkg_params(&c.network(), &mut connection, &mut client, name, id, n, t, funding_account).await
+    crate::frost::dkg::set_dkg_params(
+        &c.network(),
+        &mut connection,
+        &mut client,
+        name,
+        id,
+        n,
+        t,
+        funding_account,
+    )
+    .await
 }
 
 #[frb]
@@ -30,9 +49,7 @@ pub async fn has_dkg_params(c: &Coin) -> Result<bool> {
 #[frb]
 pub async fn init_dkg(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut *connection)
-        .await?
-        .expect("Funding account not set");
+    let account = get_funding_account(&mut *connection).await?;
     let dkg_params = get_dkg_params(&mut *connection, account).await?;
     get_mailbox_account(
         &c.network(),
@@ -49,11 +66,10 @@ pub async fn init_dkg(c: &Coin) -> Result<()> {
 #[frb]
 pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut *connection)
-        .await?
-        .expect("Funding account not set");
+    let account = get_funding_account(&mut *connection).await?;
     let dkg_params = get_dkg_params(&mut *connection, account).await?;
-    let addresses = crate::frost::db::get_addresses(&mut *connection, account, dkg_params.n).await?;
+    let addresses =
+        crate::frost::db::get_addresses(&mut *connection, account, dkg_params.n).await?;
     Ok(addresses.iter().all(|a| !a.is_empty()))
 }
 
@@ -62,11 +78,17 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
-    let account = get_funding_account(&mut connection)
-        .await?
-        .expect("Funding account not set");
+    let account = get_funding_account(&mut connection).await?;
 
-    let r = crate::frost::dkg::do_dkg(&c.network(), &mut connection, account, &mut client, height, status.clone()).await;
+    let r = crate::frost::dkg::do_dkg(
+        &c.network(),
+        &mut connection,
+        account,
+        &mut client,
+        height,
+        status.clone(),
+    )
+    .await;
     if let Err(e) = r {
         let _ = status.add_error(e);
     }
@@ -75,9 +97,7 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
 
 pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut connection)
-        .await?
-        .expect("Funding account not set");
+    let account = get_funding_account(&mut connection).await?;
     let n = get_dkg_params(&mut connection, account).await?.n;
     let addresses = crate::frost::db::get_addresses(&mut connection, account, n).await?;
     Ok(addresses)
@@ -85,9 +105,7 @@ pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
 
 pub async fn set_dkg_address(id: u8, address: &str, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut connection)
-        .await?
-        .expect("Funding account not set");
+    let account = get_funding_account(&mut connection).await?;
 
     crate::frost::dkg::set_dkg_address(&mut connection, account, id, address).await
 }
@@ -99,18 +117,18 @@ pub async fn cancel_dkg(c: &Coin) -> Result<()> {
     crate::frost::dkg::cancel_dkg(&mut connection, account).await
 }
 
-pub async fn get_funding_account(connection: &mut SqliteConnection) -> Result<Option<u32>> {
-    let rs = sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
-        .fetch_optional(&mut *connection)
+pub(crate) async fn get_funding_account(connection: &mut SqliteConnection) -> Result<u32> {
+    let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_funding'")
+        .fetch_one(&mut *connection)
         .await?;
-    let account = rs.map(|(account,)| u32::from_str(&account).unwrap());
+    let account = u32::from_str(&account).unwrap();
     Ok(account)
 }
 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DKGParams {
-    pub id: u16,
+    pub id: u8,
     pub n: u8,
     pub t: u8,
     pub birth_height: u32,
@@ -135,9 +153,21 @@ pub async fn reset_sign(c: &Coin) -> Result<()> {
 }
 
 #[frb]
-pub async fn init_sign(coordinator: u16, funding_account: u32, pczt: &PcztPackage, c: &Coin) -> Result<()> {
+pub async fn init_sign(
+    coordinator: u8,
+    funding_account: u32,
+    pczt: &PcztPackage,
+    c: &Coin,
+) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::frost::sign::init_sign(&mut *connection, c.account, funding_account, coordinator, pczt).await
+    crate::frost::sign::init_sign(
+        &mut *connection,
+        c.account,
+        funding_account,
+        coordinator,
+        pczt,
+    )
+    .await
 }
 
 #[frb]
@@ -169,11 +199,11 @@ pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> 
 #[frb(dart_metadata = ("freezed"))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FrostSignParams {
-    pub coordinator: u16,
+    pub coordinator: u8,
     pub funding_account: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SigningStatus {
     SendingCommitment,
     WaitingForCommitments,
