@@ -35,16 +35,21 @@ use zcash_protocol::memo::Memo;
 
 use crate::{
     api::{
+        coin::Network,
         frost::{FrostSignParams, SigningStatus},
         pay::PcztPackage,
         sync::SYNCING,
-    }, api::coin::Network, frb_generated::StreamSink, frost::{
+    },
+    frb_generated::StreamSink,
+    frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::{delete_frost_state, get_dkg_params, publish},
-    }, pay::{
+    },
+    pay::{
         plan::{ORCHARD_PK, SAPLING_PROVER},
         send,
-    }, Client
+    },
+    Client, Sink,
 };
 
 use super::{FrostSigMessage, P};
@@ -66,7 +71,7 @@ pub async fn init_sign(
     connection: &mut SqliteConnection,
     _account: u32,
     funding_account: u32,
-    coordinator: u16,
+    coordinator: u8,
     pczt: &PcztPackage,
 ) -> Result<()> {
     let pczt = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
@@ -95,6 +100,17 @@ pub async fn do_sign(
     client: &mut Client,
     height: u32,
     status: StreamSink<SigningStatus>,
+) -> Result<()> {
+    do_sign_impl(network, connection, account, client, height, status).await
+}
+
+pub async fn do_sign_impl(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    client: &mut Client,
+    height: u32,
+    status: impl Sink<SigningStatus>,
 ) -> Result<()> {
     let Some(pczt_pkg) = get_pczt(&mut *connection).await? else {
         return Ok(()); // No signing in progress
@@ -206,10 +222,8 @@ pub async fn do_sign(
         // we send all the commitments in one zcash transaction
         // the coordinator does not need to send a message to itself,
         //   (the commitments are already in the database)
-        if dkg_params.id as u16 != params.coordinator {
-            status
-                .add(SigningStatus::SendingCommitment)
-                .map_err(anyhow::Error::msg)?;
+        if dkg_params.id as u8 != params.coordinator {
+            status.send(SigningStatus::SendingCommitment).await;
             let txid = publish(
                 network,
                 &mut tx,
@@ -257,11 +271,9 @@ pub async fn do_sign(
         }
 
         // we are not the coordinator, and we haven't received all the sigpackages
-        if dkg_params.id as u16 != params.coordinator {
+        if dkg_params.id as u8 != params.coordinator {
             info!("Waiting for sigpackages");
-            status
-                .add(SigningStatus::WaitingForSigningPackage)
-                .map_err(anyhow::Error::msg)?;
+            status.send(SigningStatus::WaitingForSigningPackage).await;
             return Ok(());
         }
 
@@ -278,9 +290,7 @@ pub async fn do_sign(
                     c.len(),
                     dkg_params.t
                 );
-                status
-                    .add(SigningStatus::WaitingForCommitments)
-                    .map_err(anyhow::Error::msg)?;
+                status.send(SigningStatus::WaitingForCommitments).await;
                 return Ok(());
             }
             // build the sigpackage for this input and store it
@@ -335,8 +345,8 @@ pub async fn do_sign(
         // we send all the sigpackages in one zcash transaction
         // with one output/memo per input/signature needed
         status
-            .add(SigningStatus::SendingSigningPackage)
-            .map_err(anyhow::Error::msg)?;
+            .send(SigningStatus::SendingSigningPackage)
+            .await;
         let txid = publish(
             network,
             &mut tx,
@@ -371,8 +381,8 @@ pub async fn do_sign(
         for (idx, ((signing_package, randomizer), nonces)) in
             sigpackages.iter().zip(nonces.iter()).enumerate()
         {
-            let signature_share = sign(signing_package, nonces, &spkg, *randomizer)
-                .context("Failed to sign")?;
+            let signature_share =
+                sign(signing_package, nonces, &spkg, *randomizer).context("Failed to sign")?;
             let signature_share = signature_share.serialize();
 
             sqlx::query(
@@ -396,10 +406,10 @@ pub async fn do_sign(
             recipients.push((coordinator_address.as_str(), memo_bytes));
         }
 
-        if dkg_params.id as u16 != params.coordinator {
+        if dkg_params.id as u8 != params.coordinator {
             status
-                .add(SigningStatus::SendingSignatureShare)
-                .map_err(anyhow::Error::msg)?;
+                .send(SigningStatus::SendingSignatureShare)
+                .await;
             let txid = publish(
                 network,
                 &mut tx,
@@ -411,8 +421,8 @@ pub async fn do_sign(
             .await?;
 
             status
-                .add(SigningStatus::SigningCompleted)
-                .map_err(anyhow::Error::msg)?;
+                .send(SigningStatus::SigningCompleted)
+                .await;
             info!("Published sigshares transaction: {}", txid);
         }
         tx.commit().await?;
@@ -456,7 +466,7 @@ pub async fn do_sign(
 
     // final step: aggregate the sigshares
     // this is only done by the coordinator
-    if dkg_params.id as u16 == params.coordinator {
+    if dkg_params.id as u8 == params.coordinator {
         let mut tx = connection.begin().await?;
         let sigsharess = get_all_sigshares(&mut tx, account, &sighash, nsigs).await?;
         let mut signatures = vec![];
@@ -471,8 +481,8 @@ pub async fn do_sign(
                     dkg_params.t
                 );
                 status
-                    .add(SigningStatus::WaitingForSignatureShares)
-                    .map_err(anyhow::Error::msg)?;
+                    .send(SigningStatus::WaitingForSignatureShares)
+                    .await;
                 return Ok(());
             }
             let randomized_params =
@@ -496,8 +506,8 @@ pub async fn do_sign(
         info!("Signature completed");
 
         status
-            .add(SigningStatus::PreparingTransaction)
-            .map_err(anyhow::Error::msg)?;
+            .send(SigningStatus::PreparingTransaction)
+            .await;
         let signer = Signer::new(pczt);
         let signer = signer
             .sign_orchard_with(|_pczt, bundle, _| {
@@ -538,13 +548,13 @@ pub async fn do_sign(
         info!("Transaction Len: {}", tx_bytes.len());
 
         status
-            .add(SigningStatus::SendingTransaction)
-            .map_err(anyhow::Error::msg)?;
+            .send(SigningStatus::SendingTransaction)
+            .await;
         let txid = send(client, height, &tx_bytes).await?;
         info!("Transaction sent: {}", txid);
         status
-            .add(SigningStatus::TransactionSent(txid))
-            .map_err(anyhow::Error::msg)?;
+            .send(SigningStatus::TransactionSent(txid))
+            .await;
     }
 
     delete_frost_state(&mut *connection).await?;
@@ -591,7 +601,7 @@ async fn get_sign_params(connection: &mut SqliteConnection) -> Result<FrostSignP
 async fn get_coordinator_address(
     connection: &mut SqliteConnection,
     account: u32,
-    coordinator: u16,
+    coordinator: u8,
 ) -> Result<String> {
     let (address,) = sqlx::query_as::<_, (Vec<u8>,)>(
         "SELECT data FROM dkg_packages WHERE
