@@ -6,7 +6,7 @@ use crate::{
     }, pay::plan::{extract_transaction, sign_transaction}
 };
 use bigdecimal::BigDecimal;
-use juniper::{graphql_object, FieldResult, GraphQLInputObject};
+use juniper::{graphql_object, FieldResult, GraphQLObject, GraphQLInputObject};
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio_util::sync::CancellationToken;
 
@@ -41,7 +41,21 @@ pub struct Payment {
     pub recipients: Vec<Recipient>,
     pub src_pools: Option<i32>,
     pub recipient_pays_fee: Option<bool>,
+    pub fee: Option<BigDecimal>,
 }
+
+#[derive(GraphQLObject)]
+pub struct Output {
+    pub address: String,
+    pub amount: BigDecimal,
+}
+
+#[derive(GraphQLObject)]
+pub struct UnsignedTx {
+    pub recipients: Vec<Output>,
+    pub fee: BigDecimal,
+}
+
 
 #[graphql_object]
 #[graphql(
