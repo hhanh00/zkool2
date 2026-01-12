@@ -41,7 +41,6 @@ pub struct Payment {
     pub recipients: Vec<Recipient>,
     pub src_pools: Option<i32>,
     pub recipient_pays_fee: Option<bool>,
-    pub fee: Option<BigDecimal>,
 }
 
 #[derive(GraphQLObject)]
@@ -187,8 +186,14 @@ impl Mutation {
         crate::graphql::frost::do_dkg(context).await
     }
 
-    pub async fn frost_sign(id_coordinator: i32, id_account: i32, pczt: String, context: &Context) -> FieldResult<bool> {
-        crate::graphql::frost::frost_sign(id_coordinator, id_account, pczt, context).await
+    pub async fn frost_sign(id_coordinator: i32, id_account: i32, message_account: i32, pczt: String, context: &Context) -> FieldResult<bool> {
+        crate::graphql::frost::frost_sign(id_coordinator, id_account, message_account, pczt, context).await
+    }
+
+    pub async fn frost_cancel(context: &Context) -> FieldResult<bool> {
+        let mut connection = context.coin.get_connection().await?;
+        crate::frost::dkg::delete_frost_state(&mut connection).await?;
+        Ok(true)
     }
 }
 

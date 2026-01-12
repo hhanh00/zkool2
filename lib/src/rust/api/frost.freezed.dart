@@ -577,6 +577,7 @@ class _$DKGStatus_SharedAddressCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$FrostSignParams {
+  int get account;
   int get coordinator;
   int get fundingAccount;
 
@@ -593,6 +594,7 @@ mixin _$FrostSignParams {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is FrostSignParams &&
+            (identical(other.account, account) || other.account == account) &&
             (identical(other.coordinator, coordinator) ||
                 other.coordinator == coordinator) &&
             (identical(other.fundingAccount, fundingAccount) ||
@@ -600,11 +602,12 @@ mixin _$FrostSignParams {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, coordinator, fundingAccount);
+  int get hashCode =>
+      Object.hash(runtimeType, account, coordinator, fundingAccount);
 
   @override
   String toString() {
-    return 'FrostSignParams(coordinator: $coordinator, fundingAccount: $fundingAccount)';
+    return 'FrostSignParams(account: $account, coordinator: $coordinator, fundingAccount: $fundingAccount)';
   }
 }
 
@@ -614,7 +617,7 @@ abstract mixin class $FrostSignParamsCopyWith<$Res> {
           FrostSignParams value, $Res Function(FrostSignParams) _then) =
       _$FrostSignParamsCopyWithImpl;
   @useResult
-  $Res call({int coordinator, int fundingAccount});
+  $Res call({int account, int coordinator, int fundingAccount});
 }
 
 /// @nodoc
@@ -630,10 +633,15 @@ class _$FrostSignParamsCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? account = null,
     Object? coordinator = null,
     Object? fundingAccount = null,
   }) {
     return _then(_self.copyWith(
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
       coordinator: null == coordinator
           ? _self.coordinator
           : coordinator // ignore: cast_nullable_to_non_nullable
@@ -737,13 +745,14 @@ extension FrostSignParamsPatterns on FrostSignParams {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int coordinator, int fundingAccount)? $default, {
+    TResult Function(int account, int coordinator, int fundingAccount)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _FrostSignParams() when $default != null:
-        return $default(_that.coordinator, _that.fundingAccount);
+        return $default(_that.account, _that.coordinator, _that.fundingAccount);
       case _:
         return orElse();
     }
@@ -764,12 +773,12 @@ extension FrostSignParamsPatterns on FrostSignParams {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int coordinator, int fundingAccount) $default,
+    TResult Function(int account, int coordinator, int fundingAccount) $default,
   ) {
     final _that = this;
     switch (_that) {
       case _FrostSignParams():
-        return $default(_that.coordinator, _that.fundingAccount);
+        return $default(_that.account, _that.coordinator, _that.fundingAccount);
     }
   }
 
@@ -787,12 +796,13 @@ extension FrostSignParamsPatterns on FrostSignParams {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int coordinator, int fundingAccount)? $default,
+    TResult? Function(int account, int coordinator, int fundingAccount)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _FrostSignParams() when $default != null:
-        return $default(_that.coordinator, _that.fundingAccount);
+        return $default(_that.account, _that.coordinator, _that.fundingAccount);
       case _:
         return null;
     }
@@ -803,9 +813,13 @@ extension FrostSignParamsPatterns on FrostSignParams {
 
 class _FrostSignParams extends FrostSignParams {
   const _FrostSignParams(
-      {required this.coordinator, required this.fundingAccount})
+      {required this.account,
+      required this.coordinator,
+      required this.fundingAccount})
       : super._();
 
+  @override
+  final int account;
   @override
   final int coordinator;
   @override
@@ -824,6 +838,7 @@ class _FrostSignParams extends FrostSignParams {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _FrostSignParams &&
+            (identical(other.account, account) || other.account == account) &&
             (identical(other.coordinator, coordinator) ||
                 other.coordinator == coordinator) &&
             (identical(other.fundingAccount, fundingAccount) ||
@@ -831,11 +846,12 @@ class _FrostSignParams extends FrostSignParams {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, coordinator, fundingAccount);
+  int get hashCode =>
+      Object.hash(runtimeType, account, coordinator, fundingAccount);
 
   @override
   String toString() {
-    return 'FrostSignParams(coordinator: $coordinator, fundingAccount: $fundingAccount)';
+    return 'FrostSignParams(account: $account, coordinator: $coordinator, fundingAccount: $fundingAccount)';
   }
 }
 
@@ -847,7 +863,7 @@ abstract mixin class _$FrostSignParamsCopyWith<$Res>
       __$FrostSignParamsCopyWithImpl;
   @override
   @useResult
-  $Res call({int coordinator, int fundingAccount});
+  $Res call({int account, int coordinator, int fundingAccount});
 }
 
 /// @nodoc
@@ -863,10 +879,15 @@ class __$FrostSignParamsCopyWithImpl<$Res>
   @override
   @pragma('vm:prefer-inline')
   $Res call({
+    Object? account = null,
     Object? coordinator = null,
     Object? fundingAccount = null,
   }) {
     return _then(_FrostSignParams(
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
       coordinator: null == coordinator
           ? _self.coordinator
           : coordinator // ignore: cast_nullable_to_non_nullable
