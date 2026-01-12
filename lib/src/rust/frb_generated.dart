@@ -3288,7 +3288,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_u_16(id, serializer);
+          sse_encode_u_8(id, serializer);
           sse_encode_String(address, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,

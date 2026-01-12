@@ -9,7 +9,7 @@ use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::api::coin::Network;
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
+use crate::graphql::data::{Account, Addresses, Balance, DKGStatus, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::Context;
 use crate::tiu;
@@ -268,6 +268,10 @@ impl Account {
     pub async fn transactions(&self, context: &Context) -> FieldResult<Vec<Transaction>> {
         let txs = Query::transactions_by_account(self.id, None, context).await?;
         Ok(txs)
+    }
+
+    pub async fn dkg_status() -> FieldResult<DKGStatus> {
+        crate::graphql::frost::dkg_status().await
     }
 }
 
