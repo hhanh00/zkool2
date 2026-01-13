@@ -922,7 +922,7 @@ final class LifecycleProvider extends $AsyncNotifierProvider<Lifecycle, bool> {
   Lifecycle create() => Lifecycle();
 }
 
-String _$lifecycleHash() => r'56c133a3eb74b3d00892770f1b0f0bfe1bbd4350';
+String _$lifecycleHash() => r'84c4bc8b08d2a464e0b67519730300ec766a48bb';
 
 abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   FutureOr<bool> build();

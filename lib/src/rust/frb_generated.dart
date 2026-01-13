@@ -4073,26 +4073,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 17)
-      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
+    if (arr.length != 19)
+      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
       name: dco_decode_String(arr[2]),
       seed: dco_decode_opt_String(arr[3]),
-      aindex: dco_decode_u_32(arr[4]),
-      icon: dco_decode_opt_list_prim_u_8_strict(arr[5]),
-      birth: dco_decode_u_32(arr[6]),
-      folder: dco_decode_folder(arr[7]),
-      position: dco_decode_u_8(arr[8]),
-      hidden: dco_decode_bool(arr[9]),
-      saved: dco_decode_bool(arr[10]),
-      enabled: dco_decode_bool(arr[11]),
-      internal: dco_decode_bool(arr[12]),
-      hw: dco_decode_u_8(arr[13]),
-      height: dco_decode_u_32(arr[14]),
-      time: dco_decode_u_32(arr[15]),
-      balance: dco_decode_u_64(arr[16]),
+      passphrase: dco_decode_opt_String(arr[4]),
+      aindex: dco_decode_u_32(arr[5]),
+      dindex: dco_decode_u_32(arr[6]),
+      icon: dco_decode_opt_list_prim_u_8_strict(arr[7]),
+      birth: dco_decode_u_32(arr[8]),
+      folder: dco_decode_folder(arr[9]),
+      position: dco_decode_u_8(arr[10]),
+      hidden: dco_decode_bool(arr[11]),
+      saved: dco_decode_bool(arr[12]),
+      enabled: dco_decode_bool(arr[13]),
+      internal: dco_decode_bool(arr[14]),
+      hw: dco_decode_u_8(arr[15]),
+      height: dco_decode_u_32(arr[16]),
+      time: dco_decode_u_32(arr[17]),
+      balance: dco_decode_u_64(arr[18]),
     );
   }
 
@@ -5184,7 +5186,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_id = sse_decode_u_32(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_seed = sse_decode_opt_String(deserializer);
+    var var_passphrase = sse_decode_opt_String(deserializer);
     var var_aindex = sse_decode_u_32(deserializer);
+    var var_dindex = sse_decode_u_32(deserializer);
     var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
     var var_birth = sse_decode_u_32(deserializer);
     var var_folder = sse_decode_folder(deserializer);
@@ -5202,7 +5206,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         id: var_id,
         name: var_name,
         seed: var_seed,
+        passphrase: var_passphrase,
         aindex: var_aindex,
+        dindex: var_dindex,
         icon: var_icon,
         birth: var_birth,
         folder: var_folder,
@@ -6511,7 +6517,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.id, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_opt_String(self.seed, serializer);
+    sse_encode_opt_String(self.passphrase, serializer);
     sse_encode_u_32(self.aindex, serializer);
+    sse_encode_u_32(self.dindex, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
     sse_encode_u_32(self.birth, serializer);
     sse_encode_folder(self.folder, serializer);

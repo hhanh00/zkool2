@@ -14,6 +14,8 @@ pub struct Account {
     pub aindex: i32,
     pub dindex: i32,
     pub birth: i32,
+    pub height: i32,
+    pub balance: BigDecimal,
 }
 
 #[derive(Clone, Debug)]

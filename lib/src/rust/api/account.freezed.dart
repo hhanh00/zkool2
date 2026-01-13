@@ -18,7 +18,9 @@ mixin _$Account {
   int get id;
   String get name;
   String? get seed;
+  String? get passphrase;
   int get aindex;
+  int get dindex;
   Uint8List? get icon;
   int get birth;
   Folder get folder;
@@ -48,7 +50,10 @@ mixin _$Account {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.seed, seed) || other.seed == seed) &&
+            (identical(other.passphrase, passphrase) ||
+                other.passphrase == passphrase) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
+            (identical(other.dindex, dindex) || other.dindex == dindex) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.folder, folder) || other.folder == folder) &&
@@ -66,29 +71,32 @@ mixin _$Account {
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      coin,
-      id,
-      name,
-      seed,
-      aindex,
-      const DeepCollectionEquality().hash(icon),
-      birth,
-      folder,
-      position,
-      hidden,
-      saved,
-      enabled,
-      internal,
-      hw,
-      height,
-      time,
-      balance);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        coin,
+        id,
+        name,
+        seed,
+        passphrase,
+        aindex,
+        dindex,
+        const DeepCollectionEquality().hash(icon),
+        birth,
+        folder,
+        position,
+        hidden,
+        saved,
+        enabled,
+        internal,
+        hw,
+        height,
+        time,
+        balance
+      ]);
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
   }
 }
 
@@ -102,7 +110,9 @@ abstract mixin class $AccountCopyWith<$Res> {
       int id,
       String name,
       String? seed,
+      String? passphrase,
       int aindex,
+      int dindex,
       Uint8List? icon,
       int birth,
       Folder folder,
@@ -135,7 +145,9 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
     Object? id = null,
     Object? name = null,
     Object? seed = freezed,
+    Object? passphrase = freezed,
     Object? aindex = null,
+    Object? dindex = null,
     Object? icon = freezed,
     Object? birth = null,
     Object? folder = null,
@@ -166,9 +178,17 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
           ? _self.seed
           : seed // ignore: cast_nullable_to_non_nullable
               as String?,
+      passphrase: freezed == passphrase
+          ? _self.passphrase
+          : passphrase // ignore: cast_nullable_to_non_nullable
+              as String?,
       aindex: null == aindex
           ? _self.aindex
           : aindex // ignore: cast_nullable_to_non_nullable
+              as int,
+      dindex: null == dindex
+          ? _self.dindex
+          : dindex // ignore: cast_nullable_to_non_nullable
               as int,
       icon: freezed == icon
           ? _self.icon
@@ -328,7 +348,9 @@ extension AccountPatterns on Account {
             int id,
             String name,
             String? seed,
+            String? passphrase,
             int aindex,
+            int dindex,
             Uint8List? icon,
             int birth,
             Folder folder,
@@ -352,7 +374,9 @@ extension AccountPatterns on Account {
             _that.id,
             _that.name,
             _that.seed,
+            _that.passphrase,
             _that.aindex,
+            _that.dindex,
             _that.icon,
             _that.birth,
             _that.folder,
@@ -390,7 +414,9 @@ extension AccountPatterns on Account {
             int id,
             String name,
             String? seed,
+            String? passphrase,
             int aindex,
+            int dindex,
             Uint8List? icon,
             int birth,
             Folder folder,
@@ -413,7 +439,9 @@ extension AccountPatterns on Account {
             _that.id,
             _that.name,
             _that.seed,
+            _that.passphrase,
             _that.aindex,
+            _that.dindex,
             _that.icon,
             _that.birth,
             _that.folder,
@@ -448,7 +476,9 @@ extension AccountPatterns on Account {
             int id,
             String name,
             String? seed,
+            String? passphrase,
             int aindex,
+            int dindex,
             Uint8List? icon,
             int birth,
             Folder folder,
@@ -471,7 +501,9 @@ extension AccountPatterns on Account {
             _that.id,
             _that.name,
             _that.seed,
+            _that.passphrase,
             _that.aindex,
+            _that.dindex,
             _that.icon,
             _that.birth,
             _that.folder,
@@ -498,7 +530,9 @@ class _Account implements Account {
       required this.id,
       required this.name,
       this.seed,
+      this.passphrase,
       required this.aindex,
+      required this.dindex,
       this.icon,
       required this.birth,
       required this.folder,
@@ -521,7 +555,11 @@ class _Account implements Account {
   @override
   final String? seed;
   @override
+  final String? passphrase;
+  @override
   final int aindex;
+  @override
+  final int dindex;
   @override
   final Uint8List? icon;
   @override
@@ -564,7 +602,10 @@ class _Account implements Account {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.seed, seed) || other.seed == seed) &&
+            (identical(other.passphrase, passphrase) ||
+                other.passphrase == passphrase) &&
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
+            (identical(other.dindex, dindex) || other.dindex == dindex) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.folder, folder) || other.folder == folder) &&
@@ -582,29 +623,32 @@ class _Account implements Account {
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      coin,
-      id,
-      name,
-      seed,
-      aindex,
-      const DeepCollectionEquality().hash(icon),
-      birth,
-      folder,
-      position,
-      hidden,
-      saved,
-      enabled,
-      internal,
-      hw,
-      height,
-      time,
-      balance);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        coin,
+        id,
+        name,
+        seed,
+        passphrase,
+        aindex,
+        dindex,
+        const DeepCollectionEquality().hash(icon),
+        birth,
+        folder,
+        position,
+        hidden,
+        saved,
+        enabled,
+        internal,
+        hw,
+        height,
+        time,
+        balance
+      ]);
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, aindex: $aindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
   }
 }
 
@@ -619,7 +663,9 @@ abstract mixin class _$AccountCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int id,
       String name,
       String? seed,
+      String? passphrase,
       int aindex,
+      int dindex,
       Uint8List? icon,
       int birth,
       Folder folder,
@@ -653,7 +699,9 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
     Object? id = null,
     Object? name = null,
     Object? seed = freezed,
+    Object? passphrase = freezed,
     Object? aindex = null,
+    Object? dindex = null,
     Object? icon = freezed,
     Object? birth = null,
     Object? folder = null,
@@ -684,9 +732,17 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
           ? _self.seed
           : seed // ignore: cast_nullable_to_non_nullable
               as String?,
+      passphrase: freezed == passphrase
+          ? _self.passphrase
+          : passphrase // ignore: cast_nullable_to_non_nullable
+              as String?,
       aindex: null == aindex
           ? _self.aindex
           : aindex // ignore: cast_nullable_to_non_nullable
+              as int,
+      dindex: null == dindex
+          ? _self.dindex
+          : dindex // ignore: cast_nullable_to_non_nullable
               as int,
       icon: freezed == icon
           ? _self.icon
