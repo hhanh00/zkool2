@@ -1199,7 +1199,7 @@ pub async fn get_notes_txid(
     // Return all notes for a given transaction
     // including the ones that may be spent
     let notes = sqlx::query(
-        "SELECT n.id_note, n.height, n.pool, n.tx, n.value, n.locked
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked
        FROM notes n
        JOIN transactions t ON n.tx = t.id_tx
 	   WHERE n.account = ?1
