@@ -27,7 +27,7 @@ class ChartPageState extends ConsumerState<ChartPage> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     return Scaffold(
       appBar: AppBar(title: Text("Charts")),

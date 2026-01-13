@@ -65,7 +65,7 @@ class TxPageState extends ConsumerState<TxPage> {
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     if (account == null) return blank(context);
     final t = Theme.of(context).textTheme;
@@ -262,7 +262,7 @@ class MempoolPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     return Scaffold(
       appBar: AppBar(title: Text("Mempool")),

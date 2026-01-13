@@ -54,7 +54,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   Widget build(BuildContext context) {
     if (this.account == null) return blank(context);
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
 
@@ -220,7 +220,7 @@ class TransparentAddressesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     return Scaffold(
       appBar: AppBar(title: Text("Transparent Addresses")),
