@@ -713,28 +713,29 @@ class GetTxDetails extends _$GetTxDetails {
 @Riverpod(keepAlive: true)
 class Lifecycle extends _$Lifecycle {
   DateTime unlockTime = DateTime.fromMillisecondsSinceEpoch(0);
+  bool? locked;
 
   @override
   Future<bool> build() async {
-    final settings = await ref.watch(appSettingsProvider.future);
-    return settings.needPin;
+    if (locked == null) {
+      final settings = await ref.watch(appSettingsProvider.future);
+      locked = settings.needPin;
+    }
+    return locked!;
   }
 
   void unlock() {
     unlockTime = DateTime.now();
+    locked = false;
     state = AsyncData(false);
   }
 
-  void lock() {
-    unlockTime = DateTime.fromMillisecondsSinceEpoch(0);
-    state = AsyncData(true);
-  }
-
-  void check() async {
+  Future<void> lock({bool force = true}) async {
     final settings = await ref.read(appSettingsProvider.future);
-    if (!settings.needPin) {
-      state = AsyncData(false);
-    } else if (DateTime.now().difference(unlockTime).inSeconds > 30) {
+    if (!settings.needPin) return;
+    if (force || DateTime.now().difference(unlockTime).inSeconds > 30) {
+      unlockTime = DateTime.fromMillisecondsSinceEpoch(0);
+      locked = true;
       state = AsyncData(true);
     }
   }
@@ -753,7 +754,7 @@ class LifecycleWatcher with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final scope = ProviderScope.containerOf(appKey.currentContext!);
-      scope.read(lifecycleProvider.notifier).check();
+      scope.read(lifecycleProvider.notifier).lock(force: false);
     }
   }
 }

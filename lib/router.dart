@@ -28,8 +28,6 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
 
-part 'router.g.dart';
-
 final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
@@ -40,51 +38,51 @@ GoRouter router(bool recoveryMode) => GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => pinLock(AccountListPage()),
+          builder: (context, state) => AccountListPage(),
           routes: [
             GoRoute(
               path: 'account',
-              builder: (context, state) => pinLock(AccountViewPage()),
+              builder: (context, state) => AccountViewPage(),
             ),
           ],
         ),
         GoRoute(
           path: '/account/edit',
-          builder: (context, state) => pinLock(AccountEditPage(state.extra as List<Account>)),
+          builder: (context, state) => AccountEditPage(state.extra as List<Account>),
         ),
         GoRoute(
           path: '/account/new',
-          builder: (context, state) => pinLock(NewAccountPage()),
+          builder: (context, state) => NewAccountPage(),
         ),
         GoRoute(
           path: '/viewing_keys',
-          builder: (context, state) => pinLock(ViewingKeysPage(state.extra as int)),
+          builder: (context, state) => ViewingKeysPage(state.extra as int),
         ),
         GoRoute(
           path: '/receive',
-          builder: (context, state) => pinLock(ReceivePage()),
+          builder: (context, state) => ReceivePage(),
         ),
         GoRoute(
           path: '/transparent_addresses',
-          builder: (context, state) => pinLock(TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>)),
+          builder: (context, state) => TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>),
         ),
         GoRoute(
           path: '/send',
-          builder: (context, state) => pinLock(SendPage()),
+          builder: (context, state) => SendPage(),
         ),
         GoRoute(
           path: '/send2',
-          builder: (context, state) => pinLock(Send2Page(state.extra as List<Recipient>)),
+          builder: (context, state) => Send2Page(state.extra as List<Recipient>),
         ),
-        GoRoute(path: '/tx', builder: (context, state) => pinLock(TxPage(state.extra as PcztPackage))),
-        GoRoute(path: '/tx_view', builder: (context, state) => pinLock(TxViewPage(state.extra as int))),
-        GoRoute(path: '/log', builder: (context, state) => pinLock(LogviewPage())),
+        GoRoute(path: '/tx', builder: (context, state) => TxPage(state.extra as PcztPackage)),
+        GoRoute(path: '/tx_view', builder: (context, state) => TxViewPage(state.extra as int)),
+        GoRoute(path: '/log', builder: (context, state) => LogviewPage()),
         GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
         GoRoute(
           path: '/qr',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return pinLock(QRPage(text: args["text"], title: args["title"]));
+            return QRPage(text: args["text"], title: args["title"]);
           },
         ),
         GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
@@ -93,48 +91,42 @@ GoRouter router(bool recoveryMode) => GoRouter(
         GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
         GoRoute(path: '/folders', builder: (context, state) => FolderPage()),
         GoRoute(path: '/categories', builder: (context, state) => CategoryPage()),
-        GoRoute(path: '/dkg1', builder: (context, state) => pinLock(DKGPage1())),
-        GoRoute(path: '/dkg2', builder: (context, state) => pinLock(DKGPage2())),
-        GoRoute(path: '/dkg3', builder: (context, state) => pinLock(DKGPage3())),
-        GoRoute(path: '/frost1', builder: (context, state) => pinLock(FrostPage1(state.extra as PcztPackage))),
-        GoRoute(path: '/frost2', builder: (context, state) => pinLock(FrostPage2())),
-        GoRoute(path: '/settings', builder: (context, state) => pinLock(SettingsPage()), routes: [
-          GoRoute(path: 'qr', builder: (context, state) => pinLock(SettingsQRPage(onClose: state.extra as VoidFunction<QRSettings>))),
-        ]),
+        GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
+        GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2()),
+        GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
+        GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
+        GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
+        GoRoute(
+            path: '/settings',
+            routes: [
+              GoRoute(path: 'qr', builder: (context, state) => SettingsQRPage(onClose: state.extra as VoidFunction<QRSettings>)),
+            ],
+            builder: (context, state) => SettingsPage()),
         GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
         GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
         GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
-
       ],
     );
 
-Widget pinLock(Widget child) => child;
+// @riverpod
+// class PinLocked extends _$PinLocked {
+//   @override
+//   Future<bool> build() async {
+//     final settings = await ref.watch(appSettingsProvider.future);
+//     return settings.needPin;
+//   }
 
-// Widget pinLock(Widget child) => Observer(builder: (context) {
-//       appStore.unlocked;
-//       appStore.needPin;
-//       return (appStore.unlocked == null && appStore.needPin) ? PinLock() : child;
-//     },);
+//   void unlock() {
+//     // state = state.whenData();
+//     Future(() {
+//       relock();
+//     });
+//   }
 
-@riverpod
-class PinLocked extends _$PinLocked {
-  @override
-  bool build() {
-    final settings = ref.read(appSettingsProvider).requireValue;
-    return settings.needPin;
-  }
-
-  void unlock() {
-    state = false;
-    Future(() {
-      relock();
-    });
-  }
-
-  void relock() {
-    final settings = ref.read(appSettingsProvider).requireValue;
-    state = settings.needPin;
-  }
-}
+//   void relock() {
+//     final settings = ref.read(appSettingsProvider).requireValue;
+//     state = state.whenData((s) => settings.needPin);
+//   }
+// }

@@ -110,7 +110,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
     }
 
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
 

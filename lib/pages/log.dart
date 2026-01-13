@@ -14,7 +14,7 @@ class LogviewPageState extends ConsumerState<LogviewPage> {
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     final log = ref.watch(logProvider);
     final fullLog = log.join("\n");

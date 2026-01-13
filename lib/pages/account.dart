@@ -64,7 +64,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    logger.i("pinlock $pinlock");
+    if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
 
@@ -271,7 +272,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     if (folders == null) return SizedBox.expand();
     Future(tutorial);
@@ -808,7 +809,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     return Scaffold(
       appBar: AppBar(
