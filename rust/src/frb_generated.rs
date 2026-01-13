@@ -4829,7 +4829,9 @@ impl SseDecode for crate::api::account::Account {
         let mut var_id = <u32>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_seed = <Option<String>>::sse_decode(deserializer);
+        let mut var_passphrase = <Option<String>>::sse_decode(deserializer);
         let mut var_aindex = <u32>::sse_decode(deserializer);
+        let mut var_dindex = <u32>::sse_decode(deserializer);
         let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_birth = <u32>::sse_decode(deserializer);
         let mut var_folder = <crate::api::account::Folder>::sse_decode(deserializer);
@@ -4847,7 +4849,9 @@ impl SseDecode for crate::api::account::Account {
             id: var_id,
             name: var_name,
             seed: var_seed,
+            passphrase: var_passphrase,
             aindex: var_aindex,
+            dindex: var_dindex,
             icon: var_icon,
             birth: var_birth,
             folder: var_folder,
@@ -6281,7 +6285,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.id.into_into_dart().into_dart(),
             self.name.into_into_dart().into_dart(),
             self.seed.into_into_dart().into_dart(),
+            self.passphrase.into_into_dart().into_dart(),
             self.aindex.into_into_dart().into_dart(),
+            self.dindex.into_into_dart().into_dart(),
             self.icon.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
             self.folder.into_into_dart().into_dart(),
@@ -7202,7 +7208,9 @@ impl SseEncode for crate::api::account::Account {
         <u32>::sse_encode(self.id, serializer);
         <String>::sse_encode(self.name, serializer);
         <Option<String>>::sse_encode(self.seed, serializer);
+        <Option<String>>::sse_encode(self.passphrase, serializer);
         <u32>::sse_encode(self.aindex, serializer);
+        <u32>::sse_encode(self.dindex, serializer);
         <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
         <u32>::sse_encode(self.birth, serializer);
         <crate::api::account::Folder>::sse_encode(self.folder, serializer);

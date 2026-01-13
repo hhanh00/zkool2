@@ -13,19 +13,25 @@ use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{
     Account, Addresses, Balance, DKGStatus, Note, Transaction, UnconfirmedTx,
 };
-use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::mutation::MEMPOOL;
+use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::Context;
 use crate::pay::TxPlan;
 use crate::tiu;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDateTime};
-use juniper::{graphql_object, FieldError, FieldResult};
+use juniper::{graphql_object, GraphQLInputObject, FieldError, FieldResult};
 use orchard::keys::Scope;
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 pub struct Query {}
+
+#[derive(GraphQLInputObject, Default)]
+pub struct AccountFilter {
+    id: Option<i32>,
+    name: Option<String>,
+}
 
 #[graphql_object]
 #[graphql(context = Context)]
@@ -34,43 +40,33 @@ impl Query {
         "1.0"
     }
 
-    async fn accounts(context: &Context) -> FieldResult<Vec<Account>> {
+    async fn accounts(account_filter: Option<AccountFilter>, context: &Context) -> FieldResult<Vec<Account>> {
         let mut conn = context.coin.get_connection().await?;
-        let accounts = query(
-            "SELECT id_account, name, seed, passphrase, aindex, dindex, birth
-            FROM accounts ORDER BY id_account",
-        )
-        .map(row_to_account)
-        .fetch_all(&mut *conn)
-        .await?;
-        Ok(accounts)
-    }
+        let accounts = crate::db::list_accounts(&mut conn, context.coin.coin).await?;
+        let mut accounts: Vec<_> = accounts
+            .into_iter()
+            .map(|a| Account {
+                id: a.id as i32,
+                name: a.name,
+                seed: a.seed,
+                passphrase: a.passphrase,
+                aindex: a.aindex as i32,
+                dindex: a.dindex as i32,
+                birth: a.birth as i32,
+                height: a.height as i32,
+                balance: zats_to_zec(a.balance as i64),
+            })
+            .collect();
 
-    async fn accounts_by_name(name: String, context: &Context) -> FieldResult<Vec<Account>> {
-        let mut conn = context.coin.get_connection().await?;
-        let accounts = query(
-            "SELECT id_account, name, seed, passphrase, aindex, dindex, birth FROM accounts
-            WHERE name = ?1",
-        )
-        .bind(&name)
-        .map(row_to_account)
-        .fetch_all(&mut *conn)
-        .await?;
-        Ok(accounts)
-    }
+        let account_filter = account_filter.unwrap_or_default();
+        if let Some(id) = account_filter.id {
+            accounts.retain(|a| a.id == id);
+        };
+        if let Some(name) = account_filter.name {
+            accounts.retain(|a| a.name == name);
+        }
 
-    pub async fn account_by_id(id_account: i32, context: &Context) -> FieldResult<Account> {
-        let mut conn = context.coin.get_connection().await?;
-        let account = query(
-            "SELECT id_account, name, seed, passphrase, aindex, dindex, birth FROM accounts
-            WHERE id_account = ?1",
-        )
-        .bind(id_account)
-        .map(row_to_account)
-        .fetch_optional(&mut *conn)
-        .await?
-        .ok_or(anyhow::anyhow!("Unknown account"))?;
-        Ok(account)
+        Ok(accounts)
     }
 
     pub async fn transactions_by_account(
@@ -232,7 +228,8 @@ impl Query {
         let pczt = hex::decode(&pczt)?;
         let (pczt, _) =
             bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
-        let signed = crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &pczt).await?;
+        let signed =
+            crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &pczt).await?;
         let tx_bin = crate::pay::plan::extract_transaction(&signed).await?;
         let tx = hex::encode(&tx_bin);
         Ok(tx)
@@ -258,10 +255,7 @@ impl TxPlan {
             })
             .collect();
         let fee = zats_to_zec(self.fee as i64);
-        UnsignedTx {
-            recipients,
-            fee,
-        }
+        UnsignedTx { recipients, fee }
     }
 }
 
@@ -369,14 +363,16 @@ impl Account {
     pub fn birth(&self) -> i32 {
         self.birth
     }
+    pub fn height(&self) -> i32 {
+        self.height
+    }
+    pub fn balance(&self) -> BigDecimal {
+        self.balance.clone()
+    }
 
     pub async fn transactions(&self, context: &Context) -> FieldResult<Vec<Transaction>> {
         let txs = Query::transactions_by_account(self.id, None, context).await?;
         Ok(txs)
-    }
-
-    pub async fn dkg_status() -> FieldResult<DKGStatus> {
-        crate::graphql::frost::dkg_status().await
     }
 }
 
@@ -457,25 +453,6 @@ impl Note {
             .await
             .map_err(|_| anyhow::anyhow!("No tx exists for ID {}", self.tx))?
             .map_err(|err| FieldError::new(err.to_string(), juniper::Value::Null))
-    }
-}
-
-fn row_to_account(r: SqliteRow) -> Account {
-    let id: i32 = r.get(0);
-    let name: String = r.get(1);
-    let seed: Option<String> = r.get(2);
-    let passphrase: Option<String> = r.get(3);
-    let aindex: i32 = r.get(4);
-    let dindex: i32 = r.get(5);
-    let birth: i32 = r.get(6);
-    Account {
-        id,
-        name,
-        seed,
-        passphrase,
-        aindex,
-        dindex,
-        birth,
     }
 }
 
