@@ -78,7 +78,7 @@ class SendPageState extends ConsumerState<SendPage> {
     if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
     final c = ref.read(coinContextProvider);
@@ -448,7 +448,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
     if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
 
