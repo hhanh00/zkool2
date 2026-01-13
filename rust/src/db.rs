@@ -1180,10 +1180,12 @@ pub async fn get_account_hw(connection: &mut SqliteConnection, account: u32) -> 
 
 pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
     let notes = sqlx::query(
-        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked
-       FROM notes n LEFT JOIN spends s
-	   ON n.id_note = s.id_note
-	   WHERE n.account = ? AND s.id_note IS NULL ORDER BY n.height DESC",
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
+        m.memo_text
+        FROM notes n LEFT JOIN spends s
+	    ON n.id_note = s.id_note
+        LEFT JOIN memos m ON n.id_note = m.note
+	    WHERE n.account = ? AND s.id_note IS NULL ORDER BY n.height DESC",
     )
     .bind(account)
     .map(row_to_note)
@@ -1201,9 +1203,11 @@ pub async fn get_notes_txid(
     // Return all notes for a given transaction
     // including the ones that may be spent
     let notes = sqlx::query(
-        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
+        m.memo_text
        FROM notes n
        JOIN transactions t ON n.tx = t.id_tx
+       LEFT JOIN memos m ON n.id_note = m.note
 	   WHERE n.account = ?1
        AND t.txid = ?2",
     )
@@ -1225,6 +1229,7 @@ fn row_to_note(row: SqliteRow) -> TxNote {
     let diversifier: Option<Vec<u8>> = row.get(5);
     let value: u64 = row.get(6);
     let locked: bool = row.get(7);
+    let memo: Option<String> = row.get(8);
 
     TxNote {
         id: id_note,
@@ -1235,6 +1240,7 @@ fn row_to_note(row: SqliteRow) -> TxNote {
         diversifier,
         value,
         locked,
+        memo,
     }
 }
 

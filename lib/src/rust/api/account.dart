@@ -473,6 +473,7 @@ class TxNote {
   final Uint8List? diversifier;
   final BigInt value;
   final bool locked;
+  final String? memo;
 
   const TxNote({
     required this.id,
@@ -483,6 +484,7 @@ class TxNote {
     this.diversifier,
     required this.value,
     required this.locked,
+    this.memo,
   });
 
   static Future<TxNote> default_() =>
@@ -497,7 +499,8 @@ class TxNote {
       scope.hashCode ^
       diversifier.hashCode ^
       value.hashCode ^
-      locked.hashCode;
+      locked.hashCode ^
+      memo.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -511,7 +514,8 @@ class TxNote {
           scope == other.scope &&
           diversifier == other.diversifier &&
           value == other.value &&
-          locked == other.locked;
+          locked == other.locked &&
+          memo == other.memo;
 }
 
 class TxOutput {

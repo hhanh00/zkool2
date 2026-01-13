@@ -45,8 +45,12 @@ pub struct Payment {
 
 #[derive(GraphQLObject)]
 pub struct Output {
+    pub id: i32,
+    pub pool: i32,
+    pub vout: i32,
+    pub value: BigDecimal,
     pub address: String,
-    pub amount: BigDecimal,
+    pub memo: Option<String>,
 }
 
 #[derive(GraphQLObject)]

@@ -10,9 +10,7 @@ use zcash_keys::keys::UnifiedFullViewingKey;
 use crate::api::coin::{Coin, Network};
 use crate::api::pay::{DustChangePolicy, PcztPackage};
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{
-    Account, Addresses, Balance, DKGStatus, Note, Transaction, UnconfirmedTx,
-};
+use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::Context;
@@ -21,7 +19,7 @@ use crate::tiu;
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDateTime};
-use juniper::{graphql_object, GraphQLInputObject, FieldError, FieldResult};
+use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
 use orchard::keys::Scope;
 use sqlx::{query, sqlite::SqliteRow, Row};
 
@@ -40,7 +38,10 @@ impl Query {
         "1.0"
     }
 
-    async fn accounts(account_filter: Option<AccountFilter>, context: &Context) -> FieldResult<Vec<Account>> {
+    async fn accounts(
+        account_filter: Option<AccountFilter>,
+        context: &Context,
+    ) -> FieldResult<Vec<Account>> {
         let mut conn = context.coin.get_connection().await?;
         let accounts = crate::db::list_accounts(&mut conn, context.coin.coin).await?;
         let mut accounts: Vec<_> = accounts
@@ -249,9 +250,14 @@ impl TxPlan {
         let recipients: Vec<_> = self
             .outputs
             .into_iter()
-            .map(|o| Output {
+            .enumerate()
+            .map(|(id, o)| Output {
+                id: 0,
+                pool: o.pool as i32,
+                vout: id as i32,
                 address: o.address,
-                amount: zats_to_zec(o.amount as i64),
+                value: zats_to_zec(o.amount as i64),
+                memo: None,
             })
             .collect();
         let fee = zats_to_zec(self.fee as i64);
@@ -337,6 +343,7 @@ fn resolve_note(
         diversifier: n.diversifier.map(|d| hex::encode(&d)).unwrap_or_default(),
         address: address.unwrap_or_default(),
         value: zats_to_zec(n.value as i64),
+        memo: n.memo,
     }
 }
 
@@ -401,8 +408,8 @@ impl Transaction {
     }
 
     pub async fn notes(&self, context: &Context) -> FieldResult<Vec<Note>> {
-        let mut conn = context.coin.get_connection().await?;
         let network = context.coin.network();
+        let mut conn = context.coin.get_connection().await?;
         let ufvk =
             crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
         let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
@@ -416,13 +423,64 @@ impl Transaction {
         Ok(notes)
     }
 
-    pub async fn memos(&self, context: &Context) -> FieldResult<Vec<String>> {
+    pub async fn outputs(&self, context: &Context) -> FieldResult<Vec<Output>> {
         let mut conn = context.coin.get_connection().await?;
-        let mut txid = hex::decode(&self.txid)?;
-        txid.reverse();
-        let memos = crate::db::get_memos_txid(&mut conn, self.account as u32, &txid).await?;
-        let memos: Vec<_> = memos.into_iter().filter_map(|m| m.memo).collect();
-        Ok(memos)
+        let outputs = query(
+            "SELECT o.id_output, o.pool, o.vout, o.value, o.address, m.memo_text
+        FROM outputs o
+        LEFT JOIN memos m ON o.id_output = m.output
+        WHERE o.tx = ?1",
+        )
+        .bind(self.id)
+        .map(|r: SqliteRow| Output {
+            id: r.get(0),
+            pool: r.get(1),
+            vout: r.get(2),
+            value: zats_to_zec(r.get(3)),
+            address: r.get(4),
+            memo: r.get(5),
+        })
+        .fetch_all(&mut *conn)
+        .await?;
+        Ok(outputs)
+    }
+
+    pub async fn spends(&self, context: &Context) -> FieldResult<Vec<Note>> {
+        let network = context.coin.network();
+        let mut conn = context.coin.get_connection().await?;
+        let ufvk =
+            crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
+        let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
+        let spends = query(
+            "SELECT n.id_note, n.pool, n.height, n.tx,
+            n.scope, n.diversifier, n.value, n.locked,
+            m.memo_text
+            FROM spends s
+            JOIN notes n ON s.id_note = n.id_note
+            LEFT JOIN memos m ON s.id_note = m.note
+            WHERE s.tx = ?1
+            ORDER BY s.id_note",
+        )
+        .bind(self.id)
+        .map(|r: SqliteRow| crate::api::account::TxNote {
+            id: r.get(0),
+            pool: r.get(1),
+            height: r.get(2),
+            tx: r.get(3),
+            scope: r.get(4),
+            diversifier: r.get(5),
+            value: r.get(6),
+            locked: r.get(7),
+            memo: r.get(8),
+        })
+        .fetch_all(&mut *conn)
+        .await?;
+
+        let spends: Vec<_> = spends
+            .into_iter()
+            .map(|n| resolve_note(&network, &ufvk, n))
+            .collect();
+        Ok(spends)
     }
 }
 
@@ -445,6 +503,9 @@ impl Note {
     }
     pub fn diversifier(&self) -> String {
         self.diversifier.clone()
+    }
+    pub fn memo(&self) -> Option<String> {
+        self.memo.clone()
     }
     pub async fn tx(&self, context: &Context) -> FieldResult<Transaction> {
         context
