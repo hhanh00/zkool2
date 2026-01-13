@@ -106,8 +106,9 @@ pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
 pub async fn set_dkg_address(id: u8, address: &str, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection).await?;
-
-    crate::frost::dkg::set_dkg_address(&mut connection, account, id, address).await
+    let dkg_params = get_dkg_params(&mut connection, account).await?;
+    let my_id = dkg_params.id;
+    crate::frost::dkg::set_dkg_address(&mut connection, account, id, my_id, address).await
 }
 
 #[frb]
