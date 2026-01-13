@@ -226,6 +226,25 @@ impl Query {
         let unsigned = tx_plan.to_unsigned_tx();
         Ok(unsigned)
     }
+
+    async fn sign_tx(id_account: i32, pczt: String, context: &Context) -> FieldResult<String> {
+        let mut connection = context.coin.get_connection().await?;
+        let pczt = hex::decode(&pczt)?;
+        let (pczt, _) =
+            bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
+        let signed = crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &pczt).await?;
+        let tx_bin = crate::pay::plan::extract_transaction(&signed).await?;
+        let tx = hex::encode(&tx_bin);
+        Ok(tx)
+    }
+
+    async fn broadcast_tx(tx_bytes: String, context: &Context) -> FieldResult<String> {
+        let tx = hex::decode(&tx_bytes)?;
+        let mut client = context.coin.client().await?;
+        let height = client.latest_height().await?;
+        let result = client.post_transaction(height, &tx).await?;
+        Ok(result)
+    }
 }
 
 impl TxPlan {

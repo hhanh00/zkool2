@@ -18,13 +18,21 @@ use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
 
 use crate::{
-    Client, Sink, account::{get_account_seed, get_orchard_vk}, api::{
+    account::{get_account_seed, get_orchard_vk},
+    api::{
         coin::Network,
-        frost::{DKGParams, DKGStatus, get_funding_account},
+        frost::{get_funding_account, DKGParams, DKGStatus},
         sync::SYNCING,
-    }, db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk}, frb_generated::StreamSink, frost::FrostMessage, pay::{
-        Recipient, plan::{extract_transaction, plan_transaction, sign_transaction}, pool::ALL_POOLS
-    }
+    },
+    db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk},
+    frb_generated::StreamSink,
+    frost::FrostMessage,
+    pay::{
+        plan::{extract_transaction, plan_transaction, sign_transaction},
+        pool::ALL_POOLS,
+        Recipient,
+    },
+    Client, Sink,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -67,11 +75,17 @@ pub async fn set_dkg_address(
     connection: &mut SqliteConnection,
     account: u32,
     id: u8,
+    my_id: u8,
     address: &str,
 ) -> Result<()> {
+    // do not override our own address
+    if id == my_id {
+        return Ok(());
+    }
     sqlx::query(
         "INSERT INTO dkg_packages(account, public, round, from_id, data)
-        VALUES (?, TRUE, 0, ?, ?) ON CONFLICT DO NOTHING",
+        VALUES (?, TRUE, 0, ?, ?) ON CONFLICT DO UPDATE SET
+        data = excluded.data",
     )
     .bind(account)
     .bind(id)
@@ -588,11 +602,14 @@ pub async fn in_dkg(connection: &mut SqliteConnection) -> Result<bool> {
         return Ok(false);
     }
     let account = get_funding_account(&mut *connection).await?;
-    let (n, ) = sqlx::query_as::<_, (u32, )>("SELECT n FROM dkg_params WHERE account = ?1")
+    let (n,) = sqlx::query_as::<_, (u32,)>("SELECT n FROM dkg_params WHERE account = ?1")
         .bind(account)
         .fetch_optional(&mut *connection)
-        .await?.unwrap_or_default();
-    if n == 0 { return Ok(false); }
+        .await?
+        .unwrap_or_default();
+    if n == 0 {
+        return Ok(false);
+    }
     let (n_addresses,): (u32,) = sqlx::query_as(
         "SELECT COUNT(*) FROM dkg_packages WHERE account = ?1
         AND round = 0 AND public = 1",
