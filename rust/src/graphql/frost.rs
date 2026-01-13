@@ -9,10 +9,6 @@ use crate::{
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
 
-pub async fn dkg_status() -> FieldResult<DKGStatus> {
-    todo!()
-}
-
 pub async fn dkg_start(
     name: String,
     threshold: i32,

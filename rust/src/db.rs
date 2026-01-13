@@ -845,7 +845,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
                 FROM notes a
                 LEFT JOIN spends b ON a.id_note = b.id_note
                 WHERE b.id_note IS NULL)
-        SELECT id_account, a.name, seed, aindex,
+        SELECT id_account, a.name, seed, passphrase, aindex, dindex,
         icon, birth, a.position, hidden, saved, enabled, internal,
         sh.height, COALESCE(hdr.time, 0), COALESCE(SUM(unspent.value), 0) AS balance,
         COALESCE(f.id_folder, 0), COALESCE(f.name, '') AS folder_name,
@@ -860,27 +860,29 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
     )
     .map(|row: SqliteRow| {
         let folder = Folder {
-            id: row.get(14),
-            name: row.get(15),
+            id: row.get(16),
+            name: row.get(17),
         };
         Account {
             coin,
             id: row.get(0),
             name: row.get(1),
             seed: row.get(2),
-            aindex: row.get(3),
-            icon: row.get(4),
-            birth: row.get(5),
-            position: row.get(6),
-            hidden: row.get(7),
-            saved: row.get(8),
-            enabled: row.get(9),
-            internal: row.get(10),
-            height: row.get(11),
-            time: row.get(12),
-            balance: row.get::<i64, _>(13) as u64,
+            passphrase: row.get(3),
+            aindex: row.get(4),
+            dindex: row.get(5),
+            icon: row.get(6),
+            birth: row.get(7),
+            position: row.get(8),
+            hidden: row.get(9),
+            saved: row.get(10),
+            enabled: row.get(11),
+            internal: row.get(12),
+            height: row.get(13),
+            time: row.get(14),
+            balance: row.get::<i64, _>(15) as u64,
             folder,
-            hw: row.get::<u8, _>(16),
+            hw: row.get::<u8, _>(18),
         }
     })
     .fetch(&mut *connection);
