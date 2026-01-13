@@ -103,7 +103,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     Future(tutorial);
 
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     final tt = Theme.of(context).textTheme;
     final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");

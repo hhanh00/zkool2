@@ -95,7 +95,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
 
@@ -269,7 +269,7 @@ class DKGPage2State extends ConsumerState<DKGPage2> {
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     return Scaffold(
       appBar: AppBar(
