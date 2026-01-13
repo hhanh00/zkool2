@@ -144,7 +144,7 @@ pub async fn frost_sign(
     let pczt = hex::decode(&pczt)?;
     let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
     crate::frost::sign::init_sign(
-        &mut *connection,
+        &mut connection,
         id_account as u32,
         message_account as u32,
         id_coordinator as u8,
