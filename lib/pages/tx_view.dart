@@ -46,7 +46,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     if (account == null || idx == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value == true) return PinLock();
+    if (pinlock.value ?? false) return PinLock();
 
     final tx = account!.transactions[idx!];
     final TxAccount txDetails;
