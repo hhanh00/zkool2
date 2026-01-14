@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:convert/convert.dart';
 import 'package:flutter/foundation.dart';
@@ -168,8 +167,7 @@ class TxPageState extends ConsumerState<TxPage> {
         c: c,
       );
       try {
-        final txid = jsonDecode(result) as String;
-        final txidHex = hex.decode(txid);
+        final txidHex = hex.decode(result);
         await storePendingTx(
           height: txPlan.height,
           txid: txidHex,
@@ -177,7 +175,7 @@ class TxPageState extends ConsumerState<TxPage> {
           category: pczt.category,
           c: c,
         );
-        await showMessage(context, txid);
+        await showMessage(context, result);
         showSnackbar("Transaction broadcasted successfully");
       } catch (_) {
         if (mounted) await showException(context, result);

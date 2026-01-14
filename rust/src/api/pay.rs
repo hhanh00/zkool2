@@ -4,16 +4,10 @@ use bincode::{config::legacy, Decode, Encode};
 use crate::{api::coin::Coin, pay::{Recipient, TxPlan, plan::plan_transaction}};
 use flutter_rust_bridge::frb;
 
-pub enum DustChangePolicy {
-    Discard,
-    SendToRecipient,
-}
-
 pub struct PaymentOptions {
     pub src_pools: u8,
     pub recipient_pays_fee: bool,
     pub smart_transparent: bool,
-    pub dust_change_policy: DustChangePolicy,
     pub category: Option<u32>,
 }
 
@@ -38,7 +32,6 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         recipients,
         options.recipient_pays_fee,
         options.smart_transparent,
-        options.dust_change_policy,
         options.category,
     )
     .await

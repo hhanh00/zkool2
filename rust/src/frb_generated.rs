@@ -4990,18 +4990,6 @@ impl SseDecode for crate::api::frost::DKGStatus {
     }
 }
 
-impl SseDecode for crate::api::pay::DustChangePolicy {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut inner = <i32>::sse_decode(deserializer);
-        return match inner {
-            0 => crate::api::pay::DustChangePolicy::Discard,
-            1 => crate::api::pay::DustChangePolicy::SendToRecipient,
-            _ => unreachable!("Invalid variant for DustChangePolicy: {}", inner),
-        };
-    }
-}
-
 impl SseDecode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5046,13 +5034,6 @@ impl SseDecode for crate::api::frost::FrostSignParams {
             coordinator: var_coordinator,
             funding_account: var_fundingAccount,
         };
-    }
-}
-
-impl SseDecode for i32 {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
     }
 }
 
@@ -5541,14 +5522,11 @@ impl SseDecode for crate::api::pay::PaymentOptions {
         let mut var_srcPools = <u8>::sse_decode(deserializer);
         let mut var_recipientPaysFee = <bool>::sse_decode(deserializer);
         let mut var_smartTransparent = <bool>::sse_decode(deserializer);
-        let mut var_dustChangePolicy =
-            <crate::api::pay::DustChangePolicy>::sse_decode(deserializer);
         let mut var_category = <Option<u32>>::sse_decode(deserializer);
         return crate::api::pay::PaymentOptions {
             src_pools: var_srcPools,
             recipient_pays_fee: var_recipientPaysFee,
             smart_transparent: var_smartTransparent,
-            dust_change_policy: var_dustChangePolicy,
             category: var_category,
         };
     }
@@ -6008,6 +5986,13 @@ impl SseDecode for [usize; 3] {
     }
 }
 
+impl SseDecode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
+    }
+}
+
 fn pde_ffi_dispatcher_primary_impl(
     func_id: i32,
     port: flutter_rust_bridge::for_generated::MessagePort,
@@ -6437,27 +6422,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::DKGStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::pay::DustChangePolicy {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        match self {
-            Self::Discard => 0.into_dart(),
-            Self::SendToRecipient => 1.into_dart(),
-            _ => unreachable!(),
-        }
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::pay::DustChangePolicy
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::pay::DustChangePolicy>
-    for crate::api::pay::DustChangePolicy
-{
-    fn into_into_dart(self) -> crate::api::pay::DustChangePolicy {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::account::Folder {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6631,7 +6595,6 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PaymentOptions {
             self.src_pools.into_into_dart().into_dart(),
             self.recipient_pays_fee.into_into_dart().into_dart(),
             self.smart_transparent.into_into_dart().into_dart(),
-            self.dust_change_policy.into_into_dart().into_dart(),
             self.category.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -7321,22 +7284,6 @@ impl SseEncode for crate::api::frost::DKGStatus {
     }
 }
 
-impl SseEncode for crate::api::pay::DustChangePolicy {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(
-            match self {
-                crate::api::pay::DustChangePolicy::Discard => 0,
-                crate::api::pay::DustChangePolicy::SendToRecipient => 1,
-                _ => {
-                    unimplemented!("");
-                }
-            },
-            serializer,
-        );
-    }
-}
-
 impl SseEncode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7367,13 +7314,6 @@ impl SseEncode for crate::api::frost::FrostSignParams {
         <u32>::sse_encode(self.account, serializer);
         <u8>::sse_encode(self.coordinator, serializer);
         <u32>::sse_encode(self.funding_account, serializer);
-    }
-}
-
-impl SseEncode for i32 {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
     }
 }
 
@@ -7774,7 +7714,6 @@ impl SseEncode for crate::api::pay::PaymentOptions {
         <u8>::sse_encode(self.src_pools, serializer);
         <bool>::sse_encode(self.recipient_pays_fee, serializer);
         <bool>::sse_encode(self.smart_transparent, serializer);
-        <crate::api::pay::DustChangePolicy>::sse_encode(self.dust_change_policy, serializer);
         <Option<u32>>::sse_encode(self.category, serializer);
     }
 }
@@ -8113,6 +8052,13 @@ impl SseEncode for [usize; 3] {
             },
             serializer,
         );
+    }
+}
+
+impl SseEncode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
     }
 }
 
