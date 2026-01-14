@@ -292,6 +292,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
+    final coingecko = await prefs.getString("coingecko") ?? "";
     final recovery = await prefs.getBool("recovery") ?? false;
     final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
     final isLightNode = (hasDb ? await getProp(key: "is_light_node", c: c) : null) ?? "true";
@@ -321,6 +322,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       pinUnlockedAt: DateTime.now(),
       offline: offline,
       useTor: useTor,
+      coingecko: coingecko,
       recovery: recovery,
       syncInterval: syncInterval,
       actionsPerSync: actionsPerSync,
@@ -357,6 +359,7 @@ sealed class AppSettings with _$AppSettings {
     required String syncInterval, // in blocks
     required String actionsPerSync,
     required bool useTor,
+    required String coingecko,
     required bool recovery,
     required bool needPin,
     required DateTime pinUnlockedAt,

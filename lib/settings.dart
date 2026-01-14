@@ -19,6 +19,7 @@ final logID = GlobalKey();
 final lightnodeID = GlobalKey();
 final lwdID = GlobalKey();
 final torID = GlobalKey();
+final coingeckoID = GlobalKey();
 final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
@@ -72,6 +73,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await prefs.setString("coingecko", settings.coingecko);
         await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
         await putProp(key: "qr_size", value: settings.qrSettings.size.toString(), c: c);
         await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString(), c: c);
@@ -109,14 +111,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       final packageInfo = await PackageInfo.fromPlatform();
       final version = packageInfo.version;
       final buildNumber = packageInfo.buildNumber;
-      versionString = "$version+$buildNumber";
+      versionString = "$version+$buildNumber.beta";
       setState(() {});
     });
   }
 
   void tutorial() async {
     tutorialHelper(
-        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, actionsID, autosyncID, cancelID, pinLockID, offlineID, useQRID, blockExplorerID]);
+        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, coingeckoID, actionsID, autosyncID, cancelID, pinLockID, offlineID, useQRID, blockExplorerID]);
   }
 
   @override
@@ -228,6 +230,19 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 ),
                 Gap(8),
                 Showcase(
+                  key: coingeckoID,
+                  description: "CoinGecko API Key. Register for an account on their website",
+                  child: FormBuilderTextField(
+                    name: "coingecko",
+                    decoration: InputDecoration(
+                      label: Text("CoinGecko API Key"),
+                    ),
+                    initialValue: settings.coingecko,
+                    onChanged: onChangedCoingecko,
+                  ),
+                ),
+                Gap(8),
+                Showcase(
                   key: blockExplorerID,
                   description: "Block Explorer URL",
                   child: FormBuilderTextField(
@@ -283,6 +298,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (value == null) return;
     setState(() {
       settings = settings.copyWith(lwd: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  void onChangedCoingecko(String? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(coingecko: value);
       widget.onChanged(settings);
     });
   }

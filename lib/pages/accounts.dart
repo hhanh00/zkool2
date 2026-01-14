@@ -65,7 +65,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
       final currentHeight = ref.read(currentHeightProvider.notifier);
       currentHeight.setHeight(height);
       if (fetchPrice) {
-        final p = await getCoingeckoPrice();
+        final p = await getCoingeckoPrice(api: settings.coingecko);
         final currentPrice = ref.read(priceProvider.notifier);
         currentPrice.setPrice(p);
         setState(() {
