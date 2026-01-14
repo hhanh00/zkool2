@@ -1,13 +1,13 @@
 use crate::{api::pay::PcztPackage, Client};
 
+use crate::api::coin::Network;
 use anyhow::Result;
 use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
 use zcash_transparent::address::TransparentAddress;
-use crate::api::coin::Network;
 
 pub mod error;
 pub mod fee;

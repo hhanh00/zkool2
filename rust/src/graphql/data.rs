@@ -55,6 +55,7 @@ pub struct Note {
     pub scope: i32,
     pub diversifier: String,
     pub address: String,
+    pub memo: Option<String>,
 }
 
 #[derive(GraphQLObject)]
