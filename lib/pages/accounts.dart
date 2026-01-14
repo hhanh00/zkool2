@@ -37,17 +37,6 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   double? price;
 
   @override
-  void initState() {
-    super.initState();
-    final settings = ref.read(appSettingsProvider).requireValue;
-    if (!settings.disclaimerAccepted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        GoRouter.of(context).push("/disclaimer");
-      });
-    }
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     routeObserver.subscribe(this, ModalRoute.of(context)!);
@@ -89,8 +78,6 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void tutorial() async {
-    final settings = ref.read(appSettingsProvider).requireValue;
-    if (!settings.disclaimerAccepted) return;
     tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, heightID]);
 
     final accounts = await ref.read(getAccountsProvider.future);
@@ -100,19 +87,18 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
 
   @override
   Widget build(BuildContext context) {
-    Future(tutorial);
-
-    final pinlock = ref.watch(lifecycleProvider);
-    if (pinlock.value ?? false) return PinLock();
-
     final tt = Theme.of(context).textTheme;
     final t = tt.bodyMedium!.copyWith(fontFamily: "monospace");
 
-    final c = ref.read(coinContextProvider);
-    final selectedFolder = ref.watch(selectedFolderProvider);
+    Future(tutorial);
 
     final List<Account> accountList;
     try {
+      final pinlockAV = ref.watch(lifecycleProvider);
+      ensureAV(context, pinlockAV);
+      if (pinlockAV.requireValue) return PinLock();
+
+      final selectedFolder = ref.watch(selectedFolderProvider);
       final accountsAV = ref.watch(getAccountsProvider);
       ensureAV(context, accountsAV);
       accountList = accountsAV.requireValue.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList();
