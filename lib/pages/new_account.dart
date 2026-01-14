@@ -40,7 +40,7 @@ class NewAccountPage extends ConsumerStatefulWidget {
 }
 
 class NewAccountPageState extends ConsumerState<NewAccountPage> {
-  late final c = ref.read(coinContextProvider);
+  late var c = ref.read(coinContextProvider);
   var name = "";
   var restore = false;
   var key = "";
@@ -334,7 +334,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           if (!settings.offline) await cacheBlockTime(height: bh, c: c);
         } on AnyhowException catch (_) {}
 
-        ref.read(coinContextProvider.notifier).setAccount(account: account);
+        await ref.read(coinContextProvider.notifier).setAccount(account: account);
+        c = ref.read(coinContextProvider);
 
         if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
           await showTransparentScan(ref, context);
