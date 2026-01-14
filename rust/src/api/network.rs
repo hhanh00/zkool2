@@ -15,9 +15,9 @@ pub async fn get_current_height(c: &Coin) -> Result<u32> {
     Ok(height as u32)
 }
 
-pub async fn get_coingecko_price() -> Result<f64> {
+pub async fn get_coingecko_price(api: &str) -> Result<f64> {
     let rep =
-        reqwest::get("https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd")
+        reqwest::get(&format!("https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd&x_cg_demo_api_key={api}"))
             .await?
             .error_for_status()?
             .json::<ZcashUSD>()
