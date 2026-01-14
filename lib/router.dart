@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
@@ -31,8 +30,12 @@ import 'package:zkool/widgets/scanner.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
-GoRouter router(bool recoveryMode) => GoRouter(
-      initialLocation: recoveryMode ? '/database_manager' : '/splash',
+GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
+      initialLocation: !disclaimerAccepted
+          ? '/disclaimer'
+          : recoveryMode
+              ? '/database_manager'
+              : '/splash',
       observers: [routeObserver],
       navigatorKey: navigatorKey,
       routes: [
