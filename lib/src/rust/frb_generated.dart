@@ -197,7 +197,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiSyncFetchTxDetails({required Coin c});
 
-  Future<void> crateApiTransactionFillMissingTxPrices({required Coin c});
+  Future<void> crateApiTransactionFillMissingTxPrices(
+      {required String api, required Coin c});
 
   Future<FrostSignParams> crateApiFrostFrostSignParamsDefault();
 
@@ -224,7 +225,7 @@ abstract class RustLibApi extends BaseApi {
   Future<Addresses> crateApiAccountGetAddresses(
       {required int uaPools, required Coin c});
 
-  Future<double> crateApiNetworkGetCoingeckoPrice();
+  Future<double> crateApiNetworkGetCoingeckoPrice({required String api});
 
   Future<int> crateApiNetworkGetCurrentHeight({required Coin c});
 
@@ -1481,11 +1482,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiTransactionFillMissingTxPrices({required Coin c}) {
+  Future<void> crateApiTransactionFillMissingTxPrices(
+      {required String api, required Coin c}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(api, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 37, port: port_);
@@ -1495,7 +1498,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiTransactionFillMissingTxPricesConstMeta,
-        argValues: [c],
+        argValues: [api, c],
         apiImpl: this,
       ),
     );
@@ -1504,7 +1507,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiTransactionFillMissingTxPricesConstMeta =>
       const TaskConstMeta(
         debugName: "fill_missing_tx_prices",
-        argNames: ["c"],
+        argNames: ["api", "c"],
       );
 
   @override
@@ -1785,11 +1788,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<double> crateApiNetworkGetCoingeckoPrice() {
+  Future<double> crateApiNetworkGetCoingeckoPrice({required String api}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(api, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 48, port: port_);
         },
@@ -1798,7 +1802,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiNetworkGetCoingeckoPriceConstMeta,
-        argValues: [],
+        argValues: [api],
         apiImpl: this,
       ),
     );
@@ -1807,7 +1811,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiNetworkGetCoingeckoPriceConstMeta =>
       const TaskConstMeta(
         debugName: "get_coingecko_price",
-        argNames: [],
+        argNames: ["api"],
       );
 
   @override

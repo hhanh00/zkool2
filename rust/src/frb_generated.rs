@@ -1495,13 +1495,15 @@ fn wire__crate__api__transaction__fill_missing_tx_prices_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_api = <String>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok =
-                            crate::api::transaction::fill_missing_tx_prices(&api_c).await?;
+                            crate::api::transaction::fill_missing_tx_prices(api_api, &api_c)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1899,11 +1901,12 @@ fn wire__crate__api__network__get_coingecko_price_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_api = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::network::get_coingecko_price().await?;
+                        let output_ok = crate::api::network::get_coingecko_price(&api_api).await?;
                         Ok(output_ok)
                     })()
                     .await,
