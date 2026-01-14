@@ -8,7 +8,7 @@ use zcash_keys::encoding::AddressCodec;
 use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::api::coin::{Coin, Network};
-use crate::api::pay::{DustChangePolicy, PcztPackage};
+use crate::api::pay::PcztPackage;
 use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
@@ -292,9 +292,8 @@ pub async fn prepare_tx(
         id_account as u32,
         payment.src_pools.unwrap_or(7) as u8,
         &recipients,
-        false,
         payment.recipient_pays_fee.unwrap_or_default(),
-        DustChangePolicy::Discard,
+        false,
         None,
     )
     .await?;

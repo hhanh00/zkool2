@@ -533,7 +533,6 @@ pub async fn publish(
         &recipients,
         false,
         false,
-        crate::api::pay::DustChangePolicy::Discard,
         None,
     )
     .await

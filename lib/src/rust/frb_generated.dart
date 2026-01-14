@@ -4283,12 +4283,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  DustChangePolicy dco_decode_dust_change_policy(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return DustChangePolicy.values[raw as int];
-  }
-
-  @protected
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
@@ -4330,12 +4324,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       coordinator: dco_decode_u_8(arr[1]),
       fundingAccount: dco_decode_u_32(arr[2]),
     );
-  }
-
-  @protected
-  int dco_decode_i_32(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return raw as int;
   }
 
   @protected
@@ -4632,14 +4620,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PaymentOptions dco_decode_payment_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return PaymentOptions(
       srcPools: dco_decode_u_8(arr[0]),
       recipientPaysFee: dco_decode_bool(arr[1]),
       smartTransparent: dco_decode_bool(arr[2]),
-      dustChangePolicy: dco_decode_dust_change_policy(arr[3]),
-      category: dco_decode_opt_box_autoadd_u_32(arr[4]),
+      category: dco_decode_opt_box_autoadd_u_32(arr[3]),
     );
   }
 
@@ -5413,13 +5400,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  DustChangePolicy sse_decode_dust_change_policy(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var inner = sse_decode_i_32(deserializer);
-    return DustChangePolicy.values[inner];
-  }
-
-  @protected
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
@@ -5452,12 +5432,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         account: var_account,
         coordinator: var_coordinator,
         fundingAccount: var_fundingAccount);
-  }
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -5930,13 +5904,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_srcPools = sse_decode_u_8(deserializer);
     var var_recipientPaysFee = sse_decode_bool(deserializer);
     var var_smartTransparent = sse_decode_bool(deserializer);
-    var var_dustChangePolicy = sse_decode_dust_change_policy(deserializer);
     var var_category = sse_decode_opt_box_autoadd_u_32(deserializer);
     return PaymentOptions(
         srcPools: var_srcPools,
         recipientPaysFee: var_recipientPaysFee,
         smartTransparent: var_smartTransparent,
-        dustChangePolicy: var_dustChangePolicy,
         category: var_category);
   }
 
@@ -6312,6 +6284,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_usize_strict(deserializer);
     return UsizeArray3(inner);
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -6705,13 +6683,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_dust_change_policy(
-      DustChangePolicy self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.index, serializer);
-  }
-
-  @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
@@ -6739,12 +6710,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.account, serializer);
     sse_encode_u_8(self.coordinator, serializer);
     sse_encode_u_32(self.fundingAccount, serializer);
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
   }
 
   @protected
@@ -7143,7 +7108,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_8(self.srcPools, serializer);
     sse_encode_bool(self.recipientPaysFee, serializer);
     sse_encode_bool(self.smartTransparent, serializer);
-    sse_encode_dust_change_policy(self.dustChangePolicy, serializer);
     sse_encode_opt_box_autoadd_u_32(self.category, serializer);
   }
 
@@ -7431,6 +7395,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_usize_strict(self.inner, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
   }
 }
 
