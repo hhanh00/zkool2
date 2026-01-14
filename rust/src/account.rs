@@ -927,7 +927,10 @@ pub async fn get_tx_details(
     .await?;
 
     let notes = sqlx::query(
-        "SELECT id_note, pool, height, tx, scope, diversifier, value, locked FROM notes
+        "SELECT n.id_note, n.pool, n.height, n.tx, n.scope,
+        n.diversifier, n.value, n.locked, m.memo_text
+        FROM notes n
+        LEFT JOIN memos m ON n.id_note = m.note
         WHERE account = ? AND tx = ?",
     )
     .bind(account)
@@ -941,6 +944,7 @@ pub async fn get_tx_details(
         let diversifier: Option<Vec<u8>> = row.get(5);
         let value: u64 = row.get(6);
         let locked: bool = row.get(7);
+        let memo = row.get(8);
         TxNote {
             id: id_note,
             pool,
@@ -950,6 +954,7 @@ pub async fn get_tx_details(
             diversifier,
             value,
             locked,
+            memo
         }
     })
     .fetch_all(&mut *connection)

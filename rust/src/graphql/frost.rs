@@ -5,7 +5,7 @@ use sqlx::{query, sqlite::SqliteRow, Row};
 use crate::{
     api::{coin::Coin, frost::get_funding_account},
     frost::dkg::{in_dkg, in_frost},
-    graphql::{data::DKGStatus, Context},
+    graphql::Context,
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
 
