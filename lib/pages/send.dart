@@ -30,7 +30,6 @@ final openTxID = GlobalKey();
 final addTxID = GlobalKey();
 final clearID = GlobalKey();
 final sendID2 = GlobalKey();
-final dustChangePolicyID = GlobalKey();
 final categoryID = GlobalKey();
 
 class SendPage extends ConsumerStatefulWidget {
@@ -249,7 +248,6 @@ class SendPageState extends ConsumerState<SendPage> {
         srcPools: 1, // Only the transparent pool (mask)
         recipientPaysFee: true,
         smartTransparent: smartTransparent,
-        dustChangePolicy: DustChangePolicy.sendToRecipient,
       );
       final pczt = await prepare(
         recipients: [
@@ -273,7 +271,6 @@ class SendPageState extends ConsumerState<SendPage> {
       final options = PaymentOptions(
         srcPools: 6, // Only the sapling and orchard pool (mask)
         recipientPaysFee: true,
-        dustChangePolicy: DustChangePolicy.sendToRecipient,
         smartTransparent: false,
       );
       final pczt = await prepare(
@@ -416,7 +413,6 @@ class Send2PageState extends ConsumerState<Send2Page> {
   String? txId;
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
   var recipientPaysFee = false;
-  var discardDustChange = true;
   int? category;
   var puri = "";
   AccountData? account;
@@ -503,17 +499,6 @@ class Send2PageState extends ConsumerState<Send2Page> {
                   ),
                 ),
                 Showcase(
-                  key: dustChangePolicyID,
-                  description: "If the change amount is below the dust limit, it can be sent to the recipient or discarded.",
-                  child: FormBuilderSwitch(
-                    name: "dustChangePolicy",
-                    title: Text("Discard Dust Change"),
-                    initialValue: true,
-                    onChanged: (v) => setState(() => discardDustChange = v!),
-                  ),
-                ),
-                Gap(8),
-                Showcase(
                   key: categoryID,
                   description: "Spending or Income Category (for Budgetting)",
                   child: FormBuilderDropdown(
@@ -558,7 +543,6 @@ class Send2PageState extends ConsumerState<Send2Page> {
       final options = PaymentOptions(
         srcPools: srcPools,
         recipientPaysFee: recipientPaysFee,
-        dustChangePolicy: discardDustChange ? DustChangePolicy.discard : DustChangePolicy.sendToRecipient,
         smartTransparent: false,
         category: category,
       );

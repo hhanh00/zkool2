@@ -50,7 +50,7 @@ use crate::{
         get_sapling_vk,
     },
     api::coin::Network,
-    api::pay::{DustChangePolicy, PcztPackage},
+    api::pay::PcztPackage,
     db::{get_account_dindex, get_account_hw, select_account_transparent},
     pay::{
         error::Error,
@@ -101,7 +101,6 @@ pub async fn plan_transaction(
     recipients: &[Recipient],
     recipient_pays_fee: bool,
     smart_transparent: bool,
-    dust_change_policy: DustChangePolicy,
     category: Option<u32>,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
@@ -373,40 +372,7 @@ pub async fn plan_transaction(
         .cloned()
         .collect::<Vec<_>>();
 
-    if change >= COST_PER_ACTION {
-        outputs.push(change_recipient.clone());
-    } else {
-        let fee = fee_manager.fee();
-        // if the change is less than the cost of an action, we should not create it
-        fee_manager.remove_output(change_pool);
-        let updated_fee = fee_manager.fee();
-        assert!(
-            updated_fee <= fee,
-            "Fee should not increase: {fee} -> {updated_fee}"
-        );
-        let refund_fee = fee - updated_fee;
-        match dust_change_policy {
-            DustChangePolicy::Discard if !recipient_pays_fee => {
-                info!(
-                    "Discarding change of {} in pool {}. Prev fee {}, current fee {}",
-                    to_zec(change),
-                    change_pool,
-                    fee,
-                    updated_fee
-                );
-            }
-            _ => {
-                info!(
-                    "Sending {} in pool {} to the first recipient",
-                    to_zec(change + refund_fee),
-                    change_pool
-                );
-                if let Some(first) = outputs.first_mut() {
-                    first.recipient.amount += change + refund_fee;
-                }
-            }
-        }
-    }
+    outputs.push(change_recipient.clone());
 
     info!("Initializing Builder");
 
