@@ -28,22 +28,17 @@ class SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     if (openDatabaseSuccess != null) {
-      final settings = ref.read(appSettingsProvider).requireValue;
-      if (!settings.disclaimerAccepted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/disclaimer"));
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (!openDatabaseSuccess!)
-            GoRouter.of(context).go('/database_manager');
-          else {
-            final selectedAccount = await ref.read(selectedAccountProvider.future);
-            if (selectedAccount != null) {
-              GoRouter.of(context).go("/account", extra: selectedAccount);
-            } else
-              GoRouter.of(context).go("/");
-          }
-        });
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!openDatabaseSuccess!)
+          GoRouter.of(context).go('/database_manager');
+        else {
+          final selectedAccount = await ref.read(selectedAccountProvider.future);
+          if (selectedAccount != null) {
+            GoRouter.of(context).go("/account", extra: selectedAccount);
+          } else
+            GoRouter.of(context).go("/");
+        }
+      });
     }
     return Center(
       child: Image.asset(

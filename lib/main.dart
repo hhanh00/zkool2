@@ -24,7 +24,9 @@ Future<void> main() async {
   await initDatadir(directory: dataDir.path);
   final prefs = SharedPreferencesAsync();
   final recovery = await prefs.getBool("recovery") ?? false;
-  final r = router(recovery);
+  final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
+
+  final r = router(disclaimerAccepted, recovery);
 
   // Future<AppSettings> initApp(WidgetRef ref, AppSettings s) async {
   //   appWatcher = LifecycleWatcher(ref);

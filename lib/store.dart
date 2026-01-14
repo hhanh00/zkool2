@@ -289,7 +289,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final hasDb = ref.watch(hasDbProvider);
     final prefs = SharedPreferencesAsync();
     String dbName = await prefs.getString("database") ?? appName;
-    final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
@@ -318,7 +317,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       net: net,
       isLightNode: isLightNode == "true",
       lwd: lwd,
-      disclaimerAccepted: disclaimerAccepted,
       needPin: needPin,
       pinUnlockedAt: DateTime.now(),
       offline: offline,
@@ -358,7 +356,6 @@ sealed class AppSettings with _$AppSettings {
     required String blockExplorer,
     required String syncInterval, // in blocks
     required String actionsPerSync,
-    required bool disclaimerAccepted,
     required bool useTor,
     required bool recovery,
     required bool needPin,
