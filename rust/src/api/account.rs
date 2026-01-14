@@ -640,6 +640,7 @@ pub struct TxNote {
     pub diversifier: Option<Vec<u8>>,
     pub value: u64,
     pub locked: bool,
+    pub memo: Option<String>,
 }
 
 #[derive(Default, Debug)]
