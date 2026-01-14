@@ -60,24 +60,16 @@ Future<void> storePendingTx(
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);
 
-enum DustChangePolicy {
-  discard,
-  sendToRecipient,
-  ;
-}
-
 class PaymentOptions {
   final int srcPools;
   final bool recipientPaysFee;
   final bool smartTransparent;
-  final DustChangePolicy dustChangePolicy;
   final int? category;
 
   const PaymentOptions({
     required this.srcPools,
     required this.recipientPaysFee,
     required this.smartTransparent,
-    required this.dustChangePolicy,
     this.category,
   });
 
@@ -86,7 +78,6 @@ class PaymentOptions {
       srcPools.hashCode ^
       recipientPaysFee.hashCode ^
       smartTransparent.hashCode ^
-      dustChangePolicy.hashCode ^
       category.hashCode;
 
   @override
@@ -97,7 +88,6 @@ class PaymentOptions {
           srcPools == other.srcPools &&
           recipientPaysFee == other.recipientPaysFee &&
           smartTransparent == other.smartTransparent &&
-          dustChangePolicy == other.dustChangePolicy &&
           category == other.category;
 }
 
