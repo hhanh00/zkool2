@@ -25,6 +25,9 @@ class InputAmountState extends ConsumerState<InputAmount> {
 
   @override
   Widget build(BuildContext context) {
+    final coingecko = ref.watch(appSettingsProvider).whenData((s) => s.coingecko);
+    if (coingecko.value == null) return blank(context);
+
     final price = ref.watch(priceProvider);
     return FormBuilderField<String>(
       key: formFieldKey,
@@ -77,7 +80,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                   ),
                   Gap(8),
                   IconButton(
-                    onPressed: onUpdateFx,
+                    onPressed: () => onUpdateFx(coingecko.requireValue),
                     icon: Icon(Icons.refresh),
                   ),
                 ],
@@ -91,8 +94,8 @@ class InputAmountState extends ConsumerState<InputAmount> {
     );
   }
 
-  void onUpdateFx() async {
-    final p = await getCoingeckoPrice();
+  void onUpdateFx(String coingecko) async {
+    final p = await getCoingeckoPrice(api: coingecko);
     setState(() {
       final price = ref.read(priceProvider.notifier);
       price.setPrice(p);
