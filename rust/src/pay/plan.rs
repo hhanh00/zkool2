@@ -555,15 +555,19 @@ pub async fn plan_transaction(
         n_outputs[pool as usize] += 1;
         match pool {
             0 => {
-                let to = get_transparent_address(network, &recipient.address)?;
-                info!(
-                    "Adding transparent output {} {}",
-                    &recipient.address,
-                    to_zec(value.into())
-                );
-                builder
-                    .add_transparent_output(&to, value)
-                    .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
+                // Don't add transparent outputs that have no value
+                // because it is considered dust by the zcashd nodes
+                if value != Zatoshis::ZERO {
+                    let to = get_transparent_address(network, &recipient.address)?;
+                    info!(
+                        "Adding transparent output {} {}",
+                        &recipient.address,
+                        to_zec(value.into())
+                    );
+                    builder
+                        .add_transparent_output(&to, value)
+                        .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
+                }
             }
             1 => {
                 let to = get_sapling_address(network, &recipient.address)?;

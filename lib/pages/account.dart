@@ -64,7 +64,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     if (account == null) return blank(context);
 
     final pinlock = ref.watch(lifecycleProvider);
-    logger.i("pinlock $pinlock");
     if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
