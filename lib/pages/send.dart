@@ -50,6 +50,10 @@ class SendPageState extends ConsumerState<SendPage> {
   Addresses? addresses;
   int? editingIndex;
 
+  String? address;
+  String? amount;
+  String? memo;
+
   void tutorial() async {
     tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
   }
@@ -85,7 +89,6 @@ class SendPageState extends ConsumerState<SendPage> {
     final cs = Theme.of(context).colorScheme;
 
     final balance = pbalance;
-    final address = formKey.currentState?.fields['address']?.value as String? ?? "";
     final recipientTiles = recipients
         .mapIndexed(
           (i, r) => ListTile(
@@ -107,7 +110,7 @@ class SendPageState extends ConsumerState<SendPage> {
         )
         .toList();
 
-    supportsMemo = address.isNotEmpty && validAddress(address) == null && !isValidTransparentAddress(address: address, c: c);
+    supportsMemo = address != null && address!.isNotEmpty == true && validAddress(address) == null && !isValidTransparentAddress(address: address!, c: c);
     return Scaffold(
       appBar: AppBar(
         title: Text("Recipient"),
@@ -117,7 +120,7 @@ class SendPageState extends ConsumerState<SendPage> {
             description: "Load an unsigned transaction",
             child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open)),
           ),
-          Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: reset, icon: Icon(Icons.clear))),
+          Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: onClear, icon: Icon(Icons.clear))),
           Showcase(
             key: addTxID,
             description: "Queue this recipient to create a multi send",
@@ -170,6 +173,7 @@ class SendPageState extends ConsumerState<SendPage> {
                             name: "address",
                             decoration: const InputDecoration(labelText: "Address"),
                             validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
+                            initialValue: address,
                             onChanged: onAddressChanged,
                             textInputAction: TextInputAction.next,
                             onEditingComplete: () {
@@ -186,7 +190,13 @@ class SendPageState extends ConsumerState<SendPage> {
                     ),
                   ],
                 ),
-                InputAmount(key: amountKey, name: "amount", onMax: onMax),
+                InputAmount(
+                  key: amountKey,
+                  name: "amount",
+                  initialValue: amount,
+                  onChanged: (v) => setState(() => amount = v),
+                  onMax: onMax,
+                ),
                 Visibility(
                   visible: supportsMemo,
                   maintainState: true,
@@ -194,6 +204,8 @@ class SendPageState extends ConsumerState<SendPage> {
                     name: "memo",
                     decoration: const InputDecoration(labelText: "Memo"),
                     maxLines: 8,
+                    initialValue: memo,
+                    onChanged: (v) => setState(() => memo = v),
                   ),
                 ),
               ],
@@ -221,7 +233,9 @@ class SendPageState extends ConsumerState<SendPage> {
   void onMax() async {
     final form = formKey.currentState!;
     final total = await maxSpendable(c: c);
-    form.fields['amount']?.didChange(zatToString(total));
+    final a = zatToString(total);
+    form.fields['amount']?.didChange(a);
+    setState(() => amount = a);
   }
 
   void onAdd() async {
@@ -230,7 +244,7 @@ class SendPageState extends ConsumerState<SendPage> {
       setState(() {
         recipients.add(recipient);
       });
-      reset();
+      onClear();
     }
   }
 
@@ -292,11 +306,15 @@ class SendPageState extends ConsumerState<SendPage> {
       editingIndex = index;
       final fields = formKey.currentState!.fields;
       final recipient = recipients[index];
-      fields["address"]!.didChange(recipient.address);
-      fields["amount"]!.didChange(zatToString(recipient.amount));
-      fields["memo"]!.didChange(recipient.userMemo);
+      setState(() {
+        address = recipient.address;
+        amount = zatToString(recipient.amount);
+        memo = recipient.userMemo;
+        fields["address"]!.didChange(address);
+        fields["amount"]!.didChange(amount);
+        fields["memo"]!.didChange(memo);
+      });
     }
-    setState(() {});
   }
 
   Future<void> finishEditing() async {
@@ -304,14 +322,13 @@ class SendPageState extends ConsumerState<SendPage> {
       final recipient = await validateAndGetRecipient();
       if (recipient != null) recipients[editingIndex!] = recipient;
       editingIndex = null;
-      reset();
+      onClear();
     }
   }
 
   void onSend() async {
     await finishEditing();
 
-    logger.i(formKey.currentState!.isDirty);
     if (formKey.currentState!.isDirty) {
       final recipient = await validateAndGetRecipient();
       if (recipient != null) {
@@ -321,14 +338,15 @@ class SendPageState extends ConsumerState<SendPage> {
     }
 
     if (!mounted) return;
-    reset();
+    onClear();
     if (recipients.isNotEmpty) await GoRouter.of(context).push("/send2", extra: recipients);
   }
 
   void onScan() async {
     final address2 = await showScanner(context, validator: validAddressOrPaymentURI);
     if (address2 != null) {
-      formKey.currentState!.fields["address"]!.didChange(address2);
+      // formKey.currentState!.fields["address"]!.didChange(address2);
+      setState(() => address = address2);
     }
   }
 
@@ -337,21 +355,28 @@ class SendPageState extends ConsumerState<SendPage> {
     final recipients2 = parsePaymentUri(uri: v);
     if (recipients2 != null) {
       if (recipients2.length == 1) {
-        final fields = formKey.currentState!.fields;
         final recipient = recipients2.first;
+        final fields = formKey.currentState!.fields;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          fields["address"]!.didChange(recipient.address);
-          if (recipient.amount > BigInt.zero) fields["amount"]!.didChange(zatToString(recipient.amount));
-          fields["memo"]!.didChange(recipient.userMemo);
-          setState(() {});
+          setState(() {
+            address = recipient.address;
+            fields["address"]!.didChange(address);
+            if (recipient.amount > BigInt.zero) {
+              amount = zatToString(recipient.amount);
+              fields["amount"]!.didChange(amount);
+            }
+            memo = recipient.userMemo;
+            fields["memo"]!.didChange(memo);
+          });
         });
       } else {
         setState(() => recipients = recipients2);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (formKey.currentState!.isDirty) reset();
+          if (formKey.currentState!.isDirty) onClear();
         });
       }
     }
+    setState(() => address = v);
   }
 
   void onAddressEditComplete() {
@@ -377,22 +402,27 @@ class SendPageState extends ConsumerState<SendPage> {
   void onPoolSelected(int pool) {
     final a = addresses;
     if (a == null) return;
-    final addressField = formKey.currentState!.fields["address"]!;
+    // final addressField = formKey.currentState!.fields["address"]!;
     switch (pool) {
       case 0:
-        addressField.didChange(a.taddr ?? "");
+        address = (a.taddr ?? "");
       case 1:
-        addressField.didChange(a.saddr ?? "");
+        address = (a.saddr ?? "");
       case 2:
-        addressField.didChange(a.oaddr ?? "");
+        address = (a.oaddr ?? "");
       default:
         logger.w("Unknown pool selected: $pool");
     }
     setState(() {});
   }
 
-  void reset() {
+  void onClear() {
     formKey.currentState!.reset();
+    setState(() {
+      address = null;
+      amount = null;
+      memo = null;
+    });
   }
 }
 
@@ -448,7 +478,6 @@ class Send2PageState extends ConsumerState<Send2Page> {
 
     Future(tutorial);
 
-    logger.i("hasTex: $hasTex, recipients: ${widget.recipients.length}");
     final categoryItems = [
       DropdownMenuItem(value: null, child: Text("Unknown")),
       ...categories!.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),

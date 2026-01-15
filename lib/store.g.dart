@@ -630,7 +630,7 @@ final class CurrentHeightNotifierProvider
           argument: null,
           retry: null,
           name: r'currentHeightProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -652,7 +652,7 @@ final class CurrentHeightNotifierProvider
 }
 
 String _$currentHeightNotifierHash() =>
-    r'f52275d8bff2395996b80041883a8ec0f2df6d0e';
+    r'16daa9bce5d88e0c013ac53051b9c0479659ff6d';
 
 abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
   int? build();

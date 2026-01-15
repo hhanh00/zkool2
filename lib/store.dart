@@ -380,7 +380,7 @@ class LogNotifier extends _$LogNotifier {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class CurrentHeightNotifier extends _$CurrentHeightNotifier {
   @override
   int? build() => null;
@@ -429,6 +429,9 @@ class MempoolNotifier extends _$MempoolNotifier {
                   final size = msg.field2; // size in bytes of the tx
                   addTx(txId, amounts, size);
                 }
+                if (msg is MempoolMsg_BlockHeight) {
+                  clear();
+                }
               },
               onDone: comp.complete,
               onError: (e) {
@@ -455,6 +458,10 @@ class MempoolNotifier extends _$MempoolNotifier {
       );
     }
     state = state.copyWith(unconfirmedTx: unconfirmedTx, unconfirmedFunds: unconfirmedFunds);
+  }
+
+  void clear() {
+    state = state.copyWith(unconfirmedFunds: {}, unconfirmedTx: []);
   }
 }
 
