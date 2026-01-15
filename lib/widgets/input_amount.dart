@@ -11,9 +11,10 @@ import 'package:zkool/validators.dart';
 
 class InputAmount extends ConsumerStatefulWidget {
   final String name;
-  final String? amount;
+  final String? initialValue;
   final void Function()? onMax;
-  const InputAmount({required this.name, this.amount, this.onMax, super.key});
+  final void Function(String?)? onChanged;
+  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, super.key});
 
   @override
   ConsumerState<InputAmount> createState() => InputAmountState();
@@ -32,7 +33,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
     return FormBuilderField<String>(
       key: formFieldKey,
       name: widget.name,
-      initialValue: widget.amount,
+      initialValue: widget.initialValue,
       onReset: onReset,
       onChanged: onChanged,
       builder: (state) {
@@ -121,8 +122,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       final form = formKey.currentState!;
       final v = form.fields["zat"]!.value;
       if (v != null) {
-        final usd = stringToZat(v).toDecimal() * p.toDecimal() /
-          Decimal.fromInt(zatsPerZec);
+        final usd = stringToZat(v).toDecimal() * p.toDecimal() / Decimal.fromInt(zatsPerZec);
         form.fields["fiat"]!.didChange(displayPrice(usd.toDecimal().toDouble()));
       }
       disableChangeHandlers = false;
@@ -146,6 +146,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       }
       disableChangeHandlers = false;
     });
+    widget.onChanged?.call(v);
   }
 
   void onFiatChanged(String? v, {bool interactive = false}) {
