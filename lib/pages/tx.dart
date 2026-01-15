@@ -166,6 +166,7 @@ class TxPageState extends ConsumerState<TxPage> {
         txBytes: txBytes,
         c: c,
       );
+      logger.i("tx result $result");
       try {
         final txidHex = hex.decode(result);
         await storePendingTx(
@@ -203,8 +204,7 @@ class TxPageState extends ConsumerState<TxPage> {
         data: pcztData,
       );
       final appSettings = await ref.read(appSettingsProvider.future);
-      if (path != null && appSettings.qrSettings.enabled)
-        await showAnimatedQR(context, ref, path);
+      if (path != null && appSettings.qrSettings.enabled) await showAnimatedQR(context, ref, path);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
