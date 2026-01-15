@@ -931,7 +931,7 @@ pub async fn get_tx_details(
         n.diversifier, n.value, n.locked, m.memo_text
         FROM notes n
         LEFT JOIN memos m ON n.id_note = m.note
-        WHERE account = ? AND tx = ?",
+        WHERE n.account = ? AND n.tx = ?",
     )
     .bind(account)
     .bind(tx.id)
