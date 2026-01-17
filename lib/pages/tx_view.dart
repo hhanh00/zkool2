@@ -81,7 +81,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   }
 
   Future<void> gotoToTx(int newIdx) async {
-    idx = newIdx;
+    setState(() => idx = newIdx);
   }
 
   List<Widget> show(TxAccount txd) {
