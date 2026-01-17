@@ -205,9 +205,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     if (filename != null) await showMessage(context, "$filename Saved");
   }
 
-  // the context must be from inside the DefaultTabController, which
-  // means it cannot be this widget's context
-  int tabIndex(BuildContext context) => DefaultTabController.of(context).index;
+  int tabIndex(BuildContext context) => tabController.index;
 }
 
 class AccountEditPage extends ConsumerStatefulWidget {
