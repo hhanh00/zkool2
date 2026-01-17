@@ -111,7 +111,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       final packageInfo = await PackageInfo.fromPlatform();
       final version = packageInfo.version;
       final buildNumber = packageInfo.buildNumber;
-      versionString = "$version+$buildNumber.beta";
+      versionString = "$version+$buildNumber";
       setState(() {});
     });
   }
