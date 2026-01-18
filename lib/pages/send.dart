@@ -345,7 +345,7 @@ class SendPageState extends ConsumerState<SendPage> {
   void onScan() async {
     final address2 = await showScanner(context, validator: validAddressOrPaymentURI);
     if (address2 != null) {
-      // formKey.currentState!.fields["address"]!.didChange(address2);
+      formKey.currentState!.fields["address"]!.didChange(address2);
       setState(() => address = address2);
     }
   }
@@ -402,7 +402,6 @@ class SendPageState extends ConsumerState<SendPage> {
   void onPoolSelected(int pool) {
     final a = addresses;
     if (a == null) return;
-    // final addressField = formKey.currentState!.fields["address"]!;
     switch (pool) {
       case 0:
         address = (a.taddr ?? "");
@@ -413,6 +412,8 @@ class SendPageState extends ConsumerState<SendPage> {
       default:
         logger.w("Unknown pool selected: $pool");
     }
+    final addressField = formKey.currentState!.fields["address"]!;
+    addressField.didChange(address);
     setState(() {});
   }
 
