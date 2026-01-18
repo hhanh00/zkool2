@@ -3,7 +3,9 @@ use sapling_crypto::keys::FullViewingKey;
 use zcash_transparent::address::TransparentAddress;
 use sqlx::SqliteConnection;
 
-use crate::{api::{coin::{Coin, Network}, pay::{PcztPackage, SigningEvent}}, frb_generated::StreamSink};
+use crate::{api::{coin::{Coin, Network}, pay::{PcztPackage, SigningEvent}}};
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))] {
@@ -54,6 +56,7 @@ cfg_if::cfg_if! {
             Ok(address)
         }
 
+        #[cfg(feature = "flutter")]
         pub async fn sign_ledger_transaction(
             sink: StreamSink<SigningEvent>,
             package: PcztPackage,

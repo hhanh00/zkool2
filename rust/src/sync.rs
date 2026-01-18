@@ -1,5 +1,4 @@
 use anyhow::{Context as _, Result};
-use flutter_rust_bridge::frb;
 use sqlx::SqliteConnection;
 use sqlx::{Row, sqlite::SqliteRow};
 use std::collections::HashMap;
@@ -38,10 +37,12 @@ use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 use crate::api::ledger::get_hw_transparent_address;
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Default, Debug)]
 pub struct Transaction {
     pub id: u32,
@@ -64,7 +65,7 @@ impl std::fmt::Display for Transaction {
     }
 }
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 pub struct NoteExtended {
     pub id: u32,
     pub address: Vec<u8>,
@@ -149,7 +150,7 @@ impl std::fmt::Display for WarpSyncMessage {
     }
 }
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 pub struct BlockHeader {
     pub height: u32,
     pub hash: Vec<u8>,
@@ -165,7 +166,7 @@ impl std::fmt::Debug for BlockHeader {
     }
 }
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Default)]
 pub struct Note {
     pub id: u32,

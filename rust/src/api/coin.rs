@@ -4,6 +4,7 @@ use std::sync::{LazyLock, OnceLock};
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
 use arti_client::TorClient;
+#[cfg(feature="flutter")]
 use flutter_rust_bridge::frb;
 use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
@@ -24,7 +25,7 @@ use crate::net::zebra::ZebraClient;
 use crate::{Client, IntoAnyhow};
 
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone)]
 pub struct Coin {
     pub coin: u8,
@@ -94,7 +95,7 @@ impl Coin {
         pool.acquire().await.anyhow()
     }
 
-    #[frb]
+    #[cfg_attr(feature = "flutter", frb)]
     pub fn set_account(self, account: u32) -> Result<Self> {
         Ok(Coin {
             account,
@@ -102,7 +103,7 @@ impl Coin {
         })
     }
 
-    #[frb]
+    #[cfg_attr(feature = "flutter", frb)]
     pub fn set_use_tor(self, use_tor: bool) -> Result<Coin> {
         Ok(Coin {
             use_tor,
@@ -110,7 +111,7 @@ impl Coin {
         })
     }
 
-    #[frb(sync)]
+    #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn set_lwd(self, server_type: u8, url: String) -> Result<Self> {
         Ok(Coin {
             url,
@@ -226,7 +227,7 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
 }
 
 impl Coin {
-    #[frb(sync)]
+    #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn new() -> Self {
         Coin {
             coin: 0,
