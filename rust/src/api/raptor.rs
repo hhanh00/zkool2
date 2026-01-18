@@ -1,9 +1,10 @@
 use std::{fs::File, io::Read, sync::{LazyLock, Mutex}};
 
 use anyhow::Result;
-use flutter_rust_bridge::frb;
 use qrcode::{bits::Bits, EcLevel};
 use raptorq::{Decoder, Encoder, EncodingPacket, ObjectTransmissionInformation};
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
 pub struct RaptorQParams {
     pub version: u16,
@@ -11,7 +12,7 @@ pub struct RaptorQParams {
     pub repair: u32,
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn encode(path: &str, params: RaptorQParams) -> Result<Vec<Vec<u8>>> {
     let mut file = File::open(path)?;
     let mut data = vec![];
@@ -36,7 +37,7 @@ pub async fn encode(path: &str, params: RaptorQParams) -> Result<Vec<Vec<u8>>> {
     Ok(ser_packets)
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn get_qr_bytes(data: &[u8]) -> Result<Vec<u8>> {
     let mut v = vec![];
     v.reserve(data.len());
@@ -51,7 +52,7 @@ pub fn get_qr_bytes(data: &[u8]) -> Result<Vec<u8>> {
     Ok(v)
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn decode(packet: &[u8]) -> Result<Option<Vec<u8>>> {
     {
         let mut dec = DECODER.lock().unwrap();
@@ -86,7 +87,8 @@ fn ec_level_of(level: u8) -> EcLevel {
     }
 }
 
-#[flutter_rust_bridge::frb(init)]
+#[cfg(feature="flutter")]
+#[frb(init)]
 pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();

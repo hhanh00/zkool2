@@ -25,7 +25,6 @@ use crate::{
         sync::SYNCING,
     },
     db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk},
-    frb_generated::StreamSink,
     frost::FrostMessage,
     pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
@@ -34,6 +33,8 @@ use crate::{
     },
     Client, Sink,
 };
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn set_dkg_params(
@@ -221,6 +222,7 @@ pub async fn get_dkg_params(connection: &mut SqliteConnection, account: u32) -> 
     Ok(dkg_params)
 }
 
+#[cfg(feature = "flutter")]
 pub async fn do_dkg(
     network: &Network,
     connection: &mut SqliteConnection,

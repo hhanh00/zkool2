@@ -1,10 +1,14 @@
 use anyhow::Result;
-use flutter_rust_bridge::frb;
 use tokio::runtime::Runtime;
 pub use tokio_util::sync::CancellationToken;
 
-use crate::{api::coin::Coin, frb_generated::StreamSink};
+use crate::{api::coin::Coin};
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
+#[cfg(feature = "flutter")]
 async fn run_mempool(
     mempool_sink: StreamSink<MempoolMsg>,
     cancel_token: CancellationToken,
@@ -29,21 +33,21 @@ async fn run_mempool(
     Ok(())
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 #[derive(Clone)]
 pub enum MempoolMsg {
     BlockHeight(u32),
     TxId(String, Vec<(u32, String, i64)>, u32),
 }
 
-#[frb(opaque)]
+#[cfg_attr(feature = "flutter", frb(opaque))]
 pub struct Mempool {
     runtime: Runtime,
     cancel_token: Option<CancellationToken>,
 }
 
 impl Mempool {
-    #[frb(sync)]
+    #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn new() -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -55,6 +59,7 @@ impl Mempool {
         }
     }
 
+    #[cfg(feature = "flutter")]
     pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, c: Coin) -> Result<()> {
         let ct = CancellationToken::new();
         self.cancel_token = Some(ct.clone());
@@ -74,7 +79,7 @@ impl Mempool {
     }
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn get_mempool_tx(tx_id: &str, c: &Coin) -> Result<Vec<u8>> {
     let mut client = c.client().await?;
     let tx = crate::mempool::get_mempool_tx(&c.network(), &mut client, tx_id).await?;

@@ -1,16 +1,20 @@
 use anyhow::Result;
-use flutter_rust_bridge::frb;
 use std::sync::LazyLock;
 use tokio::sync::{broadcast, Mutex};
 
 use crate::api::coin::Coin;
 
 use crate::db::calculate_balance;
-use crate::frb_generated::StreamSink;
 use crate::io::SyncHeight;
 use crate::sync::BlockHeader;
 
-#[frb]
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
     accounts: Vec<u32>,
@@ -32,7 +36,7 @@ pub async fn synchronize(
     .await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn balance(c: &Coin) -> Result<PoolBalance> {
     let mut connection = c.get_connection().await?;
     let account = c.account;
@@ -40,7 +44,7 @@ pub async fn balance(c: &Coin) -> Result<PoolBalance> {
     calculate_balance(&mut *connection, account, None).await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn cancel_sync() -> Result<()> {
     let tx = CANCEL_SYNC.lock().await;
     if let Some(tx) = tx.as_ref() {
@@ -49,19 +53,19 @@ pub async fn cancel_sync() -> Result<()> {
     Ok(())
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn rewind_sync(height: u32, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::sync::rewind_sync(&c.network(), &mut *connection, account, height).await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn get_db_height(c: &Coin) -> Result<SyncHeight> {
     let mut connection = c.get_connection().await?;
     crate::sync::get_db_height(&mut *connection, c.account).await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn fetch_tx_details(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
@@ -69,7 +73,7 @@ pub async fn fetch_tx_details(c: &Coin) -> Result<()> {
     Ok(())
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn cache_block_time(height: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;

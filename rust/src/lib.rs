@@ -3,13 +3,16 @@ use lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use tokio_stream::wrappers::ReceiverStream;
 use zcash_primitives::transaction::Transaction;
 
-use crate::{frb_generated::StreamSink, lwd::CompactBlock, net::LwdServer};
+use crate::{lwd::CompactBlock, net::LwdServer};
+#[cfg(feature = "flutter")]
+use frb_generated::StreamSink;
 
 pub mod account;
 pub mod api;
 pub mod bip38;
 pub mod budget;
 pub mod db;
+#[cfg(feature="flutter")]
 mod frb_generated;
 pub mod frost;
 #[cfg(feature = "graphql")]
@@ -62,6 +65,7 @@ pub trait Sink<V>: Clone {
     fn send_error(&self, e: Error) -> impl std::future::Future<Output = ()> + Send;
 }
 
+#[cfg(feature="flutter")]
 impl<T: Clone + frb_generated::SseEncode + Send + Sync> Sink<T> for StreamSink<T> {
     async fn send(&self, value: T) {
         let _ = self.add(value);

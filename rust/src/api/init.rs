@@ -1,6 +1,5 @@
 use std::sync::{Mutex, OnceLock};
 
-use flutter_rust_bridge::frb;
 use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
 use tracing_subscriber::{
     field::MakeVisitor,
@@ -14,9 +13,13 @@ use tracing_subscriber::{
     EnvFilter, Layer, Registry,
 };
 
+#[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
-#[frb(init)]
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb(init))]
 pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
@@ -53,6 +56,7 @@ where
         .boxed()
 }
 
+#[cfg(feature = "flutter")]
 fn frb_layer<S>() -> BoxedLayer<S>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
@@ -62,6 +66,7 @@ where
 
 struct FrbLogger;
 
+#[cfg(feature = "flutter")]
 impl<S> Layer<S> for FrbLogger
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
@@ -91,17 +96,19 @@ where
     }
 }
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 pub struct LogMessage {
     pub level: u8,
     pub message: String,
     pub span: Option<String>,
 }
 
-#[frb(sync)]
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn set_log_stream(s: StreamSink<LogMessage>) {
     println!("Setting log stream");
     let _ = LOG_SINK.set(Mutex::new(s));
 }
 
+#[cfg(feature = "flutter")]
 static LOG_SINK: OnceLock<Mutex<StreamSink<LogMessage>>> = OnceLock::new();

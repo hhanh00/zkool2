@@ -36,7 +36,6 @@ use crate::{
     api::pay::{PcztPackage, SigningEvent},
     api::coin::Network,
     db::get_account_aindex,
-    frb_generated::StreamSink,
     ledger::{
         connect_ledger,
         hashers::{
@@ -49,7 +48,11 @@ use crate::{
     tiu, IntoAnyhow,
 };
 
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "flutter")]
 pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -647,6 +650,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
     Ok(())
 }
 
+#[cfg(feature = "flutter")]
 pub async fn sign_ledger_transaction(
     network: Network,
     sink: StreamSink<SigningEvent>,
