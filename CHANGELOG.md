@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.9.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.0...zkool-v6.9.1) (2026-01-18)
+
+
+### Bug Fixes
+
+* fix address qr scan ([#760](https://github.com/hhanh00/zkool2/issues/760)) ([a28617f](https://github.com/hhanh00/zkool2/commit/a28617fd2c400ae38ebf5bfad0ee0e7fa1a9946f))
+
 ## [6.9.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.8.2...zkool-v6.9.0) (2026-01-17)
 
 
