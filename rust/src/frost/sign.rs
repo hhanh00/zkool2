@@ -40,7 +40,6 @@ use crate::{
         pay::PcztPackage,
         sync::SYNCING,
     },
-    frb_generated::StreamSink,
     frost::{
         db::{get_coordinator_broadcast_account, get_mailbox_account},
         dkg::{delete_frost_state, get_dkg_params, publish},
@@ -53,6 +52,9 @@ use crate::{
 };
 
 use super::{FrostSigMessage, P};
+
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 
 type CommitmentMap = BTreeMap<Identifier, SigningCommitments<P>>;
 type SignatureMap = BTreeMap<Identifier, SignatureShare<P>>;
@@ -101,6 +103,7 @@ pub async fn init_sign(
     Ok(())
 }
 
+#[cfg(feature = "flutter")]
 pub async fn do_sign(
     network: &Network,
     connection: &mut SqliteConnection,

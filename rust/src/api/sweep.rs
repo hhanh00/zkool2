@@ -1,10 +1,13 @@
 use anyhow::Result;
-use flutter_rust_bridge::frb;
 use tokio_util::sync::CancellationToken;
 
-use crate::{api::coin::Coin, frb_generated::StreamSink, sync::transparent_sweep};
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+use crate::{api::coin::Coin, sync::transparent_sweep};
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
-#[frb(opaque)]
+#[cfg_attr(feature = "flutter", frb(opaque))]
 pub struct TransparentScanner {
     pub(crate) cancellation_token: CancellationToken,
 }
@@ -16,7 +19,10 @@ impl TransparentScanner {
         })
     }
 
-    pub async fn run(&mut self, address_stream: StreamSink<String>,
+    #[cfg(feature = "flutter")]
+    pub async fn run(
+        &mut self,
+        address_stream: StreamSink<String>,
         end_height: u32,
         gap_limit: u32,
         c: &Coin,
