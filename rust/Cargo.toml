@@ -12,7 +12,7 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-flutter_rust_bridge = "=2.11.1"
+flutter_rust_bridge = {version = "=2.11.1", optional = true}
 
 anyhow = "1.0.97"
 bip39 = "2.1.0"
@@ -130,6 +130,8 @@ rand = "0.6"
 tonic-build = "0.13"
 
 [features]
+default = ["flutter"]
+flutter = ["flutter_rust_bridge"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "bigdecimal", "chrono", "figment", "clap"]
 zemu = []
 

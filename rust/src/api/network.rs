@@ -1,10 +1,11 @@
 use anyhow::Result;
-use flutter_rust_bridge::frb;
 use serde::Deserialize;
 
 use crate::api::coin::Coin;
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn init_datadir(directory: &str) -> Result<()> {
     crate::api::coin::init_datadir(directory).await
 }
@@ -25,7 +26,7 @@ pub async fn get_coingecko_price(api: &str) -> Result<f64> {
     Ok(rep.zcash.usd)
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn get_network_name(c: &Coin) -> String {
     c.get_name().to_string()
 }

@@ -1,7 +1,7 @@
 use crate::api::coin::Network;
 use crate::lwd::{CompactOrchardAction, CompactSaplingOutput};
 use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
-use crate::{api::mempool::MempoolMsg, frb_generated::StreamSink};
+use crate::api::mempool::MempoolMsg;
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::keys::Scope;
@@ -15,7 +15,10 @@ use zcash_primitives::transaction::{Authorized, Transaction, TransactionData};
 use zcash_transparent::address::TransparentAddress;
 
 use crate::{Client, Sink};
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 
+#[cfg(feature = "flutter")]
 pub async fn run_mempool(
     mempool_tx: StreamSink<MempoolMsg>,
     network: &Network,
