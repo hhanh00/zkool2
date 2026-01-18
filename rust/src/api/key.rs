@@ -1,13 +1,14 @@
 use anyhow::Result;
-use flutter_rust_bridge::frb;
 use rand_core::{OsRng, RngCore as _};
 use zcash_keys::keys::UnifiedFullViewingKey;
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 
 use crate::{
     api::coin::Coin, key::{is_valid_sapling_key, is_valid_transparent_key}
 };
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn generate_seed() -> Result<String> {
     let mut entropy = [0u8; 32];
     OsRng.fill_bytes(&mut entropy);
@@ -15,17 +16,17 @@ pub fn generate_seed() -> Result<String> {
     Ok(m.to_string())
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_valid_phrase(phrase: &str) -> bool {
     crate::key::is_valid_phrase(phrase)
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_valid_fvk(fvk: &str, c: &Coin) -> bool {
     crate::key::is_valid_ufvk(&c.network(), fvk)
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_valid_key(key: &str, c: &Coin) -> bool {
     let network = &c.network();
 
@@ -52,18 +53,18 @@ pub fn is_valid_key(key: &str, c: &Coin) -> bool {
     false
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_valid_address(address: &str) -> bool {
     let r = zcash_address::ZcashAddress::try_from_encoded(address);
     r.is_ok()
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_valid_transparent_address(address: &str, c: &Coin) -> bool {
     crate::key::is_valid_transparent_address(&c.network(), address)
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_tex_address(address: &str, c: &Coin) -> bool {
     let Some(address) = zcash_keys::address::Address::decode(&c.network(), address) else {
         return false;
@@ -75,7 +76,7 @@ pub fn is_tex_address(address: &str, c: &Coin) -> bool {
     is_tex
 }
 
-#[frb(sync)]
+#[cfg_attr(feature = "flutter", frb(sync))]
 pub fn get_key_pools(key: &str, c: &Coin) -> Result<u8> {
     let network = &c.network();
 

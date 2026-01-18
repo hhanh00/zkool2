@@ -1,18 +1,20 @@
 use anyhow::{Ok, Result};
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+#[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 
 use crate::{
     api::coin::Coin,
-    frb_generated::StreamSink,
     frost::{db::get_mailbox_account, dkg::get_dkg_params},
 };
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn set_dkg_params(
     name: &str,
     id: u8,
@@ -36,7 +38,7 @@ pub async fn set_dkg_params(
     .await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn has_dkg_params(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     let exists =
@@ -46,7 +48,7 @@ pub async fn has_dkg_params(c: &Coin) -> Result<bool> {
     Ok(exists.is_some())
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn init_dkg(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut *connection).await?;
@@ -63,7 +65,7 @@ pub async fn init_dkg(c: &Coin) -> Result<()> {
     Ok(())
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut *connection).await?;
@@ -73,7 +75,8 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
     Ok(addresses.iter().all(|a| !a.is_empty()))
 }
 
-#[frb]
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
@@ -111,7 +114,7 @@ pub async fn set_dkg_address(id: u8, address: &str, c: &Coin) -> Result<()> {
     crate::frost::dkg::set_dkg_address(&mut connection, account, id, my_id, address).await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn cancel_dkg(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection).await?;
@@ -126,7 +129,7 @@ pub(crate) async fn get_funding_account(connection: &mut SqliteConnection) -> Re
     Ok(account)
 }
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DKGParams {
     pub id: u8,
@@ -147,13 +150,13 @@ pub enum DKGStatus {
     SharedAddress(String),
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn reset_sign(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::frost::sign::reset_sign(&mut *connection).await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn init_sign(
     coordinator: u8,
     funding_account: u32,
@@ -171,13 +174,14 @@ pub async fn init_sign(
     .await
 }
 
-#[frb]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     crate::frost::sign::is_signing_in_progress(&mut *connection).await
 }
 
-#[frb]
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
@@ -196,7 +200,7 @@ pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> 
     Ok(())
 }
 
-#[frb(dart_metadata = ("freezed"))]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FrostSignParams {
     pub account: u32,
