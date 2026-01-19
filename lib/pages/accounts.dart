@@ -93,11 +93,15 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     Future(tutorial);
 
     final List<Account> accountList;
+    final AppSettings settings;
     try {
       final pinlockAV = ref.watch(lifecycleProvider);
       ensureAV(context, pinlockAV);
       if (pinlockAV.requireValue) return PinLock();
 
+      final settingsAV = ref.watch(appSettingsProvider);
+      ensureAV(context, settingsAV);
+      settings = settingsAV.requireValue;
       final selectedFolder = ref.watch(selectedFolderProvider);
       final accountsAV = ref.watch(getAccountsProvider);
       ensureAV(context, accountsAV);
@@ -128,6 +132,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
           const Gap(8),
           if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
           const Gap(8),
+          if (settings.offline) ...[
+            Text("Wallet is in offline mode", style: tt.labelSmall),
+            const Gap(8),
+          ],
         ],
         builder: (context, index, account, {selected, onSelectChanged}) {
           final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
