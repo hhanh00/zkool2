@@ -24,7 +24,7 @@ use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::{debug, event, info, span, Level};
-use zcash_address::ZcashAddress;
+use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder},
@@ -49,8 +49,7 @@ use crate::{
         get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
         get_sapling_vk,
     },
-    api::coin::Network,
-    api::pay::PcztPackage,
+    api::{coin::Network, pay::PcztPackage},
     db::{get_account_dindex, get_account_hw, select_account_transparent},
     pay::{
         error::Error,
@@ -896,14 +895,52 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     Ok(tx_bytes)
 }
 
+struct MyTransparentAddress(TransparentAddress);
+impl TryFromAddress for MyTransparentAddress {
+    type Error = ();
+
+    fn try_from_unified(
+        _net: NetworkType,
+        data: zcash_address::unified::Address,
+    ) -> std::result::Result<Self, ConversionError<Self::Error>> {
+        let ua = UnifiedAddress::try_from(data).unwrap();
+        ua.transparent()
+            .map(|v| MyTransparentAddress(v.clone()))
+            .ok_or(ConversionError::User(()))
+    }
+
+    fn try_from_transparent_p2pkh(
+        _net: NetworkType,
+        data: [u8; 20],
+    ) -> Result<Self, ConversionError<Self::Error>> {
+        Ok(MyTransparentAddress(TransparentAddress::PublicKeyHash(
+            data,
+        )))
+    }
+
+    fn try_from_tex(
+        _net: NetworkType,
+        data: [u8; 20],
+    ) -> std::result::Result<Self, ConversionError<Self::Error>> {
+        Ok(MyTransparentAddress(TransparentAddress::PublicKeyHash(
+            data,
+        )))
+    }
+
+    fn try_from_transparent_p2sh(
+        _net: NetworkType,
+        data: [u8; 20],
+    ) -> std::result::Result<Self, ConversionError<Self::Error>> {
+        Ok(MyTransparentAddress(TransparentAddress::ScriptHash(data)))
+    }
+}
+
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
     tracing::info!("{address}");
-    if let Ok(taddr) = TransparentAddress::decode(network, address) {
-        return Ok(taddr);
-    }
-    let ua = UnifiedAddress::decode(network, address).map_err(|e| anyhow::anyhow!(e))?;
-    if let Some(taddr) = ua.transparent() {
-        return Ok(*taddr);
+    let addr = ZcashAddress::try_from_encoded(address)?;
+    if addr.can_receive_as(zcash_protocol::PoolType::Transparent) {
+        let taddr: MyTransparentAddress = addr.convert_if_network(network.network_type()).unwrap();
+        return Ok(taddr.0);
     }
     anyhow::bail!("Invalid transparent address: {address}");
 }
