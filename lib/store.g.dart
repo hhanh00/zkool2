@@ -699,7 +699,7 @@ final class MempoolNotifierProvider
   }
 }
 
-String _$mempoolNotifierHash() => r'ac70d541690655dfc71ce8f87f09eba60a082fdf';
+String _$mempoolNotifierHash() => r'1ee6eb5ad07e3b638f9b1e731aaabfa622dfc2d4';
 
 abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
   MempoolState build();
