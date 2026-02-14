@@ -1,0 +1,54 @@
+# Production-ready Flatpak manifest for Zkool wallet
+# Ref: Cake Wallet (com.cakewallet.CakeWallet.yml)
+# Build: flutter build linux && flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml
+# Export: flatpak build-export export flatpak-build
+# Bundle: flatpak build-bundle export zkool.flatpak cc.methyl.Zkool
+
+app-id: cc.methyl.Zkool
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: zkool-wrapper
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --socket=pulseaudio
+  - --share=network
+  - --filesystem=home
+  - --filesystem=xdg-documents
+  # For Ledger/hardware wallet:
+  # - --device=all
+
+modules:
+  - name: zkool
+    buildsystem: simple
+    build-commands:
+      - |
+        BUNDLE="build/linux/x64/release/bundle"
+        if [ ! -f "$BUNDLE/zkool" ]; then
+          echo "Error: Linux bundle not found. Run: flutter build linux"
+          exit 1
+        fi
+        cp -a "$BUNDLE"/* /app/
+        chmod 755 /app/zkool
+        mkdir -p /app/bin
+        printf '%s\n' \
+          '#!/bin/bash' \
+          'export GTK_MODULES= NO_AT_BRIDGE=1' \
+          'exec 2> >(grep -v -e canberra-gtk-module -e "libEGL warning" -e "DRI3" -e atk_socket_embed -e "Atk-CRITICAL" >&2)' \
+          'exec /app/zkool "$@"' \
+          > /app/bin/zkool-wrapper
+        chmod 755 /app/bin/zkool-wrapper
+        mkdir -p /app/share/applications
+        cp linux/cc.methyl.Zkool.desktop /app/share/applications/
+        mkdir -p /app/share/icons/hicolor/256x256/apps
+        cp flatpak/cc.methyl.Zkool.icon.png /app/share/icons/hicolor/256x256/apps/cc.methyl.Zkool.png
+        mkdir -p /app/share/metainfo
+        cp flatpak/cc.methyl.Zkool.metainfo.xml /app/share/metainfo/cc.methyl.Zkool.metainfo.xml
+    sources:
+      - type: dir
+        path: ..
