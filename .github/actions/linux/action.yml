@@ -24,14 +24,31 @@ runs:
         wget -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
         chmod +x appimagetool
         sudo mv appimagetool /usr/local/bin/
+        sudo apt-get install -y flatpak flatpak-builder appstream appstream-compose
         mkdir out
         echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+      env:
+        ARCH: ${{ inputs.arch }}
+    - name: Install Flatpak runtime and SDK
+      shell: bash
+      run: |
+        sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        sudo flatpak install -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
       env:
         ARCH: ${{ inputs.arch }}
     - name: Build
       shell: bash
       run: |
         fastforge package --platform=linux --targets=deb,appimage
+    - name: Build Flatpak
+      if: ${{ inputs.arch == 'x86_64' }}
+      shell: bash
+      run: |
+        flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml
+        flatpak build-export export flatpak-build
+        flatpak build-bundle export out/zkool-${{ inputs.version }}-${{ inputs.arch }}.flatpak cc.methyl.Zkool
+      env:
+        ARCH: ${{ inputs.arch }}
     - name: Make ISO
       if: ${{ inputs.arch == 'x86_64' }}
       id: iso
@@ -45,7 +62,7 @@ runs:
       id: out
       shell: bash
       run: |
-        find . -path ./out -prune -o -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" \) -exec sh -c '
+        find . -path ./out -prune -o -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.iso" -o -name "*.flatpak" \) -exec sh -c '
           f="$1"
           base=$(basename "$f")
           ext="${base##*.}"

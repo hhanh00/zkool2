@@ -2,6 +2,8 @@
 
 Zkool is a multi-account wallet for Zcash.
 
+**Linux:** You can build and run as [Flatpak](flatpak/README.md) (recommended), or use the [AppImage/Deb](.github/actions/linux) from the release artifacts.
+
 ## Feature Tables
 
 ### General

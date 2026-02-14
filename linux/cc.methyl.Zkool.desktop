@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Zkool
+Comment=A multi-account crypto wallet for Zcash
+Categories=Office;Finance;
+Terminal=false
+Icon=cc.methyl.Zkool
+Exec=zkool-wrapper
