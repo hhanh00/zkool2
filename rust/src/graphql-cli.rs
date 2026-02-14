@@ -87,8 +87,8 @@ async fn main() -> Result<()> {
             Some("/subscriptions"),
         )));
 
-    tracing::info!("Listening on 127.0.0.1:{port}");
-    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    tracing::info!("Listening on 0.0.0.0:{port}");
+    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 
     Ok(())
 }
