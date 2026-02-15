@@ -8,6 +8,7 @@ use tokio_stream::StreamExt;
 use tracing::info;
 use zcash_transparent::address::TransparentAddress;
 
+use crate::api::account::get_ledger;
 use crate::api::coin::{Coin, Network};
 use crate::api::sync::{CANCEL_SYNC, SYNCING};
 use crate::budget::merge_pending_txs;
@@ -36,7 +37,6 @@ use tokio_util::sync::CancellationToken;
 use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
-use crate::api::ledger::get_hw_transparent_address;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
@@ -1050,6 +1050,7 @@ pub async fn transparent_sweep(
     let aindex = get_account_aindex(&mut connection, account).await?;
     let dindex = get_account_dindex(&mut connection, account).await?;
     tokio::spawn(async move {
+        let ledger = get_ledger(&mut connection, account).await?;
         let mut n_added = 0;
         let tk = select_account_transparent(&mut connection, account, dindex).await?;
         let xvk = tk.xvk;
@@ -1061,7 +1062,7 @@ pub async fn transparent_sweep(
                 let (pk, taddr) = match xvk.as_ref() {
                     Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
                     None if hw != 0 => {
-                        get_hw_transparent_address(&network, aindex, scope, dindex).await?
+                        ledger.get_hw_transparent_address(&network, aindex, scope, dindex).await?
                     }
                     _ => anyhow::bail!("Sweep needs an xpub key"),
                 };

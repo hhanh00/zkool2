@@ -1,30 +1,11 @@
 use std::sync::LazyLock;
 use std::io::Write;
-
 use byteorder::{WriteBytesExt, BE};
-use hidapi::{self, HidApi, HidDevice};
-use tokio::runtime::Builder;
-use tokio::sync::{mpsc, oneshot, Mutex};
+use hidapi::{HidApi, HidDevice};
+use tokio::{runtime::Builder, sync::{Mutex, mpsc, oneshot}};
 use tonic::async_trait;
 
-use crate::IntoAnyhow;
-
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "macos")] {
-        use std::sync::Arc;
-        use ledger_transport_zemu::TransportZemuHttp;
-        use ledger_transport::Exchange;
-    }
-}
-
-pub mod builder;
-pub mod error;
-pub mod fvk;
-pub mod hashers;
-pub mod legacy;
-
-pub type LedgerError = error::Error;
-pub type LedgerResult<T> = std::result::Result<T, LedgerError>;
+use crate::{IntoAnyhow, ledger::{LedgerError, LedgerResult}};
 
 pub fn open_ledger(api: &HidApi) -> LedgerResult<HidDevice> {
     for devinfo in api.device_list() {
@@ -172,9 +153,7 @@ impl Device for LedgerDevice {
 impl LedgerDevice {
     pub async fn new() -> LedgerResult<Self> {
         let tx = Self::start().await?;
-        Ok(LedgerDevice {
-            tx,
-        })
+        Ok(LedgerDevice { tx })
     }
 
     pub async fn start() -> LedgerResult<mpsc::Sender<(APDUCommand, ReponseChannel)>> {
@@ -192,7 +171,8 @@ impl LedgerDevice {
                         let rep = Self::read(&device).await?;
                         let answer = APDUAnswer::from_bytes(&rep)?;
                         Ok::<_, LedgerError>(answer)
-                    }.await;
+                    }
+                    .await;
                     let _ = sender.send(answer);
                 }
             });
@@ -270,28 +250,32 @@ impl LedgerDevice {
 
 pub static LEDGER_ZEMU: LazyLock<tokio::sync::Mutex<Option<LedgerDeviceZEMU>>> =
     LazyLock::new(|| {
-        #[cfg(target_os = "macos")]
+        #[cfg(feature = "zemu")]
         {
+            use std::sync::Arc;
+
             let device = ledger_transport_zemu::TransportZemuHttp::new("192.168.18.13", 9999);
             let ledger = LedgerDeviceZEMU {
                 device: Arc::new(device),
             };
             tokio::sync::Mutex::new(Some(ledger))
         }
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(not(feature = "zemu"))]
         tokio::sync::Mutex::new(Some(LedgerDeviceZEMU {}))
     });
 
 #[derive(Clone)]
 pub struct LedgerDeviceZEMU {
-    #[cfg(target_os = "macos")]
-    pub device: Arc<TransportZemuHttp>,
+    #[cfg(feature = "zemu")]
+    pub device: std::sync::Arc<ledger_transport_zemu::TransportZemuHttp>,
 }
 
 #[async_trait]
 impl Device for LedgerDeviceZEMU {
-    #[cfg(target_os = "macos")]
+    #[cfg(feature = "zemu")]
     async fn execute(&self, command: APDUCommand) -> LedgerResult<APDUAnswer> {
+        use ledger_transport::Exchange;
+
         let res = self
             .device
             .exchange(&ledger_transport::APDUCommand {
@@ -308,13 +292,10 @@ impl Device for LedgerDeviceZEMU {
         })
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(feature = "zemu"))]
     async fn execute(&self, _command: APDUCommand) -> LedgerResult<APDUAnswer> {
         unimplemented!()
     }
 }
 
 pub static LEDGER: LazyLock<Mutex<Option<LedgerDevice>>> = LazyLock::new(|| Mutex::new(None));
-
-#[cfg(test)]
-mod tests;

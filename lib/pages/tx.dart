@@ -11,7 +11,6 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/ledger.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
