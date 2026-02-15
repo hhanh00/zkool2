@@ -13,7 +13,7 @@ use zcash_transparent::address::TransparentAddress;
 
 use crate::api::coin::Network;
 use crate::db::LEDGER_CODE;
-use crate::ledger::{APDUCommand, Device, LEDGER_ZEMU};
+use crate::ledger::transport::{APDUCommand, Device, LEDGER_ZEMU};
 use crate::Client;
 
 pub async fn derive_hw_transparent_address<D: Device>(
@@ -305,7 +305,7 @@ pub async fn sign_transaction(
 
 #[cfg(test)]
 mod tests {
-    use crate::ledger::{APDUCommand, LEDGER_ZEMU};
+    use crate::ledger::transport::{APDUCommand, LEDGER_ZEMU};
 
     use super::*;
 
