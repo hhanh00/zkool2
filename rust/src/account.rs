@@ -2,10 +2,6 @@ use std::str::FromStr as _;
 
 use crate::{
     api::{account::{Addresses, get_ledger}, coin::Network,
-    //     ledger::{
-    //     get_hw_fvk, get_hw_next_diversifier_address, get_hw_sapling_address,
-    //     get_hw_transparent_address,
-    // }
 }, bip38, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
