@@ -1,10 +1,12 @@
 use std::str::FromStr as _;
 
 use crate::{
-    api::{account::Addresses, coin::Network, ledger::{
-        get_hw_fvk, get_hw_next_diversifier_address, get_hw_sapling_address,
-        get_hw_transparent_address,
-    }}, bip38, db::{
+    api::{account::{Addresses, get_ledger}, coin::Network,
+    //     ledger::{
+    //     get_hw_fvk, get_hw_next_diversifier_address, get_hw_sapling_address,
+    //     get_hw_transparent_address,
+    // }
+}, bip38, db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
         store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
@@ -20,7 +22,6 @@ use crate::{
     },
     db::{
         get_account_hw, select_account_transparent, store_account_hw, store_account_metadata,
-        LEDGER_CODE,
     },
     pay::pool::ALL_POOLS,
 };
@@ -91,9 +92,11 @@ pub async fn new_account(
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
     if na.ledger {
+        let ledger = get_ledger(&mut db_tx, account).await?;
+
         let has_seed = !key.is_empty();
         if !has_seed {
-            store_account_hw(&mut db_tx, account, LEDGER_CODE, na.aindex).await?;
+            store_account_hw(&mut db_tx, account, 1, na.aindex).await?;
         }
         // we must do sapling derivation first to know a valid dindex
         // because in sapling some indices are invalid
@@ -110,7 +113,7 @@ pub async fn new_account(
                 let address = derive_sapling_address(network, &sxvk, dindex);
                 store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
             } else {
-                let fvk = get_hw_fvk(network, LEDGER_CODE, na.aindex).await?;
+                let fvk = ledger.get_hw_fvk(network, na.aindex).await?;
                 let mut dfvk = fvk.to_bytes().to_vec();
                 dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
                 let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
@@ -118,13 +121,13 @@ pub async fn new_account(
                 // api but it is currently not working
                 // instead, we "assume" the dindex = 0 is the default sapling address
                 // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
-                let address = get_hw_sapling_address(network, na.aindex).await?;
+                let address = ledger.get_hw_sapling_address(network, na.aindex).await?;
                 store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
             }
         }
         if pools & 1 != 0 && !has_seed {
             init_account_transparent(&mut db_tx, account, birth).await?;
-            let (pk, taddr) = get_hw_transparent_address(network, na.aindex, 0, dindex).await?;
+            let (pk, taddr) = ledger.get_hw_transparent_address(network, na.aindex, 0, dindex).await?;
             store_account_transparent_addr(
                 &mut db_tx,
                 account,
@@ -672,6 +675,7 @@ pub async fn generate_next_dindex(
     account: u32,
 ) -> Result<u32> {
     let mut db_tx = connection.begin().await?;
+    let ledger = get_ledger(&mut db_tx, account).await?;
     let (aindex, mut dindex): (u32, u32) =
         sqlx::query_as("SELECT aindex, dindex FROM accounts WHERE id_account = ?")
             .bind(account)
@@ -684,7 +688,7 @@ pub async fn generate_next_dindex(
     if let Some(svk) = svk.as_ref() {
         dindex += 1;
         let address = if hw != 0 {
-            let (di, address) = get_hw_next_diversifier_address(network, aindex, dindex).await?;
+            let (di, address) = ledger.get_hw_next_diversifier_address(network, aindex, dindex).await?;
             dindex = di;
             address
         } else {
@@ -719,7 +723,7 @@ pub async fn generate_next_dindex(
             (sk, pk, Some(address))
         }
         None if hw != 0 => {
-            let (pk, address) = get_hw_transparent_address(network, aindex, 0, dindex).await?;
+            let (pk, address) = ledger.get_hw_transparent_address(network, aindex, 0, dindex).await?;
             (None, pk, Some(address))
         }
         _ => (None, vec![], None),

@@ -37,19 +37,18 @@ use crate::{
     api::coin::Network,
     db::get_account_aindex,
     ledger::{
-        connect_ledger,
         hashers::{
             orchard_hasher, output_hasher, prevout_hasher, sequence_hasher, spend_hasher,
             zoutput_hasher,
         },
-        APDUCommand, Device, LedgerError, LedgerResult,
+        LedgerError, LedgerResult,
     },
     pay::plan::SAPLING_PROVER,
     tiu, IntoAnyhow,
 };
 
 #[cfg(feature = "flutter")]
-use crate::frb_generated::StreamSink;
+use crate::{frb_generated::StreamSink, ledger::transport::Device};
 
 #[allow(clippy::too_many_arguments)]
 #[cfg(feature = "flutter")]
@@ -65,6 +64,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 ) -> LedgerResult<()> {
     let s = sink;
     let run = async move {
+        use crate::ledger::transport::APDUCommand;
+
         let coin_type = network.coin_type();
         let aindex = get_account_aindex(&mut *connection, account).await?;
         let (xvk,): (Vec<u8>,) =
@@ -659,6 +660,8 @@ pub async fn sign_ledger_transaction(
     package: PcztPackage,
 ) -> Result<()> {
     tokio::spawn(async move {
+        use crate::ledger::transport::connect_ledger;
+
         let ledger = connect_ledger().await?;
         sign_transaction(
             &network,

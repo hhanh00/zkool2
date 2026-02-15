@@ -4,11 +4,14 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../lib.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+import 'pay.dart';
 part 'account.freezed.dart';
 
+// These functions are ignored because they are not marked as `pub`: `get_ledger`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<int> getAccountPools({required int account, required Coin c}) =>
@@ -155,6 +158,14 @@ Future<String> showLedgerSaplingAddress({required Coin c}) =>
 
 Future<String> showLedgerTransparentAddress({required Coin c}) =>
     RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress(c: c);
+
+Stream<SigningEvent> signLedgerTransaction(
+        {required PcztPackage package, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountSignLedgerTransaction(package: package, c: c);
+
+Future<void> dummyExport({required SigningEvent a}) =>
+    RustLib.instance.api.crateApiAccountDummyExport(a: a);
 
 @freezed
 sealed class Account with _$Account {

@@ -9,7 +9,7 @@ use zcash_protocol::consensus::NetworkConstants;
 use zcash_transparent::address::TransparentAddress;
 
 use crate::{
-    account::get_sapling_address, api::coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{connect_ledger, APDUCommand, Device, LedgerError, LedgerResult}, tiu, IntoAnyhow
+    IntoAnyhow, account::get_sapling_address, api::coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{LedgerError, LedgerResult, transport::{APDUCommand, Device, connect_ledger}}, tiu
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
@@ -227,7 +227,7 @@ mod tests {
     use zcash_keys::encoding::AddressCodec;
     use zcash_protocol::consensus::MainNetwork;
 
-    use crate::{ledger::{APDUCommand, Device, LEDGER_ZEMU}, tiu};
+    use crate::{ledger::transport::{APDUCommand, Device, LEDGER_ZEMU}, tiu};
     use std::io::Write;
 
     #[tokio::test]

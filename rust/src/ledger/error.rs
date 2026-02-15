@@ -16,12 +16,12 @@ pub enum Error {
     HasOrchard,
     #[error("Invalid Output")]
     InvalidOut,
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[cfg(feature = "ledger")]
     #[error(transparent)]
     Hid(#[from] hidapi::HidError),
     #[error(transparent)]
     IO(#[from] std::io::Error),
-    #[cfg(target_os = "macos")]
+    #[cfg(feature = "zemu")]
     #[error(transparent)]
     ZEMU(#[from] ledger_transport_zemu::LedgerZemuError),
     #[error(transparent)]

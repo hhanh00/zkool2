@@ -39,6 +39,7 @@ runs:
     - name: Build
       shell: bash
       run: |
+        ./misc/mkcargokit_options.sh ledger > rust_builder/cargokit/cargokit.yaml
         fastforge package --platform=linux --targets=deb,appimage
     - name: Build Flatpak
       if: ${{ inputs.arch == 'x86_64' }}

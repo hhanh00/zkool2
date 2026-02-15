@@ -96,7 +96,6 @@ age = "0.11.1"
 zstd = "0.13.3"
 
 cfg-if = "1.0.3"
-ledger-transport = "0.10.0"
 libsqlite3-sys = {version = "0.30", features = ["bundled-sqlcipher-vendored-openssl"]}
 
 juniper = {version = "0.17", optional = true, features = ["bigdecimal", "chrono"]}
@@ -109,15 +108,17 @@ figment = {version = "0.10", optional = true}
 dataloader = {version = "0.18", optional = true}
 clap = {version = "4.5", optional = true, features = ["derive"]}
 
+ledger-transport = {version = "0.10.0", optional = true}
+ledger-transport-zemu = {version = "0.10.0", optional = true}
+
 [target.'cfg(target_os = "macos")'.dependencies]
-hidapi = "2.6.3"
-ledger-transport-zemu = "0.10.0"
+hidapi = {version = "2.6.3", optional = true}
 
 [target.'cfg(target_os = "linux")'.dependencies]
-hidapi = {version = "2.6.3", default-features = false, features = ["linux-native"]}
+hidapi = {version = "2.6.3", optional = true, default-features = false, features = ["linux-native"]}
 
 [target.'cfg(target_os = "windows")'.dependencies]
-hidapi = {version = "2.6.3", default-features = false, features = ["windows-native"]}
+hidapi = {version = "2.6.3", optional = true, default-features = false, features = ["windows-native"]}
 
 [lints.rust]
 unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
@@ -133,7 +134,8 @@ tonic-build = "0.13"
 default = ["flutter"]
 flutter = ["flutter_rust_bridge"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "bigdecimal", "chrono", "figment", "clap"]
-zemu = []
+ledger = ["hidapi", "ledger-transport"]
+zemu = ["ledger", "ledger-transport-zemu"]
 
 [patch.crates-io]
 orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66"}

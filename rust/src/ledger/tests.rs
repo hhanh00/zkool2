@@ -19,16 +19,13 @@ use zcash_address::unified::{self, Encoding, Ufvk};
 use zcash_protocol::consensus::MainNetwork;
 
 use crate::{
-    api::pay::PcztPackage,
-    api::coin::Network,
-    ledger::{
+    IntoAnyhow as _, api::{coin::Network, pay::PcztPackage}, ledger::{
         hashers::{
             create_hasher, header_hasher, orchard_hasher, output_hasher, prevout_hasher,
             sequence_hasher, spend_hasher, transparent_hasher, zoutput_hasher,
         },
-        APDUCommand,
-    },
-    IntoAnyhow as _,
+        transport::{APDUCommand, Device, LEDGER_ZEMU},
+    }
 };
 
 use super::*;

@@ -9,7 +9,6 @@ import 'api/db.dart';
 import 'api/frost.dart';
 import 'api/init.dart';
 import 'api/key.dart';
-import 'api/ledger.dart';
 import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/pay.dart';
@@ -163,6 +162,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Seed dco_decode_box_autoadd_seed(dynamic raw);
+
+  @protected
+  SigningEvent dco_decode_box_autoadd_signing_event(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
@@ -532,6 +534,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Seed sse_decode_box_autoadd_seed(SseDeserializer deserializer);
+
+  @protected
+  SigningEvent sse_decode_box_autoadd_signing_event(
+      SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
@@ -914,6 +920,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_seed(Seed self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_signing_event(
+      SigningEvent self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);

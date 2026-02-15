@@ -41,7 +41,9 @@ runs:
         APPLE_CERTIFICATE_PASSWORD: ${{ inputs.mac_pwd }}
     - name: Build
       shell: bash
-      run: flutter build macos
+      run: |
+        ./misc/mkcargokit_options.sh zemu > rust_builder/cargokit/cargokit.yaml
+        flutter build macos
     - name: Notarization
       shell: bash
       run: ./misc/codesign-notarize.sh

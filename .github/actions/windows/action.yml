@@ -22,6 +22,7 @@ runs:
         export PUB_CACHE="$RUNNER_TEMP/.pub-cache"
         dart pub global activate fastforge
         echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
+        ./misc/mkcargokit_options.sh ledger > rust_builder/cargokit/cargokit.yaml
     - name: Build
       shell: powershell
       run: |

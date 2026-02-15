@@ -7,7 +7,7 @@ use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sapling_crypto::PaymentAddress;
-use sqlx::{sqlite::SqliteRow, Row};
+use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
 use tracing::info;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
@@ -15,14 +15,16 @@ use zcash_keys::{
     encoding::AddressCodec,
     keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
 };
+use zcash_protocol::consensus::Parameters as ZkParams;
 use zcash_transparent::address::TransparentAddress;
 use zip32::AccountId;
-use zcash_protocol::consensus::Parameters as ZkParams;
 
+use crate::{api::pay::PcztPackage, frb_generated::StreamSink};
 use crate::{
-    api::{coin::Coin, ledger::{show_sapling_address, show_transparent_address}},
-    db::get_account_dindex,
+    api::{coin::Coin, pay::SigningEvent},
+    db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
+    ledger::HWAPI,
 };
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -475,8 +477,7 @@ pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
     let memo = Mnemonic::from_str(&seed).unwrap();
     let seed = memo.to_seed("");
 
-    let usk =
-        UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(aindex).unwrap())?;
+    let usk = UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(aindex).unwrap())?;
     let uvk = usk.to_unified_full_viewing_key();
     if uvk.sapling().is_some() {
         println!("Has Sapling");
@@ -606,15 +607,29 @@ pub async fn max_spendable(c: &Coin) -> Result<u64> {
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn show_ledger_sapling_address(c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let r = show_sapling_address(&c.network(), &mut connection, c.account).await?;
+    let ledger = get_ledger(&mut connection, c.account).await?;
+    let r = ledger.show_sapling_address(&c.network(), &mut connection, c.account).await?;
     Ok(r)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn show_ledger_transparent_address(c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let r = show_transparent_address(&c.network(), &mut connection, c.account).await?;
+    let ledger = get_ledger(&mut connection, c.account).await?;
+    let r = ledger.show_transparent_address(&c.network(), &mut connection, c.account).await?;
     Ok(r)
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn sign_ledger_transaction(
+    sink: StreamSink<SigningEvent>,
+    package: PcztPackage,
+    c: &Coin,
+) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    let ledger = get_ledger(&mut connection, c.account).await?;
+    ledger.sign_ledger_transaction(sink, package, c).await?;
+    Ok(())
 }
 
 #[derive(Default, Debug)]
@@ -669,3 +684,22 @@ pub struct TxMemo {
     pub pool: u8,
     pub memo: Option<String>,
 }
+
+pub(crate) async fn get_ledger(connection: &mut SqliteConnection, account: u32) -> Result<Box<dyn HWAPI + Send + Sync>> {
+    let hw = get_account_hw(connection, account).await?;
+    let r: Box<dyn HWAPI + Send + Sync> = if hw == 1 {
+        #[cfg(feature = "ledger")]
+        let d = Box::new(crate::ledger::nano::NanoLedger {});
+
+        #[cfg(not(feature = "ledger"))]
+        let d = Box::new(());
+
+        d
+    } else {
+        Box::new(())
+    };
+    Ok(r)
+}
+
+#[frb]
+pub fn dummy_export(_a: SigningEvent) {}
