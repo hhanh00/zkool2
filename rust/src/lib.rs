@@ -19,7 +19,6 @@ pub mod frost;
 pub mod graphql;
 pub mod io;
 pub mod key;
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub mod ledger;
 #[path = "./cash.z.wallet.sdk.rpc.rs"]
 pub mod lwd;
