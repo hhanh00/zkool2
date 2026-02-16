@@ -61,7 +61,6 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
 
     let in_dkg = in_dkg(&mut connection).await?;
     let in_frost = in_frost(&mut connection).await?;
-    tracing::info!("in_dkg {in_dkg} in_frost {in_frost}");
     if !in_dkg && !in_frost {
         return Ok(());
     }
