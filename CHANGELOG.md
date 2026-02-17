@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.10.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.0...zkool-v6.10.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* android build break ([#770](https://github.com/hhanh00/zkool2/issues/770)) ([8d85dbb](https://github.com/hhanh00/zkool2/commit/8d85dbb6117076c0e128bbabd131f9411a011a62))
+* docker build ([#779](https://github.com/hhanh00/zkool2/issues/779)) ([5e80485](https://github.com/hhanh00/zkool2/commit/5e8048561b2b52b9954a029d5dead50df65add1d))
+* txid in csv in wrong byte order ([#776](https://github.com/hhanh00/zkool2/issues/776)) ([60b057b](https://github.com/hhanh00/zkool2/commit/60b057b07a166e37b5fd38b0826e7ab014bfeb70))
+
 ## [6.10.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.9.0...zkool-v6.10.0) (2026-02-14)
 
 
