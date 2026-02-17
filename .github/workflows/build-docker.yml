@@ -19,9 +19,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            hhanh00/zcash-walletd
+            hhanh00/zkool-graphql
           tags: |
-            type=semver,pattern={{version}},match=v(\d.\d.\d)$
+            type=semver,pattern={{version}},match=v(\d+.\d+.\d+)$
 
       - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
