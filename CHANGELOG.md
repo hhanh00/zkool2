@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.10.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.1...zkool-v6.10.2) (2026-02-17)
+
+
+### Bug Fixes
+
+* make docker image multiplatform ([#780](https://github.com/hhanh00/zkool2/issues/780)) ([d8f4b62](https://github.com/hhanh00/zkool2/commit/d8f4b62f74e9e34307ab28836a66c3ee21a69a71))
+
 ## [6.10.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.0...zkool-v6.10.1) (2026-02-17)
 
 
