@@ -1422,7 +1422,10 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
         v.to_string()
     } else if let Ok(v) = row.try_get::<String, _>(index) {
         v
-    } else if let Ok(v) = row.try_get::<Vec<u8>, _>(index) {
+    } else if let Ok(mut v) = row.try_get::<Vec<u8>, _>(index) {
+        if c.name() == "txid" {
+            v.reverse();
+        }
         hex::encode(&v)
     } else {
         unreachable!("{}", t.name())
