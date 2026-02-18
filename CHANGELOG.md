@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.10.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.1...zkool-v6.10.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* alpine base image for docker ([#789](https://github.com/hhanh00/zkool2/issues/789)) ([5ac91bb](https://github.com/hhanh00/zkool2/commit/5ac91bba24cafb0b9fcba6ee03cf1a79c3b6c533))
+
 ## [6.10.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.0...zkool-v6.10.1) (2026-02-17)
 
 
