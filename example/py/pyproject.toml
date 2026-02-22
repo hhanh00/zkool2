@@ -1,0 +1,10 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zkool-py-example"
+version = "0.0.1"
+dependencies = [
+  "gql[aiohttp]",
+]
