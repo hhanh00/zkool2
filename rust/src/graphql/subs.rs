@@ -7,20 +7,21 @@ use tokio_stream::wrappers::ReceiverStream;
 
 use crate::graphql::{
     data::{Event, EventStream},
-    Context,
+    {Context, check_auth},
 };
 
 pub struct Subscription {}
 
 #[graphql_subscription(context = Context)]
 impl Subscription {
-    pub async fn events(id_account: i32) -> EventStream {
+    pub async fn events(id_account: i32, context: &Context) -> FieldResult<EventStream> {
+        check_auth(context, id_account)?;
         let (tx, rx) = mpsc::channel::<FieldResult<Event>>(10);
         let mut subs = SUBS.lock().await;
         let e = subs.entry(id_account).or_insert_with(Vec::new);
         e.push(tx);
 
-        Box::pin(ReceiverStream::new(rx))
+        Ok(Box::pin(ReceiverStream::new(rx)))
     }
 }
 
