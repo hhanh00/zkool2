@@ -13,7 +13,7 @@ use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
-use crate::graphql::Context;
+use crate::graphql::{Context, check_admin_auth, check_auth};
 use crate::pay::TxPlan;
 use crate::tiu;
 use bigdecimal::num_bigint::BigInt;
@@ -42,6 +42,7 @@ impl Query {
         account_filter: Option<AccountFilter>,
         context: &Context,
     ) -> FieldResult<Vec<Account>> {
+        check_admin_auth(context)?;
         let mut conn = context.coin.get_connection().await?;
         let accounts = crate::db::list_accounts(&mut conn, context.coin.coin).await?;
         let mut accounts: Vec<_> = accounts
@@ -75,6 +76,7 @@ impl Query {
         height: Option<i32>,
         context: &Context,
     ) -> FieldResult<Vec<Transaction>> {
+        check_auth(context, id_account)?;
         let height = height.unwrap_or_default();
         let mut conn = context.coin.get_connection().await?;
         let transactions = query(
@@ -94,6 +96,7 @@ impl Query {
         txid: String,
         context: &Context,
     ) -> FieldResult<Transaction> {
+        check_auth(context, id_account)?;
         let mut txid = hex::decode(&txid)?;
         txid.reverse();
         let mut conn = context.coin.get_connection().await?;
@@ -111,15 +114,20 @@ impl Query {
     }
 
     pub async fn memos_by_transaction(
+        id_account: i32,
         id_transaction: i32,
         context: &Context,
     ) -> FieldResult<Vec<String>> {
+        check_auth(context, id_account)?;
         let mut conn = context.coin.get_connection().await?;
         let memos = query(
             "SELECT memo_text FROM memos
-            WHERE tx = ?1 AND memo_text IS NOT NULL ORDER BY id_memo",
+            JOIN transactions t ON t.id_tx = tx
+            WHERE tx = ?1 AND memo_text IS NOT NULL AND t.account = ?2
+            ORDER BY id_memo",
         )
         .bind(id_transaction)
+        .bind(id_account)
         .map(|r: SqliteRow| r.get::<String, _>(0))
         .fetch_all(&mut *conn)
         .await?;
@@ -131,6 +139,7 @@ impl Query {
         height: Option<i32>,
         context: &Context,
     ) -> FieldResult<Balance> {
+        check_auth(context, id_account)?;
         let height = height.map(|h| h as u32);
         let mut conn = context.coin.get_connection().await?;
         let current_height = get_sync_height(&mut conn, id_account as u32).await?;
@@ -152,6 +161,7 @@ impl Query {
         pools: Option<i32>,
         context: &Context,
     ) -> FieldResult<Addresses> {
+        check_auth(context, id_account)?;
         let mut conn = context.coin.get_connection().await?;
         let ua_pools = pools.unwrap_or(6) as u8;
         let addresses = crate::account::get_addresses(
@@ -170,7 +180,8 @@ impl Query {
         Ok(addresses)
     }
 
-    async fn unconfirmed_by_account(id_account: i32) -> FieldResult<Vec<UnconfirmedTx>> {
+    async fn unconfirmed_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<UnconfirmedTx>> {
+        check_auth(context, id_account)?;
         let mempool = MEMPOOL.lock().await;
         if let Some(unconfirmed_txs) = mempool.unconfirmed.get(&(id_account as u32)) {
             let txs: Vec<_> = unconfirmed_txs
@@ -186,6 +197,7 @@ impl Query {
     }
 
     async fn notes_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<Note>> {
+        check_auth(context, id_account)?;
         let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
         let ufvk = crate::key::get_account_ufvk(&network, &mut conn, id_account as u32, 7).await?;
@@ -209,6 +221,7 @@ impl Query {
         payment: Payment,
         context: &Context,
     ) -> FieldResult<String> {
+        check_auth(context, id_account)?;
         let tx = prepare_tx(id_account, payment, &context.coin).await?;
         let txbin = bincode::encode_to_vec(&tx, bincode::config::standard())?;
         let txhex = hex::encode(&txbin);
@@ -225,6 +238,7 @@ impl Query {
     }
 
     async fn sign_tx(id_account: i32, pczt: String, context: &Context) -> FieldResult<String> {
+        check_auth(context, id_account)?;
         let mut connection = context.coin.get_connection().await?;
         let pczt = hex::decode(&pczt)?;
         let (pczt, _) =
