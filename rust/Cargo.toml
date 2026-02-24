@@ -106,6 +106,7 @@ bigdecimal = {version = "0.4", optional = true}
 chrono = {version = "0.4", optional = true}
 figment = {version = "0.10", optional = true}
 dataloader = {version = "0.18", optional = true}
+jsonwebtoken = {version = "10.3", optional = true, features = ["aws_lc_rs"] }
 clap = {version = "4.5", optional = true, features = ["derive"]}
 
 ledger-transport = {version = "0.10.0", optional = true}
@@ -133,7 +134,7 @@ tonic-build = "0.13"
 [features]
 default = ["flutter"]
 flutter = ["flutter_rust_bridge"]
-graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "bigdecimal", "chrono", "figment", "clap"]
+graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 
