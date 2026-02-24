@@ -31,7 +31,7 @@ impl juniper::Context for Context {}
 
 pub fn check_auth(context: &Context, id_account: i32) -> FieldResult<()> {
     if let Some(auth) = &context.auth {
-        if auth.sub != id_account as u32 {
+        if auth.sub != 0 && auth.sub != id_account as u32 {
             return Err(FieldError::new("Unauthorized", juniper::Value::Null))
         }
     }
