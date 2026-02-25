@@ -7,6 +7,7 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/utils.dart';
 
@@ -27,6 +28,11 @@ Future<void> main() async {
   final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
 
   final r = router(disclaimerAccepted, recovery);
+
+  final e = await parseElection(electionJson: '{"start":3155000,"end":3169000,"need_sig":true,"name":"Test Election","questions":[{"title":"Q1. What is your favorite color?","subtitle":"","index":0,"address":"zcv1re3za92mksd4hga0xw6rwxlklkxsqe9nuqqtdws8mu7cynd6gee74863uq4s9aze6q2zywze20y","choices":[{"title":null,"subtitle":null,"answers":["Red","Green","Blue"]}]},{"title":"Q2. Is the earth flat?","subtitle":"","index":1,"address":"zcv1panzgdd6kyygjqtykys6snl9sy59tdnhrpmezdamlt0umxcgs3z4mrndy7eajpkpxerry7tvccv","choices":[{"title":null,"subtitle":null,"answers":["Yes","No"]}]},{"title":"Q3. Do you like pizza?","subtitle":"","index":2,"address":"zcv1yk6u9k8t6087ru4vsjfzepfw9yhhgpnua27r74wmqyqetn35663c62tnfzw46vqqtu2g54jwqt8","choices":[{"title":null,"subtitle":null,"answers":["Yes","No"]}]}]}');
+  final c = e.questions[0].choices[0];
+  final a = c.answers[0];
+  logger.i(a);
 
   // Future<AppSettings> initApp(WidgetRef ref, AppSettings s) async {
   //   appWatcher = LifecycleWatcher(ref);

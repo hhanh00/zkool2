@@ -11,3 +11,4 @@ pub mod sync;
 pub mod transaction;
 pub mod sweep;
 pub mod raptor;
+pub mod vote;
