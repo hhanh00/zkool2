@@ -112,6 +112,12 @@ clap = {version = "4.5", optional = true, features = ["derive"]}
 ledger-transport = {version = "0.10.0", optional = true}
 ledger-transport-zemu = {version = "0.10.0", optional = true}
 
+[dependencies.zcvlib]
+#zcvlib = {path = "../../zcv/zcvlib", optional = true}
+git = "https://github.com/hhanh00/zcv"
+rev = "bd9fdcd82ecb992d47deed117a8c0c970d47d1a3"
+optional = true
+
 [target.'cfg(target_os = "macos")'.dependencies]
 hidapi = {version = "2.6.3", optional = true}
 
@@ -133,13 +139,13 @@ tonic-build = "0.13"
 
 [features]
 default = ["flutter"]
-flutter = ["flutter_rust_bridge"]
+flutter = ["flutter_rust_bridge", "zcvlib"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 
 [patch.crates-io]
-orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "c06fec6d69c7e6d9619273d8217bf600832a1e66"}
+orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "3c5c0bbcb4d268921bd339f7fd84ca90685dda59"}
 
 zcash_note_encryption = {git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29"}
 
