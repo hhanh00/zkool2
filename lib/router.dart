@@ -20,6 +20,7 @@ import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
+import 'package:zkool/pages/vote.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/pay.dart';
@@ -99,6 +100,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
         GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
         GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
+        GoRoute(path: '/vote', builder: (context, state) => VotePage1()),
         GoRoute(
             path: '/settings',
             routes: [

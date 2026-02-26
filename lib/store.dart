@@ -18,6 +18,7 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
 
 part 'store.g.dart';
@@ -236,6 +237,18 @@ Future<List<Folder>> getFolders(Ref ref) async {
 Future<List<Category>> getCategories(Ref ref) async {
   final c = ref.watch(coinContextProvider);
   return await listCategories(c: c);
+}
+
+@riverpod
+Future<ElectionId> electionId(Ref ref) async {
+  final c = ref.watch(coinContextProvider);
+  return await getElectionId(c: c);
+}
+
+@riverpod
+Future<ElectionPropsPub> election(Ref ref) async {
+  final c = ref.watch(coinContextProvider);
+  return await getElection(c: c);
 }
 
 @riverpod

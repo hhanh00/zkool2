@@ -4,7 +4,12 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'vote.freezed.dart';
+
+// These functions are ignored because they are not marked as `pub`: `connect_voted`
 
 Future<String> compileElectionDef(
         {required String electionJson, required String seed}) =>
@@ -13,6 +18,16 @@ Future<String> compileElectionDef(
 
 Future<ElectionPropsPub> parseElection({required String electionJson}) =>
     RustLib.instance.api.crateApiVoteParseElection(electionJson: electionJson);
+
+Future<ElectionId> getElectionId({required Coin c}) =>
+    RustLib.instance.api.crateApiVoteGetElectionId(c: c);
+
+Future<ElectionPropsPub> getElection({required Coin c}) =>
+    RustLib.instance.api.crateApiVoteGetElection(c: c);
+
+Future<ElectionPropsPub> fetchElection(
+        {required String url, required List<int> hash, required Coin c}) =>
+    RustLib.instance.api.crateApiVoteFetchElection(url: url, hash: hash, c: c);
 
 class ChoiceProp {
   final String? title;
@@ -36,6 +51,14 @@ class ChoiceProp {
           title == other.title &&
           subtitle == other.subtitle &&
           answers == other.answers;
+}
+
+@freezed
+sealed class ElectionId with _$ElectionId {
+  const factory ElectionId({
+    String? url,
+    required Uint8List hash,
+  }) = _ElectionId;
 }
 
 class ElectionPropsPub {
