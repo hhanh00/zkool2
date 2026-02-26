@@ -1,9 +1,21 @@
 use anyhow::Result;
-use zcvlib::{api::simple::{self}};
-pub use zcvlib::pod::{ElectionPropsPub, QuestionPropPub, ChoiceProp};
+use sqlx::{query, query_as};
+use tonic::{
+    transport::{Channel, ClientTlsConfig},
+    Request,
+};
+#[cfg(feature = "flutter")]
+use zcvlib::db::store_election;
+pub use zcvlib::pod::{ChoiceProp, ElectionPropsPub, QuestionPropPub};
+use zcvlib::{
+    api::simple::{self},
+    vote_rpc::{Hash, vote_streamer_client::VoteStreamerClient},
+};
 
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
+
+use crate::api::coin::Coin;
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
@@ -45,4 +57,71 @@ pub struct _ChoiceProp {
 pub async fn parse_election(election_json: String) -> Result<ElectionPropsPub> {
     let e: ElectionPropsPub = serde_json::from_str(&election_json)?;
     Ok(e)
+}
+
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+pub struct ElectionId {
+    pub url: Option<String>,
+    pub hash: Vec<u8>,
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_election_id(c: &Coin) -> Result<ElectionId> {
+    let mut conn = c.get_connection().await?;
+    let (hash, url): (Vec<u8>, Option<String>) = query_as(
+        "SELECT hash, url FROM v_state
+        WHERE id = 0",
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    Ok(ElectionId {
+        url,
+        hash,
+    })
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_election(c: &Coin) -> Result<ElectionPropsPub> {
+    let mut conn = c.get_connection().await?;
+    let (data,): (String,) = query_as(
+        "SELECT e.data FROM v_elections e
+        JOIN v_state s ON s.hash = e.hash
+        WHERE s.id = 0",
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    let e: ElectionPropsPub = serde_json::from_str(&data)?;
+    Ok(e)
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Coin) -> Result<ElectionPropsPub> {
+    let mut conn = c.get_connection().await?;
+    let mut client = connect_voted(url.clone()).await?;
+    let election_json = client
+        .get_election(Request::new(Hash { hash: hash.clone() }))
+        .await?
+        .into_inner()
+        .election;
+    query("UPDATE v_state SET hash = ?1, url = ?2 WHERE id = 0")
+    .bind(&hash)
+    .bind(&url)
+    .execute(&mut *conn)
+    .await?;
+    let election: ElectionPropsPub = serde_json::from_str(&election_json)?;
+    store_election(&mut *conn, &election).await?;
+    Ok(election)
+}
+
+async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
+    let mut channel = tonic::transport::Channel::from_shared(url.clone())?;
+    if url.starts_with("https") {
+        let tls = ClientTlsConfig::new().with_enabled_roots();
+        channel = channel.tls_config(tls)?;
+    }
+    let client = VoteStreamerClient::connect(channel).await?;
+    Ok(client)
 }
