@@ -189,6 +189,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
+  ElectionId dco_decode_election_id(dynamic raw);
+
+  @protected
   ElectionPropsPub dco_decode_election_props_pub(dynamic raw);
 
   @protected
@@ -575,6 +578,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
+
+  @protected
+  ElectionId sse_decode_election_id(SseDeserializer deserializer);
 
   @protected
   ElectionPropsPub sse_decode_election_props_pub(SseDeserializer deserializer);
@@ -977,6 +983,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_election_id(ElectionId self, SseSerializer serializer);
 
   @protected
   void sse_encode_election_props_pub(
