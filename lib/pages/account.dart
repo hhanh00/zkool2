@@ -98,6 +98,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   onUpdateAllTxPrices();
                 case "charts":
                   GoRouter.of(context).push("/chart");
+                case "vote":
+                  GoRouter.of(context).push("/vote");
                 default:
                   onExport(int.parse(result));
               }
@@ -116,6 +118,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   value: "charts",
                   child: Text("Charts"),
                 ),
+              PopupMenuItem<String>(
+                value: "vote",
+                child: Text("Vote"),
+              ),
             ],
           ),
         ],

@@ -177,6 +177,7 @@ async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<Sqlite
         };
         crate::db::put_prop(&mut connection, "coin", coin_value).await?;
     }
+    zcvlib::db::create_schema(&mut connection).await?;
 
     Ok(pool)
 }
