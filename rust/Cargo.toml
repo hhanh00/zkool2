@@ -116,7 +116,7 @@ ledger-transport-zemu = {version = "0.10.0", optional = true}
 [dependencies.zcvlib]
 # path = "../../zcv/zcvlib"
 git = "https://github.com/hhanh00/zcv"
-rev = "b85da296ddb49f80c479f6e34cbdb43c1587377d"
+rev = "44bb5412f3ec71240a8b02661c4cad260b644709"
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
