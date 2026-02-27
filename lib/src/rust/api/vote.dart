@@ -19,15 +19,26 @@ Future<String> compileElectionDef(
 Future<ElectionPropsPub> parseElection({required String electionJson}) =>
     RustLib.instance.api.crateApiVoteParseElection(electionJson: electionJson);
 
-Future<ElectionId> getElectionId({required Coin c}) =>
+Future<Context> getElectionContext({required Coin c}) =>
+    RustLib.instance.api.crateApiVoteGetElectionContext(c: c);
+
+Future<ElectionId> getElectionId({required Context c}) =>
     RustLib.instance.api.crateApiVoteGetElectionId(c: c);
 
-Future<ElectionPropsPub> getElection({required Coin c}) =>
+Future<ElectionPropsPub> getElection({required Context c}) =>
     RustLib.instance.api.crateApiVoteGetElection(c: c);
 
 Future<ElectionPropsPub> fetchElection(
-        {required String url, required List<int> hash, required Coin c}) =>
+        {required String url, required List<int> hash, required Context c}) =>
     RustLib.instance.api.crateApiVoteFetchElection(url: url, hash: hash, c: c);
+
+Future<void> scanVotes(
+        {required String hash, required int idAccount, required Context c}) =>
+    RustLib.instance.api
+        .crateApiVoteScanVotes(hash: hash, idAccount: idAccount, c: c);
+
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>>
+abstract class Context implements RustOpaqueInterface {}
 
 class ChoiceProp {
   final String? title;
