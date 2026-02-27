@@ -28,6 +28,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
   VoteContext? vc;
   final formKey = GlobalKey<FormBuilderState>();
   bool scanning = false;
+  double? progress;
 
   @override
   void initState() {
@@ -50,42 +51,39 @@ class VotePage1State extends ConsumerState<VotePage1> {
       appBar: AppBar(
         title: Text("Vote"),
       ),
-      body: (vc == null) ? showLoading("Vote Context") : SingleChildScrollView(
-          child: Padding(
-              padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
-              child: FormBuilder(
-                key: formKey,
-                child: Column(
-                  children: [
-                    FormBuilderTextField(
-                      name: "url",
-                      decoration: InputDecoration(label: Text("Election URL")),
-                      initialValue: url,
-                      readOnly: url != null,
+      body: (vc == null)
+          ? showLoading("Vote Context")
+          : SingleChildScrollView(
+              child: Padding(
+                  padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+                  child: FormBuilder(
+                    key: formKey,
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          name: "url",
+                          decoration: InputDecoration(label: Text("Election URL")),
+                          initialValue: url,
+                          readOnly: url != null,
+                        ),
+                        FormBuilderTextField(
+                          name: "hash",
+                          decoration: InputDecoration(label: Text("Hash")),
+                          initialValue: h,
+                          readOnly: h!.isNotEmpty,
+                        ),
+                        Gap(16),
+                        ElevatedButton(onPressed: onNext, child: Text("Next")),
+                      ],
                     ),
-                    FormBuilderTextField(
-                      name: "hash",
-                      decoration: InputDecoration(label: Text("Hash")),
-                      initialValue: h,
-                      readOnly: h!.isNotEmpty,
-                    ),
-                    Gap(16),
-                    ElevatedButton(onPressed: onNext, child: Text("Next")),
-                    Gap(16),
-                    if (scanning) Text("Please wait while we compute your voting power"),
-                  ],
-                ),
-              ))),
+                  ))),
     );
   }
 
-  onNext() async {
+  void onNext() async {
     final vc = this.vc!;
     if (vc.election != null)
-      await GoRouter.of(context).push(
-        "/vote/page2",
-        extra: vc,
-      );
+      await scan(vc);
     else {
       final form = formKey.currentState!;
       if (!form.validate()) return;
@@ -105,14 +103,33 @@ class VotePage1State extends ConsumerState<VotePage1> {
         setState(() => scanning = false);
       }
 
-      await GoRouter.of(context).push(
-        "/vote/page2",
-        extra: vc.copyWith(
+      await scan(vc.copyWith(
           id: eid,
           election: election,
         ),
       );
     }
+  }
+
+  Future<void> scan(VoteContext vc) async {
+    final t = Theme.of(context).textTheme;
+    final progressSub = scanVotes(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
+    var progress = ValueNotifier<double>(0.0);
+    progressSub.listen((p) {
+      setState(() => progress.value = p.toDouble());
+    }, onDone: () {
+      setState(() {
+        GoRouter.of(context).pushReplacement("/vote/page2", extra: vc);
+      });
+    });
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("Please wait while we scan for your voting funds", style: t.headlineSmall),
+        content: ValueListenableBuilder<double>(valueListenable: progress, builder: (context, progress, _) => LinearProgressIndicator(value: progress * 0.01)),
+      ),
+    );
   }
 }
 
@@ -130,14 +147,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
   @override
   void initState() {
     super.initState();
-    Future(() async {
-      final progressSub = scanVotes(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
-      progressSub.listen((p) {
-        setState(() => progress = p.toDouble());
-      }, onDone: () {
-        setState(() => progress = null);
-      });
-    });
+    Future(() async {});
   }
 
   @override
@@ -156,8 +166,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
                   Text(question.title, style: t.headlineSmall),
                   Text(question.subtitle),
                   Gap(16),
-                  if (progress != null)
-                    LinearProgressIndicator(value: progress! * 0.01)
+                  if (progress != null) LinearProgressIndicator(value: progress! * 0.01)
                 ],
               ))),
     );
