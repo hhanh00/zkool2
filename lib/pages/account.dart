@@ -99,7 +99,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                 case "charts":
                   GoRouter.of(context).push("/chart");
                 case "vote":
-                  GoRouter.of(context).push("/vote");
+                  GoRouter.of(context).push("/vote/page1");
                 default:
                   onExport(int.parse(result));
               }
