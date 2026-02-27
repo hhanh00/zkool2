@@ -5,7 +5,7 @@ use tonic::{
     Request,
 };
 #[cfg(feature = "flutter")]
-use zcvlib::db::store_election;
+use zcvlib::{api::ProgressReporter, db::store_election};
 pub use zcvlib::pod::{ChoiceProp, ElectionPropsPub, QuestionPropPub};
 use zcvlib::vote_rpc::{vote_streamer_client::VoteStreamerClient, Hash};
 
@@ -14,7 +14,10 @@ pub use zcvlib::context::Context;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
-use crate::api::coin::Coin;
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+
+use crate::{api::coin::Coin};
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
@@ -139,8 +142,15 @@ async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn scan_votes(hash: String, id_account: u32, c: &Context) -> Result<()> {
+pub async fn scan_votes(progress: StreamSink<u32>, hash: String, id_account: u32, c: &Context) -> Result<()> {
     tracing::info!("scan_votes");
-    zcvlib::api::simple::scan_notes(hash, id_account, &c).await?;
+    zcvlib::api::simple::scan_notes(hash, id_account, &progress, &c).await?;
     Ok(())
+}
+
+#[cfg(feature = "flutter")]
+impl ProgressReporter for StreamSink<u32> {
+    fn report(&self, p: u32) {
+        let _ = self.add(p);
+    }
 }
