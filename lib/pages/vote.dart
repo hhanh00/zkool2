@@ -125,11 +125,18 @@ class VotePage2 extends ConsumerStatefulWidget {
 }
 
 class VotePage2State extends ConsumerState<VotePage2> {
+  double? progress;
+
   @override
   void initState() {
     super.initState();
     Future(() async {
-      await scanVotes(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
+      final progressSub = scanVotes(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
+      progressSub.listen((p) {
+        setState(() => progress = p.toDouble());
+      }, onDone: () {
+        setState(() => progress = null);
+      });
     });
   }
 
@@ -148,6 +155,9 @@ class VotePage2State extends ConsumerState<VotePage2> {
                 children: [
                   Text(question.title, style: t.headlineSmall),
                   Text(question.subtitle),
+                  Gap(16),
+                  if (progress != null)
+                    LinearProgressIndicator(value: progress! * 0.01)
                 ],
               ))),
     );

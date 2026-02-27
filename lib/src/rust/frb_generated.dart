@@ -372,7 +372,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSyncRewindSync(
       {required int height, required int account, required Coin c});
 
-  Future<void> crateApiVoteScanVotes(
+  Stream<int> crateApiVoteScanVotes(
       {required String hash, required int idAccount, required Context c});
 
   Future<String> crateApiPaySend(
@@ -3478,33 +3478,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiVoteScanVotes(
+  Stream<int> crateApiVoteScanVotes(
       {required String hash, required int idAccount, required Context c}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(hash, serializer);
-          sse_encode_u_32(idAccount, serializer);
-          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
-              c, serializer);
-          pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 109, port: port_);
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_AnyhowException,
+    final progress = RustStreamSink<int>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_u_32_Sse(progress, serializer);
+            sse_encode_String(hash, serializer);
+            sse_encode_u_32(idAccount, serializer);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
+                c, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer,
+                funcId: 109, port: port_);
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiVoteScanVotesConstMeta,
+          argValues: [progress, hash, idAccount, c],
+          apiImpl: this,
         ),
-        constMeta: kCrateApiVoteScanVotesConstMeta,
-        argValues: [hash, idAccount, c],
-        apiImpl: this,
       ),
     );
+    return progress.stream;
   }
 
   TaskConstMeta get kCrateApiVoteScanVotesConstMeta => const TaskConstMeta(
         debugName: "scan_votes",
-        argNames: ["hash", "idAccount", "c"],
+        argNames: ["progress", "hash", "idAccount", "c"],
       );
 
   @override
@@ -4346,6 +4351,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   RustStreamSink<SyncProgress> dco_decode_StreamSink_sync_progress_Sse(
       dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<int> dco_decode_StreamSink_u_32_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -5542,6 +5553,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<SyncProgress> sse_decode_StreamSink_sync_progress_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<int> sse_decode_StreamSink_u_32_Sse(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     throw UnimplementedError('Unreachable ()');
@@ -6974,6 +6992,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.setupAndSerialize(
         codec: SseCodec(
           decodeSuccessData: sse_decode_sync_progress,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_u_32_Sse(
+      RustStreamSink<int> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
           decodeErrorData: sse_decode_AnyhowException,
         ),
       ),
