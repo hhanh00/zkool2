@@ -240,18 +240,6 @@ Future<List<Category>> getCategories(Ref ref) async {
 }
 
 @riverpod
-Future<ElectionId> electionId(Ref ref) async {
-  final c = ref.watch(coinContextProvider);
-  return await getElectionId(c: c);
-}
-
-@riverpod
-Future<ElectionPropsPub> election(Ref ref) async {
-  final c = ref.watch(coinContextProvider);
-  return await getElection(c: c);
-}
-
-@riverpod
 Future<AccountData> account(Ref ref, int id) async {
   final c = ref.watch(coinContextProvider);
   final accounts = await ref.watch(getAccountsProvider.future);

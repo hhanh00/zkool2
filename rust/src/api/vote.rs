@@ -7,10 +7,9 @@ use tonic::{
 #[cfg(feature = "flutter")]
 use zcvlib::db::store_election;
 pub use zcvlib::pod::{ChoiceProp, ElectionPropsPub, QuestionPropPub};
-use zcvlib::{
-    api::simple::{self},
-    vote_rpc::{Hash, vote_streamer_client::VoteStreamerClient},
-};
+use zcvlib::vote_rpc::{vote_streamer_client::VoteStreamerClient, Hash};
+
+pub use zcvlib::context::Context;
 
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
@@ -20,7 +19,7 @@ use crate::api::coin::Coin;
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn compile_election_def(election_json: String, seed: String) -> Result<String> {
-    let election_def = simple::compile_election_def(election_json, seed)?;
+    let election_def = zcvlib::api::simple::compile_election_def(election_json, seed)?;
     Ok(election_def)
 }
 
@@ -67,24 +66,36 @@ pub struct ElectionId {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_election_id(c: &Coin) -> Result<ElectionId> {
+pub async fn get_election_context(c: &Coin) -> Result<Context> {
     let mut conn = c.get_connection().await?;
+    let (election_url,): (String,) = query_as(
+        "SELECT url FROM v_state
+        WHERE id = 0",
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    tracing::info!("get_election_context");
+    let context = Context::new(&c.db_filepath, &c.url, &election_url).await?;
+    Ok(context)
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_election_id(c: &Context) -> Result<ElectionId> {
+    let mut conn = c.connect().await?;
     let (hash, url): (Vec<u8>, Option<String>) = query_as(
         "SELECT hash, url FROM v_state
         WHERE id = 0",
     )
     .fetch_one(&mut *conn)
     .await?;
-    Ok(ElectionId {
-        url,
-        hash,
-    })
+    Ok(ElectionId { url, hash })
 }
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_election(c: &Coin) -> Result<ElectionPropsPub> {
-    let mut conn = c.get_connection().await?;
+pub async fn get_election(c: &Context) -> Result<ElectionPropsPub> {
+    let mut conn = c.connect().await?;
     let (data,): (String,) = query_as(
         "SELECT e.data FROM v_elections e
         JOIN v_state s ON s.hash = e.hash
@@ -98,8 +109,8 @@ pub async fn get_election(c: &Coin) -> Result<ElectionPropsPub> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Coin) -> Result<ElectionPropsPub> {
-    let mut conn = c.get_connection().await?;
+pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Context) -> Result<ElectionPropsPub> {
+    let mut conn = c.connect().await?;
     let mut client = connect_voted(url.clone()).await?;
     let election_json = client
         .get_election(Request::new(Hash { hash: hash.clone() }))
@@ -107,10 +118,10 @@ pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Coin) -> Result<Elec
         .into_inner()
         .election;
     query("UPDATE v_state SET hash = ?1, url = ?2 WHERE id = 0")
-    .bind(&hash)
-    .bind(&url)
-    .execute(&mut *conn)
-    .await?;
+        .bind(&hash)
+        .bind(&url)
+        .execute(&mut *conn)
+        .await?;
     let election: ElectionPropsPub = serde_json::from_str(&election_json)?;
     store_election(&mut *conn, &election).await?;
     Ok(election)
@@ -124,4 +135,12 @@ async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
     }
     let client = VoteStreamerClient::connect(channel).await?;
     Ok(client)
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn scan_votes(hash: String, id_account: u32, c: &Context) -> Result<()> {
+    tracing::info!("scan_votes");
+    zcvlib::api::simple::scan_notes(hash, id_account, &c).await?;
+    Ok(())
 }

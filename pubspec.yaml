@@ -59,6 +59,8 @@ dependencies:
   url_launcher: ^6.3.2
 
   bubble: ^1.2.1
+  memoize: ^3.0.0
+  async: ^2.13.0
 
 dev_dependencies:
   flutter_test:
