@@ -130,6 +130,14 @@ pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Context) -> Result<E
     Ok(election)
 }
 
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn delete_election(c: &Context) -> Result<()> {
+    tracing::info!("delete_election");
+    zcvlib::api::simple::client_delete_election(&c).await?;
+    Ok(())
+}
+
 async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
     let mut channel = tonic::transport::Channel::from_shared(url.clone())?;
     if url.starts_with("https") {
