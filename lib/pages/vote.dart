@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -8,12 +6,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/pages/account.dart';
-import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:async/async.dart';
+import 'package:zkool/widgets/input_amount.dart';
 
 part 'vote.freezed.dart';
 
@@ -145,53 +142,72 @@ class VotePage2 extends ConsumerStatefulWidget {
 }
 
 class VotePage2State extends ConsumerState<VotePage2> {
+  final amountKey = GlobalKey<InputAmountState>();
+  String amount = "";
   String? balance;
   late final question = widget.voteContext.election!.questions[0];
   late List<int> answers = [for (var _ in question.choices) 1];
 
-  @override
-  void initState() {
-    super.initState();
-    Future(() async {
-      final vc = widget.voteContext;
-      final b = await getBalance(
-        hash: hex.encode(vc.id.hash),
-        idAccount: vc.account,
-        idxQuestion: widget.idxQuestion,
-        c: vc.context,
-      );
-      setState(() => balance = zatToString(b));
-    });
+  void init() async {
+    final vc = widget.voteContext;
+    final b = await getBalance(
+      hash: hex.encode(vc.id.hash),
+      idAccount: vc.account,
+      idxQuestion: widget.idxQuestion,
+      c: vc.context,
+    );
+    amount = zatToString(b);
+    balance = amount;
+    amountKey.currentState!.setAmount(amount);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
+    if (balance == null)
+      WidgetsBinding.instance.addPostFrameCallback((_) => init());
+
     return Scaffold(
-      appBar: AppBar(title: Text("Vote"),
-      actions: [
-        IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))
-      ]),
+      appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))]),
       body: SingleChildScrollView(
           child: Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (balance != null) Center(child: Text(balance!, style: t.headlineMedium)),
-                  Gap(32),
                   Text(question.title, style: t.headlineSmall),
                   Text(question.subtitle),
                   Gap(16),
-                  ...[for (var (i, c) in question.choices.indexed)
-                    ChoiceWidget(c, answers[i], onChanged: (v) => answers[i] = v!,)]
+                  InputAmount(key: amountKey, name: "amount", showFx: false, initialValue: amount, onChanged: (v) => setState(() => amount = v!)),
+                  Gap(8),
+                  if (balance != null) Center(child: Text("Max available: $balance", style: t.bodySmall)),
+                  Gap(16),
+                  ...[
+                    for (var (i, c) in question.choices.indexed)
+                      ChoiceWidget(
+                        c,
+                        answers[i],
+                        onChanged: (v) => answers[i] = v!,
+                      )
+                  ]
                 ],
               ))),
     );
   }
 
   void onVote() async {
+    final voteContent = hex.encode(answers);
+    await vote(
+      hash: hex.encode(vc.id.hash),
+      idAccount: vc.account,
+      idxQuestion: widget.idxQuestion,
+      vote: voteContent,
+      amount: stringToZat(amount),
+      c: vc.context,
+    );
+
     logger.i(answers);
   }
 
@@ -217,7 +233,13 @@ class ChoiceWidget extends StatelessWidget {
                 if (choice.subtitle != null) Align(alignment: AlignmentGeometry.bottomLeft, child: Text(choice.subtitle!)),
                 FormBuilderRadioGroup<int>(
                   name: choice.title!,
-                  options: [for (var (i, a) in choice.answers.indexed) FormBuilderFieldOption(value: i + 1, child: Text(a),)],
+                  options: [
+                    for (var (i, a) in choice.answers.indexed)
+                      FormBuilderFieldOption(
+                        value: i + 1,
+                        child: Text(a),
+                      )
+                  ],
                   initialValue: answer,
                   onChanged: onChanged,
                 )

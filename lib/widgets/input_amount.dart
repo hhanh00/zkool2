@@ -14,7 +14,10 @@ class InputAmount extends ConsumerStatefulWidget {
   final String? initialValue;
   final void Function()? onMax;
   final void Function(String?)? onChanged;
-  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, super.key});
+  final bool showFx;
+  InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, super.key}) {
+    assert(initialValue == null || !showFx);
+  }
 
   @override
   ConsumerState<InputAmount> createState() => InputAmountState();
@@ -49,6 +52,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                       decoration: InputDecoration(label: Text("Amount in ZEC")),
                       validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      initialValue: widget.initialValue,
                       onChanged: (v) => onChanged(v, interactive: true),
                     ),
                   ),
@@ -56,7 +60,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                   IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top)),
                 ],
               ),
-              Row(
+              if (widget.showFx) Row(
                 children: [
                   Expanded(
                     child: FormBuilderTextField(
@@ -87,7 +91,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                 ],
               ),
               Gap(16),
-              Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
+              if (widget.showFx) Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
             ],
           ),
         );
@@ -173,5 +177,9 @@ class InputAmountState extends ConsumerState<InputAmount> {
     final form = formKey.currentState!;
     if (zat) form.fields["zat"]!.reset();
     if (fiat) form.fields["fiat"]!.reset();
+  }
+
+  void setAmount(String v) {
+    onChanged(v, interactive: false);
   }
 }

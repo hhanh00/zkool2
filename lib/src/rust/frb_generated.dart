@@ -87,7 +87,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -796671090;
+  int get rustContentHash => -1374010440;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -449,6 +449,14 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAccountUpdateAccount(
       {required AccountUpdate update, required Coin c});
+
+  Future<void> crateApiVoteVote(
+      {required String hash,
+      required int idAccount,
+      required int idxQuestion,
+      required String vote,
+      required BigInt amount,
+      required Context c});
 
   RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_Context;
 
@@ -4212,6 +4220,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "update_account",
         argNames: ["update", "c"],
+      );
+
+  @override
+  Future<void> crateApiVoteVote(
+      {required String hash,
+      required int idAccount,
+      required int idxQuestion,
+      required String vote,
+      required BigInt amount,
+      required Context c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(hash, serializer);
+          sse_encode_u_32(idAccount, serializer);
+          sse_encode_u_32(idxQuestion, serializer);
+          sse_encode_String(vote, serializer);
+          sse_encode_u_64(amount, serializer);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
+              c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 133, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVoteVoteConstMeta,
+        argValues: [hash, idAccount, idxQuestion, vote, amount, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVoteVoteConstMeta => const TaskConstMeta(
+        debugName: "vote",
+        argNames: ["hash", "idAccount", "idxQuestion", "vote", "amount", "c"],
       );
 
   RustArcIncrementStrongCountFnType
