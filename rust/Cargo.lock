@@ -9754,7 +9754,6 @@ dependencies = [
 [[package]]
 name = "zcvlib"
 version = "0.4.0"
-source = "git+https://github.com/hhanh00/zcv?rev=44bb5412f3ec71240a8b02661c4cad260b644709#44bb5412f3ec71240a8b02661c4cad260b644709"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
