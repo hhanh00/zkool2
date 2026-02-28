@@ -8,6 +8,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/store.dart';
@@ -103,7 +104,8 @@ class VotePage1State extends ConsumerState<VotePage1> {
         setState(() => scanning = false);
       }
 
-      await scan(vc.copyWith(
+      await scan(
+        vc.copyWith(
           id: eid,
           election: election,
         ),
@@ -119,7 +121,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
       setState(() => progress.value = p.toDouble());
     }, onDone: () {
       setState(() {
-        GoRouter.of(context).pushReplacement("/vote/page2", extra: vc);
+        GoRouter.of(context).pushReplacement("/vote/page2/0", extra: vc);
       });
     });
     await showDialog(
@@ -134,45 +136,94 @@ class VotePage1State extends ConsumerState<VotePage1> {
 }
 
 class VotePage2 extends ConsumerStatefulWidget {
+  final int idxQuestion;
   final VoteContext voteContext;
-  const VotePage2(this.voteContext, {super.key});
+  const VotePage2(this.idxQuestion, this.voteContext, {super.key});
 
   @override
   ConsumerState<VotePage2> createState() => VotePage2State();
 }
 
 class VotePage2State extends ConsumerState<VotePage2> {
-  double? progress;
+  String? balance;
+  late final question = widget.voteContext.election!.questions[0];
+  late List<int> answers = [for (var _ in question.choices) 1];
 
   @override
   void initState() {
     super.initState();
-    Future(() async {});
+    Future(() async {
+      final vc = widget.voteContext;
+      final b = await getBalance(
+        hash: hex.encode(vc.id.hash),
+        idAccount: vc.account,
+        idxQuestion: widget.idxQuestion,
+        c: vc.context,
+      );
+      setState(() => balance = zatToString(b));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final question = vc.election!.questions[0];
 
     return Scaffold(
-      appBar: AppBar(title: Text("Vote")),
+      appBar: AppBar(title: Text("Vote"),
+      actions: [
+        IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))
+      ]),
       body: SingleChildScrollView(
           child: Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (balance != null) Center(child: Text(balance!, style: t.headlineMedium)),
+                  Gap(32),
                   Text(question.title, style: t.headlineSmall),
                   Text(question.subtitle),
                   Gap(16),
-                  if (progress != null) LinearProgressIndicator(value: progress! * 0.01)
+                  ...[for (var (i, c) in question.choices.indexed)
+                    ChoiceWidget(c, answers[i], onChanged: (v) => answers[i] = v!,)]
                 ],
               ))),
     );
   }
 
+  void onVote() async {
+    logger.i(answers);
+  }
+
   VoteContext get vc => widget.voteContext;
+}
+
+class ChoiceWidget extends StatelessWidget {
+  final ChoiceProp choice;
+  final int answer;
+  final void Function(int?) onChanged;
+  const ChoiceWidget(this.choice, this.answer, {super.key, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Card(
+        child: Padding(
+            padding: EdgeInsetsGeometry.all(8),
+            child: Column(
+              children: [
+                if (choice.title != null) Text(choice.title!, style: t.bodyLarge),
+                Gap(8),
+                if (choice.subtitle != null) Align(alignment: AlignmentGeometry.bottomLeft, child: Text(choice.subtitle!)),
+                FormBuilderRadioGroup<int>(
+                  name: choice.title!,
+                  options: [for (var (i, a) in choice.answers.indexed) FormBuilderFieldOption(value: i + 1, child: Text(a),)],
+                  initialValue: answer,
+                  onChanged: onChanged,
+                )
+              ],
+            )));
+  }
 }
 
 @freezed
