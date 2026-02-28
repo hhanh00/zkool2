@@ -33,6 +33,9 @@ Future<ElectionPropsPub> fetchElection(
         {required String url, required List<int> hash, required Context c}) =>
     RustLib.instance.api.crateApiVoteFetchElection(url: url, hash: hash, c: c);
 
+Future<void> deleteElection({required Context c}) =>
+    RustLib.instance.api.crateApiVoteDeleteElection(c: c);
+
 Stream<int> scanVotes(
         {required String hash, required int idAccount, required Context c}) =>
     RustLib.instance.api
