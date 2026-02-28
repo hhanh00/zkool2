@@ -47,9 +47,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
     final h = vc?.id.hash.let((h) => hex.encode(h));
     final url = vc?.id.url;
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Vote"),
-      ),
+      appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onQuit, icon: Icon(Icons.delete))]),
       body: (vc == null)
           ? showLoading("Vote Context")
           : SingleChildScrollView(
@@ -77,6 +75,15 @@ class VotePage1State extends ConsumerState<VotePage1> {
                     ),
                   ))),
     );
+  }
+
+  void onQuit() async {
+    final vc = this.vc!;
+    final confirmed = await confirmDialog(context, title: "Leave Election", message: "Are you sure you want to leave this election? This will delete the cached election data");
+    if (confirmed) {
+      await deleteElection(c: vc.context);
+      GoRouter.of(context).pop();
+    }
   }
 
   void onNext() async {
@@ -227,8 +234,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
     );
     balance = zatToString(b);
     setState(() {});
-    if (mounted)
-      GoRouter.of(context).pop();
+    if (mounted) GoRouter.of(context).pop();
   }
 
   VoteContext get vc => widget.voteContext;
