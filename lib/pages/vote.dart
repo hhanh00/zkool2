@@ -32,6 +32,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
   void initState() {
     super.initState();
     Future(() async {
+      // TODO: Handle errors, voting server may not be up
       final c = ref.read(coinContextProvider);
       final context = await contextMemoizer.runOnce(() => getElectionContext(c: c));
       final eid = await getElectionId(c: context);
@@ -94,13 +95,6 @@ class VotePage1State extends ConsumerState<VotePage1> {
       final election = await fetchElection(url: url, hash: hash, c: vc.context);
       final eid = await getElectionId(c: vc.context);
 
-      try {
-        setState(() => scanning = true);
-        // await scanVotes(c: widget.ec);
-      } finally {
-        setState(() => scanning = false);
-      }
-
       await scan(
         vc.copyWith(
           id: eid,
@@ -116,7 +110,8 @@ class VotePage1State extends ConsumerState<VotePage1> {
     var progress = ValueNotifier<double>(0.0);
     progressSub.listen((p) {
       setState(() => progress.value = p.toDouble());
-    }, onDone: () {
+    }, onDone: () async {
+      await scanBallots(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
       setState(() {
         GoRouter.of(context).pushReplacement("/vote/page2/0", extra: vc);
       });
@@ -166,8 +161,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
-    if (balance == null)
-      WidgetsBinding.instance.addPostFrameCallback((_) => init());
+    if (balance == null) WidgetsBinding.instance.addPostFrameCallback((_) => init());
 
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))]),
@@ -207,8 +201,34 @@ class VotePage2State extends ConsumerState<VotePage2> {
       amount: stringToZat(amount),
       c: vc.context,
     );
+    await refresh();
+  }
 
-    logger.i(answers);
+  Future<void> refresh() async {
+    final t = Theme.of(context).textTheme;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("Synchronizing", style: t.headlineSmall),
+      ),
+    );
+    final hash = hex.encode(vc.id.hash);
+    await scanBallots(
+      hash: hash,
+      idAccount: vc.account,
+      c: vc.context,
+    );
+    final b = await getBalance(
+      hash: hash,
+      idAccount: vc.account,
+      idxQuestion: widget.idxQuestion,
+      c: vc.context,
+    );
+    balance = zatToString(b);
+    setState(() {});
+    if (mounted)
+      GoRouter.of(context).pop();
   }
 
   VoteContext get vc => widget.voteContext;
