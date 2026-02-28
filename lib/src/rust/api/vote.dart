@@ -38,6 +38,11 @@ Stream<int> scanVotes(
     RustLib.instance.api
         .crateApiVoteScanVotes(hash: hash, idAccount: idAccount, c: c);
 
+Future<void> scanBallots(
+        {required String hash, required int idAccount, required Context c}) =>
+    RustLib.instance.api
+        .crateApiVoteScanBallots(hash: hash, idAccount: idAccount, c: c);
+
 Future<BigInt> getBalance(
         {required String hash,
         required int idAccount,
