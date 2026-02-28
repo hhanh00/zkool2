@@ -150,6 +150,14 @@ pub async fn scan_votes(progress: StreamSink<u32>, hash: String, id_account: u32
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn scan_ballots(hash: String, id_account: u32, c: &Context) -> Result<()> {
+    tracing::info!("scan_ballots");
+    zcvlib::api::simple::scan_ballots(hash, vec![id_account], &c).await?;
+    Ok(())
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn get_balance(hash: String, id_account: u32, idx_question: u32, c: &Context) -> Result<u64> {
     tracing::info!("get_balance");
     let balance = zcvlib::api::simple::get_balance(hash, id_account, idx_question, &c).await?;
