@@ -10,6 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'vote.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `connect_voted`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `report`
 
 Future<String> compileElectionDef(
         {required String electionJson, required String seed}) =>
@@ -36,6 +37,14 @@ Stream<int> scanVotes(
         {required String hash, required int idAccount, required Context c}) =>
     RustLib.instance.api
         .crateApiVoteScanVotes(hash: hash, idAccount: idAccount, c: c);
+
+Future<BigInt> getBalance(
+        {required String hash,
+        required int idAccount,
+        required int idxQuestion,
+        required Context c}) =>
+    RustLib.instance.api.crateApiVoteGetBalance(
+        hash: hash, idAccount: idAccount, idxQuestion: idxQuestion, c: c);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>>
 abstract class Context implements RustOpaqueInterface {}
