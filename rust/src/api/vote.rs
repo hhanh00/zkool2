@@ -157,6 +157,14 @@ pub async fn get_balance(hash: String, id_account: u32, idx_question: u32, c: &C
 }
 
 #[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn vote(hash: String, id_account: u32, idx_question: u32, vote: String, amount: u64, c: &Context) -> Result<()> {
+    tracing::info!("get_balance");
+    zcvlib::api::simple::vote(hash, id_account, idx_question, vote, amount, &c).await?;
+    Ok(())
+}
+
+#[cfg(feature = "flutter")]
 impl ProgressReporter for StreamSink<u32> {
     fn report(&self, p: u32) {
         let _ = self.add(p);

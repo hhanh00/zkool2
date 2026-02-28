@@ -46,6 +46,21 @@ Future<BigInt> getBalance(
     RustLib.instance.api.crateApiVoteGetBalance(
         hash: hash, idAccount: idAccount, idxQuestion: idxQuestion, c: c);
 
+Future<void> vote(
+        {required String hash,
+        required int idAccount,
+        required int idxQuestion,
+        required String vote,
+        required BigInt amount,
+        required Context c}) =>
+    RustLib.instance.api.crateApiVoteVote(
+        hash: hash,
+        idAccount: idAccount,
+        idxQuestion: idxQuestion,
+        vote: vote,
+        amount: amount,
+        c: c);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>>
 abstract class Context implements RustOpaqueInterface {}
 
