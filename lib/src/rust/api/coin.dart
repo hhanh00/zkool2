@@ -6,6 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+import 'vote.dart';
 part 'coin.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `_regtest`, `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `try_open`
@@ -53,4 +54,8 @@ sealed class Coin with _$Coin {
 
   Future<Coin> setUseTor({required bool useTor}) => RustLib.instance.api
       .crateApiCoinCoinSetUseTor(that: this, useTor: useTor);
+
+  Future<Context> toContext() => RustLib.instance.api.crateApiCoinCoinToContext(
+        that: this,
+      );
 }

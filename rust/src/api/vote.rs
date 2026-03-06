@@ -1,13 +1,15 @@
 use anyhow::Result;
-use sqlx::{query, query_as};
+#[cfg(feature = "flutter")]
+use sqlx::sqlite::SqliteRow;
+use sqlx::{query, query_as, Row};
 use tonic::{
     transport::{Channel, ClientTlsConfig},
     Request,
 };
+pub use zcvlib::pod::{ElectionPropsPub, QuestionProp};
+use zcvlib::vote_rpc::vote_streamer_client::VoteStreamerClient;
 #[cfg(feature = "flutter")]
-use zcvlib::{api::ProgressReporter, db::store_election};
-pub use zcvlib::pod::{ChoiceProp, ElectionPropsPub, QuestionPropPub};
-use zcvlib::vote_rpc::{vote_streamer_client::VoteStreamerClient, Hash};
+use zcvlib::{api::ProgressReporter, db::store_election, vote_rpc::Empty};
 
 pub use zcvlib::context::Context;
 
@@ -17,7 +19,7 @@ use flutter_rust_bridge::frb;
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
 
-use crate::{api::coin::Coin};
+use crate::api::coin::Coin;
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
@@ -33,24 +35,17 @@ pub struct _ElectionPropsPub {
     pub end: u32,
     pub need_sig: bool,
     pub name: String,
-    pub questions: Vec<QuestionPropPub>,
+    pub questions: Vec<QuestionProp>,
+    pub caption: String,
+    pub address: String,
+    pub domain: Vec<u8>,
 }
 
 #[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb(mirror(QuestionPropPub)))]
-pub struct _QuestionPropPub {
+#[cfg_attr(feature = "flutter", frb(mirror(QuestionProp)))]
+pub struct _QuestionProp {
     pub title: String,
     pub subtitle: String,
-    pub index: usize,
-    pub address: String,
-    pub choices: Vec<ChoiceProp>,
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb(mirror(ChoiceProp)))]
-pub struct _ChoiceProp {
-    pub title: Option<String>,
-    pub subtitle: Option<String>,
     pub answers: Vec<String>,
 }
 
@@ -61,67 +56,60 @@ pub async fn parse_election(election_json: String) -> Result<ElectionPropsPub> {
     Ok(e)
 }
 
-#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
-pub struct ElectionId {
-    pub url: Option<String>,
-    pub hash: Vec<u8>,
+impl Coin {
+    pub async fn to_context(&self) -> Result<Context> {
+        let mut conn = self.get_connection().await?;
+        let (election_url,): (String,) = query_as(
+            "SELECT url FROM v_state
+        WHERE id = 0",
+        )
+        .fetch_one(&mut *conn)
+        .await?;
+        let context = Context::new(&self.db_filepath, &self.url, &election_url).await?;
+        Ok(context)
+    }
 }
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_election_context(c: &Coin) -> Result<Context> {
+pub async fn get_election_url(c: &Coin) -> Result<Option<String>> {
     let mut conn = c.get_connection().await?;
-    let (election_url,): (String,) = query_as(
+    let url = query(
         "SELECT url FROM v_state
         WHERE id = 0",
     )
+    .map(|r: SqliteRow| r.get::<Option<String>, _>(0))
     .fetch_one(&mut *conn)
     .await?;
-    tracing::info!("get_election_context");
-    let context = Context::new(&c.db_filepath, &c.url, &election_url).await?;
-    Ok(context)
+    Ok(url)
 }
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_election_id(c: &Context) -> Result<ElectionId> {
-    let mut conn = c.connect().await?;
-    let (hash, url): (Vec<u8>, Option<String>) = query_as(
-        "SELECT hash, url FROM v_state
-        WHERE id = 0",
+pub async fn get_election(c: &Coin) -> Result<ElectionPropsPub> {
+    let mut conn = c.get_connection().await?;
+    let data = query(
+        "SELECT data FROM v_elections
+        WHERE id_election = 0",
     )
+    .map(|r: SqliteRow| r.get::<String, _>(0))
     .fetch_one(&mut *conn)
     .await?;
-    Ok(ElectionId { url, hash })
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn get_election(c: &Context) -> Result<ElectionPropsPub> {
-    let mut conn = c.connect().await?;
-    let (data,): (String,) = query_as(
-        "SELECT e.data FROM v_elections e
-        JOIN v_state s ON s.hash = e.hash
-        WHERE s.id = 0",
-    )
-    .fetch_one(&mut *conn)
-    .await?;
-    let e: ElectionPropsPub = serde_json::from_str(&data)?;
+    let e = serde_json::from_str::<ElectionPropsPub>(&data)?;
     Ok(e)
 }
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Context) -> Result<ElectionPropsPub> {
-    let mut conn = c.connect().await?;
+pub async fn fetch_election(url: String, c: &Coin) -> Result<ElectionPropsPub> {
+    let mut conn = c.get_connection().await?;
     let mut client = connect_voted(url.clone()).await?;
     let election_json = client
-        .get_election(Request::new(Hash { hash: hash.clone() }))
+        .get_election(Request::new(Empty {}))
         .await?
         .into_inner()
         .election;
-    query("UPDATE v_state SET hash = ?1, url = ?2 WHERE id = 0")
-        .bind(&hash)
+    query("UPDATE v_state SET url = ?1 WHERE id = 0")
         .bind(&url)
         .execute(&mut *conn)
         .await?;
@@ -132,10 +120,54 @@ pub async fn fetch_election(url: String, hash: Vec<u8>, c: &Context) -> Result<E
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn delete_election(c: &Context) -> Result<()> {
+pub async fn delete_election(c: &Coin) -> Result<()> {
     tracing::info!("delete_election");
+    let c = c.to_context().await?;
     zcvlib::api::simple::client_delete_election(&c).await?;
     Ok(())
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn scan_votes(progress: StreamSink<u32>, id_account: u32, c: &Coin) -> Result<()> {
+    let c = c.to_context().await?;
+    tracing::info!("scan_votes {}", c.election_url);
+    zcvlib::api::simple::scan_notes(vec![id_account], &progress, &c).await?;
+    Ok(())
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn scan_ballots(id_account: u32, c: &Coin) -> Result<()> {
+    let c = c.to_context().await?;
+    tracing::info!("scan_ballots {}", c.election_url);
+    zcvlib::api::simple::scan_ballots(vec![id_account], &c).await?;
+    Ok(())
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_balance(id_account: u32, c: &Coin) -> Result<u64> {
+    tracing::info!("get_balance");
+    let c = c.to_context().await?;
+    let balance = zcvlib::api::simple::get_balance(id_account, &c).await?;
+    Ok(balance)
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn vote(id_account: u32, vote: String, amount: u64, c: &Coin) -> Result<String> {
+    tracing::info!("get_balance");
+    let c = c.to_context().await?;
+    let txid = zcvlib::api::simple::vote(id_account, vote, amount, &c).await?;
+    Ok(hex::encode(&txid))
+}
+
+#[cfg(feature = "flutter")]
+impl ProgressReporter for StreamSink<u32> {
+    fn report(&self, p: u32) {
+        let _ = self.add(p);
+    }
 }
 
 async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
@@ -146,43 +178,4 @@ async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
     }
     let client = VoteStreamerClient::connect(channel).await?;
     Ok(client)
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn scan_votes(progress: StreamSink<u32>, hash: String, id_account: u32, c: &Context) -> Result<()> {
-    tracing::info!("scan_votes");
-    zcvlib::api::simple::scan_notes(hash, id_account, &progress, &c).await?;
-    Ok(())
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn scan_ballots(hash: String, id_account: u32, c: &Context) -> Result<()> {
-    tracing::info!("scan_ballots");
-    zcvlib::api::simple::scan_ballots(hash, vec![id_account], &c).await?;
-    Ok(())
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn get_balance(hash: String, id_account: u32, idx_question: u32, c: &Context) -> Result<u64> {
-    tracing::info!("get_balance");
-    let balance = zcvlib::api::simple::get_balance(hash, id_account, idx_question, &c).await?;
-    Ok(balance)
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn vote(hash: String, id_account: u32, idx_question: u32, vote: String, amount: u64, c: &Context) -> Result<()> {
-    tracing::info!("get_balance");
-    zcvlib::api::simple::vote(hash, id_account, idx_question, vote, amount, &c).await?;
-    Ok(())
-}
-
-#[cfg(feature = "flutter")]
-impl ProgressReporter for StreamSink<u32> {
-    fn report(&self, p: u32) {
-        let _ = self.add(p);
-    }
 }
