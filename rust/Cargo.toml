@@ -29,7 +29,7 @@ csv-async = "1.3.1"
 futures = "0.3"
 serde = "1.0"
 serde_json = "1.0"
-serde_with = {version = "3.14.1", features = ["hex"]}
+serde_with = {version = "3.17", features = ["hex"]}
 sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
 tokio = {version = "1", features = ["full"]}
 tokio-rustls = "0.26"
@@ -116,7 +116,7 @@ ledger-transport-zemu = {version = "0.10.0", optional = true}
 [dependencies.zcvlib]
 # path = "../../zcv/zcvlib"
 git = "https://github.com/hhanh00/zcv"
-rev = "0169edf8dfe5c395011e23df778c878801cb7360"
+rev = "80578511c1da33a96d7e95399766786e7f086023"
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -146,7 +146,7 @@ ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 
 [patch.crates-io]
-orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "3c5c0bbcb4d268921bd339f7fd84ca90685dda59"}
+orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "f1943f696930c89b43e97756b3b8d818657be635"}
 
 zcash_note_encryption = {git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29"}
 
