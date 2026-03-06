@@ -4511,7 +4511,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 [[package]]
 name = "orchard"
 version = "0.11.0"
-source = "git+https://github.com/hhanh00/orchard.git?rev=3c5c0bbcb4d268921bd339f7fd84ca90685dda59#3c5c0bbcb4d268921bd339f7fd84ca90685dda59"
+source = "git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635#f1943f696930c89b43e97756b3b8d818657be635"
 dependencies = [
  "aes",
  "bitvec",
@@ -6351,14 +6351,15 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.143"
+version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d401abef1d108fbd9cbaebc3e46611f4b1021f714a0597a71f41ee463f5f4a5a"
+checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
 dependencies = [
  "itoa",
  "memchr",
- "ryu",
  "serde",
+ "serde_core",
+ "zmij",
 ]
 
 [[package]]
@@ -6395,9 +6396,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "3.14.1"
+version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c522100790450cf78eeac1507263d0a350d4d5b30df0c8e1fe051a10c22b376e"
+checksum = "381b283ce7bc6b476d903296fb59d0d36633652b633b27f64db4fb46dcbfc3b9"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -6406,8 +6407,7 @@ dependencies = [
  "indexmap 2.11.0",
  "schemars 0.9.0",
  "schemars 1.0.4",
- "serde",
- "serde_derive",
+ "serde_core",
  "serde_json",
  "serde_with_macros",
  "time",
@@ -6415,9 +6415,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "3.14.1"
+version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "327ada00f7d64abaac1e55a6911e90cf665aa051b9a561c7006c157f4633135e"
+checksum = "a6d4e30573c8cb306ed6ab1dca8423eec9a463ea0e155f45399455e0368b27e0"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",
@@ -9754,7 +9754,7 @@ dependencies = [
 [[package]]
 name = "zcvlib"
 version = "0.4.0"
-source = "git+https://github.com/hhanh00/zcv?rev=0169edf8dfe5c395011e23df778c878801cb7360#0169edf8dfe5c395011e23df778c878801cb7360"
+source = "git+https://github.com/hhanh00/zcv?rev=80578511c1da33a96d7e95399766786e7f086023#80578511c1da33a96d7e95399766786e7f086023"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -9763,6 +9763,7 @@ dependencies = [
  "bincode",
  "bip39",
  "blake2b_simd",
+ "byteorder",
  "chrono",
  "clap",
  "ff",
@@ -9770,6 +9771,7 @@ dependencies = [
  "futures",
  "hex",
  "hex-literal",
+ "incrementalmerkletree",
  "juniper",
  "juniper_graphql_ws",
  "juniper_warp",
@@ -9782,6 +9784,7 @@ dependencies = [
  "reqwest 0.12.23",
  "serde",
  "serde_json",
+ "serde_with",
  "sqlx",
  "tendermint",
  "tendermint-abci",
@@ -9795,6 +9798,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "warp",
+ "zcash_encoding",
  "zcash_note_encryption",
  "zcash_protocol",
  "zip32",
@@ -9918,6 +9922,12 @@ dependencies = [
  "zcash_address",
  "zcash_protocol",
 ]
+
+[[package]]
+name = "zmij"
+version = "1.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
 
 [[package]]
 name = "zstd"

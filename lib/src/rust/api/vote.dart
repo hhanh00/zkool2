@@ -6,8 +6,6 @@
 import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
-part 'vote.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `connect_voted`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `report`
@@ -20,96 +18,48 @@ Future<String> compileElectionDef(
 Future<ElectionPropsPub> parseElection({required String electionJson}) =>
     RustLib.instance.api.crateApiVoteParseElection(electionJson: electionJson);
 
-Future<Context> getElectionContext({required Coin c}) =>
-    RustLib.instance.api.crateApiVoteGetElectionContext(c: c);
+Future<String?> getElectionUrl({required Coin c}) =>
+    RustLib.instance.api.crateApiVoteGetElectionUrl(c: c);
 
-Future<ElectionId> getElectionId({required Context c}) =>
-    RustLib.instance.api.crateApiVoteGetElectionId(c: c);
-
-Future<ElectionPropsPub> getElection({required Context c}) =>
+Future<ElectionPropsPub> getElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteGetElection(c: c);
 
 Future<ElectionPropsPub> fetchElection(
-        {required String url, required List<int> hash, required Context c}) =>
-    RustLib.instance.api.crateApiVoteFetchElection(url: url, hash: hash, c: c);
+        {required String url, required Coin c}) =>
+    RustLib.instance.api.crateApiVoteFetchElection(url: url, c: c);
 
-Future<void> deleteElection({required Context c}) =>
+Future<void> deleteElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteDeleteElection(c: c);
 
-Stream<int> scanVotes(
-        {required String hash, required int idAccount, required Context c}) =>
-    RustLib.instance.api
-        .crateApiVoteScanVotes(hash: hash, idAccount: idAccount, c: c);
+Stream<int> scanVotes({required int idAccount, required Coin c}) =>
+    RustLib.instance.api.crateApiVoteScanVotes(idAccount: idAccount, c: c);
 
-Future<void> scanBallots(
-        {required String hash, required int idAccount, required Context c}) =>
-    RustLib.instance.api
-        .crateApiVoteScanBallots(hash: hash, idAccount: idAccount, c: c);
+Future<void> scanBallots({required int idAccount, required Coin c}) =>
+    RustLib.instance.api.crateApiVoteScanBallots(idAccount: idAccount, c: c);
 
-Future<BigInt> getBalance(
-        {required String hash,
-        required int idAccount,
-        required int idxQuestion,
-        required Context c}) =>
-    RustLib.instance.api.crateApiVoteGetBalance(
-        hash: hash, idAccount: idAccount, idxQuestion: idxQuestion, c: c);
+Future<BigInt> getBalance({required int idAccount, required Coin c}) =>
+    RustLib.instance.api.crateApiVoteGetBalance(idAccount: idAccount, c: c);
 
-Future<void> vote(
-        {required String hash,
-        required int idAccount,
-        required int idxQuestion,
+Future<String> vote(
+        {required int idAccount,
         required String vote,
         required BigInt amount,
-        required Context c}) =>
+        required Coin c}) =>
     RustLib.instance.api.crateApiVoteVote(
-        hash: hash,
-        idAccount: idAccount,
-        idxQuestion: idxQuestion,
-        vote: vote,
-        amount: amount,
-        c: c);
+        idAccount: idAccount, vote: vote, amount: amount, c: c);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>>
 abstract class Context implements RustOpaqueInterface {}
-
-class ChoiceProp {
-  final String? title;
-  final String? subtitle;
-  final List<String> answers;
-
-  const ChoiceProp({
-    this.title,
-    this.subtitle,
-    required this.answers,
-  });
-
-  @override
-  int get hashCode => title.hashCode ^ subtitle.hashCode ^ answers.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ChoiceProp &&
-          runtimeType == other.runtimeType &&
-          title == other.title &&
-          subtitle == other.subtitle &&
-          answers == other.answers;
-}
-
-@freezed
-sealed class ElectionId with _$ElectionId {
-  const factory ElectionId({
-    String? url,
-    required Uint8List hash,
-  }) = _ElectionId;
-}
 
 class ElectionPropsPub {
   final int start;
   final int end;
   final bool needSig;
   final String name;
-  final List<QuestionPropPub> questions;
+  final List<QuestionProp> questions;
+  final String caption;
+  final String address;
+  final Uint8List domain;
 
   const ElectionPropsPub({
     required this.start,
@@ -117,6 +67,9 @@ class ElectionPropsPub {
     required this.needSig,
     required this.name,
     required this.questions,
+    required this.caption,
+    required this.address,
+    required this.domain,
   });
 
   @override
@@ -125,7 +78,10 @@ class ElectionPropsPub {
       end.hashCode ^
       needSig.hashCode ^
       name.hashCode ^
-      questions.hashCode;
+      questions.hashCode ^
+      caption.hashCode ^
+      address.hashCode ^
+      domain.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -136,40 +92,32 @@ class ElectionPropsPub {
           end == other.end &&
           needSig == other.needSig &&
           name == other.name &&
-          questions == other.questions;
+          questions == other.questions &&
+          caption == other.caption &&
+          address == other.address &&
+          domain == other.domain;
 }
 
-class QuestionPropPub {
+class QuestionProp {
   final String title;
   final String subtitle;
-  final BigInt index;
-  final String address;
-  final List<ChoiceProp> choices;
+  final List<String> answers;
 
-  const QuestionPropPub({
+  const QuestionProp({
     required this.title,
     required this.subtitle,
-    required this.index,
-    required this.address,
-    required this.choices,
+    required this.answers,
   });
 
   @override
-  int get hashCode =>
-      title.hashCode ^
-      subtitle.hashCode ^
-      index.hashCode ^
-      address.hashCode ^
-      choices.hashCode;
+  int get hashCode => title.hashCode ^ subtitle.hashCode ^ answers.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is QuestionPropPub &&
+      other is QuestionProp &&
           runtimeType == other.runtimeType &&
           title == other.title &&
           subtitle == other.subtitle &&
-          index == other.index &&
-          address == other.address &&
-          choices == other.choices;
+          answers == other.answers;
 }
