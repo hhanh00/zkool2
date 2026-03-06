@@ -15,7 +15,8 @@ class InputAmount extends ConsumerStatefulWidget {
   final void Function()? onMax;
   final void Function(String?)? onChanged;
   final bool showFx;
-  InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, super.key}) {
+  final BigInt? max;
+  InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, this.max, super.key}) {
     assert(initialValue == null || !showFx);
   }
 
@@ -39,6 +40,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       initialValue: widget.initialValue,
       onReset: onReset,
       onChanged: onChanged,
+      validator: FormBuilderValidators.compose([FormBuilderValidators.required(), (v) => validAmount(v, max: widget.max)]),
       builder: (state) {
         return FormBuilder(
           key: formKey,
@@ -50,46 +52,52 @@ class InputAmountState extends ConsumerState<InputAmount> {
                     child: FormBuilderTextField(
                       name: "zat",
                       decoration: InputDecoration(label: Text("Amount in ZEC")),
-                      validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                       initialValue: widget.initialValue,
                       onChanged: (v) => onChanged(v, interactive: true),
                     ),
                   ),
                   Gap(8),
-                  IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top)),
+                  if (widget.onMax != null) IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top)),
                 ],
               ),
-              if (widget.showFx) Row(
-                children: [
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: "fiat",
-                      decoration: InputDecoration(label: Text("Amount in USD")),
-                      validator: validAmount,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (v) => onFiatChanged(v, interactive: true),
+              Gap(4),
+              if (state.errorText != null)
+                Text(
+                  state.errorText!,
+                  style: TextStyle(color: Colors.red),
+                ),
+              if (widget.showFx)
+                Row(
+                  children: [
+                    Expanded(
+                      child: FormBuilderTextField(
+                        name: "fiat",
+                        decoration: InputDecoration(label: Text("Amount in USD")),
+                        validator: validAmount,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (v) => onFiatChanged(v, interactive: true),
+                      ),
                     ),
-                  ),
-                  Gap(8),
-                  SizedBox(
-                    width: 80,
-                    child: FormBuilderTextField(
-                      name: "fx",
-                      decoration: InputDecoration(label: Text("Fx")),
-                      validator: validAmount,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      initialValue: displayPrice(price),
-                      onChanged: onPriceChanged,
+                    Gap(8),
+                    SizedBox(
+                      width: 80,
+                      child: FormBuilderTextField(
+                        name: "fx",
+                        decoration: InputDecoration(label: Text("Fx")),
+                        validator: validAmount,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        initialValue: displayPrice(price),
+                        onChanged: onPriceChanged,
+                      ),
                     ),
-                  ),
-                  Gap(8),
-                  IconButton(
-                    onPressed: () => onUpdateFx(coingecko.requireValue),
-                    icon: Icon(Icons.refresh),
-                  ),
-                ],
-              ),
+                    Gap(8),
+                    IconButton(
+                      onPressed: () => onUpdateFx(coingecko.requireValue),
+                      icon: Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
               Gap(16),
               if (widget.showFx) Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
             ],

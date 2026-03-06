@@ -131,7 +131,7 @@ class VotePage2 extends ConsumerStatefulWidget {
 }
 
 class VotePage2State extends ConsumerState<VotePage2> {
-  final amountKey = GlobalKey<InputAmountState>();
+  final formKey = GlobalKey<FormBuilderState>();
   String amount = "";
   String? balance;
   late List<int> answers = [for (var _ in widget.election.questions) 1];
@@ -144,7 +144,6 @@ class VotePage2State extends ConsumerState<VotePage2> {
     );
     amount = zatToString(b);
     balance = amount;
-    amountKey.currentState!.setAmount(amount);
     await refresh();
     setState(() {});
   }
@@ -157,36 +156,47 @@ class VotePage2State extends ConsumerState<VotePage2> {
       WidgetsBinding.instance.addPostFrameCallback((_) => init());
     }
 
+    final max = balance?.let((b) => stringToZat(b));
     final election = widget.election;
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))]),
       body: SingleChildScrollView(
           child: Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(election.name, style: t.headlineSmall),
-                  Text(election.caption),
-                  Gap(16),
-                  InputAmount(key: amountKey, name: "amount", showFx: false, initialValue: amount, onChanged: (v) => setState(() => amount = v!)),
-                  Gap(8),
-                  if (balance != null) Center(child: Text("Max available: $balance", style: t.bodySmall)),
-                  Gap(16),
-                  ...[
-                    for (var (i, c) in election.questions.indexed)
-                      QuestionWidget(
-                        c,
-                        answers[i],
-                        onChanged: (v) => answers[i] = v!,
-                      )
-                  ]
-                ],
-              ))),
+              child: FormBuilder(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(election.name, style: t.headlineSmall),
+                      Text(election.caption),
+                      Gap(16),
+                      InputAmount(
+                        key: ValueKey(balance),
+                        name: "amount",
+                        showFx: false,
+                        initialValue: amount,
+                        onChanged: (v) => setState(() => amount = v!),
+                        max: max,
+                      ),
+                      Gap(8),
+                      if (balance != null) Center(child: Text("Max available: $balance", style: t.bodySmall)),
+                      Gap(16),
+                      ...[
+                        for (var (i, c) in election.questions.indexed)
+                          QuestionWidget(
+                            c,
+                            answers[i],
+                            onChanged: (v) => answers[i] = v!,
+                          )
+                      ]
+                    ],
+                  )))),
     );
   }
 
   void onVote() async {
+    if (!formKey.currentState!.validate()) return;
     final c = ref.read(coinContextProvider);
     final voteContent = hex.encode(answers);
     AwesomeDialog? dialog;
@@ -224,8 +234,8 @@ class VotePage2State extends ConsumerState<VotePage2> {
         idAccount: c.account,
         c: c,
       );
-      balance = zatToString(b);
-      amountKey.currentState?.setAmount(balance!);
+      amount = zatToString(b);
+      balance = amount;
     } finally {
       dialog?.dismiss();
     }
