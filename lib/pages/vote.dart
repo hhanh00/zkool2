@@ -5,6 +5,7 @@ import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
@@ -34,14 +35,18 @@ class VotePage1State extends ConsumerState<VotePage1> {
   void initState() {
     super.initState();
     Future(() async {
-      // TODO: Handle errors, voting server may not be up
-      final c = ref.read(coinContextProvider);
-      final url = await getElectionUrl(c: c);
-      final election = (url != null) ? await fetchElection(url: url, c: c) : null;
-      setState(() {
-        this.url = url ?? "";
-        this.election = election;
-      });
+      try {
+        final c = ref.read(coinContextProvider);
+        final url = await getElectionUrl(c: c);
+        final election = (url != null) ? await fetchElection(url: url, c: c) : null;
+        setState(() {
+          this.url = url ?? "";
+          this.election = election;
+        });
+      } on AnyhowException catch (e) {
+        if (!mounted) return;
+        await showException(context, e.message);
+      }
     });
   }
 
@@ -144,7 +149,9 @@ class VotePage2State extends ConsumerState<VotePage2> {
     );
     amount = zatToString(b);
     balance = amount;
-    await refresh();
+    final newBalance = await refresh(context, ref);
+    amount = zatToString(newBalance);
+    balance = amount;
     setState(() {});
   }
 
@@ -159,7 +166,16 @@ class VotePage2State extends ConsumerState<VotePage2> {
     final max = balance?.let((b) => stringToZat(b));
     final election = widget.election;
     return Scaffold(
-      appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))]),
+      appBar: AppBar(title: Text("Vote"), actions: [
+        IconButton(
+          onPressed: onDelegate,
+          icon: Icon(Icons.forward),
+        ),
+        IconButton(
+          onPressed: onVote,
+          icon: Icon(Icons.how_to_vote),
+        )
+      ]),
       body: SingleChildScrollView(
           child: Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
@@ -195,6 +211,10 @@ class VotePage2State extends ConsumerState<VotePage2> {
     );
   }
 
+  void onDelegate() async {
+    await GoRouter.of(context).push("/vote/delegate", extra: amount);
+  }
+
   void onVote() async {
     if (!formKey.currentState!.validate()) return;
     final c = ref.read(coinContextProvider);
@@ -213,32 +233,9 @@ class VotePage2State extends ConsumerState<VotePage2> {
     } finally {
       dialog?.dismiss();
     }
-    await refresh();
-  }
-
-  Future<void> refresh() async {
-    final c = ref.read(coinContextProvider);
-    AwesomeDialog? dialog;
-    try {
-      dialog = await showMessage(
-        context,
-        "Synchronizing",
-        dismissable: false,
-      );
-      await Future.delayed(Duration(seconds: 2));
-      await scanBallots(
-        idAccount: c.account,
-        c: c,
-      );
-      final b = await getBalance(
-        idAccount: c.account,
-        c: c,
-      );
-      amount = zatToString(b);
-      balance = amount;
-    } finally {
-      dialog?.dismiss();
-    }
+    final newBalance = await refresh(context, ref);
+    amount = zatToString(newBalance);
+    balance = amount;
     setState(() {});
   }
 }
@@ -274,5 +271,102 @@ class QuestionWidget extends StatelessWidget {
                 )
               ],
             )));
+  }
+}
+
+class VoteDelegatePage extends ConsumerStatefulWidget {
+  final String amount;
+  const VoteDelegatePage(this.amount, {super.key});
+
+  @override
+  ConsumerState<ConsumerStatefulWidget> createState() => VoteDelegateState();
+}
+
+class VoteDelegateState extends ConsumerState<VoteDelegatePage> {
+  final formKey = GlobalKey<FormBuilderState>();
+  String? address;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      final c = ref.read(coinContextProvider);
+      address = await getElectionAddress(idAccount: c.account, c: c);
+      setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Delegate"),
+          actions: [IconButton(onPressed: onOK, icon: Icon(Icons.check))],
+        ),
+        body: SingleChildScrollView(
+            child: Padding(
+                padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+                child: FormBuilder(
+                    key: formKey,
+                    child: Column(children: [
+                      ListTile(
+                        title: Text("Your address"),
+                        subtitle: CopyableText(address ?? ""),
+                      ),
+                      Gap(16),
+                      FormBuilderTextField(
+                        name: "address",
+                        decoration: InputDecoration(label: Text("Recipient")),
+                      )
+                    ])))));
+  }
+
+  void onOK() async {
+    try {
+      final c = ref.read(coinContextProvider);
+      final recipient = formKey.currentState!.fields["address"]!.value as String;
+      final confirmed = await confirmDialog(context, title: "Delegate", message: "Sending ${widget.amount} votes to $recipient");
+      if (confirmed) {
+        final a = stringToZat(widget.amount);
+        AwesomeDialog? dialog;
+        try {
+          dialog = await showMessage(context, "Please wait while we compute the ballot", dismissable: false);
+          final id = await delegate(idAccount: c.account, amount: a, address: recipient, c: c);
+          showSnackbar("Delegation $id submitted");
+        } finally {
+          dialog?.dismiss();
+        }
+      }
+    } on AnyhowException catch (e) {
+      if (!mounted) return;
+      await showException(context, e.message);
+    }
+    if (!mounted) return;
+    await refresh(context, ref);
+    GoRouter.of(context).pop();
+  }
+}
+
+Future<BigInt> refresh(BuildContext context, WidgetRef ref, ) async {
+  final c = ref.read(coinContextProvider);
+  AwesomeDialog? dialog;
+  try {
+    dialog = await showMessage(
+      context,
+      "Synchronizing",
+      dismissable: false,
+    );
+    await Future.delayed(Duration(seconds: 2));
+    await scanBallots(
+      idAccount: c.account,
+      c: c,
+    );
+    final b = await getBalance(
+      idAccount: c.account,
+      c: c,
+    );
+    return b;
+  } finally {
+    dialog?.dismiss();
   }
 }
