@@ -102,7 +102,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
         GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
         GoRoute(path: '/vote/page1', builder: (context, state) => VotePage1()),
-        GoRoute(path: '/vote/page2/:question', builder: (context, state) => VotePage2(int.parse(state.pathParameters["question"]!), state.extra as VoteContext)),
+        GoRoute(path: '/vote/page2', builder: (context, state) => VotePage2(state.extra as ElectionPropsPub)),
         GoRoute(
             path: '/settings',
             routes: [

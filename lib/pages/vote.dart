@@ -1,8 +1,10 @@
+import 'dart:async';
+
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
@@ -12,21 +14,21 @@ import 'package:zkool/utils.dart';
 import 'package:async/async.dart';
 import 'package:zkool/widgets/input_amount.dart';
 
-part 'vote.freezed.dart';
-
 final contextMemoizer = AsyncMemoizer<Context>();
 
 class VotePage1 extends ConsumerStatefulWidget {
   const VotePage1({super.key});
 
+  @override
   ConsumerState<VotePage1> createState() => VotePage1State();
 }
 
 class VotePage1State extends ConsumerState<VotePage1> {
-  VoteContext? vc;
   final formKey = GlobalKey<FormBuilderState>();
   bool scanning = false;
   double? progress;
+  ElectionPropsPub? election;
+  String? url;
 
   @override
   void initState() {
@@ -34,93 +36,79 @@ class VotePage1State extends ConsumerState<VotePage1> {
     Future(() async {
       // TODO: Handle errors, voting server may not be up
       final c = ref.read(coinContextProvider);
-      final context = await contextMemoizer.runOnce(() => getElectionContext(c: c));
-      final eid = await getElectionId(c: context);
-      final election = (eid.hash.isNotEmpty) ? await fetchElection(url: eid.url!, hash: eid.hash, c: context) : null;
-      final voteContext = VoteContext(account: c.account, context: context, id: eid, election: election);
-      setState(() => vc = voteContext);
+      final url = await getElectionUrl(c: c);
+      final election = (url != null) ? await fetchElection(url: url, c: c) : null;
+      setState(() {
+        this.url = url ?? "";
+        this.election = election;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final h = vc?.id.hash.let((h) => hex.encode(h));
-    final url = vc?.id.url;
+    if (url == null) return SizedBox.expand();
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onQuit, icon: Icon(Icons.delete))]),
-      body: (vc == null)
-          ? showLoading("Vote Context")
-          : SingleChildScrollView(
-              child: Padding(
-                  padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
-                  child: FormBuilder(
-                    key: formKey,
-                    child: Column(
-                      children: [
-                        FormBuilderTextField(
-                          name: "url",
-                          decoration: InputDecoration(label: Text("Election URL")),
-                          initialValue: url,
-                          readOnly: url != null,
-                        ),
-                        FormBuilderTextField(
-                          name: "hash",
-                          decoration: InputDecoration(label: Text("Hash")),
-                          initialValue: h,
-                          readOnly: h!.isNotEmpty,
-                        ),
-                        Gap(16),
-                        ElevatedButton(onPressed: onNext, child: Text("Next")),
-                      ],
+      body: SingleChildScrollView(
+          child: Padding(
+              padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+              child: FormBuilder(
+                key: formKey,
+                child: Column(
+                  children: [
+                    FormBuilderTextField(
+                      name: "url",
+                      decoration: InputDecoration(label: Text("Election URL")),
+                      initialValue: url,
+                      // readOnly: url.isNotEmpty,
                     ),
-                  ))),
+                    Gap(16),
+                    ElevatedButton(onPressed: onNext, child: Text("Next")),
+                  ],
+                ),
+              ))),
     );
   }
 
   void onQuit() async {
-    final vc = this.vc!;
-    final confirmed = await confirmDialog(context, title: "Leave Election", message: "Are you sure you want to leave this election? This will delete the cached election data");
+    final confirmed = await confirmDialog(context,
+        title: "Leave Election", message: "Are you sure you want to leave this election? This will delete the cached election data");
     if (confirmed) {
-      await deleteElection(c: vc.context);
+      final c = ref.read(coinContextProvider);
+      await deleteElection(c: c);
       GoRouter.of(context).pop();
     }
   }
 
   void onNext() async {
-    final vc = this.vc!;
-    if (vc.election != null)
-      await scan(vc);
+    if (election != null)
+      await scan();
     else {
       final form = formKey.currentState!;
       if (!form.validate()) return;
       final fields = form.fields;
       final url = fields["url"]!.value as String;
-      final hashStr = fields["hash"]!.value as String;
-      logger.i("$url $hashStr");
-      final hash = hex.decode(hashStr); // TODO: Validate
+      logger.i("url: $url");
 
-      final election = await fetchElection(url: url, hash: hash, c: vc.context);
-      final eid = await getElectionId(c: vc.context);
+      final c = ref.read(coinContextProvider);
+      election = await fetchElection(url: url, c: c);
 
-      await scan(
-        vc.copyWith(
-          id: eid,
-          election: election,
-        ),
-      );
+      await scan();
     }
   }
 
-  Future<void> scan(VoteContext vc) async {
+  Future<void> scan() async {
     final t = Theme.of(context).textTheme;
-    final progressSub = scanVotes(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
+    final c = ref.read(coinContextProvider);
+    final progressSub = scanVotes(idAccount: c.account, c: c);
     var progress = ValueNotifier<double>(0.0);
     progressSub.listen((p) {
       setState(() => progress.value = p.toDouble());
     }, onDone: () async {
-      await scanBallots(hash: hex.encode(vc.id.hash), idAccount: vc.account, c: vc.context);
+      await scanBallots(idAccount: c.account, c: c);
       setState(() {
-        GoRouter.of(context).pushReplacement("/vote/page2/0", extra: vc);
+        GoRouter.of(context).pushReplacement("/vote/page2", extra: election!);
       });
     });
     await showDialog(
@@ -135,9 +123,8 @@ class VotePage1State extends ConsumerState<VotePage1> {
 }
 
 class VotePage2 extends ConsumerStatefulWidget {
-  final int idxQuestion;
-  final VoteContext voteContext;
-  const VotePage2(this.idxQuestion, this.voteContext, {super.key});
+  final ElectionPropsPub election;
+  const VotePage2(this.election, {super.key});
 
   @override
   ConsumerState<VotePage2> createState() => VotePage2State();
@@ -147,20 +134,18 @@ class VotePage2State extends ConsumerState<VotePage2> {
   final amountKey = GlobalKey<InputAmountState>();
   String amount = "";
   String? balance;
-  late final question = widget.voteContext.election!.questions[0];
-  late List<int> answers = [for (var _ in question.choices) 1];
+  late List<int> answers = [for (var _ in widget.election.questions) 1];
 
   void init() async {
-    final vc = widget.voteContext;
+    final c = ref.read(coinContextProvider);
     final b = await getBalance(
-      hash: hex.encode(vc.id.hash),
-      idAccount: vc.account,
-      idxQuestion: widget.idxQuestion,
-      c: vc.context,
+      idAccount: c.account,
+      c: c,
     );
     amount = zatToString(b);
     balance = amount;
     amountKey.currentState!.setAmount(amount);
+    await refresh();
     setState(() {});
   }
 
@@ -168,8 +153,11 @@ class VotePage2State extends ConsumerState<VotePage2> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
-    if (balance == null) WidgetsBinding.instance.addPostFrameCallback((_) => init());
+    if (balance == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => init());
+    }
 
+    final election = widget.election;
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onVote, icon: Icon(Icons.how_to_vote))]),
       body: SingleChildScrollView(
@@ -178,16 +166,16 @@ class VotePage2State extends ConsumerState<VotePage2> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(question.title, style: t.headlineSmall),
-                  Text(question.subtitle),
+                  Text(election.name, style: t.headlineSmall),
+                  Text(election.caption),
                   Gap(16),
                   InputAmount(key: amountKey, name: "amount", showFx: false, initialValue: amount, onChanged: (v) => setState(() => amount = v!)),
                   Gap(8),
                   if (balance != null) Center(child: Text("Max available: $balance", style: t.bodySmall)),
                   Gap(16),
                   ...[
-                    for (var (i, c) in question.choices.indexed)
-                      ChoiceWidget(
+                    for (var (i, c) in election.questions.indexed)
+                      QuestionWidget(
                         c,
                         answers[i],
                         onChanged: (v) => answers[i] = v!,
@@ -199,52 +187,57 @@ class VotePage2State extends ConsumerState<VotePage2> {
   }
 
   void onVote() async {
+    final c = ref.read(coinContextProvider);
     final voteContent = hex.encode(answers);
-    await vote(
-      hash: hex.encode(vc.id.hash),
-      idAccount: vc.account,
-      idxQuestion: widget.idxQuestion,
-      vote: voteContent,
-      amount: stringToZat(amount),
-      c: vc.context,
-    );
+    AwesomeDialog? dialog;
+    try {
+      dialog = await showMessage(context, "Please wait while we compute the ballot", dismissable: false);
+
+      final id = await vote(
+        idAccount: c.account,
+        vote: voteContent,
+        amount: stringToZat(amount),
+        c: c,
+      );
+      showSnackbar("Vote $id submitted");
+    } finally {
+      dialog?.dismiss();
+    }
     await refresh();
   }
 
   Future<void> refresh() async {
-    final t = Theme.of(context).textTheme;
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text("Synchronizing", style: t.headlineSmall),
-      ),
-    );
-    final hash = hex.encode(vc.id.hash);
-    await scanBallots(
-      hash: hash,
-      idAccount: vc.account,
-      c: vc.context,
-    );
-    final b = await getBalance(
-      hash: hash,
-      idAccount: vc.account,
-      idxQuestion: widget.idxQuestion,
-      c: vc.context,
-    );
-    balance = zatToString(b);
+    final c = ref.read(coinContextProvider);
+    AwesomeDialog? dialog;
+    try {
+      dialog = await showMessage(
+        context,
+        "Synchronizing",
+        dismissable: false,
+      );
+      await Future.delayed(Duration(seconds: 2));
+      await scanBallots(
+        idAccount: c.account,
+        c: c,
+      );
+      final b = await getBalance(
+        idAccount: c.account,
+        c: c,
+      );
+      balance = zatToString(b);
+      amountKey.currentState?.setAmount(balance!);
+    } finally {
+      dialog?.dismiss();
+    }
     setState(() {});
-    if (mounted) GoRouter.of(context).pop();
   }
-
-  VoteContext get vc => widget.voteContext;
 }
 
-class ChoiceWidget extends StatelessWidget {
-  final ChoiceProp choice;
+class QuestionWidget extends StatelessWidget {
+  final QuestionProp question;
   final int answer;
   final void Function(int?) onChanged;
-  const ChoiceWidget(this.choice, this.answer, {super.key, required this.onChanged});
+  const QuestionWidget(this.question, this.answer, {super.key, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -254,13 +247,13 @@ class ChoiceWidget extends StatelessWidget {
             padding: EdgeInsetsGeometry.all(8),
             child: Column(
               children: [
-                if (choice.title != null) Text(choice.title!, style: t.bodyLarge),
+                Text(question.title, style: t.bodyLarge),
                 Gap(8),
-                if (choice.subtitle != null) Align(alignment: AlignmentGeometry.bottomLeft, child: Text(choice.subtitle!)),
+                Align(alignment: AlignmentGeometry.bottomLeft, child: Text(question.subtitle)),
                 FormBuilderRadioGroup<int>(
-                  name: choice.title!,
+                  name: question.title,
                   options: [
-                    for (var (i, a) in choice.answers.indexed)
+                    for (var (i, a) in question.answers.indexed)
                       FormBuilderFieldOption(
                         value: i + 1,
                         child: Text(a),
@@ -272,16 +265,4 @@ class ChoiceWidget extends StatelessWidget {
               ],
             )));
   }
-}
-
-@freezed
-sealed class VoteContext with _$VoteContext {
-  const VoteContext._();
-
-  factory VoteContext({
-    required int account,
-    required ElectionId id,
-    required ElectionPropsPub? election,
-    required Context context,
-  }) = _VoteContext;
 }
