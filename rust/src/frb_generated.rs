@@ -41,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1988525934;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -475532231;
 
 // Section: executor
 
@@ -861,6 +861,42 @@ fn wire__crate__api__coin__coin_set_use_tor_impl(
         },
     )
 }
+fn wire__crate__api__coin__coin_to_context_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "coin_to_context",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::coin::Coin::to_context(&api_that).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__vote__compile_election_def_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1110,28 +1146,12 @@ fn wire__crate__api__vote__delete_election_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::vote::delete_election(&*api_c_guard).await?;
+                        let output_ok = crate::api::vote::delete_election(&api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1550,31 +1570,12 @@ fn wire__crate__api__vote__fetch_election_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_url = <String>::sse_decode(&mut deserializer);
-            let api_hash = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok =
-                            crate::api::vote::fetch_election(api_url, api_hash, &*api_c_guard)
-                                .await?;
+                        let output_ok = crate::api::vote::fetch_election(api_url, &api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2084,37 +2085,14 @@ fn wire__crate__api__vote__get_balance_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_hash = <String>::sse_decode(&mut deserializer);
             let api_id_account = <u32>::sse_decode(&mut deserializer);
-            let api_idx_question = <u32>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::vote::get_balance(
-                            api_hash,
-                            api_id_account,
-                            api_idx_question,
-                            &*api_c_guard,
-                        )
-                        .await?;
+                        let output_ok =
+                            crate::api::vote::get_balance(api_id_account, &api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2289,28 +2267,12 @@ fn wire__crate__api__vote__get_election_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::vote::get_election(&*api_c_guard).await?;
+                        let output_ok = crate::api::vote::get_election(&api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2319,7 +2281,7 @@ fn wire__crate__api__vote__get_election_impl(
         },
     )
 }
-fn wire__crate__api__vote__get_election_context_impl(
+fn wire__crate__api__vote__get_election_url_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -2327,7 +2289,7 @@ fn wire__crate__api__vote__get_election_context_impl(
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "get_election_context",
+            debug_name: "get_election_url",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -2346,59 +2308,7 @@ fn wire__crate__api__vote__get_election_context_impl(
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::vote::get_election_context(&api_c).await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
-fn wire__crate__api__vote__get_election_id_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "get_election_id",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::vote::get_election_id(&*api_c_guard).await?;
+                        let output_ok = crate::api::vote::get_election_url(&api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4274,32 +4184,14 @@ fn wire__crate__api__vote__scan_ballots_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_hash = <String>::sse_decode(&mut deserializer);
             let api_id_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::vote::scan_ballots(api_hash, api_id_account, &*api_c_guard)
-                                .await?;
+                            crate::api::vote::scan_ballots(api_id_account, &api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4334,36 +4226,15 @@ fn wire__crate__api__vote__scan_votes_impl(
                 <StreamSink<u32, flutter_rust_bridge::for_generated::SseCodec>>::sse_decode(
                     &mut deserializer,
                 );
-            let api_hash = <String>::sse_decode(&mut deserializer);
             let api_id_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::vote::scan_votes(
-                            api_progress,
-                            api_hash,
-                            api_id_account,
-                            &*api_c_guard,
-                        )
-                        .await?;
+                        let output_ok =
+                            crate::api::vote::scan_votes(api_progress, api_id_account, &api_c)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5232,41 +5103,17 @@ fn wire__crate__api__vote__vote_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_hash = <String>::sse_decode(&mut deserializer);
             let api_id_account = <u32>::sse_decode(&mut deserializer);
-            let api_idx_question = <u32>::sse_decode(&mut deserializer);
             let api_vote = <String>::sse_decode(&mut deserializer);
             let api_amount = <u64>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>,
-            >>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::vote::vote(
-                            api_hash,
-                            api_id_account,
-                            api_idx_question,
-                            api_vote,
-                            api_amount,
-                            &*api_c_guard,
-                        )
-                        .await?;
+                        let output_ok =
+                            crate::api::vote::vote(api_id_account, api_vote, api_amount, &api_c)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5281,26 +5128,21 @@ fn wire__crate__api__vote__vote_impl(
 #[allow(clippy::unnecessary_literal_unwrap)]
 const _: fn() = || {
     {
-        let ChoiceProp = None::<crate::api::vote::ChoiceProp>.unwrap();
-        let _: Option<String> = ChoiceProp.title;
-        let _: Option<String> = ChoiceProp.subtitle;
-        let _: Vec<String> = ChoiceProp.answers;
-    }
-    {
         let ElectionPropsPub = None::<crate::api::vote::ElectionPropsPub>.unwrap();
         let _: u32 = ElectionPropsPub.start;
         let _: u32 = ElectionPropsPub.end;
         let _: bool = ElectionPropsPub.need_sig;
         let _: String = ElectionPropsPub.name;
-        let _: Vec<crate::api::vote::QuestionPropPub> = ElectionPropsPub.questions;
+        let _: Vec<crate::api::vote::QuestionProp> = ElectionPropsPub.questions;
+        let _: String = ElectionPropsPub.caption;
+        let _: String = ElectionPropsPub.address;
+        let _: Vec<u8> = ElectionPropsPub.domain;
     }
     {
-        let QuestionPropPub = None::<crate::api::vote::QuestionPropPub>.unwrap();
-        let _: String = QuestionPropPub.title;
-        let _: String = QuestionPropPub.subtitle;
-        let _: usize = QuestionPropPub.index;
-        let _: String = QuestionPropPub.address;
-        let _: Vec<crate::api::vote::ChoiceProp> = QuestionPropPub.choices;
+        let QuestionProp = None::<crate::api::vote::QuestionProp>.unwrap();
+        let _: String = QuestionProp.title;
+        let _: String = QuestionProp.subtitle;
+        let _: Vec<String> = QuestionProp.answers;
     }
 };
 
@@ -5594,20 +5436,6 @@ impl SseDecode for crate::api::account::Category {
     }
 }
 
-impl SseDecode for crate::api::vote::ChoiceProp {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_title = <Option<String>>::sse_decode(deserializer);
-        let mut var_subtitle = <Option<String>>::sse_decode(deserializer);
-        let mut var_answers = <Vec<String>>::sse_decode(deserializer);
-        return crate::api::vote::ChoiceProp {
-            title: var_title,
-            subtitle: var_subtitle,
-            answers: var_answers,
-        };
-    }
-}
-
 impl SseDecode for crate::api::coin::Coin {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5666,18 +5494,6 @@ impl SseDecode for crate::api::frost::DKGStatus {
     }
 }
 
-impl SseDecode for crate::api::vote::ElectionId {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_url = <Option<String>>::sse_decode(deserializer);
-        let mut var_hash = <Vec<u8>>::sse_decode(deserializer);
-        return crate::api::vote::ElectionId {
-            url: var_url,
-            hash: var_hash,
-        };
-    }
-}
-
 impl SseDecode for crate::api::vote::ElectionPropsPub {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5685,13 +5501,19 @@ impl SseDecode for crate::api::vote::ElectionPropsPub {
         let mut var_end = <u32>::sse_decode(deserializer);
         let mut var_needSig = <bool>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
-        let mut var_questions = <Vec<crate::api::vote::QuestionPropPub>>::sse_decode(deserializer);
+        let mut var_questions = <Vec<crate::api::vote::QuestionProp>>::sse_decode(deserializer);
+        let mut var_caption = <String>::sse_decode(deserializer);
+        let mut var_address = <String>::sse_decode(deserializer);
+        let mut var_domain = <Vec<u8>>::sse_decode(deserializer);
         return crate::api::vote::ElectionPropsPub {
             start: var_start,
             end: var_end,
             need_sig: var_needSig,
             name: var_name,
             questions: var_questions,
+            caption: var_caption,
+            address: var_address,
+            domain: var_domain,
         };
     }
 }
@@ -5786,18 +5608,6 @@ impl SseDecode for Vec<crate::api::account::Category> {
     }
 }
 
-impl SseDecode for Vec<crate::api::vote::ChoiceProp> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = vec![];
-        for idx_ in 0..len_ {
-            ans_.push(<crate::api::vote::ChoiceProp>::sse_decode(deserializer));
-        }
-        return ans_;
-    }
-}
-
 impl SseDecode for Vec<crate::api::account::Folder> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5882,15 +5692,13 @@ impl SseDecode for Vec<usize> {
     }
 }
 
-impl SseDecode for Vec<crate::api::vote::QuestionPropPub> {
+impl SseDecode for Vec<crate::api::vote::QuestionProp> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = vec![];
         for idx_ in 0..len_ {
-            ans_.push(<crate::api::vote::QuestionPropPub>::sse_decode(
-                deserializer,
-            ));
+            ans_.push(<crate::api::vote::QuestionProp>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -6296,20 +6104,16 @@ impl SseDecode for crate::api::sync::PoolBalance {
     }
 }
 
-impl SseDecode for crate::api::vote::QuestionPropPub {
+impl SseDecode for crate::api::vote::QuestionProp {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_title = <String>::sse_decode(deserializer);
         let mut var_subtitle = <String>::sse_decode(deserializer);
-        let mut var_index = <usize>::sse_decode(deserializer);
-        let mut var_address = <String>::sse_decode(deserializer);
-        let mut var_choices = <Vec<crate::api::vote::ChoiceProp>>::sse_decode(deserializer);
-        return crate::api::vote::QuestionPropPub {
+        let mut var_answers = <Vec<String>>::sse_decode(deserializer);
+        return crate::api::vote::QuestionProp {
             title: var_title,
             subtitle: var_subtitle,
-            index: var_index,
-            address: var_address,
-            choices: var_choices,
+            answers: var_answers,
         };
     }
 }
@@ -6778,85 +6582,85 @@ fn pde_ffi_dispatcher_primary_impl(
         17 => wire__crate__api__coin__coin_open_database_impl(port, ptr, rust_vec_len, data_len),
         18 => wire__crate__api__coin__coin_set_account_impl(port, ptr, rust_vec_len, data_len),
         20 => wire__crate__api__coin__coin_set_use_tor_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__vote__compile_election_def_impl(port, ptr, rust_vec_len, data_len),
-        22 => {
+        21 => wire__crate__api__coin__coin_to_context_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__vote__compile_election_def_impl(port, ptr, rust_vec_len, data_len),
+        23 => {
             wire__crate__api__account__create_new_category_impl(port, ptr, rust_vec_len, data_len)
         }
-        23 => wire__crate__api__account__create_new_folder_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__raptor__decode_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__account__delete_account_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__account__delete_categories_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__vote__delete_election_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__account__delete_folders_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__frost__do_dkg_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__frost__do_sign_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__account__dummy_export_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__raptor__encode_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__raptor__end_decode_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__account__export_account_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__pay__extract_transaction_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__transaction__fetch_amounts_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__transaction__fetch_category_amounts_impl(
+        24 => wire__crate__api__account__create_new_folder_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__raptor__decode_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__account__delete_account_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__account__delete_categories_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__vote__delete_election_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__account__delete_folders_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__frost__do_dkg_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__frost__do_sign_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__account__dummy_export_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__raptor__encode_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__raptor__end_decode_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__account__export_account_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__pay__extract_transaction_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__transaction__fetch_amounts_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__transaction__fetch_category_amounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__vote__fetch_election_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__account__fetch_transparent_address_tx_count_impl(
+        39 => wire__crate__api__vote__fetch_election_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__account__fetch_transparent_address_tx_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__sync__fetch_tx_details_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__transaction__fill_missing_tx_prices_impl(
+        41 => wire__crate__api__sync__fetch_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__transaction__fill_missing_tx_prices_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        42 => wire__crate__api__frost__frost_sign_params_default_impl(
+        43 => wire__crate__api__frost__frost_sign_params_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => wire__crate__api__account__generate_next_change_address_impl(
+        44 => wire__crate__api__account__generate_next_change_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => {
+        45 => {
             wire__crate__api__account__generate_next_dindex_impl(port, ptr, rust_vec_len, data_len)
         }
-        46 => wire__crate__api__account__get_account_fingerprint_impl(
+        47 => wire__crate__api__account__get_account_fingerprint_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => wire__crate__api__account__get_account_frost_params_impl(
+        48 => wire__crate__api__account__get_account_frost_params_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        48 => wire__crate__api__account__get_account_pools_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__account__get_account_seed_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__vote__get_balance_impl(port, ptr, rust_vec_len, data_len),
-        53 => {
+        49 => wire__crate__api__account__get_account_pools_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__account__get_account_seed_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__vote__get_balance_impl(port, ptr, rust_vec_len, data_len),
+        54 => {
             wire__crate__api__network__get_coingecko_price_impl(port, ptr, rust_vec_len, data_len)
         }
-        54 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__vote__get_election_impl(port, ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__vote__get_election_context_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__vote__get_election_id_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__vote__get_election_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__vote__get_election_url_impl(port, ptr, rust_vec_len, data_len),
         60 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
         62 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
         63 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
@@ -6961,7 +6765,7 @@ fn pde_ffi_dispatcher_sync_impl(
         2 => wire__crate__api__mempool__Mempool_new_impl(ptr, rust_vec_len, data_len),
         16 => wire__crate__api__coin__coin_new_impl(ptr, rust_vec_len, data_len),
         19 => wire__crate__api__coin__coin_set_lwd_impl(ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
         61 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
         65 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
         79 => wire__crate__api__key__is_tex_address_impl(ptr, rust_vec_len, data_len),
@@ -7149,28 +6953,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Category>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::api::vote::ChoiceProp> {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.0.title.into_into_dart().into_dart(),
-            self.0.subtitle.into_into_dart().into_dart(),
-            self.0.answers.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for FrbWrapper<crate::api::vote::ChoiceProp>
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<crate::api::vote::ChoiceProp>>
-    for crate::api::vote::ChoiceProp
-{
-    fn into_into_dart(self) -> FrbWrapper<crate::api::vote::ChoiceProp> {
-        self.into()
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::coin::Coin {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7221,24 +7003,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::DKGStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::vote::ElectionId {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.url.into_into_dart().into_dart(),
-            self.hash.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::vote::ElectionId {}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::vote::ElectionId>
-    for crate::api::vote::ElectionId
-{
-    fn into_into_dart(self) -> crate::api::vote::ElectionId {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::api::vote::ElectionPropsPub> {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7247,6 +7011,9 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::api::vote::ElectionProp
             self.0.need_sig.into_into_dart().into_dart(),
             self.0.name.into_into_dart().into_dart(),
             self.0.questions.into_into_dart().into_dart(),
+            self.0.caption.into_into_dart().into_dart(),
+            self.0.address.into_into_dart().into_dart(),
+            self.0.domain.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -7491,26 +7258,24 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::PoolBalance>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::api::vote::QuestionPropPub> {
+impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::api::vote::QuestionProp> {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.0.title.into_into_dart().into_dart(),
             self.0.subtitle.into_into_dart().into_dart(),
-            self.0.index.into_into_dart().into_dart(),
-            self.0.address.into_into_dart().into_dart(),
-            self.0.choices.into_into_dart().into_dart(),
+            self.0.answers.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for FrbWrapper<crate::api::vote::QuestionPropPub>
+    for FrbWrapper<crate::api::vote::QuestionProp>
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<crate::api::vote::QuestionPropPub>>
-    for crate::api::vote::QuestionPropPub
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<crate::api::vote::QuestionProp>>
+    for crate::api::vote::QuestionProp
 {
-    fn into_into_dart(self) -> FrbWrapper<crate::api::vote::QuestionPropPub> {
+    fn into_into_dart(self) -> FrbWrapper<crate::api::vote::QuestionProp> {
         self.into()
     }
 }
@@ -8123,15 +7888,6 @@ impl SseEncode for crate::api::account::Category {
     }
 }
 
-impl SseEncode for crate::api::vote::ChoiceProp {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <Option<String>>::sse_encode(self.title, serializer);
-        <Option<String>>::sse_encode(self.subtitle, serializer);
-        <Vec<String>>::sse_encode(self.answers, serializer);
-    }
-}
-
 impl SseEncode for crate::api::coin::Coin {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -8181,14 +7937,6 @@ impl SseEncode for crate::api::frost::DKGStatus {
     }
 }
 
-impl SseEncode for crate::api::vote::ElectionId {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <Option<String>>::sse_encode(self.url, serializer);
-        <Vec<u8>>::sse_encode(self.hash, serializer);
-    }
-}
-
 impl SseEncode for crate::api::vote::ElectionPropsPub {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -8196,7 +7944,10 @@ impl SseEncode for crate::api::vote::ElectionPropsPub {
         <u32>::sse_encode(self.end, serializer);
         <bool>::sse_encode(self.need_sig, serializer);
         <String>::sse_encode(self.name, serializer);
-        <Vec<crate::api::vote::QuestionPropPub>>::sse_encode(self.questions, serializer);
+        <Vec<crate::api::vote::QuestionProp>>::sse_encode(self.questions, serializer);
+        <String>::sse_encode(self.caption, serializer);
+        <String>::sse_encode(self.address, serializer);
+        <Vec<u8>>::sse_encode(self.domain, serializer);
     }
 }
 
@@ -8266,16 +8017,6 @@ impl SseEncode for Vec<crate::api::account::Category> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::account::Category>::sse_encode(item, serializer);
-        }
-    }
-}
-
-impl SseEncode for Vec<crate::api::vote::ChoiceProp> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::api::vote::ChoiceProp>::sse_encode(item, serializer);
         }
     }
 }
@@ -8350,12 +8091,12 @@ impl SseEncode for Vec<usize> {
     }
 }
 
-impl SseEncode for Vec<crate::api::vote::QuestionPropPub> {
+impl SseEncode for Vec<crate::api::vote::QuestionProp> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <crate::api::vote::QuestionPropPub>::sse_encode(item, serializer);
+            <crate::api::vote::QuestionProp>::sse_encode(item, serializer);
         }
     }
 }
@@ -8675,14 +8416,12 @@ impl SseEncode for crate::api::sync::PoolBalance {
     }
 }
 
-impl SseEncode for crate::api::vote::QuestionPropPub {
+impl SseEncode for crate::api::vote::QuestionProp {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.title, serializer);
         <String>::sse_encode(self.subtitle, serializer);
-        <usize>::sse_encode(self.index, serializer);
-        <String>::sse_encode(self.address, serializer);
-        <Vec<crate::api::vote::ChoiceProp>>::sse_encode(self.choices, serializer);
+        <Vec<String>>::sse_encode(self.answers, serializer);
     }
 }
 

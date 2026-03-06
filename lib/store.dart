@@ -18,7 +18,6 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
 
 part 'store.g.dart';
