@@ -103,6 +103,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
         GoRoute(path: '/vote/page1', builder: (context, state) => VotePage1()),
         GoRoute(path: '/vote/page2', builder: (context, state) => VotePage2(state.extra as ElectionPropsPub)),
+        GoRoute(path: '/vote/delegate', builder: (context, state) => VoteDelegatePage(state.extra as String)),
         GoRoute(
             path: '/settings',
             routes: [

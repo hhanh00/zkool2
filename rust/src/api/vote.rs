@@ -164,6 +164,24 @@ pub async fn vote(id_account: u32, vote: String, amount: u64, c: &Coin) -> Resul
 }
 
 #[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn delegate(id_account: u32, address: String, amount: u64, c: &Coin) -> Result<String> {
+    tracing::info!("delegate");
+    let c = c.to_context().await?;
+    let txid = zcvlib::api::simple::delegate(id_account, &address, amount, &c).await?;
+    Ok(hex::encode(&txid))
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_election_address(id_account: u32, c: &Coin) -> Result<String> {
+    tracing::info!("get_election_address");
+    let c = c.to_context().await?;
+    let address = zcvlib::api::simple::get_account_address(id_account, &c).await?;
+    Ok(address)
+}
+
+#[cfg(feature = "flutter")]
 impl ProgressReporter for StreamSink<u32> {
     fn report(&self, p: u32) {
         let _ = self.add(p);
