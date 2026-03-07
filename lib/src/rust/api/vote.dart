@@ -18,15 +18,16 @@ Future<String> compileElectionDef(
 Future<ElectionPropsPub> parseElection({required String electionJson}) =>
     RustLib.instance.api.crateApiVoteParseElection(electionJson: electionJson);
 
-Future<String?> getElectionUrl({required Coin c}) =>
+Future<(String?, int?)> getElectionUrl({required Coin c}) =>
     RustLib.instance.api.crateApiVoteGetElectionUrl(c: c);
 
 Future<ElectionPropsPub> getElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteGetElection(c: c);
 
 Future<ElectionPropsPub> fetchElection(
-        {required String url, required Coin c}) =>
-    RustLib.instance.api.crateApiVoteFetchElection(url: url, c: c);
+        {required String url, required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVoteFetchElection(url: url, account: account, c: c);
 
 Future<void> deleteElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteDeleteElection(c: c);
