@@ -48,6 +48,18 @@ Future<String> vote(
     RustLib.instance.api.crateApiVoteVote(
         idAccount: idAccount, vote: vote, amount: amount, c: c);
 
+Future<String> delegate(
+        {required int idAccount,
+        required String address,
+        required BigInt amount,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVoteDelegate(
+        idAccount: idAccount, address: address, amount: amount, c: c);
+
+Future<String> getElectionAddress({required int idAccount, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVoteGetElectionAddress(idAccount: idAccount, c: c);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Context>>
 abstract class Context implements RustOpaqueInterface {}
 
