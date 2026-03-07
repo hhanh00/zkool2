@@ -30,6 +30,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
   double? progress;
   ElectionPropsPub? election;
   String? url;
+  int? account;
 
   @override
   void initState() {
@@ -37,12 +38,12 @@ class VotePage1State extends ConsumerState<VotePage1> {
     Future(() async {
       try {
         final c = ref.read(coinContextProvider);
-        final url = await getElectionUrl(c: c);
-        final election = (url != null) ? await fetchElection(url: url, c: c) : null;
+        final (url, account) = await getElectionUrl(c: c);
         setState(() {
           this.url = url ?? "";
-          this.election = election;
+          this.account = account;
         });
+        if (url != null && account == c.account) await loadElection(url);
       } on AnyhowException catch (e) {
         if (!mounted) return;
         await showException(context, e.message);
@@ -52,7 +53,8 @@ class VotePage1State extends ConsumerState<VotePage1> {
 
   @override
   Widget build(BuildContext context) {
-    if (url == null) return SizedBox.expand();
+    final t = Theme.of(context);
+    final c = ref.watch(coinContextProvider);
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onQuit, icon: Icon(Icons.delete))]),
       body: SingleChildScrollView(
@@ -63,13 +65,23 @@ class VotePage1State extends ConsumerState<VotePage1> {
                 child: Column(
                   children: [
                     FormBuilderTextField(
+                      key: ValueKey(url),
                       name: "url",
                       decoration: InputDecoration(label: Text("Election URL")),
                       initialValue: url,
-                      // readOnly: url.isNotEmpty,
+                      readOnly: url?.isNotEmpty == true,
+                      onSubmitted: loadElection,
                     ),
                     Gap(16),
-                    ElevatedButton(onPressed: onNext, child: Text("Next")),
+                    if (account != null && account != c.account) ...[
+                      Text("Election was opened in another account",
+                          style: t.textTheme.bodyLarge!.copyWith(
+                            color: t.colorScheme.tertiary,
+                          )),
+                      Gap(8),
+                    ],
+                    ElevatedButton(onPressed: election != null ? onNext : null, child: Text("Next")),
+                    Gap(16),
                   ],
                 ),
               ))),
@@ -97,10 +109,19 @@ class VotePage1State extends ConsumerState<VotePage1> {
       logger.i("url: $url");
 
       final c = ref.read(coinContextProvider);
-      election = await fetchElection(url: url, c: c);
+      election = await fetchElection(url: url, account: c.account, c: c);
 
       await scan();
     }
+  }
+
+  Future<void> loadElection(String? url) async {
+    if (url == null) return;
+    final c = ref.read(coinContextProvider);
+    final election = await fetchElection(url: url, account: c.account, c: c);
+    setState(() {
+      this.election = election;
+    });
   }
 
   Future<void> scan() async {
@@ -142,13 +163,6 @@ class VotePage2State extends ConsumerState<VotePage2> {
   late List<int> answers = [for (var _ in widget.election.questions) 1];
 
   void init() async {
-    final c = ref.read(coinContextProvider);
-    final b = await getBalance(
-      idAccount: c.account,
-      c: c,
-    );
-    amount = zatToString(b);
-    balance = amount;
     final newBalance = await refresh(context, ref);
     amount = zatToString(newBalance);
     balance = amount;
@@ -217,6 +231,8 @@ class VotePage2State extends ConsumerState<VotePage2> {
 
   void onVote() async {
     if (!formKey.currentState!.validate()) return;
+    final confirmed = await confirmDialog(context, title: "Vote", message: "Do you want to submit this vote?");
+    if (!confirmed) return;
     final c = ref.read(coinContextProvider);
     final voteContent = hex.encode(answers);
     AwesomeDialog? dialog;
@@ -347,7 +363,10 @@ class VoteDelegateState extends ConsumerState<VoteDelegatePage> {
   }
 }
 
-Future<BigInt> refresh(BuildContext context, WidgetRef ref, ) async {
+Future<BigInt> refresh(
+  BuildContext context,
+  WidgetRef ref,
+) async {
   final c = ref.read(coinContextProvider);
   AwesomeDialog? dialog;
   try {
