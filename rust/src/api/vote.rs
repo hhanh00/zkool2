@@ -72,16 +72,20 @@ impl Coin {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_election_url(c: &Coin) -> Result<Option<String>> {
+pub async fn get_election_url(c: &Coin) -> Result<(Option<String>, Option<u32>)> {
     let mut conn = c.get_connection().await?;
-    let url = query(
-        "SELECT url FROM v_state
+    let (url, account) = query(
+        "SELECT url, account FROM v_state
         WHERE id = 0",
     )
-    .map(|r: SqliteRow| r.get::<Option<String>, _>(0))
+    .map(|r: SqliteRow| {
+        let url: Option<String> = r.get(0);
+        let account: Option<u32> = r.get(1);
+        (url, account)
+    })
     .fetch_one(&mut *conn)
     .await?;
-    Ok(url)
+    Ok((url, account))
 }
 
 #[cfg(feature = "flutter")]
@@ -101,7 +105,7 @@ pub async fn get_election(c: &Coin) -> Result<ElectionPropsPub> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_election(url: String, c: &Coin) -> Result<ElectionPropsPub> {
+pub async fn fetch_election(url: String, account: u32, c: &Coin) -> Result<ElectionPropsPub> {
     let mut conn = c.get_connection().await?;
     let mut client = connect_voted(url.clone()).await?;
     let election_json = client
@@ -109,8 +113,9 @@ pub async fn fetch_election(url: String, c: &Coin) -> Result<ElectionPropsPub> {
         .await?
         .into_inner()
         .election;
-    query("UPDATE v_state SET url = ?1 WHERE id = 0")
+    query("UPDATE v_state SET url = ?1, account = ?2 WHERE id = 0")
         .bind(&url)
+        .bind(account)
         .execute(&mut *conn)
         .await?;
     let election: ElectionPropsPub = serde_json::from_str(&election_json)?;
