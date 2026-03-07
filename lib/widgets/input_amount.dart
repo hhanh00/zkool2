@@ -2,7 +2,6 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
@@ -40,7 +39,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       initialValue: widget.initialValue,
       onReset: onReset,
       onChanged: onChanged,
-      validator: FormBuilderValidators.compose([FormBuilderValidators.required(), (v) => validAmount(v, max: widget.max)]),
+      validator: (v) => validAmount(v, max: widget.max),
       builder: (state) {
         return FormBuilder(
           key: formKey,
