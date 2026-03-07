@@ -208,7 +208,7 @@ abstract class RustLibApi extends BaseApi {
       {int? from, int? to, required Coin c});
 
   Future<ElectionPropsPub> crateApiVoteFetchElection(
-      {required String url, required Coin c});
+      {required String url, required int account, required Coin c});
 
   Future<List<TAddressTxCount>> crateApiAccountFetchTransparentAddressTxCount(
       {required Coin c});
@@ -259,7 +259,7 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiVoteGetElectionAddress(
       {required int idAccount, required Coin c});
 
-  Future<String?> crateApiVoteGetElectionUrl({required Coin c});
+  Future<(String?, int?)> crateApiVoteGetElectionUrl({required Coin c});
 
   Future<String> crateApiAccountGetExportedData(
       {required int type, required Coin c});
@@ -1618,12 +1618,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<ElectionPropsPub> crateApiVoteFetchElection(
-      {required String url, required Coin c}) {
+      {required String url, required int account, required Coin c}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(url, serializer);
+          sse_encode_u_32(account, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 40, port: port_);
@@ -1633,7 +1634,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiVoteFetchElectionConstMeta,
-        argValues: [url, c],
+        argValues: [url, account, c],
         apiImpl: this,
       ),
     );
@@ -1641,7 +1642,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiVoteFetchElectionConstMeta => const TaskConstMeta(
         debugName: "fetch_election",
-        argNames: ["url", "c"],
+        argNames: ["url", "account", "c"],
       );
 
   @override
@@ -2195,7 +2196,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String?> crateApiVoteGetElectionUrl({required Coin c}) {
+  Future<(String?, int?)> crateApiVoteGetElectionUrl({required Coin c}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -2205,7 +2206,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 61, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_opt_String,
+          decodeSuccessData: sse_decode_record_opt_string_opt_box_autoadd_u_32,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiVoteGetElectionUrlConstMeta,
@@ -5223,6 +5224,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  (String?, int?) dco_decode_record_opt_string_opt_box_autoadd_u_32(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (
+      dco_decode_opt_String(arr[0]),
+      dco_decode_opt_box_autoadd_u_32(arr[1]),
+    );
+  }
+
+  @protected
   (String, double, bool) dco_decode_record_string_f_64_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -6577,6 +6592,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  (String?, int?) sse_decode_record_opt_string_opt_box_autoadd_u_32(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_opt_String(deserializer);
+    var var_field1 = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
   (String, double, bool) sse_decode_record_string_f_64_bool(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -7826,6 +7850,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.userMemo, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.memoBytes, serializer);
     sse_encode_opt_box_autoadd_f_64(self.price, serializer);
+  }
+
+  @protected
+  void sse_encode_record_opt_string_opt_box_autoadd_u_32(
+      (String?, int?) self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.$1, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.$2, serializer);
   }
 
   @protected

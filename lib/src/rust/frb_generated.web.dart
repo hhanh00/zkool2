@@ -362,6 +362,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient dco_decode_recipient(dynamic raw);
 
   @protected
+  (String?, int?) dco_decode_record_opt_string_opt_box_autoadd_u_32(
+      dynamic raw);
+
+  @protected
   (String, double, bool) dco_decode_record_string_f_64_bool(dynamic raw);
 
   @protected
@@ -761,6 +765,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Recipient sse_decode_recipient(SseDeserializer deserializer);
+
+  @protected
+  (String?, int?) sse_decode_record_opt_string_opt_box_autoadd_u_32(
+      SseDeserializer deserializer);
 
   @protected
   (String, double, bool) sse_decode_record_string_f_64_bool(
@@ -1184,6 +1192,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_opt_string_opt_box_autoadd_u_32(
+      (String?, int?) self, SseSerializer serializer);
 
   @protected
   void sse_encode_record_string_f_64_bool(
