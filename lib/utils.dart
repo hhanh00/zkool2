@@ -32,6 +32,8 @@ final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigit
 final zatFormatter = DecimalFormatter(formatter);
 final shortFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 3);
 final zatShortFormatter = DecimalFormatter(shortFormatter);
+final fiatFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 2);
+final fiatCentFormatter = DecimalFormatter(fiatFormatter);
 final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP != ".";
 
 final int zatsPerZec = 100000000;
