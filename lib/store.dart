@@ -109,11 +109,13 @@ sealed class SyncProgressAccount with _$SyncProgressAccount {
 class ProgressWidget extends ConsumerWidget {
   final Account account;
   final double? width;
+  final TextStyle? style;
   final Widget Function(BuildContext context, SyncProgressAccount status, TextStyle? style) builder;
   const ProgressWidget(
     this.account, {
     super.key,
     this.width,
+    this.style,
     required this.builder,
   });
 
@@ -132,10 +134,10 @@ class ProgressWidget extends ConsumerWidget {
     final timestamp = DateTime.fromMillisecondsSinceEpoch(ss.time * 1000);
     final syncAge = DateTime.now().difference(timestamp);
     final old = syncAge > Duration(minutes: 30);
-    final style = old ? TextStyle(color: Colors.red) : null;
+    final s = style ?? TextStyle();
+    final s2= old ? s.copyWith(color: Colors.red) : s;
 
     return IntrinsicHeight(child: SizedBox(
-      width: width,
       child: Stack(
         children: [
           if (ss.start != ss.end)
@@ -145,7 +147,7 @@ class ProgressWidget extends ConsumerWidget {
                 value: ss.progress(),
               ),
             ),
-          Center(child: builder(context, ss, style)),
+          builder(context, ss, s2),
         ],
       ),
     ));
@@ -154,9 +156,10 @@ class ProgressWidget extends ConsumerWidget {
 
 class SmallProgressWidget extends StatelessWidget {
   final Account account;
-  const SmallProgressWidget(this.account, {super.key});
+  final TextStyle? style;
+  const SmallProgressWidget(this.account, {this.style, super.key});
   @override
-  Widget build(BuildContext context) => ProgressWidget(account, width: 80, builder: (context, status, style) => Text("${status.height}", style: style));
+  Widget build(BuildContext context) => ProgressWidget(account, style: style, builder: (context, status, style) => Text("${status.height}", style: style));
 }
 
 class HeroProgressWidget extends StatelessWidget {
@@ -167,7 +170,7 @@ class HeroProgressWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     Widget child = ProgressWidget(account, builder: (context, status, style) {
-      return Text.rich(
+      return Center(child: Text.rich(
         TextSpan(
           children: [
             TextSpan(text: "${status.height}", style: t.bodyLarge!.merge(style)),
@@ -178,7 +181,7 @@ class HeroProgressWidget extends StatelessWidget {
               ),
           ],
         ),
-      );
+      ));
     });
 
     return DisplayPanel(
@@ -348,7 +351,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class PriceNotifier extends _$PriceNotifier {
   @override
   double? build() => null;
