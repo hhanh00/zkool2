@@ -11,7 +11,6 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
