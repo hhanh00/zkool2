@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:zkool/utils.dart';
 
 class DisplayPanel extends StatelessWidget {
@@ -119,6 +120,52 @@ class TransactionTile extends StatelessWidget {
           fontWeight: FontWeight.bold,
           fontSize: 16,
         ),
+      ),
+    );
+  }
+}
+
+class AccountCard extends StatelessWidget {
+  final Widget leading;
+  final String name;
+  final Widget balance;
+  final Widget height;
+  final Widget? fiat;
+
+  const AccountCard({
+    super.key,
+    required this.leading,
+    required this.name,
+    required this.balance,
+    required this.height,
+    required this.fiat,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    return DisplayPanel(
+      child: Row(
+        children: [
+          leading,
+          const Gap(16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: tt.titleLarge,
+                ),
+                height,
+              ],
+            ),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            balance,
+            if (fiat != null) fiat!,
+          ])
+        ],
       ),
     );
   }
