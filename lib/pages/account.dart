@@ -67,7 +67,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
       final b = account.balance.field0;
       fiat = price?.let((p) {
         final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
-        return fiatFormatter.format(f);
+        return "\$ ${fiatFormatter.format(f)}";
       });
       ss = ensureAV(context, ssAV);
     } on Widget catch (w) {
