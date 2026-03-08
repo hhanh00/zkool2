@@ -35,7 +35,6 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   late final c = ref.read(coinContextProvider);
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
-  double? price;
 
   @override
   void didChangeDependencies() {
@@ -66,12 +65,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
       final currentHeight = ref.read(currentHeightProvider.notifier);
       currentHeight.setHeight(height);
       if (fetchPrice) {
-        final p = await getCoingeckoPrice(api: settings.coingecko);
         final currentPrice = ref.read(priceProvider.notifier);
-        currentPrice.setPrice(p);
-        setState(() {
-          price = p;
-        });
+        await currentPrice.fetch(settings.coingecko);
       }
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
@@ -94,6 +89,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
 
     final List<Account> accountList;
     final AppSettings settings;
+    final double? price;
     try {
       final pinlockAV = ref.watch(lifecycleProvider);
       ensureAV(context, pinlockAV);
@@ -105,6 +101,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
       final selectedFolder = ref.watch(selectedFolderProvider);
       final accountsAV = ref.watch(getAccountsProvider);
       ensureAV(context, accountsAV);
+      price = ref.watch(priceProvider);
+
       accountList = accountsAV.requireValue.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList();
     } on Widget catch (w) {
       return w;
@@ -150,7 +148,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                 leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
                 name: account.name,
                 balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
-                fiat: fiat != null ? Text("\$$fiat", style: tt.titleLarge!.copyWith(color: Colors.green)) : null,
+                fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
                 height: SmallProgressWidget(account, style: tt.labelSmall),
               ),
               onTap: () => onOpen(context, account),
