@@ -452,13 +452,14 @@ Future<String?> saveFile({String? title, String? fileName, required Uint8List da
   );
 }
 
-void ensureAV<T>(BuildContext context, AsyncValue<T> av) {
+T ensureAV<T>(BuildContext context, AsyncValue<T> av) {
   switch (av) {
     case AsyncLoading():
       throw blank(context);
     case AsyncError(:final error):
       throw showError(error);
-    default:
+    case AsyncData<T>(:final value):
+      return value;
   }
 }
 
