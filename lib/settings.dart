@@ -23,6 +23,7 @@ final coingeckoID = GlobalKey();
 final actionsID = GlobalKey();
 final autosyncID = GlobalKey();
 final cancelID = GlobalKey();
+final fxID = GlobalKey();
 final pinLockID = GlobalKey();
 final offlineID = GlobalKey();
 final useQRID = GlobalKey();
@@ -73,6 +74,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await prefs.setBool("get_fx", settings.getFx);
         await prefs.setString("coingecko", settings.coingecko);
         await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
         await putProp(key: "qr_size", value: settings.qrSettings.size.toString(), c: c);
@@ -82,6 +84,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
         ref.read(coinContextProvider.notifier).set(coin: c);
+        ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
         ref.invalidate(appSettingsProvider);
       },
     );
@@ -118,7 +121,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   void tutorial() async {
     tutorialHelper(
-        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, coingeckoID, actionsID, autosyncID, cancelID, pinLockID, offlineID, useQRID, blockExplorerID]);
+        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, coingeckoID, actionsID, autosyncID, cancelID, pinLockID, offlineID, fxID, useQRID, blockExplorerID]);
   }
 
   @override
@@ -227,6 +230,12 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   key: offlineID,
                   description: "Toggle offline mode",
                   child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: settings.offline, onChanged: onOfflineChanged),
+                ),
+                Gap(8),
+                Showcase(
+                  key: fxID,
+                  description: "Toggle auto update of market price",
+                  child: FormBuilderSwitch(name: "fx", title: Text("Auto Fetch Market Price"), initialValue: settings.getFx, onChanged: onGetFxChanged),
                 ),
                 Gap(8),
                 Showcase(
@@ -355,6 +364,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (value == null) return;
     setState(() {
       settings = settings.copyWith(offline: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  onGetFxChanged(bool? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(getFx: value);
       widget.onChanged(settings);
     });
   }
