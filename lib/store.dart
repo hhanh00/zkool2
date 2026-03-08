@@ -135,9 +135,10 @@ class ProgressWidget extends ConsumerWidget {
     final syncAge = DateTime.now().difference(timestamp);
     final old = syncAge > Duration(minutes: 30);
     final s = style ?? TextStyle();
-    final s2= old ? s.copyWith(color: Colors.red) : s;
+    final s2 = old ? s.copyWith(color: Colors.red) : s;
 
-    return IntrinsicHeight(child: SizedBox(
+    return IntrinsicHeight(
+        child: SizedBox(
       child: Stack(
         children: [
           if (ss.start != ss.end)
@@ -170,7 +171,8 @@ class HeroProgressWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     Widget child = ProgressWidget(account, builder: (context, status, style) {
-      return Center(child: Text.rich(
+      return Center(
+          child: Text.rich(
         TextSpan(
           children: [
             TextSpan(text: "${status.height}", style: t.bodyLarge!.merge(style)),
@@ -185,7 +187,7 @@ class HeroProgressWidget extends StatelessWidget {
     });
 
     return DisplayPanel(
-        child: Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -305,6 +307,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
+    final getFx = await prefs.getBool("get_fx") ?? false;
     final coingecko = await prefs.getString("coingecko") ?? "";
     final recovery = await prefs.getBool("recovery") ?? false;
     final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
@@ -325,6 +328,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       delay: int.parse(qrDelay),
       repair: int.parse(qrRepair),
     );
+    final price = ref.watch(priceProvider.notifier);
+    price.setAutoFetchFx(getFx, coingecko);
 
     return AppSettings(
       dbName: dbName,
@@ -335,6 +340,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       pinUnlockedAt: DateTime.now(),
       offline: offline,
       useTor: useTor,
+      getFx: getFx,
       coingecko: coingecko,
       recovery: recovery,
       syncInterval: syncInterval,
@@ -359,6 +365,31 @@ class PriceNotifier extends _$PriceNotifier {
   void setPrice(double price) {
     state = price;
   }
+
+  Timer? fetchFxTimer;
+  void setAutoFetchFx(bool autoGetFx, String api) async {
+    if (autoGetFx) {
+      await fetch(api);
+      fetchFxTimer = Timer.periodic(Duration(minutes: 1), (_) async {
+        await fetch(api);
+      });
+    } else {
+      fetchFxTimer?.cancel();
+      fetchFxTimer = null;
+    }
+  }
+
+  Future<double?> fetch(String api) async {
+    try {
+      final p = await getCoingeckoPrice(api: api);
+      setPrice(p);
+      return p;
+    }
+    catch (_) {
+      return null;
+    }
+  }
+
 }
 
 @freezed
@@ -377,6 +408,7 @@ sealed class AppSettings with _$AppSettings {
     required bool needPin,
     required DateTime pinUnlockedAt,
     required bool offline,
+    required bool getFx,
     required QRSettings qrSettings,
   }) = _AppSettings;
 }
