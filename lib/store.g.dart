@@ -533,7 +533,7 @@ final class PriceNotifierProvider
           argument: null,
           retry: null,
           name: r'priceProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -554,7 +554,7 @@ final class PriceNotifierProvider
   }
 }
 
-String _$priceNotifierHash() => r'b7a89807a11e82312888aa1c78dc319609ab355e';
+String _$priceNotifierHash() => r'67e0426a00856d7af77dad637283bbb590b50ce1';
 
 abstract class _$PriceNotifier extends $Notifier<double?> {
   double? build();
@@ -750,7 +750,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'56bfd5d266a17e0da9fbc0be7afa3559f634e7e1';
+    r'8fd302a45deeebc8abcc823adfbc11ba7f1ab729';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
