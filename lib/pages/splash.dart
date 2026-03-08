@@ -49,14 +49,13 @@ class SplashPageState extends ConsumerState<SplashPage> {
   }
 
   void tryOpenDatabase() async {
-    logger.i("tryOpenDatabase");
     String? password;
     var c = ref.read(coinContextProvider);
     while (true) {
       final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
       final dbFilepath = await getFullDatabasePath(dbName);
-      logger.i('dbFilepath: $dbFilepath');
+      logger.i("dbFilepath: $dbFilepath");
       try {
         c = await c.openDatabase(dbFilepath: dbFilepath, password: password);
         break;

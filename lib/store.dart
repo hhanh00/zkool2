@@ -4,7 +4,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:gap/gap.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -644,7 +643,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         await checkSyncNeeded(currentHeight, now: now);
       }
     } on AnyhowException catch (e) {
-      logger.i(e);
+      logger.e(e);
       // ignore
     } finally {
       if (interval > 0) Timer(Duration(seconds: 15), () => autoSync());
