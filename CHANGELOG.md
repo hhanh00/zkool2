@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.0...zkool-v6.12.0) (2026-03-08)
+
+
+### Features
+
+* tx account update ([#812](https://github.com/hhanh00/zkool2/issues/812)) ([5b02b88](https://github.com/hhanh00/zkool2/commit/5b02b88f22c5468bb9faea17b627a5c47b6fafd5))
+
 ## [6.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.2...zkool-v6.11.0) (2026-03-07)
 
 
