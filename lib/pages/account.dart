@@ -23,6 +23,7 @@ import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/pool_select.dart';
+import 'package:zkool/widgets/theme.dart';
 
 class AccountViewPage extends ConsumerStatefulWidget {
   const AccountViewPage({super.key});
@@ -51,17 +52,22 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   @override
   Widget build(BuildContext context) {
     final AccountData? account;
+    final SyncProgressAccount ss;
     try {
       final accountAV = ref.watch(getCurrentAccountProvider);
       ensureAV(context, accountAV);
       account = accountAV.value;
+      final ssAV = ref.watch(syncStateAccountProvider(account!.account.id));
+      ensureAV(context, ssAV);
+      ss = ssAV.requireValue;
     } on Widget catch (w) {
       return w;
     }
 
     final t = Theme.of(context);
     final tt = t.textTheme;
-    if (account == null) return blank(context);
+    final cs = t.colorScheme;
+    final syncing = ss.start != ss.end;
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
@@ -142,35 +148,40 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                       color: Theme.of(context).colorScheme.surface,
                       child: Column(
                         children: [
-                          Text("Height"),
+                          if (syncing) ...[
+                            HeroProgressWidget(account.account),
+                            Gap(8),
+                          ],
+                          DisplayPanel(
+                              child: Column(children: [
+                            Showcase(
+                              key: balID,
+                              description: "Balance across all pools",
+                              child: zatToText(
+                                b.field0[0] + b.field0[1] + b.field0[2],
+                                selectable: true,
+                                style: tt.displaySmall!,
+                              ),
+                            ),
+                            Gap(8),
+                            BalanceWidget(b, showcase: true),
+                          ])),
                           Gap(8),
-                          HeroProgressWidget(account.account),
-                          Gap(16),
-                          Text("Balance"),
-                          Gap(8),
-                          BalanceWidget(b, showcase: true),
-                          Gap(8),
-                          unconfirmedAmount != null
-                              ? zatToText(
-                                  BigInt.from(unconfirmedAmount),
-                                  prefix: "Unconfirmed: ",
-                                  colored: true,
-                                  selectable: true,
-                                  style: tt.bodyLarge,
-                                )
-                              : SizedBox.shrink(),
-                          Gap(8),
-                          Showcase(
-                            key: balID,
-                            description: "Balance across all pools",
-                            child: zatToText(b.field0[0] + b.field0[1] + b.field0[2], selectable: true, style: tt.titleLarge!),
-                          ),
-                          Gap(8),
+                          if (unconfirmedAmount != null) ...[
+                            zatToText(
+                              BigInt.from(unconfirmedAmount),
+                              prefix: "Unconfirmed: ",
+                              colored: true,
+                              selectable: true,
+                              style: tt.bodyLarge,
+                            ),
+                            Gap(8),
+                          ],
                         ],
                       ),
                     ),
                   ),
-                  ...showTxHistory(account.transactions),
+                  ...showTxHistory(context, account.transactions),
                 ],
               ),
               showMemos(context, account.memos),
@@ -588,51 +599,42 @@ class BalanceWidget extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        zatToText(
-          balance.field0[0],
-          prefix: "T: ",
-          selectable: true,
-          onTap: () => onPoolSelected?.call(0),
-        ),
-        const Gap(8),
-        zatToText(
-          balance.field0[1],
-          prefix: "S: ",
-          selectable: true,
-          onTap: () => onPoolSelected?.call(1),
-        ),
-        const Gap(8),
-        zatToText(
-          balance.field0[2],
-          prefix: "O: ",
-          selectable: true,
-          onTap: () => onPoolSelected?.call(2),
-        ),
+        BalanceChip(PoolType.transparent, zatToShortString(balance.field0[0])),
+        Gap(8),
+        BalanceChip(PoolType.sapling, zatToShortString(balance.field0[1])),
+        Gap(8),
+        BalanceChip(PoolType.orchard, zatToShortString(balance.field0[2])),
       ],
     );
   }
 }
 
-List<Widget> showTxHistory(List<Tx> transactions) {
+List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
+  final t = Theme.of(context).textTheme;
   return [
     SliverToBoxAdapter(
-      child: Column(
-        children: [
-          Text("Transaction History (${transactions.length} txs)"),
-          const Gap(8),
-        ],
+      child: Padding(
+        padding: EdgeInsetsGeometry.symmetric(vertical: 16),
+        child: Center(
+            child: Text(
+          "Transaction History (${transactions.length} txs)",
+          style: t.bodyLarge,
+        )),
       ),
     ),
     SliverFixedExtentList.builder(
       itemCount: transactions.length,
       itemBuilder: (context, index) {
         final tx = transactions[index];
-        final tile = ListTile(
+        final (color, icon, label) = getTransactionType(tx.tpe);
+        final tile = TransactionTile(
+          icon: icon,
+          color: color,
+          label: label,
+          amount: BigInt.from(tx.value),
+          date: tx.time,
+          id: tx.id,
           onTap: () => gotoTransaction(context, tx.id),
-          leading: Text("${tx.height}"),
-          title: Text(getTransactionType(tx.tpe)),
-          subtitle: Text(timeToString(tx.time)),
-          trailing: zatToText(BigInt.from(tx.value), colored: true, selectable: false),
         );
 
         return tile;
@@ -642,23 +644,22 @@ List<Widget> showTxHistory(List<Tx> transactions) {
   ];
 }
 
-String getTransactionType(int? tpe) {
-  if (tpe == null) return "";
+(MaterialColor, IconData, String) getTransactionType(int? tpe) {
   switch (tpe) {
     case 0:
-      return "\u2194 Self Tx";
+      return (Colors.grey, Icons.remove, "Self Transfer");
     case 1:
-      return "\u2795 Received";
+      return (Colors.green, Icons.arrow_upward, "Receive");
     case 2:
-      return "\u2796 Spent";
+      return (Colors.red, Icons.arrow_downward, "Sent");
     case 4:
-      return "\u{1F513} Unshielding";
+      return (Colors.purple, Icons.visibility, "Unshield");
     case 8:
-      return "\u{1F6E1} Shielding";
+      return (Colors.blue, Icons.shield, "Shield");
     case 12:
-      return "\u{1F310} \u2194 T. Self Tx";
+      return (Colors.grey, Icons.drag_handle, "T. Self Transfer");
     default:
-      return "Unknown";
+      return (Colors.grey, Icons.question_mark, "Unknown");
   }
 }
 
