@@ -303,7 +303,6 @@ Future<(String?, String?)?> showChangeDbPassword(BuildContext context, {required
       final fields = formKey.currentState!.fields;
       final oldPassword = fields["old_password"]!.value as String?;
       final newPassword = fields["new_password"]!.value as String?;
-      logger.i("$oldPassword $newPassword");
       return (oldPassword, newPassword);
     },
   );

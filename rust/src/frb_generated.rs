@@ -760,7 +760,7 @@ fn wire__crate__api__coin__coin_set_account_impl(
     rust_vec_len_: i32,
     data_len_: i32,
 ) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "coin_set_account",
             port: Some(port_),
@@ -779,12 +779,14 @@ fn wire__crate__api__coin__coin_set_account_impl(
             let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             let api_account = <u32>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
+            move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok = crate::api::coin::Coin::set_account(api_that, api_account)?;
+                    (move || async move {
+                        let output_ok =
+                            crate::api::coin::Coin::set_account(api_that, api_account).await?;
                         Ok(output_ok)
-                    })(),
+                    })()
+                    .await,
                 )
             }
         },
