@@ -53,6 +53,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   Widget build(BuildContext context) {
     final AccountData? account;
     final SyncProgressAccount ss;
+    final double? price;
+    final String? fiat;
     try {
       final accountAV = ref.watch(getCurrentAccountProvider);
       account = ensureAV(context, accountAV);
@@ -61,6 +63,12 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         return SizedBox.shrink();
       }
       final ssAV = ref.watch(syncStateAccountProvider(account.account.id));
+      price = ref.watch(priceProvider);
+      final b = account.balance.field0;
+      fiat = price?.let((p) {
+        final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
+        return fiatFormatter.format(f);
+      });
       ss = ensureAV(context, ssAV);
     } on Widget catch (w) {
       return w;
@@ -68,7 +76,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
     final t = Theme.of(context);
     final tt = t.textTheme;
-    final cs = t.colorScheme;
     final syncing = ss.start != ss.end;
 
     final pinlock = ref.watch(lifecycleProvider);
@@ -159,11 +166,14 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                             Showcase(
                               key: balID,
                               description: "Balance across all pools",
-                              child: zatToText(
-                                b.field0[0] + b.field0[1] + b.field0[2],
-                                selectable: true,
-                                style: tt.displaySmall!,
-                              ),
+                              child: Column(children: [
+                                zatToText(
+                                  b.field0[0] + b.field0[1] + b.field0[2],
+                                  selectable: true,
+                                  style: tt.displaySmall!,
+                                ),
+                                if (fiat != null) Text(fiat),
+                              ]),
                             ),
                             Gap(8),
                             BalanceWidget(b, showcase: true),
