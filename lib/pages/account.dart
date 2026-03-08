@@ -55,11 +55,13 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final SyncProgressAccount ss;
     try {
       final accountAV = ref.watch(getCurrentAccountProvider);
-      ensureAV(context, accountAV);
-      account = accountAV.value;
-      final ssAV = ref.watch(syncStateAccountProvider(account!.account.id));
-      ensureAV(context, ssAV);
-      ss = ssAV.requireValue;
+      account = ensureAV(context, accountAV);
+      if (account == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/"));
+        return SizedBox.shrink();
+      }
+      final ssAV = ref.watch(syncStateAccountProvider(account.account.id));
+      ss = ensureAV(context, ssAV);
     } on Widget catch (w) {
       return w;
     }
