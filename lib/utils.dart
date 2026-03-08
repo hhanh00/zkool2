@@ -30,6 +30,8 @@ String initials(String name) => name.substring(0, min(2, name.length)).toUpperCa
 final locale = PlatformDispatcher.instance.locale.toString();
 final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 8);
 final zatFormatter = DecimalFormatter(formatter);
+final shortFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 3);
+final zatShortFormatter = DecimalFormatter(shortFormatter);
 final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP != ".";
 
 final int zatsPerZec = 100000000;
@@ -42,6 +44,12 @@ String doubleToString(double v, {required int decimals}) {
 String zatToString(BigInt zat) {
   final z = Fixed.fromBigInt(zat, scale: 8);
   final s = zatFormatter.format(z.toDecimal());
+  return s;
+}
+
+String zatToShortString(BigInt zat) {
+  final z = Fixed.fromBigInt(zat, scale: 8);
+  final s = zatShortFormatter.format(z.toDecimal());
   return s;
 }
 
@@ -63,8 +71,10 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
             SelectableText.rich(
               TextSpan(
                 children: [
-                  TextSpan(text: majorUnits, style: style),
-                  TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.6)),
+                  TextSpan(text: majorUnits, style: style.copyWith(fontWeight: FontWeight.bold)),
+                  TextSpan(text: minorUnits, style: style.copyWith(
+                    fontSize: style.fontSize! * 0.5,
+                    color: Colors.grey)),
                 ],
               ),
             ),

@@ -19,6 +19,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/theme.dart';
 
 part 'store.g.dart';
 part 'store.freezed.dart';
@@ -134,13 +135,12 @@ class ProgressWidget extends ConsumerWidget {
     final old = syncAge > Duration(minutes: 30);
     final style = old ? TextStyle(color: Colors.red) : null;
 
-    return SizedBox(
+    return IntrinsicHeight(child: SizedBox(
       width: width,
-      height: 80,
       child: Stack(
         children: [
           if (ss.start != ss.end)
-            SizedBox.expand(
+            Positioned.fill(
               child: LinearProgressIndicator(
                 color: t.colorScheme.primary.withAlpha(128),
                 value: ss.progress(),
@@ -149,7 +149,7 @@ class ProgressWidget extends ConsumerWidget {
           Center(child: builder(context, ss, style)),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -165,31 +165,42 @@ class HeroProgressWidget extends StatelessWidget {
   const HeroProgressWidget(this.account, {super.key});
 
   @override
-  Widget build(BuildContext context) => ProgressWidget(
-        account,
-        builder: (context, status, style) {
-          final t = Theme.of(context).textTheme;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: "${status.height}", style: t.bodyLarge!.merge(style)),
-                    if (status.end - status.height > 0)
-                      TextSpan(
-                        text: " tip-${status.end - status.height}",
-                        style: t.labelSmall,
-                      ),
-                  ],
-                ),
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    Widget child = ProgressWidget(account, builder: (context, status, style) {
+      return Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: "${status.height}", style: t.bodyLarge!.merge(style)),
+            if (status.end - status.height > 0)
+              TextSpan(
+                text: " tip-${status.end - status.height}",
+                style: t.labelSmall,
               ),
-              Gap(8),
-              Text(timeToString(status.time), style: t.bodySmall),
-            ],
-          );
-        },
+          ],
+        ),
       );
+    });
+
+    return DisplayPanel(
+        child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Height",
+                style: t.bodyLarge,
+              ),
+              Text("1 min ago", style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
+          child,
+        ],
+      ),
+    );
+  }
 }
 
 // AppStore get appStore => AppStoreBase.instance;
