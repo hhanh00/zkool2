@@ -125,26 +125,30 @@ class VotePage1State extends ConsumerState<VotePage1> {
   }
 
   Future<void> scan() async {
-    final t = Theme.of(context).textTheme;
-    final c = ref.read(coinContextProvider);
-    final progressSub = scanVotes(idAccount: c.account, c: c);
-    var progress = ValueNotifier<double>(0.0);
-    progressSub.listen((p) {
-      setState(() => progress.value = p.toDouble());
-    }, onDone: () async {
-      await scanBallots(idAccount: c.account, c: c);
-      setState(() {
-        GoRouter.of(context).pushReplacement("/vote/page2", extra: election!);
+    try {
+      final t = Theme.of(context).textTheme;
+      final c = ref.read(coinContextProvider);
+      final progressSub = scanVotes(idAccount: c.account, c: c);
+      var progress = ValueNotifier<double>(0.0);
+      progressSub.listen((p) {
+        setState(() => progress.value = p.toDouble());
+      }, onDone: () async {
+        setState(() {
+          GoRouter.of(context).pushReplacement("/vote/page2", extra: election!);
+        });
       });
-    });
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text("Please wait while we scan for your voting funds", style: t.headlineSmall),
-        content: ValueListenableBuilder<double>(valueListenable: progress, builder: (context, progress, _) => LinearProgressIndicator(value: progress * 0.01)),
-      ),
-    );
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Text("Please wait while we scan for your voting funds", style: t.headlineSmall),
+          content:
+              ValueListenableBuilder<double>(valueListenable: progress, builder: (context, progress, _) => LinearProgressIndicator(value: progress * 0.01)),
+        ),
+      );
+    } on AnyhowException catch (e) {
+      await showException(context, e.message);
+    }
   }
 }
 
@@ -163,10 +167,14 @@ class VotePage2State extends ConsumerState<VotePage2> {
   late List<int> answers = [for (var _ in widget.election.questions) 1];
 
   void init() async {
-    final newBalance = await refresh(context, ref);
-    amount = zatToString(newBalance);
-    balance = amount;
-    setState(() {});
+    try {
+      final newBalance = await refresh(context, ref);
+      amount = zatToString(newBalance);
+      balance = amount;
+      setState(() {});
+    } on AnyhowException catch (e) {
+      await showException(context, e.message);
+    }
   }
 
   @override
@@ -353,12 +361,12 @@ class VoteDelegateState extends ConsumerState<VoteDelegatePage> {
           dialog?.dismiss();
         }
       }
+      await refresh(context, ref);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
     }
     if (!mounted) return;
-    await refresh(context, ref);
     GoRouter.of(context).pop();
   }
 }
