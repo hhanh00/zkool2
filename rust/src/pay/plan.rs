@@ -905,7 +905,7 @@ impl TryFromAddress for MyTransparentAddress {
     ) -> std::result::Result<Self, ConversionError<Self::Error>> {
         let ua = UnifiedAddress::try_from(data).unwrap();
         ua.transparent()
-            .map(|v| MyTransparentAddress(v.clone()))
+            .map(|v| MyTransparentAddress(*v))
             .ok_or(ConversionError::User(()))
     }
 
