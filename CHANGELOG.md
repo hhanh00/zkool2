@@ -1,5 +1,38 @@
 # Changelog
 
+## [6.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.2...zkool-v6.11.0) (2026-03-09)
+
+
+### Features
+
+* add auto fx rate update flag ([#816](https://github.com/hhanh00/zkool2/issues/816)) ([9ba11de](https://github.com/hhanh00/zkool2/commit/9ba11de52e1efb54051ae34674c3d58e4df8637e))
+* add progress bar during scanning ([#801](https://github.com/hhanh00/zkool2/issues/801)) ([9412f0e](https://github.com/hhanh00/zkool2/commit/9412f0e03153131d8f5fbc818c5ea7150ef28d1d))
+* button for deleting election data ([#806](https://github.com/hhanh00/zkool2/issues/806)) ([db9db91](https://github.com/hhanh00/zkool2/commit/db9db918503f55019ee063d059b9d221cd615a6c))
+* coin voting functionality ([#808](https://github.com/hhanh00/zkool2/issues/808)) ([acb36a9](https://github.com/hhanh00/zkool2/commit/acb36a9eb8091553035d09034deb6190d8bae7bd))
+* fetch election from vote server ([#798](https://github.com/hhanh00/zkool2/issues/798)) ([f5761ad](https://github.com/hhanh00/zkool2/commit/f5761adc85935b96cb571f01a7370ae5791cd556))
+* fetch election from vote server ([#799](https://github.com/hhanh00/zkool2/issues/799)) ([89957c4](https://github.com/hhanh00/zkool2/commit/89957c461a55af441e9e2b20ce3f556272305450))
+* **graphql:** jwt authorization ([#794](https://github.com/hhanh00/zkool2/issues/794)) ([9f1b146](https://github.com/hhanh00/zkool2/commit/9f1b1463c2468e0a0503c00169a57aaae47fb4d5))
+* **graphql:** read/write scope ([#822](https://github.com/hhanh00/zkool2/issues/822)) ([84e9b8d](https://github.com/hhanh00/zkool2/commit/84e9b8d2655135ceb5c3dcf503952fac18c79ed7))
+* scan existing notes to compute voting power ([#800](https://github.com/hhanh00/zkool2/issues/800)) ([d26d6c5](https://github.com/hhanh00/zkool2/commit/d26d6c56e011e525f9d2da73a46f0bb5753755d1))
+* submit ballot ([#804](https://github.com/hhanh00/zkool2/issues/804)) ([d3252a1](https://github.com/hhanh00/zkool2/commit/d3252a1237a84e0e785bf14c4644c04f5bc64e38))
+* synchronize with voting chain ([#805](https://github.com/hhanh00/zkool2/issues/805)) ([44b6b84](https://github.com/hhanh00/zkool2/commit/44b6b84f9a2aa7db72d9d16cb3b51eaccbad2461))
+* tx account update ([#812](https://github.com/hhanh00/zkool2/issues/812)) ([fc87ba2](https://github.com/hhanh00/zkool2/commit/fc87ba2034a9654bd21d8dd9650aed6fecf7bb2f))
+* vote delegation ([#810](https://github.com/hhanh00/zkool2/issues/810)) ([8c40248](https://github.com/hhanh00/zkool2/commit/8c4024824d789b942e6448eb69429ea313577837))
+* voting form ([#803](https://github.com/hhanh00/zkool2/issues/803)) ([0624ecf](https://github.com/hhanh00/zkool2/commit/0624ecfd3df286dd3785bbacfe9c74e7dc430053))
+
+
+### Bug Fixes
+
+* account list ui update ([#815](https://github.com/hhanh00/zkool2/issues/815)) ([e4f2fb9](https://github.com/hhanh00/zkool2/commit/e4f2fb93e4de7695630da8fdc324a9cb76a1be32))
+* add error handling ([#817](https://github.com/hhanh00/zkool2/issues/817)) ([403d859](https://github.com/hhanh00/zkool2/commit/403d859d4acfc2b26ef83d9c742383939aa3ec1b))
+* allow admin user to execute any command ([#796](https://github.com/hhanh00/zkool2/issues/796)) ([31742a7](https://github.com/hhanh00/zkool2/commit/31742a71db2549c26919feb596b54d908298003f))
+* check that current account is associated with the vote ([#811](https://github.com/hhanh00/zkool2/issues/811)) ([b59989e](https://github.com/hhanh00/zkool2/commit/b59989e16da87c3b459ba213714bcc1142b165c5))
+* put the progress bar in a modal dialog box ([#802](https://github.com/hhanh00/zkool2/issues/802)) ([a4171ad](https://github.com/hhanh00/zkool2/commit/a4171ad2a133f55cbed2dc88f54d208e44425444))
+* remove dummy text ([381a0f7](https://github.com/hhanh00/zkool2/commit/381a0f73f0c3efae3507cb2af0023414641367db))
+* save current account between restarts ([#814](https://github.com/hhanh00/zkool2/issues/814)) ([c67126a](https://github.com/hhanh00/zkool2/commit/c67126a00a416fa77f6c3c800fc73cdaa190dad8))
+* tile overflow ([#819](https://github.com/hhanh00/zkool2/issues/819)) ([5de3abe](https://github.com/hhanh00/zkool2/commit/5de3abe9ea1b5ffce1ccb6943e6760096444dc3b))
+* voting ui ([#809](https://github.com/hhanh00/zkool2/issues/809)) ([5195c06](https://github.com/hhanh00/zkool2/commit/5195c0637aa551a4b9139cb0e384a77d251c0af4))
+
 ## [6.10.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.1...zkool-v6.10.2) (2026-02-18)
 
 
