@@ -649,7 +649,10 @@ List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
           onTap: () => gotoTransaction(context, tx.id),
         );
 
-        return tile;
+        return Column(children: [
+          Expanded(child: tile),
+          Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
+        ]);
       },
       itemExtent: 64,
     ),
