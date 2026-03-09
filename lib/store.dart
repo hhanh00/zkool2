@@ -197,7 +197,6 @@ class HeroProgressWidget extends StatelessWidget {
                 "Height",
                 style: t.bodyLarge,
               ),
-              Text("1 min ago", style: TextStyle(color: Colors.grey, fontSize: 12)),
             ],
           ),
           child,
