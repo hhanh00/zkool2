@@ -20,7 +20,6 @@ import 'package:local_auth/error_codes.dart' as auth_error;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import 'package:local_auth/local_auth.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/store.dart';
@@ -74,9 +73,7 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
               TextSpan(
                 children: [
                   TextSpan(text: majorUnits, style: style.copyWith(fontWeight: FontWeight.bold)),
-                  TextSpan(text: minorUnits, style: style.copyWith(
-                    fontSize: style.fontSize! * 0.5,
-                    color: Colors.grey)),
+                  TextSpan(text: minorUnits, style: style.copyWith(fontSize: style.fontSize! * 0.5, color: Colors.grey)),
                 ],
               ),
             ),
@@ -103,14 +100,54 @@ String timeToString(int time) {
   if (time == 0) return "N/A";
   final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
   final dateString = DateFormat('yyyy-MM-dd').format(date);
-  final timeAgoStr = timeago.format(date);
-  return '$dateString ($timeAgoStr)';
+  final timeAgo = compactBetween(date, DateTime.now());
+  return '$dateString ($timeAgo)';
+}
+
+Widget timeToWidget(BuildContext context, int time) {
+  if (time == 0) return SizedBox.shrink();
+  final t = Theme.of(context).textTheme;
+  final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
+  final dateString = DateFormat('yyyy-MM-dd ').format(date);
+  final timeAgo = compactBetween(date, DateTime.now());
+  return Text.rich(TextSpan(children: [
+    TextSpan(text: dateString),
+    TextSpan(text: "($timeAgo)", style: t.labelSmall),
+  ]));
 }
 
 String exactTimeToString(int time) {
   if (time == 0) return "N/A";
   final date = DateTime.fromMillisecondsSinceEpoch(time * 1000);
   return date.toString();
+}
+
+String compactBetween(DateTime from, DateTime to) {
+  final parts = <String>[];
+
+  int years  = to.year - from.year;
+  int months = to.month - from.month;
+  int days   = to.day - from.day;
+  int hours  = to.hour - from.hour;
+  int mins   = to.minute - from.minute;
+
+  // Cascade borrows
+  if (mins < 0)   { mins += 60;   hours -= 1; }
+  if (hours < 0)  { hours += 24;  days -= 1; }
+  if (days < 0) {
+    final prevMonth = DateTime(to.year, to.month - 1);
+    days += DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
+    months -= 1;
+  }
+  if (months < 0) { months += 12; years -= 1; }
+
+  if (years  > 0) parts.add('${years}y');
+  if (months > 0) parts.add('${months}mo');
+  if (days   > 0) parts.add('${days}d');
+  if (hours  > 0) parts.add('${hours}h');
+  if (mins   > 0) parts.add('${mins}m');
+
+  return parts.take(2).join('');
 }
 
 String txIdToString(Uint8List txid) {
