@@ -70,7 +70,6 @@ class VotePage1State extends ConsumerState<VotePage1> {
                       decoration: InputDecoration(label: Text("Election URL")),
                       initialValue: url,
                       readOnly: url?.isNotEmpty == true,
-                      onSubmitted: loadElection,
                     ),
                     Gap(16),
                     if (account != null && account != c.account) ...[
@@ -80,7 +79,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
                           )),
                       Gap(8),
                     ],
-                    ElevatedButton(onPressed: election != null ? onNext : null, child: Text("Next")),
+                    ElevatedButton(onPressed: onNext, child: Text("Next")),
                     Gap(16),
                   ],
                 ),
@@ -99,19 +98,19 @@ class VotePage1State extends ConsumerState<VotePage1> {
   }
 
   void onNext() async {
-    if (election != null)
-      await scan();
-    else {
-      final form = formKey.currentState!;
-      if (!form.validate()) return;
-      final fields = form.fields;
-      final url = fields["url"]!.value as String;
-      logger.i("url: $url");
+    try {
+      if (election == null) {
+        final form = formKey.currentState!;
+        if (!form.validate()) return;
+        final fields = form.fields;
+        final url = fields["url"]!.value as String;
 
-      final c = ref.read(coinContextProvider);
-      election = await fetchElection(url: url, account: c.account, c: c);
-
+        final c = ref.read(coinContextProvider);
+        election = await fetchElection(url: url, account: c.account, c: c);
+      }
       await scan();
+    } on AnyhowException catch (e) {
+      await showException(context, e.message);
     }
   }
 
@@ -192,10 +191,12 @@ class VotePage2State extends ConsumerState<VotePage2> {
         IconButton(
           onPressed: onDelegate,
           icon: Icon(Icons.forward),
+          tooltip: "Delegate",
         ),
         IconButton(
           onPressed: onVote,
           icon: Icon(Icons.how_to_vote),
+          tooltip: "Vote",
         )
       ]),
       body: SingleChildScrollView(
