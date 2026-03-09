@@ -5,6 +5,7 @@ use warp::reject::Reject;
 pub struct Claims {
     pub exp: usize,
     pub sub: u32,
+    pub write: bool,
 }
 
 #[derive(Debug)]
