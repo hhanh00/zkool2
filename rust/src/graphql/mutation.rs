@@ -93,7 +93,7 @@ impl Mutation {
         update_account: UpdateAccount,
         context: &Context,
     ) -> FieldResult<bool> {
-        check_auth(context, id_account)?;
+        check_auth(context, id_account, true)?;
         let ua = crate::api::account::AccountUpdate {
             coin: 0,
             id: id_account as u32,
@@ -109,13 +109,13 @@ impl Mutation {
     }
 
     async fn delete_account(id_account: i32, context: &Context) -> FieldResult<bool> {
-        check_auth(context, id_account)?;
+        check_auth(context, id_account, true)?;
         crate::api::account::delete_account(id_account as u32, &context.coin).await?;
         Ok(true)
     }
 
     async fn reset_account(id_account: i32, context: &Context) -> FieldResult<bool> {
-        check_auth(context, id_account)?;
+        check_auth(context, id_account, true)?;
         crate::api::account::reset_sync(id_account as u32, &context.coin).await?;
         Ok(true)
     }
@@ -137,8 +137,24 @@ impl Mutation {
         Ok(height as i32)
     }
 
+    async fn synchronize_account(id_account: i32, context: &Context) -> FieldResult<i32> {
+        check_auth(context, id_account, false)?;
+        let current_height = crate::api::network::get_current_height(&context.coin).await?;
+        let height = crate::sync::synchronize_impl(
+            (),
+            vec![id_account as u32],
+            current_height,
+            100_000,
+            40,
+            10_000,
+            &context.coin,
+        )
+        .await?;
+        Ok(height as i32)
+    }
+
     async fn pay(id_account: i32, payment: Payment, context: &Context) -> FieldResult<String> {
-        check_auth(context, id_account)?;
+        check_auth(context, id_account, true)?;
         let coin = &context.coin;
         let pczt = prepare_tx(id_account, payment, coin).await?;
         let mut connection = coin.get_connection().await?;
@@ -151,7 +167,7 @@ impl Mutation {
     }
 
     async fn new_addresses(id_account: i32, context: &Context) -> FieldResult<Addresses> {
-        check_auth(context, id_account)?;
+        check_auth(context, id_account, false)?;
         let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
         generate_next_dindex(&network, &mut conn, id_account as u32).await?;
