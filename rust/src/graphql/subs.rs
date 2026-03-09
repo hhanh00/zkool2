@@ -15,7 +15,7 @@ pub struct Subscription {}
 #[graphql_subscription(context = Context)]
 impl Subscription {
     pub async fn events(id_account: i32, context: &Context) -> FieldResult<EventStream> {
-        check_auth(context, id_account)?;
+        check_auth(context, id_account, false)?;
         let (tx, rx) = mpsc::channel::<FieldResult<Event>>(10);
         let mut subs = SUBS.lock().await;
         let e = subs.entry(id_account).or_insert_with(Vec::new);
