@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.11.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.0...zkool-v6.11.1) (2026-03-09)
+
+
+### Bug Fixes
+
+* change logic of the next button in vote & add tooltips ([#824](https://github.com/hhanh00/zkool2/issues/824)) ([b931115](https://github.com/hhanh00/zkool2/commit/b931115c26b93816df21a7900b4852832a084653))
+
 ## [6.11.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.10.2...zkool-v6.11.0) (2026-03-09)
 
 
