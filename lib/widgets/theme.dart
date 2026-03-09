@@ -100,7 +100,7 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = timeToString(date);
+    final d = timeToWidget(context, date);
     return ListTile(
       onTap: onTap,
       leading: Container(
@@ -112,7 +112,7 @@ class TransactionTile extends StatelessWidget {
         child: Icon(icon, color: color),
       ),
       title: Text(label),
-      subtitle: Text(d),
+      subtitle: d,
       trailing: Text(
         zatToShortString(amount),
         style: TextStyle(

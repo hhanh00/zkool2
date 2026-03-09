@@ -29,11 +29,17 @@ impl Context {
 
 impl juniper::Context for Context {}
 
-pub fn check_auth(context: &Context, id_account: i32) -> FieldResult<()> {
+pub fn check_auth(context: &Context, id_account: i32, check_write: bool) -> FieldResult<()> {
     if let Some(auth) = &context.auth {
-        if auth.sub != 0 && auth.sub != id_account as u32 {
-            return Err(FieldError::new("Unauthorized", juniper::Value::Null))
+        if auth.sub == 0 {
+            return Ok(()); // has admin rights
         }
+        if auth.sub == id_account as u32 &&
+            (!check_write || auth.write)
+        {
+            return Ok(());
+        }
+        return Err(FieldError::new("Unauthorized", juniper::Value::Null))
     }
     Ok(())
 }
