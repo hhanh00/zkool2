@@ -114,7 +114,7 @@ class TransactionTile extends StatelessWidget {
       title: Text(label),
       subtitle: Text(d),
       trailing: Text(
-        zatToString(amount),
+        zatToShortString(amount),
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
