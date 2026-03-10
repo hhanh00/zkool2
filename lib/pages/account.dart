@@ -611,11 +611,11 @@ class BalanceWidget extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        BalanceChip(PoolType.transparent, zatToShortString(balance.field0[0])),
+        GestureDetector(onTap: () => onPoolSelected?.call(0), child: BalanceChip(PoolType.transparent, zatToShortString(balance.field0[0]))),
         Gap(8),
-        BalanceChip(PoolType.sapling, zatToShortString(balance.field0[1])),
+        GestureDetector(onTap: () => onPoolSelected?.call(1), child: BalanceChip(PoolType.sapling, zatToShortString(balance.field0[1]))),
         Gap(8),
-        BalanceChip(PoolType.orchard, zatToShortString(balance.field0[2])),
+        GestureDetector(onTap: () => onPoolSelected?.call(2), child: BalanceChip(PoolType.orchard, zatToShortString(balance.field0[2]))),
       ],
     );
   }

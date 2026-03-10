@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
