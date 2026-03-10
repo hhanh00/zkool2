@@ -27,7 +27,7 @@ use tracing::{debug, event, info, span, Level};
 use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
-    builder::{BuildConfig, Builder},
+    builder::{BuildConfig, Builder, DEFAULT_TX_EXPIRY_DELTA},
     fees::zip317::FeeRule,
 };
 use zcash_proofs::prover::LocalTxProver;
@@ -376,7 +376,7 @@ pub async fn plan_transaction(
     info!("Initializing Builder");
 
     let current_height = client.latest_height().await?;
-    let target_height = current_height + 100 +
+    let target_height = current_height + DEFAULT_TX_EXPIRY_DELTA +
         // on regtest, add ZIP212_GRACE_PERIOD to make sure
         // ZIP-212 is enforced
         if network.network_type() == NetworkType::Regtest {
