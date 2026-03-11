@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.11.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.1...zkool-v6.11.2) (2026-03-11)
+
+
+### Bug Fixes
+
+* DEFAULT_TX_EXPIRY_DELTA is added by the pczt builder ([#829](https://github.com/hhanh00/zkool2/issues/829)) ([8a5011c](https://github.com/hhanh00/zkool2/commit/8a5011caca7349c877b9e59aa055660f42ed1ce1))
+* use default expiry delta (40) ([#827](https://github.com/hhanh00/zkool2/issues/827)) ([393bf2d](https://github.com/hhanh00/zkool2/commit/393bf2d52a42f75f2ed90f1b5a82cf5cb4ebc62e))
+
 ## [6.11.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.0...zkool-v6.11.1) (2026-03-09)
 
 
