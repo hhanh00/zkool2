@@ -376,7 +376,7 @@ pub async fn plan_transaction(
     info!("Initializing Builder");
 
     let current_height = client.latest_height().await?;
-    let target_height = current_height + DEFAULT_TX_EXPIRY_DELTA +
+    let target_height = current_height +
         // on regtest, add ZIP212_GRACE_PERIOD to make sure
         // ZIP-212 is enforced
         if network.network_type() == NetworkType::Regtest {
