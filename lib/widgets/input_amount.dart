@@ -15,9 +15,7 @@ class InputAmount extends ConsumerStatefulWidget {
   final void Function(String?)? onChanged;
   final bool showFx;
   final BigInt? max;
-  InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, this.max, super.key}) {
-    assert(initialValue == null || !showFx);
-  }
+  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, this.max, super.key});
 
   @override
   ConsumerState<InputAmount> createState() => InputAmountState();
