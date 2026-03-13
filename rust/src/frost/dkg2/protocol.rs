@@ -20,9 +20,7 @@ pub trait SecretData: Debug + BinaryRW + Sized + Send + Sync {
     type Public: PublicData;
 }
 
-pub trait PublicData: Debug + BinaryRW + Sized + Send + Sync + Unpin {
-    fn can_broadcast() -> bool;
-}
+pub trait PublicData: Debug + BinaryRW + Sized + Send + Sync + Unpin {}
 
 pub type FrostMap<T> = BTreeMap<Identifier, T>;
 
@@ -58,46 +56,47 @@ pub async fn get_or_generate<T: SecretData>(
             tracing::info!("get_or_generate 2");
             tracing::info!("{params:?}");
             if !prefix.is_empty() {
-                if T::Public::can_broadcast() {
-                    let p = p.expect_left("public data should be identical to all participants");
-                    let m = FrostMessage {
-                        from_id: params.id,
-                        data: p.to_bytes(),
-                    };
-                    let m = m.encode_with_prefix(prefix.as_bytes())?;
-                    let broadcast_address = params
-                        .broadcast_address
-                        .as_ref()
-                        .expect("Must have broadcast address");
-                    publish(
-                        network,
-                        connection,
-                        params.funding,
-                        client,
-                        height,
-                        &[(broadcast_address, m)],
-                    )
-                    .await?;
-                } else {
-                    let p = p.expect_right("public data should be specific to a participant");
-                    let mut recipients = vec![];
-                    for (id, p) in p {
+                match p {
+                    Either::Left(p) => {
                         let m = FrostMessage {
                             from_id: params.id,
                             data: p.to_bytes(),
                         };
                         let m = m.encode_with_prefix(prefix.as_bytes())?;
-                        recipients.push((&*params.mailbox_addresses[&id], m));
+                        let broadcast_address = params
+                            .broadcast_address
+                            .as_ref()
+                            .expect("Must have broadcast address");
+                        publish(
+                            network,
+                            connection,
+                            params.funding,
+                            client,
+                            height,
+                            &[(broadcast_address, m)],
+                        )
+                        .await?;
                     }
-                    publish(
-                        network,
-                        connection,
-                        params.funding,
-                        client,
-                        height,
-                        &recipients,
-                    )
-                    .await?;
+                    Either::Right(p) => {
+                        let mut recipients = vec![];
+                        for (id, p) in p {
+                            let m = FrostMessage {
+                                from_id: params.id,
+                                data: p.to_bytes(),
+                            };
+                            let m = m.encode_with_prefix(prefix.as_bytes())?;
+                            recipients.push((&*params.mailbox_addresses[&id], m));
+                        }
+                        publish(
+                            network,
+                            connection,
+                            params.funding,
+                            client,
+                            height,
+                            &recipients,
+                        )
+                        .await?;
+                    }
                 }
             }
             s

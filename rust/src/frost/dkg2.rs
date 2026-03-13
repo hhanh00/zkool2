@@ -1,5 +1,6 @@
 use anyhow::Result;
 use bincode::config;
+use either::Either;
 use orchard::keys::{FullViewingKey, Scope};
 use sqlx::{query, sqlite::SqliteRow, Acquire, Row, SqliteConnection};
 use zcash_keys::address::UnifiedAddress;
@@ -12,8 +13,8 @@ use crate::{
     frost::{
         dkg2::{
             mail::FrostParams,
-            pkg::{DKGRound1Public, DKGRound2Public},
-            protocol::BinaryRW,
+            pkg::{DKGRound1Public, DKGRound1Secret, DKGRound2Public},
+            protocol::{BinaryRW, FrostMap, SecretData},
         },
         FrostMessage,
     },
@@ -92,6 +93,49 @@ pub async fn process_messages(
     Ok(())
 }
 
+pub async fn run_round<T>(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    prefix: &str,
+    round: u8,
+    params: &FrostParams,
+    builder: impl FnOnce() -> Result<(T, Either<T::Public, FrostMap<T::Public>>)>,
+) -> Result<(T, FrostMap<T::Public>)>
+where
+    T: SecretData,
+{
+    tracing::info!("run_round {round}: get_or_generate secret package");
+    let secret_package = protocol::get_or_generate::<T>(
+        network,
+        params.birth,
+        &mut *connection,
+        client,
+        prefix,
+        round,
+        params,
+        builder,
+    )
+    .await?;
+
+    tracing::info!("run_round {round}: get public packages");
+    let public_packages = protocol::get_and_collect(&mut *connection, round, params, |data| {
+        T::Public::try_from_bytes(&data)
+            .expect("Data was validated before insertion in dkg_packages")
+    })
+    .await?;
+
+    tracing::info!("# of public packages: {}", public_packages.len());
+    if !prefix.is_empty() && public_packages.len() < params.n as usize - 1 {
+        anyhow::bail!(
+            "Need {} more public packages",
+            params.n as usize - public_packages.len() - 1
+        );
+    }
+
+    Ok((secret_package, public_packages))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn dkg_workflow(
     network: &Network,
@@ -99,81 +143,38 @@ pub async fn dkg_workflow(
     client: &mut Client,
     params: &FrostParams,
 ) -> Result<()> {
-    tracing::info!("WF 0");
+    tracing::info!("process_messages personal messages");
     process_messages(&mut *connection, params.mailbox, params).await?;
-    tracing::info!("WF 1");
+
+    tracing::info!("process_messages broadcast messages");
     let Some(broadcast) = params.broadcast else {
         anyhow::bail!("At least one peer address is missing");
     };
     process_messages(&mut *connection, broadcast, params).await?;
 
-    tracing::info!("WF 2");
+    tracing::info!("Start rounds");
     let mut db_tx = connection.begin().await?;
-    tracing::info!("WF 3");
-    let s1p = protocol::get_or_generate::<pkg::DKGRound1Secret>(
-        network,
-        params.birth,
-        &mut db_tx,
-        client,
-        "DK12",
-        1,
-        params,
-        move || pkg::build_part1(params.id, params.n, params.t),
-    )
-    .await?;
 
-    let p1p = protocol::get_and_collect(&mut db_tx, 1, params, |data| {
-        DKGRound1Public::try_from_bytes(&data)
-            .expect("Data was validated before insertion in dkg_packages")
+    tracing::info!("Round 1");
+    let (s1p, p1p) =
+        run_round::<DKGRound1Secret>(network, &mut db_tx, client, "DK12", 1, params, move || {
+            pkg::build_part1(params.id, params.n, params.t)
+        })
+        .await?;
+
+    tracing::info!("Round 2");
+    let (s2p, p2p) = run_round(network, &mut db_tx, client, "DK22", 2, params, || {
+        pkg::build_part2(s1p, p1p.clone())
     })
     .await?;
-    tracing::info!("R1 public count: {}", p1p.len());
-    if p1p.len() < params.n as usize - 1 {
-        anyhow::bail!(
-            "Need {} more public round 1 packages",
-            params.n as usize - p1p.len()
-        );
-    }
-    tracing::info!("WF 4");
 
-    let s2p = protocol::get_or_generate::<pkg::DKGRound2Secret>(
-        network,
-        params.birth,
-        &mut db_tx,
-        client,
-        "DK22",
-        2,
-        params,
-        || pkg::build_part2(s1p, p1p.clone()),
-    )
-    .await?;
-    let p2p = protocol::get_and_collect(&mut db_tx, 2, params, |data| {
-        DKGRound2Public::try_from_bytes(&data)
-            .expect("Data was validated before insertion in dkg_packages")
+    tracing::info!("Round 3");
+    let (sk, _) = run_round(network, &mut db_tx, client, "", 3, params, || {
+        pkg::build_part3(s2p, p1p, p2p)
     })
     .await?;
-    tracing::info!("R2 public count: {}", p2p.len());
-    if p2p.len() < params.n as usize - 1 {
-        anyhow::bail!(
-            "Need {} more public round 2 packages",
-            params.n as usize - p2p.len()
-        );
-    }
-    tracing::info!("WF 5");
 
-    let sk = protocol::get_or_generate::<pkg::DKGRound3Secret>(
-        network,
-        params.birth,
-        &mut db_tx,
-        client,
-        "",
-        3,
-        params,
-        || pkg::build_part3(s2p, p1p, p2p),
-    )
-    .await?;
-
-
+    tracing::info!("Build shared address");
     // Build the shared key out of the public key and parts of the broadcast account
     let fvk = get_orchard_vk(&mut db_tx, broadcast)
         .await?
@@ -192,14 +193,6 @@ pub async fn dkg_workflow(
     let sua = ua.encode(network);
     tracing::info!("Shared address: {sua}");
 
-    // Get all mailbox addresses
-    // Generate broadcast address
-    // Get Round 1 private key
-    // Get Round 1 public commitments
-    // Get Round 2 private key
-    // Get Round 2 public commitments
-    // Get private key share
-    // Get pub key share
     db_tx.commit().await?;
     Ok(())
 }
