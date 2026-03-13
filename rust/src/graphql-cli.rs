@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
         .set_lwd(0, lwd_url)?;
 
     let context = Context::new(coin);
-    tokio::spawn(run_mempool(context.clone()));
+    // tokio::spawn(run_mempool(context.clone()));
 
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 

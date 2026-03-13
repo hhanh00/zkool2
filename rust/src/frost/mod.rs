@@ -6,15 +6,26 @@ use reddsa::frost::redpallas::{
     keys::dkg::{round1, round2},
     Identifier, PallasBlake2b512,
 };
+use thiserror::Error;
 
 pub type P = PallasBlake2b512;
 
 pub mod db;
 pub mod dkg;
+pub mod dkg2;
 pub mod sign;
 
 pub type PK1Map = BTreeMap<Identifier, round1::Package>;
 pub type PK2Map = BTreeMap<Identifier, round2::Package>;
+
+#[derive(Error, Debug)]
+pub enum FrostError {
+    #[error("Unavailable")]
+    Unavailable,
+    #[error(transparent)]
+    Any(#[from] anyhow::Error),
+}
+pub type FrostResult<T> = Result<T, FrostError>;
 
 #[derive(Encode, Decode)]
 pub struct FrostMessage {

@@ -8,9 +8,8 @@ use sqlx::SqliteConnection;
 
 use crate::{
     api::coin::Coin,
-    frost::{db::get_mailbox_account, dkg::get_dkg_params},
+    frost::{db::get_mailbox_account, dkg::get_dkg_params, dkg2::mail::get_frost_params},
 };
-use std::str::FromStr;
 
 use super::pay::PcztPackage;
 
@@ -22,10 +21,10 @@ pub async fn set_dkg_params(
     t: u8,
     funding_account: u32,
     c: &Coin,
-) -> Result<()> {
+) -> Result<String> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::frost::dkg::set_dkg_params(
+    crate::frost::dkg2::set_dkg_params(
         &c.network(),
         &mut connection,
         &mut client,
@@ -109,9 +108,14 @@ pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
 pub async fn set_dkg_address(id: u8, address: &str, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection).await?;
-    let dkg_params = get_dkg_params(&mut connection, account).await?;
+    let dkg_params = get_frost_params(
+        &c.network(), &mut connection).await?
+        .ok_or(anyhow::anyhow!("No DKG Parameters"))?;
     let my_id = dkg_params.id;
-    crate::frost::dkg::set_dkg_address(&mut connection, account, id, my_id, address).await
+    if id == my_id {
+        anyhow::bail!("Cannot set our own address");
+    }
+    crate::frost::dkg2::set_dkg_address(&mut connection, account, id, address).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -122,10 +126,10 @@ pub async fn cancel_dkg(c: &Coin) -> Result<()> {
 }
 
 pub(crate) async fn get_funding_account(connection: &mut SqliteConnection) -> Result<u32> {
-    let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_funding'")
+    let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_account'")
         .fetch_one(&mut *connection)
         .await?;
-    let account = u32::from_str(&account).unwrap();
+    let account = account.parse::<u32>()?;
     Ok(account)
 }
 

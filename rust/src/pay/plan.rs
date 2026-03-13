@@ -27,7 +27,7 @@ use tracing::{debug, event, info, span, Level};
 use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
-    builder::{BuildConfig, Builder, DEFAULT_TX_EXPIRY_DELTA},
+    builder::{BuildConfig, Builder},
     fees::zip317::FeeRule,
 };
 use zcash_proofs::prover::LocalTxProver;
