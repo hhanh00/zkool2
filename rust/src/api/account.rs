@@ -294,6 +294,7 @@ pub struct AccountUpdate {
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Default)]
 pub struct NewAccount {
     pub icon: Option<Vec<u8>>,
     pub name: String,

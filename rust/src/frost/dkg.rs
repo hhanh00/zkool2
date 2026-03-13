@@ -515,6 +515,7 @@ pub async fn publish(
     height: u32,
     recipients: &[(&str, Vec<u8>)],
 ) -> Result<String, anyhow::Error> {
+    tracing::info!("Publish");
     let recipients = recipients
         .iter()
         .map(|(address, data)| Recipient {
@@ -537,12 +538,12 @@ pub async fn publish(
         false,
         None,
     )
-    .await
-    .unwrap();
+    .await?;
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
     let result = crate::pay::send(client, height, &txb).await?;
-    hex::decode(&result)?;
+    tracing::info!("txid {result}");
+    hex::decode(&result)?; // success if result is a hex string
     Ok(result)
 }
 

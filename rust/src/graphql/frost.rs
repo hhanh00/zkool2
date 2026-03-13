@@ -1,12 +1,14 @@
 use bincode::config;
-use juniper::{FieldError, FieldResult};
+use juniper::FieldResult;
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 use crate::{
     api::{coin::Coin, frost::get_funding_account},
-    frost::dkg::{in_dkg, in_frost},
+    frost::{
+        dkg::{in_dkg, in_frost}, dkg2::mail::get_frost_params,
+    },
     graphql::Context,
-    sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
+    sync::{DEFAULT_ACTIONS_PER_SYNC, synchronize_impl},
 };
 
 pub async fn dkg_start(
@@ -18,7 +20,7 @@ pub async fn dkg_start(
     context: &Context,
 ) -> FieldResult<String> {
     let coin = &context.coin;
-    crate::api::frost::set_dkg_params(
+    let address = crate::api::frost::set_dkg_params(
         &name,
         id_participant as u8,
         participants as u8,
@@ -27,15 +29,15 @@ pub async fn dkg_start(
         coin,
     )
     .await?;
-    crate::api::frost::init_dkg(coin).await?;
-    let addresses = crate::api::frost::get_dkg_addresses(coin).await?;
-    if id_participant <= 0 || id_participant > participants {
-        return Err(FieldError::new(
-            "Invalid id_participant",
-            juniper::Value::Null,
-        ));
-    }
-    let address = addresses[id_participant as usize - 1].clone();
+    // crate::api::frost::init_dkg(coin).await?;
+    // let addresses = crate::api::frost::get_dkg_addresses(coin).await?;
+    // if id_participant <= 0 || id_participant > participants {
+    //     return Err(FieldError::new(
+    //         "Invalid id_participant",
+    //         juniper::Value::Null,
+    //     ));
+    // }
+    // let address = addresses[id_participant as usize - 1].clone();
     Ok(address)
 }
 
@@ -97,14 +99,8 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
     }
 
     if in_frost {
-        crate::frost::sign::do_sign_impl(
-            &coin.network(),
-            &mut connection,
-            &mut client,
-            height,
-            (),
-        )
-        .await?;
+        crate::frost::sign::do_sign_impl(&coin.network(), &mut connection, &mut client, height, ())
+            .await?;
     }
     Ok(())
 }
@@ -147,4 +143,16 @@ pub async fn frost_sign(
     )
     .await?;
     Ok(true)
+}
+
+pub async fn dkg_workflow(context: &Context) -> FieldResult<bool> {
+    let coin = &context.coin;
+    let mut connection = coin.get_connection().await?;
+    let mut client = coin.client().await?;
+    if let Some(params) = get_frost_params(&coin.network(), &mut connection).await? {
+        crate::frost::dkg2::dkg_workflow(&coin.network(), &mut connection, &mut client, &params)
+            .await?;
+        return Ok(true)
+    }
+    Ok(false)
 }

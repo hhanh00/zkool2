@@ -202,6 +202,11 @@ impl Mutation {
         .await
     }
 
+    pub async fn dkg_workflow(context: &Context) -> FieldResult<bool> {
+        crate::graphql::frost::dkg_workflow(context).await
+    }
+
+
     pub async fn dkg_cancel(context: &Context) -> FieldResult<bool> {
         crate::graphql::frost::dkg_cancel(context).await
     }

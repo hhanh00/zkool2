@@ -356,6 +356,13 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         .execute(&mut *connection)
         .await;
 
+    let _ = sqlx::query("ALTER TABLE dkg_params ADD COLUMN name TEXT")
+        .execute(&mut *connection)
+        .await;
+    let _ = sqlx::query("ALTER TABLE dkg_params ADD COLUMN height INTEGER")
+        .execute(&mut *connection)
+        .await;
+
     let version = get_prop(connection, "version").await?;
     match version {
         Some(version) if version.parse::<u16>()? > DB_VERSION => {
