@@ -600,7 +600,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     final completer = Completer<void>();
     try {
       logger.i("Starting Synchronization");
-      showSnackbar("Starting Synchronization");
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
+        showSnackbar("Starting Synchronization");
       syncInProgress = true;
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
@@ -633,7 +634,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           Timer.run(() async {
             ref.invalidate(getAccountsProvider);
             ref.invalidate(accountProvider);
-            showSnackbar("Synchronization Completed");
+            if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
+              showSnackbar("Synchronization Completed");
             logger.i("Synchronization Completed");
             completer.complete();
           });
