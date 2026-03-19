@@ -4,9 +4,11 @@ use anyhow::Result;
 use clap::Parser;
 use figment::providers::{Format, Serialized, Toml};
 use figment::Figment;
+use jsonwebtoken::{DecodingKey, Validation};
 use juniper::RootNode;
 use juniper_graphql_ws::ConnectionConfig;
 use rlz::api::coin::Coin;
+use rlz::graphql::jwt::{AuthError, Claims};
 use rlz::graphql::mutation::run_mempool;
 use rlz::graphql::{mutation::Mutation, query::Query, subs::Subscription, Context};
 use serde::{Deserialize, Serialize};
@@ -24,6 +26,8 @@ pub struct Config {
     pub lwd_url: Option<String>,
     #[clap(short, long, value_parser)]
     pub port: Option<u16>,
+    #[clap(short, long, value_parser)]
+    pub jwt_secret_file: Option<String>,
 }
 
 #[tokio::main]
@@ -46,11 +50,19 @@ async fn main() -> Result<()> {
         db_path,
         lwd_url,
         port,
+        jwt_secret_file,
         ..
     } = config;
     let db_path = db_path.unwrap_or("zkool.db".to_string());
     let lwd_url = lwd_url.unwrap_or("https://zec.rocks".to_string());
     let port = port.unwrap_or(8000);
+
+    let secret = jwt_secret_file
+        .map(|path| {
+            let s = std::fs::read_to_string(&path)?.trim().to_string();
+            Ok::<_, anyhow::Error>(s)
+        })
+        .transpose()?;
 
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
     let coin = Coin::new()
@@ -64,7 +76,43 @@ async fn main() -> Result<()> {
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 
     let c = context.clone();
-    let context_extractor = warp::any().map(move || context.clone());
+    let c2 = c.clone();
+    let context_extractor = match secret {
+        Some(secret) => {
+            let filter = warp::header::optional::<String>("authorization").and_then(
+                move |auth_header: Option<String>| {
+                    let secret = secret.clone();
+                    let c = c2.clone();
+                    async move {
+                        let token = match auth_header {
+                            Some(h) if h.starts_with("Bearer ") => {
+                                h.trim_start_matches("Bearer ").trim().to_string()
+                            }
+                            _ => return Err(warp::reject::custom(AuthError)), // missing or malformed
+                        };
+
+                        let token_data = jsonwebtoken::decode::<Claims>(
+                            token,
+                            &DecodingKey::from_secret(secret.as_bytes()),
+                            &Validation::default(),
+                        )
+                        .map_err(|_| warp::reject::custom(AuthError))?;
+                        let auth_context = Context {
+                            auth: Some(token_data.claims),
+                            ..c
+                        };
+
+                        Ok::<_, warp::reject::Rejection>(auth_context)
+                    }
+                },
+            );
+            filter.boxed()
+        }
+        None => {
+            let filter = warp::any().map(move || c2.clone());
+            filter.boxed()
+        }
+    };
 
     let schema = Arc::new(schema);
 

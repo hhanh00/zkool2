@@ -19,7 +19,7 @@ use zcash_protocol::consensus::{
 };
 use zcash_protocol::local_consensus::LocalNetwork;
 
-use crate::db::{create_schema, migrate_sapling_addresses};
+use crate::db::{create_schema, migrate_sapling_addresses, put_prop};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::net::zebra::ZebraClient;
 use crate::{Client, IntoAnyhow};
@@ -56,12 +56,17 @@ impl Coin {
             .await?
             .unwrap_or("0".to_string());
         let coin = coin.parse::<u8>()?;
+        let account = crate::db::get_prop(&mut connection, "account")
+            .await?
+            .unwrap_or("0".to_string());
+        let account = account.parse::<u32>()?;
 
         migrate_sapling_addresses(&network, &mut connection).await?;
 
         Ok(Coin {
             coin,
             db_filepath,
+            account,
             ..self
         })
     }
@@ -96,7 +101,9 @@ impl Coin {
     }
 
     #[cfg_attr(feature = "flutter", frb)]
-    pub fn set_account(self, account: u32) -> Result<Self> {
+    pub async fn set_account(self, account: u32) -> Result<Self> {
+        let mut conn = self.get_connection().await?;
+        put_prop(&mut *conn, "account", &account.to_string()).await?;
         Ok(Coin {
             account,
             ..self
@@ -177,6 +184,7 @@ async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<Sqlite
         };
         crate::db::put_prop(&mut connection, "coin", coin_value).await?;
     }
+    zcvlib::db::create_schema(&mut connection).await?;
 
     Ok(pool)
 }

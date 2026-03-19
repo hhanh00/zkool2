@@ -4,7 +4,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:gap/gap.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -19,6 +18,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/theme.dart';
 
 part 'store.g.dart';
 part 'store.freezed.dart';
@@ -109,11 +109,13 @@ sealed class SyncProgressAccount with _$SyncProgressAccount {
 class ProgressWidget extends ConsumerWidget {
   final Account account;
   final double? width;
+  final TextStyle? style;
   final Widget Function(BuildContext context, SyncProgressAccount status, TextStyle? style) builder;
   const ProgressWidget(
     this.account, {
     super.key,
     this.width,
+    this.style,
     required this.builder,
   });
 
@@ -132,32 +134,33 @@ class ProgressWidget extends ConsumerWidget {
     final timestamp = DateTime.fromMillisecondsSinceEpoch(ss.time * 1000);
     final syncAge = DateTime.now().difference(timestamp);
     final old = syncAge > Duration(minutes: 30);
-    final style = old ? TextStyle(color: Colors.red) : null;
+    final s = style ?? TextStyle();
+    final s2 = old ? s.copyWith(color: Colors.red) : s;
 
-    return SizedBox(
-      width: width,
-      height: 80,
+    return IntrinsicHeight(
+        child: SizedBox(
       child: Stack(
         children: [
           if (ss.start != ss.end)
-            SizedBox.expand(
+            Positioned.fill(
               child: LinearProgressIndicator(
                 color: t.colorScheme.primary.withAlpha(128),
                 value: ss.progress(),
               ),
             ),
-          Center(child: builder(context, ss, style)),
+          builder(context, ss, s2),
         ],
       ),
-    );
+    ));
   }
 }
 
 class SmallProgressWidget extends StatelessWidget {
   final Account account;
-  const SmallProgressWidget(this.account, {super.key});
+  final TextStyle? style;
+  const SmallProgressWidget(this.account, {this.style, super.key});
   @override
-  Widget build(BuildContext context) => ProgressWidget(account, width: 80, builder: (context, status, style) => Text("${status.height}", style: style));
+  Widget build(BuildContext context) => ProgressWidget(account, style: style, builder: (context, status, style) => Text("${status.height}", style: style));
 }
 
 class HeroProgressWidget extends StatelessWidget {
@@ -165,31 +168,42 @@ class HeroProgressWidget extends StatelessWidget {
   const HeroProgressWidget(this.account, {super.key});
 
   @override
-  Widget build(BuildContext context) => ProgressWidget(
-        account,
-        builder: (context, status, style) {
-          final t = Theme.of(context).textTheme;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: "${status.height}", style: t.bodyLarge!.merge(style)),
-                    if (status.end - status.height > 0)
-                      TextSpan(
-                        text: " tip-${status.end - status.height}",
-                        style: t.labelSmall,
-                      ),
-                  ],
-                ),
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    Widget child = ProgressWidget(account, builder: (context, status, style) {
+      return Center(
+          child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: "${status.height}", style: t.bodyLarge!.merge(style)),
+            if (status.end - status.height > 0)
+              TextSpan(
+                text: " tip-${status.end - status.height}",
+                style: t.labelSmall,
               ),
-              Gap(8),
-              Text(timeToString(status.time), style: t.bodySmall),
+          ],
+        ),
+      ));
+    });
+
+    return DisplayPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Height",
+                style: t.bodyLarge,
+              ),
             ],
-          );
-        },
-      );
+          ),
+          child,
+        ],
+      ),
+    );
+  }
 }
 
 // AppStore get appStore => AppStoreBase.instance;
@@ -292,6 +306,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
+    final getFx = await prefs.getBool("get_fx") ?? false;
     final coingecko = await prefs.getString("coingecko") ?? "";
     final recovery = await prefs.getBool("recovery") ?? false;
     final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
@@ -312,6 +327,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       delay: int.parse(qrDelay),
       repair: int.parse(qrRepair),
     );
+    final price = ref.watch(priceProvider.notifier);
+    price.setAutoFetchFx(getFx, coingecko);
 
     return AppSettings(
       dbName: dbName,
@@ -322,6 +339,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       pinUnlockedAt: DateTime.now(),
       offline: offline,
       useTor: useTor,
+      getFx: getFx,
       coingecko: coingecko,
       recovery: recovery,
       syncInterval: syncInterval,
@@ -338,7 +356,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class PriceNotifier extends _$PriceNotifier {
   @override
   double? build() => null;
@@ -346,6 +364,31 @@ class PriceNotifier extends _$PriceNotifier {
   void setPrice(double price) {
     state = price;
   }
+
+  Timer? fetchFxTimer;
+  void setAutoFetchFx(bool autoGetFx, String api) async {
+    if (autoGetFx) {
+      await fetch(api);
+      fetchFxTimer = Timer.periodic(Duration(minutes: 1), (_) async {
+        await fetch(api);
+      });
+    } else {
+      fetchFxTimer?.cancel();
+      fetchFxTimer = null;
+    }
+  }
+
+  Future<double?> fetch(String api) async {
+    try {
+      final p = await getCoingeckoPrice(api: api);
+      setPrice(p);
+      return p;
+    }
+    catch (_) {
+      return null;
+    }
+  }
+
 }
 
 @freezed
@@ -364,6 +407,7 @@ sealed class AppSettings with _$AppSettings {
     required bool needPin,
     required DateTime pinUnlockedAt,
     required bool offline,
+    required bool getFx,
     required QRSettings qrSettings,
   }) = _AppSettings;
 }
@@ -556,7 +600,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     final completer = Completer<void>();
     try {
       logger.i("Starting Synchronization");
-      showSnackbar("Starting Synchronization");
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
+        showSnackbar("Starting Synchronization");
       syncInProgress = true;
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
@@ -589,7 +634,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           Timer.run(() async {
             ref.invalidate(getAccountsProvider);
             ref.invalidate(accountProvider);
-            showSnackbar("Synchronization Completed");
+            if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
+              showSnackbar("Synchronization Completed");
             logger.i("Synchronization Completed");
             completer.complete();
           });
@@ -633,7 +679,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         await checkSyncNeeded(currentHeight, now: now);
       }
     } on AnyhowException catch (e) {
-      logger.i(e);
+      logger.e(e);
       // ignore
     } finally {
       if (interval > 0) Timer(Duration(seconds: 15), () => autoSync());

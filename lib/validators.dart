@@ -47,13 +47,16 @@ String? validAddressOrPaymentURI(String? s) {
   return "Invalid Address or Payment URI";
 }
 
-String? validAmount(String? amount) {
+String? validAmount(String? amount, {BigInt? max}) {
   if ((amount == null || amount.isEmpty)) {
     return null;
   }
   final a = NumberFormat.decimalPattern(locale).tryParse(amount);
   if (a == null) {
     return "Invalid Amount";
+  }
+  if (max != null && stringToZat(amount) > max) {
+    return "Amount exceeds maximum";
   }
   return null;
 }

@@ -28,10 +28,6 @@ Future<void> main() async {
 
   final r = router(disclaimerAccepted, recovery);
 
-  // Future<AppSettings> initApp(WidgetRef ref, AppSettings s) async {
-  //   appWatcher = LifecycleWatcher(ref);
-  //   return s;
-  // }
   runApp(
     ProviderScope(
       child: ToastificationWrapper(

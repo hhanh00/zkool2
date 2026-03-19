@@ -2,7 +2,6 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
@@ -14,7 +13,9 @@ class InputAmount extends ConsumerStatefulWidget {
   final String? initialValue;
   final void Function()? onMax;
   final void Function(String?)? onChanged;
-  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, super.key});
+  final bool showFx;
+  final BigInt? max;
+  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, this.max, super.key});
 
   @override
   ConsumerState<InputAmount> createState() => InputAmountState();
@@ -36,6 +37,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       initialValue: widget.initialValue,
       onReset: onReset,
       onChanged: onChanged,
+      validator: (v) => validAmount(v, max: widget.max),
       builder: (state) {
         return FormBuilder(
           key: formKey,
@@ -47,47 +49,54 @@ class InputAmountState extends ConsumerState<InputAmount> {
                     child: FormBuilderTextField(
                       name: "zat",
                       decoration: InputDecoration(label: Text("Amount in ZEC")),
-                      validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAmount]),
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      initialValue: widget.initialValue,
                       onChanged: (v) => onChanged(v, interactive: true),
                     ),
                   ),
                   Gap(8),
-                  IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top)),
+                  if (widget.onMax != null) IconButton(onPressed: widget.onMax, icon: Icon(Icons.vertical_align_top)),
                 ],
               ),
-              Row(
-                children: [
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: "fiat",
-                      decoration: InputDecoration(label: Text("Amount in USD")),
-                      validator: validAmount,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (v) => onFiatChanged(v, interactive: true),
+              Gap(4),
+              if (state.errorText != null)
+                Text(
+                  state.errorText!,
+                  style: TextStyle(color: Colors.red),
+                ),
+              if (widget.showFx)
+                Row(
+                  children: [
+                    Expanded(
+                      child: FormBuilderTextField(
+                        name: "fiat",
+                        decoration: InputDecoration(label: Text("Amount in USD")),
+                        validator: validAmount,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (v) => onFiatChanged(v, interactive: true),
+                      ),
                     ),
-                  ),
-                  Gap(8),
-                  SizedBox(
-                    width: 80,
-                    child: FormBuilderTextField(
-                      name: "fx",
-                      decoration: InputDecoration(label: Text("Fx")),
-                      validator: validAmount,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      initialValue: displayPrice(price),
-                      onChanged: onPriceChanged,
+                    Gap(8),
+                    SizedBox(
+                      width: 80,
+                      child: FormBuilderTextField(
+                        name: "fx",
+                        decoration: InputDecoration(label: Text("Fx")),
+                        validator: validAmount,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        initialValue: displayPrice(price),
+                        onChanged: onPriceChanged,
+                      ),
                     ),
-                  ),
-                  Gap(8),
-                  IconButton(
-                    onPressed: () => onUpdateFx(coingecko.requireValue),
-                    icon: Icon(Icons.refresh),
-                  ),
-                ],
-              ),
+                    Gap(8),
+                    IconButton(
+                      onPressed: () => onUpdateFx(coingecko.requireValue),
+                      icon: Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
               Gap(16),
-              Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
+              if (widget.showFx) Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
             ],
           ),
         );
@@ -173,5 +182,9 @@ class InputAmountState extends ConsumerState<InputAmount> {
     final form = formKey.currentState!;
     if (zat) form.fields["zat"]!.reset();
     if (fiat) form.fields["fiat"]!.reset();
+  }
+
+  void setAmount(String v) {
+    onChanged(v, interactive: false);
   }
 }
