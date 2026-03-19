@@ -383,7 +383,7 @@ Future<BigInt> refresh(
       "Synchronizing",
       dismissable: false,
     );
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(Duration(seconds: 15));
     await scanBallots(
       idAccount: c.account,
       c: c,
