@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.11.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.2...zkool-v6.11.3) (2026-03-20)
+
+
+### Bug Fixes
+
+* increase delay after voting from 2s to 15s before refreshing ([#835](https://github.com/hhanh00/zkool2/issues/835)) ([9dcb1e4](https://github.com/hhanh00/zkool2/commit/9dcb1e47003b83d19c7513d9392e9a7389d2fd56))
+
 ## [6.11.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.1...zkool-v6.11.2) (2026-03-17)
 
 
