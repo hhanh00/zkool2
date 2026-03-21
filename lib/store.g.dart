@@ -504,7 +504,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'ef07020c62113b0017338ac37daf414162ce2325';
+    r'c4565fe09f2b58589c0ef9b5f9002b3a654669c6';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -554,7 +554,7 @@ final class PriceNotifierProvider
   }
 }
 
-String _$priceNotifierHash() => r'67e0426a00856d7af77dad637283bbb590b50ce1';
+String _$priceNotifierHash() => r'9c6f7b369e9fef6348fa6fdda446294b8c8dac98';
 
 abstract class _$PriceNotifier extends $Notifier<double?> {
   double? build();
@@ -750,7 +750,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'8fd302a45deeebc8abcc823adfbc11ba7f1ab729';
+    r'48bdddbf9b610b98139d31c92b92d93742f562d1';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

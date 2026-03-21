@@ -134,6 +134,15 @@ pub async fn delete_election(c: &Coin) -> Result<()> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn delete_election_data(new_account: Option<u32>, c: &Coin) -> Result<()> {
+    tracing::info!("delete_election_data");
+    let c = c.to_context().await?;
+    zcvlib::api::simple::client_delete_election_data(&c, new_account).await?;
+    Ok(())
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn scan_votes(progress: StreamSink<u32>, id_account: u32, c: &Coin) -> Result<()> {
     let c = c.to_context().await?;
     tracing::info!("scan_votes {}", c.election_url);
