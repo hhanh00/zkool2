@@ -253,7 +253,10 @@ fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteCo
         .filename(db_filepath)
         .create_if_missing(true);
     let options = match password.as_ref() {
-        Some(password) => options.pragma("key", password.clone()),
+        Some(password) => {
+            let escaped_password = format!("'{}'", password.replace('\'', "''"));
+            options.pragma("key", escaped_password)
+        }
         None => options,
     };
     options
