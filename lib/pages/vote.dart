@@ -54,6 +54,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final c = ref.watch(coinContextProvider);
+    final votingBound = account != null && account != c.account;
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onQuit, icon: Icon(Icons.delete))]),
       body: SingleChildScrollView(
@@ -71,14 +72,22 @@ class VotePage1State extends ConsumerState<VotePage1> {
                       readOnly: url?.isNotEmpty == true,
                     ),
                     Gap(16),
-                    if (account != null && account != c.account) ...[
+                    if (votingBound) ...[
                       Text("Election was opened in another account",
                           style: t.textTheme.bodyLarge!.copyWith(
                             color: t.colorScheme.tertiary,
                           )),
                       Gap(8),
                     ],
-                    ElevatedButton(onPressed: onNext, child: Text("Next")),
+                    votingBound
+                        ? ElevatedButton(
+                            onPressed: onSwitch,
+                            child: Text("Switch"),
+                          )
+                        : ElevatedButton(
+                            onPressed: onNext,
+                            child: Text("Next"),
+                          ),
                     Gap(16),
                   ],
                 ),
@@ -93,6 +102,23 @@ class VotePage1State extends ConsumerState<VotePage1> {
       final c = ref.read(coinContextProvider);
       await deleteElection(c: c);
       GoRouter.of(context).pop();
+    }
+  }
+
+  void onSwitch() async {
+    try {
+      final confirmed = await confirmDialog(context,
+          title: "Leave Election",
+          message: "Are you sure you want to switch to this account?\nThis will delete the election data"
+              " of the other account");
+      if (confirmed) {
+        final c = ref.read(coinContextProvider);
+        await deleteElectionData(newAccount: c.account, c: c);
+        election = await getElection(c: c);
+        await scan();
+      }
+    } on AnyhowException catch (e) {
+      await showException(context, e.message);
     }
   }
 

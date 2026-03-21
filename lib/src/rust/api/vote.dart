@@ -32,6 +32,10 @@ Future<ElectionPropsPub> fetchElection(
 Future<void> deleteElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteDeleteElection(c: c);
 
+Future<void> deleteElectionData({int? newAccount, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVoteDeleteElectionData(newAccount: newAccount, c: c);
+
 Stream<int> scanVotes({required int idAccount, required Coin c}) =>
     RustLib.instance.api.crateApiVoteScanVotes(idAccount: idAccount, c: c);
 
