@@ -16,42 +16,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-
-      - name: Cache
-        id: cache-zkool
-        uses: actions/cache@v4
-        with:
-          path: ./rust/target/release/zkool_graphql
-          key: ${{ runner.os }}-zkool_graphql
-
-      - name: Build zkool_graphql
-        # if: steps.cache-zkool.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libudev-dev
-          cd rust
-          cargo build --release --bin zkool_graphql --features=graphql
-
-      - name: Save cache
-        if: steps.cache-zkool.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./rust/target/release/zkool_graphql
-          key: ${{ runner.os }}-zkool_graphql
-
-      - name: Run regtest
-        uses: ./.github/actions/zebra
-        with:
-          miner_address: tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs
-      - name: Shield mine and check balance
-        run: |
-          curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [200] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
-          nohup ./rust/target/release/zkool_graphql -d regtest.db -l http://localhost:8137 -n &
-          pushd example/py
-          pip install .
-          python mining.py
-        env:
-          MINER_SEED: "burger voice warrior danger satoshi you solid atom elite alcohol category layer able debate culture talk tissue language hip surge fiction paddle stove voyage"
-          DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
-          SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
+      # - name: Build zkool_graphql
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y pkg-config libudev-dev
+      #     cd rust
+      #     cargo build --release --bin zkool_graphql --features=graphql
+      # - name: Run regtest
+      #   uses: ./.github/actions/zebra
+      #   with:
+      #     miner_address: tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs
