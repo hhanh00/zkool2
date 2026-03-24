@@ -1,0 +1,18 @@
+[network]
+network = "Regtest"
+
+[rpc]
+listen_addr = "0.0.0.0:18232"
+enable_cookie_auth = false
+
+[mining]
+internal_miner = true
+miner_address = ""
+
+[network.testnet_parameters.activation_heights]
+"NU6.1" = 1
+
+[[network.testnet_parameters.lockbox_disbursements]]
+# dummy address
+address = "t27eWDgjFYJGVXmzrXeVjnb5J3uXDM9xH9v"
+amount = 0
