@@ -26,6 +26,8 @@ pub struct Config {
     pub lwd_url: Option<String>,
     #[clap(short, long, value_parser)]
     pub port: Option<u16>,
+    #[clap(short, long)]
+    pub no_mempool: bool,
     #[clap(short, long, value_parser)]
     pub jwt_secret_file: Option<String>,
 }
@@ -51,6 +53,7 @@ async fn main() -> Result<()> {
         lwd_url,
         port,
         jwt_secret_file,
+        no_mempool,
         ..
     } = config;
     let db_path = db_path.unwrap_or("zkool.db".to_string());
@@ -71,7 +74,9 @@ async fn main() -> Result<()> {
         .set_lwd(0, lwd_url)?;
 
     let context = Context::new(coin);
-    tokio::spawn(run_mempool(context.clone()));
+    if !no_mempool {
+        tokio::spawn(run_mempool(context.clone()));
+    }
 
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 
