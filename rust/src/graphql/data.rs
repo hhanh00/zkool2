@@ -48,6 +48,7 @@ pub struct Addresses {
 
 #[derive(Clone, Debug)]
 pub struct Note {
+    pub id: i32,
     pub height: i32,
     pub pool: i32,
     pub tx: i32,

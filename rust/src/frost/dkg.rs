@@ -17,6 +17,8 @@ use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
 
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 use crate::{
     account::{get_account_seed, get_orchard_vk},
     api::{
@@ -33,8 +35,6 @@ use crate::{
     },
     Client, Sink,
 };
-#[cfg(feature = "flutter")]
-use crate::frb_generated::StreamSink;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn set_dkg_params(
@@ -534,6 +534,7 @@ pub async fn publish(
         ALL_POOLS,
         &recipients,
         false,
+        None,
         false,
         None,
     )

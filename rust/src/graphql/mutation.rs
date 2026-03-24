@@ -42,6 +42,7 @@ pub struct Payment {
     pub recipients: Vec<Recipient>,
     pub src_pools: Option<i32>,
     pub recipient_pays_fee: Option<bool>,
+    pub confirmations: Option<i32>,
 }
 
 #[derive(GraphQLObject)]

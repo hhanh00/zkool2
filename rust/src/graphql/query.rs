@@ -307,6 +307,7 @@ pub async fn prepare_tx(
         payment.src_pools.unwrap_or(7) as u8,
         &recipients,
         payment.recipient_pays_fee.unwrap_or_default(),
+        payment.confirmations.map(|v| v as u32),
         false,
         None,
     )
@@ -349,6 +350,7 @@ fn resolve_note(
     };
 
     Note {
+        id: n.id as i32,
         height: n.height as i32,
         pool: n.pool as i32,
         tx: n.tx as i32,
@@ -499,6 +501,9 @@ impl Transaction {
 
 #[graphql_object]
 impl Note {
+    pub fn id(&self) -> i32 {
+        self.id
+    }
     pub fn height(&self) -> i32 {
         self.height
     }
@@ -580,7 +585,10 @@ impl dataloader::BatchFn<i32, Result<Transaction, Arc<Error>>> for TxBatcher {
     async fn load(&mut self, keys: &[i32]) -> HashMap<i32, Result<Transaction, Arc<Error>>> {
         let f = async move {
             let mut conn = self.pool.acquire().await?;
-            query("CREATE TEMP TABLE tmp_ids (id INTEGER PRIMARY KEY)")
+            query("CREATE TEMP TABLE IF NOT EXISTS tmp_ids (id INTEGER PRIMARY KEY)")
+                .execute(&mut *conn)
+                .await?;
+            query("DELETE FROM tmp_ids")
                 .execute(&mut *conn)
                 .await?;
             for id in keys {
