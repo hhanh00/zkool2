@@ -32,6 +32,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         options.src_pools,
         recipients,
         options.recipient_pays_fee,
+        None,
         options.smart_transparent,
         options.category,
     )
