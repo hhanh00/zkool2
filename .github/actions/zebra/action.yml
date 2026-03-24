@@ -1,6 +1,12 @@
 name: "Build Zebra & Zaino"
 inputs:
-  miner_address:
+  MINER_SEED:
+    required: true
+  MINER_ADDRESS:
+    required: true
+  SEED:
+    required: true
+  DESTINATION_ADDRESS:
     required: true
 runs:
   using: "composite"
@@ -13,7 +19,14 @@ runs:
           ./tools/bin
         key: ${{ runner.os }}-zebra-4.2.0
 
-    - name: Run regtest
+    - name: Install zkool
+      if: github.repository != 'hhanh00/zkool2' && steps.cache-zebra.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        cargo install --git https://github.com/hhanh00/zkool2 --features=graphql --root ./tools --bin zkool_graphql
+        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml misc/zebra.toml
+
+    - name: Install zebra & zaino
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
       run: |
@@ -29,20 +42,23 @@ runs:
         path: ./tools/bin
         key: ${{ runner.os }}-zebra-4.2.0
 
+    - name: Install config
+      if: github.repository != 'hhanh00/zkool2'
+      shell: bash
+      run: |
+        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
+        curl -sf https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/wip/example/sh/mine.sh -o mine.sh
+        chmod +x mine.sh
+
     - name: Add tools to PATH
       shell: bash
       run: echo "$GITHUB_WORKSPACE/tools/bin" >> $GITHUB_PATH
 
-    - name: Config
+    - name: Start regtest, mine and shield to wallet
       shell: bash
-      run: |
-        sed -i -e "s#miner_address = \"\"#miner_address = \"${MINER_ADDRESS}\"#" misc/zebra.toml
-        nohup zebrad -c misc/zebra.toml start > zebrad.log 2>&1 & disown
-        sleep 60
-        tail zebrad.log
-        zainod generate-config
-        nohup zainod start > zainod.log 2>&1 & disown
-        sleep 60
-        tail zainod.log
+      run: ./mine.sh
       env:
-        MINER_ADDRESS: ${{ inputs.miner_address }}
+        MINER_SEED: ${{ inputs.MINER_SEED }}
+        MINER_ADDRESS: ${{ inputs.MINER_ADDRESS }}
+        SEED: ${{ inputs.SEED }}
+        DESTINATION_ADDRESS: ${{ inputs.DESTINATION_ADDRESS }}
