@@ -27,7 +27,7 @@ use tracing::{debug, event, info, span, Level};
 use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
-    builder::{BuildConfig, Builder, DEFAULT_TX_EXPIRY_DELTA},
+    builder::{BuildConfig, Builder},
     fees::zip317::FeeRule,
 };
 use zcash_proofs::prover::LocalTxProver;
@@ -99,6 +99,7 @@ pub async fn plan_transaction(
     src_pools: u8,
     recipients: &[Recipient],
     recipient_pays_fee: bool,
+    confirmations: Option<u32>,
     smart_transparent: bool,
     category: Option<u32>,
 ) -> Result<PcztPackage> {
@@ -159,10 +160,15 @@ pub async fn plan_transaction(
     let mut fee_manager = FeeManager::default();
     fee_manager.add_output(change_pool);
 
+    let confirmations = confirmations.unwrap_or_default();
+    let height = client.latest_height().await?;
+    let max_height = height.saturating_sub(confirmations);
+
     let mut input_pools = vec![vec![]; 3];
     let (inputs, recipients, recipient_pays_fee) = if smart_transparent {
         // Restrict to using one transparent address per shielding
-        let notes = fetch_one_taddr_unspent_notes(connection, account).await?;
+        let mut notes = fetch_one_taddr_unspent_notes(connection, account).await?;
+        notes.retain(|n| n.height <= max_height);
         // override the amount to the maximum amount available
         let max = notes.iter().map(|n| n.amount).sum::<u64>();
         let recipient = Recipient {
@@ -171,8 +177,10 @@ pub async fn plan_transaction(
         };
         (notes, vec![recipient], true)
     } else {
+        let mut notes = fetch_unspent_notes_grouped_by_pool(connection, account).await?;
+        notes.retain(|n| n.height <= max_height);
         (
-            fetch_unspent_notes_grouped_by_pool(connection, account).await?,
+            notes,
             recipients,
             recipient_pays_fee,
         )
@@ -1108,7 +1116,7 @@ async fn fetch_one_taddr_unspent_notes(
     account: u32,
 ) -> Result<Vec<InputNote>> {
     let notes = sqlx::query(
-        "SELECT a.id_note, a.value, a.taddress
+        "SELECT a.id_note, a.height, a.value, a.taddress
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
         WHERE b.id_note IS NULL AND a.account = ?
@@ -1120,12 +1128,14 @@ async fn fetch_one_taddr_unspent_notes(
     .bind(account)
     .map(|row: SqliteRow| {
         let id: u32 = row.get(0);
-        let value: u64 = row.get(1);
-        let taddress: u32 = row.get(2);
+        let height: u32 = row.get(1);
+        let value: u64 = row.get(2);
+        let taddress: u32 = row.get(3);
         (
             taddress,
             InputNote {
                 id,
+                height,
                 amount: value,
                 remaining: value,
                 pool: 0, // transparent pool
@@ -1157,7 +1167,7 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     account: u32,
 ) -> Result<Vec<InputNote>> {
     let unspent_notes = sqlx::query(
-        "SELECT a.id_note, a.pool, a.value
+        "SELECT a.id_note, a.height, a.pool, a.value
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
         WHERE b.id_note IS NULL AND a.account = ?
@@ -1167,10 +1177,12 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     .bind(account)
     .map(|row: SqliteRow| {
         let id_note: u32 = row.get(0);
-        let pool: u8 = row.get(1);
-        let value: i64 = row.get(2);
+        let height: u32 = row.get(1);
+        let pool: u8 = row.get(2);
+        let value: i64 = row.get(3);
         InputNote {
             id: id_note,
+            height,
             amount: value as u64,
             remaining: value as u64,
             pool,

@@ -1,0 +1,12 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --allow-env src/wallet.ts"
+  },
+  "imports": {
+    "graphql-ws": "npm:graphql-ws@^5.16.0",
+    "big": "npm:big.js@^6.2.0"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}

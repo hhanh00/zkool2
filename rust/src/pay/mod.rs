@@ -64,6 +64,7 @@ impl RecipientState {
 #[derive(Clone, Debug)]
 pub struct InputNote {
     pub id: u32,
+    pub height: u32,
     pub amount: u64,
     pub remaining: u64,
     pub pool: u8,
