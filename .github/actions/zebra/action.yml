@@ -47,7 +47,7 @@ runs:
       shell: bash
       run: |
         curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
-        curl -sf https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/wip/example/sh/mine.sh -o mine.sh
+        curl -sf https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o mine.sh
         chmod +x mine.sh
 
     - name: Add tools to PATH
