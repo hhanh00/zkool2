@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.11.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.3...zkool-v6.11.4) (2026-03-24)
+
+
+### Bug Fixes
+
+* escape db password and wrap in single quotes ([#840](https://github.com/hhanh00/zkool2/issues/840)) ([cb7b74d](https://github.com/hhanh00/zkool2/commit/cb7b74d906f5b41db9453e4611086f4c08960b0d))
+* voting button "Next" should not be enabled when election associated with another account ([#838](https://github.com/hhanh00/zkool2/issues/838)) ([6be8aaa](https://github.com/hhanh00/zkool2/commit/6be8aaa1d57a8fcd42ad1968868231d7ce423f61))
+
 ## [6.11.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.2...zkool-v6.11.3) (2026-03-20)
 
 
