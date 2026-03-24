@@ -1,0 +1,48 @@
+name: "Build Zebra & Zaino"
+inputs:
+  miner_address:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Cache zebra
+      id: cache-zebra
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./tools/bin
+        key: ${{ runner.os }}-zebra-4.2.0
+
+    - name: Run regtest
+      if: steps.cache-zebra.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt update && sudo apt install -y libclang-dev clang
+
+        cargo install --git https://github.com/ZcashFoundation/zebra --tag v4.2.0 --features=internal-miner --root ./tools zebrad
+        cargo install --git https://github.com/zingolabs/zaino --tag 0.2.0-rc.6 --root ./tools zainod
+
+    - name: Save cache
+      if: steps.cache-zebra.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ./tools/bin
+        key: ${{ runner.os }}-zebra-4.2.0
+
+    - name: Add tools to PATH
+      shell: bash
+      run: echo "$GITHUB_WORKSPACE/tools/bin" >> $GITHUB_PATH
+
+    - name: Config
+      shell: bash
+      run: |
+        sed -i -e "s#miner_address = \"\"#miner_address = \"${MINER_ADDRESS}\"#" misc/zebra.toml
+        nohup zebrad -c misc/zebra.toml start > zebrad.log 2>&1 & disown
+        sleep 60
+        tail zebrad.log
+        zainod generate-config
+        nohup zainod start > zainod.log 2>&1 & disown
+        sleep 60
+        tail zainod.log
+      env:
+        MINER_ADDRESS: ${{ inputs.miner_address }}
