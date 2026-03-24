@@ -42,7 +42,7 @@ runs:
         ./misc/mkcargokit_options.sh ledger > rust_builder/cargokit/cargokit.yaml
         fastforge package --platform=linux --targets=deb,appimage
     - name: Build Flatpak
-      if: ${{ inputs.arch == 'x86_64' }}
+      if: ${{ inputs.arch == 'x86_64' && github.event_name != 'pull_request' }}
       shell: bash
       run: |
         flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml
@@ -51,7 +51,7 @@ runs:
       env:
         ARCH: ${{ inputs.arch }}
     - name: Make ISO
-      if: ${{ inputs.arch == 'x86_64' }}
+      if: ${{ inputs.arch == 'x86_64' && github.event_name != 'pull_request' }}
       id: iso
       shell: bash
       run: |
