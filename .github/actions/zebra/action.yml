@@ -20,7 +20,7 @@ runs:
         key: ${{ runner.os }}-zebra-4.2.0
 
     - name: Install zkool
-      if: github.repository != 'hhanh00/zkool2' && steps.cache-zebra.outputs.cache-hit != 'true'
+      if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
       run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.11.4 --features=graphql --root ./tools --bin zkool_graphql
 
@@ -45,8 +45,8 @@ runs:
       shell: bash
       run: |
         curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
-        curl -sf https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o mine.sh
-        chmod +x mine.sh
+        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o ./example/sh/mine.sh
+        chmod +x ./example/sh/mine.sh
 
     - name: Add tools to PATH
       shell: bash
@@ -54,7 +54,7 @@ runs:
 
     - name: Start regtest, mine and shield to wallet
       shell: bash
-      run: ./mine.sh
+      run: ./example/sh/mine.sh
       env:
         MINER_SEED: ${{ inputs.MINER_SEED }}
         MINER_ADDRESS: ${{ inputs.MINER_ADDRESS }}
