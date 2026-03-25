@@ -16,6 +16,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup regtest
+        uses: hhanh00/zkool2/.github/actions/zebra@main
+        with:
+          MINER_SEED: "burger voice warrior danger satoshi you solid atom elite alcohol category layer able debate culture talk tissue language hip surge fiction paddle stove voyage"
+          MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+          SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
+          DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
       # - name: Build zkool_graphql
       #   run: |
       #     sudo apt-get update
