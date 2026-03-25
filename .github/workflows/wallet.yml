@@ -16,6 +16,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install gq
+        run: npm install -g graphqurl
       - name: Setup regtest
         uses: hhanh00/zkool2/.github/actions/zebra@main
         with:
@@ -23,13 +25,17 @@ jobs:
           MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
           DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
-      # - name: Build zkool_graphql
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y pkg-config libudev-dev
-      #     cd rust
-      #     cargo build --release --bin zkool_graphql --features=graphql
-      # - name: Run regtest
-      #   uses: ./.github/actions/zebra
-      #   with:
-      #     miner_address: tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs
+      - name: Build zkool_graphql
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libudev-dev
+          cd rust
+          cargo build --release --bin zkool_graphql --features=graphql
+      - name: Run smoke tests
+        run: |
+          rm -f regtest.db
+          nohup ./rust/target/release/zkool_graphql -d regtest.db -l http://localhost:8137 -n &
+          cd example/sh
+          ./smoke.sh
+        env:
+          SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
