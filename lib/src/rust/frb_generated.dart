@@ -439,6 +439,7 @@ abstract class RustLibApi extends BaseApi {
       required int actionsPerSync,
       required int transparentLimit,
       required int checkpointAge,
+      required bool fast,
       required Coin c});
 
   TxPlan crateApiPayToPlan({required PcztPackage package, required Coin c});
@@ -4046,6 +4047,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       required int actionsPerSync,
       required int transparentLimit,
       required int checkpointAge,
+      required bool fast,
       required Coin c}) {
     final progress = RustStreamSink<SyncProgress>();
     unawaited(
@@ -4059,6 +4061,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             sse_encode_u_32(actionsPerSync, serializer);
             sse_encode_u_32(transparentLimit, serializer);
             sse_encode_u_32(checkpointAge, serializer);
+            sse_encode_bool(fast, serializer);
             sse_encode_box_autoadd_coin(c, serializer);
             pdeCallFfi(generalizedFrbRustBinding, serializer,
                 funcId: 127, port: port_);
@@ -4075,6 +4078,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             actionsPerSync,
             transparentLimit,
             checkpointAge,
+            fast,
             c
           ],
           apiImpl: this,
@@ -4093,6 +4097,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "actionsPerSync",
           "transparentLimit",
           "checkpointAge",
+          "fast",
           "c"
         ],
       );
