@@ -22,6 +22,7 @@ pub async fn synchronize(
     actions_per_sync: u32,
     transparent_limit: u32,
     checkpoint_age: u32,
+    fast: bool,
     c: &Coin,
 ) -> Result<u32> {
     crate::sync::synchronize_impl(
@@ -31,11 +32,13 @@ pub async fn synchronize(
         actions_per_sync,
         transparent_limit,
         checkpoint_age,
-        false,
+        fast,
         c,
     )
     .await
 }
+
+
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn balance(c: &Coin) -> Result<PoolBalance> {
