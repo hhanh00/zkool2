@@ -80,6 +80,7 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
         DEFAULT_ACTIONS_PER_SYNC,
         1,
         100,
+        false,
         &coin,
     )
     .await?;
