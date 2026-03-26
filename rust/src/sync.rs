@@ -228,6 +228,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
     actions_per_sync: u32,
     transparent_limit: u32,
     checkpoint_age: u32,
+    noskip_details: bool,
     c: &Coin,
 ) -> Result<u32> {
     if accounts.is_empty() {
@@ -379,10 +380,12 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             }
 
             // Update our local map as well for the next iteration
-            for (account, _) in &accounts_to_sync {
-                account_heights.insert(*account, end_height);
-                crate::memo::fetch_tx_details(&network, &mut connection, &mut client, *account)
-                    .await?;
+            if !noskip_details {
+                for (account, _) in &accounts_to_sync {
+                    account_heights.insert(*account, end_height);
+                    crate::memo::fetch_tx_details(&network, &mut connection, &mut client, *account)
+                        .await?;
+                }
             }
 
             info!(
