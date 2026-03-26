@@ -615,6 +615,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         actionsPerSync: int.parse(settings.actionsPerSync),
         transparentLimit: 100, // scan the last 100 known transparent addresses
         checkpointAge: 200,
+        fast: true,
         c: c,
       ); // trim checkpoints older than 200 blocks
       await syncProgressSubscription?.cancel();
@@ -637,6 +638,11 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
             if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
               showSnackbar("Synchronization Completed");
             logger.i("Synchronization Completed");
+            // Fetch tx details in the background
+            unawaited(Future(() async {
+              await fetchTxDetails(c: c);
+              ref.invalidate(accountProvider);
+            }));
             completer.complete();
           });
         },
