@@ -16,6 +16,7 @@ Stream<SyncProgress> synchronize(
         required int actionsPerSync,
         required int transparentLimit,
         required int checkpointAge,
+        required bool fast,
         required Coin c}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
@@ -23,6 +24,7 @@ Stream<SyncProgress> synchronize(
         actionsPerSync: actionsPerSync,
         transparentLimit: transparentLimit,
         checkpointAge: checkpointAge,
+        fast: fast,
         c: c);
 
 Future<PoolBalance> balance({required Coin c}) =>
