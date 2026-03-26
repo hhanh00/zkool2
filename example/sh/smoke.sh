@@ -3,6 +3,20 @@ set -euo pipefail
 set -x
 GRAPHQL_URL="http://localhost:8000/graphql"
 
+height() {
+  gq $GRAPHQL_URL -q '
+  query h {
+    currentHeight
+  }' | jq -r '.data.currentHeight'
+}
+
+wait_zaino() {
+  local target=$(($1 + $2))
+  while (( $(height) < $target )); do
+    sleep 1
+  done
+}
+
 echo "Test transfer to new wallet"
 
 echo "Import funded wallet"
@@ -71,9 +85,9 @@ TXID=$(gq $GRAPHQL_URL \
 -v 'amount=10.5' | jq -r '.data.pay')
 
 echo "Mine a few blocks"
+HEIGHT=$(height)
 curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
-echo "Wait 15s to give zaino some time to index"
-sleep 15
+wait_zaino $HEIGHT 10
 
 echo "Synchronize"
 gq $GRAPHQL_URL \
