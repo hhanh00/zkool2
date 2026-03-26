@@ -1,9 +1,9 @@
 use anyhow::{Context as _, Result};
 use sqlx::SqliteConnection;
-use sqlx::{Row, sqlite::SqliteRow};
+use sqlx::{sqlite::SqliteRow, Row};
 use std::collections::HashMap;
-use tokio::sync::mpsc::channel;
 use tokio::sync::broadcast;
+use tokio::sync::mpsc::channel;
 use tokio_stream::StreamExt;
 use tracing::info;
 use zcash_transparent::address::TransparentAddress;
@@ -19,19 +19,23 @@ use crate::{Client, Sink};
 use std::{collections::HashSet, mem};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height, has_pool}, api::{sync::SyncProgress}, db::{
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height, has_pool},
+    api::sync::SyncProgress,
+    db::{
         get_account_aindex, get_account_dindex, get_account_hw, select_account_transparent,
         store_account_transparent_addr,
-    }, lwd::CompactBlock, warp::{
-        Witness, legacy::CommitmentTreeFrontier, sync::{SyncError, warp_sync}
-    }
+    },
+    lwd::CompactBlock,
+    warp::{
+        legacy::CommitmentTreeFrontier,
+        sync::{warp_sync, SyncError},
+        Witness,
+    },
 };
 use bincode::config;
-use sqlx::{pool::PoolConnection};
+use sqlx::pool::PoolConnection;
 use sqlx::{Connection, Sqlite, SqlitePool};
-use tokio::sync::{
-    mpsc::{Sender},
-};
+use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::sync::CancellationToken;
 use zcash_keys::encoding::AddressCodec;
@@ -380,9 +384,9 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             }
 
             // Update our local map as well for the next iteration
-            if !noskip_details {
-                for (account, _) in &accounts_to_sync {
-                    account_heights.insert(*account, end_height);
+            for (account, _) in &accounts_to_sync {
+                account_heights.insert(*account, end_height);
+                if !noskip_details {
                     crate::memo::fetch_tx_details(&network, &mut connection, &mut client, *account)
                         .await?;
                 }
@@ -1065,7 +1069,9 @@ pub async fn transparent_sweep(
                 let (pk, taddr) = match xvk.as_ref() {
                     Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
                     None if hw != 0 => {
-                        ledger.get_hw_transparent_address(&network, aindex, scope, dindex).await?
+                        ledger
+                            .get_hw_transparent_address(&network, aindex, scope, dindex)
+                            .await?
                     }
                     _ => anyhow::bail!("Sweep needs an xpub key"),
                 };
