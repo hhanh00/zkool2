@@ -70,8 +70,10 @@ TXID=$(gq $GRAPHQL_URL \
 }' -v "account=$WALLET" -v "address=$ADDRESS" \
 -v 'amount=10.5' | jq -r '.data.pay')
 
-echo "Pause for 30s"
-sleep 30
+echo "Mine a few blocks"
+curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
+echo "Wait 15s to give zaino some time to index"
+sleep 15
 
 echo "Synchronize"
 gq $GRAPHQL_URL \
