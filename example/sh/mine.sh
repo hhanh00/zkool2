@@ -28,8 +28,19 @@ gql() {
         | jq -r '.data'
 }
 
+height() {
+  gql "query { currentHeight }" {} | jq -r '.currentHeight'
+}
+
+wait_zaino() {
+  local target=$(($1 + $2))
+  while (( $(height) < $target )); do
+    sleep 1
+  done
+}
+
 # Get current height
-HEIGHT=$(gql "query { currentHeight }" {} | jq -r '.currentHeight')
+HEIGHT=$(height)
 echo "Height: $HEIGHT"
 
 # Create miner account
@@ -88,7 +99,9 @@ TXID=$(gql 'mutation Pay($id: Int!, $payment: Payment!) {
     }}')" | jq -r '.pay')
 echo "Done. txid: $TXID"
 
-sleep 30
+HEIGHT=$(height)
+curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
+wait_zaino $HEIGHT 10
 
 # Sync wallet
 gql 'mutation Synchronize($id: Int!) { synchronizeAccount(idAccount: $id) }' \
