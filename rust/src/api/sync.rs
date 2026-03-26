@@ -31,6 +31,7 @@ pub async fn synchronize(
         actions_per_sync,
         transparent_limit,
         checkpoint_age,
+        false,
         c,
     )
     .await
