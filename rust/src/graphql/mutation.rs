@@ -121,8 +121,9 @@ impl Mutation {
         Ok(true)
     }
 
-    async fn synchronize(id_accounts: Vec<i32>, context: &Context) -> FieldResult<i32> {
+    async fn synchronize(id_accounts: Vec<i32>, fast: Option<bool>, context: &Context) -> FieldResult<i32> {
         check_admin_auth(context)?;
+        let fast = fast.unwrap_or_default();
         let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
         let height = crate::sync::synchronize_impl(
@@ -132,14 +133,16 @@ impl Mutation {
             100_000,
             40,
             10_000,
+            fast,
             &context.coin,
         )
         .await?;
         Ok(height as i32)
     }
 
-    async fn synchronize_account(id_account: i32, context: &Context) -> FieldResult<i32> {
+    async fn synchronize_account(id_account: i32, fast: Option<bool>, context: &Context) -> FieldResult<i32> {
         check_auth(context, id_account, false)?;
+        let fast = fast.unwrap_or_default();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
         let height = crate::sync::synchronize_impl(
             (),
@@ -148,6 +151,7 @@ impl Mutation {
             100_000,
             40,
             10_000,
+            fast,
             &context.coin,
         )
         .await?;
