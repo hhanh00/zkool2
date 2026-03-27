@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.4...zkool-v6.12.0) (2026-03-27)
+
+
+### Features
+
+* add flag "fast" that skips downloading tx details ([#851](https://github.com/hhanh00/zkool2/issues/851)) ([d50c22d](https://github.com/hhanh00/zkool2/commit/d50c22dd636909b4fce0a8887255cda277b28184))
+* Fetch tx details in the background ([#853](https://github.com/hhanh00/zkool2/issues/853)) ([517f50b](https://github.com/hhanh00/zkool2/commit/517f50bdbe6f321239436a6d4d3d40c2b00a2bcb))
+
+
+### Bug Fixes
+
+* make smoke test wait for blocks instead of sleep ([#855](https://github.com/hhanh00/zkool2/issues/855)) ([afe1f80](https://github.com/hhanh00/zkool2/commit/afe1f80d1358867f3ff8d8c9edf152ceb4ee2081))
+* **test:** mine a few blocks via api instead of waiting ([#854](https://github.com/hhanh00/zkool2/issues/854)) ([f5f0f9b](https://github.com/hhanh00/zkool2/commit/f5f0f9b3649b54b8e096cda8686685f0fca8fd6a))
+
 ## [6.11.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.3...zkool-v6.11.4) (2026-03-24)
 
 
