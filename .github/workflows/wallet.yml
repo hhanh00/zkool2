@@ -34,7 +34,7 @@ jobs:
       - name: Run smoke tests
         run: |
           rm -f regtest.db
-          nohup ./rust/target/release/zkool_graphql -d regtest.db -l http://localhost:8137 -n &
+          nohup ./target/release/zkool_graphql -d regtest.db -l http://localhost:8137 -n &
           cd example/sh
           ./smoke.sh
         env:

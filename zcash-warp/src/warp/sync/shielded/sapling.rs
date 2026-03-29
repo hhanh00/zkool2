@@ -2,10 +2,11 @@ use anyhow::Result;
 use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqliteConnection;
 use zip32::Scope;
-use crate::api::coin::Network;
 
 use crate::{
     lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx},
+    network::Network,
+    types,
     warp::{hasher::SaplingHasher, try_sapling_decrypt},
     Hash32,
 };
@@ -73,7 +74,7 @@ impl ShieldedProtocol for SaplingProtocol {
         ivtx: u32,
         vout: u32,
         output: &Self::Output,
-    ) -> Result<Option<(sapling_crypto::Note, crate::sync::Note)>> {
+    ) -> Result<Option<(sapling_crypto::Note, types::Note)>> {
         try_sapling_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
     }
 
