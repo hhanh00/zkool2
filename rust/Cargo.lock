@@ -5868,6 +5868,7 @@ dependencies = [
  "tracing-subscriber",
  "warp",
  "webpki-roots",
+ "zcash-warp",
  "zcash_address",
  "zcash_encoding",
  "zcash_keys",
@@ -9575,6 +9576,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "zcash-warp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "blake2b_simd",
+ "chacha20",
+ "futures",
+ "halo2_gadgets",
+ "halo2_proofs",
+ "hex",
+ "jubjub",
+ "orchard",
+ "prost 0.14.3",
+ "rayon",
+ "sapling-crypto",
+ "secp256k1",
+ "sqlx",
+ "thiserror 2.0.16",
+ "tokio 1.49.0",
+ "tokio-stream",
+ "tonic",
+ "tonic-prost",
+ "tracing",
+ "zcash_encoding",
+ "zcash_note_encryption",
+ "zcash_primitives",
+ "zcash_protocol",
+ "zcash_transparent",
+ "zip32",
+]
+
+[[package]]
 name = "zcash_address"
 version = "0.10.1"
 source = "git+https://github.com/hhanh00/librustzcash.git?rev=27c170eee23d51cc2d5ee1bf161a12042fd387a1#27c170eee23d51cc2d5ee1bf161a12042fd387a1"
@@ -9766,6 +9800,7 @@ dependencies = [
 [[package]]
 name = "zcvlib"
 version = "0.5.2"
+source = "git+https://github.com/hhanh00/zcv?rev=dd8ffc041512036ddd939fc4e9cd1e21ddab9f82#dd8ffc041512036ddd939fc4e9cd1e21ddab9f82"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

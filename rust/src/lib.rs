@@ -20,7 +20,6 @@ pub mod graphql;
 pub mod io;
 pub mod key;
 pub mod ledger;
-#[path = "./cash.z.wallet.sdk.rpc.rs"]
 pub mod lwd;
 pub mod memo;
 pub mod mempool;

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::{collections::HashMap, mem::swap};
 
-use crate::api::coin::Network;
+use crate::network::Network;
 use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;
@@ -11,7 +11,7 @@ use tokio::sync::mpsc::Sender;
 use tracing::{enabled, info};
 
 use crate::lwd::{CompactBlock, CompactTx};
-use crate::sync::{Note, Transaction, WarpSyncMessage, UTXO};
+use crate::types::{Note, Transaction, WarpSyncMessage, UTXO};
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
 use crate::Hash32;
 
@@ -89,12 +89,9 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
         }
 
-        // map from (account, nullifier) to NoteRef
         let mut utxos: HashMap<Vec<u8>, UTXO> = HashMap::new();
 
         for (account, _, _, _) in keys.iter() {
-            // Use an anti join to get the unspent notes
-            // and a join to filter based on the account and pool
             info!(
                 "fetch UTXOs - account: {}, pool: {}, height: {}",
                 account, pool, height
@@ -173,7 +170,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             })
         });
 
-        // new notes
         let mut notes: Vec<(<P as ShieldedProtocol>::Note, Note, &<P as ShieldedProtocol>::NK)> = outputs
             .flat_map_iter(|(height, ivtx, vout, o)| {
                 self.keys.iter().flat_map(move |(account, scope, ivk, nk)| {
@@ -199,14 +195,10 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
 
         let mut position = self.position;
         let mut height = 0;
-        // fill in the position of the notes
         for cb in blocks.iter() {
             height = cb.height as u32;
             for (ivtx, tx) in cb.vtx.iter().enumerate() {
-                // skip over the txs until we find the next note
                 loop {
-                    // there could be more than one note in the same tx
-                    // so we need to check all of them
                     match note {
                         Some((n, dbn, nk))
                             if dbn.height == cb.height as u32 && dbn.ivtx == ivtx as u32 =>
@@ -215,8 +207,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                             let nf = P::derive_nf(nk, dbn.position, n)?;
                             dbn.nf = nf.to_vec();
 
-                            // send the tx if it is not already sent
-                            // and before the notes it contains
                             let transaction = Transaction {
                                 account: dbn.account,
                                 height: cb.height as u32,
@@ -258,23 +248,16 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             })
             .collect::<Vec<_>>();
 
-        // notes are not used beyond this point
-
         let mut cmxs = vec![];
         let mut count_cmxs = 0;
 
-        // #region update commitment tree state
         for depth in 0..MERKLE_DEPTH as usize {
             let mut position = self.position >> depth;
-            // prepend previous trailing node (if resuming a half pair)
             if position % 2 == 1 {
                 cmxs.insert(0, Some(self.tree_state.0[depth].unwrap()));
                 position -= 1;
             }
 
-            // slightly more efficient than doing it before the insert
-            // the tree leaves are the note commitments
-            // and the internal nodes are the hashes of the children
             if depth == 0 {
                 for cb in blocks.iter() {
                     for vtx in cb.vtx.iter() {
@@ -287,7 +270,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 }
             }
 
-            // loop on the *new* notes
             for n in new_utxos.iter_mut() {
                 let npos = n.position >> depth;
                 let nidx = (npos - position) as usize;
@@ -298,9 +280,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 }
 
                 if nidx.is_multiple_of(2) {
-                    // left node
                     if nidx + 1 < cmxs.len() {
-                        // ommer is right node if it exists
                         assert!(
                             cmxs[nidx + 1].is_some(),
                             "{} {} {}",
@@ -313,7 +293,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                         n.witness.ommers.0[depth] = None;
                     }
                 } else {
-                    // right node
                     assert!(
                         cmxs[nidx - 1].is_some(),
                         "{} {} {}",
@@ -321,35 +300,30 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                         n.position,
                         nidx
                     );
-                    n.witness.ommers.0[depth] = cmxs[nidx - 1]; // ommer is left node
+                    n.witness.ommers.0[depth] = cmxs[nidx - 1];
                 }
             }
 
             let len = cmxs.len();
             if len >= 2 {
-                // loop on *old notes*
                 for n in self.utxos.values_mut() {
                     if n.witness.ommers.0[depth].is_none() {
-                        // fill right ommer if
                         assert!(cmxs[1].is_some());
-                        n.witness.ommers.0[depth] = cmxs[1]; // we just got it
+                        n.witness.ommers.0[depth] = cmxs[1];
                     }
                 }
             }
 
-            // save last node if not a full pair
             if len % 2 == 1 {
                 self.tree_state.0[depth] = cmxs[len - 1];
             } else {
                 self.tree_state.0[depth] = None;
             }
 
-            // hash and combine to next depth
             let pairs = len / 2;
             let mut cmxs2 = self.hasher.parallel_combine_opt(depth as u8, &cmxs, pairs);
             swap(&mut cmxs, &mut cmxs2);
         }
-        // #endregion
 
         tracing::info!("Old notes #{}", self.utxos.len());
         tracing::info!("New notes #{}", new_utxos.len());
@@ -390,7 +364,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             .map(|(account, _, _, _)| *account)
             .collect::<Vec<_>>();
 
-        // detect spends
         for cb in blocks.iter() {
             for vtx in cb.vtx.iter() {
                 for sp in P::extract_inputs(vtx).iter() {
