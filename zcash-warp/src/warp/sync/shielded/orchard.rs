@@ -4,10 +4,11 @@ use orchard::{
     Note,
 };
 use sqlx::SqliteConnection;
-use crate::api::coin::Network;
 
 use crate::{
     lwd::{CompactOrchardAction, CompactTx},
+    network::Network,
+    types,
     warp::{hasher::OrchardHasher, try_orchard_decrypt},
     Hash32,
 };
@@ -72,11 +73,11 @@ impl ShieldedProtocol for OrchardProtocol {
         ivtx: u32,
         vout: u32,
         output: &Self::Output,
-    ) -> Result<Option<(Self::Note, crate::sync::Note)>> {
+    ) -> Result<Option<(Self::Note, types::Note)>> {
         try_orchard_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
     }
 
-    fn derive_nf(nk: &Self::NK, _position: u32, note: &mut Self::Note) -> Result<crate::Hash32> {
+    fn derive_nf(nk: &Self::NK, _position: u32, note: &mut Self::Note) -> Result<Hash32> {
         let nf = note.nullifier(nk);
         Ok(nf.to_bytes())
     }

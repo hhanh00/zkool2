@@ -39,7 +39,6 @@ fn accumulate_generator(acc: &Fr, idx_generator: u32) -> ExtendedPoint {
 }
 
 pub fn hash_combine(depth: u8, left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
-    // info!("+ {} {} {}", depth, hex::encode(left), hex::encode(right));
     let p = hash_combine_inner(depth, left, right);
     p.to_affine().get_u().to_repr()
 }
@@ -57,11 +56,9 @@ pub fn hash_combine_inner(depth: u8, left: &[u8; 32], right: &[u8; 32]) -> Exten
     accumulate_scalar(&mut acc, &mut cur, b);
     cur = cur.double().double().double();
 
-    // Shift right by 1 bit and overwrite the 256th bit of left
     let mut left = *left;
     let mut right = *right;
 
-    // move by 1 bit to fill the missing 256th bit of left
     let mut carry = 0;
     for i in (0..32).rev() {
         let c = right[i] & 1;
@@ -69,9 +66,8 @@ pub fn hash_combine_inner(depth: u8, left: &[u8; 32], right: &[u8; 32]) -> Exten
         carry = c;
     }
     left[31] &= 0x7F;
-    left[31] |= carry << 7; // move the first bit of right into 256th of left
+    left[31] |= carry << 7;
 
-    // we have 255*2/3 = 170 chunks
     let mut bit_offset = 0;
     let mut byte_offset = 0;
     let mut idx_generator = 0;
@@ -85,7 +81,7 @@ pub fn hash_combine_inner(depth: u8, left: &[u8; 32], right: &[u8; 32]) -> Exten
         } else {
             right[byte_offset - 32] as u16
         };
-        v = v >> bit_offset & 0x07; // keep 3 bits
+        v = v >> bit_offset & 0x07;
         accumulate_scalar(&mut acc, &mut cur, v as u8);
 
         if (i + 3) % PEDERSEN_HASH_CHUNKS_PER_GENERATOR as u32 == 0 {
@@ -94,7 +90,7 @@ pub fn hash_combine_inner(depth: u8, left: &[u8; 32], right: &[u8; 32]) -> Exten
             acc = Fr::zero();
             cur = Fr::one();
         } else {
-            cur = cur.double().double().double(); // 2^4 * cur
+            cur = cur.double().double().double();
         }
         bit_offset += 3;
         if bit_offset >= 8 {

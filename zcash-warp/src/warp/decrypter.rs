@@ -1,6 +1,7 @@
 use crate::{
     lwd::{CompactOrchardAction, CompactSaplingOutput},
-    sync::Note,
+    network::Network,
+    types::Note,
 };
 
 use anyhow::Result;
@@ -25,7 +26,6 @@ use sapling_crypto::{
 };
 use zcash_note_encryption::{EphemeralKeyBytes, COMPACT_NOTE_SIZE};
 use zcash_primitives::transaction::components::sapling::zip212_enforcement;
-use crate::api::coin::Network;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_sapling_decrypt(
@@ -37,7 +37,7 @@ pub fn try_sapling_decrypt(
     ivtx: u32,
     vout: u32,
     co: &CompactSaplingOutput,
-) -> Result<Option<(sapling_crypto::Note, crate::sync::Note)>> {
+) -> Result<Option<(sapling_crypto::Note, Note)>> {
     let epkb = &*co.epk;
     let epk = jubjub::AffinePoint::from_bytes(epkb.try_into().unwrap()).unwrap();
     let enc = &co.ciphertext;
@@ -78,7 +78,6 @@ pub fn try_sapling_decrypt(
                     diversifier: recipient.diversifier().0.to_vec(),
                     ivtx,
                     cmx: cmx.to_bytes().to_vec(),
-                    // nf cannot be calculated at this point because we don't have the position
                     ..Note::default()
                 };
                 return Ok(Some((note, dbn)));

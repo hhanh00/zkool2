@@ -33,8 +33,6 @@ impl CommitmentTreeFrontier {
                 (None, Some(_)) => unreachable!(),
             },
             |acc, (i, p)| {
-                // Treat occupation of parents array as a binary number
-                // (right-shifted by 1)
                 acc + if p.is_some() { 1 << (i + 1) } else { 0 }
             },
         )
