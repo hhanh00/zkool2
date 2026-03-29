@@ -1,9 +1,3 @@
-// use anyhow::Result;
-// use incrementalmerkletree::witness::IncrementalWitness;
-// use rusqlite::Connection;
-// use sapling_crypto::Node;
-// use tracing::info;
-
 use crate::{
     warp::{AuthPath, Hasher, Witness, MERKLE_DEPTH},
     Hash32,

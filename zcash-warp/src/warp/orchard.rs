@@ -15,19 +15,16 @@ impl OrchardHasher {
         let mut acc = self.q;
         let (s_x, s_y) = SINSEMILLA_S[depth as usize];
         let s_chunk = Affine::from_xy(s_x, s_y).unwrap();
-        acc = (acc + s_chunk) + acc; // TODO Bail if + gives point at infinity? Shouldn't happen if data was validated
+        acc = (acc + s_chunk) + acc;
 
-        // Shift right by 1 bit and overwrite the 256th bit of left
         let mut left = *left;
         let mut right = *right;
-        left[31] |= (right[0] & 1) << 7; // move the first bit of right into 256th of left
+        left[31] |= (right[0] & 1) << 7;
         for i in 0..32 {
-            // move by 1 bit to fill the missing 256th bit of left
             let carry = if i < 31 { (right[i + 1] & 1) << 7 } else { 0 };
             right[i] = right[i] >> 1 | carry;
         }
 
-        // we have 255*2/10 = 51 chunks
         let mut bit_offset = 0;
         let mut byte_offset = 0;
         for _ in 0..51 {
@@ -40,7 +37,7 @@ impl OrchardHasher {
                     right[byte_offset - 32] as u16 | (right[byte_offset - 31] as u16) << 8
                 }
             };
-            v = v >> bit_offset & 0x03FF; // keep 10 bits
+            v = v >> bit_offset & 0x03FF;
             let (s_x, s_y) = SINSEMILLA_S[v as usize];
             let s_chunk = Affine::from_xy(s_x, s_y).unwrap();
             acc = (acc + s_chunk) + acc;
@@ -64,11 +61,11 @@ impl Default for OrchardHasher {
 }
 
 impl Hasher for OrchardHasher {
-    fn empty(&self) -> crate::Hash32 {
+    fn empty(&self) -> Hash32 {
         Fq::from(2).to_repr()
     }
 
-    fn combine(&self, depth: u8, l: &crate::Hash32, r: &crate::Hash32) -> crate::Hash32 {
+    fn combine(&self, depth: u8, l: &Hash32, r: &Hash32) -> Hash32 {
         let acc = self.node_combine_inner(depth, l, r);
         let p = acc
             .to_affine()
@@ -78,12 +75,7 @@ impl Hasher for OrchardHasher {
         p.to_repr()
     }
 
-    fn parallel_combine(
-        &self,
-        depth: u8,
-        layer: &[crate::Hash32],
-        pairs: usize,
-    ) -> Vec<crate::Hash32> {
+    fn parallel_combine(&self, depth: u8, layer: &[Hash32], pairs: usize) -> Vec<Hash32> {
         let hash_extended: Vec<_> = (0..pairs)
             .into_par_iter()
             .map(|i| self.node_combine_inner(depth, &layer[2 * i], &layer[2 * i + 1]))

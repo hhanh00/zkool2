@@ -14,9 +14,7 @@ use tokio::sync::{Mutex, OnceCell};
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Uri};
 use tor_rtcompat::PreferredRuntime;
 use tower::service_fn;
-use zcash_protocol::consensus::{
-    BlockHeight, MainNetwork, NetworkType, NetworkUpgrade, Parameters, TestNetwork,
-};
+use zcash_protocol::consensus::BlockHeight;
 use zcash_protocol::local_consensus::LocalNetwork;
 
 use crate::db::{create_schema, migrate_sapling_addresses, put_prop};
@@ -262,33 +260,7 @@ fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteCo
     options
 }
 
-#[derive(Copy, Clone, Debug)]
-pub enum Network {
-    Main,
-    Test,
-    Regtest(LocalNetwork),
-}
-
-impl Parameters for Network {
-    fn network_type(&self) -> NetworkType {
-        match self {
-            Network::Main => MainNetwork.network_type(),
-            Network::Test => TestNetwork.network_type(),
-            Network::Regtest(n) => n.network_type(),
-        }
-    }
-
-    fn activation_height(
-        &self,
-        nu: NetworkUpgrade,
-    ) -> Option<zcash_protocol::consensus::BlockHeight> {
-        match self {
-            Network::Main => MainNetwork.activation_height(nu),
-            Network::Test => TestNetwork.activation_height(nu),
-            Network::Regtest(n) => n.activation_height(nu),
-        }
-    }
-}
+pub use zcash_warp::network::Network;
 
 pub(crate) const fn _regtest() -> LocalNetwork {
     LocalNetwork {

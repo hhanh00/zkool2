@@ -1,37 +1,24 @@
 use std::{collections::HashSet, time::Duration};
 
-use crate::api::coin::Network;
+use crate::network::Network;
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use thiserror::Error;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::info;
 
 use crate::{
     lwd::CompactBlock,
-    sync::{BlockHeader, WarpSyncMessage},
+    types::{BlockHeader, WarpSyncMessage},
     warp::hasher::{OrchardHasher, SaplingHasher},
 };
 
 use super::legacy::CommitmentTreeFrontier;
 
-// pub mod builder;
-mod shielded;
-// mod transparent;
+pub use crate::types::SyncError;
 
-#[derive(Error, Debug)]
-pub enum SyncError {
-    #[error("Reorganization detected at block {0}")]
-    Reorg(u32),
-    #[error("Sync cancelled")]
-    Cancelled,
-    #[error(transparent)]
-    Tonic(#[from] tonic::Status),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
-}
+mod shielded;
 
 pub type SaplingSync = Synchronizer<shielded::sapling::SaplingProtocol>;
 pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
@@ -97,8 +84,6 @@ pub async fn warp_sync(
         .await
         .unwrap();
 
-    // Having a separate task for downloading blocks allows us to
-    // parallelize the decryption of blocks with the downloading of new blocks.
     let account_ids = accounts.iter().map(|(id, _)| *id).collect::<Vec<_>>();
     let (tx_blocks, mut rx_blocks) = tokio::sync::mpsc::channel::<BlockMessage>(2);
     tokio::spawn(async move {
@@ -109,7 +94,7 @@ pub async fn warp_sync(
         let mut current_height = start_height;
         let mut prev_current_height = 0;
 
-        let mut c = 0; // count of outputs & actions
+        let mut c = 0;
         loop {
             tokio::select! {
                 _ = interval.tick() => {
@@ -132,13 +117,6 @@ pub async fn warp_sync(
                         current_height = block.height as u32;
                         if let Some(prev_hash) = prev_hash {
                             if prev_hash != block_prev_hash {
-                                // This block does not continue the chain from the previous block we have
-                                // Since we think the server has a more recent chain, we rewind
-                                // to a point before the latest block we have, thus discarding the
-                                // fragment of our chain from the previous checkpoint
-                                // If that checkpoint is also no longer on the main chain,
-                                // the server will send us block that will not match again and we repeat the process
-                                // of trimming our chain little by little
                                 let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
                                 info!("Reorganization detected at block {}", block.height);
                                 break;

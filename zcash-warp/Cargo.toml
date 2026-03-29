@@ -1,0 +1,40 @@
+[package]
+edition = "2021"
+name = "zcash-warp"
+version = "0.1.0"
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+anyhow = "1.0"
+thiserror = "2.0"
+hex = "0.4"
+futures = "0.3"
+rayon = "1.10"
+tokio = {version = "1", features = ["full"]}
+tokio-stream = "0.1"
+tracing = "0.1"
+
+bincode = {version = "2.0", features = ["serde"]}
+blake2b_simd = "1.0"
+chacha20 = "0.9"
+halo2_gadgets = "0.3"
+halo2_proofs = "0.3"
+jubjub = "0.10"
+secp256k1 = "0.29"
+zip32 = "0.2"
+
+orchard = {version = "0.11", features = ["unstable-frost"]}
+sapling-crypto = "0.5"
+zcash_encoding = "0.3"
+zcash_note_encryption = "0.4"
+zcash_primitives = {version = "0.26", features = ["transparent-inputs"]}
+zcash_protocol = {version = "0.7", features = ["local-consensus"]}
+zcash_transparent = {version = "0.6", features = ["transparent-inputs"]}
+
+prost = "0.14.0"
+tonic = {version = "0.14.0", features = ["tls-webpki-roots"]}
+tonic-prost = "0.14.0"
+
+sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
