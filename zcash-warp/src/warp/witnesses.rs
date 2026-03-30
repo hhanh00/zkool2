@@ -1,30 +1,66 @@
 use crate::{
-    warp::{AuthPath, Hasher, Witness, MERKLE_DEPTH},
+    warp::{AuthPath, FragmentAuthPath, Hasher, Witness, MERKLE_DEPTH},
     Hash32,
 };
+use anyhow::Result;
 
-impl Witness {
-    pub fn build_auth_path(&self, edge: &AuthPath, empty_roots: &AuthPath) -> AuthPath {
-        let mut path = AuthPath::default();
-        let mut p = self.position;
-        let mut edge_used = false;
-        for i in 0..MERKLE_DEPTH as usize {
-            let ommer = self.ommers.0[i];
-            path.0[i] = match ommer {
-                Some(o) => o,
-                None => {
-                    assert!(p & 1 == 0);
-                    if edge_used {
-                        empty_roots.0[i]
-                    } else {
-                        edge_used = true;
-                        edge.0[i]
-                    }
-                }
+impl AuthPath {
+    pub fn root<H: Hasher>(&self, position: u32, value: &[u8; 32], h: &H) -> Hash32 {
+        let mut hash = *value;
+        let mut p = position;
+        for (i, ommer) in self.0.iter().enumerate() {
+            hash = if p & 1 == 0 {
+                h.combine(i as u8, &hash, ommer)
+            } else {
+                h.combine(i as u8, ommer, &hash)
             };
             p /= 2;
         }
-        path
+        hash
+    }
+}
+
+// height at which a and b binary representation start to diverge
+fn divergence_height(a: u32, b: u32) -> usize {
+    assert!(a < b);
+    // after the xor, the common prefix becomes 0...
+    let xor = a ^ b;
+    (u32::BITS - xor.leading_zeros()) as usize
+}
+
+impl Witness {
+    pub fn build_auth_path(
+        &self,
+        edge: &FragmentAuthPath,
+        empty_roots: &AuthPath,
+    ) -> Result<AuthPath> {
+        // calculate the height of the current partial subtree
+        let h = divergence_height(self.position, edge.1);
+        let mut path = AuthPath::default();
+        let mut p = self.position;
+
+        for i in 0..MERKLE_DEPTH as usize {
+            path.0[i] = if p & 1 == 1 {
+                // Right node: sibling must be known
+                self.ommers.0[i].ok_or_else(|| {
+                    anyhow::anyhow!("ommer at level {i} must be Some for right node")
+                })?
+            } else if i + 1 < h {
+                // Left node below subtree height: the right tree must be full and therefore
+                // known
+                self.ommers.0[i].ok_or_else(|| {
+                    anyhow::anyhow!("ommer at level {i} must be Some for left node")
+                })?
+            } else if i + 1 == h {
+                // Left node at subtree height: use the partial subtree
+                edge.0 .0[i]
+            } else {
+                // Left node above subtree height, the right node must be empty
+                empty_roots.0[i]
+            };
+            p >>= 1;
+        }
+        Ok(path)
     }
 
     pub fn root<H: Hasher>(&self, edge: &AuthPath, h: &H) -> Hash32 {
