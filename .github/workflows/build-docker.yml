@@ -52,7 +52,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           file: misc/alpine.dockerfile
-          context: rust
           tags: ${{ env.REGISTRY_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
           # push: ${{ env.TAGGED == 'true' }}
