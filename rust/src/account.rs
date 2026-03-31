@@ -47,6 +47,7 @@ use zcash_protocol::consensus::{NetworkConstants, NetworkUpgrade, Parameters};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
+use zcash_warp::warp::FragmentAuthPath;
 use zip32::{fingerprint::SeedFingerprint, AccountId};
 
 use crate::{
@@ -444,7 +445,7 @@ pub async fn get_sapling_note(
     id: u32,
     height: u32,
     dfvk: &DiversifiableFullViewingKey,
-    edge: &AuthPath,
+    edge: &FragmentAuthPath,
     empty_roots: &AuthPath,
 ) -> Result<(sapling_crypto::Note, u32, sapling_crypto::MerklePath)> {
     let r = sqlx::query(
@@ -475,7 +476,7 @@ pub async fn get_sapling_note(
 
         let (witness, _) = bincode::decode_from_slice::<Witness, _>(&witness, legacy()).unwrap();
 
-        let auth_path = witness.build_auth_path(edge, empty_roots);
+        let auth_path = witness.build_auth_path(edge, empty_roots).unwrap();
         let mut mp = vec![];
         for i in 0..MERKLE_DEPTH as usize {
             mp.push(sapling_crypto::Node::from_bytes(auth_path.0[i]).unwrap());
@@ -531,7 +532,7 @@ pub async fn get_orchard_note(
     id: u32,
     height: u32,
     ovk: &orchard::keys::FullViewingKey,
-    eo: &AuthPath,
+    eo: &FragmentAuthPath,
     ero: &AuthPath,
 ) -> Result<(orchard::Note, orchard::tree::MerklePath)> {
     let (scope, position, diversifier, value, rcm, rho, witness) = sqlx::query(
@@ -572,7 +573,7 @@ pub async fn get_orchard_note(
         .unwrap();
 
     assert_eq!(witness.position, position);
-    let auth_path = witness.build_auth_path(eo, ero);
+    let auth_path = witness.build_auth_path(eo, ero).unwrap();
     let auth_path = auth_path
         .0
         .iter()

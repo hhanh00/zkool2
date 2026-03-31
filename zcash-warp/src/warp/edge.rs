@@ -1,3 +1,5 @@
+use crate::warp::FragmentAuthPath;
+
 use super::{AuthPath, Edge, Hash32, Hasher};
 
 impl Edge {
@@ -18,7 +20,8 @@ impl Edge {
         hash
     }
 
-    pub fn to_auth_path<H: Hasher>(&self, h: &H) -> AuthPath {
+    pub fn to_auth_path<H: Hasher>(&self, h: &H) -> FragmentAuthPath {
+        let mut position = 0;
         let mut empty = h.empty();
         let mut hash = h.empty();
         let mut path = AuthPath::default();
@@ -27,6 +30,7 @@ impl Edge {
             match n {
                 Some(n) => {
                     hash = h.combine(depth as u8, n, &hash);
+                    position |= 1 << depth;
                 }
                 None => {
                     hash = h.combine(depth as u8, &hash, &empty);
@@ -34,6 +38,6 @@ impl Edge {
             }
             empty = h.combine(depth as u8, &empty, &empty);
         }
-        path
+        FragmentAuthPath(path, position)
     }
 }
