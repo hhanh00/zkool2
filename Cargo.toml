@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "rust",
-    "zcash-warp",
+    "zcash-trees",
 ]
 resolver = "2"
 

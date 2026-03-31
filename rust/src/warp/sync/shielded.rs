@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::{collections::HashMap, mem::swap};
 
-use crate::network::Network;
+use zcash_trees::network::Network;
 use anyhow::{Context as _, Result};
 use bincode::config::legacy;
 use futures::TryStreamExt;
@@ -11,9 +11,9 @@ use tokio::sync::mpsc::Sender;
 use tracing::{enabled, info};
 
 use crate::lwd::{CompactBlock, CompactTx};
-use crate::types::{Note, Transaction, WarpSyncMessage, UTXO};
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
 use crate::Hash32;
+use zcash_trees::types::{Note, Transaction, WarpSyncMessage, UTXO};
 
 pub mod orchard;
 pub mod sapling;
