@@ -5,11 +5,11 @@ use zip32::Scope;
 
 use crate::{
     lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx},
-    network::Network,
-    types,
-    warp::{hasher::SaplingHasher, try_sapling_decrypt},
     Hash32,
 };
+use zcash_trees::{network::Network, types};
+
+use crate::warp::{hasher::SaplingHasher, try_sapling_decrypt};
 
 use super::ShieldedProtocol;
 

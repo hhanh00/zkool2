@@ -42,8 +42,8 @@ use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
 
-pub use zcash_warp::types::{BlockHeader, Note, Transaction, WarpSyncMessage, UTXO};
-pub use zcash_warp::types::SyncError;
+pub use zcash_trees::types::{BlockHeader, Note, Transaction, WarpSyncMessage, UTXO};
+pub use zcash_trees::types::SyncError;
 
 pub struct NoteExtended {
     pub id: u32,

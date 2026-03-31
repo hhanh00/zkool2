@@ -260,7 +260,7 @@ fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteCo
     options
 }
 
-pub use zcash_warp::network::Network;
+pub use zcash_trees::network::Network;
 
 pub(crate) const fn _regtest() -> LocalNetwork {
     LocalNetwork {
