@@ -1,8 +1,6 @@
-use crate::{
-    lwd::{CompactOrchardAction, CompactSaplingOutput},
-    network::Network,
-    types::Note,
-};
+use crate::lwd::{CompactOrchardAction, CompactSaplingOutput};
+use zcash_trees::network::Network;
+use zcash_trees::types::Note;
 
 use anyhow::Result;
 use blake2b_simd::Params;
@@ -21,11 +19,22 @@ use orchard::{
     note_encryption::{CompactAction, OrchardDomain},
 };
 use sapling_crypto::{
-    note_encryption::{plaintext_version_is_valid, SaplingDomain, KDF_SAPLING_PERSONALIZATION},
+    note_encryption::{plaintext_version_is_valid, SaplingDomain, Zip212Enforcement, KDF_SAPLING_PERSONALIZATION},
     SaplingIvk,
 };
-use zcash_note_encryption::{EphemeralKeyBytes, COMPACT_NOTE_SIZE};
-use zcash_primitives::transaction::components::sapling::zip212_enforcement;
+use zcash_note_encryption::EphemeralKeyBytes;
+
+const COMPACT_NOTE_SIZE: usize = 52;
+
+fn zip212(network: &Network, height: u32) -> Zip212Enforcement {
+    use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
+    let height = BlockHeight::from_u32(height);
+    match network.activation_height(NetworkUpgrade::Canopy) {
+        Some(h) if height >= h => Zip212Enforcement::On,
+        None => Zip212Enforcement::On,
+        _ => Zip212Enforcement::GracePeriod,
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_sapling_decrypt(
@@ -42,7 +51,7 @@ pub fn try_sapling_decrypt(
     let epk = jubjub::AffinePoint::from_bytes(epkb.try_into().unwrap()).unwrap();
     let enc = &co.ciphertext;
     let epk = epk.mul_by_cofactor().to_niels();
-    let zip212_enforcement = zip212_enforcement(network, height.into());
+    let zip212_enforcement = zip212(network, height);
     let ka = epk.multiply_bits(&ivk.to_repr()).to_affine();
     let key = Params::new()
         .hash_length(32)
@@ -100,7 +109,7 @@ pub fn try_orchard_decrypt(
     vout: u32,
     ca: &CompactOrchardAction,
 ) -> Result<Option<(orchard::note::Note, Note)>> {
-    let zip212_enforcement = zip212_enforcement(network, height.into());
+    let zip212_enforcement = zip212(network, height);
     let bb = ivk.to_bytes();
     let ivk_fq = Fq::from_repr(bb[32..64].try_into().unwrap()).unwrap();
 
