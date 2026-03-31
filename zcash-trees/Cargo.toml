@@ -27,10 +27,6 @@ zcash_encoding = "0.3"
 zcash_protocol = {version = "0.7", features = ["local-consensus"]}
 zcash_transparent = {version = "0.6", features = ["transparent-inputs"]}
 
-prost = "0.14.0"
-tonic = {version = "0.14.0", features = ["tls-webpki-roots"]}
-tonic-prost = "0.14.0"
-
 incrementalmerkletree = {version = "0.8", optional = true}
 
 [features]
