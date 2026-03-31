@@ -1,10 +1,8 @@
-mod decrypter;
 pub mod edge;
 pub mod hasher;
 pub mod legacy;
 mod orchard;
 mod sapling;
-pub mod sync;
 pub mod witnesses;
 
 use crate::{lwd::CompactBlock, Hash32};
@@ -130,5 +128,4 @@ pub struct TransparentSK {
     pub sk: SecretKey,
 }
 
-pub use decrypter::{try_orchard_decrypt, try_sapling_decrypt};
 use zcash_transparent::address::TransparentAddress;

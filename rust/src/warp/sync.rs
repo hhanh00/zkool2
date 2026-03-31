@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
-use crate::network::Network;
+use zcash_trees::network::Network;
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
@@ -10,13 +10,13 @@ use tracing::info;
 
 use crate::{
     lwd::CompactBlock,
-    types::{BlockHeader, WarpSyncMessage},
     warp::hasher::{OrchardHasher, SaplingHasher},
 };
+use zcash_trees::types::{BlockHeader, WarpSyncMessage};
 
 use super::legacy::CommitmentTreeFrontier;
 
-pub use crate::types::SyncError;
+pub use zcash_trees::types::SyncError;
 
 mod shielded;
 
