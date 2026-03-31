@@ -7,11 +7,11 @@ use sqlx::SqliteConnection;
 
 use crate::{
     lwd::{CompactOrchardAction, CompactTx},
-    network::Network,
-    types,
-    warp::{hasher::OrchardHasher, try_orchard_decrypt},
     Hash32,
 };
+use zcash_trees::{network::Network, types};
+
+use crate::warp::{hasher::OrchardHasher, try_orchard_decrypt};
 
 use super::ShieldedProtocol;
 

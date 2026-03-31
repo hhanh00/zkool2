@@ -47,7 +47,7 @@ use zcash_protocol::consensus::{NetworkConstants, NetworkUpgrade, Parameters};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
-use zcash_warp::warp::FragmentAuthPath;
+use zcash_trees::warp::FragmentAuthPath;
 use zip32::{fingerprint::SeedFingerprint, AccountId};
 
 use crate::{
