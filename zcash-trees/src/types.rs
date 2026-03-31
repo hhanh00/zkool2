@@ -6,8 +6,8 @@ pub enum SyncError {
     Reorg(u32),
     #[error("Sync cancelled")]
     Cancelled,
-    #[error(transparent)]
-    Tonic(#[from] tonic::Status),
+    #[error("Tonic error: {0}")]
+    Tonic(String),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
