@@ -19,6 +19,9 @@ pub struct Edge(pub [Option<Hash32>; MERKLE_DEPTH as usize]);
 #[derive(Encode, Decode, Default, Debug)]
 pub struct AuthPath(pub [Hash32; MERKLE_DEPTH as usize]);
 
+#[derive(Encode, Decode, Default, Debug)]
+pub struct FragmentAuthPath(pub AuthPath, pub u32);
+
 #[derive(Clone, Default, Encode, Decode, PartialEq, Debug)]
 pub struct Witness {
     pub value: Hash32,
