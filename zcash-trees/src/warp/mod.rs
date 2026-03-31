@@ -5,7 +5,7 @@ mod orchard;
 mod sapling;
 pub mod witnesses;
 
-use crate::{lwd::CompactBlock, Hash32};
+use crate::Hash32;
 use bincode::{Decode, Encode};
 use secp256k1::SecretKey;
 
@@ -40,17 +40,6 @@ pub struct BlockHeader {
     pub hash: Hash32,
     pub prev_hash: Hash32,
     pub timestamp: u32,
-}
-
-impl From<&CompactBlock> for BlockHeader {
-    fn from(block: &CompactBlock) -> Self {
-        BlockHeader {
-            height: block.height as u32,
-            hash: block.hash.clone().try_into().unwrap(),
-            prev_hash: block.prev_hash.clone().try_into().unwrap(),
-            timestamp: block.time,
-        }
-    }
 }
 
 pub trait Hasher: std::fmt::Debug + Default {
