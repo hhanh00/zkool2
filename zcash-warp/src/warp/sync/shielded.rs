@@ -337,7 +337,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         for utxo in self.utxos.values_mut() {
             if enabled!(target: "warp", tracing::Level::DEBUG) {
                 let w = &mut utxo.witness;
-                let anchor = w.root(&auth_path, &self.hasher);
+                let anchor = w.root(&auth_path.0, &self.hasher);
                 w.anchor = anchor;
                 if let Some(root) = root {
                     if root != anchor {
