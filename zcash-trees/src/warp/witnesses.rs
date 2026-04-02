@@ -29,6 +29,31 @@ fn divergence_height(a: u32, b: u32) -> usize {
 }
 
 impl Witness {
+    pub fn rewind(self, current_position: u32) -> Self {
+        let Witness {
+            value,
+            position,
+            mut ommers,
+            anchor,
+        } = self;
+        // calculate the height of the current partial subtree
+        let h = divergence_height(self.position, current_position);
+        // clear right ommers that were filled after the position
+        let mut p = self.position;
+        for i in h..MERKLE_DEPTH as usize {
+            if p & 1 == 0 {
+                ommers.0[i] = None;
+            }
+            p /= 2;
+        }
+        Witness {
+            value,
+            position,
+            ommers,
+            anchor,
+        }
+    }
+
     pub fn build_auth_path(
         &self,
         edge: &FragmentAuthPath,
@@ -52,9 +77,11 @@ impl Witness {
                     anyhow::anyhow!("ommer at level {i} must be Some for left node")
                 })?
             } else if i + 1 == h {
+                anyhow::ensure!(self.ommers.0[i].is_none());
                 // Left node at subtree height: use the partial subtree
                 edge.0 .0[i]
             } else {
+                anyhow::ensure!(self.ommers.0[i].is_none());
                 // Left node above subtree height, the right node must be empty
                 empty_roots.0[i]
             };
