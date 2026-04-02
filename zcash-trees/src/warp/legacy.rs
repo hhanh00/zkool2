@@ -135,7 +135,7 @@ mod tests {
         let root1 = imt.root().to_bytes();
 
         assert_eq!(root0, root1);
-        println!("root: {}", hex::encode(&root0));
+        println!("root: {}", hex::encode(root0));
     }
 
     #[cfg(feature = "imt")]
@@ -159,14 +159,14 @@ mod tests {
         let edge_auth_path = edge.to_auth_path(&hasher);
         let root0 = edge.root(&hasher);
         // root at the rewound point
-        println!("root0: {}", hex::encode(&root0));
+        println!("root0: {}", hex::encode(root0));
 
         let witness = witness.rewind(edge_auth_path.1);
         let path = witness.build_auth_path(&edge_auth_path, &empty_roots).unwrap();
         let root1 = path.root(witness.position, &witness.value, &hasher);
 
         // new witness should have the same root as the rewound point
-        println!("root1: {}", hex::encode(&root1));
+        println!("root1: {}", hex::encode(root1));
         assert_eq!(root0, root1);
     }
 }
