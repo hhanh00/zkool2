@@ -4,6 +4,12 @@ use crate::{
 };
 use anyhow::Result;
 
+pub struct MerklePath<const D: usize> {
+    pub value: Hash32,
+    pub position: u32,
+    pub path: [Hash32; D],
+}
+
 impl AuthPath {
     pub fn root<H: Hasher>(&self, position: u32, value: &[u8; 32], h: &H) -> Hash32 {
         let mut hash = *value;
@@ -29,7 +35,7 @@ fn divergence_height(a: u32, b: u32) -> usize {
 }
 
 impl Witness {
-    pub fn rewind(self, current_position: u32) -> Self {
+    pub fn rewind(self, edge_position: u32) -> Self {
         let Witness {
             value,
             position,
@@ -37,11 +43,11 @@ impl Witness {
             anchor,
         } = self;
         // calculate the height of the current partial subtree
-        let h = divergence_height(self.position, current_position);
+        let h = divergence_height(self.position, edge_position);
         // clear right ommers that were filled after the position
         let mut p = self.position;
-        for i in h..MERKLE_DEPTH as usize {
-            if p & 1 == 0 {
+        for i in 0..MERKLE_DEPTH as usize {
+            if i + 1 >= h && p & 1 == 0 {
                 ommers.0[i] = None;
             }
             p /= 2;
