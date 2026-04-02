@@ -1305,7 +1305,8 @@ pub async fn change_db_password(
 ) -> Result<()> {
     let mut options = SqliteConnectOptions::new().filename(db_filepath);
     if !old_password.is_empty() {
-        options = options.pragma("key", old_password.to_string());
+        let escaped = format!("'{}'", old_password.replace('\'', "''"));
+        options = options.pragma("key", escaped);
     }
 
     let tmp_db_filepath = format!("{tmp_dir}/__tmp.db");
@@ -1313,9 +1314,10 @@ pub async fn change_db_password(
 
     {
         let mut connection = SqliteConnection::connect_with(&options).await?;
+        let escaped_new = new_password.replace('\'', "''");
         sqlx::query(&format!(
             "ATTACH DATABASE '{}' AS new_db KEY '{}'",
-            &tmp_db_filepath, new_password
+            &tmp_db_filepath, escaped_new
         ))
         .execute(&mut connection)
         .await?;
