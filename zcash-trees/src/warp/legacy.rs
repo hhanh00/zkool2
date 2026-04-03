@@ -1,7 +1,7 @@
 use crate::Hash32;
 #[cfg(feature = "imt")]
 use orchard::tree::MerkleHashOrchard;
-use std::io::Read;
+use std::io::{Read, Write};
 use zcash_encoding::{Optional, Vector};
 
 use super::{Edge, Hasher, MERKLE_DEPTH};
@@ -24,6 +24,15 @@ impl CommitmentTreeFrontier {
             right,
             parents,
         })
+    }
+
+    pub fn write<W: Write>(&self, mut writer: W) -> std::io::Result<()> {
+        Optional::write(&mut writer, self.left.as_ref(), |w, h| w.write_all(h))?;
+        Optional::write(&mut writer, self.right.as_ref(), |w, h| w.write_all(h))?;
+        Vector::write(&mut writer, &self.parents, |w, p| {
+            Optional::write(w, p.as_ref(), |w, h| w.write_all(h))
+        })?;
+        Ok(())
     }
 
     pub fn size(&self) -> usize {
@@ -80,6 +89,34 @@ pub type OrchardFrontier =
 
 #[cfg(feature = "imt")]
 impl CommitmentTreeFrontier {
+    pub fn from_orchard_frontier(frontier: &OrchardFrontier) -> Self {
+        let Some(nef) = frontier.value() else {
+            return CommitmentTreeFrontier::default();
+        };
+
+        let pos = u64::from(nef.position());
+        let mut ommer_iter = nef.ommers().iter();
+        let leaf = nef.leaf();
+
+        let (left, right) = if pos % 2 == 0 {
+            (Some(leaf.to_bytes()), None)
+        } else {
+            let left_bytes = ommer_iter.next().unwrap().to_bytes();
+            (Some(left_bytes), Some(leaf.to_bytes()))
+        };
+
+        let mut parents: Vec<Option<Hash32>> = vec![];
+        for i in 0..(MERKLE_DEPTH as usize - 1) {
+            if (pos >> (i + 1)) & 1 == 1 {
+                parents.push(Some(ommer_iter.next().unwrap().to_bytes()));
+            } else {
+                parents.push(None);
+            }
+        }
+
+        CommitmentTreeFrontier { left, right, parents }
+    }
+
     pub fn to_orchard_frontier(self) -> OrchardFrontier {
         let size = self.size();
         if size == 0 {
