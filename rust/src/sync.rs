@@ -51,6 +51,7 @@ pub struct NoteExtended {
     pub memo: Vec<u8>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
     progress: S,
     accounts: Vec<u32>,
