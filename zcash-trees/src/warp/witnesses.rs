@@ -28,7 +28,7 @@ impl AuthPath {
 
 // height at which a and b binary representation start to diverge
 fn divergence_height(a: u32, b: u32) -> usize {
-    assert!(a < b);
+    assert!(a <= b, "{a} must be <= {b}");
     // after the xor, the common prefix becomes 0...
     let xor = a ^ b;
     (u32::BITS - xor.leading_zeros()) as usize
