@@ -14,6 +14,7 @@ use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
 
 #[cfg(feature = "flutter")]
+#[allow(clippy::too_many_arguments)]
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn synchronize(
     progress: StreamSink<SyncProgress>,
