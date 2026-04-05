@@ -117,7 +117,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
         IconButton(
           onPressed: onQuit,
           icon: Icon(Icons.cancel),
-          tooltip: "Delegate",
+          tooltip: "Quit",
         ),
         IconButton(
           onPressed: onDelegate,
