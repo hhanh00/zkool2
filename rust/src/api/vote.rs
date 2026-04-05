@@ -2,11 +2,8 @@ use anyhow::Result;
 #[cfg(feature = "flutter")]
 use sqlx::sqlite::SqliteRow;
 use sqlx::{query, query_as, Row};
-use tonic::{
-    transport::{Channel, ClientTlsConfig},
-};
 pub use zcvlib::pod::{ElectionPropsPub, QuestionProp};
-use zcvlib::vote_rpc::vote_streamer_client::VoteStreamerClient;
+
 #[cfg(feature = "flutter")]
 use zcvlib::{
     api::{
