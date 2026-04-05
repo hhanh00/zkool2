@@ -179,7 +179,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbb4e440d04be07da1f1bf44fb4495ebd58669372fe0cffa6e48595ac5bd88a3"
 dependencies = [
  "android_log-sys",
- "env_filter",
+ "env_filter 0.1.4",
  "log",
 ]
 
@@ -2068,6 +2068,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_filter"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32e90c2accc4b07a8456ea0debdc2e7587bdd890680d71173a15d4ae604f6eef"
+dependencies = [
+ "log",
+ "regex",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2078,6 +2088,19 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.11.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0621c04f2196ac3f488dd583365b9c09be011a4ab8b9f37248ffcc8f6198b56a"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "env_filter 1.0.1",
+ "jiff",
+ "log",
 ]
 
 [[package]]
@@ -3534,6 +3557,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "imt-tree"
+version = "0.1.0"
+source = "git+https://github.com/hhanh00/vote-nullifier-pir?rev=016392d09e84d1de43ed04d138b0692c595bb4af#016392d09e84d1de43ed04d138b0692c595bb4af"
+dependencies = [
+ "anyhow",
+ "ff",
+ "halo2_gadgets",
+ "hex",
+ "pasta_curves",
+ "rayon",
+ "tracing",
+]
+
+[[package]]
 name = "incrementalmerkletree"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3695,6 +3732,30 @@ name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+
+[[package]]
+name = "jiff"
+version = "0.2.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a3546dc96b6d42c5f24902af9e2538e82e39ad350b0c766eb3fbf2d8f3d8359"
+dependencies = [
+ "jiff-static",
+ "log",
+ "portable-atomic",
+ "portable-atomic-util",
+ "serde_core",
+]
+
+[[package]]
+name = "jiff-static"
+version = "0.2.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a8c8b344124222efd714b73bb41f8b5120b27a7cc1c75593a6ff768d9d05aa4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "jobserver"
@@ -4522,7 +4583,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 [[package]]
 name = "orchard"
 version = "0.11.0"
-source = "git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635#f1943f696930c89b43e97756b3b8d818657be635"
+source = "git+https://github.com/hhanh00/orchard.git?rev=c6319ac04d1ae5a4b046c2cf9c209d1b3b5f0124#c6319ac04d1ae5a4b046c2cf9c209d1b3b5f0124"
 dependencies = [
  "aes",
  "bitvec",
@@ -4551,6 +4612,41 @@ dependencies = [
  "tracing",
  "visibility",
  "zcash_encoding",
+ "zcash_note_encryption",
+ "zcash_spec",
+ "zip32",
+]
+
+[[package]]
+name = "orchard"
+version = "0.11.0"
+source = "git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635#f1943f696930c89b43e97756b3b8d818657be635"
+dependencies = [
+ "aes",
+ "bitvec",
+ "blake2b_simd",
+ "core2",
+ "ff",
+ "fpe",
+ "getset",
+ "group",
+ "halo2_gadgets",
+ "halo2_poseidon",
+ "halo2_proofs",
+ "hex",
+ "incrementalmerkletree",
+ "lazy_static",
+ "memuse",
+ "nonempty",
+ "pasta_curves",
+ "rand 0.8.5",
+ "reddsa 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "sinsemilla",
+ "subtle",
+ "thiserror 1.0.69",
+ "tracing",
+ "visibility",
  "zcash_note_encryption",
  "zcash_spec",
  "zip32",
@@ -4704,7 +4800,7 @@ dependencies = [
  "getset",
  "jubjub",
  "nonempty",
- "orchard",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635)",
  "pasta_curves",
  "postcard",
  "rand_core 0.6.4",
@@ -4848,6 +4944,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "pir-client"
+version = "0.1.0"
+source = "git+https://github.com/hhanh00/vote-nullifier-pir?rev=016392d09e84d1de43ed04d138b0692c595bb4af#016392d09e84d1de43ed04d138b0692c595bb4af"
+dependencies = [
+ "anyhow",
+ "ff",
+ "futures",
+ "hex",
+ "imt-tree",
+ "log",
+ "pasta_curves",
+ "pir-types",
+ "reqwest 0.12.28",
+ "serde_json",
+ "tokio 1.50.0",
+ "ypir",
+]
+
+[[package]]
+name = "pir-types"
+version = "0.1.0"
+source = "git+https://github.com/hhanh00/vote-nullifier-pir?rev=016392d09e84d1de43ed04d138b0692c595bb4af#016392d09e84d1de43ed04d138b0692c595bb4af"
+dependencies = [
+ "anyhow",
+ "ff",
+ "imt-tree",
+ "pasta_curves",
+ "serde",
+]
+
+[[package]]
 name = "pkcs1"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4910,6 +5037,15 @@ name = "portable-atomic"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
+
+[[package]]
+name = "portable-atomic-util"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "091397be61a01d4be58e7841595bd4bfedb15f1cd54977d79b8271e94ed799a3"
+dependencies = [
+ "portable-atomic",
+]
 
 [[package]]
 name = "postage"
@@ -5826,7 +5962,7 @@ dependencies = [
  "clap",
  "csv-async",
  "dataloader",
- "env_logger",
+ "env_logger 0.10.2",
  "figment",
  "flutter_rust_bridge",
  "fpdec",
@@ -5851,7 +5987,7 @@ dependencies = [
  "ledger-transport-zemu",
  "libsqlite3-sys",
  "log",
- "orchard",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635)",
  "pczt",
  "prost 0.14.3",
  "qrcode",
@@ -5885,7 +6021,7 @@ dependencies = [
  "tracing-subscriber",
  "warp",
  "webpki-roots",
- "zcash-trees",
+ "zcash-trees 0.1.0",
  "zcash_address",
  "zcash_encoding",
  "zcash_keys",
@@ -6706,6 +6842,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "spiral-rs"
+version = "0.4.0"
+source = "git+https://github.com/menonsamir/spiral-rs.git?rev=f2c23c7#f2c23c7ced192e80687b52134ee861098f764769"
+dependencies = [
+ "fastrand",
+ "getrandom 0.2.17",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "serde_json",
+ "sha2 0.10.9",
+ "subtle",
+]
+
+[[package]]
 name = "spki"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7203,6 +7353,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "test-log"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37d53ac171c92a39e4769491c4b4dde7022c60042254b5fc044ae409d34a24d4"
+dependencies = [
+ "env_logger 0.11.10",
+ "test-log-macros",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "test-log-macros"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be35209fd0781c5401458ab66e4f98accf63553e8fae7425503e92fdd319783b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -9743,6 +9915,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ypir"
+version = "0.1.0"
+source = "git+https://github.com/menonsamir/ypir.git?branch=artifact#b9801521301f34502496d694b2ac034857104ebc"
+dependencies = [
+ "cc",
+ "clap",
+ "env_logger 0.11.10",
+ "fastrand",
+ "log",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "serde",
+ "serde_json",
+ "sha1",
+ "spiral-rs",
+ "test-log",
+]
+
+[[package]]
 name = "zcash-trees"
 version = "0.1.0"
 dependencies = [
@@ -9755,7 +9946,32 @@ dependencies = [
  "hex",
  "incrementalmerkletree",
  "jubjub",
- "orchard",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635)",
+ "rayon",
+ "sapling-crypto",
+ "secp256k1",
+ "thiserror 2.0.18",
+ "zcash_encoding",
+ "zcash_protocol",
+ "zcash_transparent",
+ "zip32",
+]
+
+[[package]]
+name = "zcash-trees"
+version = "0.1.0"
+source = "git+https://github.com/hhanh00/zkool2?rev=97ba893f61c422c7f8032ab341f6473eab94ae20#97ba893f61c422c7f8032ab341f6473eab94ae20"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "blake2b_simd",
+ "chacha20",
+ "halo2_gadgets",
+ "halo2_proofs",
+ "hex",
+ "incrementalmerkletree",
+ "jubjub",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635)",
  "rayon",
  "sapling-crypto",
  "secp256k1",
@@ -9804,7 +10020,7 @@ dependencies = [
  "group",
  "memuse",
  "nonempty",
- "orchard",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635)",
  "rand_core 0.6.4",
  "sapling-crypto",
  "secrecy 0.8.0",
@@ -9851,7 +10067,7 @@ dependencies = [
  "jubjub",
  "memuse",
  "nonempty",
- "orchard",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=f1943f696930c89b43e97756b3b8d818657be635)",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "redjubjub",
@@ -9957,8 +10173,8 @@ dependencies = [
 
 [[package]]
 name = "zcvlib"
-version = "0.5.2"
-source = "git+https://github.com/hhanh00/zcv?rev=dd8ffc041512036ddd939fc4e9cd1e21ddab9f82#dd8ffc041512036ddd939fc4e9cd1e21ddab9f82"
+version = "0.6.0"
+source = "git+https://github.com/hhanh00/zcv?rev=43d86651a33db29ece305c6eddb7334262cef357#43d86651a33db29ece305c6eddb7334262cef357"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -9976,13 +10192,13 @@ dependencies = [
  "futures",
  "hex",
  "hex-literal",
- "incrementalmerkletree",
  "juniper",
  "juniper_graphql_ws",
  "juniper_warp",
- "orchard",
+ "orchard 0.11.0 (git+https://github.com/hhanh00/orchard.git?rev=c6319ac04d1ae5a4b046c2cf9c209d1b3b5f0124)",
  "parking_lot",
  "pasta_curves",
+ "pir-client",
  "prost 0.14.3",
  "rand 0.8.5",
  "rand_core 0.6.4",
@@ -10003,6 +10219,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "warp",
+ "zcash-trees 0.1.0 (git+https://github.com/hhanh00/zkool2?rev=97ba893f61c422c7f8032ab341f6473eab94ae20)",
  "zcash_encoding",
  "zcash_note_encryption",
  "zcash_protocol",
