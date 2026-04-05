@@ -26,6 +26,16 @@ class InputAmountState extends ConsumerState<InputAmount> {
   final formKey = GlobalKey<FormBuilderState>();
 
   @override
+  void didUpdateWidget(InputAmount oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue != widget.initialValue) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) onChanged(widget.initialValue);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final coingecko = ref.watch(appSettingsProvider).whenData((s) => s.coingecko);
     if (coingecko.value == null) return blank(context);
