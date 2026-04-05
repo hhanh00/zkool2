@@ -203,13 +203,3 @@ impl ProgressReporter for StreamSink<u32> {
         let _ = self.add(p);
     }
 }
-
-async fn connect_voted(url: String) -> Result<VoteStreamerClient<Channel>> {
-    let mut channel = tonic::transport::Channel::from_shared(url.clone())?;
-    if url.starts_with("https") {
-        let tls = ClientTlsConfig::new().with_enabled_roots();
-        channel = channel.tls_config(tls)?;
-    }
-    let client = VoteStreamerClient::connect(channel).await?;
-    Ok(client)
-}
