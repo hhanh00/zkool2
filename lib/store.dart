@@ -641,7 +641,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         currentHeight: currentHeight,
         actionsPerSync: int.parse(settings.actionsPerSync),
         transparentLimit: 100, // scan the last 100 known transparent addresses
-        checkpointAge: 200,
+        checkpointAge: 500_000, // a year worth of checkpoints in case we have to rewind for voting
         fast: true,
         c: c,
       ); // trim checkpoints older than 200 blocks
