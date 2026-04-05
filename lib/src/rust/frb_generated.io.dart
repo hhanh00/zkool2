@@ -40,9 +40,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_MempoolPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempoolPtr;
 
-  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_NetworkPtr => wire
-      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetworkPtr;
-
   CrossPlatformFinalizerArg
       get rust_arc_decrement_strong_count_TransparentScannerPtr => wire
           ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScannerPtr;
@@ -58,11 +55,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   Mempool
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
-          dynamic raw);
-
-  @protected
-  Network
-      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
           dynamic raw);
 
   @protected
@@ -96,11 +88,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           dynamic raw);
 
   @protected
-  Network
-      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-          dynamic raw);
-
-  @protected
   TransparentScanner
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           dynamic raw);
@@ -130,9 +117,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
-  RustStreamSink<int> dco_decode_StreamSink_u_32_Sse(dynamic raw);
-
-  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
@@ -158,6 +142,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Coin dco_decode_box_autoadd_coin(dynamic raw);
+
+  @protected
+  ElectionPropsPub dco_decode_box_autoadd_election_props_pub(dynamic raw);
 
   @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
@@ -315,6 +302,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
+  ElectionPropsPub? dco_decode_opt_box_autoadd_election_props_pub(dynamic raw);
+
+  @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -360,10 +350,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient dco_decode_recipient(dynamic raw);
 
   @protected
-  (String?, int?) dco_decode_record_opt_string_opt_box_autoadd_u_32(
-      dynamic raw);
-
-  @protected
   (String, double, bool) dco_decode_record_string_f_64_bool(dynamic raw);
 
   @protected
@@ -371,6 +357,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw);
+
+  @protected
+  (int, String, ElectionPropsPub?)
+      dco_decode_record_u_32_string_opt_box_autoadd_election_props_pub(
+          dynamic raw);
 
   @protected
   Seed dco_decode_seed(dynamic raw);
@@ -452,11 +443,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
-  Network
-      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-          SseDeserializer deserializer);
-
-  @protected
   TransparentScanner
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           SseDeserializer deserializer);
@@ -484,11 +470,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   Mempool
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
-          SseDeserializer deserializer);
-
-  @protected
-  Network
-      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
           SseDeserializer deserializer);
 
   @protected
@@ -525,10 +506,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
-  RustStreamSink<int> sse_decode_StreamSink_u_32_Sse(
-      SseDeserializer deserializer);
-
-  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
@@ -555,6 +532,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Coin sse_decode_box_autoadd_coin(SseDeserializer deserializer);
+
+  @protected
+  ElectionPropsPub sse_decode_box_autoadd_election_props_pub(
+      SseDeserializer deserializer);
 
   @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
@@ -719,6 +700,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  ElectionPropsPub? sse_decode_opt_box_autoadd_election_props_pub(
+      SseDeserializer deserializer);
+
+  @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
@@ -765,10 +750,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Recipient sse_decode_recipient(SseDeserializer deserializer);
 
   @protected
-  (String?, int?) sse_decode_record_opt_string_opt_box_autoadd_u_32(
-      SseDeserializer deserializer);
-
-  @protected
   (String, double, bool) sse_decode_record_string_f_64_bool(
       SseDeserializer deserializer);
 
@@ -778,6 +759,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
       SseDeserializer deserializer);
+
+  @protected
+  (int, String, ElectionPropsPub?)
+      sse_decode_record_u_32_string_opt_box_autoadd_election_props_pub(
+          SseDeserializer deserializer);
 
   @protected
   Seed sse_decode_seed(SseDeserializer deserializer);
@@ -864,11 +850,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
-      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-          Network self, SseSerializer serializer);
-
-  @protected
-  void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           TransparentScanner self, SseSerializer serializer);
 
@@ -896,11 +877,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
           Mempool self, SseSerializer serializer);
-
-  @protected
-  void
-      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-          Network self, SseSerializer serializer);
 
   @protected
   void
@@ -936,10 +912,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       RustStreamSink<SyncProgress> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_StreamSink_u_32_Sse(
-      RustStreamSink<int> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -966,6 +938,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_coin(Coin self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_election_props_pub(
+      ElectionPropsPub self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
@@ -1143,6 +1119,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_election_props_pub(
+      ElectionPropsPub? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
@@ -1192,10 +1172,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_recipient(Recipient self, SseSerializer serializer);
 
   @protected
-  void sse_encode_record_opt_string_opt_box_autoadd_u_32(
-      (String?, int?) self, SseSerializer serializer);
-
-  @protected
   void sse_encode_record_string_f_64_bool(
       (String, double, bool) self, SseSerializer serializer);
 
@@ -1206,6 +1182,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_record_u_32_string_i_64(
       (int, String, PlatformInt64) self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_u_32_string_opt_box_autoadd_election_props_pub(
+      (int, String, ElectionPropsPub?) self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);
@@ -1354,38 +1334,6 @@ class RustLibWire implements BaseWire {
           'frbgen_zkool_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool');
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempoolPtr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
-
-  void
-      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetworkPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-          'frbgen_zkool_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork');
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork =
-      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetworkPtr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
-
-  void
-      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetworkPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-          'frbgen_zkool_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork');
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetwork =
-      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNetworkPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

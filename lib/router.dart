@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
@@ -24,7 +25,6 @@ import 'package:zkool/pages/vote.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/pay.dart';
-import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -102,7 +102,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
         GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
         GoRoute(path: '/vote/page1', builder: (context, state) => VotePage1()),
-        GoRoute(path: '/vote/page2', builder: (context, state) => VotePage2(state.extra as ElectionPropsPub)),
+        GoRoute(path: '/vote/page2', builder: (context, state) => VotePage2()),
         GoRoute(path: '/vote/delegate', builder: (context, state) => VoteDelegatePage(state.extra as String)),
         GoRoute(
             path: '/settings',
