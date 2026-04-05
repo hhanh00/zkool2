@@ -78,7 +78,7 @@ impl Coin {
         }
     }
 
-    pub fn network(&self) -> Network {
+    pub(crate) fn network(&self) -> Network {
         match self.coin {
             0 => Network::Main,
             1 => Network::Test,
@@ -260,7 +260,7 @@ fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteCo
     options
 }
 
-pub use zcash_trees::network::Network;
+pub(crate) use zcash_trees::network::Network;
 
 pub(crate) const fn _regtest() -> LocalNetwork {
     LocalNetwork {

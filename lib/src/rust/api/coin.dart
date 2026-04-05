@@ -9,16 +9,13 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'vote.dart';
 part 'coin.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `_regtest`, `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `try_open`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `activation_height`, `clone`, `clone`, `fmt`, `network_type`
+// These functions are ignored because they are not marked as `pub`: `_regtest`, `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `network`, `try_open`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 Future<void> initDatadir({required String directory}) =>
     RustLib.instance.api.crateApiCoinInitDatadir(directory: directory);
 
 Future<void> getTorClient() => RustLib.instance.api.crateApiCoinGetTorClient();
-
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Network>>
-abstract class Network implements RustOpaqueInterface {}
 
 @freezed
 sealed class Coin with _$Coin {
@@ -32,10 +29,6 @@ sealed class Coin with _$Coin {
     required bool useTor,
   }) = _Coin;
   Future<void> getName() => RustLib.instance.api.crateApiCoinCoinGetName(
-        that: this,
-      );
-
-  Future<Network> network() => RustLib.instance.api.crateApiCoinCoinNetwork(
         that: this,
       );
 

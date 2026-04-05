@@ -1975,6 +1975,324 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
 }
 
 /// @nodoc
+mixin _$ElectionData {
+  ElectionPropsPub? get election;
+  String get url;
+  int get account;
+
+  /// Create a copy of ElectionData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $ElectionDataCopyWith<ElectionData> get copyWith =>
+      _$ElectionDataCopyWithImpl<ElectionData>(
+          this as ElectionData, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ElectionData &&
+            (identical(other.election, election) ||
+                other.election == election) &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.account, account) || other.account == account));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, election, url, account);
+
+  @override
+  String toString() {
+    return 'ElectionData(election: $election, url: $url, account: $account)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $ElectionDataCopyWith<$Res> {
+  factory $ElectionDataCopyWith(
+          ElectionData value, $Res Function(ElectionData) _then) =
+      _$ElectionDataCopyWithImpl;
+  @useResult
+  $Res call({ElectionPropsPub? election, String url, int account});
+}
+
+/// @nodoc
+class _$ElectionDataCopyWithImpl<$Res> implements $ElectionDataCopyWith<$Res> {
+  _$ElectionDataCopyWithImpl(this._self, this._then);
+
+  final ElectionData _self;
+  final $Res Function(ElectionData) _then;
+
+  /// Create a copy of ElectionData
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? election = freezed,
+    Object? url = null,
+    Object? account = null,
+  }) {
+    return _then(_self.copyWith(
+      election: freezed == election
+          ? _self.election
+          : election // ignore: cast_nullable_to_non_nullable
+              as ElectionPropsPub?,
+      url: null == url
+          ? _self.url
+          : url // ignore: cast_nullable_to_non_nullable
+              as String,
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [ElectionData].
+extension ElectionDataPatterns on ElectionData {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_ElectionData value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _ElectionData() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_ElectionData value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ElectionData():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_ElectionData value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ElectionData() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(ElectionPropsPub? election, String url, int account)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _ElectionData() when $default != null:
+        return $default(_that.election, _that.url, _that.account);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(ElectionPropsPub? election, String url, int account)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ElectionData():
+        return $default(_that.election, _that.url, _that.account);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(ElectionPropsPub? election, String url, int account)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ElectionData() when $default != null:
+        return $default(_that.election, _that.url, _that.account);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _ElectionData implements ElectionData {
+  _ElectionData(
+      {required this.election, required this.url, required this.account});
+
+  @override
+  final ElectionPropsPub? election;
+  @override
+  final String url;
+  @override
+  final int account;
+
+  /// Create a copy of ElectionData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$ElectionDataCopyWith<_ElectionData> get copyWith =>
+      __$ElectionDataCopyWithImpl<_ElectionData>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _ElectionData &&
+            (identical(other.election, election) ||
+                other.election == election) &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.account, account) || other.account == account));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, election, url, account);
+
+  @override
+  String toString() {
+    return 'ElectionData(election: $election, url: $url, account: $account)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$ElectionDataCopyWith<$Res>
+    implements $ElectionDataCopyWith<$Res> {
+  factory _$ElectionDataCopyWith(
+          _ElectionData value, $Res Function(_ElectionData) _then) =
+      __$ElectionDataCopyWithImpl;
+  @override
+  @useResult
+  $Res call({ElectionPropsPub? election, String url, int account});
+}
+
+/// @nodoc
+class __$ElectionDataCopyWithImpl<$Res>
+    implements _$ElectionDataCopyWith<$Res> {
+  __$ElectionDataCopyWithImpl(this._self, this._then);
+
+  final _ElectionData _self;
+  final $Res Function(_ElectionData) _then;
+
+  /// Create a copy of ElectionData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? election = freezed,
+    Object? url = null,
+    Object? account = null,
+  }) {
+    return _then(_ElectionData(
+      election: freezed == election
+          ? _self.election
+          : election // ignore: cast_nullable_to_non_nullable
+              as ElectionPropsPub?,
+      url: null == url
+          ? _self.url
+          : url // ignore: cast_nullable_to_non_nullable
+              as String,
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$MempoolState {
   bool get running;
   Map<int, int> get unconfirmedFunds;
