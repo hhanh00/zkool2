@@ -66,7 +66,13 @@ class VotePage1State extends ConsumerState<VotePage1> {
 
       final c = ref.read(coinContextProvider);
       final e = ref.read(electionProvider.notifier);
-      await e.fetch(c.account, url);
+      AwesomeDialog? dialog;
+      try {
+        dialog = await showMessage(context, "Please wait while we mint voting tokens from your orchard funds", dismissable: false);
+        await e.fetch(c.account, url);
+      } finally {
+        dialog?.dismiss();
+      }
       await GoRouter.of(context).pushReplacement('/vote/page2');
     } on AnyhowException catch (e) {
       await showException(context, e.message);
@@ -108,6 +114,11 @@ class VotePage2State extends ConsumerState<VotePage2> {
     final max = balance?.let((b) => stringToZat(b));
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [
+        IconButton(
+          onPressed: onQuit,
+          icon: Icon(Icons.cancel),
+          tooltip: "Delegate",
+        ),
         IconButton(
           onPressed: onDelegate,
           icon: Icon(Icons.forward),
@@ -152,6 +163,15 @@ class VotePage2State extends ConsumerState<VotePage2> {
                     ],
                   )))),
     );
+  }
+
+  void onQuit() async {
+    final confirmed = await confirmDialog(context, title: "Close Election?", message: "Do you want to quit this election?");
+    if (confirmed) {
+      final c = ref.read(coinContextProvider);
+      await deleteElection(c: c);
+      GoRouter.of(context).pop();
+    }
   }
 
   void onDelegate() async {
