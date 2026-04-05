@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -32,144 +33,41 @@ class VotePage1State extends ConsumerState<VotePage1> {
   int? account;
 
   @override
-  void initState() {
-    super.initState();
-    Future(() async {
-      try {
-        final c = ref.read(coinContextProvider);
-        final (url, account) = await getElectionUrl(c: c);
-        setState(() {
-          this.url = url ?? "";
-          this.account = account;
-        });
-        if (url != null && account == c.account) await loadElection(url);
-      } on AnyhowException catch (e) {
-        if (!mounted) return;
-        await showException(context, e.message);
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final c = ref.watch(coinContextProvider);
-    final votingBound = account != null && account != c.account;
     return Scaffold(
-      appBar: AppBar(title: Text("Vote"), actions: [IconButton(onPressed: onQuit, icon: Icon(Icons.delete))]),
+      appBar: AppBar(title: Text("Vote")),
       body: SingleChildScrollView(
           child: Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
               child: FormBuilder(
                 key: formKey,
-                child: Column(
-                  children: [
-                    FormBuilderTextField(
-                      key: ValueKey(url),
-                      name: "url",
-                      decoration: InputDecoration(label: Text("Election URL")),
-                      initialValue: url,
-                      readOnly: url?.isNotEmpty == true,
-                    ),
-                    Gap(16),
-                    if (votingBound) ...[
-                      Text("Election was opened in another account",
-                          style: t.textTheme.bodyLarge!.copyWith(
-                            color: t.colorScheme.tertiary,
-                          )),
-                      Gap(8),
-                    ],
-                    votingBound
-                        ? ElevatedButton(
-                            onPressed: onSwitch,
-                            child: Text("Switch"),
-                          )
-                        : ElevatedButton(
-                            onPressed: onNext,
-                            child: Text("Next"),
-                          ),
-                    Gap(16),
-                  ],
-                ),
+                child: Column(children: [
+                  FormBuilderTextField(
+                    key: ValueKey(url),
+                    name: "url",
+                    decoration: InputDecoration(label: Text("Election URL")),
+                  ),
+                  Gap(16),
+                  ElevatedButton(
+                    onPressed: onNext,
+                    child: Text("Next"),
+                  ),
+                ]),
               ))),
     );
   }
 
-  void onQuit() async {
-    final confirmed = await confirmDialog(context,
-        title: "Leave Election", message: "Are you sure you want to leave this election? This will delete the cached election data");
-    if (confirmed) {
-      final c = ref.read(coinContextProvider);
-      await deleteElection(c: c);
-      GoRouter.of(context).pop();
-    }
-  }
-
-  void onSwitch() async {
-    try {
-      final confirmed = await confirmDialog(context,
-          title: "Leave Election",
-          message: "Are you sure you want to switch to this account?\nThis will delete the election data"
-              " of the other account");
-      if (confirmed) {
-        final c = ref.read(coinContextProvider);
-        await deleteElectionData(newAccount: c.account, c: c);
-        election = await getElection(c: c);
-        await scan();
-      }
-    } on AnyhowException catch (e) {
-      await showException(context, e.message);
-    }
-  }
-
   void onNext() async {
     try {
-      if (election == null) {
-        final form = formKey.currentState!;
-        if (!form.validate()) return;
-        final fields = form.fields;
-        final url = fields["url"]!.value as String;
+      final form = formKey.currentState!;
+      if (!form.validate()) return;
+      final fields = form.fields;
+      final url = fields["url"]!.value as String;
 
-        final c = ref.read(coinContextProvider);
-        election = await fetchElection(url: url, account: c.account, c: c);
-      }
-      await scan();
-    } on AnyhowException catch (e) {
-      await showException(context, e.message);
-    }
-  }
-
-  Future<void> loadElection(String? url) async {
-    if (url == null) return;
-    final c = ref.read(coinContextProvider);
-    final election = await fetchElection(url: url, account: c.account, c: c);
-    setState(() {
-      this.election = election;
-    });
-  }
-
-  Future<void> scan() async {
-    try {
-      final t = Theme.of(context).textTheme;
       final c = ref.read(coinContextProvider);
-      final progressSub = scanVotes(idAccount: c.account, c: c);
-      var progress = ValueNotifier<double>(0.0);
-      progressSub.listen((p) {
-        setState(() => progress.value = p.toDouble());
-      }, onDone: () async {
-        setState(() {
-          GoRouter.of(context).pushReplacement("/vote/page2", extra: election!);
-        });
-      });
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Text("Please wait while we scan for your voting funds", style: t.headlineSmall),
-          content:
-              ValueListenableBuilder<double>(valueListenable: progress, builder: (context, progress, _) => LinearProgressIndicator(value: progress * 0.01)),
-        ),
-      );
+      final e = ref.read(electionProvider.notifier);
+      await e.fetch(c.account, url);
+      await GoRouter.of(context).pushReplacement('/vote/page2');
     } on AnyhowException catch (e) {
       await showException(context, e.message);
     }
@@ -177,8 +75,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
 }
 
 class VotePage2 extends ConsumerStatefulWidget {
-  final ElectionPropsPub election;
-  const VotePage2(this.election, {super.key});
+  const VotePage2({super.key});
 
   @override
   ConsumerState<VotePage2> createState() => VotePage2State();
@@ -188,29 +85,27 @@ class VotePage2State extends ConsumerState<VotePage2> {
   final formKey = GlobalKey<FormBuilderState>();
   String amount = "";
   String? balance;
-  late List<int> answers = [for (var _ in widget.election.questions) 1];
+  late ElectionPropsPub election;
+  late List<int> answers;
 
-  void init() async {
-    try {
-      final newBalance = await refresh(context, ref);
-      amount = zatToString(newBalance);
-      balance = amount;
+  @override
+  void initState() {
+    super.initState();
+    final e = ref.read(electionProvider)!;
+    election = e.election!;
+    answers = [for (var _ in election.questions) 1];
+    Future(() async {
+      balance = zatToString(await refresh(context, ref));
+      amount = balance!;
       setState(() {});
-    } on AnyhowException catch (e) {
-      await showException(context, e.message);
-    }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
 
-    if (balance == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => init());
-    }
-
     final max = balance?.let((b) => stringToZat(b));
-    final election = widget.election;
     return Scaffold(
       appBar: AppBar(title: Text("Vote"), actions: [
         IconButton(
@@ -273,6 +168,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
     try {
       dialog = await showMessage(context, "Please wait while we compute the ballot", dismissable: false);
 
+      logger.i("amount $amount");
       final id = await vote(
         idAccount: c.account,
         vote: voteContent,
@@ -409,7 +305,7 @@ Future<BigInt> refresh(
       "Synchronizing",
       dismissable: false,
     );
-    await Future.delayed(Duration(seconds: 15));
+    await Future.delayed(Duration(seconds: 5));
     await scanBallots(
       idAccount: c.account,
       c: c,

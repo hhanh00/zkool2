@@ -18,16 +18,17 @@ Future<String> compileElectionDef(
 Future<ElectionPropsPub> parseElection({required String electionJson}) =>
     RustLib.instance.api.crateApiVoteParseElection(electionJson: electionJson);
 
-Future<(String?, int?)> getElectionUrl({required Coin c}) =>
-    RustLib.instance.api.crateApiVoteGetElectionUrl(c: c);
-
-Future<ElectionPropsPub> getElection({required Coin c}) =>
+Future<(int, String, ElectionPropsPub?)> getElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteGetElection(c: c);
 
 Future<ElectionPropsPub> fetchElection(
-        {required String url, required int account, required Coin c}) =>
+        {required int account, required String url, required Coin c}) =>
     RustLib.instance.api
-        .crateApiVoteFetchElection(url: url, account: account, c: c);
+        .crateApiVoteFetchElection(account: account, url: url, c: c);
+
+Future<void> importElectionAccount({required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVoteImportElectionAccount(account: account, c: c);
 
 Future<void> deleteElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteDeleteElection(c: c);
@@ -35,9 +36,6 @@ Future<void> deleteElection({required Coin c}) =>
 Future<void> deleteElectionData({int? newAccount, required Coin c}) =>
     RustLib.instance.api
         .crateApiVoteDeleteElectionData(newAccount: newAccount, c: c);
-
-Stream<int> scanVotes({required int idAccount, required Coin c}) =>
-    RustLib.instance.api.crateApiVoteScanVotes(idAccount: idAccount, c: c);
 
 Future<void> scanBallots({required int idAccount, required Coin c}) =>
     RustLib.instance.api.crateApiVoteScanBallots(idAccount: idAccount, c: c);
@@ -69,7 +67,7 @@ Future<String> getElectionAddress({required int idAccount, required Coin c}) =>
 abstract class Context implements RustOpaqueInterface {}
 
 class ElectionPropsPub {
-  final int start;
+  final String pir;
   final int end;
   final bool needSig;
   final String name;
@@ -79,7 +77,7 @@ class ElectionPropsPub {
   final Uint8List domain;
 
   const ElectionPropsPub({
-    required this.start,
+    required this.pir,
     required this.end,
     required this.needSig,
     required this.name,
@@ -91,7 +89,7 @@ class ElectionPropsPub {
 
   @override
   int get hashCode =>
-      start.hashCode ^
+      pir.hashCode ^
       end.hashCode ^
       needSig.hashCode ^
       name.hashCode ^
@@ -105,7 +103,7 @@ class ElectionPropsPub {
       identical(this, other) ||
       other is ElectionPropsPub &&
           runtimeType == other.runtimeType &&
-          start == other.start &&
+          pir == other.pir &&
           end == other.end &&
           needSig == other.needSig &&
           name == other.name &&

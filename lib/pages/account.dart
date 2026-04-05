@@ -107,14 +107,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
           ),
           PopupMenuButton<String>(
-            onSelected: (String result) {
+            onSelected: (String result) async {
               switch (result) {
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "charts":
                   GoRouter.of(context).push("/chart");
                 case "vote":
-                  GoRouter.of(context).push("/vote/page1");
+                  final e = ref.read(electionProvider.notifier);
+                  final election = await e.init();
+                  await GoRouter.of(context).push(election == null ? "/vote/page1" : "/vote/page2");
                 default:
                   onExport(int.parse(result));
               }

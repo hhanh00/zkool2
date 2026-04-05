@@ -17,6 +17,7 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/theme.dart';
 
@@ -383,12 +384,10 @@ class PriceNotifier extends _$PriceNotifier {
       final p = await getCoingeckoPrice(api: api);
       setPrice(p);
       return p;
-    }
-    catch (_) {
+    } catch (_) {
       return null;
     }
   }
-
 }
 
 @freezed
@@ -433,6 +432,35 @@ class CurrentHeightNotifier extends _$CurrentHeightNotifier {
     if (state == height) return false;
     state = height;
     return true;
+  }
+}
+
+@freezed
+sealed class ElectionData with _$ElectionData {
+  factory ElectionData({
+    required ElectionPropsPub? election,
+    required String url,
+    required int account,
+  }) = _ElectionData;
+}
+
+@Riverpod(keepAlive: true)
+class ElectionNotifier extends _$ElectionNotifier {
+  @override
+  ElectionData? build() => null;
+
+  Future<void> fetch(int account, String url) async {
+    final c = ref.watch(coinContextProvider);
+    final election = await fetchElection(account: account, url: url, c: c);
+    await importElectionAccount(account: account, c: c);
+    state = ElectionData(election: election, account: account, url: url);
+  }
+
+  Future<ElectionPropsPub?> init() async {
+    final c = ref.watch(coinContextProvider);
+    final (account, url, election) = await getElection(c: c);
+    state = ElectionData(election: election, account: account, url: url);
+    return election;
   }
 }
 
@@ -600,8 +628,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     final completer = Completer<void>();
     try {
       logger.i("Starting Synchronization");
-      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
-        showSnackbar("Starting Synchronization");
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) showSnackbar("Starting Synchronization");
       syncInProgress = true;
       retrySyncTimer?.cancel();
       retrySyncTimer = null;
@@ -635,8 +662,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           Timer.run(() async {
             ref.invalidate(getAccountsProvider);
             ref.invalidate(accountProvider);
-            if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
-              showSnackbar("Synchronization Completed");
+            if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) showSnackbar("Synchronization Completed");
             logger.i("Synchronization Completed");
             // Fetch tx details in the background
             unawaited(Future(() async {
