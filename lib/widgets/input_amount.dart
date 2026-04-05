@@ -109,11 +109,11 @@ class InputAmountState extends ConsumerState<InputAmount> {
     setState(() {
       final price = ref.read(priceProvider.notifier);
       price.setPrice(p);
-      formKey.currentState!.fields["fx"]!.didChange(displayPrice(p));
+      formKey.currentState!.fields["fx"]?.didChange(displayPrice(p));
     });
   }
 
-  String? fx() => formKey.currentState!.fields["fx"]!.value as String?;
+  String? fx() => formKey.currentState!.fields["fx"]?.value as String?;
   String? displayPrice(double? p) => p?.let((p) => doubleToString(p, decimals: 3));
 
   bool disableChangeHandlers = false;
@@ -132,7 +132,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       final v = form.fields["zat"]!.value;
       if (v != null) {
         final usd = stringToZat(v).toDecimal() * p.toDecimal() / Decimal.fromInt(zatsPerZec);
-        form.fields["fiat"]!.didChange(displayPrice(usd.toDecimal().toDouble()));
+        form.fields["fiat"]?.didChange(displayPrice(usd.toDecimal().toDouble()));
       }
       disableChangeHandlers = false;
     });
@@ -151,7 +151,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
         formFieldKey.currentState!.reset();
       } else if (price != null) {
         final usd = stringToZat(v).toDouble() * price / 1e8;
-        form.fields["fiat"]!.didChange(displayPrice(usd));
+        form.fields["fiat"]?.didChange(displayPrice(usd));
       }
       disableChangeHandlers = false;
     });
@@ -162,7 +162,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
     if (disableChangeHandlers || v == null) return;
     final price = ref.read(priceProvider);
     final form = formKey.currentState!;
-    if (!interactive) form.fields["fiat"]!.didChange(v);
+    if (!interactive) form.fields["fiat"]?.didChange(v);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       disableChangeHandlers = true;
       if (v.isEmpty) {
@@ -181,7 +181,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
   void onReset({bool zat = true, bool fiat = true}) {
     final form = formKey.currentState!;
     if (zat) form.fields["zat"]!.reset();
-    if (fiat) form.fields["fiat"]!.reset();
+    if (fiat) form.fields["fiat"]?.reset();
   }
 
   void setAmount(String v) {
