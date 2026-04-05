@@ -55,8 +55,9 @@ String? validAmount(String? amount, {BigInt? max}) {
   if (a == null) {
     return "Invalid Amount";
   }
-  if (max != null && stringToZat(amount) > max) {
-    return "Amount exceeds maximum";
+  final am = stringToZat(amount);
+  if (max != null && am > max) {
+    return "Amount $am exceeds maximum of $max";
   }
   return null;
 }

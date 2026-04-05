@@ -142,10 +142,9 @@ class VotePage2State extends ConsumerState<VotePage2> {
                       Text(election.caption),
                       Gap(16),
                       InputAmount(
-                        key: ValueKey(balance),
                         name: "amount",
                         showFx: false,
-                        initialValue: amount,
+                        initialValue: balance,
                         onChanged: (v) => setState(() => amount = v!),
                         max: max,
                       ),
@@ -180,7 +179,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
 
   void onVote() async {
     if (!formKey.currentState!.validate()) return;
-    final confirmed = await confirmDialog(context, title: "Vote", message: "Do you want to submit this vote?");
+    final confirmed = await confirmDialog(context, title: "Vote", message: "Do you want to submit this vote of $amount?");
     if (!confirmed) return;
     final c = ref.read(coinContextProvider);
     final voteContent = hex.encode(answers);
