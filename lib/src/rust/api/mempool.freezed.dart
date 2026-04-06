@@ -140,9 +140,7 @@ extension MempoolMsgPatterns on MempoolMsg {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function(int field0)? blockHeight,
-    TResult Function(String field0, List<(int, String, PlatformInt64)> field1,
-            int field2)?
-        txId,
+    TResult Function(MempoolTx field0)? txId,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -150,7 +148,7 @@ extension MempoolMsgPatterns on MempoolMsg {
       case MempoolMsg_BlockHeight() when blockHeight != null:
         return blockHeight(_that.field0);
       case MempoolMsg_TxId() when txId != null:
-        return txId(_that.field0, _that.field1, _that.field2);
+        return txId(_that.field0);
       case _:
         return orElse();
     }
@@ -172,16 +170,14 @@ extension MempoolMsgPatterns on MempoolMsg {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(int field0) blockHeight,
-    required TResult Function(String field0,
-            List<(int, String, PlatformInt64)> field1, int field2)
-        txId,
+    required TResult Function(MempoolTx field0) txId,
   }) {
     final _that = this;
     switch (_that) {
       case MempoolMsg_BlockHeight():
         return blockHeight(_that.field0);
       case MempoolMsg_TxId():
-        return txId(_that.field0, _that.field1, _that.field2);
+        return txId(_that.field0);
     }
   }
 
@@ -200,16 +196,14 @@ extension MempoolMsgPatterns on MempoolMsg {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function(int field0)? blockHeight,
-    TResult? Function(String field0, List<(int, String, PlatformInt64)> field1,
-            int field2)?
-        txId,
+    TResult? Function(MempoolTx field0)? txId,
   }) {
     final _that = this;
     switch (_that) {
       case MempoolMsg_BlockHeight() when blockHeight != null:
         return blockHeight(_that.field0);
       case MempoolMsg_TxId() when txId != null:
-        return txId(_that.field0, _that.field1, _that.field2);
+        return txId(_that.field0);
       case _:
         return null;
     }
@@ -285,21 +279,10 @@ class _$MempoolMsg_BlockHeightCopyWithImpl<$Res>
 /// @nodoc
 
 class MempoolMsg_TxId extends MempoolMsg {
-  const MempoolMsg_TxId(
-      this.field0, final List<(int, String, PlatformInt64)> field1, this.field2)
-      : _field1 = field1,
-        super._();
+  const MempoolMsg_TxId(this.field0) : super._();
 
   @override
-  final String field0;
-  final List<(int, String, PlatformInt64)> _field1;
-  List<(int, String, PlatformInt64)> get field1 {
-    if (_field1 is EqualUnmodifiableListView) return _field1;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_field1);
-  }
-
-  final int field2;
+  final MempoolTx field0;
 
   /// Create a copy of MempoolMsg
   /// with the given fields replaced by the non-null parameter values.
@@ -313,18 +296,15 @@ class MempoolMsg_TxId extends MempoolMsg {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is MempoolMsg_TxId &&
-            (identical(other.field0, field0) || other.field0 == field0) &&
-            const DeepCollectionEquality().equals(other._field1, _field1) &&
-            (identical(other.field2, field2) || other.field2 == field2));
+            (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, field0,
-      const DeepCollectionEquality().hash(_field1), field2);
+  int get hashCode => Object.hash(runtimeType, field0);
 
   @override
   String toString() {
-    return 'MempoolMsg.txId(field0: $field0, field1: $field1, field2: $field2)';
+    return 'MempoolMsg.txId(field0: $field0)';
   }
 }
 
@@ -335,8 +315,7 @@ abstract mixin class $MempoolMsg_TxIdCopyWith<$Res>
           MempoolMsg_TxId value, $Res Function(MempoolMsg_TxId) _then) =
       _$MempoolMsg_TxIdCopyWithImpl;
   @useResult
-  $Res call(
-      {String field0, List<(int, String, PlatformInt64)> field1, int field2});
+  $Res call({MempoolTx field0});
 }
 
 /// @nodoc
@@ -352,22 +331,12 @@ class _$MempoolMsg_TxIdCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   $Res call({
     Object? field0 = null,
-    Object? field1 = null,
-    Object? field2 = null,
   }) {
     return _then(MempoolMsg_TxId(
       null == field0
           ? _self.field0
           : field0 // ignore: cast_nullable_to_non_nullable
-              as String,
-      null == field1
-          ? _self._field1
-          : field1 // ignore: cast_nullable_to_non_nullable
-              as List<(int, String, PlatformInt64)>,
-      null == field2
-          ? _self.field2
-          : field2 // ignore: cast_nullable_to_non_nullable
-              as int,
+              as MempoolTx,
     ));
   }
 }

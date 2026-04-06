@@ -699,7 +699,7 @@ final class ElectionNotifierProvider
   }
 }
 
-String _$electionNotifierHash() => r'0f34ff6dd9e87c0108d8610091d76a3ef6ead460';
+String _$electionNotifierHash() => r'fa2f024dda600a56be8a9e6ba300f2398c672102';
 
 abstract class _$ElectionNotifier extends $Notifier<ElectionData?> {
   ElectionData? build();
@@ -800,7 +800,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'504bb6b4d7599c919277dff4e8ee46f630ccb1ea';
+    r'b8a4c26b505c5fc5207b862d4aaa6cc38bd22551';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

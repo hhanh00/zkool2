@@ -35,9 +35,40 @@ async fn run_mempool(
 
 #[cfg_attr(feature = "flutter", frb)]
 #[derive(Clone)]
+pub struct MempoolNote {
+    pub account: u32,
+    pub name: String,
+    pub value: i64,
+    pub pool: u8,
+    pub scope: u8,
+    pub diversifier: Option<Vec<u8>>,
+    pub diversifier_index: Option<i64>,
+    pub address: Option<String>,
+    pub memo: Option<String>,
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+#[derive(Clone)]
+pub struct MempoolAmount {
+    pub account: u32,
+    pub name: String,
+    pub value: i64,
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+#[derive(Clone)]
+pub struct MempoolTx {
+    pub txid: String,
+    pub amounts: Vec<MempoolAmount>,
+    pub notes: Vec<MempoolNote>,
+    pub size: u32,
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+#[derive(Clone)]
 pub enum MempoolMsg {
     BlockHeight(u32),
-    TxId(String, Vec<(u32, String, i64)>, u32),
+    TxId(MempoolTx),
 }
 
 #[cfg_attr(feature = "flutter", frb(opaque))]

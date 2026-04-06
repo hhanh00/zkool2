@@ -55,6 +55,7 @@ pub struct Note {
     pub value: BigDecimal,
     pub scope: i32,
     pub diversifier: String,
+    pub diversifier_index: Option<BigDecimal>,
     pub address: String,
     pub memo: Option<String>,
 }
@@ -63,6 +64,17 @@ pub struct Note {
 pub struct UnconfirmedTx {
     pub txid: String,
     pub value: BigDecimal,
+}
+
+#[derive(Clone, Default, GraphQLObject)]
+pub struct UnconfirmedNote {
+    pub pool: i32,
+    pub scope: i32,
+    pub value: BigDecimal,
+    pub diversifier: String,
+    pub diversifier_index: Option<BigDecimal>,
+    pub address: Option<String>,
+    pub memo: Option<String>,
 }
 
 #[derive(Clone, GraphQLEnum)]
@@ -78,7 +90,9 @@ pub struct Event {
     pub r#type: EventType,
     pub height: i32,
     pub txid: String,
+    pub value: BigDecimal,
     pub dkg_account: i32,
+    pub notes: Vec<UnconfirmedNote>,
 }
 
 #[derive(Clone, GraphQLEnum, Default)]

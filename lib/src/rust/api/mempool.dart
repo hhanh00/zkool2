@@ -10,7 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'mempool.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run_mempool`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`
 
 Future<Uint8List> getMempoolTx({required String txId, required Coin c}) =>
     RustLib.instance.api.crateApiMempoolGetMempoolTx(txId: txId, c: c);
@@ -24,6 +24,30 @@ abstract class Mempool implements RustOpaqueInterface {
   Stream<MempoolMsg> run({required Coin c});
 }
 
+class MempoolAmount {
+  final int account;
+  final String name;
+  final PlatformInt64 value;
+
+  const MempoolAmount({
+    required this.account,
+    required this.name,
+    required this.value,
+  });
+
+  @override
+  int get hashCode => account.hashCode ^ name.hashCode ^ value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MempoolAmount &&
+          runtimeType == other.runtimeType &&
+          account == other.account &&
+          name == other.name &&
+          value == other.value;
+}
+
 @freezed
 sealed class MempoolMsg with _$MempoolMsg {
   const MempoolMsg._();
@@ -32,8 +56,85 @@ sealed class MempoolMsg with _$MempoolMsg {
     int field0,
   ) = MempoolMsg_BlockHeight;
   const factory MempoolMsg.txId(
-    String field0,
-    List<(int, String, PlatformInt64)> field1,
-    int field2,
+    MempoolTx field0,
   ) = MempoolMsg_TxId;
+}
+
+class MempoolNote {
+  final int account;
+  final String name;
+  final PlatformInt64 value;
+  final int pool;
+  final int scope;
+  final Uint8List? diversifier;
+  final PlatformInt64? diversifierIndex;
+  final String? address;
+  final String? memo;
+
+  const MempoolNote({
+    required this.account,
+    required this.name,
+    required this.value,
+    required this.pool,
+    required this.scope,
+    this.diversifier,
+    this.diversifierIndex,
+    this.address,
+    this.memo,
+  });
+
+  @override
+  int get hashCode =>
+      account.hashCode ^
+      name.hashCode ^
+      value.hashCode ^
+      pool.hashCode ^
+      scope.hashCode ^
+      diversifier.hashCode ^
+      diversifierIndex.hashCode ^
+      address.hashCode ^
+      memo.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MempoolNote &&
+          runtimeType == other.runtimeType &&
+          account == other.account &&
+          name == other.name &&
+          value == other.value &&
+          pool == other.pool &&
+          scope == other.scope &&
+          diversifier == other.diversifier &&
+          diversifierIndex == other.diversifierIndex &&
+          address == other.address &&
+          memo == other.memo;
+}
+
+class MempoolTx {
+  final String txid;
+  final List<MempoolAmount> amounts;
+  final List<MempoolNote> notes;
+  final int size;
+
+  const MempoolTx({
+    required this.txid,
+    required this.amounts,
+    required this.notes,
+    required this.size,
+  });
+
+  @override
+  int get hashCode =>
+      txid.hashCode ^ amounts.hashCode ^ notes.hashCode ^ size.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MempoolTx &&
+          runtimeType == other.runtimeType &&
+          txid == other.txid &&
+          amounts == other.amounts &&
+          notes == other.notes &&
+          size == other.size;
 }

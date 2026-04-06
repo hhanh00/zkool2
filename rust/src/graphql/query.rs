@@ -320,7 +320,7 @@ fn resolve_note(
     ufvk: &UnifiedFullViewingKey,
     n: crate::api::account::TxNote,
 ) -> Note {
-    let address = match n.pool {
+    let (address, diversifier_index) = match n.pool {
         1 => {
             let div = n.diversifier.as_ref().unwrap().clone();
             let d = sapling_crypto::keys::Diversifier(tiu!(div));
@@ -331,7 +331,9 @@ fn resolve_note(
                 sfvk.diversified_change_address(d)
             }
             .unwrap();
-            Some(address.encode(&network))
+            let diversifier_index: Option<u64> = sfvk.decrypt_diversifier(&address).and_then(|d|
+                d.0.try_into().ok());
+            (Some(address.encode(&network)), diversifier_index)
         }
         2 => {
             let div = n.diversifier.as_ref().unwrap().clone();
@@ -342,11 +344,14 @@ fn resolve_note(
             } else {
                 Scope::Internal
             };
+            let ivk = ofvk.to_ivk(scope);
             let address = ofvk.address(d, scope);
+            let diversifier_index: Option<u64> = ivk.diversifier_index(&address)
+            .and_then(|d| d.try_into().ok());
             let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
-            Some(ua.encode(&network))
+            (Some(ua.encode(&network)), diversifier_index)
         }
-        _ => None,
+        _ => (None, None),
     };
 
     Note {
@@ -356,6 +361,7 @@ fn resolve_note(
         tx: n.tx as i32,
         scope: n.scope as i32,
         diversifier: n.diversifier.map(|d| hex::encode(&d)).unwrap_or_default(),
+        diversifier_index: diversifier_index.map(BigDecimal::from),
         address: address.unwrap_or_default(),
         value: zats_to_zec(n.value as i64),
         memo: n.memo,

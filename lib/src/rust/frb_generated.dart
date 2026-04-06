@@ -4607,6 +4607,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_i_64(raw);
+  }
+
+  @protected
+  MempoolTx dco_decode_box_autoadd_mempool_tx(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_mempool_tx(raw);
+  }
+
+  @protected
   NewAccount dco_decode_box_autoadd_new_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_new_account(raw);
@@ -4823,6 +4835,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<MempoolAmount> dco_decode_list_mempool_amount(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_mempool_amount).toList();
+  }
+
+  @protected
+  List<MempoolNote> dco_decode_list_mempool_note(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_mempool_note).toList();
+  }
+
+  @protected
   List<int> dco_decode_list_prim_u_32_loose(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as List<int>;
@@ -4883,15 +4907,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<(int, double)> dco_decode_list_record_u_32_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_record_u_32_f_64).toList();
-  }
-
-  @protected
-  List<(int, String, PlatformInt64)> dco_decode_list_record_u_32_string_i_64(
-      dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>)
-        .map(dco_decode_record_u_32_string_i_64)
-        .toList();
   }
 
   @protected
@@ -4975,6 +4990,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MempoolAmount dco_decode_mempool_amount(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return MempoolAmount(
+      account: dco_decode_u_32(arr[0]),
+      name: dco_decode_String(arr[1]),
+      value: dco_decode_i_64(arr[2]),
+    );
+  }
+
+  @protected
   MempoolMsg dco_decode_mempool_msg(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     switch (raw[0]) {
@@ -4984,13 +5012,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         );
       case 1:
         return MempoolMsg_TxId(
-          dco_decode_String(raw[1]),
-          dco_decode_list_record_u_32_string_i_64(raw[2]),
-          dco_decode_u_32(raw[3]),
+          dco_decode_box_autoadd_mempool_tx(raw[1]),
         );
       default:
         throw Exception("unreachable");
     }
+  }
+
+  @protected
+  MempoolNote dco_decode_mempool_note(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return MempoolNote(
+      account: dco_decode_u_32(arr[0]),
+      name: dco_decode_String(arr[1]),
+      value: dco_decode_i_64(arr[2]),
+      pool: dco_decode_u_8(arr[3]),
+      scope: dco_decode_u_8(arr[4]),
+      diversifier: dco_decode_opt_list_prim_u_8_strict(arr[5]),
+      diversifierIndex: dco_decode_opt_box_autoadd_i_64(arr[6]),
+      address: dco_decode_opt_String(arr[7]),
+      memo: dco_decode_opt_String(arr[8]),
+    );
+  }
+
+  @protected
+  MempoolTx dco_decode_mempool_tx(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return MempoolTx(
+      txid: dco_decode_String(arr[0]),
+      amounts: dco_decode_list_mempool_amount(arr[1]),
+      notes: dco_decode_list_mempool_note(arr[2]),
+      size: dco_decode_u_32(arr[3]),
+    );
   }
 
   @protected
@@ -5044,6 +5103,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FrostParams? dco_decode_opt_box_autoadd_frost_params(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_frost_params(raw);
+  }
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_64(raw);
   }
 
   @protected
@@ -5204,20 +5269,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return (
       dco_decode_u_32(arr[0]),
       dco_decode_f_64(arr[1]),
-    );
-  }
-
-  @protected
-  (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 3) {
-      throw Exception('Expected 3 elements, got ${arr.length}');
-    }
-    return (
-      dco_decode_u_32(arr[0]),
-      dco_decode_String(arr[1]),
-      dco_decode_i_64(arr[2]),
     );
   }
 
@@ -5795,6 +5846,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_64(deserializer));
+  }
+
+  @protected
+  MempoolTx sse_decode_box_autoadd_mempool_tx(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_mempool_tx(deserializer));
+  }
+
+  @protected
   NewAccount sse_decode_box_autoadd_new_account(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_new_account(deserializer));
@@ -6045,6 +6108,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<MempoolAmount> sse_decode_list_mempool_amount(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <MempoolAmount>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_mempool_amount(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<MempoolNote> sse_decode_list_mempool_note(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <MempoolNote>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_mempool_note(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<int> sse_decode_list_prim_u_32_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -6133,19 +6221,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <(int, double)>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_record_u_32_f_64(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
-  List<(int, String, PlatformInt64)> sse_decode_list_record_u_32_string_i_64(
-      SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <(int, String, PlatformInt64)>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_record_u_32_string_i_64(deserializer));
     }
     return ans_;
   }
@@ -6281,6 +6356,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MempoolAmount sse_decode_mempool_amount(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_account = sse_decode_u_32(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_value = sse_decode_i_64(deserializer);
+    return MempoolAmount(
+        account: var_account, name: var_name, value: var_value);
+  }
+
+  @protected
   MempoolMsg sse_decode_mempool_msg(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -6290,13 +6375,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         var var_field0 = sse_decode_u_32(deserializer);
         return MempoolMsg_BlockHeight(var_field0);
       case 1:
-        var var_field0 = sse_decode_String(deserializer);
-        var var_field1 = sse_decode_list_record_u_32_string_i_64(deserializer);
-        var var_field2 = sse_decode_u_32(deserializer);
-        return MempoolMsg_TxId(var_field0, var_field1, var_field2);
+        var var_field0 = sse_decode_box_autoadd_mempool_tx(deserializer);
+        return MempoolMsg_TxId(var_field0);
       default:
         throw UnimplementedError('');
     }
+  }
+
+  @protected
+  MempoolNote sse_decode_mempool_note(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_account = sse_decode_u_32(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_value = sse_decode_i_64(deserializer);
+    var var_pool = sse_decode_u_8(deserializer);
+    var var_scope = sse_decode_u_8(deserializer);
+    var var_diversifier = sse_decode_opt_list_prim_u_8_strict(deserializer);
+    var var_diversifierIndex = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_address = sse_decode_opt_String(deserializer);
+    var var_memo = sse_decode_opt_String(deserializer);
+    return MempoolNote(
+        account: var_account,
+        name: var_name,
+        value: var_value,
+        pool: var_pool,
+        scope: var_scope,
+        diversifier: var_diversifier,
+        diversifierIndex: var_diversifierIndex,
+        address: var_address,
+        memo: var_memo);
+  }
+
+  @protected
+  MempoolTx sse_decode_mempool_tx(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_txid = sse_decode_String(deserializer);
+    var var_amounts = sse_decode_list_mempool_amount(deserializer);
+    var var_notes = sse_decode_list_mempool_note(deserializer);
+    var var_size = sse_decode_u_32(deserializer);
+    return MempoolTx(
+        txid: var_txid, amounts: var_amounts, notes: var_notes, size: var_size);
   }
 
   @protected
@@ -6383,6 +6501,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_frost_params(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_64(deserializer));
     } else {
       return null;
     }
@@ -6560,16 +6689,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_field0 = sse_decode_u_32(deserializer);
     var var_field1 = sse_decode_f_64(deserializer);
     return (var_field0, var_field1);
-  }
-
-  @protected
-  (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
-      SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_field0 = sse_decode_u_32(deserializer);
-    var var_field1 = sse_decode_String(deserializer);
-    var var_field2 = sse_decode_i_64(deserializer);
-    return (var_field0, var_field1, var_field2);
   }
 
   @protected
@@ -7172,6 +7291,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_i_64(
+      PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_mempool_tx(
+      MempoolTx self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mempool_tx(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_new_account(
       NewAccount self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -7380,6 +7513,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_mempool_amount(
+      List<MempoolAmount> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_mempool_amount(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_mempool_note(
+      List<MempoolNote> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_mempool_note(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_prim_u_32_loose(
       List<int> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -7466,16 +7619,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_record_u_32_f_64(item, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_list_record_u_32_string_i_64(
-      List<(int, String, PlatformInt64)> self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_record_u_32_string_i_64(item, serializer);
     }
   }
 
@@ -7578,22 +7721,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_mempool_amount(MempoolAmount self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.account, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_i_64(self.value, serializer);
+  }
+
+  @protected
   void sse_encode_mempool_msg(MempoolMsg self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     switch (self) {
       case MempoolMsg_BlockHeight(field0: final field0):
         sse_encode_i_32(0, serializer);
         sse_encode_u_32(field0, serializer);
-      case MempoolMsg_TxId(
-          field0: final field0,
-          field1: final field1,
-          field2: final field2
-        ):
+      case MempoolMsg_TxId(field0: final field0):
         sse_encode_i_32(1, serializer);
-        sse_encode_String(field0, serializer);
-        sse_encode_list_record_u_32_string_i_64(field1, serializer);
-        sse_encode_u_32(field2, serializer);
+        sse_encode_box_autoadd_mempool_tx(field0, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_mempool_note(MempoolNote self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.account, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_i_64(self.value, serializer);
+    sse_encode_u_8(self.pool, serializer);
+    sse_encode_u_8(self.scope, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.diversifier, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.diversifierIndex, serializer);
+    sse_encode_opt_String(self.address, serializer);
+    sse_encode_opt_String(self.memo, serializer);
+  }
+
+  @protected
+  void sse_encode_mempool_tx(MempoolTx self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.txid, serializer);
+    sse_encode_list_mempool_amount(self.amounts, serializer);
+    sse_encode_list_mempool_note(self.notes, serializer);
+    sse_encode_u_32(self.size, serializer);
   }
 
   @protected
@@ -7663,6 +7831,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_frost_params(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+      PlatformInt64? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_64(self, serializer);
     }
   }
 
@@ -7808,15 +7987,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.$1, serializer);
     sse_encode_f_64(self.$2, serializer);
-  }
-
-  @protected
-  void sse_encode_record_u_32_string_i_64(
-      (int, String, PlatformInt64) self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_32(self.$1, serializer);
-    sse_encode_String(self.$2, serializer);
-    sse_encode_i_64(self.$3, serializer);
   }
 
   @protected

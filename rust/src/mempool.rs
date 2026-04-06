@@ -1,17 +1,23 @@
 use crate::api::coin::Network;
-use crate::lwd::{CompactOrchardAction, CompactSaplingOutput};
-use crate::warp::{try_orchard_decrypt, try_sapling_decrypt};
-use crate::api::mempool::MempoolMsg;
+use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::keys::Scope;
+use orchard::{keys::Scope, note_encryption::OrchardDomain};
+use sapling_crypto::{
+    keys::PreparedIncomingViewingKey,
+    note_encryption::SaplingDomain,
+    zip32::DiversifiableFullViewingKey,
+};
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
-use zcash_keys::encoding::AddressCodec as _;
-use zcash_note_encryption::COMPACT_NOTE_SIZE;
-use zcash_primitives::transaction::{Authorized, Transaction, TransactionData};
+use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
+use zcash_note_encryption::try_note_decryption;
+use zcash_primitives::transaction::{
+    components::sapling::zip212_enforcement, Authorized, Transaction, TransactionData,
+};
+use zcash_protocol::memo::Memo;
 use zcash_transparent::address::TransparentAddress;
 
 use crate::{Client, Sink};
@@ -60,7 +66,7 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
         let account: u32 = row.get(0);
         let name: String = row.get(1);
         let xvk: Vec<u8> = row.get(2);
-        let fvk = sapling_crypto::keys::FullViewingKey::read(&*xvk).unwrap();
+        let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
         (account, name, fvk)
     })
     .fetch_all(&mut *connection)
@@ -110,17 +116,23 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
                                 &orchard_accounts,
                                 &tx_data,
                             ).await?;
-                            let a = notes
+                            let amounts = notes
                                 .iter()
                                 .map(|n| ((n.account, n.name.clone()), n.value))
-                                .into_group_map();
-                            let amounts = a
+                                .into_group_map()
                                 .into_iter()
-                                .map(|((account, name), note_values)| {
-                                    (account, name, note_values.iter().sum::<i64>())
+                                .map(|((account, name), values)| MempoolAmount {
+                                    account,
+                                    name,
+                                    value: values.iter().sum(),
                                 })
                                 .collect::<Vec<_>>();
-                            mempool_tx.send(MempoolMsg::TxId(tx_hash, amounts, len as u32)).await;
+                            mempool_tx.send(MempoolMsg::TxId(MempoolTx {
+                                txid: tx_hash,
+                                amounts,
+                                notes,
+                                size: len as u32,
+                            })).await;
                         }
                         None => {
                             break;
@@ -134,10 +146,11 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
     Ok(())
 }
 
-pub struct MempoolNote {
-    pub account: u32,
-    pub name: String,
-    pub value: i64,
+fn memo_bytes_to_text(bytes: &[u8]) -> Option<String> {
+    Memo::from_bytes(bytes).ok().and_then(|m| match m {
+        Memo::Text(t) => Some(t.to_string()),
+        _ => None,
+    })
 }
 
 pub async fn decode_raw_transaction(
@@ -145,7 +158,7 @@ pub async fn decode_raw_transaction(
     connection: &mut SqliteConnection,
     height: u32,
     tkeys: &[(u32, String, TransparentAddress)],
-    zkeys: &[(u32, String, sapling_crypto::keys::FullViewingKey)],
+    zkeys: &[(u32, String, DiversifiableFullViewingKey)],
     okeys: &[(u32, String, orchard::keys::FullViewingKey)],
     tx_data: &TransactionData<Authorized>,
 ) -> Result<Vec<MempoolNote>> {
@@ -156,20 +169,23 @@ pub async fn decode_raw_transaction(
             let mut nf = vec![];
             v.prevout().write(&mut nf)?;
             let spent_amount = sqlx::query(
-                "SELECT account, name, value FROM notes n
+                "SELECT a.id_account, a.name, n.value, n.pool, n.scope, n.diversifier, m.memo_text
+                FROM notes n
                 JOIN accounts a ON n.account = a.id_account
-                WHERE nullifier = ?",
+                LEFT JOIN memos m ON m.note = n.id_note
+                WHERE n.nullifier = ?",
             )
             .bind(&nf)
-            .map(|row: SqliteRow| {
-                let account: u32 = row.get(0);
-                let name: String = row.get(1);
-                let value: i64 = row.get(2);
-                MempoolNote {
-                    account,
-                    name,
-                    value: -value,
-                }
+            .map(|row: SqliteRow| MempoolNote {
+                account: row.get(0),
+                name: row.get(1),
+                value: -(row.get::<i64, _>(2)),
+                pool: row.get(3),
+                scope: row.get::<Option<u8>, _>(4).unwrap_or(0),
+                diversifier: row.get(5),
+                diversifier_index: None,
+                address: None,
+                memo: row.get(6),
             })
             .fetch_all(&mut *connection)
             .await?;
@@ -179,12 +195,17 @@ pub async fn decode_raw_transaction(
             if let Some(vout_address) = v.recipient_address() {
                 if let Some((account, name, _)) = tkeys.iter().find(|(_, _, a)| a == &vout_address)
                 {
-                    let n = MempoolNote {
+                    notes.push(MempoolNote {
                         account: *account,
                         name: name.clone(),
                         value: v.value().into_u64() as i64,
-                    };
-                    notes.push(n);
+                        pool: 0,
+                        scope: 0,
+                        diversifier: None,
+                        diversifier_index: None,
+                        address: Some(vout_address.encode(network)),
+                        memo: None,
+                    });
                 }
             }
         }
@@ -194,42 +215,56 @@ pub async fn decode_raw_transaction(
         for v in sbundle.shielded_spends().iter() {
             let nf = &v.nullifier().to_vec();
             let spent_amount = sqlx::query(
-                "SELECT account, name, value FROM notes n
+                "SELECT a.id_account, a.name, n.value, n.pool, n.scope, n.diversifier, m.memo_text
+                FROM notes n
                 JOIN accounts a ON n.account = a.id_account
-                WHERE nullifier = ?",
+                LEFT JOIN memos m ON m.note = n.id_note
+                WHERE n.nullifier = ?",
             )
             .bind(nf)
-            .map(|row: SqliteRow| {
-                let account: u32 = row.get(0);
-                let name: String = row.get(1);
-                let value: i64 = row.get(2);
-                MempoolNote {
-                    account,
-                    name,
-                    value: -value,
-                }
+            .map(|row: SqliteRow| MempoolNote {
+                account: row.get(0),
+                name: row.get(1),
+                value: -(row.get::<i64, _>(2)),
+                pool: row.get(3),
+                scope: row.get::<Option<u8>, _>(4).unwrap_or(0),
+                diversifier: row.get(5),
+                diversifier_index: None,
+                address: None,
+                memo: row.get(6),
             })
             .fetch_all(&mut *connection)
             .await?;
             notes.extend(spent_amount);
         }
+        let domain = SaplingDomain::new(zip212_enforcement(network, height.into()));
         for v in sbundle.shielded_outputs().iter() {
-            for (account, name, fvk) in zkeys.iter() {
-                let ivk = fvk.vk.ivk();
-                let co = CompactSaplingOutput {
-                    cmu: v.cmu().to_bytes().to_vec(),
-                    epk: v.ephemeral_key().0.to_vec(),
-                    ciphertext: v.enc_ciphertext()[..COMPACT_NOTE_SIZE].to_vec(),
-                };
-                if let Some((note, _)) =
-                    try_sapling_decrypt(network, *account, 0, &ivk, height, 0, 0, &co)?
-                {
-                    let amount = note.value().inner() as i64;
-                    notes.push(MempoolNote {
-                        account: *account,
-                        name: name.clone(),
-                        value: amount,
-                    });
+            for (account, name, dfvk) in zkeys.iter() {
+                for scope in [zip32::Scope::External, zip32::Scope::Internal] {
+                    let ivk = dfvk.to_ivk(scope);
+                    let pivk = PreparedIncomingViewingKey::new(&ivk);
+                    if let Some((note, recipient, memo_bytes)) =
+                        try_note_decryption(&domain, &pivk, v)
+                    {
+                        let diversifier = recipient.diversifier().0.to_vec();
+                        let address = recipient.encode(network);
+                        let diversifier_index = dfvk
+                            .decrypt_diversifier(&recipient)
+                            .and_then(|(di, _)| di.try_into().ok())
+                            .map(|d: u64| d as i64);
+                        notes.push(MempoolNote {
+                            account: *account,
+                            name: name.clone(),
+                            value: note.value().inner() as i64,
+                            pool: 1,
+                            scope: if scope == zip32::Scope::External { 0 } else { 1 },
+                            diversifier: Some(diversifier),
+                            diversifier_index,
+                            address: Some(address),
+                            memo: memo_bytes_to_text(&memo_bytes),
+                        });
+                        break;
+                    }
                 }
             }
         }
@@ -239,48 +274,56 @@ pub async fn decode_raw_transaction(
         for v in obundle.actions().iter() {
             let nf = v.nullifier().to_bytes().to_vec();
             let spent_amount = sqlx::query(
-                "SELECT account, name, value FROM notes n
+                "SELECT a.id_account, a.name, n.value, n.pool, n.scope, n.diversifier, m.memo_text
+                FROM notes n
                 JOIN accounts a ON n.account = a.id_account
-                WHERE nullifier = ?",
+                LEFT JOIN memos m ON m.note = n.id_note
+                WHERE n.nullifier = ?",
             )
             .bind(&nf)
-            .map(|row: SqliteRow| {
-                let account: u32 = row.get(0);
-                let name: String = row.get(1);
-                let value: i64 = row.get(2);
-                MempoolNote {
-                    account,
-                    name,
-                    value: -value,
-                }
+            .map(|row: SqliteRow| MempoolNote {
+                account: row.get(0),
+                name: row.get(1),
+                value: -(row.get::<i64, _>(2)),
+                pool: row.get(3),
+                scope: row.get::<Option<u8>, _>(4).unwrap_or(0),
+                diversifier: row.get(5),
+                diversifier_index: None,
+                address: None,
+                memo: row.get(6),
             })
             .fetch_all(&mut *connection)
             .await?;
             notes.extend(spent_amount);
 
+            let domain = OrchardDomain::for_action(v);
             for (account, name, fvk) in okeys.iter() {
-                let ca = CompactOrchardAction {
-                    nullifier: v.nullifier().to_bytes().to_vec(),
-                    cmx: v.cmx().to_bytes().to_vec(),
-                    ephemeral_key: v.encrypted_note().epk_bytes.to_vec(),
-                    ciphertext: v.encrypted_note().enc_ciphertext[..COMPACT_NOTE_SIZE].to_vec(),
-                };
-                for scope in 0..2 {
-                    let s = if scope == 0 {
-                        Scope::External
-                    } else {
-                        Scope::Internal
-                    };
-                    let ivk = fvk.to_ivk(s);
-                    if let Some((note, _)) =
-                        try_orchard_decrypt(network, *account, scope, &ivk, height, 0, 0, &ca)?
+                for scope in [Scope::External, Scope::Internal] {
+                    let ivk = fvk.to_ivk(scope);
+                    let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ivk);
+                    if let Some((note, recipient, memo_bytes)) =
+                        try_note_decryption(&domain, &pivk, v)
                     {
-                        let amount = note.value().inner() as i64;
+                        let diversifier = recipient.diversifier().as_array().to_vec();
+                        let ua =
+                            UnifiedAddress::from_receivers(Some(recipient), None, None).unwrap();
+                        let address = ua.encode(network);
+                        let diversifier_index = ivk
+                            .diversifier_index(&recipient)
+                            .and_then(|di| di.try_into().ok())
+                            .map(|d: u64| d as i64);
                         notes.push(MempoolNote {
                             account: *account,
                             name: name.clone(),
-                            value: amount,
+                            value: note.value().inner() as i64,
+                            pool: 2,
+                            scope: if scope == Scope::External { 0 } else { 1 },
+                            diversifier: Some(diversifier),
+                            diversifier_index,
+                            address: Some(address),
+                            memo: memo_bytes_to_text(&memo_bytes),
                         });
+                        break;
                     }
                 }
             }
