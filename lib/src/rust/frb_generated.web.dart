@@ -155,6 +155,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FrostParams dco_decode_box_autoadd_frost_params(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  MempoolTx dco_decode_box_autoadd_mempool_tx(dynamic raw);
+
+  @protected
   NewAccount dco_decode_box_autoadd_new_account(dynamic raw);
 
   @protected
@@ -227,6 +233,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Memo> dco_decode_list_memo(dynamic raw);
 
   @protected
+  List<MempoolAmount> dco_decode_list_mempool_amount(dynamic raw);
+
+  @protected
+  List<MempoolNote> dco_decode_list_mempool_note(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_32_loose(dynamic raw);
 
   @protected
@@ -256,10 +268,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<(int, double)> dco_decode_list_record_u_32_f_64(dynamic raw);
-
-  @protected
-  List<(int, String, PlatformInt64)> dco_decode_list_record_u_32_string_i_64(
-      dynamic raw);
 
   @protected
   List<TAddressTxCount> dco_decode_list_t_address_tx_count(dynamic raw);
@@ -292,7 +300,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Memo dco_decode_memo(dynamic raw);
 
   @protected
+  MempoolAmount dco_decode_mempool_amount(dynamic raw);
+
+  @protected
   MempoolMsg dco_decode_mempool_msg(dynamic raw);
+
+  @protected
+  MempoolNote dco_decode_mempool_note(dynamic raw);
+
+  @protected
+  MempoolTx dco_decode_mempool_tx(dynamic raw);
 
   @protected
   NewAccount dco_decode_new_account(dynamic raw);
@@ -311,6 +328,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostParams? dco_decode_opt_box_autoadd_frost_params(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
   Seed? dco_decode_opt_box_autoadd_seed(dynamic raw);
@@ -356,9 +376,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   (int, double) dco_decode_record_u_32_f_64(dynamic raw);
-
-  @protected
-  (int, String, PlatformInt64) dco_decode_record_u_32_string_i_64(dynamic raw);
 
   @protected
   (int, String, ElectionPropsPub?)
@@ -546,6 +563,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FrostParams sse_decode_box_autoadd_frost_params(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  MempoolTx sse_decode_box_autoadd_mempool_tx(SseDeserializer deserializer);
+
+  @protected
   NewAccount sse_decode_box_autoadd_new_account(SseDeserializer deserializer);
 
   @protected
@@ -622,6 +645,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Memo> sse_decode_list_memo(SseDeserializer deserializer);
 
   @protected
+  List<MempoolAmount> sse_decode_list_mempool_amount(
+      SseDeserializer deserializer);
+
+  @protected
+  List<MempoolNote> sse_decode_list_mempool_note(SseDeserializer deserializer);
+
+  @protected
   List<int> sse_decode_list_prim_u_32_loose(SseDeserializer deserializer);
 
   @protected
@@ -652,10 +682,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<(int, double)> sse_decode_list_record_u_32_f_64(
-      SseDeserializer deserializer);
-
-  @protected
-  List<(int, String, PlatformInt64)> sse_decode_list_record_u_32_string_i_64(
       SseDeserializer deserializer);
 
   @protected
@@ -690,7 +716,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Memo sse_decode_memo(SseDeserializer deserializer);
 
   @protected
+  MempoolAmount sse_decode_mempool_amount(SseDeserializer deserializer);
+
+  @protected
   MempoolMsg sse_decode_mempool_msg(SseDeserializer deserializer);
+
+  @protected
+  MempoolNote sse_decode_mempool_note(SseDeserializer deserializer);
+
+  @protected
+  MempoolTx sse_decode_mempool_tx(SseDeserializer deserializer);
 
   @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
@@ -711,6 +746,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   FrostParams? sse_decode_opt_box_autoadd_frost_params(
       SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   Seed? sse_decode_opt_box_autoadd_seed(SseDeserializer deserializer);
@@ -757,10 +795,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   (int, double) sse_decode_record_u_32_f_64(SseDeserializer deserializer);
-
-  @protected
-  (int, String, PlatformInt64) sse_decode_record_u_32_string_i_64(
-      SseDeserializer deserializer);
 
   @protected
   (int, String, ElectionPropsPub?)
@@ -953,6 +987,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       FrostParams self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_i_64(
+      PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_mempool_tx(
+      MempoolTx self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_new_account(
       NewAccount self, SseSerializer serializer);
 
@@ -1033,6 +1075,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_memo(List<Memo> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_mempool_amount(
+      List<MempoolAmount> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_mempool_note(
+      List<MempoolNote> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_32_loose(
       List<int> self, SseSerializer serializer);
 
@@ -1072,10 +1122,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<(int, double)> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_record_u_32_string_i_64(
-      List<(int, String, PlatformInt64)> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_list_t_address_tx_count(
       List<TAddressTxCount> self, SseSerializer serializer);
 
@@ -1109,7 +1155,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_memo(Memo self, SseSerializer serializer);
 
   @protected
+  void sse_encode_mempool_amount(MempoolAmount self, SseSerializer serializer);
+
+  @protected
   void sse_encode_mempool_msg(MempoolMsg self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_mempool_note(MempoolNote self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_mempool_tx(MempoolTx self, SseSerializer serializer);
 
   @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);
@@ -1130,6 +1185,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_frost_params(
       FrostParams? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+      PlatformInt64? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_seed(Seed? self, SseSerializer serializer);
@@ -1180,10 +1239,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_record_u_32_f_64(
       (int, double) self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_record_u_32_string_i_64(
-      (int, String, PlatformInt64) self, SseSerializer serializer);
 
   @protected
   void sse_encode_record_u_32_string_opt_box_autoadd_election_props_pub(

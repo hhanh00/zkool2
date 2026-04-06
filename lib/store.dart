@@ -495,10 +495,10 @@ class MempoolNotifier extends _$MempoolNotifier {
         mempool.run(c: c).listen(
               (msg) {
                 if (msg is MempoolMsg_TxId) {
-                  final txId = msg.field0; // txid hash
-                  final amounts = msg.field1; // list of (account id, name, value unconfirmed)
-                  final size = msg.field2; // size in bytes of the tx
-                  addTx(txId, amounts, size);
+                  final mempoolTx = msg.field0; // txid hash
+                  final amounts = mempoolTx.amounts; // list of (account id, name, value unconfirmed)
+                  final size = mempoolTx.size; // size in bytes of the tx
+                  addTx(mempoolTx.txid, amounts, size);
                 }
                 if (msg is MempoolMsg_BlockHeight) {
                   clear();
@@ -515,13 +515,15 @@ class MempoolNotifier extends _$MempoolNotifier {
     }
   }
 
-  void addTx(String txId, List<(int, String, int)> unconfirmedValues, int size) {
-    final unconfirmed = unconfirmedValues.map((a) => "${a.$2} ${zatToString(BigInt.from(a.$3))}").join(", ");
+  void addTx(String txId, List<MempoolAmount> unconfirmedValues, int size) {
+    final unconfirmed = unconfirmedValues.map((a) => "${a.name} ${zatToString(BigInt.from(a.value))}").join(", ");
     final unconfirmedTx = state.unconfirmedTx;
     unconfirmedTx.add((txId, unconfirmed, size));
 
     final unconfirmedFunds = state.unconfirmedFunds;
-    for (var (account, _, amount) in unconfirmedValues) {
+    for (var a in unconfirmedValues) {
+      final account = a.account;
+      final amount = a.value;
       unconfirmedFunds.update(
         account,
         (value) => value + amount,
