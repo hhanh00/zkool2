@@ -452,7 +452,6 @@ class ElectionNotifier extends _$ElectionNotifier {
   Future<void> fetch(int account, String url) async {
     final c = ref.watch(coinContextProvider);
     final election = await fetchElection(account: account, url: url, c: c);
-    await importElectionAccount(account: account, c: c);
     state = ElectionData(election: election, account: account, url: url);
   }
 
