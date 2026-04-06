@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.13.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.0...zkool-v6.13.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* fetch election and import atomically ([#875](https://github.com/hhanh00/zkool2/issues/875)) ([c065b04](https://github.com/hhanh00/zkool2/commit/c065b042959eedec1f4d803f853e05e0d22ac7e1))
+
 ## [6.13.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.12.0...zkool-v6.13.0) (2026-04-05)
 
 
