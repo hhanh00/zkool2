@@ -5428,11 +5428,13 @@ impl SseDecode for crate::api::account::Addresses {
         let mut var_saddr = <Option<String>>::sse_decode(deserializer);
         let mut var_oaddr = <Option<String>>::sse_decode(deserializer);
         let mut var_ua = <Option<String>>::sse_decode(deserializer);
+        let mut var_diversifierIndex = <u32>::sse_decode(deserializer);
         return crate::api::account::Addresses {
             taddr: var_taddr,
             saddr: var_saddr,
             oaddr: var_oaddr,
             ua: var_ua,
+            diversifier_index: var_diversifierIndex,
         };
     }
 }
@@ -7020,6 +7022,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Addresses {
             self.saddr.into_into_dart().into_dart(),
             self.oaddr.into_into_dart().into_dart(),
             self.ua.into_into_dart().into_dart(),
+            self.diversifier_index.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8017,6 +8020,7 @@ impl SseEncode for crate::api::account::Addresses {
         <Option<String>>::sse_encode(self.saddr, serializer);
         <Option<String>>::sse_encode(self.oaddr, serializer);
         <Option<String>>::sse_encode(self.ua, serializer);
+        <u32>::sse_encode(self.diversifier_index, serializer);
     }
 }
 

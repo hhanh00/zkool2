@@ -4548,13 +4548,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Addresses dco_decode_addresses(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return Addresses(
       taddr: dco_decode_opt_String(arr[0]),
       saddr: dco_decode_opt_String(arr[1]),
       oaddr: dco_decode_opt_String(arr[2]),
       ua: dco_decode_opt_String(arr[3]),
+      diversifierIndex: dco_decode_u_32(arr[4]),
     );
   }
 
@@ -5790,8 +5791,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_saddr = sse_decode_opt_String(deserializer);
     var var_oaddr = sse_decode_opt_String(deserializer);
     var var_ua = sse_decode_opt_String(deserializer);
+    var var_diversifierIndex = sse_decode_u_32(deserializer);
     return Addresses(
-        taddr: var_taddr, saddr: var_saddr, oaddr: var_oaddr, ua: var_ua);
+        taddr: var_taddr,
+        saddr: var_saddr,
+        oaddr: var_oaddr,
+        ua: var_ua,
+        diversifierIndex: var_diversifierIndex);
   }
 
   @protected
@@ -7236,6 +7242,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.saddr, serializer);
     sse_encode_opt_String(self.oaddr, serializer);
     sse_encode_opt_String(self.ua, serializer);
+    sse_encode_u_32(self.diversifierIndex, serializer);
   }
 
   @protected
