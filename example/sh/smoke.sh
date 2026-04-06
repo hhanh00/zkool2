@@ -2,6 +2,7 @@
 set -euo pipefail
 set -x
 GRAPHQL_URL="http://localhost:8000/graphql"
+WS_URL="ws://localhost:8000/subscriptions"
 
 height() {
   gq $GRAPHQL_URL -q '
@@ -71,6 +72,27 @@ gq $GRAPHQL_URL \
   }
 }' -v "account=$WALLET" | jq -r '.data.balanceByAccount.orchard'
 
+echo "Subscribe to mempool events for new wallet"
+EVENTS_FILE=$(mktemp)
+gq $WS_URL \
+  -q 'subscription ($account: Int!) {
+  events(idAccount: $account) {
+    type
+    txid
+    value
+    notes {
+      pool
+      scope
+      value
+      address
+      diversifierIndex
+      memo
+    }
+  }
+}' -v "account=$A2" > "$EVENTS_FILE" &
+SUB_PID=$!
+sleep 1
+
 echo "Send funds"
 TXID=$(gq $GRAPHQL_URL \
 -q 'mutation ($account: Int!, $address: String!, $amount: BigDecimal!){
@@ -83,6 +105,13 @@ TXID=$(gq $GRAPHQL_URL \
   })
 }' -v "account=$WALLET" -v "address=$ADDRESS" \
 -v 'amount=10.5' | jq -r '.data.pay')
+
+echo "Waiting for mempool event..."
+sleep 5
+echo "Unconfirmed tx events for account $A2:"
+cat "$EVENTS_FILE" | jq .
+kill $SUB_PID 2>/dev/null || true
+rm -f "$EVENTS_FILE"
 
 echo "Mine a few blocks"
 HEIGHT=$(height)
