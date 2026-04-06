@@ -184,6 +184,7 @@ impl Mutation {
             transparent: addresses.taddr,
             sapling: addresses.saddr,
             orchard: addresses.oaddr,
+            diversifier_index: BigDecimal::from(addresses.diversifier_index),
         };
         Ok(addresses)
     }
@@ -256,28 +257,28 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                         let all_notes = tx.notes;
                         for item in tx.amounts {
                             let (account, value) = (item.account, item.value);
+                            let notes: Vec<UnconfirmedNote> = all_notes
+                                .iter()
+                                .filter(|n| n.account == account)
+                                .map(|n| UnconfirmedNote {
+                                    pool: n.pool as i32,
+                                    scope: n.scope as i32,
+                                    value: zats_to_zec(n.value),
+                                    diversifier: n.diversifier.as_deref()
+                                        .map(hex::encode)
+                                        .unwrap_or_default(),
+                                    diversifier_index: n.diversifier_index.map(BigDecimal::from),
+                                    address: n.address.clone(),
+                                    memo: n.memo.clone(),
+                                })
+                                .collect();
                             {
                                 let mut mempool = MEMPOOL.lock().await;
                                 let e = mempool.unconfirmed.entry(account);
                                 let e = e.or_insert_with(HashMap::new);
-                                e.insert(txid.clone(), zats_to_zec(value));
+                                e.insert(txid.clone(), (zats_to_zec(value), notes.clone()));
                             }
                             {
-                                let notes: Vec<UnconfirmedNote> = all_notes
-                                    .iter()
-                                    .filter(|n| n.account == account)
-                                    .map(|n| UnconfirmedNote {
-                                        pool: n.pool as i32,
-                                        scope: n.scope as i32,
-                                        value: zats_to_zec(n.value),
-                                        diversifier: n.diversifier.as_deref()
-                                            .map(hex::encode)
-                                            .unwrap_or_default(),
-                                        diversifier_index: n.diversifier_index.map(BigDecimal::from),
-                                        address: n.address.clone(),
-                                        memo: n.memo.clone(),
-                                    })
-                                    .collect();
                                 let account = account as i32;
                                 let ss = SUBS.lock().await;
                                 if let Some(subs) = ss.get(&account) {
@@ -337,7 +338,7 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
 
 #[derive(Default)]
 pub struct Mempool {
-    pub unconfirmed: HashMap<u32, HashMap<String, BigDecimal>>,
+    pub unconfirmed: HashMap<u32, HashMap<String, (BigDecimal, Vec<UnconfirmedNote>)>>,
 }
 
 pub static MEMPOOL: LazyLock<Mutex<Mempool>> = LazyLock::new(|| Mutex::new(Mempool::default()));
