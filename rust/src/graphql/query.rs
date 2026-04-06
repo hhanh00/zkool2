@@ -528,6 +528,9 @@ impl Note {
     pub fn diversifier(&self) -> String {
         self.diversifier.clone()
     }
+    pub fn diversifier_index(&self) -> Option<BigDecimal> {
+        self.diversifier_index.clone()
+    }
     pub fn memo(&self) -> Option<String> {
         self.memo.clone()
     }
