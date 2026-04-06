@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::LazyLock};
 
 use crate::{
-    Sink, account::generate_next_dindex, api::{mempool::MempoolMsg}, graphql::{
-        Context, data::{Addresses, Event, EventType}, query::{prepare_tx, zats_to_zec}, subs::SUBS
+    Sink, account::generate_next_dindex, api::mempool::MempoolMsg, graphql::{
+        Context, data::{Addresses, Event, EventType, UnconfirmedNote}, query::{prepare_tx, zats_to_zec}, subs::SUBS
     }, pay::plan::{extract_transaction, sign_transaction}
 };
 use bigdecimal::BigDecimal;
@@ -251,8 +251,11 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 match msg {
-                    MempoolMsg::TxId(txid, items, _) => {
-                        for (account, _, value) in items {
+                    MempoolMsg::TxId(tx) => {
+                        let txid = tx.txid;
+                        let all_notes = tx.notes;
+                        for item in tx.amounts {
+                            let (account, value) = (item.account, item.value);
                             {
                                 let mut mempool = MEMPOOL.lock().await;
                                 let e = mempool.unconfirmed.entry(account);
@@ -260,6 +263,21 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                                 e.insert(txid.clone(), zats_to_zec(value));
                             }
                             {
+                                let notes: Vec<UnconfirmedNote> = all_notes
+                                    .iter()
+                                    .filter(|n| n.account == account)
+                                    .map(|n| UnconfirmedNote {
+                                        pool: n.pool as i32,
+                                        scope: n.scope as i32,
+                                        value: zats_to_zec(n.value),
+                                        diversifier: n.diversifier.as_deref()
+                                            .map(hex::encode)
+                                            .unwrap_or_default(),
+                                        diversifier_index: n.diversifier_index.map(BigDecimal::from),
+                                        address: n.address.clone(),
+                                        memo: n.memo.clone(),
+                                    })
+                                    .collect();
                                 let account = account as i32;
                                 let ss = SUBS.lock().await;
                                 if let Some(subs) = ss.get(&account) {
@@ -268,6 +286,8 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                                             .send(Ok(Event {
                                                 r#type: EventType::Tx,
                                                 txid: txid.clone(),
+                                                value: zats_to_zec(value),
+                                                notes: notes.clone(),
                                                 ..Event::default()
                                             }))
                                             .await;
