@@ -211,17 +211,23 @@ class Addresses {
   final String? saddr;
   final String? oaddr;
   final String? ua;
+  final int diversifierIndex;
 
   const Addresses({
     this.taddr,
     this.saddr,
     this.oaddr,
     this.ua,
+    required this.diversifierIndex,
   });
 
   @override
   int get hashCode =>
-      taddr.hashCode ^ saddr.hashCode ^ oaddr.hashCode ^ ua.hashCode;
+      taddr.hashCode ^
+      saddr.hashCode ^
+      oaddr.hashCode ^
+      ua.hashCode ^
+      diversifierIndex.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -231,7 +237,8 @@ class Addresses {
           taddr == other.taddr &&
           saddr == other.saddr &&
           oaddr == other.oaddr &&
-          ua == other.ua;
+          ua == other.ua &&
+          diversifierIndex == other.diversifierIndex;
 }
 
 @freezed
