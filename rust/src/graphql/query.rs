@@ -176,6 +176,7 @@ impl Query {
             transparent: addresses.taddr,
             sapling: addresses.saddr,
             orchard: addresses.oaddr,
+            diversifier_index: BigDecimal::from(addresses.diversifier_index),
         };
         Ok(addresses)
     }
@@ -186,9 +187,10 @@ impl Query {
         if let Some(unconfirmed_txs) = mempool.unconfirmed.get(&(id_account as u32)) {
             let txs: Vec<_> = unconfirmed_txs
                 .iter()
-                .map(|(txid, value)| UnconfirmedTx {
+                .map(|(txid, (value, notes))| UnconfirmedTx {
                     txid: txid.clone(),
                     value: value.clone(),
+                    notes: notes.clone(),
                 })
                 .collect();
             return Ok(txs);

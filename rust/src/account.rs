@@ -811,6 +811,7 @@ async fn get_transparent_keys(
 
 pub async fn get_addresses(network: &Network, connection: &mut SqliteConnection, account: u32, ua_pools: u8) -> Result<Addresses> {
     let dindex = crate::db::get_account_dindex(connection, account).await?;
+    let diversifier_index = dindex;
 
     let tkeys = crate::db::select_account_transparent(connection, account, dindex).await?;
     let skeys = crate::db::select_account_sapling(network, connection, account).await?;
@@ -844,6 +845,7 @@ pub async fn get_addresses(network: &Network, connection: &mut SqliteConnection,
         saddr: saddr.map(|x| x.encode(&network)),
         oaddr: ua_orchard.map(|x| x.encode(&network)),
         ua: ua.map(|x| x.encode(&network)),
+        diversifier_index,
     };
 
     Ok(addresses)
