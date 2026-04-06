@@ -1,15 +1,5 @@
 # Changelog
 
-## [6.13.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.0...zkool-v6.13.1) (2026-04-06)
-
-
-### Bug Fixes
-
-* fetch election and import atomically ([#875](https://github.com/hhanh00/zkool2/issues/875)) ([c065b04](https://github.com/hhanh00/zkool2/commit/c065b042959eedec1f4d803f853e05e0d22ac7e1))
-
-## [6.13.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.12.0...zkool-v6.13.0) (2026-04-05)
-
-
 ### Features
 
 * add quit election button ([#872](https://github.com/hhanh00/zkool2/issues/872)) ([19db47a](https://github.com/hhanh00/zkool2/commit/19db47a491a75a301512b967923111afe23fb48b))
@@ -27,6 +17,7 @@
 * fix issue with refresh of input amount widget ([#874](https://github.com/hhanh00/zkool2/issues/874)) ([cf41de8](https://github.com/hhanh00/zkool2/commit/cf41de843252e663f868b1079e773f477f640a7e))
 * tooltip ([#873](https://github.com/hhanh00/zkool2/issues/873)) ([0f8fc75](https://github.com/hhanh00/zkool2/commit/0f8fc75b84e5aa3626ed2ffb41c661b4e0fe93a4))
 * witness.rewind and test ([#865](https://github.com/hhanh00/zkool2/issues/865)) ([b5c0c8d](https://github.com/hhanh00/zkool2/commit/b5c0c8d66c866fc0852e62a17aff94a602e98e09))
+* fetch election and import atomically ([#875](https://github.com/hhanh00/zkool2/issues/875)) ([c065b04](https://github.com/hhanh00/zkool2/commit/c065b042959eedec1f4d803f853e05e0d22ac7e1))
 
 ## [6.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.4...zkool-v6.12.0) (2026-03-27)
 
