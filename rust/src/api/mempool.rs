@@ -34,7 +34,7 @@ async fn run_mempool(
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MempoolNote {
     pub account: u32,
     pub name: String,

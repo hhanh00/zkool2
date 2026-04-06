@@ -104,6 +104,7 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
                         Some((_, tx, len)) => {
                             let txid = tx.txid();
                             let tx_hash = txid.to_string();
+                            tracing::info!("MP {tx_hash}");
 
                             let tx_data = tx.into_data();
 
