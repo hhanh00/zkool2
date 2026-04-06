@@ -373,6 +373,7 @@ pub struct Addresses {
     pub saddr: Option<String>,
     pub oaddr: Option<String>,
     pub ua: Option<String>,
+    pub diversifier_index: u32,
 }
 
 #[cfg_attr(feature = "flutter", frb)]

@@ -44,6 +44,7 @@ pub struct Addresses {
     pub transparent: Option<String>,
     pub sapling: Option<String>,
     pub orchard: Option<String>,
+    pub diversifier_index: BigDecimal,
 }
 
 #[derive(Clone, Debug)]
@@ -64,6 +65,7 @@ pub struct Note {
 pub struct UnconfirmedTx {
     pub txid: String,
     pub value: BigDecimal,
+    pub notes: Vec<UnconfirmedNote>,
 }
 
 #[derive(Clone, Default, GraphQLObject)]
