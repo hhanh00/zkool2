@@ -1,5 +1,8 @@
 # Changelog
 
+## [6.13.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.12.0...zkool-v6.13.0) (2026-04-06)
+
+
 ### Features
 
 * add quit election button ([#872](https://github.com/hhanh00/zkool2/issues/872)) ([19db47a](https://github.com/hhanh00/zkool2/commit/19db47a491a75a301512b967923111afe23fb48b))
@@ -12,12 +15,13 @@
 
 ### Bug Fixes
 
+* add more info to mempool txs ([#877](https://github.com/hhanh00/zkool2/issues/877)) ([ef03343](https://github.com/hhanh00/zkool2/commit/ef03343c916ac0d1a9ff2c257ceda6d33d0a486a))
 * assert in witness calculation ([#870](https://github.com/hhanh00/zkool2/issues/870)) ([97ba893](https://github.com/hhanh00/zkool2/commit/97ba893f61c422c7f8032ab341f6473eab94ae20))
 * drop support for 32-bit android due to build breaks ([#858](https://github.com/hhanh00/zkool2/issues/858)) ([3edbd1e](https://github.com/hhanh00/zkool2/commit/3edbd1e6993775520f3d24de07cefd3b00aa1c39))
+* fetch election and import atomically ([#875](https://github.com/hhanh00/zkool2/issues/875)) ([c065b04](https://github.com/hhanh00/zkool2/commit/c065b042959eedec1f4d803f853e05e0d22ac7e1))
 * fix issue with refresh of input amount widget ([#874](https://github.com/hhanh00/zkool2/issues/874)) ([cf41de8](https://github.com/hhanh00/zkool2/commit/cf41de843252e663f868b1079e773f477f640a7e))
 * tooltip ([#873](https://github.com/hhanh00/zkool2/issues/873)) ([0f8fc75](https://github.com/hhanh00/zkool2/commit/0f8fc75b84e5aa3626ed2ffb41c661b4e0fe93a4))
 * witness.rewind and test ([#865](https://github.com/hhanh00/zkool2/issues/865)) ([b5c0c8d](https://github.com/hhanh00/zkool2/commit/b5c0c8d66c866fc0852e62a17aff94a602e98e09))
-* fetch election and import atomically ([#875](https://github.com/hhanh00/zkool2/issues/875)) ([c065b04](https://github.com/hhanh00/zkool2/commit/c065b042959eedec1f4d803f853e05e0d22ac7e1))
 
 ## [6.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.4...zkool-v6.12.0) (2026-03-27)
 
