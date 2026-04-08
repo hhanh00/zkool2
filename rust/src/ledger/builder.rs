@@ -7,7 +7,7 @@ use jubjub::Fr;
 use pczt::{
     common::LockTimeInput,
     roles::{
-        io_finalizer::IoFinalizer, low_level_signer::Signer, prover::Prover,
+        io_finalizer::IoFinalizer, prover::Prover,
         spend_finalizer::SpendFinalizer, updater::Updater,
     },
     Pczt,
@@ -389,7 +389,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 
             let note_enc = sapling_note_encryption(Some(ovk), note.clone(), *memo, &mut rng);
             let cout = note_enc.encrypt_outgoing_plaintext(&cv, &cmu, &mut rng);
-            let epk = note_enc.epk().to_bytes();
+            let epk = SaplingDomain::epk_bytes(note_enc.epk());
             let enc = note_enc.encrypt_note_plaintext();
             let ock = SaplingDomain::derive_ock(&ovk, &cv, &cmu.to_bytes(), &epk);
 
@@ -587,29 +587,29 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             ssigs.push(signature);
         }
 
-        // We apply these signatures to the PCZT
-        let signer = Signer::new(pczt.clone());
-        let signer = signer
-            .sign_transparent_with(|_, tbundle, _| {
-                for ((tin, signature), pk) in tbundle
-                    .inputs_mut()
-                    .iter_mut()
-                    .zip(tsigs.iter())
-                    .zip(pks.iter())
-                {
-                    tin.apply_signature(pk, signature);
+        // We apply these signatures to the PCZT.
+        // First populate hash160_preimages so append_transparent_signature can find pubkeys.
+        let updater = Updater::new(pczt);
+        let updater = updater
+            .update_transparent_with(|mut u| {
+                for (i, pk) in pks.iter().enumerate() {
+                    u.update_input_with(i, |mut u| {
+                        u.set_hash160_preimage(pk.serialize().to_vec());
+                        Ok(())
+                    })?;
                 }
-                Ok::<_, zcash_transparent::pczt::ParseError>(())
+                Ok(())
             })
             .unwrap();
-        let signer = signer
-            .sign_sapling_with(|_, sbundle, _| {
-                for (sp, signature) in sbundle.spends_mut().iter_mut().zip(ssigs.iter()) {
-                    sp.apply_signature(*signature);
-                }
-                Ok::<_, sapling_crypto::pczt::ParseError>(())
-            })
-            .unwrap();
+        let pczt = updater.finish();
+
+        let mut signer = pczt::roles::signer::Signer::new(pczt).unwrap();
+        for (index, signature) in tsigs.iter().enumerate() {
+            signer.append_transparent_signature(index, *signature).unwrap();
+        }
+        for (index, signature) in ssigs.iter().enumerate() {
+            signer.apply_sapling_signature(index, *signature).unwrap();
+        }
         let pczt = signer.finish();
         // And calculate the final components, i.e the binding signature
         let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();

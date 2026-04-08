@@ -93,12 +93,10 @@ pub async fn init_sign(
     .bind(&params)
     .execute(&mut *connection)
     .await?;
-    sqlx::query(
-        "INSERT INTO props(key, value) VALUES ('dkg_funding', ?) ON CONFLICT DO NOTHING",
-    )
-    .bind(funding_account)
-    .execute(&mut *connection)
-    .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_funding', ?) ON CONFLICT DO NOTHING")
+        .bind(funding_account)
+        .execute(&mut *connection)
+        .await?;
 
     Ok(())
 }
@@ -354,9 +352,7 @@ pub async fn do_sign_impl(
         }
         // we send all the sigpackages in one zcash transaction
         // with one output/memo per input/signature needed
-        status
-            .send(SigningStatus::SendingSigningPackage)
-            .await;
+        status.send(SigningStatus::SendingSigningPackage).await;
         let txid = publish(
             network,
             &mut tx,
@@ -417,9 +413,7 @@ pub async fn do_sign_impl(
         }
 
         if dkg_params.id as u8 != params.coordinator {
-            status
-                .send(SigningStatus::SendingSignatureShare)
-                .await;
+            status.send(SigningStatus::SendingSignatureShare).await;
             let txid = publish(
                 network,
                 &mut tx,
@@ -430,9 +424,7 @@ pub async fn do_sign_impl(
             )
             .await?;
 
-            status
-                .send(SigningStatus::SigningCompleted)
-                .await;
+            status.send(SigningStatus::SigningCompleted).await;
             info!("Published sigshares transaction: {}", txid);
         }
         tx.commit().await?;
@@ -490,9 +482,7 @@ pub async fn do_sign_impl(
                     sigshares.len(),
                     dkg_params.t
                 );
-                status
-                    .send(SigningStatus::WaitingForSignatureShares)
-                    .await;
+                status.send(SigningStatus::WaitingForSignatureShares).await;
                 return Ok(());
             }
             let randomized_params =
@@ -515,16 +505,19 @@ pub async fn do_sign_impl(
         tx.commit().await?;
         info!("Signature completed");
 
-        status
-            .send(SigningStatus::PreparingTransaction)
-            .await;
+        status.send(SigningStatus::PreparingTransaction).await;
+
+        let signer = pczt::roles::signer::Signer::new(pczt).unwrap();
+        let sighash: [u8; 32] = signer.shielded_sighash();
+        let pczt = signer.finish();
+
         let signer = Signer::new(pczt);
         let signer = signer
             .sign_orchard_with(|_pczt, bundle, _| {
                 for (idx, signature) in signatures.into_iter().enumerate() {
                     let action_index = pczt_pkg.orchard_indices[idx];
                     let action = &mut bundle.actions_mut()[action_index];
-                    action.spend_auth_sig(signature);
+                    let _ = action.apply_signature(sighash, signature);
                     // How do we update the spend_auth_sig?
                     // a[0].spend().spend_auth_sig = Some(signature.clone());
                 }
@@ -557,14 +550,10 @@ pub async fn do_sign_impl(
         tx.write(&mut tx_bytes).unwrap();
         info!("Transaction Len: {}", tx_bytes.len());
 
-        status
-            .send(SigningStatus::SendingTransaction)
-            .await;
+        status.send(SigningStatus::SendingTransaction).await;
         let txid = send(client, height, &tx_bytes).await?;
         info!("Transaction sent: {}", txid);
-        status
-            .send(SigningStatus::TransactionSent(txid))
-            .await;
+        status.send(SigningStatus::TransactionSent(txid)).await;
     }
 
     delete_frost_state(&mut *connection).await?;
