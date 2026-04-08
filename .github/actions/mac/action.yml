@@ -42,7 +42,7 @@ runs:
     - name: Build
       shell: bash
       run: |
-        ./misc/mkcargokit_options.sh zemu > rust_builder/cargokit/cargokit.yaml
+        ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
         flutter build macos
     - name: Notarization
       shell: bash

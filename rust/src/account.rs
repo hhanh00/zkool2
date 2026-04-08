@@ -89,12 +89,13 @@ pub async fn new_account(
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
     if na.ledger {
-        let ledger = get_ledger(&mut db_tx, account).await?;
-
         let has_seed = !key.is_empty();
         if !has_seed {
             store_account_hw(&mut db_tx, account, 1, na.aindex).await?;
         }
+
+        let ledger = get_ledger(&mut db_tx, account).await?;
+
         // we must do sapling derivation first to know a valid dindex
         // because in sapling some indices are invalid
         let mut dindex = 0;
