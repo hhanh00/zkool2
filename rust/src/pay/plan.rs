@@ -38,6 +38,7 @@ use zcash_protocol::{
 };
 use zcash_transparent::{
     address::TransparentAddress,
+    builder::{SpendInfo, TransparentInputInfo},
     bundle::{OutPoint, TxOut},
     pczt::Bip32Derivation,
 };
@@ -80,7 +81,7 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
             let amount = Zatoshis::const_from_u64(r.amount);
             let memo = encode_memo(r)?;
             Ok::<_, anyhow::Error>(
-                Payment::new(address, amount, memo, None, None, vec![]).expect("payment"),
+                Payment::new(address, Some(amount), memo, None, None, vec![]).expect("payment"),
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -464,9 +465,10 @@ pub async fn plan_transaction(
                             TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
-                        builder
-                            .add_transparent_input(pubkey, utxo, coin)
-                            .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
+                        builder.add_transparent_input(
+                            TransparentInputInfo::from_parts(utxo, coin, SpendInfo::P2pkh { pubkey })
+                                .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
+                        );
                         tsk_dindex.push((pubkey, scope, dindex, taddress));
                     }
                     1 => {
@@ -600,7 +602,7 @@ pub async fn plan_transaction(
                 builder.add_orchard_output::<Infallible>(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
-                    value.into_u64(),
+                    value,
                     memo,
                 )?;
             }
