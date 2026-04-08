@@ -1,32 +1,5 @@
 # Changelog
 
-## [6.13.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.12.0...zkool-v6.13.4) (2026-04-08)
-
-
-### Features
-
-* add quit election button ([#872](https://github.com/hhanh00/zkool2/issues/872)) ([19db47a](https://github.com/hhanh00/zkool2/commit/19db47a491a75a301512b967923111afe23fb48b))
-* add rewind method to witness that brings it to ([#863](https://github.com/hhanh00/zkool2/issues/863)) ([ea50692](https://github.com/hhanh00/zkool2/commit/ea506928036b56d040e0f07ec22707cafe1e6f8b))
-* add serializers to commitment tree state ([#868](https://github.com/hhanh00/zkool2/issues/868)) ([054433c](https://github.com/hhanh00/zkool2/commit/054433c8aa0fcd15b55f363a55c03d803b89503a))
-* add serializers, size to Edge ([#869](https://github.com/hhanh00/zkool2/issues/869)) ([fb17c08](https://github.com/hhanh00/zkool2/commit/fb17c0833583b74695345b82e60c549c51d3db33))
-* add support for computing the auth path of a witness at a prior position ([#860](https://github.com/hhanh00/zkool2/issues/860)) ([b1cb42c](https://github.com/hhanh00/zkool2/commit/b1cb42cc06312af0e9a7e72c108d6d7dc7cdb0e8))
-* pir integration ([#871](https://github.com/hhanh00/zkool2/issues/871)) ([4c81679](https://github.com/hhanh00/zkool2/commit/4c81679cda92281aeaa62caaca60b92d581f2d41))
-
-
-### Bug Fixes
-
-* add diversifier index to new_addresses and return from unconfirmed by account ([#881](https://github.com/hhanh00/zkool2/issues/881)) ([590b7cb](https://github.com/hhanh00/zkool2/commit/590b7cbf5f4db4b003232091b867a01b24df9a91))
-* add more info to mempool txs ([#877](https://github.com/hhanh00/zkool2/issues/877)) ([ef03343](https://github.com/hhanh00/zkool2/commit/ef03343c916ac0d1a9ff2c257ceda6d33d0a486a))
-* assert in witness calculation ([#870](https://github.com/hhanh00/zkool2/issues/870)) ([97ba893](https://github.com/hhanh00/zkool2/commit/97ba893f61c422c7f8032ab341f6473eab94ae20))
-* db escaping in change_db_password ([#883](https://github.com/hhanh00/zkool2/issues/883)) ([ed04c2c](https://github.com/hhanh00/zkool2/commit/ed04c2cc60bc6c8c0deaa68f9f3584c9b7f476ce))
-* drop support for 32-bit android due to build breaks ([#858](https://github.com/hhanh00/zkool2/issues/858)) ([3edbd1e](https://github.com/hhanh00/zkool2/commit/3edbd1e6993775520f3d24de07cefd3b00aa1c39))
-* fetch election and import atomically ([#875](https://github.com/hhanh00/zkool2/issues/875)) ([c065b04](https://github.com/hhanh00/zkool2/commit/c065b042959eedec1f4d803f853e05e0d22ac7e1))
-* fix issue with refresh of input amount widget ([#874](https://github.com/hhanh00/zkool2/issues/874)) ([cf41de8](https://github.com/hhanh00/zkool2/commit/cf41de843252e663f868b1079e773f477f640a7e))
-* ledger new account ([#887](https://github.com/hhanh00/zkool2/issues/887)) ([1bde434](https://github.com/hhanh00/zkool2/commit/1bde434f553e8e2eddef9200055e3d5a00436b67))
-* tooltip ([#873](https://github.com/hhanh00/zkool2/issues/873)) ([0f8fc75](https://github.com/hhanh00/zkool2/commit/0f8fc75b84e5aa3626ed2ffb41c661b4e0fe93a4))
-* update to upstream crates ([#885](https://github.com/hhanh00/zkool2/issues/885)) ([2a9e331](https://github.com/hhanh00/zkool2/commit/2a9e3315107ed5da21eee3f7c7551c0f5f16d0a1))
-* witness.rewind and test ([#865](https://github.com/hhanh00/zkool2/issues/865)) ([b5c0c8d](https://github.com/hhanh00/zkool2/commit/b5c0c8d66c866fc0852e62a17aff94a602e98e09))
-
 ## [6.12.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.11.4...zkool-v6.12.0) (2026-03-27)
 
 
