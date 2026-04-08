@@ -62,6 +62,7 @@ runs:
     - name: Build iOS
       shell: bash
       run: |
+        rm rust/cargokit.yaml
         xcode-project use-profiles
         flutter build ipa --export-options-plist=ios/export_options.plist
     - name: Move to outdir
