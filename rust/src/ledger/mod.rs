@@ -64,7 +64,6 @@ cfg_if::cfg_if! {
         pub mod fvk;
         pub mod hashers;
         pub mod nano;
-        // pub mod legacy;
 
         #[cfg(test)]
         mod tests;
