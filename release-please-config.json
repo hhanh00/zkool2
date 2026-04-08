@@ -2,8 +2,7 @@
   "packages": {
     ".": {
       "release-type": "dart",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "6.13.3"
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
