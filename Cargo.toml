@@ -14,7 +14,7 @@ zcash_note_encryption = {git = "https://github.com/zcash/zcash_note_encryption.g
 
 pczt = {git = "https://github.com/hhanh00/librustzcash.git", rev = "9a7f84682f97b1ba5fdd5eead84a66c818cb500e"}
 reddsa = {git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d"}
-sapling-crypto = {git = "https://github.com/zcash/sapling-crypto.git", rev = "e99f38a8"}
+sapling-crypto = {git = "https://github.com/hhanh00/sapling-crypto.git", rev = "50f15ecc5c292a7738e3c43d6879601bd7d241c8"}
 zcash_address = {git = "https://github.com/hhanh00/librustzcash.git", rev = "9a7f84682f97b1ba5fdd5eead84a66c818cb500e"}
 zcash_encoding = {git = "https://github.com/hhanh00/librustzcash.git", rev = "9a7f84682f97b1ba5fdd5eead84a66c818cb500e"}
 zcash_keys = {git = "https://github.com/hhanh00/librustzcash.git", rev = "9a7f84682f97b1ba5fdd5eead84a66c818cb500e"}

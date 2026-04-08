@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use fpdec::Decimal;
 use zcash_protocol::memo::Memo;
 use zip321::TransactionRequest;
@@ -23,7 +23,7 @@ pub fn parse_payment_uri(uri: &str) -> Result<Vec<Recipient>> {
         .values()
         .map(|payment| {
             let address = payment.recipient_address().to_string();
-            let amount = payment.amount().into_u64();
+            let amount = payment.amount().context("Invalid amount")?.into_u64();
             let memo = payment.memo();
             let memo_text = memo
                 .map(|m| {
