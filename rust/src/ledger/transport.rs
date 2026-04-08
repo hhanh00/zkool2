@@ -158,6 +158,7 @@ impl LedgerDevice {
 
     pub async fn start() -> LedgerResult<mpsc::Sender<(APDUCommand, ReponseChannel)>> {
         let hidapi = HidApi::new()?;
+        tracing::info!("LedgerDevice::start");
         let device = open_ledger(&hidapi)?;
         let (tx, mut rx) = mpsc::channel::<(APDUCommand, ReponseChannel)>(8);
         // spawn a single thread worker to make sure that access to the device is serialized
