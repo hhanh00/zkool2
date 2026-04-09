@@ -158,7 +158,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
       disableChangeHandlers = true;
       if (v.isEmpty) {
         onReset(zat: false);
-        formFieldKey.currentState!.reset();
+        formFieldKey.currentState!.didChange("");
       } else if (price != null) {
         final usd = stringToZat(v).toDouble() * price / 1e8;
         form.fields["fiat"]?.didChange(displayPrice(usd));

@@ -133,6 +133,14 @@ pub async fn import_election_account(account: u32, c: &Coin) -> Result<()> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn check_witnesses(account: u32, url: String, c: &Coin) -> Result<bool> {
+    let c = c.to_context().await?;
+    let ok = zcvlib::api::simple::check_witnesses(account, &url, &c).await?;
+    Ok(ok)
+}
+
+#[cfg(feature = "flutter")]
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn delete_election(c: &Coin) -> Result<()> {
     tracing::info!("delete_election");
     let c = c.to_context().await?;
