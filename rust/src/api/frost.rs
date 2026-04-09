@@ -8,7 +8,7 @@ use sqlx::SqliteConnection;
 
 use crate::{
     api::coin::Coin,
-    frost::{db::get_mailbox_account, dkg::get_dkg_params},
+    frost::dkg::{get_dkg_params, get_mailbox_account},
 };
 use std::str::FromStr;
 
@@ -42,7 +42,7 @@ pub async fn set_dkg_params(
 pub async fn has_dkg_params(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     let exists =
-        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_funding'")
+        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_account'")
             .fetch_optional(&mut *connection)
             .await?;
     Ok(exists.is_some())
@@ -71,7 +71,7 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
     let account = get_funding_account(&mut *connection).await?;
     let dkg_params = get_dkg_params(&mut *connection, account).await?;
     let addresses =
-        crate::frost::db::get_addresses(&mut *connection, account, dkg_params.n).await?;
+        crate::frost::dkg::get_addresses(&mut *connection, account, dkg_params.n).await?;
     Ok(addresses.iter().all(|a| !a.is_empty()))
 }
 
@@ -102,7 +102,7 @@ pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
     let mut connection = c.get_connection().await?;
     let account = get_funding_account(&mut connection).await?;
     let n = get_dkg_params(&mut connection, account).await?.n;
-    let addresses = crate::frost::db::get_addresses(&mut connection, account, n).await?;
+    let addresses = crate::frost::dkg::get_addresses(&mut connection, account, n).await?;
     Ok(addresses)
 }
 
@@ -122,7 +122,7 @@ pub async fn cancel_dkg(c: &Coin) -> Result<()> {
 }
 
 pub(crate) async fn get_funding_account(connection: &mut SqliteConnection) -> Result<u32> {
-    let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_funding'")
+    let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_account'")
         .fetch_one(&mut *connection)
         .await?;
     let account = u32::from_str(&account).unwrap();

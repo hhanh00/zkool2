@@ -4,7 +4,7 @@ use sqlx::{query, sqlite::SqliteRow, Row};
 
 use crate::{
     api::{coin::Coin, frost::get_funding_account},
-    frost::dkg::{in_dkg, in_frost},
+    frost::{dkg::in_dkg, sign::in_sign},
     graphql::Context,
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
@@ -60,8 +60,8 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
     tracing::info!("new_block {height}");
 
     let in_dkg = in_dkg(&mut connection).await?;
-    let in_frost = in_frost(&mut connection).await?;
-    if !in_dkg && !in_frost {
+    let in_sign = in_sign(&mut connection).await?;
+    if !in_dkg && !in_sign {
         return Ok(());
     }
 
@@ -97,7 +97,7 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
         .await?;
     }
 
-    if in_frost {
+    if in_sign {
         crate::frost::sign::do_sign_impl(
             &coin.network(),
             &mut connection,
