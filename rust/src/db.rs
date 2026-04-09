@@ -226,7 +226,8 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         n INTEGER NOT NULL,
         t INTEGER NOT NULL,
         seed TEXT NOT NULL,
-        birth_height INTEGER NOT NULL
+        birth_height INTEGER NOT NULL,
+        name TEXT NOT NULL DEFAULT('')
     )",
     )
     .execute(&mut *connection)
@@ -241,6 +242,40 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         from_id INTEGER NOT NULL,
         data BLOB NOT NULL,
         UNIQUE (account, public, round, from_id)
+    )",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS dkg_addresses (
+        account INTEGER NOT NULL,
+        from_id INTEGER NOT NULL,
+        address TEXT NOT NULL,
+        PRIMARY KEY (account, from_id)
+    )",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS dkg_state (
+        account INTEGER PRIMARY KEY,
+        spkg1 BLOB,
+        spkg2 BLOB,
+        key_pkg BLOB
+    )",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS dkg_peers (
+        account INTEGER NOT NULL,
+        round INTEGER NOT NULL,
+        from_id INTEGER NOT NULL,
+        data BLOB NOT NULL,
+        PRIMARY KEY (account, round, from_id)
     )",
     )
     .execute(&mut *connection)
@@ -355,6 +390,64 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
         .execute(&mut *connection)
         .await;
+    let _ = sqlx::query("ALTER TABLE dkg_params ADD COLUMN name TEXT NOT NULL DEFAULT('')")
+        .execute(&mut *connection)
+        .await;
+
+    // V8 — migrate dkg_packages into dkg_addresses / dkg_state / dkg_peers
+    // dkg_packages round=0, public=1  → dkg_addresses
+    sqlx::query(
+        "INSERT OR IGNORE INTO dkg_addresses (account, from_id, address)
+        SELECT account, from_id, CAST(data AS TEXT)
+        FROM dkg_packages WHERE round = 0 AND public = 1",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    // dkg_packages round=1/2/3, public=0 → dkg_state columns
+    // Insert a stub row for any account that has secrets, then fill each column.
+    sqlx::query(
+        "INSERT OR IGNORE INTO dkg_state (account)
+        SELECT DISTINCT account FROM dkg_packages WHERE public = 0 AND round IN (1, 2, 3)",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "UPDATE dkg_state SET spkg1 = (
+            SELECT data FROM dkg_packages
+            WHERE dkg_packages.account = dkg_state.account AND round = 1 AND public = 0
+        ) WHERE spkg1 IS NULL",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "UPDATE dkg_state SET spkg2 = (
+            SELECT data FROM dkg_packages
+            WHERE dkg_packages.account = dkg_state.account AND round = 2 AND public = 0
+        ) WHERE spkg2 IS NULL",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "UPDATE dkg_state SET key_pkg = (
+            SELECT data FROM dkg_packages
+            WHERE dkg_packages.account = dkg_state.account AND round = 3 AND public = 0
+        ) WHERE key_pkg IS NULL",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    // dkg_packages round=1/2/3, public=1 → dkg_peers
+    sqlx::query(
+        "INSERT OR IGNORE INTO dkg_peers (account, round, from_id, data)
+        SELECT account, round, from_id, data
+        FROM dkg_packages WHERE public = 1 AND round IN (1, 2, 3)",
+    )
+    .execute(&mut *connection)
+    .await?;
 
     let version = get_prop(connection, "version").await?;
     match version {
@@ -916,6 +1009,18 @@ pub async fn delete_account(connection: &mut SqliteConnection, account: u32) -> 
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM dkg_packages WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM dkg_addresses WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM dkg_state WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM dkg_peers WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
         .await?;
