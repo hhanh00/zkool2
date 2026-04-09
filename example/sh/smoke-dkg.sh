@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-set -x
 
 # Test for 3-out-of-3 FROST DKG using GraphQL API
 # This test sets up 3 separate zkool_graphql instances with distinct databases
@@ -8,46 +7,77 @@ set -x
 # Configuration
 N=3                     # Number of participants
 T=3                      # Threshold (all 3 must participate)
+DEFAULT_PORT=8000        # Port for default GraphQL instance
 PORT_BASE=8001            # Starting port for GraphQL instances
-DB_BASE=8001              # Starting port for database connections
 GRAPHQL_BASE_URL="http://localhost:8137"  # LWD URL for all participants
+
+# Path to zkool_graphql binary (relative to script location in example/sh/)
+ZKOOL_GRAPHQL="$(dirname "$0")/../../target/release/zkool_graphql"
 
 # Cleanup function
 cleanup() {
     echo "Cleaning up..."
+    # Clean up default instance
+    if [ -n "$PID_DEFAULT" ]; then
+        # kill "$PID_DEFAULT" 2>/dev/null || true
+        true
+    fi
+    rm -rf "/tmp/regtest_dkg_default.db" 2>/dev/null || true
+    # rm -f "/tmp/graphql_default.log" 2>/dev/null || true
+
+    # Clean up participant instances
     for i in $(seq 1 $N); do
         eval "pid=\$PID_${i}"
         if [ -n "$pid" ]; then
-            kill "$pid" 2>/dev/null || true
+          kill "$pid" 2>/dev/null || true
         fi
-        rm -rf "/tmp/dkg_test_${i}.db" 2>/dev/null || true
-        rm -f "/tmp/graphql_${i}.log" 2>/dev/null || true
+        rm -rf "/tmp/regtest_dkg_test_${i}.db" 2>/dev/null || true
+        # rm -f "/tmp/graphql_${i}.log" 2>/dev/null || true
     done
 }
 
 # Set trap for cleanup
-trap cleanup EXIT INT TERM
+#trap cleanup EXIT INT TERM
 
-# Seed for funded wallet
-SEED="secret-extended-key-test1"
-FUNDING_SEED="secret-extended-key-test-spending"
+pkill zkool 2>/dev/null || true
+sleep 2
+rm -rf /tmp/regtest_dkg_*.db 2>/dev/null
+rm -f /tmp/graphql_*.log 2>/dev/null || true
 
 echo "=== Setting up 3-out-of-3 FROST DKG Test ==="
+
+# Start default zkool_graphql instance
+DEFAULT_DB="/tmp/regtest_dkg_default.db"
+echo "Starting default instance on port $DEFAULT_PORT with database $DEFAULT_DB"
+rm -f "$DEFAULT_DB"
+
+"$ZKOOL_GRAPHQL" \
+    -d "$DEFAULT_DB" \
+    -p $DEFAULT_PORT \
+    -l http://localhost:8137 \
+    -n \
+    > "/tmp/graphql_default.log" 2>&1 &
+
+PID_DEFAULT=$!
+DEFAULT_URL="http://localhost:$DEFAULT_PORT/graphql"
+echo "Waiting for default instance to start..."
+sleep 2
 
 # Start 3 separate zkool_graphql instances with distinct databases
 GRAPHQL_URLS=()
 for i in $(seq 1 $N); do
     PORT=$((PORT_BASE + i - 1))
-    DB_PATH="/tmp/dkg_test_${i}.db"
+    DB_PATH="/tmp/regtest_dkg_test_${i}.db"
 
     echo "Starting participant $i on port $PORT with database $DB_PATH"
     rm -f "$DB_PATH"
 
     # Start zkool_graphql in background
-    /Users/hanhhuynhhuu/projects/zkool/target/release/zkool_graphql \
+    "$ZKOOL_GRAPHQL" \
         -d "$DB_PATH" \
         -p $PORT \
-        -c "127.0.0.1:18232" \
+        -l http://localhost:8137 \
+        -n \
         > "/tmp/graphql_${i}.log" 2>&1 &
 
     # Save PID for cleanup
@@ -60,13 +90,6 @@ for i in $(seq 1 $N); do
 done
 
 echo "All participants started"
-
-# Function to query GraphQL
-gq() {
-    local url=$1
-    shift
-    gq "$url" "$@"
-}
 
 # Function to get current height
 height() {
@@ -85,24 +108,43 @@ wait_for_height() {
 
 echo ""
 echo "=== Step 1: Create funded wallet ==="
-MAIN_WALLET=$(gq "${GRAPHQL_URLS[0]}" \
+MAIN_WALLET=$(gq "$DEFAULT_URL" \
   -q 'mutation ($main: String!) {
   createAccount(newAccount: {
-    name: "Funding"
+    name: "Main"
     key: $main
     aindex: 0
     useInternal: false
     birth: 1
   })
-}' -v "main=$SEED" | jq -r '.data.createAccount')
+}' -v "main=$SEED" | jq -r '.data.createAccount' | tr -d '[:space:]')
 
 echo "Funding wallet: $MAIN_WALLET"
+
+# Synchronize wallet
+gq "$DEFAULT_URL" \
+  -q 'mutation ($account: Int!) {
+    synchronizeAccount(idAccount: $account)
+  }' -v "account=$MAIN_WALLET" > /dev/null
+
+# Get funding wallet balance
+FUNDING_BALANCE=$(gq "$DEFAULT_URL" \
+  -q 'query ($account: Int!) {
+    balanceByAccount(idAccount: $account) {
+      orchard
+    }
+  }' \
+  -v "account=$MAIN_WALLET" | jq -r '.data.balanceByAccount.orchard' | tr -d '[:space:]')
+
+echo "Funding wallet balance: $FUNDING_BALANCE"
 
 echo ""
 echo "=== Step 2: Initialize DKG for each participant ==="
 
 # Initialize DKG parameters for each participant
 DKG_ADDRESSES=()
+FUNDING_ADDRESSES=()
+FUNDING_ACCOUNTS=()  # Store funding account IDs
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
 
@@ -116,15 +158,29 @@ for i in $(seq 1 $N); do
         useInternal: false
         birth: 1
       })
-    }' | jq -r '.data.createAccount')
+    }' | jq -r '.data.createAccount' | tr -d '[:space:]')
+
+    # Store the funding account ID for later use
+    FUNDING_ACCOUNTS+=("$FUNDING_ACCOUNT")
+
+    # Retrieve funding wallet orchard address
+    FUNDING_ADDRESS=$(gq "$GRAPHQL_URL" \
+      -q 'query ($account: Int!) {
+        addressByAccount(idAccount: $account) {
+          orchard
+        }
+      }' \
+      -v "account=$FUNDING_ACCOUNT" | jq -r '.data.addressByAccount.orchard' | tr -d '[:space:]')
 
     echo "Participant $i funding account: $FUNDING_ACCOUNT"
+    echo "Participant $i funding address: $FUNDING_ADDRESS"
+    FUNDING_ADDRESSES+=("$FUNDING_ADDRESS")
 
     # Initialize DKG with participant ID
     DKG_ADDRESS=$(gq "$GRAPHQL_URL" \
       -q 'mutation ($name: String!, $t: Int!, $n: Int!, $funding: Int!, $id: Int!) {
       dkgStart(
-        name: "Frost-Test-3of3"
+        name: $name
         threshold: $t
         participants: $n
         messageAccount: $funding
@@ -135,16 +191,143 @@ for i in $(seq 1 $N); do
       -v "t=$T" \
       -v "n=$N" \
       -v "funding=$FUNDING_ACCOUNT" \
-      -v "id=$i" | jq -r '.data.dkgStart')
+      -v "id=$i" | jq -r '.data.dkgStart' | tr -d '[:space:]')
 
     echo "Participant $i DKG address: $DKG_ADDRESS"
     DKG_ADDRESSES+=("$DKG_ADDRESS")
+done
 
-    # Synchronize the funding account
+echo ""
+echo "=== Step 2.5: Wait for main wallet to receive funds from auto-mining ==="
+
+# Wait for main wallet to receive funds
+echo "Waiting for main wallet to receive funds..."
+TIMEOUT=120
+ELAPSED=0
+while [ $ELAPSED -lt $TIMEOUT ]; do
+    # Synchronize wallet
+    SYNC_RESULT=$(gq "$DEFAULT_URL" \
+      -q 'mutation ($account: Int!) {
+        synchronizeAccount(idAccount: $account)
+      }' -v "account=$MAIN_WALLET" 2>&1)
+
+    if echo "$SYNC_RESULT" | grep -q "error"; then
+        echo "WARNING: Failed to synchronize main wallet:"
+        echo "$SYNC_RESULT"
+    fi
+
+    # Get funding wallet balance
+    FUNDING_BALANCE=$(gq "$DEFAULT_URL" \
+      -q 'query ($account: Int!) {
+        balanceByAccount(idAccount: $account) {
+          orchard
+        }
+      }' \
+      -v "account=$MAIN_WALLET" | jq -r '.data.balanceByAccount.orchard' | tr -d '[:space:]')
+
+    if [ -n "$FUNDING_BALANCE" ] && [ "$FUNDING_BALANCE" != "null" ] && [ "$FUNDING_BALANCE" != "0" ]; then
+        echo "Main wallet funded: $FUNDING_BALANCE"
+        break
+    fi
+
+    echo "Waiting for funds... ($((ELAPSED))/$TIMEOUT)"
+    sleep 5
+    ELAPSED=$((ELAPSED + 5))
+done
+
+if [ "$FUNDING_BALANCE" = "null" ] || [ "$FUNDING_BALANCE" = "0" ] || [ -z "$FUNDING_BALANCE" ]; then
+    echo "ERROR: Main wallet has insufficient balance (got: $FUNDING_BALANCE)"
+    exit 1
+fi
+
+echo ""
+echo "=== Step 2.6: Fund each participant's funding address ==="
+
+# Build recipients array for payment
+RECIPIENTS=""
+for i in $(seq 1 $N); do
+    if [ $i -eq 1 ]; then
+        RECIPIENTS="{address: \"${FUNDING_ADDRESSES[$((i-1))]}\", amount: 1.0}"
+    else
+        RECIPIENTS="$RECIPIENTS, {address: \"${FUNDING_ADDRESSES[$((i-1))]}\", amount: 0.01}"
+    fi
+done
+
+# Send 1 ZEC to each funding address in a single transaction
+echo "Sending 0.01 ZEC to each of $N funding addresses..."
+TXID=$(gq "$DEFAULT_URL" \
+  -q "mutation (\$account: Int!) {
+    pay(idAccount: \$account
+      payment: {
+        recipients: [$RECIPIENTS]
+      })
+    }" \
+  -v "account=$MAIN_WALLET" | jq -r '.data.pay' | tr -d '[:space:]')
+
+echo "Funding transaction: $TXID"
+
+# Mine blocks to confirm transaction
+echo "Mining blocks for confirmation..."
+HEIGHT=$(height)
+curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [5] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
+wait_for_height $HEIGHT 5
+
+# Synchronize the funding account for each participant
+for i in $(seq 1 $N); do
+    GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
+    FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
+
+    echo "Synchronizing participant $i funding account..."
     gq "$GRAPHQL_URL" \
       -q 'mutation ($account: Int!) {
         synchronizeAccount(idAccount: $account)
       }' -v "account=$FUNDING_ACCOUNT" > /dev/null
+done
+
+echo ""
+echo "=== Step 2.7: Verify funding accounts received funds ==="
+
+for i in $(seq 1 $N); do
+    GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
+    FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
+
+    echo "Checking participant $i funding account balance..."
+    TIMEOUT=30
+    ELAPSED=0
+    while [ $ELAPSED -lt $TIMEOUT ]; do
+        # Synchronize before checking balance
+        SYNC_RESULT=$(gq "$GRAPHQL_URL" \
+          -q 'mutation ($account: Int!) {
+            synchronizeAccount(idAccount: $account)
+          }' -v "account=$FUNDING_ACCOUNT" 2>&1)
+
+        if echo "$SYNC_RESULT" | grep -q "error"; then
+            echo "WARNING: Failed to synchronize participant $i funding account:"
+            echo "$SYNC_RESULT"
+        fi
+
+        FUNDING_BALANCE=$(gq "$GRAPHQL_URL" \
+          -q 'query ($account: Int!) {
+            balanceByAccount(idAccount: $account) {
+              orchard
+            }
+          }' \
+          -v "account=$FUNDING_ACCOUNT" | jq -r '.data.balanceByAccount.orchard' | tr -d '[:space:]')
+
+        if [ -n "$FUNDING_BALANCE" ] && [ "$FUNDING_BALANCE" != "null" ] && [ "$FUNDING_BALANCE" != "0" ]; then
+            echo "Participant $i funding account balance: $FUNDING_BALANCE"
+            break
+        fi
+
+        echo "Participant $i funding account balance: $FUNDING_BALANCE, retrying... ($((ELAPSED))/$TIMEOUT)"
+        sleep 2
+        ELAPSED=$((ELAPSED + 2))
+    done
+
+    if [ "$FUNDING_BALANCE" = "null" ] || [ "$FUNDING_BALANCE" = "0" ] || [ -z "$FUNDING_BALANCE" ]; then
+        echo "ERROR: Participant $i funding account has insufficient balance (expected > 0, got: $FUNDING_BALANCE)"
+        exit 1
+    fi
 done
 
 echo ""
@@ -177,20 +360,102 @@ echo "=== Step 4: Execute DKG on all participants ==="
 # Execute DKG on each participant (they should complete in parallel)
 FROST_ACCOUNTS=()
 SHARED_ADDRESSES=()
+
+# First, initiate doDkg on all participants
+echo "Initiating DKG on all participants..."
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
-
-    echo "Executing DKG on participant $i..."
-    gq "$GRAPHQL_URL" \
+    echo "Starting DKG on participant $i..."
+    DKG_RESULT=$(gq "$GRAPHQL_URL" \
       -q 'mutation {
         doDkg
-      }' > /dev/null
+      }' 2>&1)
 
-    echo "Participant $i DKG execution started"
-
-    # Give it time to process
-    sleep 2
+    if echo "$DKG_RESULT" | grep -q "error"; then
+        echo "ERROR: Failed to initiate DKG for participant $i:"
+        echo "$DKG_RESULT"
+    fi
 done
+
+# Now loop until all participants complete DKG or timeout (5 minutes)
+echo "Waiting for all participants to complete DKG..."
+TIMEOUT=300
+ELAPSED=0
+while [ $ELAPSED -lt $TIMEOUT ]; do
+    ALL_COMPLETED=true
+
+    # Check each participant
+    for i in $(seq 1 $N); do
+        GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
+        FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
+
+        # Check if DKG completed by checking if account with name Dkg-Test-$i exists
+        DB_PATH="/tmp/regtest_dkg_test_${i}.db"
+        FROST_CHECK=$(sqlite3 "$DB_PATH" "SELECT name FROM accounts WHERE name = 'Dkg-Test-$i';" 2>/dev/null || echo "")
+
+        if [ -z "$FROST_CHECK" ]; then
+            # This participant hasn't completed, sync and retry doDkg
+            ALL_COMPLETED=false
+            echo "Participant $i DKG still in progress, syncing and retrying..."
+
+            # Get all internal account IDs to synchronize
+            DB_PATH="/tmp/regtest_dkg_test_${i}.db"
+            INTERNAL_ACCOUNTS=$(sqlite3 "$DB_PATH" "SELECT id_account FROM accounts WHERE internal = 1;" 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+
+            if [ -n "$INTERNAL_ACCOUNTS" ]; then
+                # Synchronize all internal accounts to receive messages from other participants
+                SYNC_RESULT=$(gq "$GRAPHQL_URL" \
+                  -q "mutation (\$accounts: [Int!]!) {
+                    synchronize(idAccounts: \$accounts)
+                  }" \
+                  -v "accounts=[$INTERNAL_ACCOUNTS]" 2>&1)
+
+                if echo "$SYNC_RESULT" | grep -q "error"; then
+                    echo "ERROR: Failed to synchronize internal accounts for participant $i:"
+                    echo "$SYNC_RESULT"
+                fi
+            fi
+
+            # Also synchronize the funding account before retrying doDkg
+            FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
+            SYNC_RESULT=$(gq "$GRAPHQL_URL" \
+              -q 'mutation ($account: Int!) {
+                synchronizeAccount(idAccount: $account)
+              }' \
+              -v "account=$FUNDING_ACCOUNT" 2>&1)
+
+            if echo "$SYNC_RESULT" | grep -q "error"; then
+                echo "WARNING: Failed to synchronize participant $i funding account:"
+                echo "$SYNC_RESULT"
+            fi
+
+            # Retry doDkg to continue to next round
+            DKG_RESULT=$(gq "$GRAPHQL_URL" \
+              -q 'mutation {
+                doDkg
+              }' 2>&1)
+
+            if echo "$DKG_RESULT" | grep -q "error"; then
+                echo "ERROR: Failed to execute doDkg for participant $i:"
+                echo "$DKG_RESULT"
+            fi
+        fi
+    done
+
+    # If all completed, break out of loop
+    if [ "$ALL_COMPLETED" = true ]; then
+        echo "All participants completed DKG successfully"
+        break
+    fi
+
+    sleep 2
+    ELAPSED=$((ELAPSED + 2))
+done
+
+if [ $ELAPSED -ge $TIMEOUT ]; then
+    echo "ERROR: DKG timed out after $TIMEOUT seconds"
+    exit 1
+fi
 
 echo ""
 echo "=== Step 5: Wait for DKG completion and verify results ==="
@@ -200,16 +465,11 @@ SHARED_ADDRESS=null
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
 
-    # Get all accounts and find the FROST account
-    ACCOUNTS=$(gq "$GRAPHQL_URL" \
-      -q 'query {
-        accounts {
-          id
-          name
-        }
-      }' | jq -r '.data.accounts[] | select(.name | startswith("frost-")) | .id')
+    # Get the FROST account ID from database (account named Dkg-Test-$i)
+    DB_PATH="/tmp/regtest_dkg_test_${i}.db"
+    FROST_ACCOUNT_ID=$(sqlite3 "$DB_PATH" "SELECT id_account FROM accounts WHERE name = 'Dkg-Test-$i';" 2>/dev/null)
 
-    if [ -z "$ACCOUNTS" ]; then
+    if [ -z "$FROST_ACCOUNT_ID" ]; then
         echo "ERROR: No FROST account found for participant $i"
         exit 1
     fi
@@ -221,7 +481,12 @@ for i in $(seq 1 $N); do
           orchard
         }
       }' \
-      -v "account=$ACCOUNTS" | jq -r '.data.addressByAccount.orchard')
+      -v "account=$FROST_ACCOUNT_ID" | jq -r '.data.addressByAccount.orchard' | tr -d '[:space:]')
+
+    if [ -z "$FROST_ADDRESS" ] || [ "$FROST_ADDRESS" = "null" ]; then
+        echo "ERROR: No FROST account found for participant $i"
+        exit 1
+    fi
 
     echo "Participant $i shared address: $FROST_ADDRESS"
 
@@ -235,33 +500,33 @@ for i in $(seq 1 $N); do
         exit 1
     fi
 
-    FROST_ACCOUNTS+=("$ACCOUNTS")
+    FROST_ACCOUNTS+=("$FROST_ACCOUNT_ID")
     SHARED_ADDRESSES+=("$FROST_ADDRESS")
 done
 
 echo ""
-echo "=== Step 6: Fund the shared FROST address ==="
+echo "=== Step 7: Fund the shared FROST address ==="
 
-# Mine some blocks to generate funds for funding wallet
-echo "Generating initial blocks..."
-HEIGHT=$(height)
-curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [100] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
-wait_for_height $HEIGHT 100
+# Synchronize the main wallet to get latest balance
+gq "$DEFAULT_URL" \
+  -q 'mutation ($account: Int!) {
+    synchronizeAccount(idAccount: $account)
+  }' -v "account=$MAIN_WALLET" > /dev/null
 
 # Get funding wallet balance
-FUNDING_BALANCE=$(gq "${GRAPHQL_URLS[0]}" \
+FUNDING_BALANCE=$(gq "$DEFAULT_URL" \
   -q 'query ($account: Int!) {
     balanceByAccount(idAccount: $account) {
       orchard
     }
   }' \
-  -v "account=$MAIN_WALLET" | jq -r '.data.balanceByAccount.orchard')
+  -v "account=$MAIN_WALLET" | jq -r '.data.balanceByAccount.orchard' | tr -d '[:space:]')
 
 echo "Funding wallet balance: $FUNDING_BALANCE"
 
 # Send funds to shared FROST address
 echo "Sending 10 ZEC to shared FROST address..."
-TXID=$(gq "${GRAPHQL_URLS[0]}" \
+TXID=$(gq "$DEFAULT_URL" \
   -q 'mutation ($account: Int!, $address: String!, $amount: BigDecimal!){
     pay(idAccount: $account
       payment: {
@@ -278,7 +543,7 @@ TXID=$(gq "${GRAPHQL_URLS[0]}" \
 echo "Funding transaction: $TXID"
 
 echo ""
-echo "=== Step 7: Mine blocks and synchronize ==="
+echo "=== Step 8: Mine blocks and synchronize ==="
 
 # Mine blocks to confirm transaction
 echo "Mining blocks..."
@@ -299,7 +564,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 8: Verify shared address balance ==="
+echo "=== Step 9: Verify shared address balance ==="
 
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
@@ -310,7 +575,7 @@ for i in $(seq 1 $N); do
           orchard
         }
       }' \
-      -v "account=${FROST_ACCOUNTS[$((i-1))]}" | jq -r '.data.balanceByAccount.orchard')
+      -v "account=${FROST_ACCOUNTS[$((i-1))]}" | jq -r '.data.balanceByAccount.orchard' | tr -d '[:space:]')
 
     echo "Participant $i FROST balance: $FINAL_BALANCE"
 

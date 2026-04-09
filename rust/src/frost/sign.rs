@@ -150,7 +150,7 @@ pub async fn do_sign_impl(
         return Ok(());
     }
 
-    let birth_height = height - 10000;
+    let birth_height = height.saturating_sub(10000) + 1;
     let params = get_sign_params(&mut *connection).await?;
     let account = params.account;
     let coordinator_address =

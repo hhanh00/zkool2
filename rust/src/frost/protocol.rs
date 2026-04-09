@@ -364,7 +364,11 @@ pub async fn run_round<R: Round>(
 
     // 2. Produce our own secret + outgoing packages if not yet done
     if R::load_secret(conn, account).await?.is_none() {
-        let (secret, outgoing) = R::produce(&input)?;
+        let (secret, outgoing) = R::produce(&input)
+            .map_err(|e| {
+                tracing::error!("Round produce failed for account {}: {}", account, e);
+                e
+            })?;
         let recipients_raw = outgoing.into_recipients(route_ctx)?;
 
         let mut tx = conn.begin().await?;
@@ -387,13 +391,20 @@ pub async fn run_round<R: Round>(
 
     // 3. Check if enough peer packages have arrived
     let peers = R::load_publics(conn, account).await?;
-    if peers.len() < R::threshold(n, t) {
+    // Filter out our own package, then check threshold (accounting that we have our own package)
+    let peer_count = peers.iter().filter(|(id, _)| *id != self_id).count();
+    if peer_count + 1 < R::threshold(n, t) {  // +1 for our own package
         return Ok(None);
     }
 
     // 4. Collect and advance to the next round
     let secret = R::load_secret(conn, account).await?.unwrap();
-    Ok(Some(R::collect(input, secret, peers)?))
+    R::collect(input, secret, peers)
+        .map_err(|e| {
+            tracing::error!("Round collect failed for account {}: {}", account, e);
+            e
+        })
+        .map(Some)
 }
 
 /// Wire message used during DKG rounds.
