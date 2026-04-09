@@ -29,6 +29,11 @@ Future<void> importElectionAccount({required int account, required Coin c}) =>
     RustLib.instance.api
         .crateApiVoteImportElectionAccount(account: account, c: c);
 
+Future<bool> checkWitnesses(
+        {required int account, required String url, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVoteCheckWitnesses(account: account, url: url, c: c);
+
 Future<void> deleteElection({required Coin c}) =>
     RustLib.instance.api.crateApiVoteDeleteElection(c: c);
 

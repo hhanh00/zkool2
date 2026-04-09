@@ -9,6 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/src/rust/api/account.dart' show resetSync;
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -66,6 +67,20 @@ class VotePage1State extends ConsumerState<VotePage1> {
 
       final c = ref.read(coinContextProvider);
       final e = ref.read(electionProvider.notifier);
+      final witnessesOk = await checkWitnesses(account: c.account, url: url, c: c);
+      if (!witnessesOk) {
+        if (!mounted) return;
+        final confirmed = await confirmDialog(context,
+            title: "Missing Witnesses",
+            message: "Some of your notes were spent after the snapshot height and their data was purged. Do you want to reset and resync now?",);
+        if (!confirmed) return;
+        await resetSync(id: c.account, c: c);
+        final accountData = await ref.read(accountProvider(c.account).future);
+        final synchronizer = ref.read(synchronizerProvider.notifier);
+        await synchronizer.startSynchronize([accountData.account]);
+        return;
+      }
+      if (!mounted) return;
       AwesomeDialog? dialog;
       try {
         dialog = await showMessage(context, "Please wait while we mint voting tokens from your orchard funds", dismissable: false);
