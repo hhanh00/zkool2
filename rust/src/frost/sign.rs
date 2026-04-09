@@ -40,9 +40,9 @@ use crate::{
         pay::PcztPackage,
         sync::SYNCING,
     },
-    frost::{
-        db::{get_coordinator_broadcast_account, get_mailbox_account},
-        dkg::{delete_frost_state, get_dkg_params, publish},
+    frost::dkg::{
+        delete_frost_state, get_coordinator_broadcast_account, get_dkg_params,
+        get_mailbox_account, publish,
     },
     pay::{
         plan::{ORCHARD_PK, SAPLING_PROVER},
@@ -93,7 +93,7 @@ pub async fn init_sign(
     .bind(&params)
     .execute(&mut *connection)
     .await?;
-    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_funding', ?) ON CONFLICT DO NOTHING")
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?) ON CONFLICT DO NOTHING")
         .bind(funding_account)
         .execute(&mut *connection)
         .await?;
@@ -153,7 +153,7 @@ pub async fn do_sign_impl(
     // Parse commitment memos and store them
     // commitments are privately received by the coordinator
     // the participants will not get anything
-    process_memos(
+    decode_memos(
         connection,
         account,
         mailbox_account,
@@ -252,7 +252,7 @@ pub async fn do_sign_impl(
     //
     // this is for the participants other than the coordinator
     // the coordinator will produce the sigpackages
-    process_memos(
+    decode_memos(
         connection,
         account,
         broadcast_account,
@@ -448,7 +448,7 @@ pub async fn do_sign_impl(
     }
 
     // add sigshares from the mailbox
-    process_memos(
+    decode_memos(
         connection,
         account,
         mailbox_account,
@@ -602,16 +602,15 @@ async fn get_coordinator_address(
     account: u32,
     coordinator: u8,
 ) -> Result<String> {
-    let (address,) = sqlx::query_as::<_, (Vec<u8>,)>(
-        "SELECT data FROM dkg_packages WHERE
-        account = ? AND round = 0 AND public = 1 AND from_id = ?",
+    let (address,) = sqlx::query_as::<_, (String,)>(
+        "SELECT address FROM dkg_addresses WHERE account = ? AND from_id = ?",
     )
     .bind(account)
     .bind(coordinator)
     .fetch_one(&mut *connection)
     .await
     .with_context(|| format!("Failed getting coordinator address {account} {coordinator}"))?;
-    Ok(String::from_utf8(address).expect("Failed to convert utf8"))
+    Ok(address)
 }
 
 async fn get_keys(
@@ -619,7 +618,7 @@ async fn get_keys(
     account: u32,
 ) -> Result<(KeyPackage<P>, PublicKeyPackage<P>)> {
     let (data,) = sqlx::query_as::<_, (Vec<u8>,)>(
-        "SELECT data FROM dkg_packages WHERE account = ? AND public = 0 AND round = 3",
+        "SELECT key_pkg FROM dkg_state WHERE account = ?",
     )
     .bind(account)
     .fetch_one(&mut *connection)
@@ -627,7 +626,7 @@ async fn get_keys(
     let spkg = KeyPackage::<P>::deserialize(&data)?;
 
     let (data,) = sqlx::query_as::<_, (Vec<u8>,)>(
-        "SELECT data FROM dkg_packages WHERE account = ? AND public = 1 AND round = 3",
+        "SELECT data FROM dkg_peers WHERE account = ? AND round = 3 LIMIT 1",
     )
     .bind(account)
     .fetch_one(&mut *connection)
@@ -637,7 +636,7 @@ async fn get_keys(
     Ok((spkg, ppkg))
 }
 
-async fn process_memos(
+async fn decode_memos(
     connection: &mut SqliteConnection,
     account: u32,
     mailbox_account: u32,
@@ -816,5 +815,12 @@ pub async fn is_signing_in_progress(connection: &mut SqliteConnection) -> Result
         .fetch_optional(&mut *connection)
         .await?;
 
+    Ok(exists.is_some())
+}
+
+pub async fn in_sign(connection: &mut SqliteConnection) -> Result<bool> {
+    let exists = sqlx::query("SELECT 1 FROM props WHERE key LIKE 'frost_%'")
+        .fetch_optional(connection)
+        .await?;
     Ok(exists.is_some())
 }
