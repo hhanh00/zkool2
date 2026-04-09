@@ -59,6 +59,26 @@ use crate::frb_generated::StreamSink;
 type CommitmentMap = BTreeMap<Identifier, SigningCommitments<P>>;
 type SignatureMap = BTreeMap<Identifier, SignatureShare<P>>;
 
+// ── State types ──────────────────────────────────────────────────────────────
+
+/// Initialization data for signing rounds.
+pub struct SignInit {
+    pub sighash: Vec<u8>,
+    pub nsigs: u32,
+}
+
+/// State after commitments round completes: our nonces + all peers' commitments.
+pub struct SignState1 {
+    pub init: SignInit,
+    pub nonces: Vec<SigningNonces<P>>,
+}
+
+/// State after sigpackages round completes: carries forward everything needed for sigshares.
+pub struct SignState2 {
+    pub state1: SignState1,
+    pub sigpackages: Vec<(SigningPackage<P>, Randomizer)>,
+}
+
 const COMMITMENT_PREFIX: &[u8] = b"CMT5";
 const SIGPACKAGE_PREFIX: &[u8] = b"SPK4";
 const SIGSHARE_PREFIX: &[u8] = b"SSH2";
@@ -119,6 +139,7 @@ pub async fn do_sign_impl(
     height: u32,
     status: impl Sink<SigningStatus>,
 ) -> Result<()> {
+    info!("sign: starting");
     let Some(pczt_pkg) = get_pczt(&mut *connection).await? else {
         return Ok(()); // No signing in progress
     };
@@ -150,6 +171,7 @@ pub async fn do_sign_impl(
     )
     .await?;
 
+    // ── Phase 1: Commitments ─────────────────────────────────────────────────────
     // Parse commitment memos and store them
     // commitments are privately received by the coordinator
     // the participants will not get anything
@@ -245,13 +267,12 @@ pub async fn do_sign_impl(
         }
         tx.commit().await?;
     };
-    info!("Commitments: {:?}", commitments_vec);
+    info!("Commitments phase complete");
 
-    // process sigpackages
-    // there is one sigpackage per signature
-    //
-    // this is for the participants other than the coordinator
-    // the coordinator will produce the sigpackages
+    // ── Phase 2: Sigpackages ───────────────────────────────────────────────────
+    // Process sigpackages - there is one sigpackage per signature
+    // This is for the participants other than the coordinator
+    // The coordinator will produce the sigpackages
     decode_memos(
         connection,
         account,
@@ -367,11 +388,12 @@ pub async fn do_sign_impl(
         tx.commit().await?;
     };
 
-    info!("Completed sigpackages: {:?}", sigpackages);
+    info!("Sigpackages phase complete");
 
+    // ── Phase 3: Sigshares ────────────────────────────────────────────────────
     let nonces = get_nonces(connection, account, &sighash).await?;
 
-    let sigshares = loop {
+    loop {
         // get the sigshares from the database
         // if we have them all, we have already signed the sigpackages and we are done
         let sigshares = get_sigshares(connection, account, &sighash).await?;
@@ -430,9 +452,10 @@ pub async fn do_sign_impl(
         tx.commit().await?;
     };
 
-    info!("Signature shares: {:?}", sigshares);
+    info!("Sigshares phase complete");
 
-    // copy our own sigshares to the commitments table
+    // ── Phase 4: Final aggregation (coordinator only) ────────────────────────
+    // Copy our own sigshares to the commitments table
     for idx in 0..nsigs {
         sqlx::query(
             "UPDATE frost_commitments SET sigshare =
@@ -466,8 +489,8 @@ pub async fn do_sign_impl(
         },
     ).await?;
 
-    // final step: aggregate the sigshares
-    // this is only done by the coordinator
+    // Final step: aggregate the sigshares
+    // This is only done by the coordinator
     if dkg_params.id as u8 == params.coordinator {
         let mut tx = connection.begin().await?;
         let sigsharess = get_all_sigshares(&mut tx, account, &sighash, nsigs).await?;

@@ -102,6 +102,17 @@ impl FrostBytes for Randomizer {
     fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data.try_into().map_err(|_| anyhow::anyhow!("bad randomizer length"))?).map_err(|e| anyhow::anyhow!("{e}")) }
 }
 
+impl<T: FrostBytes + bincode::Encode + bincode::Decode<()>> FrostBytes for Vec<T> {
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        bincode::encode_to_vec(self, config::legacy()).map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        bincode::decode_from_slice(data, config::legacy())
+            .map(|(v, _)| v)
+            .map_err(|e| anyhow::anyhow!("{e}"))
+    }
+}
+
 /// One indexed slot — used by SIGN rounds to carry one per-action package.
 /// A vec of these is the `Public` type for SIGN rounds (Option A for idx).
 #[derive(Encode, Decode)]
@@ -163,6 +174,9 @@ pub struct PerPeer<P>(pub BTreeMap<u8, P>);
 /// Nothing is sent (local-only computation, e.g. DKG part3).
 pub struct NoSend;
 
+/// Multiple packages sent to the coordinator (e.g., commitments for multiple inputs).
+pub struct ToCoordinatorMultiple<P>(pub Vec<P>);
+
 impl<P: FrostBytes> Dispatch for Broadcast<P> {
     type Public = P;
     fn into_recipients(self, ctx: &RouteCtx) -> Result<Vec<(String, Vec<u8>)>> {
@@ -200,6 +214,14 @@ impl Dispatch for NoSend {
     }
 }
 
+impl<P: FrostBytes + bincode::Encode + bincode::Decode<()>> Dispatch for ToCoordinatorMultiple<P> {
+    type Public = Vec<P>;
+    fn into_recipients(self, ctx: &RouteCtx) -> Result<Vec<(String, Vec<u8>)>> {
+        let data = bincode::encode_to_vec(&self.0, config::legacy())?;
+        Ok(vec![(ctx.coordinator_address.clone(), data)])
+    }
+}
+
 impl FrostBytes for () {
     fn to_bytes(&self) -> Result<Vec<u8>> { Ok(vec![]) }
     fn from_bytes(_: &[u8]) -> Result<Self> { Ok(()) }
@@ -210,6 +232,7 @@ impl FrostBytes for () {
 /// One round of a FROST protocol (DKG or SIGN).
 ///
 /// The type chain enforces that rounds are composed correctly at compile time:
+#[allow(async_fn_in_trait)]
 /// `Round2::Input = Round1::Output`, `Round3::Input = Round2::Output`, etc.
 ///
 /// - `Secret` is stored locally and never transmitted.

@@ -9,7 +9,7 @@ use reddsa::frost::redpallas::{
     keys::EvenY,
     Identifier,
 };
-use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 
