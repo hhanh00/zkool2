@@ -6,7 +6,7 @@ sed -i -e "s#miner_address = \"\"#miner_address = \"${MINER_ADDRESS}\"#" misc/ze
 nohup zebrad -c misc/zebra.toml start > zebrad.log 2>&1 & disown
 sleep 60
 tail zebrad.log
-lightwalletd --no-tls-very-insecure --data-dir=./data/regtest --grpc-bind-addr=127.0.0.1:8137 --zcash-conf-path=./misc/zebra.conf --log-file=/dev/stdout
+nohup lightwalletd --no-tls-very-insecure --data-dir=./data/regtest --grpc-bind-addr=127.0.0.1:8137 --zcash-conf-path=./misc/zebra.conf --log-file=/dev/stdout &
 nohup zkool_graphql -d regtest.db -l http://localhost:8137 -n &
 sleep 60
 
