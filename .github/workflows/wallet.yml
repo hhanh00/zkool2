@@ -37,56 +37,6 @@ jobs:
           nohup ./target/release/zkool_graphql -d regtest.db -l http://localhost:8137 -n &
           cd example/sh
           ./smoke.sh
-        env:
-          SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
-
-      - name: Run DKG tests
-        run: |
-          # Clean up any previous test artifacts
-          rm -f /tmp/dkg_test_*.db /tmp/graphql_*.log
-          # Kill any existing processes
-          lsof -ti:8001,8002,8003 | xargs kill -9 2>/dev/null || true
-
-          # Start 3 separate instances of zkool_graphql
-          echo "Starting 3 DKG participants..."
-          cd example/sh
-
-          # Participant 1
-          nohup ../../target/release/zkool_graphql -d /tmp/dkg_test_1.db -p 8001 -l http://localhost:8137 -n > /tmp/graphql_1.log 2>&1 &
-          PID_1=$!
-
-          # Participant 2
-          nohup ../../target/release/zkool_graphql -d /tmp/dkg_test_2.db -p 8002 -l http://localhost:8137 -n > /tmp/graphql_2.log 2>&1 &
-          PID_2=$!
-
-          # Participant 3
-          nohup ../../target/release/zkool_graphql -d /tmp/dkg_test_3.db -p 8003 -l http://localhost:8137 -n > /tmp/graphql_3.log 2>&1 &
-          PID_3=$!
-
-          # Wait for servers to start
-          echo "Waiting for DKG servers to start..."
-          sleep 5
-
-          # Verify servers are running
-          for i in 1 2 3; do
-              if ! curl -s http://localhost:800${i}/graphql > /dev/null; then
-                  echo "ERROR: Participant $i server failed to start"
-                  echo "=== Log for participant $i ==="
-                  cat /tmp/graphql_${i}.log
-                  exit 1
-              fi
-          done
-
-          echo "All DKG servers started successfully"
-
-          # Run the DKG test
           ./smoke-dkg.sh
-
-          # Cleanup
-          echo "Cleaning up..."
-          for i in 1 2 3; do
-              kill $PID_${i} 2>/dev/null || true
-              rm -f /tmp/dkg_test_${i}.db /tmp/graphql_${i}.log
-          done
         env:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
