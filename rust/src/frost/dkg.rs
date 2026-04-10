@@ -9,7 +9,7 @@ use reddsa::frost::redpallas::{
     keys::EvenY,
     Identifier,
 };
-use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 
@@ -66,17 +66,19 @@ impl Round for DkgRound1 {
     const PREFIX: [u8; 4] = *b"DK11";
 
     /// Need all other participants' packages.
-    fn threshold(n: u8, _t: u8) -> usize {
-        n as usize - 1
+    fn threshold(_n: u8, t: u8) -> usize {
+        t as usize
     }
 
     fn produce(input: &DkgInit) -> Result<(round1::SecretPackage, Broadcast<round1::Package>)> {
+        info!("DKG: calling dkg::part1 (self_id={}, n={}, t={})", input.self_id, input.n, input.t);
         let (spkg1, ppkg1) = dkg::part1(
             (input.self_id as u16).try_into()?,
             input.n as u16,
             input.t as u16,
             OsRng,
         )?;
+        info!("DKG: dkg::part1 completed successfully");
         Ok((spkg1, Broadcast(ppkg1)))
     }
 
@@ -87,6 +89,7 @@ impl Round for DkgRound1 {
     ) -> Result<DkgState1> {
         let ppkg1s = peers
             .into_iter()
+            .filter(|(id, _)| *id != input.self_id)  // Skip our own package
             .map(|(id, pkg)| Ok(((id as u16).try_into()?, pkg)))
             .collect::<Result<_>>()?;
         Ok(DkgState1 { init: input, spkg1, ppkg1s })
@@ -152,13 +155,16 @@ impl Round for DkgRound2 {
     const PREFIX: [u8; 4] = *b"DK21";
 
     /// Need all other participants' packages.
-    fn threshold(n: u8, _t: u8) -> usize {
-        n as usize - 1
+    fn threshold(_n: u8, t: u8) -> usize {
+        t as usize
     }
 
     fn produce(input: &DkgState1) -> Result<(round2::SecretPackage, PerPeer<round2::Package>)> {
         // part2 takes spkg1 by value — clone since input is borrowed
+        info!("DKG: calling dkg::part2 (self_id={}, n={}, t={})", input.init.self_id, input.init.n, input.init.t);
+        info!("DKG: have {} peer packages for part2", input.ppkg1s.len());
         let (spkg2, ppkg2s) = dkg::part2(input.spkg1.clone(), &input.ppkg1s)?;
+        info!("DKG: dkg::part2 completed successfully");
         // Convert BTreeMap<Identifier, Package> → BTreeMap<u8, Package>
         let per_peer: BTreeMap<u8, round2::Package> = (1u8..=input.init.n)
             .filter_map(|i| {
@@ -177,6 +183,7 @@ impl Round for DkgRound2 {
     ) -> Result<DkgState2> {
         let ppkg2s = peers
             .into_iter()
+            .filter(|(id, _)| *id != state1.init.self_id)  // Skip our own package
             .map(|(id, pkg)| Ok(((id as u16).try_into()?, pkg)))
             .collect::<Result<_>>()?;
         Ok(DkgState2 { state1, spkg2, ppkg2s })
@@ -241,7 +248,8 @@ pub async fn set_dkg_params(
     funding_account: u32,
 ) -> Result<()> {
     let height = client.latest_height().await?;
-    let birth_height = height - 10000;
+    let birth_height = height.saturating_sub(10000) + 1;
+    tracing::info!("birth_height {birth_height}");
 
     sqlx::query(
         "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name) VALUES (?, ?, ?, ?, '', ?, ?)",
@@ -464,7 +472,9 @@ pub async fn do_dkg_impl(
         .await?;
         (kp, PublicKeyPackage::from_bytes(&pp_data)?)
     } else {
+        info!("DKG: calling dkg::part3 (self_id={}, n={}, t={})", self_id, n, t);
         let (kp, pp) = dkg::part3(&state2.spkg2, &state2.state1.ppkg1s, &state2.ppkg2s)?;
+        info!("DKG: dkg::part3 completed successfully");
         sqlx::query(
             "UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2",
         )

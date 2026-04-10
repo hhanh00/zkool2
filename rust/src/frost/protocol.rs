@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bincode::{config, Decode, Encode};
 use bip39::Mnemonic;
 use futures::TryStreamExt;
@@ -102,6 +102,17 @@ impl FrostBytes for Randomizer {
     fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data.try_into().map_err(|_| anyhow::anyhow!("bad randomizer length"))?).map_err(|e| anyhow::anyhow!("{e}")) }
 }
 
+impl<T: FrostBytes + bincode::Encode + bincode::Decode<()>> FrostBytes for Vec<T> {
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        bincode::encode_to_vec(self, config::legacy()).map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        bincode::decode_from_slice(data, config::legacy())
+            .map(|(v, _)| v)
+            .map_err(|e| anyhow::anyhow!("{e}"))
+    }
+}
+
 /// One indexed slot — used by SIGN rounds to carry one per-action package.
 /// A vec of these is the `Public` type for SIGN rounds (Option A for idx).
 #[derive(Encode, Decode)]
@@ -163,6 +174,9 @@ pub struct PerPeer<P>(pub BTreeMap<u8, P>);
 /// Nothing is sent (local-only computation, e.g. DKG part3).
 pub struct NoSend;
 
+/// Multiple packages sent to the coordinator (e.g., commitments for multiple inputs).
+pub struct ToCoordinatorMultiple<P>(pub Vec<P>);
+
 impl<P: FrostBytes> Dispatch for Broadcast<P> {
     type Public = P;
     fn into_recipients(self, ctx: &RouteCtx) -> Result<Vec<(String, Vec<u8>)>> {
@@ -200,6 +214,14 @@ impl Dispatch for NoSend {
     }
 }
 
+impl<P: FrostBytes + bincode::Encode + bincode::Decode<()>> Dispatch for ToCoordinatorMultiple<P> {
+    type Public = Vec<P>;
+    fn into_recipients(self, ctx: &RouteCtx) -> Result<Vec<(String, Vec<u8>)>> {
+        let data = bincode::encode_to_vec(&self.0, config::legacy())?;
+        Ok(vec![(ctx.coordinator_address.clone(), data)])
+    }
+}
+
 impl FrostBytes for () {
     fn to_bytes(&self) -> Result<Vec<u8>> { Ok(vec![]) }
     fn from_bytes(_: &[u8]) -> Result<Self> { Ok(()) }
@@ -210,6 +232,7 @@ impl FrostBytes for () {
 /// One round of a FROST protocol (DKG or SIGN).
 ///
 /// The type chain enforces that rounds are composed correctly at compile time:
+#[allow(async_fn_in_trait)]
 /// `Round2::Input = Round1::Output`, `Round3::Input = Round2::Output`, etc.
 ///
 /// - `Secret` is stored locally and never transmitted.
@@ -341,7 +364,8 @@ pub async fn run_round<R: Round>(
 
     // 2. Produce our own secret + outgoing packages if not yet done
     if R::load_secret(conn, account).await?.is_none() {
-        let (secret, outgoing) = R::produce(&input)?;
+        let (secret, outgoing) = R::produce(&input)
+            .context(format!("Round produce failed for account {}", account))?;
         let recipients_raw = outgoing.into_recipients(route_ctx)?;
 
         let mut tx = conn.begin().await?;
@@ -364,13 +388,17 @@ pub async fn run_round<R: Round>(
 
     // 3. Check if enough peer packages have arrived
     let peers = R::load_publics(conn, account).await?;
-    if peers.len() < R::threshold(n, t) {
+    // Filter out our own package, then check threshold (accounting that we have our own package)
+    let peer_count = peers.iter().filter(|(id, _)| *id != self_id).count();
+    if peer_count + 1 < R::threshold(n, t) {  // +1 for our own package
         return Ok(None);
     }
 
     // 4. Collect and advance to the next round
     let secret = R::load_secret(conn, account).await?.unwrap();
-    Ok(Some(R::collect(input, secret, peers)?))
+    R::collect(input, secret, peers)
+        .context(format!("Round collect failed for account {}", account))
+        .map(Some)
 }
 
 /// Wire message used during DKG rounds.
