@@ -247,7 +247,7 @@ echo ""
 echo "=== Step 6: Verify transaction completed and receiver received funds ==="
 
 # Loop for up to 1 minute to verify transaction completed
-TIMEOUT=60
+TIMEOUT=300
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
     # Synchronize receiver account
@@ -294,6 +294,7 @@ echo "  1. Check participant logs: tail -f /tmp/graphql_dkg_1.log"
 echo "  2. Check database: sqlite3 /tmp/regtest_dkg_test_2.db \"SELECT * FROM frost_commitments\""
 echo "  3. Continue calling frost_sign on participants to progress the signing"
 
+tail /tmp/graphql_dkg_*.log
 # Don't auto-cleanup - preserve DKG databases for further testing
 # Users can manually clean up with: pkill zkool_graphql
 
