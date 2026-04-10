@@ -480,7 +480,9 @@ pub async fn publish(
     let pczt = sign_transaction(connection, account, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
     let result = crate::pay::send(client, height, &txb).await?;
-    hex::decode(&result)?;
+    if hex::decode(&result).is_err() {
+        anyhow::bail!(result);
+    }
     Ok(result)
 }
 

@@ -38,5 +38,6 @@ jobs:
           cd example/sh
           ./smoke.sh
           ./smoke-dkg.sh
+          ./smoke-frost.sh
         env:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"

@@ -30,17 +30,22 @@ cleanup() {
         if [ -n "$pid" ]; then
           kill "$pid" 2>/dev/null || true
         fi
-        rm -rf "/tmp/regtest_dkg_test_${i}.db" 2>/dev/null || true
         rm -f "/tmp/graphql_${i}.log" 2>/dev/null || true
     done
 }
 
 # Set trap for cleanup
-#trap cleanup EXIT INT TERM
+# If SKIP_CLEANUP is set, don't clean up databases (for chaining with smoke-frost)
+if [ -z "${SKIP_CLEANUP:-}" ]; then
+    trap cleanup EXIT INT TERM
+fi
 
 pkill zkool_graphql 2>/dev/null || true
+rm -rf "/tmp/regtest_dkg_test_*.db" 2>/dev/null || true
 sleep 2
-rm -rf /tmp/regtest_dkg_*.db 2>/dev/null
+if [ -z "${SKIP_CLEANUP:-}" ]; then
+    rm -rf /tmp/regtest_dkg_*.db 2>/dev/null
+fi
 rm -f /tmp/graphql_*.log 2>/dev/null || true
 
 echo "=== Setting up 3-out-of-3 FROST DKG Test ==="
@@ -272,17 +277,10 @@ echo ""
 echo "=== Step 4: Fund each participant's funding address ==="
 
 # Build recipients array for payment
-RECIPIENTS=""
-for i in $(seq 1 $N); do
-    if [ $i -eq 1 ]; then
-        RECIPIENTS="{address: \"${FUNDING_ADDRESSES[$((i-1))]}\", amount: 1.0}"
-    else
-        RECIPIENTS="$RECIPIENTS, {address: \"${FUNDING_ADDRESSES[$((i-1))]}\", amount: 0.01}"
-    fi
+RECIPIENTS="{address: \"${FUNDING_ADDRESSES[0]}\", amount: 0.01}"
+for i in $(seq 2 $N); do
+    RECIPIENTS="$RECIPIENTS, {address: \"${FUNDING_ADDRESSES[$((i-1))]}\", amount: 0.01}"
 done
-
-# Send 1 ZEC to each funding address in a single transaction
-echo "Sending 0.01 ZEC to each of $N funding addresses..."
 TXID=$(gq "$DEFAULT_URL" \
   -q "mutation (\$account: Int!) {
     pay(idAccount: \$account
