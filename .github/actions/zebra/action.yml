@@ -17,7 +17,7 @@ runs:
       with:
         path: |
           ./tools/bin
-        key: ${{ runner.os }}-zebra-4.2.0
+        key: ${{ runner.os }}-zebra-lwd-4.2.0
 
     - name: Install zkool
       if: steps.cache-zebra.outputs.cache-hit != 'true'
@@ -31,21 +31,23 @@ runs:
         sudo apt update && sudo apt install -y libclang-dev clang
 
         cargo install --git https://github.com/ZcashFoundation/zebra --tag v4.2.0 --features=internal-miner --root ./tools zebrad
-        cargo install --git https://github.com/zingolabs/zaino --tag 0.2.0-rc.6 --root ./tools zainod
+        go install github.com/zcash/lightwalletd@latest
+        cp $HOME/go/bin/lightwalletd tools/bin
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         path: ./tools/bin
-        key: ${{ runner.os }}-zebra-4.2.0
+        key: ${{ runner.os }}-zebra-lwd-4.2.0
 
     - name: Install config
       if: github.repository != 'hhanh00/zkool2'
       shell: bash
       run: |
         curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
-        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o ./example/sh/mine.sh
+        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zcash.conf -o misc/zcash.conf
+        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o example/sh/mine.sh
         chmod +x ./example/sh/mine.sh
 
     - name: Add tools to PATH
