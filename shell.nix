@@ -12,10 +12,10 @@ pkgs.mkShell {
   ];
 
   RUST_BACKTRACE = "1";
-  RUSTFLAGS = pkgs.lib.optionals pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=lld";
 
   shellHook = ''
     echo "🦀 Rust development environment for zkool_graphql"
-    echo "Build with: cd rust && cargo build --release --bin zkool_graphql --features=graphql"
+    echo "Build with: cargo build --release --bin zkool_graphql --features=graphql"
+    cd rust
   '';
 }
