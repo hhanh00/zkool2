@@ -9,7 +9,7 @@ N=3                     # Number of participants
 T=3                      # Threshold (all 3 must participate)
 DEFAULT_PORT=8000        # Port for default GraphQL instance
 PORT_BASE=8001            # Starting port for GraphQL instances
-GRAPHQL_BASE_URL="http://localhost:8137"  # LWD URL for all participants
+LWD_URL="http://localhost:8137"  # LWD URL for all participants
 
 # Path to zkool_graphql binary (relative to script location in example/sh/)
 ZKOOL_GRAPHQL="$(dirname "$0")/../../target/release/zkool_graphql"
