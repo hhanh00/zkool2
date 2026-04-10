@@ -24,7 +24,6 @@ for i in 1 2 3; do
         -d /tmp/regtest_dkg_test_${i}.db \
         -p $PORT \
         -l http://localhost:8137 \
-        -n \
         > /tmp/graphql_dkg_${i}.log 2>&1 &
     eval "PID_${i}=\$!"
     GRAPHQL_URLS+=("http://localhost:$PORT/graphql")
@@ -36,7 +35,6 @@ echo "Starting default instance on port 8000 with database /tmp/regtest_dkg_defa
     -d /tmp/regtest_dkg_default.db \
     -p 8000 \
     -l http://localhost:8137 \
-    -n \
     > /tmp/graphql_dkg_default.log 2>&1 &
 PID_DEFAULT=$!
 DEFAULT_URL="http://localhost:8000/graphql"
@@ -281,73 +279,8 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
         exit 0
     fi
 
-    # If not received yet, synchronize all accounts and retry signing
-    if [ $((ELAPSED + 2)) -lt $TIMEOUT ]; then
-        echo "Funds not received yet, synchronizing and retrying signing..."
-
-        # Synchronize all funding and FROST accounts
-        for i in 1 2 3; do
-            GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
-            eval "frost_account_id=\$FROST_ACCOUNT_${i}"
-            DB_PATH="/tmp/regtest_dkg_test_${i}.db"
-            FUNDING_ACCOUNT=$(sqlite3 "$DB_PATH" "SELECT id_account FROM accounts WHERE name = 'DKG-Fund';" 2>/dev/null)
-
-            # Get all internal accounts for this participant
-            INTERNAL_ACCOUNTS=$(sqlite3 "$DB_PATH" "SELECT id_account FROM accounts WHERE internal = 1;" 2>/dev/null | tr '\n' ',' | sed 's/,$//')
-
-            if [ -n "$INTERNAL_ACCOUNTS" ]; then
-                echo "Synchronizing participant $i internal accounts..."
-                gq "$GRAPHQL_URL" \
-                  -q "mutation (\$accounts: [Int!]!) {
-                    synchronize(idAccounts: \$accounts)
-                  }" \
-                  -v "accounts=[$INTERNAL_ACCOUNTS]" > /dev/null
-            fi
-
-            # Synchronize funding account
-            echo "Synchronizing participant $i funding account..."
-            gq "$GRAPHQL_URL" \
-              -q 'mutation ($account: Int!) {
-                synchronizeAccount(idAccount: $account)
-              }' \
-              -v "account=$FUNDING_ACCOUNT" > /dev/null
-        done
-
-        # Re-run signing on all participants
-        echo "Re-running signing..."
-        for i in 1 2 3; do
-            GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
-            eval "frost_account_id=\$FROST_ACCOUNT_${i}"
-            DB_PATH="/tmp/regtest_dkg_test_${i}.db"
-            FUNDING_ACCOUNT=$(sqlite3 "$DB_PATH" "SELECT id_account FROM accounts WHERE name = 'DKG-Fund';" 2>/dev/null)
-
-            # Capture output and check for errors, but don't terminate
-            SIGN_OUTPUT=$(gq "$GRAPHQL_URL" \
-              -q 'mutation ($account: Int!, $coordinator: Int!, $funding: Int!, $pczt: String!) {
-                frostSign(
-                  idAccount: $account
-                  idCoordinator: $coordinator
-                  messageAccount: $funding
-                  pczt: $pczt
-                )
-              }' \
-              -v "account=$frost_account_id" \
-              -v "coordinator=2" \
-              -v "funding=$FUNDING_ACCOUNT" \
-              -v "pczt=$PCZT" 2>&1) || true
-
-            # Check if response contains errors or frostSign returned false
-            if echo "$SIGN_OUTPUT" | grep -q '"error"' || echo "$SIGN_OUTPUT" | jq -e '.data.frostSign == false' >/dev/null 2>&1; then
-                echo "WARNING: Participant $i signing returned an error (continuing anyway):"
-                echo "$SIGN_OUTPUT" | grep -A 5 '"error"' || echo "$SIGN_OUTPUT"
-            fi
-        done
-
-        echo "Signing round completed"
-    fi
-
-    sleep 2
-    ELAPSED=$((ELAPSED + 2))
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
 done
 
 echo ""

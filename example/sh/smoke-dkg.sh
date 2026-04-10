@@ -59,7 +59,6 @@ rm -f "$DEFAULT_DB"
     -d "$DEFAULT_DB" \
     -p $DEFAULT_PORT \
     -l http://localhost:8137 \
-    -n \
     > "/tmp/graphql_default.log" 2>&1 &
 
 PID_DEFAULT=$!
@@ -81,7 +80,6 @@ for i in $(seq 1 $N); do
         -d "$DB_PATH" \
         -p $PORT \
         -l http://localhost:8137 \
-        -n \
         > "/tmp/graphql_${i}.log" 2>&1 &
 
     # Save PID for cleanup
@@ -406,50 +404,13 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
 
     # Check each participant
     for i in $(seq 1 $N); do
-        GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
-        FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
-
         # Check if DKG completed by checking if account with name Dkg-Test-$i exists
         DB_PATH="/tmp/regtest_dkg_test_${i}.db"
         FROST_CHECK=$(sqlite3 "$DB_PATH" "SELECT name FROM accounts WHERE name = 'Dkg-Test-$i';" 2>/dev/null || echo "")
 
         if [ -z "$FROST_CHECK" ]; then
-            # This participant hasn't completed, sync and retry doDkg
+            # This participant hasn't completed yet
             ALL_COMPLETED=false
-            echo "Participant $i DKG still in progress, syncing and retrying..."
-
-            # Get all internal account IDs to synchronize
-            DB_PATH="/tmp/regtest_dkg_test_${i}.db"
-            INTERNAL_ACCOUNTS=$(sqlite3 "$DB_PATH" "SELECT id_account FROM accounts WHERE internal = 1;" 2>/dev/null | tr '\n' ',' | sed 's/,$//')
-
-            if [ -n "$INTERNAL_ACCOUNTS" ]; then
-                # Synchronize all internal accounts to receive messages from other participants
-                if ! SYNC_RESULT=$(gq_check "$GRAPHQL_URL" \
-                  -q "mutation (\$accounts: [Int!]!) {
-                    synchronize(idAccounts: \$accounts)
-                  }" \
-                  -v "accounts=[$INTERNAL_ACCOUNTS]"); then
-                    echo "ERROR: Failed to synchronize internal accounts for participant $i (see above for details)"
-                fi
-            fi
-
-            # Also synchronize the funding account before retrying doDkg
-            FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
-            if ! SYNC_RESULT=$(gq_check "$GRAPHQL_URL" \
-              -q 'mutation ($account: Int!) {
-                synchronizeAccount(idAccount: $account)
-              }' \
-              -v "account=$FUNDING_ACCOUNT"); then
-                echo "WARNING: Failed to synchronize participant $i funding account (continuing...)"
-            fi
-
-            # Retry doDkg to continue to next round
-            if ! DKG_RESULT=$(gq_check "$GRAPHQL_URL" \
-              -q 'mutation {
-                doDkg
-              }'); then
-                echo "ERROR: Failed to execute doDkg for participant $i (see above for details)"
-            fi
         fi
     done
 
@@ -459,8 +420,8 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
         break
     fi
 
-    sleep 2
-    ELAPSED=$((ELAPSED + 2))
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
 done
 
 if [ $ELAPSED -ge $TIMEOUT ]; then
