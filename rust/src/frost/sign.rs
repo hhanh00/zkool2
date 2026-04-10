@@ -96,11 +96,13 @@ pub async fn init_sign(
     coordinator: u8,
     pczt: &PcztPackage,
 ) -> Result<()> {
+    info!("init_sign: account={}, funding_account={}, coordinator={}", account, funding_account, coordinator);
     let pczt = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?) ON CONFLICT DO NOTHING")
         .bind(&pczt)
         .execute(&mut *connection)
         .await?;
+    info!("init_sign: inserted PCZT into props");
     let params = FrostSignParams {
         account,
         coordinator,
@@ -113,10 +115,13 @@ pub async fn init_sign(
     .bind(&params)
     .execute(&mut *connection)
     .await?;
+    info!("init_sign: inserted signing params into props");
     sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?) ON CONFLICT DO NOTHING")
         .bind(funding_account)
         .execute(&mut *connection)
         .await?;
+    info!("init_sign: inserted dkg_account into props");
+    info!("init_sign: completed successfully for account={}", account);
 
     Ok(())
 }
@@ -139,27 +144,34 @@ pub async fn do_sign_impl(
     height: u32,
     status: impl Sink<SigningStatus>,
 ) -> Result<()> {
-    info!("sign: starting");
+    info!("sign: starting at height {}", height);
     let Some(pczt_pkg) = get_pczt(&mut *connection).await? else {
+        info!("sign: no PCZT found, skipping signing");
         return Ok(()); // No signing in progress
     };
+    info!("sign: found PCZT, signing is in progress");
 
     let guard = SYNCING.try_lock();
     if guard.is_err() {
-        info!("Signing in progress");
+        info!("sign: sync already in progress, skipping");
         return Ok(());
     }
 
     let birth_height = height.saturating_sub(10000) + 1;
     let params = get_sign_params(&mut *connection).await?;
+    info!("sign: got signing params: account={}, coordinator={}", params.account, params.coordinator);
     let account = params.account;
     let coordinator_address =
         get_coordinator_address(connection, account, params.coordinator).await?;
+    info!("sign: got coordinator address");
     let dkg_params = get_dkg_params(connection, account).await?;
+    info!("sign: got DKG params");
     let (spkg, ppkg) = get_keys(connection, account).await?;
+    info!("sign: got keys");
     let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Failed to parse PCZT");
     let sighash = get_sighash(pczt.clone());
     let nsigs = pczt_pkg.orchard_indices.len() as u32;
+    info!("sign: sighash={}, nsigs={}", hex::encode(&sighash), nsigs);
 
     // Create a mailbox account if it doesn't exist
     let (mailbox_account, _mailbox_address) = get_mailbox_account(
@@ -170,17 +182,20 @@ pub async fn do_sign_impl(
         birth_height,
     )
     .await?;
+    info!("sign: got mailbox account {}", mailbox_account);
 
     // ── Phase 1: Commitments ─────────────────────────────────────────────────────
     // Parse commitment memos and store them
     // commitments are privately received by the coordinator
-    // the participants will not get anything
+    // the participants will not get get anything
+    info!("sign: Phase 1 - Processing commitments");
     decode_memos(
         connection,
         account,
         mailbox_account,
         COMMITMENT_PREFIX,
         async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
+            info!("sign: decoded commitment memo from participant {}", pkg.idx);
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .bind(account)
                 .bind(pkg.sighash.as_slice())
@@ -189,9 +204,11 @@ pub async fn do_sign_impl(
                 .bind(&pkg.data)
                 .execute(&mut *connection)
                 .await?;
+            info!("sign: inserted commitment for participant {} into frost_commitments", pkg.idx);
             Ok(())
         },
     ).await?;
+    info!("sign: finished processing commitment memos");
 
     let (broadcast_account, broadcast_address) =
         get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
@@ -199,7 +216,9 @@ pub async fn do_sign_impl(
     info!("Processing commitments for account {}", account);
 
     let commitments_vec = loop {
+        info!("sign: checking if we have commitments for sighash={}", hex::encode(&sighash));
         let commitments_vec = get_commitments(connection, account, &sighash, nsigs).await?;
+        info!("sign: got {} commitments", commitments_vec.len());
         // does the commitment table have our commitments?
         // we do not need to have the "idx" column here because
         // we create all the commitments at once
@@ -210,12 +229,16 @@ pub async fn do_sign_impl(
             .fetch_optional(&mut *connection)
             .await?.is_some();
 
+        info!("sign: has_commitments={}", has_commitments);
         if has_commitments {
+            info!("sign: we already have our commitments, using them");
             break commitments_vec; // we have published our commitments
         }
+        info!("sign: creating and publishing our commitments");
         let mut tx = connection.begin().await?;
         let mut recipients = vec![];
         for idx in 0..nsigs {
+            info!("sign: creating commitment for idx={}", idx);
             let (nonces, commitments) = commit(spkg.signing_share(), &mut OsRng);
             // store nonces and commitments
             // nonces go to the frost_signatures table
@@ -229,6 +252,7 @@ pub async fn do_sign_impl(
             .bind(&nonces)
             .execute(&mut *tx)
             .await?;
+            info!("sign: inserted nonce for idx={}", idx);
             // commitments go to the frost_commitments table
             let commitments = commitments.serialize()?;
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?)")
@@ -239,6 +263,7 @@ pub async fn do_sign_impl(
                 .bind(&commitments)
                 .execute(&mut *tx)
                 .await?;
+            info!("sign: inserted commitment for idx={}", idx);
             let message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
                 from_id: dkg_params.id as u16,
@@ -247,12 +272,14 @@ pub async fn do_sign_impl(
             };
             let memo_bytes = message.encode_with_prefix(COMMITMENT_PREFIX)?;
             recipients.push((coordinator_address.as_str(), memo_bytes));
+            info!("sign: prepared commitment message for idx={}", idx);
         }
         // send the commitments to the coordinator
         // we send all the commitments in one zcash transaction
         // the coordinator does not need to send a message to itself,
         //   (the commitments are already in the database)
         if dkg_params.id as u8 != params.coordinator {
+            info!("sign: sending {} commitment messages to coordinator", recipients.len());
             status.send(SigningStatus::SendingCommitment).await;
             let txid = publish(
                 network,
