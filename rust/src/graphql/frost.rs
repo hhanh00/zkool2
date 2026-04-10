@@ -98,14 +98,8 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
     }
 
     if in_sign {
-        crate::frost::sign::do_sign_impl(
-            &coin.network(),
-            &mut connection,
-            &mut client,
-            height,
-            (),
-        )
-        .await?;
+        crate::frost::sign::do_sign_impl(&coin.network(), &mut connection, &mut client, height, ())
+            .await?;
     }
     Ok(())
 }
@@ -137,15 +131,35 @@ pub async fn frost_sign(
 ) -> FieldResult<bool> {
     let coin = &context.coin;
     let mut connection = coin.get_connection().await?;
-    let pczt = hex::decode(&pczt)?;
-    let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
-    crate::frost::sign::init_sign(
-        &mut connection,
-        id_account as u32,
-        message_account as u32,
-        id_coordinator as u8,
-        &pczt,
-    )
-    .await?;
+
+    // Check if signing is already in progress
+    let in_progress = crate::frost::sign::in_sign(&mut *connection).await?;
+    if in_progress {
+        tracing::info!("frost_sign: signing already in progress, calling do_sign_impl");
+        // Signing is already in progress, trigger next round
+        let mut client = coin.client().await?;
+        let height = client.latest_height().await?;
+        crate::frost::sign::do_sign_impl(
+            &coin.network(),
+            &mut *connection,
+            &mut client,
+            height,
+            (),
+        )
+        .await?;
+    } else {
+        // Not in progress, initialize signing
+        tracing::info!("frost_sign: initializing signing");
+        let pczt = hex::decode(&pczt)?;
+        let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
+        crate::frost::sign::init_sign(
+            &mut connection,
+            id_account as u32,
+            message_account as u32,
+            id_coordinator as u8,
+            &pczt,
+        )
+        .await?;
+    }
     Ok(true)
 }
