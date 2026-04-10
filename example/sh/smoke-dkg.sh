@@ -19,11 +19,10 @@ cleanup() {
     echo "Cleaning up..."
     # Clean up default instance
     if [ -n "$PID_DEFAULT" ]; then
-        # kill "$PID_DEFAULT" 2>/dev/null || true
-        true
+        kill "$PID_DEFAULT" 2>/dev/null || true
     fi
     rm -rf "/tmp/regtest_dkg_default.db" 2>/dev/null || true
-    # rm -f "/tmp/graphql_default.log" 2>/dev/null || true
+    rm -f "/tmp/graphql_default.log" 2>/dev/null || true
 
     # Clean up participant instances
     for i in $(seq 1 $N); do
@@ -32,14 +31,14 @@ cleanup() {
           kill "$pid" 2>/dev/null || true
         fi
         rm -rf "/tmp/regtest_dkg_test_${i}.db" 2>/dev/null || true
-        # rm -f "/tmp/graphql_${i}.log" 2>/dev/null || true
+        rm -f "/tmp/graphql_${i}.log" 2>/dev/null || true
     done
 }
 
 # Set trap for cleanup
 #trap cleanup EXIT INT TERM
 
-pkill zkool 2>/dev/null || true
+pkill zkool_graphql 2>/dev/null || true
 sleep 2
 rm -rf /tmp/regtest_dkg_*.db 2>/dev/null
 rm -f /tmp/graphql_*.log 2>/dev/null || true
@@ -90,6 +89,38 @@ for i in $(seq 1 $N); do
 done
 
 echo "All participants started"
+
+# Function to execute gq and print full response on error
+# Usage: gq_check <url> <args...>
+# Returns the output on success, prints error and returns non-zero on failure
+gq_check() {
+    local output
+    local tmpfile=$(mktemp)
+    output=$(gq "$@" 2>&1 | tee "$tmpfile")
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        echo "ERROR: gq command failed with exit code $exit_code" >&2
+        echo "Command: gq $*" >&2
+        echo "Full server response:" >&2
+        cat "$tmpfile" >&2
+        rm -f "$tmpfile"
+        return 1
+    fi
+
+    if echo "$output" | grep -q '"error"'; then
+        echo "ERROR: Server returned an error response" >&2
+        echo "Command: gq $*" >&2
+        echo "Full server response:" >&2
+        cat "$tmpfile" >&2
+        rm -f "$tmpfile"
+        return 1
+    fi
+
+    rm -f "$tmpfile"
+    echo "$output"
+    return 0
+}
 
 # Function to get current height
 height() {
@@ -198,7 +229,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 2.5: Wait for main wallet to receive funds from auto-mining ==="
+echo "=== Step 3: Wait for main wallet to receive funds from auto-mining ==="
 
 # Wait for main wallet to receive funds
 echo "Waiting for main wallet to receive funds..."
@@ -206,14 +237,11 @@ TIMEOUT=120
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
     # Synchronize wallet
-    SYNC_RESULT=$(gq "$DEFAULT_URL" \
+    if ! SYNC_RESULT=$(gq_check "$DEFAULT_URL" \
       -q 'mutation ($account: Int!) {
         synchronizeAccount(idAccount: $account)
-      }' -v "account=$MAIN_WALLET" 2>&1)
-
-    if echo "$SYNC_RESULT" | grep -q "error"; then
-        echo "WARNING: Failed to synchronize main wallet:"
-        echo "$SYNC_RESULT"
+      }' -v "account=$MAIN_WALLET"); then
+        echo "WARNING: Failed to synchronize main wallet (continuing...)"
     fi
 
     # Get funding wallet balance
@@ -241,7 +269,7 @@ if [ "$FUNDING_BALANCE" = "null" ] || [ "$FUNDING_BALANCE" = "0" ] || [ -z "$FUN
 fi
 
 echo ""
-echo "=== Step 2.6: Fund each participant's funding address ==="
+echo "=== Step 4: Fund each participant's funding address ==="
 
 # Build recipients array for payment
 RECIPIENTS=""
@@ -285,7 +313,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 2.7: Verify funding accounts received funds ==="
+echo "=== Step 5: Verify funding accounts received funds ==="
 
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
@@ -296,14 +324,11 @@ for i in $(seq 1 $N); do
     ELAPSED=0
     while [ $ELAPSED -lt $TIMEOUT ]; do
         # Synchronize before checking balance
-        SYNC_RESULT=$(gq "$GRAPHQL_URL" \
+        if ! SYNC_RESULT=$(gq_check "$GRAPHQL_URL" \
           -q 'mutation ($account: Int!) {
             synchronizeAccount(idAccount: $account)
-          }' -v "account=$FUNDING_ACCOUNT" 2>&1)
-
-        if echo "$SYNC_RESULT" | grep -q "error"; then
-            echo "WARNING: Failed to synchronize participant $i funding account:"
-            echo "$SYNC_RESULT"
+          }' -v "account=$FUNDING_ACCOUNT"); then
+            echo "WARNING: Failed to synchronize participant $i funding account (continuing...)"
         fi
 
         FUNDING_BALANCE=$(gq "$GRAPHQL_URL" \
@@ -331,7 +356,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 3: Exchange DKG addresses between participants ==="
+echo "=== Step 6: Exchange DKG addresses between participants ==="
 
 # Each participant sets addresses for all other participants
 for i in $(seq 1 $N); do
@@ -355,7 +380,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 4: Execute DKG on all participants ==="
+echo "=== Step 7: Execute DKG on all participants ==="
 
 # Execute DKG on each participant (they should complete in parallel)
 FROST_ACCOUNTS=()
@@ -366,14 +391,11 @@ echo "Initiating DKG on all participants..."
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
     echo "Starting DKG on participant $i..."
-    DKG_RESULT=$(gq "$GRAPHQL_URL" \
+    if ! DKG_RESULT=$(gq_check "$GRAPHQL_URL" \
       -q 'mutation {
         doDkg
-      }' 2>&1)
-
-    if echo "$DKG_RESULT" | grep -q "error"; then
-        echo "ERROR: Failed to initiate DKG for participant $i:"
-        echo "$DKG_RESULT"
+      }'); then
+        echo "ERROR: Failed to initiate DKG for participant $i (see above for details)"
     fi
 done
 
@@ -404,40 +426,31 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
 
             if [ -n "$INTERNAL_ACCOUNTS" ]; then
                 # Synchronize all internal accounts to receive messages from other participants
-                SYNC_RESULT=$(gq "$GRAPHQL_URL" \
+                if ! SYNC_RESULT=$(gq_check "$GRAPHQL_URL" \
                   -q "mutation (\$accounts: [Int!]!) {
                     synchronize(idAccounts: \$accounts)
                   }" \
-                  -v "accounts=[$INTERNAL_ACCOUNTS]" 2>&1)
-
-                if echo "$SYNC_RESULT" | grep -q "error"; then
-                    echo "ERROR: Failed to synchronize internal accounts for participant $i:"
-                    echo "$SYNC_RESULT"
+                  -v "accounts=[$INTERNAL_ACCOUNTS]"); then
+                    echo "ERROR: Failed to synchronize internal accounts for participant $i (see above for details)"
                 fi
             fi
 
             # Also synchronize the funding account before retrying doDkg
             FUNDING_ACCOUNT="${FUNDING_ACCOUNTS[$((i-1))]}"
-            SYNC_RESULT=$(gq "$GRAPHQL_URL" \
+            if ! SYNC_RESULT=$(gq_check "$GRAPHQL_URL" \
               -q 'mutation ($account: Int!) {
                 synchronizeAccount(idAccount: $account)
               }' \
-              -v "account=$FUNDING_ACCOUNT" 2>&1)
-
-            if echo "$SYNC_RESULT" | grep -q "error"; then
-                echo "WARNING: Failed to synchronize participant $i funding account:"
-                echo "$SYNC_RESULT"
+              -v "account=$FUNDING_ACCOUNT"); then
+                echo "WARNING: Failed to synchronize participant $i funding account (continuing...)"
             fi
 
             # Retry doDkg to continue to next round
-            DKG_RESULT=$(gq "$GRAPHQL_URL" \
+            if ! DKG_RESULT=$(gq_check "$GRAPHQL_URL" \
               -q 'mutation {
                 doDkg
-              }' 2>&1)
-
-            if echo "$DKG_RESULT" | grep -q "error"; then
-                echo "ERROR: Failed to execute doDkg for participant $i:"
-                echo "$DKG_RESULT"
+              }'); then
+                echo "ERROR: Failed to execute doDkg for participant $i (see above for details)"
             fi
         fi
     done
@@ -458,7 +471,7 @@ if [ $ELAPSED -ge $TIMEOUT ]; then
 fi
 
 echo ""
-echo "=== Step 5: Wait for DKG completion and verify results ==="
+echo "=== Step 8: Wait for DKG completion and verify results ==="
 
 # Check that all participants generated the same shared address
 SHARED_ADDRESS=null
@@ -505,7 +518,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 7: Fund the shared FROST address ==="
+echo "=== Step 9: Fund the shared FROST address ==="
 
 # Synchronize the main wallet to get latest balance
 gq "$DEFAULT_URL" \
@@ -525,7 +538,7 @@ FUNDING_BALANCE=$(gq "$DEFAULT_URL" \
 echo "Funding wallet balance: $FUNDING_BALANCE"
 
 # Send funds to shared FROST address
-echo "Sending 10 ZEC to shared FROST address..."
+echo "Sending 0.1 ZEC to shared FROST address..."
 TXID=$(gq "$DEFAULT_URL" \
   -q 'mutation ($account: Int!, $address: String!, $amount: BigDecimal!){
     pay(idAccount: $account
@@ -538,12 +551,12 @@ TXID=$(gq "$DEFAULT_URL" \
     }' \
   -v "account=$MAIN_WALLET" \
   -v "address=$SHARED_ADDRESS" \
-  -v 'amount=10.0' | jq -r '.data.pay')
+  -v 'amount=0.1' | jq -r '.data.pay')
 
 echo "Funding transaction: $TXID"
 
 echo ""
-echo "=== Step 8: Mine blocks and synchronize ==="
+echo "=== Step 10: Mine blocks and synchronize ==="
 
 # Mine blocks to confirm transaction
 echo "Mining blocks..."
@@ -564,7 +577,7 @@ for i in $(seq 1 $N); do
 done
 
 echo ""
-echo "=== Step 9: Verify shared address balance ==="
+echo "=== Step 11: Verify shared address balance ==="
 
 for i in $(seq 1 $N); do
     GRAPHQL_URL="${GRAPHQL_URLS[$((i-1))]}"
@@ -579,8 +592,8 @@ for i in $(seq 1 $N); do
 
     echo "Participant $i FROST balance: $FINAL_BALANCE"
 
-    if [ "$FINAL_BALANCE" != "10.00000000" ]; then
-        echo "ERROR: Expected 10.00000000, got $FINAL_BALANCE"
+    if [ "$FINAL_BALANCE" != "0.10000000" ]; then
+        echo "ERROR: Expected 0.10000000, got $FINAL_BALANCE"
         echo "Test failed!"
         exit 1
     fi
@@ -590,7 +603,7 @@ echo ""
 echo "=== ✅ DKG Test Passed! ==="
 echo "All 3 participants successfully:"
 echo "  - Generated the same shared address: $SHARED_ADDRESS"
-echo "  - Received funding of 10 ZEC"
+echo "  - Received funding of 0.1 ZEC"
 echo "  - Synchronized independently"
 echo ""
 echo "Shared FROST address: $SHARED_ADDRESS"

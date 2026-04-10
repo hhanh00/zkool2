@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bincode::{config, Decode, Encode};
 use bip39::Mnemonic;
 use futures::TryStreamExt;
@@ -365,10 +365,7 @@ pub async fn run_round<R: Round>(
     // 2. Produce our own secret + outgoing packages if not yet done
     if R::load_secret(conn, account).await?.is_none() {
         let (secret, outgoing) = R::produce(&input)
-            .map_err(|e| {
-                tracing::error!("Round produce failed for account {}: {}", account, e);
-                e
-            })?;
+            .context(format!("Round produce failed for account {}", account))?;
         let recipients_raw = outgoing.into_recipients(route_ctx)?;
 
         let mut tx = conn.begin().await?;
@@ -400,10 +397,7 @@ pub async fn run_round<R: Round>(
     // 4. Collect and advance to the next round
     let secret = R::load_secret(conn, account).await?.unwrap();
     R::collect(input, secret, peers)
-        .map_err(|e| {
-            tracing::error!("Round collect failed for account {}: {}", account, e);
-            e
-        })
+        .context(format!("Round collect failed for account {}", account))
         .map(Some)
 }
 
