@@ -7,7 +7,7 @@ N=3                     # Number of participants
 T=3                      # Threshold (all 3 must participate)
 DEFAULT_PORT=8000        # Port for default GraphQL instance
 PORT_BASE=8001            # Starting port for GraphQL instances
-GRAPHQL_BASE_URL="http://localhost:8137"  # LWD URL for all participants
+LWD_URL="http://localhost:8137"  # LWD URL for all participants
 
 # Path to zkool_graphql binary (relative to script location in example/sh/)
 ZKOOL_GRAPHQL="$(dirname "${BASH_SOURCE[0]}")/../../target/release/zkool_graphql"
@@ -52,8 +52,7 @@ start_instances() {
     "$ZKOOL_GRAPHQL" \
         -d "$DEFAULT_DB" \
         -p $DEFAULT_PORT \
-        -l http://localhost:8137 \
-        -n \
+        -l "$LWD_URL" \
         > "/tmp/graphql_${db_prefix}_default.log" 2>&1 &
 
     PID_DEFAULT=$!
@@ -74,8 +73,7 @@ start_instances() {
         "$ZKOOL_GRAPHQL" \
             -d "$DB_PATH" \
             -p $PORT \
-            -l http://localhost:8137 \
-            -n \
+            -l "$LWD_URL" \
             > "/tmp/graphql_${db_prefix}_${i}.log" 2>&1 &
 
         # Save PID for cleanup
