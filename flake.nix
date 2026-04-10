@@ -35,7 +35,6 @@
           inherit buildInputs nativeBuildInputs;
 
           RUST_BACKTRACE = "1";
-          RUSTFLAGS = pkgs.lib.optionals pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=lld";
 
           shellHook = ''
             echo "🦀 Rust development environment for zkool_graphql"
