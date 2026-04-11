@@ -424,6 +424,9 @@ pub struct FrostSigMessage {
     pub from_id: u16,
     pub idx: u32,
     pub data: Vec<u8>,
+    /// Optional ed25519 signature of the message data.
+    /// If present, the signature covers the sighash, from_id, idx, and data fields.
+    pub signature: Option<[u8; 64]>,
 }
 
 impl FrostSigMessage {
