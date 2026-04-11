@@ -5,6 +5,8 @@ use bincode::{
     config::{self, legacy},
     Decode, Encode,
 };
+use ed25519_dalek::{Signature, SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
+use ed25519_dalek::Signer as Ed25519Signer;
 use frost_rerandomized::{aggregate, sign, RandomizedParams};
 use halo2_proofs::pasta::Fq;
 use pczt::{
@@ -79,9 +81,89 @@ pub struct SignState2 {
     pub sigpackages: Vec<(SigningPackage<P>, Randomizer)>,
 }
 
-const COMMITMENT_PREFIX: &[u8] = b"CMT5";
-const SIGPACKAGE_PREFIX: &[u8] = b"SPK4";
-const SIGSHARE_PREFIX: &[u8] = b"SSH2";
+const COMMITMENT_PREFIX: &[u8] = b"CMT6";
+const SIGPACKAGE_PREFIX: &[u8] = b"SPK5";
+const SIGSHARE_PREFIX: &[u8] = b"SSH3";
+
+/// Load the ed25519 signing key from the database, if available.
+async fn load_signing_key(connection: &mut SqliteConnection, account: u32) -> Result<Option<SigningKey>> {
+    let result = sqlx::query_as::<_, (Vec<u8>,)>(
+        "SELECT signing_keypair FROM dkg_state WHERE account = ? AND signing_keypair IS NOT NULL",
+    )
+    .bind(account)
+    .fetch_optional(&mut *connection)
+    .await?;
+    match result {
+        Some((b,)) => {
+            // Validation is performed before storing to DB, so we can use expect here
+            let arr: [u8; SECRET_KEY_LENGTH] = b
+                .try_into()
+                .expect("invalid SigningKey length");
+            Ok(Some(SigningKey::from_bytes(&arr)))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Load a peer's ed25519 verifying key from the database, if available.
+async fn load_peer_verifying_key(
+    connection: &mut SqliteConnection,
+    account: u32,
+    from_id: u16,
+) -> Result<Option<VerifyingKey>> {
+    let result = sqlx::query_as::<_, (Vec<u8>,)>(
+        "SELECT data FROM dkg_peers WHERE account = ? AND round = 0 AND from_id = ?",
+    )
+    .bind(account)
+    .bind(from_id as u8)
+    .fetch_optional(&mut *connection)
+    .await?;
+    match result {
+        Some((b,)) => {
+            // Validation is performed before storing to DB, so we can use expect here
+            let arr: [u8; 32] = b
+                .try_into()
+                .expect("invalid VerifyingKey length");
+            Ok(Some(VerifyingKey::from_bytes(&arr).expect("invalid VerifyingKey")))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Sign a FrostSigMessage with the given signing key.
+fn sign_message(message: &mut FrostSigMessage, signing_key: &SigningKey) {
+    // Create a signature over the message fields (excluding the signature field itself)
+    let mut payload = vec![];
+    payload.extend_from_slice(&message.sighash);
+    payload.extend_from_slice(&message.from_id.to_be_bytes());
+    payload.extend_from_slice(&message.idx.to_be_bytes());
+    payload.extend_from_slice(&message.data);
+
+    let signature = Ed25519Signer::sign(signing_key, &payload);
+    message.signature = Some(signature.to_bytes());
+}
+
+/// Verify a FrostSigMessage's signature with the given verifying key.
+/// Returns true if verification succeeds or if there's no signature (backward compatibility).
+/// Returns false if verification fails.
+fn verify_message(message: &FrostSigMessage, verifying_key: &VerifyingKey) -> bool {
+    let Some(signature_bytes) = message.signature else {
+        // No signature - this is OK for backward compatibility with old accounts
+        return true;
+    };
+
+    // Signature::from_bytes expects a [u8; 64] reference
+    let signature = Signature::from_bytes(&signature_bytes);
+
+    // Recreate the payload
+    let mut payload = vec![];
+    payload.extend_from_slice(&message.sighash);
+    payload.extend_from_slice(&message.from_id.to_be_bytes());
+    payload.extend_from_slice(&message.idx.to_be_bytes());
+    payload.extend_from_slice(&message.data);
+
+    verifying_key.verify_strict(&payload, &signature).is_ok()
+}
 
 pub async fn reset_sign(connection: &mut SqliteConnection) -> Result<()> {
     delete_frost_state(&mut *connection).await?;
@@ -236,6 +318,8 @@ pub async fn do_sign_impl(
         }
         info!("sign: creating and publishing our commitments");
         let mut tx = connection.begin().await?;
+        // Load signing key for message authentication (if available)
+        let signing_key = load_signing_key(&mut *tx, account).await?;
         let mut recipients = vec![];
         for idx in 0..nsigs {
             info!("sign: creating commitment for idx={}", idx);
@@ -264,12 +348,17 @@ pub async fn do_sign_impl(
                 .execute(&mut *tx)
                 .await?;
             info!("sign: inserted commitment for idx={}", idx);
-            let message = FrostSigMessage {
+            let mut message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
                 from_id: dkg_params.id as u16,
                 idx,
                 data: commitments,
+                signature: None,
             };
+            // Sign the message if we have a signing key
+            if let Some(ref key) = signing_key {
+                sign_message(&mut message, key);
+            }
             let memo_bytes = message.encode_with_prefix(COMMITMENT_PREFIX)?;
             recipients.push((coordinator_address.as_str(), memo_bytes));
             info!("sign: prepared commitment message for idx={}", idx);
@@ -335,6 +424,8 @@ pub async fn do_sign_impl(
 
         // we are the coordinator, let's try to make the sigpackages
         let mut tx = connection.begin().await?;
+        // Load signing key for message authentication (if available)
+        let signing_key = load_signing_key(&mut *tx, account).await?;
         let mut recipients = vec![];
 
         for (idx, c) in commitments_vec.iter().enumerate() {
@@ -388,12 +479,17 @@ pub async fn do_sign_impl(
             let randomized_sigpackage =
                 bincode::encode_to_vec(&randomized_sigpackage, config::legacy())?;
 
-            let message = FrostSigMessage {
+            let mut message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
                 from_id: params.coordinator as u16,
                 idx: idx as u32,
                 data: randomized_sigpackage,
+                signature: None,
             };
+            // Sign the message if we have a signing key
+            if let Some(ref key) = signing_key {
+                sign_message(&mut message, key);
+            }
             let memo_bytes = message.encode_with_prefix(SIGPACKAGE_PREFIX)?;
             // broadcast the sigpackage to all participants
             recipients.push((broadcast_address.as_str(), memo_bytes));
@@ -432,6 +528,8 @@ pub async fn do_sign_impl(
         // we start a database transaction to make sure we don't store
         // the sigshares if we fail to send them
         let mut tx = connection.begin().await?;
+        // Load signing key for message authentication (if available)
+        let signing_key = load_signing_key(&mut *tx, account).await?;
         let mut recipients = vec![];
         for (idx, ((signing_package, randomizer), nonces)) in
             sigpackages.iter().zip(nonces.iter()).enumerate()
@@ -450,12 +548,17 @@ pub async fn do_sign_impl(
             .execute(&mut *tx)
             .await?;
 
-            let message = FrostSigMessage {
+            let mut message = FrostSigMessage {
                 sighash: sighash.clone().try_into().unwrap(),
                 from_id: dkg_params.id as u16,
                 idx: idx as u32,
                 data: signature_share,
+                signature: None,
             };
+            // Sign the message if we have a signing key
+            if let Some(ref key) = signing_key {
+                sign_message(&mut message, key);
+            }
             let memo_bytes = message.encode_with_prefix(SIGSHARE_PREFIX)?;
             // send the sigshare to the coordinator
             recipients.push((coordinator_address.as_str(), memo_bytes));
@@ -717,6 +820,22 @@ async fn decode_memos(
         .await?;
 
     for pkg in pkgs.into_iter().flatten() {
+        // Verify signature if present
+        if let Some(verifying_key) = load_peer_verifying_key(connection, account, pkg.from_id).await? {
+            if !verify_message(&pkg, &verifying_key) {
+                info!(
+                    "decode_memos: rejecting message from participant {} due to invalid signature",
+                    pkg.from_id
+                );
+                continue;
+            }
+            if pkg.signature.is_none() {
+                info!(
+                    "decode_memos: warning - message from participant {} was not signed (backward compatibility)",
+                    pkg.from_id
+                );
+            }
+        }
         fn_store(connection, account, &pkg).await?;
     }
 
