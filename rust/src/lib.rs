@@ -7,6 +7,7 @@ use crate::{lwd::CompactBlock, net::LwdServer};
 #[cfg(feature = "flutter")]
 use frb_generated::StreamSink;
 
+pub mod auth;
 pub mod account;
 pub mod api;
 pub mod bip38;

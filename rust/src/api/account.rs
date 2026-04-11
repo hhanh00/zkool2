@@ -231,6 +231,12 @@ pub async fn new_account(na: &NewAccount, c: &Coin) -> Result<u32> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn get_recovery_code(account: u32, c: &Coin) -> Result<Option<String>> {
+    let mut connection = c.get_connection().await?;
+    crate::db::get_passkey_account_recovery_code(&mut connection, account).await
+}
+
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn has_transparent_pub_key(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
     let r = crate::account::has_transparent_pub_key(&mut connection, c.account).await?;
@@ -308,6 +314,7 @@ pub struct NewAccount {
     pub use_internal: bool,
     pub internal: bool,
     pub ledger: bool,
+    pub passkey_prf: Option<Vec<u8>>,  // 32 bytes from WebAuthn PRF
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
