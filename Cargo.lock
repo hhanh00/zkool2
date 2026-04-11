@@ -5909,6 +5909,7 @@ dependencies = [
  "clap",
  "csv-async",
  "dataloader",
+ "ed25519-dalek",
  "env_logger",
  "figment",
  "flutter_rust_bridge",
