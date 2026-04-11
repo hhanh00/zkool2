@@ -829,6 +829,12 @@ async fn decode_memos(
                 );
                 continue;
             }
+            if pkg.signature.is_none() {
+                info!(
+                    "decode_memos: warning - message from participant {} was not signed (backward compatibility)",
+                    pkg.from_id
+                );
+            }
         }
         fn_store(connection, account, &pkg).await?;
     }
