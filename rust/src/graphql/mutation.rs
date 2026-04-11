@@ -84,6 +84,7 @@ impl Mutation {
             folder: String::new(),
             internal: false,
             ledger: false,
+            passkey_prf: None,
         };
         let id_account = crate::api::account::new_account(&na, &context.coin).await?;
         Ok(id_account as i32)

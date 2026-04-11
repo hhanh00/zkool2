@@ -107,6 +107,15 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     sqlx::query(
+        "CREATE TABLE IF NOT EXISTS passkey_accounts(
+        account INTEGER PRIMARY KEY,
+        recovery_code TEXT UNIQUE NOT NULL
+        )",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS sync_heights(
         account INTEGER,
         pool INTEGER NOT NULL,
@@ -638,6 +647,35 @@ pub async fn store_account_hw(
         .execute(connection)
         .await?;
     Ok(())
+}
+
+pub async fn store_passkey_account(
+    connection: &mut SqliteConnection,
+    account: u32,
+    recovery_code: &str,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO passkey_accounts (account, recovery_code) VALUES (?1, ?2)"
+    )
+    .bind(account)
+    .bind(recovery_code)
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
+pub async fn get_passkey_account_recovery_code(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<String>> {
+    let result = sqlx::query_as(
+        "SELECT recovery_code FROM passkey_accounts WHERE account = ?"
+    )
+    .bind(account)
+    .fetch_optional(connection)
+    .await?;
+
+    Ok(result.map(|(code,)| code))
 }
 
 pub async fn store_account_transparent_sk(

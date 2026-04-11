@@ -2608,6 +2608,7 @@ mixin _$NewAccount {
   bool get useInternal;
   bool get internal;
   bool get ledger;
+  Uint8List? get passkeyPrf;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -2637,7 +2638,9 @@ mixin _$NewAccount {
                 other.useInternal == useInternal) &&
             (identical(other.internal, internal) ||
                 other.internal == internal) &&
-            (identical(other.ledger, ledger) || other.ledger == ledger));
+            (identical(other.ledger, ledger) || other.ledger == ledger) &&
+            const DeepCollectionEquality()
+                .equals(other.passkeyPrf, passkeyPrf));
   }
 
   @override
@@ -2655,11 +2658,12 @@ mixin _$NewAccount {
       pools,
       useInternal,
       internal,
-      ledger);
+      ledger,
+      const DeepCollectionEquality().hash(passkeyPrf));
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger, passkeyPrf: $passkeyPrf)';
   }
 }
 
@@ -2682,7 +2686,8 @@ abstract mixin class $NewAccountCopyWith<$Res> {
       int? pools,
       bool useInternal,
       bool internal,
-      bool ledger});
+      bool ledger,
+      Uint8List? passkeyPrf});
 }
 
 /// @nodoc
@@ -2710,6 +2715,7 @@ class _$NewAccountCopyWithImpl<$Res> implements $NewAccountCopyWith<$Res> {
     Object? useInternal = null,
     Object? internal = null,
     Object? ledger = null,
+    Object? passkeyPrf = freezed,
   }) {
     return _then(_self.copyWith(
       icon: freezed == icon
@@ -2764,6 +2770,10 @@ class _$NewAccountCopyWithImpl<$Res> implements $NewAccountCopyWith<$Res> {
           ? _self.ledger
           : ledger // ignore: cast_nullable_to_non_nullable
               as bool,
+      passkeyPrf: freezed == passkeyPrf
+          ? _self.passkeyPrf
+          : passkeyPrf // ignore: cast_nullable_to_non_nullable
+              as Uint8List?,
     ));
   }
 }
@@ -2872,7 +2882,8 @@ extension NewAccountPatterns on NewAccount {
             int? pools,
             bool useInternal,
             bool internal,
-            bool ledger)?
+            bool ledger,
+            Uint8List? passkeyPrf)?
         $default, {
     required TResult orElse(),
   }) {
@@ -2892,7 +2903,8 @@ extension NewAccountPatterns on NewAccount {
             _that.pools,
             _that.useInternal,
             _that.internal,
-            _that.ledger);
+            _that.ledger,
+            _that.passkeyPrf);
       case _:
         return orElse();
     }
@@ -2926,7 +2938,8 @@ extension NewAccountPatterns on NewAccount {
             int? pools,
             bool useInternal,
             bool internal,
-            bool ledger)
+            bool ledger,
+            Uint8List? passkeyPrf)
         $default,
   ) {
     final _that = this;
@@ -2945,7 +2958,8 @@ extension NewAccountPatterns on NewAccount {
             _that.pools,
             _that.useInternal,
             _that.internal,
-            _that.ledger);
+            _that.ledger,
+            _that.passkeyPrf);
     }
   }
 
@@ -2976,7 +2990,8 @@ extension NewAccountPatterns on NewAccount {
             int? pools,
             bool useInternal,
             bool internal,
-            bool ledger)?
+            bool ledger,
+            Uint8List? passkeyPrf)?
         $default,
   ) {
     final _that = this;
@@ -2995,7 +3010,8 @@ extension NewAccountPatterns on NewAccount {
             _that.pools,
             _that.useInternal,
             _that.internal,
-            _that.ledger);
+            _that.ledger,
+            _that.passkeyPrf);
       case _:
         return null;
     }
@@ -3018,7 +3034,8 @@ class _NewAccount implements NewAccount {
       this.pools,
       required this.useInternal,
       required this.internal,
-      required this.ledger});
+      required this.ledger,
+      this.passkeyPrf});
 
   @override
   final Uint8List? icon;
@@ -3046,6 +3063,8 @@ class _NewAccount implements NewAccount {
   final bool internal;
   @override
   final bool ledger;
+  @override
+  final Uint8List? passkeyPrf;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -3076,7 +3095,9 @@ class _NewAccount implements NewAccount {
                 other.useInternal == useInternal) &&
             (identical(other.internal, internal) ||
                 other.internal == internal) &&
-            (identical(other.ledger, ledger) || other.ledger == ledger));
+            (identical(other.ledger, ledger) || other.ledger == ledger) &&
+            const DeepCollectionEquality()
+                .equals(other.passkeyPrf, passkeyPrf));
   }
 
   @override
@@ -3094,11 +3115,12 @@ class _NewAccount implements NewAccount {
       pools,
       useInternal,
       internal,
-      ledger);
+      ledger,
+      const DeepCollectionEquality().hash(passkeyPrf));
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger, passkeyPrf: $passkeyPrf)';
   }
 }
 
@@ -3123,7 +3145,8 @@ abstract mixin class _$NewAccountCopyWith<$Res>
       int? pools,
       bool useInternal,
       bool internal,
-      bool ledger});
+      bool ledger,
+      Uint8List? passkeyPrf});
 }
 
 /// @nodoc
@@ -3151,6 +3174,7 @@ class __$NewAccountCopyWithImpl<$Res> implements _$NewAccountCopyWith<$Res> {
     Object? useInternal = null,
     Object? internal = null,
     Object? ledger = null,
+    Object? passkeyPrf = freezed,
   }) {
     return _then(_NewAccount(
       icon: freezed == icon
@@ -3205,6 +3229,10 @@ class __$NewAccountCopyWithImpl<$Res> implements _$NewAccountCopyWith<$Res> {
           ? _self.ledger
           : ledger // ignore: cast_nullable_to_non_nullable
               as bool,
+      passkeyPrf: freezed == passkeyPrf
+          ? _self.passkeyPrf
+          : passkeyPrf // ignore: cast_nullable_to_non_nullable
+              as Uint8List?,
     ));
   }
 }

@@ -47,6 +47,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   var isSeed = false;
   var ledger = false;
   var isFvk = false;
+  var multifactorEnabled = false;
   Uint8List? iconBytes;
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -158,6 +159,21 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                     onChanged: (v) => setState(() => restore = v ?? false),
                   ),
                 ),
+                Gap(16),
+                if (!restore)
+                  FormBuilderSwitch(
+                    name: "multifactor",
+                    title: const Text("Enable Multifactor Recovery"),
+                    subtitle: Text("Use passkeys and recovery code", style: TextStyle(fontSize: 12)),
+                    initialValue: multifactorEnabled,
+                    onChanged: (v) {
+                      setState(() => multifactorEnabled = v ?? false);
+                    },
+                  ),
+                if (!restore && multifactorEnabled) ...[
+                  Gap(8),
+                  _buildMultifactorInfoCard(),
+                ],
                 Gap(16),
                 if (restore)
                   FormBuilderSwitch(
@@ -271,6 +287,40 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
 
   void onFrost() => GoRouter.of(context).push("/dkg1");
 
+  Widget _buildMultifactorInfoCard() {
+    return const MultifactorInfoCard();
+  }
+
+  Future<void> _createMultifactorAccount({
+    required String name,
+    required Uint8List? icon,
+    required bool useInternal,
+    required int birth,
+  }) async {
+    try {
+      // Placeholder for multifactor account creation
+      // TODO: Implement full flow with:
+      // - Recovery code input
+      // - Passkey registration
+      // - iCloud sync check
+      // - Account creation with multifactor setup
+
+      if (!mounted) return;
+      await showMessage(
+        context,
+        'Multifactor Recovery\n\n'
+        'This feature will add:\n'
+        '• Face ID / Touch ID authentication\n'
+        '• iCloud sync for passkeys\n'
+        '• Base32-encoded recovery string\n'
+        '• Recovery code (e.g., "john-wallet")\n\n'
+        'Coming soon!',
+      );
+    } catch (e) {
+      if (mounted) await showException(context, e.toString());
+    }
+  }
+
   void onGenerate() async {
     final seed = generateSeed();
     formKey.currentState!.fields["key"]!.didChange(seed);
@@ -284,6 +334,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final formData = formKey.currentState?.value;
       final String? name = formData?["name"];
       final bool? restore = formData?["restore"];
+      final bool multifactor = formData?["multifactor"] as bool? ?? false;
       final bool ledger = formData?["ledger"] as bool? ?? false;
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
@@ -301,6 +352,17 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           message: "Are you sure you don't want to enter the birth height?",
         );
         if (!confirmed) return;
+      }
+
+      // Handle multifactor account creation
+      if (!r && multifactor) {
+        await _createMultifactorAccount(
+          name: name ?? "",
+          icon: icon,
+          useInternal: useInternal ?? false,
+          birth: birth != null ? int.parse(birth) : currentHeight ?? 1,
+        );
+        return;
       }
 
       final bh = birth != null ? int.parse(birth) : currentHeight ?? 1;
@@ -381,5 +443,101 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       logger.e(e);
       if (mounted) await showException(context, e.message);
     }
+  }
+}
+
+class MultifactorInfoCard extends StatelessWidget {
+  const MultifactorInfoCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final tt = t.textTheme;
+    final cs = t.colorScheme;
+    final bodySmall = tt.bodySmall;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: cs.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Multifactor Recovery Setup',
+                style: tt.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const Gap(16),
+          Text(
+            'How it works:',
+            style: tt.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: t.colorScheme.primary,
+            ),
+          ),
+          const Gap(8),
+          Text(
+            'Your secret keys are derived from either:',
+            style: bodySmall,
+          ),
+          Text(
+            '• a device secret (cloud synced passkey)',
+            style: bodySmall,
+          ),
+          Text(
+            '• or a Recovery code for backup',
+            style: bodySmall,
+          ),
+          const Gap(8),
+          Text(
+            'Restore via: iCloud / Google Password Manager OR recovery code',
+            style: bodySmall?.copyWith(
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const Gap(12),
+          InkWell(
+            onTap: () async {
+              // TODO: Replace with actual documentation URL
+              // await launchUrl(Uri.parse('https://your-docs-url.com/multifactor'));
+              // For now, show a placeholder message
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Documentation link coming soon!'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.description, size: 16, color: t.colorScheme.primary),
+                const SizedBox(width: 4),
+                Text(
+                  'Learn more in documentation',
+                  style: tt.bodySmall?.copyWith(
+                    color: t.colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

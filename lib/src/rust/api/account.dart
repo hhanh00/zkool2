@@ -55,6 +55,9 @@ Future<void> reorderAccount(
 Future<int> newAccount({required NewAccount na, required Coin c}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na, c: c);
 
+Future<String?> getRecoveryCode({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetRecoveryCode(account: account, c: c);
+
 Future<bool> hasTransparentPubKey({required Coin c}) =>
     RustLib.instance.api.crateApiAccountHasTransparentPubKey(c: c);
 
@@ -298,6 +301,7 @@ sealed class NewAccount with _$NewAccount {
     required bool useInternal,
     required bool internal,
     required bool ledger,
+    Uint8List? passkeyPrf,
   }) = _NewAccount;
 }
 

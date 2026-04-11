@@ -138,20 +138,45 @@ pub async fn new_account(
             .await?;
         }
         update_dindex(&mut db_tx, account, dindex, true).await?;
-    } else if is_valid_phrase(&key) {
-        let seed_phrase = bip39::Mnemonic::from_str(&key)?;
-        let passphrase = na.passphrase.clone().unwrap_or_default();
-        let seed = seed_phrase.to_seed(&passphrase);
+    } else if is_valid_phrase(&key) || na.passkey_prf.is_some() {
+        // Handle both seed phrase and passkey accounts
+        let (seed, recovery_code) = if na.passkey_prf.is_some() {
+            // Passkey path: derive seed from PRF
+            let prf_bytes = na.passkey_prf.as_ref().unwrap();
+            let prf_array: [u8; 32] = prf_bytes.clone().try_into()
+                .map_err(|_| anyhow!("Invalid PRF output"))?;
+
+            let derived_seed = crate::auth::derive_seed_from_passkey_prf(prf_array).to_vec();
+            let code = crate::auth::encode_recovery_code(
+                derived_seed.clone().try_into().unwrap()
+            );
+
+            (derived_seed, Some(code))
+        } else {
+            // Seed phrase path: derive seed from mnemonic
+            let seed_phrase = bip39::Mnemonic::from_str(&key)?;
+            let passphrase = na.passphrase.clone().unwrap_or_default();
+            let seed = seed_phrase.to_seed(&passphrase);
+            (seed.to_vec(), None)
+        };
+
         let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+
+        // Store seed info (empty for passkey accounts)
+        let seed_phrase = if recovery_code.is_some() { "" } else { &key };
         store_account_seed(
             &mut db_tx,
             account,
-            &key,
-            &passphrase,
+            seed_phrase,
+            "",
             &seed_fingerprint,
             na.aindex,
-        )
-        .await?;
+        ).await?;
+
+        // Store passkey metadata if applicable
+        if let Some(ref code) = recovery_code {
+            crate::db::store_passkey_account(&mut db_tx, account, code).await?;
+        }
         let usk = UnifiedSpendingKey::from_seed(
             &network,
             &seed,
