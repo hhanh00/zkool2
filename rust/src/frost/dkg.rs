@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::{Context, Result};
+use ed25519_dalek::{SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
 use orchard::keys::{FullViewingKey, Scope};
 use rand_core::OsRng;
 use reddsa::frost::redpallas::{
@@ -29,6 +30,38 @@ pub use super::protocol::{
     get_addresses, get_coordinator_broadcast_account, get_mailbox_account, publish, run_round,
 };
 
+// ── FrostBytes for ed25519 types ─────────────────────────────────────────────
+
+impl FrostBytes for SigningKey {
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        Ok(self.to_bytes().to_vec())
+    }
+
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        if data.len() != SECRET_KEY_LENGTH {
+            anyhow::bail!("Invalid SigningKey length: expected {}, got {}", SECRET_KEY_LENGTH, data.len());
+        }
+        let arr: [u8; SECRET_KEY_LENGTH] = data[..SECRET_KEY_LENGTH].try_into()
+            .map_err(|_| anyhow::anyhow!("Failed to convert slice to array"))?;
+        Ok(SigningKey::from_bytes(&arr))
+    }
+}
+
+impl FrostBytes for VerifyingKey {
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        Ok(self.as_bytes().to_vec())
+    }
+
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        if data.len() != 32 {
+            anyhow::bail!("Invalid VerifyingKey length: expected 32, got {}", data.len());
+        }
+        let arr: [u8; 32] = data.try_into()
+            .map_err(|_| anyhow::anyhow!("Failed to convert slice to array"))?;
+        VerifyingKey::from_bytes(&arr).map_err(|e| anyhow::anyhow!("Invalid VerifyingKey: {}", e))
+    }
+}
+
 // ── State types ──────────────────────────────────────────────────────────────
 
 /// Seed data for the first DKG round.
@@ -38,9 +71,17 @@ pub struct DkgInit {
     pub t: u8,
 }
 
+/// State after round 0 completes: our signing keypair + all peers' public keys.
+pub struct DkgState0 {
+    pub init: DkgInit,
+    pub signing_key: SigningKey,
+    pub verifying_key: VerifyingKey,
+    pub peer_verifying_keys: BTreeMap<u8, VerifyingKey>,
+}
+
 /// State after round 1 completes: our secret + all peers' round-1 packages.
 pub struct DkgState1 {
-    pub init: DkgInit,
+    pub state0: DkgState0,
     pub spkg1: round1::SecretPackage,
     pub ppkg1s: BTreeMap<Identifier, round1::Package>,
 }
@@ -52,12 +93,123 @@ pub struct DkgState2 {
     pub ppkg2s: BTreeMap<Identifier, round2::Package>,
 }
 
+// ── DkgRound0 ────────────────────────────────────────────────────────────────
+
+pub struct DkgRound0;
+
+impl Round for DkgRound0 {
+    type Input = DkgInit;
+    type Output = DkgState0;
+    type Secret = SigningKey;
+    type Outgoing = Broadcast<VerifyingKey>;
+    type Public = VerifyingKey;
+
+    const PREFIX: [u8; 4] = *b"DK00";
+
+    /// Need all other participants' public keys.
+    fn threshold(_n: u8, t: u8) -> usize {
+        t as usize
+    }
+
+    fn produce(input: &DkgInit) -> Result<(SigningKey, Broadcast<VerifyingKey>)> {
+        info!("DKG Round0: generating signing keypair (self_id={}, n={}, t={})", input.self_id, input.n, input.t);
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let verifying_key = signing_key.verifying_key();
+        info!("DKG Round0: signing keypair generated, public key: {}", hex::encode(verifying_key.as_bytes()));
+        Ok((signing_key, Broadcast(verifying_key.clone())))
+    }
+
+    fn collect(
+        input: DkgInit,
+        signing_key: SigningKey,
+        peers: Vec<(u8, VerifyingKey)>,
+    ) -> Result<DkgState0> {
+        let verifying_key = signing_key.verifying_key().clone();
+        let peer_verifying_keys: BTreeMap<u8, VerifyingKey> = peers
+            .into_iter()
+            .filter(|(id, _)| *id != input.self_id)  // Skip our own key
+            .map(|(id, pk)| (id, pk))
+            .collect();
+        info!("DKG Round0: collected {} peer verifying keys", peer_verifying_keys.len());
+        Ok(DkgState0 {
+            init: input,
+            signing_key,
+            verifying_key,
+            peer_verifying_keys,
+        })
+    }
+
+    async fn load_secret(conn: &mut SqliteConnection, account: u32) -> Result<Option<SigningKey>> {
+        let result = sqlx::query_as::<_, (Vec<u8>,)>("SELECT signing_keypair FROM dkg_state WHERE account = ? AND signing_keypair IS NOT NULL")
+            .bind(account)
+            .fetch_optional(&mut *conn)
+            .await?;
+        match result {
+            Some((b,)) => {
+                if b.len() != SECRET_KEY_LENGTH {
+                    anyhow::bail!("Invalid SigningKey length in DB: expected {}, got {}", SECRET_KEY_LENGTH, b.len());
+                }
+                let arr: [u8; SECRET_KEY_LENGTH] = b.try_into()
+                    .map_err(|_| anyhow::anyhow!("Failed to convert DB bytes to array"))?;
+                Ok(Some(SigningKey::from_bytes(&arr)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn store_secret(conn: &mut SqliteConnection, account: u32, s: &SigningKey) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO dkg_state(account, signing_keypair) VALUES(?1, ?2)
+            ON CONFLICT(account) DO UPDATE SET signing_keypair = excluded.signing_keypair",
+        )
+        .bind(account)
+        .bind(s.to_bytes().to_vec())
+        .execute(&mut *conn)
+        .await?;
+        Ok(())
+    }
+
+    async fn store_public(conn: &mut SqliteConnection, account: u32, from_id: u8, p: &VerifyingKey) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 0, ?2, ?3)
+            ON CONFLICT DO NOTHING",
+        )
+        .bind(account)
+        .bind(from_id)
+        .bind(p.as_bytes().to_vec())
+        .execute(&mut *conn)
+        .await?;
+        Ok(())
+    }
+
+    async fn load_publics(conn: &mut SqliteConnection, account: u32) -> Result<Vec<(u8, VerifyingKey)>> {
+        let rows = sqlx::query("SELECT from_id, data FROM dkg_peers WHERE account = ? AND round = 0")
+            .bind(account)
+            .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<Vec<u8>, _>(1)))
+            .fetch_all(&mut *conn)
+            .await?;
+
+        let mut result = Vec::new();
+        for (id, data) in rows {
+            if data.len() != 32 {
+                anyhow::bail!("Invalid VerifyingKey length for participant {}: expected 32, got {}", id, data.len());
+            }
+            let arr: [u8; 32] = data.try_into()
+                .map_err(|_| anyhow::anyhow!("Failed to convert VerifyingKey bytes for participant {}", id))?;
+            let vk = VerifyingKey::from_bytes(&arr)
+                .map_err(|e| anyhow::anyhow!("Invalid VerifyingKey for participant {}: {}", id, e))?;
+            result.push((id, vk));
+        }
+        Ok(result)
+    }
+}
+
 // ── DkgRound1 ────────────────────────────────────────────────────────────────
 
 pub struct DkgRound1;
 
 impl Round for DkgRound1 {
-    type Input = DkgInit;
+    type Input = DkgState0;
     type Output = DkgState1;
     type Secret = round1::SecretPackage;
     type Outgoing = Broadcast<round1::Package>;
@@ -70,12 +222,12 @@ impl Round for DkgRound1 {
         t as usize
     }
 
-    fn produce(input: &DkgInit) -> Result<(round1::SecretPackage, Broadcast<round1::Package>)> {
-        info!("DKG: calling dkg::part1 (self_id={}, n={}, t={})", input.self_id, input.n, input.t);
+    fn produce(input: &DkgState0) -> Result<(round1::SecretPackage, Broadcast<round1::Package>)> {
+        info!("DKG: calling dkg::part1 (self_id={}, n={}, t={})", input.init.self_id, input.init.n, input.init.t);
         let (spkg1, ppkg1) = dkg::part1(
-            (input.self_id as u16).try_into()?,
-            input.n as u16,
-            input.t as u16,
+            (input.init.self_id as u16).try_into()?,
+            input.init.n as u16,
+            input.init.t as u16,
             OsRng,
         )?;
         info!("DKG: dkg::part1 completed successfully");
@@ -83,16 +235,16 @@ impl Round for DkgRound1 {
     }
 
     fn collect(
-        input: DkgInit,
+        input: DkgState0,
         spkg1: round1::SecretPackage,
         peers: Vec<(u8, round1::Package)>,
     ) -> Result<DkgState1> {
         let ppkg1s = peers
             .into_iter()
-            .filter(|(id, _)| *id != input.self_id)  // Skip our own package
+            .filter(|(id, _)| *id != input.init.self_id)  // Skip our own package
             .map(|(id, pkg)| Ok(((id as u16).try_into()?, pkg)))
             .collect::<Result<_>>()?;
-        Ok(DkgState1 { init: input, spkg1, ppkg1s })
+        Ok(DkgState1 { state0: input, spkg1, ppkg1s })
     }
 
     async fn load_secret(conn: &mut SqliteConnection, account: u32) -> Result<Option<round1::SecretPackage>> {
@@ -161,12 +313,12 @@ impl Round for DkgRound2 {
 
     fn produce(input: &DkgState1) -> Result<(round2::SecretPackage, PerPeer<round2::Package>)> {
         // part2 takes spkg1 by value — clone since input is borrowed
-        info!("DKG: calling dkg::part2 (self_id={}, n={}, t={})", input.init.self_id, input.init.n, input.init.t);
+        info!("DKG: calling dkg::part2 (self_id={}, n={}, t={})", input.state0.init.self_id, input.state0.init.n, input.state0.init.t);
         info!("DKG: have {} peer packages for part2", input.ppkg1s.len());
         let (spkg2, ppkg2s) = dkg::part2(input.spkg1.clone(), &input.ppkg1s)?;
         info!("DKG: dkg::part2 completed successfully");
         // Convert BTreeMap<Identifier, Package> → BTreeMap<u8, Package>
-        let per_peer: BTreeMap<u8, round2::Package> = (1u8..=input.init.n)
+        let per_peer: BTreeMap<u8, round2::Package> = (1u8..=input.state0.init.n)
             .filter_map(|i| {
                 let id: Identifier = (i as u16).try_into().ok()?;
                 let pkg = ppkg2s.get(&id)?.clone();
@@ -183,7 +335,7 @@ impl Round for DkgRound2 {
     ) -> Result<DkgState2> {
         let ppkg2s = peers
             .into_iter()
-            .filter(|(id, _)| *id != state1.init.self_id)  // Skip our own package
+            .filter(|(id, _)| *id != state1.state0.init.self_id)  // Skip our own package
             .map(|(id, pkg)| Ok(((id as u16).try_into()?, pkg)))
             .collect::<Result<_>>()?;
         Ok(DkgState2 { state1, spkg2, ppkg2s })
@@ -412,15 +564,35 @@ pub async fn do_dkg_impl(
         peer_addresses: addresses,
     };
 
-    // ── Round 1: everyone broadcasts one package to the shared address ────────
+    // ── Round 0: broadcast signing public keys ────────────────────────────────
     let init = DkgInit { self_id, n, t };
-    let Some(state1) = run_round::<DkgRound1>(
+    let Some(state0) = run_round::<DkgRound0>(
         connection,
         account,
         n, t, self_id,
         account,            // funding_account
         broadcast_account,  // incoming memos arrive at broadcast
         init,
+        &route_ctx,
+        network,
+        client,
+        height,
+    )
+    .await?
+    else {
+        status.send(DKGStatus::WaitRound1Pkg).await; // TODO: add WaitRound0Pkg status
+        return Ok(());
+    };
+    info!("Round 0 complete - collected {} peer signing keys", state0.peer_verifying_keys.len());
+
+    // ── Round 1: everyone broadcasts one package to the shared address ────────
+    let Some(state1) = run_round::<DkgRound1>(
+        connection,
+        account,
+        n, t, self_id,
+        account,            // funding_account
+        broadcast_account,  // incoming memos arrive at broadcast
+        state0,
         &route_ctx,
         network,
         client,

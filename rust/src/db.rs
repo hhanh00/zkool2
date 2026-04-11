@@ -394,7 +394,12 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         .execute(&mut *connection)
         .await;
 
-    // V8 — migrate dkg_packages into dkg_addresses / dkg_state / dkg_peers
+    // V8 — signing key for FROST message authentication
+    let _ = sqlx::query("ALTER TABLE dkg_state ADD COLUMN signing_keypair BLOB")
+        .execute(&mut *connection)
+        .await;
+
+    // V9 — migrate dkg_packages into dkg_addresses / dkg_state / dkg_peers
     // dkg_packages round=0, public=1  → dkg_addresses
     sqlx::query(
         "INSERT OR IGNORE INTO dkg_addresses (account, from_id, address)
