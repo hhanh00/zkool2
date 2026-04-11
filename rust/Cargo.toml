@@ -118,7 +118,7 @@ ledger-transport-zemu = {version = "0.10.0", optional = true}
 [dependencies.zcvlib]
 #path = "../../zcv/zcvlib"
 git = "https://github.com/hhanh00/zcv"
-rev = "6d63d054f3b3eb3c6b7a620d31730c5595f36bd0"
+rev = "83b450682c87efeefb5b923dc41946a37724b577"
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -142,7 +142,7 @@ tonic-prost-build = "0.14"
 
 [features]
 default = ["flutter"]
-flutter = ["flutter_rust_bridge", "zcvlib"]
+flutter = ["flutter_rust_bridge", "zcvlib/client"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
