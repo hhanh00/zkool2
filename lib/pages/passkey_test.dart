@@ -195,6 +195,7 @@ class _PasskeyTestScreenState extends State<PasskeyTestScreen> {
       final response = await FlutterPasskeyService.authenticate(authOptions);
 
       _addLog('✅ Authentication successful!');
+      _addLog('Credential ID: ${response.id.substring(0, 20)}...');
       _addLog('Checking for PRF results...');
 
       // Check PRF results
