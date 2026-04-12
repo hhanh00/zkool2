@@ -30,7 +30,7 @@ class _PasskeyTestScreenState extends State<PasskeyTestScreen> {
   final _logMessages = <String>[];
 
   // Fixed salt for determinism testing (challenge can vary)
-  String? _fixedSalt;
+  final String _fixedSalt = base64Encode("salt".codeUnits);
 
   @override
   void dispose() {
@@ -65,18 +65,10 @@ class _PasskeyTestScreenState extends State<PasskeyTestScreen> {
       });
 
       // Generate or use fixed salt (challenge can vary)
-      if (_fixedSalt == null) {
-        final salt = _generateChallenge();
-        _fixedSalt = base64Url.encode(salt);
-        _addLog('Generated NEW PRF salt: ${_fixedSalt!.substring(0, 20)}...');
-      } else {
-        _addLog('Using EXISTING PRF salt: ${_fixedSalt!.substring(0, 20)}...');
-      }
-
       _addLog('RP ID: $_rpId');
       _addLog('RP Name: $_rpName');
       _addLog('PRF Key: "seed"');
-      _addLog('PRF Salt: ${_fixedSalt!.substring(0, 20)}...');
+      _addLog('PRF Salt: $_fixedSalt');
 
       // First, we need to register a passkey
       await _registerPasskey();
@@ -100,11 +92,6 @@ class _PasskeyTestScreenState extends State<PasskeyTestScreen> {
     try {
       _addLog('');
       _addLog('--- Step 2: Second PRF Derivation ("Authentication") ---');
-
-      if (_fixedSalt == null) {
-        _addLog('❌ No salt available. Register first.');
-        return;
-      }
 
       setState(() {
         _isLoading = true;
@@ -178,27 +165,22 @@ class _PasskeyTestScreenState extends State<PasskeyTestScreen> {
       _addLog('');
       _addLog('--- PRF Seed Derivation ($step) ---');
 
-      if (_fixedSalt == null) {
-        _addLog('❌ Salt not set. Run Step 1 first.');
-        return;
-      }
-
       // Generate NEW challenge each time (allowed!)
       final challenge = _generateChallenge();
       final challengeBase64 = base64Url.encode(challenge);
       _addLog('Generated NEW challenge: ${challengeBase64.substring(0, 20)}...');
-      _addLog('Using SAME salt: ${_fixedSalt!.substring(0, 20)}...');
+      _addLog('Using SAME salt: $_fixedSalt');
       _addLog('Challenge (base64): ${challengeBase64.substring(0, 20)}...');
 
       // Create authentication options WITH PRF
       _addLog('Creating authentication options WITH PRF...');
-      _addLog('PRF eval: {"first": "${_fixedSalt!.substring(0, 20)}..."}');
+      _addLog('PRF eval: {"first": "$_fixedSalt"}');
 
       final authOptions = FlutterPasskeyService.createAuthenticationOptions(
         challenge: challengeBase64,
         rpId: _rpId,
         prfEval: {
-          'first': _fixedSalt!,
+          'first': _fixedSalt,
         },
       );
       _addLog('Authentication options created');
@@ -391,7 +373,7 @@ class _PasskeyTestScreenState extends State<PasskeyTestScreen> {
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton.icon(
-                  onPressed: (_fixedSalt != null && !_isLoading) ? _authenticateWithPrf : null,
+                  onPressed: (!_isLoading) ? _authenticateWithPrf : null,
                   icon: const Icon(Icons.lock),
                   label: const Text('Step 2: Verify Determinism'),
                   style: ElevatedButton.styleFrom(
