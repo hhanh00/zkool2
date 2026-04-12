@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
+import 'package:zkool/pages/passkey_test.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/pages/db.dart';
@@ -111,6 +112,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
             builder: (context, state) => SettingsPage()),
         GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
         GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
+        GoRoute(path: '/passkey_test', builder: (context, state) => const PasskeyTestScreen()),
         GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),

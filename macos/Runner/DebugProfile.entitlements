@@ -20,6 +20,9 @@
 	<true/>
 	<key>com.apple.security.device.usb</key>
 	<true/>
-<true/>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:hhanh00.github.io</string>
+	</array>
 </dict>
 </plist>

@@ -187,6 +187,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                   onCategory();
                 case "folder":
                   onFolder();
+                case "passkey_test":
+                  onPasskeyTest();
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -201,6 +203,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
               const PopupMenuItem<String>(
                 value: "category",
                 child: Text("Categories"),
+              ),
+              const PopupMenuItem<String>(
+                value: "passkey_test",
+                child: Text("Passkey Test"),
               ),
               PopupMenuItem<String>(
                 value: 'hide',
@@ -229,6 +235,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
 
   onCategory() async {
     await GoRouter.of(context).push("/categories");
+  }
+
+  onPasskeyTest() async {
+    await GoRouter.of(context).push("/passkey_test");
   }
 
   onSync() async {

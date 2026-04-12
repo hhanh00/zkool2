@@ -507,6 +507,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.7"
+  flutter_passkey_service:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: "9b9fdb1bdf8d7cdd5dbedebbf4c6f9ba30b04937"
+      url: "https://github.com/hhanh00/flutter_passkey_service.git"
+    source: git
+    version: "0.0.5"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
