@@ -77,7 +77,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
     if (account != null) c = await c.setAccount(account: account.id);
 
     final settings = await ref.read(appSettingsProvider.future);
-    if (settings.vault) {
+    if (settings.vault && !settings.offline) {
       final googleSignIn = GoogleSignIn(
         scopes: ['https://www.googleapis.com/auth/drive.appdata'],
       );
