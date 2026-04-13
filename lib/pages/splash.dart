@@ -92,6 +92,11 @@ class SplashPageState extends ConsumerState<SplashPage> {
       }
       logger.i("Signed in Google Drive.");
 
+      // TODO: Remove this
+      // Just some basic testing code
+      final vault = ref.read(vaultProvider.notifier);
+      await vault.test();
+
       // Get authenticated client for googleapis
       // commented out and left as reference for the time being
       // final httpClient = await _googleSignIn.authenticatedClient();

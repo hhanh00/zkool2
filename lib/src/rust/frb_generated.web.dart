@@ -19,6 +19,7 @@ import 'api/raptor.dart';
 import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
+import 'api/vault.dart';
 import 'api/vote.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -39,6 +40,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_ContextPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext;
 
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_DartVaultPtr =>
+      wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault;
+
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_MempoolPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool;
 
@@ -52,6 +56,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   Context
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
+          dynamic raw);
+
+  @protected
+  DartVault
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
           dynamic raw);
 
   @protected
@@ -75,13 +84,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           dynamic raw);
 
   @protected
+  DartVault
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          dynamic raw);
+
+  @protected
   TransparentScanner
       dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           dynamic raw);
 
   @protected
+  FutureOr<Uint8List> Function()
+      dco_decode_DartFn_Inputs__Output_list_prim_u_8_strict_AnyhowException(
+          dynamic raw);
+
+  @protected
+  FutureOr<void> Function(Uint8List)
+      dco_decode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
+          dynamic raw);
+
+  @protected
+  Object dco_decode_DartOpaque(dynamic raw);
+
+  @protected
   Context
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
+          dynamic raw);
+
+  @protected
+  DartVault
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
           dynamic raw);
 
   @protected
@@ -213,6 +245,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_isize(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
@@ -457,6 +492,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
+  DartVault
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          SseDeserializer deserializer);
+
+  @protected
   Mempool
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
           SseDeserializer deserializer);
@@ -477,13 +517,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
+  DartVault
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          SseDeserializer deserializer);
+
+  @protected
   TransparentScanner
       sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           SseDeserializer deserializer);
 
   @protected
+  Object sse_decode_DartOpaque(SseDeserializer deserializer);
+
+  @protected
   Context
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
+          SseDeserializer deserializer);
+
+  @protected
+  DartVault
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
           SseDeserializer deserializer);
 
   @protected
@@ -624,6 +677,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_isize(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
@@ -881,6 +937,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          DartVault self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
           Mempool self, SseSerializer serializer);
 
@@ -901,13 +962,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          DartVault self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           TransparentScanner self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_DartFn_Inputs__Output_list_prim_u_8_strict_AnyhowException(
+      FutureOr<Uint8List> Function() self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
+          FutureOr<void> Function(Uint8List) self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_DartOpaque(Object self, SseSerializer serializer);
 
   @protected
   void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
           Context self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          DartVault self, SseSerializer serializer);
 
   @protected
   void
@@ -1054,6 +1137,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_isize(PlatformInt64 self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
@@ -1332,6 +1418,18 @@ class RustLibWire implements BaseWire {
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
               ptr);
 
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+              ptr);
+
   void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
           int ptr) =>
       wasmModule
@@ -1369,6 +1467,14 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
       rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerContext(
+          int ptr);
+
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
           int ptr);
 
   external void
