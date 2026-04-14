@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
@@ -7,6 +8,8 @@ import 'package:convert/convert.dart';
 import 'package:decimal/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
+import 'package:flutter_passkey_service/flutter_passkey_service.dart';
+import 'package:flutter_passkey_service/pigeons/messages.g.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -503,4 +506,47 @@ T ensureAV<T>(BuildContext context, AsyncValue<T> av) {
 
 extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);
+}
+
+// domain associated with zkool,
+// ie the author's github account
+const rpId = 'hhanh00.github.io';
+const rpName = 'zkool';
+
+Future<CreatePasskeyResponseData?> registerPasskey() async {
+  // try authenticate first — passkey survives app uninstall (OS keystore)
+  try {
+    await authenticatePasskey();
+    return null; // already registered
+  } catch (_) {
+    // no existing passkey — proceed to register
+  }
+
+  final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
+  final options = FlutterPasskeyService.createRegistrationOptions(
+    challenge: base64Url.encode(challenge),
+    rpName: rpName,
+    rpId: rpId,
+    userId: rpName,
+    username: rpName,
+    displayName: rpName,
+    enablePrf: true,
+  );
+  final response = await FlutterPasskeyService.register(options);
+  return response;
+}
+
+const _prfSalt = 'c2FsdA=='; // base64 of "salt"
+
+Future<Uint8List> authenticatePasskey() async {
+  final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
+  final options = FlutterPasskeyService.createAuthenticationOptions(
+    challenge: base64Url.encode(challenge),
+    rpId: rpId,
+    prfEval: {'first': _prfSalt},
+  );
+  final response = await FlutterPasskeyService.authenticate(options);
+  final derivedKey = response.clientExtensionResults?.prf?.results?['first'];
+  if (derivedKey == null || derivedKey.isEmpty) throw StateError('PRF derivation failed');
+  return base64Url.decode(base64Url.normalize(derivedKey));
 }
