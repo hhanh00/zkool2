@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
-import 'package:zkool/vault.dart';
 import 'package:zkool/utils.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -78,9 +77,8 @@ class SplashPageState extends ConsumerState<SplashPage> {
 
     final settings = await ref.read(appSettingsProvider.future);
     if (settings.vault && !settings.offline) {
-      // initialize the Vault.instance
-      vault = await Vault.create();
-      Vault.instance = vault;
+      // initialize the Vault via provider
+      await ref.read(vaultProvider.future);
     }
     logger.i("LWD ${settings.lwd}");
     c = c.setLwd(
