@@ -94,11 +94,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           dynamic raw);
 
   @protected
-  FutureOr<Uint8List> Function()
-      dco_decode_DartFn_Inputs__Output_list_prim_u_8_strict_AnyhowException(
-          dynamic raw);
-
-  @protected
   FutureOr<void> Function(Uint8List)
       dco_decode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
           dynamic raw);
@@ -305,6 +300,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<(int, double)> dco_decode_list_record_u_32_f_64(dynamic raw);
 
   @protected
+  List<RestoredAccount> dco_decode_list_restored_account(dynamic raw);
+
+  @protected
   List<TAddressTxCount> dco_decode_list_t_address_tx_count(dynamic raw);
 
   @protected
@@ -416,6 +414,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   (int, String, ElectionPropsPub?)
       dco_decode_record_u_32_string_opt_box_autoadd_election_props_pub(
           dynamic raw);
+
+  @protected
+  RestoredAccount dco_decode_restored_account(dynamic raw);
 
   @protected
   Seed dco_decode_seed(dynamic raw);
@@ -741,6 +742,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<RestoredAccount> sse_decode_list_restored_account(
+      SseDeserializer deserializer);
+
+  @protected
   List<TAddressTxCount> sse_decode_list_t_address_tx_count(
       SseDeserializer deserializer);
 
@@ -858,6 +863,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
+  RestoredAccount sse_decode_restored_account(SseDeserializer deserializer);
+
+  @protected
   Seed sse_decode_seed(SseDeserializer deserializer);
 
   @protected
@@ -969,10 +977,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
       sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           TransparentScanner self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_DartFn_Inputs__Output_list_prim_u_8_strict_AnyhowException(
-      FutureOr<Uint8List> Function() self, SseSerializer serializer);
 
   @protected
   void
@@ -1208,6 +1212,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<(int, double)> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_restored_account(
+      List<RestoredAccount> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_t_address_tx_count(
       List<TAddressTxCount> self, SseSerializer serializer);
 
@@ -1329,6 +1337,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_record_u_32_string_opt_box_autoadd_election_props_pub(
       (int, String, ElectionPropsPub?) self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_restored_account(
+      RestoredAccount self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);

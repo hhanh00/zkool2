@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::{Read, Write};
 
 use anyhow::{Result, anyhow};
@@ -6,6 +7,8 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce, aead::Aead};
 use rand_core::{OsRng, RngCore};
 use x25519_dalek::{PublicKey, StaticSecret};
+
+use crate::api::vault::RestoredAccount;
 
 pub struct AccountPayload {
     pub name: String,
@@ -124,21 +127,25 @@ impl LogEntry {
     }
 }
 
+fn derive_key_from_password(password: &str, salt: &[u8; 16]) -> Result<[u8; 32]> {
+    let params = Params::new(
+        64 * 1024, // 64 MB in KiB
+        3,         // iterations
+        2,         // parallelism
+        Some(32),  // output length
+    ).map_err(|e| anyhow!("Argon2 params failed: {}", e))?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut key = [0u8; 32];
+    argon2.hash_password_into(password.as_bytes(), salt, &mut key)
+        .map_err(|e| anyhow!("Argon2 hashing failed: {}", e))?;
+    Ok(key)
+}
+
 pub fn derive_master_key(password: &str) -> Result<Vec<u8>> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
 
-    let params = Params::new(
-        512 * 1024, // 512 MB in KiB
-        8,          // iterations
-        4,          // parallelism
-        Some(32),   // output length
-    ).map_err(|e| anyhow!("Argon2 params failed: {}", e))?;
-    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-
-    let mut master_key = [0u8; 32];
-    argon2.hash_password_into(password.as_bytes(), &salt, &mut master_key)
-        .map_err(|e| anyhow!("Argon2 hashing failed: {}", e))?;
+    let master_key = derive_key_from_password(password, &salt)?;
 
     let sk = StaticSecret::random_from_rng(OsRng);
     let pk = PublicKey::from(&sk);
@@ -198,4 +205,68 @@ pub fn encrypt_account(account: AccountPayload, pk: PublicKey) -> Result<Vec<u8>
     let mut buf = Vec::new();
     entry.write_to(&mut buf)?;
     Ok(buf)
+}
+
+pub fn recover(vault_bytes: &[u8], master_password: &str) -> Result<Vec<RestoredAccount>> {
+    let mut entries = Vec::new();
+    let mut cursor = std::io::Cursor::new(vault_bytes);
+    while cursor.position() < vault_bytes.len() as u64 {
+        entries.push(LogEntry::read_from(&mut cursor)?);
+    }
+
+    let init = entries.iter().find_map(|e| match e {
+        LogEntry::Init { pk, master_key_protected_sk, argon2_salt } => {
+            Some((*pk, *master_key_protected_sk, *argon2_salt))
+        }
+        _ => None,
+    }).ok_or_else(|| anyhow!("No Init LogEntry found"))?;
+
+    let (_, master_key_protected_sk, salt) = init;
+
+    // Derive master key from password + salt
+    let master_key = derive_key_from_password(master_password, &salt)?;
+
+    // Decrypt sk: nonce is first 12 bytes, ciphertext+tag is remaining 48 bytes
+    let cipher = ChaCha20Poly1305::new(Key::from_slice(&master_key));
+    let nonce = Nonce::from_slice(&master_key_protected_sk[..12]);
+    let sk_bytes = cipher.decrypt(nonce, &master_key_protected_sk[12..] as &[u8])
+        .map_err(|e| anyhow!("Decryption failed: {}", e))?;
+
+    tracing::info!("Recovered sk ({} bytes)", sk_bytes.len());
+
+    let sk = StaticSecret::from(<[u8; 32]>::try_from(sk_bytes).map_err(|_| anyhow!("Invalid sk length"))?);
+
+    let mut deduped: HashMap<([u8; 32], u32), RestoredAccount> = HashMap::new();
+    for entry in &entries {
+        if let LogEntry::Account { ephemeral_pk, nonce, ciphertext } = entry {
+            let ephemeral_pk = PublicKey::from(*ephemeral_pk);
+            let shared_secret = sk.diffie_hellman(&ephemeral_pk);
+
+            let derived_key = blake2b_simd::Params::new()
+                .hash_length(32)
+                .key(shared_secret.as_bytes())
+                .personal(b"zkool-vault-acct")
+                .to_state()
+                .finalize();
+
+            let cipher = ChaCha20Poly1305::new(Key::from_slice(derived_key.as_bytes()));
+            let nonce = Nonce::from_slice(nonce);
+            let plaintext = cipher.decrypt(nonce, ciphertext.as_slice() as &[u8])
+                .map_err(|e| anyhow!("Account decryption failed: {}", e))?;
+
+            let account = AccountPayload::read_from(plaintext.as_slice())?;
+            let mnemonic = bip39::Mnemonic::from_entropy(&account.entropy)?;
+            tracing::info!("Recovered account: name={}, aindex={}, use_internal={}, birth_height={}",
+                account.name, account.aindex, account.use_internal, account.birth_height);
+            deduped.insert((account.entropy, account.aindex), RestoredAccount {
+                name: account.name,
+                seed: mnemonic.to_string(),
+                aindex: account.aindex,
+                use_internal: account.use_internal,
+                birth_height: account.birth_height,
+            });
+        }
+    }
+
+    Ok(deduped.into_values().collect())
 }
