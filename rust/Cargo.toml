@@ -67,6 +67,8 @@ incrementalmerkletree = "0.8"
 reddsa = {version = "0.5.1", features = ["frost"]}
 redjubjub = "0.8"
 
+argon2 = "0.5"
+x25519-dalek = "2.0"
 bincode = {version = "2.0", features = ["serde"]}
 byteorder = "1.5"
 #postcard = "1.1"
@@ -75,6 +77,7 @@ bip32 = {version = "0.6.0-pre.1", default-features = false}
 blake2b_simd = "1.0"
 bs58 = "0.5"
 chacha20 = "0.9"
+chacha20poly1305 = "0.10"
 fpdec = "0.11"
 group = "0.13"
 halo2_gadgets = "0.4"

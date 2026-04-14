@@ -2,6 +2,7 @@ use anyhow::Result;
 
 // #[cfg(flutter)]
 mod dart;
+mod crypto;
 
 #[async_trait]
 pub trait VaultIO {
@@ -26,7 +27,7 @@ impl<IO: VaultIO> Vault<IO> {
         match (old_password, old_bytes) {
             (None, None) => {
                 // New vault
-                // Use _new_password to derive new MP vault
+                return crypto::derive_master_key(&_new_password);
             }
             (Some(_old_password), Some(_bytes)) => {
                 // Existing vault
