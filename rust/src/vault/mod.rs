@@ -17,5 +17,27 @@ pub struct Vault<IO: VaultIO> {
     pub(crate) io_handler: IO,
 }
 
+impl<IO: VaultIO> Vault<IO> {
+    pub async fn set_master_password(
+        old_password: Option<String>,
+        _new_password: String,
+        old_bytes: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>> {
+        match (old_password, old_bytes) {
+            (None, None) => {
+                // New vault
+                // Use _new_password to derive new MP vault
+            }
+            (Some(_old_password), Some(_bytes)) => {
+                // Existing vault
+                // Decrypt current vault with old_password
+                // Encrypt with new password
+            }
+            _ => unreachable!()
+        }
+        Ok(vec![])
+    }
+}
+
 pub use dart::DartVaultIO;
 use tonic::async_trait;

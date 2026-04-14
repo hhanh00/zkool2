@@ -24,4 +24,14 @@ impl DartVault {
         use crate::vault::VaultIO;
         self.0.io_handler.append(vec![1, 2, 3]).await.unwrap();
     }
+
+    #[frb]
+    pub async fn set_master_password(
+        &self,
+        old_password: Option<String>,
+        new_password: String,
+        old_bytes: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>> {
+        Vault::<DartVaultIO>::set_master_password(old_password, new_password, old_bytes).await
+    }
 }
