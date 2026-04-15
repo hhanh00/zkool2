@@ -35,6 +35,19 @@ impl DartVault {
     }
 
     #[frb]
+    pub async fn register_device(
+        &self,
+        init_bytes: Vec<u8>,
+        master_password: String,
+        device_id_str: String,
+        prf_output: Vec<u8>,
+    ) -> Result<()> {
+        let prf = <[u8; 32]>::try_from(prf_output)
+            .map_err(|_| anyhow::anyhow!("Invalid PRF output length, expected 32 bytes"))?;
+        self.0.register_device(init_bytes, master_password, device_id_str, prf).await
+    }
+
+    #[frb]
     pub async fn store_account(
         &self,
         name: String,
@@ -50,6 +63,19 @@ impl DartVault {
     #[frb]
     pub fn recover(&self, vault_bytes: Vec<u8>, master_password: String) -> Result<Vec<RestoredAccount>> {
         let accounts = crate::vault::crypto::recover(&vault_bytes, &master_password)?;
+        Ok(accounts)
+    }
+
+    #[frb]
+    pub fn recover_with_prf(
+        &self,
+        vault_bytes: Vec<u8>,
+        device_id_str: String,
+        prf_output: Vec<u8>,
+    ) -> Result<Vec<RestoredAccount>> {
+        let prf = <[u8; 32]>::try_from(prf_output)
+            .map_err(|_| anyhow::anyhow!("Invalid PRF output length, expected 32 bytes"))?;
+        let accounts = crate::vault::crypto::recover_with_prf(&vault_bytes, &device_id_str, prf)?;
         Ok(accounts)
     }
 }
