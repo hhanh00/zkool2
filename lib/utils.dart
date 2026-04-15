@@ -24,6 +24,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/store.dart';
 
@@ -514,12 +515,12 @@ const rpId = 'hhanh00.github.io';
 const rpName = 'zkool';
 
 Future<CreatePasskeyResponseData?> registerPasskey() async {
-  // try authenticate first — passkey survives app uninstall (OS keystore)
+  // Silent check: prefer on-device credentials only — no QR/remote prompt
   try {
     await authenticatePasskey();
     return null; // already registered
   } catch (_) {
-    // no existing passkey — proceed to register
+    // no existing passkey on this device — proceed to register
   }
 
   final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
@@ -532,8 +533,13 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
     displayName: rpName,
     enablePrf: true,
   );
-  final response = await FlutterPasskeyService.register(options);
-  return response;
+  try {
+    final response = await FlutterPasskeyService.register(options);
+    return response;
+  } catch (_) {
+    // user cancelled or registration failed
+    return null;
+  }
 }
 
 const _prfSalt = 'c2FsdA=='; // base64 of "salt"
@@ -544,9 +550,12 @@ Future<Uint8List> authenticatePasskey() async {
     challenge: base64Url.encode(challenge),
     rpId: rpId,
     prfEval: {'first': _prfSalt},
+    preferImmediatelyAvailableCredentials: true,
   );
   final response = await FlutterPasskeyService.authenticate(options);
   final derivedKey = response.clientExtensionResults?.prf?.results?['first'];
   if (derivedKey == null || derivedKey.isEmpty) throw StateError('PRF derivation failed');
-  return base64Url.decode(base64Url.normalize(derivedKey));
+  final prfBytes = base64Url.decode(base64Url.normalize(derivedKey));
+  logger.i('[PRF] authenticatePasskey: salt=$_prfSalt, prf=${hex.encode(prfBytes.sublist(0, 4))}...');
+  return prfBytes;
 }
