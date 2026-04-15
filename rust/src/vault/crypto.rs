@@ -174,6 +174,64 @@ pub fn derive_master_key(password: &str) -> Result<Vec<u8>> {
     Ok(buf)
 }
 
+pub fn register_device(
+    init_bytes: &[u8],
+    master_password: &str,
+    device_id_str: &str,
+    prf_output: [u8; 32],
+) -> Result<Vec<u8>> {
+    use ripemd::Ripemd160;
+    use sha2::Digest;
+
+    // 1. Parse the Init entry from init_bytes
+    let mut cursor = std::io::Cursor::new(init_bytes);
+    let init_entry = LogEntry::read_from(&mut cursor)?;
+    let (master_key_protected_sk, salt) = match &init_entry {
+        LogEntry::Init { pk: _, master_key_protected_sk, argon2_salt } => {
+            (*master_key_protected_sk, *argon2_salt)
+        }
+        _ => return Err(anyhow!("Expected Init entry")),
+    };
+
+    // 2. Decrypt SK using master password
+    let master_key = derive_key_from_password(master_password, &salt)?;
+    let cipher = ChaCha20Poly1305::new(Key::from_slice(&master_key));
+    let nonce = Nonce::from_slice(&master_key_protected_sk[..12]);
+    let sk_bytes = cipher.decrypt(nonce, &master_key_protected_sk[12..] as &[u8])
+        .map_err(|e| anyhow!("Wrong vault password: {}", e))?;
+
+    // 3. Hash device_id string to 20 bytes (RIPEMD-160)
+    let mut hasher = Ripemd160::new();
+    hasher.update(device_id_str.as_bytes());
+    let device_id: [u8; 20] = hasher.finalize().into();
+
+    // 4. Derive key from PRF output
+    let prf_key = blake2b_simd::Params::new()
+        .hash_length(32)
+        .personal(b"zkool-vault-prf")
+        .to_state()
+        .update(&prf_output)
+        .finalize();
+
+    // 5. Encrypt SK with PRF-derived key
+    let cipher = ChaCha20Poly1305::new(Key::from_slice(prf_key.as_bytes()));
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let ciphertext = cipher.encrypt(nonce, sk_bytes.as_slice() as &[u8])
+        .map_err(|e| anyhow!("Encryption failed: {}", e))?;
+
+    let mut prf_key_protected_sk = [0u8; 60];
+    prf_key_protected_sk[..12].copy_from_slice(&nonce_bytes);
+    prf_key_protected_sk[12..].copy_from_slice(&ciphertext);
+
+    // 6. Create AddDevice entry
+    let entry = LogEntry::AddDevice { device_id, prf_key_protected_sk };
+    let mut buf = Vec::with_capacity(81);
+    entry.write_to(&mut buf)?;
+    Ok(buf)
+}
+
 pub fn encrypt_account(account: AccountPayload, pk: PublicKey) -> Result<Vec<u8>> {
     let mut plaintext = Vec::new();
     account.write_to(&mut plaintext)?;
@@ -208,36 +266,83 @@ pub fn encrypt_account(account: AccountPayload, pk: PublicKey) -> Result<Vec<u8>
 }
 
 pub fn recover(vault_bytes: &[u8], master_password: &str) -> Result<Vec<RestoredAccount>> {
-    let mut entries = Vec::new();
-    let mut cursor = std::io::Cursor::new(vault_bytes);
-    while cursor.position() < vault_bytes.len() as u64 {
-        entries.push(LogEntry::read_from(&mut cursor)?);
-    }
+    let entries = parse_entries(vault_bytes)?;
 
-    let init = entries.iter().find_map(|e| match e {
+    let (_, master_key_protected_sk, salt) = entries.iter().find_map(|e| match e {
         LogEntry::Init { pk, master_key_protected_sk, argon2_salt } => {
             Some((*pk, *master_key_protected_sk, *argon2_salt))
         }
         _ => None,
     }).ok_or_else(|| anyhow!("No Init LogEntry found"))?;
 
-    let (_, master_key_protected_sk, salt) = init;
-
     // Derive master key from password + salt
     let master_key = derive_key_from_password(master_password, &salt)?;
 
     // Decrypt sk: nonce is first 12 bytes, ciphertext+tag is remaining 48 bytes
-    let cipher = ChaCha20Poly1305::new(Key::from_slice(&master_key));
-    let nonce = Nonce::from_slice(&master_key_protected_sk[..12]);
-    let sk_bytes = cipher.decrypt(nonce, &master_key_protected_sk[12..] as &[u8])
-        .map_err(|e| anyhow!("Decryption failed: {}", e))?;
+    let sk_bytes = decrypt_sk(&master_key, &master_key_protected_sk)?;
 
-    tracing::info!("Recovered sk ({} bytes)", sk_bytes.len());
+    tracing::info!("Recovered sk via master password ({} bytes)", sk_bytes.len());
 
+    decrypt_accounts(&entries, &sk_bytes)
+}
+
+pub fn recover_with_prf(
+    vault_bytes: &[u8],
+    device_id_str: &str,
+    prf_output: [u8; 32],
+) -> Result<Vec<RestoredAccount>> {
+    use ripemd::Ripemd160;
+    use sha2::Digest;
+
+    let entries = parse_entries(vault_bytes)?;
+
+    // Hash device_id
+    let mut hasher = Ripemd160::new();
+    hasher.update(device_id_str.as_bytes());
+    let device_id: [u8; 20] = hasher.finalize().into();
+
+    // Derive key from PRF output
+    let prf_key = blake2b_simd::Params::new()
+        .hash_length(32)
+        .personal(b"zkool-vault-prf")
+        .to_state()
+        .update(&prf_output)
+        .finalize();
+
+    // Find matching AddDevice entry and try to decrypt SK
+    let sk_bytes = entries.iter().find_map(|e| match e {
+        LogEntry::AddDevice { device_id: did, prf_key_protected_sk } if *did == device_id => {
+            decrypt_sk(prf_key.as_bytes(), prf_key_protected_sk).ok()
+        }
+        _ => None,
+    }).ok_or_else(|| anyhow!("No matching device entry found"))?;
+
+    tracing::info!("Recovered sk via PRF ({} bytes)", sk_bytes.len());
+
+    decrypt_accounts(&entries, &sk_bytes)
+}
+
+fn parse_entries(vault_bytes: &[u8]) -> Result<Vec<LogEntry>> {
+    let mut entries = Vec::new();
+    let mut cursor = std::io::Cursor::new(vault_bytes);
+    while cursor.position() < vault_bytes.len() as u64 {
+        entries.push(LogEntry::read_from(&mut cursor)?);
+    }
+    Ok(entries)
+}
+
+fn decrypt_sk(key: &[u8], protected_sk: &[u8; 60]) -> Result<Vec<u8>> {
+    let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
+    let nonce = Nonce::from_slice(&protected_sk[..12]);
+    cipher.decrypt(nonce, &protected_sk[12..] as &[u8])
+        .map_err(|e| anyhow!("Decryption failed: {}", e))
+}
+
+fn decrypt_accounts(entries: &[LogEntry], sk_bytes: &[u8]) -> Result<Vec<RestoredAccount>> {
     let sk = StaticSecret::from(<[u8; 32]>::try_from(sk_bytes).map_err(|_| anyhow!("Invalid sk length"))?);
 
     let mut deduped: HashMap<([u8; 32], u32), RestoredAccount> = HashMap::new();
-    for entry in &entries {
+    for entry in entries {
         if let LogEntry::Account { ephemeral_pk, nonce, ciphertext } = entry {
             let ephemeral_pk = PublicKey::from(*ephemeral_pk);
             let shared_secret = sk.diffie_hellman(&ephemeral_pk);

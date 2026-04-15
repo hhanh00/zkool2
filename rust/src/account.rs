@@ -142,7 +142,9 @@ pub async fn new_account(
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let passphrase = na.passphrase.clone().unwrap_or_default();
         let seed = seed_phrase.to_seed(&passphrase);
+
         let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+
         store_account_seed(
             &mut db_tx,
             account,
@@ -150,8 +152,7 @@ pub async fn new_account(
             &passphrase,
             &seed_fingerprint,
             na.aindex,
-        )
-        .await?;
+        ).await?;
         let usk = UnifiedSpendingKey::from_seed(
             &network,
             &seed,
