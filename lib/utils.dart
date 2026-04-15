@@ -229,13 +229,13 @@ void showSnackbar(String message) => ScaffoldMessenger.of(navigatorKey.currentCo
       ),
     );
 
-Future<bool> confirmDialog(BuildContext context, {required String title, required String message}) async {
+Future<bool> confirmDialog(BuildContext context, {required String title, required String message, Widget? body}) async {
   final confirmed = await AwesomeDialog(
         context: context,
         dialogType: DialogType.question,
         animType: AnimType.rightSlide,
         title: title,
-        body: Text(message),
+        body: body ?? Text(message),
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
         onDismissCallback: (type) {

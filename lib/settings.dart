@@ -390,6 +390,49 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   onChangedVault(bool? value) async {
     if (value == null) return;
     if (value) {
+      if (!mounted) return;
+      final tt = Theme.of(context).textTheme;
+      final confirmed = await confirmDialog(
+        context,
+        title: "Enable Vault",
+        message: "",
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.lock_outline, size: 18, color: Colors.green.shade700),
+                const Gap(8),
+                Text("End-to-end encrypted", style: tt.titleSmall?.copyWith(color: Colors.green.shade700)),
+              ],
+            ),
+            const Gap(4),
+            Text("Your account keys are encrypted. Only you can decrypt them.", style: tt.bodySmall),
+            const Gap(12),
+            Row(
+              children: [
+                Icon(Icons.cloud_outlined, size: 18, color: Colors.blue.shade700),
+                const Gap(8),
+                Text("Google Drive (app data only)", style: tt.titleSmall?.copyWith(color: Colors.blue.shade700)),
+              ],
+            ),
+            const Gap(4),
+            Text("Backups go to app-specific storage — not your entire Drive.", style: tt.bodySmall),
+            const Gap(12),
+            Row(
+              children: [
+                Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                const Gap(8),
+                Text("Biometric protection", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+              ],
+            ),
+            const Gap(4),
+            Text("Face ID / Touch ID protects your vault on this device.", style: tt.bodySmall),
+          ],
+        ),
+      );
+      if (!confirmed) return;
+
       final vault = ref.read(vaultProvider.notifier);
       String password;
       if (!await vault.hasVault()) {
@@ -397,22 +440,30 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         final p = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
         if (p == null) return;
         password = p;
-        await ref.read(vaultProvider.notifier).initialize(password);
+        try {
+          await ref.read(vaultProvider.notifier).initialize(password);
+        } catch (e) {
+          await ref.read(vaultProvider.notifier).deleteLocalVault();
+          if (mounted) await showException(context, e.toString());
+          return;
+        }
       } else {
         if (!mounted) return;
         final p = await inputPassword(context, title: "Vault Password", required: true);
         if (p == null) return;
         password = p;
       }
-      // register this device
+      // register this device with passkey
       try {
         await registerPasskey();
         final prf = await authenticatePasskey();
         await ref.read(vaultProvider.notifier).registerDevice(password: password, prf: prf);
       } on AnyhowException catch (e) {
-        if (mounted) await showException(context, e.message);
-      } catch (e) {
-        if (mounted) await showException(context, e.toString());
+        // upload failed — local data is safe, will retry next time
+        if (mounted) await showMessage(context, "Device registered locally. Cloud backup will be tried next time you add/update an account.");
+      } catch (_) {
+        // biometric denied or unavailable
+        if (mounted) await showMessage(context, "Biometric setup was skipped. Your vault is enabled but recovery will require the vault password.");
       }
     }
     setState(() {
@@ -425,9 +476,30 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     // 1. Try passkey first
     Uint8List? prf;
     try {
-      prf = await authenticatePasskey();
+      if (!mounted) return;
+      final tt = Theme.of(context).textTheme;
+      final usePasskey = await confirmDialog(
+        context,
+        title: "Vault Recovery",
+        message: "",
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                const Gap(8),
+                Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+              ],
+            ),
+            const Gap(4),
+            Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
+          ],
+        ),
+      );
+      if (usePasskey) prf = await authenticatePasskey();
     } catch (_) {
-      // no passkey available
+      // biometric denied or unavailable
     }
 
     // 2. Download vault bytes once

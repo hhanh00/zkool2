@@ -80,6 +80,13 @@ class Vault {
     await setMasterPassword(null, password);
   }
 
+  Future<void> deleteLocalVault() async {
+    final masterFile = await _localMasterFile;
+    if (await masterFile.exists()) await masterFile.delete();
+    final localFile = await _localFile;
+    if (await localFile.exists()) await localFile.delete();
+  }
+
   Future<void> registerDevice({required String password, required Uint8List prf}) async {
     final masterFile = await _localMasterFile;
     final initBytes = await masterFile.readAsBytes();
