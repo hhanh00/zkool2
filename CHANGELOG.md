@@ -1,5 +1,25 @@
 # Changelog
 
+## [6.15.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.15.0) (2026-04-15)
+
+
+### Features
+
+* dart vault impl placeholder ([#908](https://github.com/hhanh00/zkool2/issues/908)) ([30be1ac](https://github.com/hhanh00/zkool2/commit/30be1ac5016f34d26d22e024defb4e9738f632a9))
+* encrypt and save account keys to vault ([#912](https://github.com/hhanh00/zkool2/issues/912)) ([2ac5c30](https://github.com/hhanh00/zkool2/commit/2ac5c3026306059e0a68105362721121fa59815d))
+* google drive integration ([#907](https://github.com/hhanh00/zkool2/issues/907)) ([1952d2f](https://github.com/hhanh00/zkool2/commit/1952d2fca26d940e320d8079aa519007c3fdad89))
+* passkey support for the key vault ([#914](https://github.com/hhanh00/zkool2/issues/914)) ([5225f1e](https://github.com/hhanh00/zkool2/commit/5225f1e246a9a9dee7e32117fb7877269a01c552))
+* set master vault password api ([#910](https://github.com/hhanh00/zkool2/issues/910)) ([ee826af](https://github.com/hhanh00/zkool2/commit/ee826afe7eabb5dea29e09a4218c5c3e7248605d))
+* vault impl in dart ([#909](https://github.com/hhanh00/zkool2/issues/909)) ([016bb2d](https://github.com/hhanh00/zkool2/commit/016bb2d63c1b00c54261a83a93d02e4c33e61774))
+* vault master key implementation ([#911](https://github.com/hhanh00/zkool2/issues/911)) ([ec12eda](https://github.com/hhanh00/zkool2/commit/ec12eda5536f983df4ca77ebf94217b862b62371))
+* vault recovery from master password ([#913](https://github.com/hhanh00/zkool2/issues/913)) ([b0f44e9](https://github.com/hhanh00/zkool2/commit/b0f44e9050ea1be1db2f7a9f35534acd3e605dce))
+
+
+### Bug Fixes
+
+* add confirmation/explanation messages ([#915](https://github.com/hhanh00/zkool2/issues/915)) ([1a886ab](https://github.com/hhanh00/zkool2/commit/1a886abb7b945cdc59fb2bed70a6369f93eb93ed))
+* add logging messages and fix passkey on android ([#916](https://github.com/hhanh00/zkool2/issues/916)) ([a1a57c6](https://github.com/hhanh00/zkool2/commit/a1a57c6c8f5f9e50277e5a48e930e3fa47770902))
+
 ## [6.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.0) (2026-04-11)
 
 
