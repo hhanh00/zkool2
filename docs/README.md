@@ -91,6 +91,9 @@ Zkool is currently the only wallet[^8]
 - assign categories and store fiat exchange rates per transaction, allowing you
 to track your spending and income.
 
+## Privacy Policy
+Refer to the [Privacy Policy Doc](https://hhanh00.github.io/privacy.html)
+
 [^1]: 12 to 24 word mnemonics, passphrase and account index. Sapling legacy
     keys, viewing keys, unified keys, xpub, etc.
 [^2]: all pools except Sprout
