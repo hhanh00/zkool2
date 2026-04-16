@@ -182,9 +182,15 @@ class Vault {
   Future<drive.DriveApi> get _driveApi async {
     if (googleSignIn == null) await signIn();
     logger.i("_driveApi: getting authenticated client");
-    final httpClient = await googleSignIn!.authenticatedClient();
+    var httpClient = await googleSignIn!.authenticatedClient();
     if (httpClient == null) {
-      logger.e("_driveApi: authenticatedClient returned null");
+      logger.w("_driveApi: authenticatedClient returned null, re-signing in");
+      await googleSignIn?.disconnect();
+      await signIn(silent: false);
+      httpClient = await googleSignIn!.authenticatedClient();
+    }
+    if (httpClient == null) {
+      logger.e("_driveApi: authenticatedClient returned null after re-auth");
       throw StateError("Failed to get authenticated HTTP client");
     }
     logger.i("_driveApi: client obtained, creating DriveApi");
