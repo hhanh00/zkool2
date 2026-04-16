@@ -9,7 +9,7 @@ import 'package:decimal/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter_passkey_service/flutter_passkey_service.dart';
-import 'package:flutter_passkey_service/pigeons/messages.g.dart' show CreatePasskeyResponseData, PasskeyException;
+import 'package:flutter_passkey_service/pigeons/messages.g.dart' show CreatePasskeyResponseData, GetPasskeyAuthenticationResponseData, PasskeyException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -570,7 +570,13 @@ Future<Uint8List> authenticatePasskey() async {
     preferImmediatelyAvailableCredentials: true,
   );
   logger.i("[Passkey] authenticatePasskey: calling FlutterPasskeyService.authenticate");
-  final response = await FlutterPasskeyService.authenticate(options);
+  final GetPasskeyAuthenticationResponseData response;
+  try {
+    response = await FlutterPasskeyService.authenticate(options);
+  } on PasskeyException catch (e) {
+    logger.e("[Passkey] authenticatePasskey: authentication failed: ${e.message}");
+    rethrow;
+  }
   logger.i("[Passkey] authenticatePasskey: got response, checking PRF result");
   final derivedKey = response.clientExtensionResults?.prf?.results?['first'];
   if (derivedKey == null || derivedKey.isEmpty) {
