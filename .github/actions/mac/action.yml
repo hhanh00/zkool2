@@ -28,8 +28,10 @@ runs:
         openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/macos.cert.enc -out /tmp/cert.p12 -pass pass:$JKS_PASSWORD
         openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/apple.distrib.p12.enc -out /tmp/apple.distrib.p12 -pass pass:$JKS_PASSWORD
         openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/ios.mobileprovision.enc -out /tmp/ios.mobileprovision -pass pass:$JKS_PASSWORD
+        openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/zkool.provisionprofile.enc -out /tmp/zkool.provisionprofile -pass pass:$JKS_PASSWORD
         mkdir -p $HOME/Library/MobileDevice/Provisioning\ Profiles
         cp /tmp/ios.mobileprovision $HOME/Library/MobileDevice/Provisioning\ Profiles/
+        cp /tmp/zkool.provisionprofile $HOME/Library/MobileDevice/Provisioning\ Profiles/
         pip3 install codemagic-cli-tools
         ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/apple.distrib.p12 $APPLE_DISTRIB_PASSWORD
         ./misc/install-certs.sh $KEYCHAIN_PWD /tmp/cert.p12 $APPLE_CERTIFICATE_PASSWORD
