@@ -5881,6 +5881,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_aindex = <u32>::sse_decode(deserializer);
         let mut var_dindex = <u32>::sse_decode(deserializer);
         let mut var_icon = <Option<Vec<u8>>>::sse_decode(deserializer);
+        let mut var_useInternal = <bool>::sse_decode(deserializer);
         let mut var_birth = <u32>::sse_decode(deserializer);
         let mut var_folder = <crate::api::account::Folder>::sse_decode(deserializer);
         let mut var_position = <u8>::sse_decode(deserializer);
@@ -5901,6 +5902,7 @@ impl SseDecode for crate::api::account::Account {
             aindex: var_aindex,
             dindex: var_dindex,
             icon: var_icon,
+            use_internal: var_useInternal,
             birth: var_birth,
             folder: var_folder,
             position: var_position,
@@ -7562,6 +7564,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.aindex.into_into_dart().into_dart(),
             self.dindex.into_into_dart().into_dart(),
             self.icon.into_into_dart().into_dart(),
+            self.use_internal.into_into_dart().into_dart(),
             self.birth.into_into_dart().into_dart(),
             self.folder.into_into_dart().into_dart(),
             self.position.into_into_dart().into_dart(),
@@ -8632,6 +8635,7 @@ impl SseEncode for crate::api::account::Account {
         <u32>::sse_encode(self.aindex, serializer);
         <u32>::sse_encode(self.dindex, serializer);
         <Option<Vec<u8>>>::sse_encode(self.icon, serializer);
+        <bool>::sse_encode(self.use_internal, serializer);
         <u32>::sse_encode(self.birth, serializer);
         <crate::api::account::Folder>::sse_encode(self.folder, serializer);
         <u8>::sse_encode(self.position, serializer);
