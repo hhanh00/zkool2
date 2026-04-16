@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.14.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.3...zkool-v6.14.4) (2026-04-16)
+
+
+### Bug Fixes
+
+* add more debugging traces ([#925](https://github.com/hhanh00/zkool2/issues/925)) ([ed06213](https://github.com/hhanh00/zkool2/commit/ed0621325d6d64545dc91d88b0806c672dea0e05))
+* add more debugging traces ([#927](https://github.com/hhanh00/zkool2/issues/927)) ([e56e9f8](https://github.com/hhanh00/zkool2/commit/e56e9f8a7cfac373adb273a32470645cc697b91e))
+* add more debugging traces ([#928](https://github.com/hhanh00/zkool2/issues/928)) ([f760688](https://github.com/hhanh00/zkool2/commit/f7606886b55bac68d89e17131b88bdfbb935a59a))
+
 ## [6.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.2...zkool-v6.14.3) (2026-04-16)
 
 
