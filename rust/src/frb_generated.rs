@@ -6858,12 +6858,14 @@ impl SseDecode for (u32, String, Option<crate::api::vote::ElectionPropsPub>) {
 impl SseDecode for crate::api::vault::RestoredAccount {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_timestamp = <u32>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_seed = <String>::sse_decode(deserializer);
         let mut var_aindex = <u32>::sse_decode(deserializer);
         let mut var_useInternal = <bool>::sse_decode(deserializer);
         let mut var_birthHeight = <u32>::sse_decode(deserializer);
         return crate::api::vault::RestoredAccount {
+            timestamp: var_timestamp,
             name: var_name,
             seed: var_seed,
             aindex: var_aindex,
@@ -8124,6 +8126,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::pay::Recipient> for crate::pay::Re
 impl flutter_rust_bridge::IntoDart for crate::api::vault::RestoredAccount {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.timestamp.into_into_dart().into_dart(),
             self.name.into_into_dart().into_dart(),
             self.seed.into_into_dart().into_dart(),
             self.aindex.into_into_dart().into_dart(),
@@ -9371,6 +9374,7 @@ impl SseEncode for (u32, String, Option<crate::api::vote::ElectionPropsPub>) {
 impl SseEncode for crate::api::vault::RestoredAccount {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.timestamp, serializer);
         <String>::sse_encode(self.name, serializer);
         <String>::sse_encode(self.seed, serializer);
         <u32>::sse_encode(self.aindex, serializer);

@@ -367,14 +367,22 @@ fn decrypt_accounts(entries: &[LogEntry], sk_bytes: &[u8]) -> Result<Vec<Restore
             tracing::info!("Recovered account: name={}, aindex={}, use_internal={}, birth_height={}",
                 account.name, account.aindex, account.use_internal, account.birth_height);
 
-            // TODO: Insert only if new and newer than existing entry
-            deduped.insert((account.entropy, account.aindex), RestoredAccount {
+            let restored = RestoredAccount {
+                timestamp: account.timestamp,
                 name: account.name,
                 seed: mnemonic.to_string(),
                 aindex: account.aindex,
                 use_internal: account.use_internal,
                 birth_height: account.birth_height,
-            });
+            };
+            let entry = deduped.entry((account.entropy, account.aindex));
+            entry
+                .and_modify(|existing| {
+                    if restored.timestamp > existing.timestamp {
+                        *existing = restored.clone();
+                    }
+                })
+                .or_insert(restored);
         }
     }
 
