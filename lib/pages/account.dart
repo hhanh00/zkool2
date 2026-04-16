@@ -437,14 +437,15 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         ),
         c: c,
       );
-      final seed = await getAccountSeed(account: accounts[0].id, c: c);
+      final a = accounts[0];
+      final seed = a.seed;
       if (seed != null) {
         await ref.read(vaultProvider.notifier).storeAccount(
           name: name,
-          seed: seed.mnemonic,
-          aindex: accounts[0].aindex,
-          useInternal: accounts[0].internal,
-          birthHeight: accounts[0].birth,
+          seed: seed,
+          aindex: a.aindex,
+          useInternal: a.useInternal,
+          birthHeight: a.birth,
         );
       }
       ref.invalidate(getAccountsProvider);
@@ -496,13 +497,14 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         ),
         c: c,
       );
-      final seed = await getAccountSeed(account: accounts[0].id, c: c);
+      final a = accounts[0];
+      final seed = await getAccountSeed(account: a.id, c: c);
       if (seed != null) {
         await ref.read(vaultProvider.notifier).storeAccount(
-          name: accounts[0].name,
+          name: a.name,
           seed: seed.mnemonic,
-          aindex: accounts[0].aindex,
-          useInternal: accounts[0].internal,
+          aindex: a.aindex,
+          useInternal: a.useInternal,
           birthHeight: bh,
         );
       }

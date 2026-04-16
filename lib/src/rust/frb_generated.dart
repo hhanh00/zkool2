@@ -125,6 +125,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiVaultDartVaultStoreAccount(
       {required DartVault that,
+      required int timestamp,
       required String name,
       required String seed,
       required int aindex,
@@ -697,6 +698,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @override
   Future<void> crateApiVaultDartVaultStoreAccount(
       {required DartVault that,
+      required int timestamp,
       required String name,
       required String seed,
       required int aindex,
@@ -709,6 +711,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
               that, serializer);
+          sse_encode_u_32(timestamp, serializer);
           sse_encode_String(name, serializer);
           sse_encode_String(seed, serializer);
           sse_encode_u_32(aindex, serializer);
@@ -723,7 +726,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiVaultDartVaultStoreAccountConstMeta,
-        argValues: [that, name, seed, aindex, useInternal, birthHeight, pk],
+        argValues: [
+          that,
+          timestamp,
+          name,
+          seed,
+          aindex,
+          useInternal,
+          birthHeight,
+          pk
+        ],
         apiImpl: this,
       ),
     );
@@ -734,6 +746,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         debugName: "DartVault_store_account",
         argNames: [
           "that",
+          "timestamp",
           "name",
           "seed",
           "aindex",
@@ -8886,7 +8899,8 @@ class DartVaultImpl extends RustOpaque implements DartVault {
           oldBytes: oldBytes);
 
   Future<void> storeAccount(
-          {required String name,
+          {required int timestamp,
+          required String name,
           required String seed,
           required int aindex,
           required bool useInternal,
@@ -8894,6 +8908,7 @@ class DartVaultImpl extends RustOpaque implements DartVault {
           required List<int> pk}) =>
       RustLib.instance.api.crateApiVaultDartVaultStoreAccount(
           that: this,
+          timestamp: timestamp,
           name: name,
           seed: seed,
           aindex: aindex,
