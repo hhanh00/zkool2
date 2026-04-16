@@ -38,26 +38,26 @@ runs:
         KEYCHAIN_PWD: azB27DoYCFe5kzd3
         APPLE_DISTRIB_PASSWORD: ${{ inputs.ios_pwd }}
         APPLE_CERTIFICATE_PASSWORD: ${{ inputs.mac_pwd }}
-    # - name: Build
-    #   shell: bash
-    #   run: |
-    #     ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
-    #     flutter build macos
-    # - name: Notarization
-    #   shell: bash
-    #   run: ./misc/codesign-notarize.sh
-    #   env:
-    #     APPNAME: zkool
-    #     APPLE_CERTIFICATE_NAME: ${{ inputs.apple_cert_name }}
-    #     APPLE_ID: ${{ inputs.apple_id }}
-    #     APPLE_PASSWORD: ${{ inputs.apple_pwd }}
-    #     APPLE_TEAM_ID: ${{ inputs.apple_team_id }}
-    # - name: Package DMG
-    #   shell: bash
-    #   run: |
-    #     python3 -m pip install packaging
-    #     npm install -g appdmg
-    #     (cd misc; appdmg app.json app.dmg)
+    - name: Build
+      shell: bash
+      run: |
+        ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
+        flutter build macos
+    - name: Notarization
+      shell: bash
+      run: ./misc/codesign-notarize.sh
+      env:
+        APPNAME: zkool
+        APPLE_CERTIFICATE_NAME: ${{ inputs.apple_cert_name }}
+        APPLE_ID: ${{ inputs.apple_id }}
+        APPLE_PASSWORD: ${{ inputs.apple_pwd }}
+        APPLE_TEAM_ID: ${{ inputs.apple_team_id }}
+    - name: Package DMG
+      shell: bash
+      run: |
+        python3 -m pip install packaging
+        npm install -g appdmg
+        (cd misc; appdmg app.json app.dmg)
     - name: Build iOS
       shell: bash
       run: |
