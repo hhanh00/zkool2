@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.2...zkool-v6.14.3) (2026-04-16)
+
+
+### Bug Fixes
+
+* reregister the passkey if it is stale ([#923](https://github.com/hhanh00/zkool2/issues/923)) ([8af6083](https://github.com/hhanh00/zkool2/commit/8af6083cc0d942338cb216fb7eb67334f8e8e451))
+
 ## [6.14.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.2) (2026-04-16)
 
 
