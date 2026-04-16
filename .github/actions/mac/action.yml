@@ -61,7 +61,7 @@ runs:
     - name: Build iOS
       shell: bash
       run: |
-        rm rust/cargokit.yaml
+        rm -f rust/cargokit.yaml
         rm $HOME/Library/MobileDevice/Provisioning\ Profiles/*.provisionprofile
         openssl enc -pbkdf2 -aes-256-cbc -salt -d -in misc/ios.mobileprovision.enc -out $HOME/Library/MobileDevice/Provisioning\ Profiles/ios.mobileprovision -pass pass:$JKS_PASSWORD
         xcode-project use-profiles
