@@ -1289,6 +1289,7 @@ mixin _$AppSettings {
   bool get offline;
   bool get getFx;
   QRSettings get qrSettings;
+  bool get vault;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -1324,7 +1325,8 @@ mixin _$AppSettings {
             (identical(other.offline, offline) || other.offline == offline) &&
             (identical(other.getFx, getFx) || other.getFx == getFx) &&
             (identical(other.qrSettings, qrSettings) ||
-                other.qrSettings == qrSettings));
+                other.qrSettings == qrSettings) &&
+            (identical(other.vault, vault) || other.vault == vault));
   }
 
   @override
@@ -1344,11 +1346,12 @@ mixin _$AppSettings {
       pinUnlockedAt,
       offline,
       getFx,
-      qrSettings);
+      qrSettings,
+      vault);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault)';
   }
 }
 
@@ -1373,7 +1376,8 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       DateTime pinUnlockedAt,
       bool offline,
       bool getFx,
-      QRSettings qrSettings});
+      QRSettings qrSettings,
+      bool vault});
 
   $QRSettingsCopyWith<$Res> get qrSettings;
 }
@@ -1405,6 +1409,7 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? offline = null,
     Object? getFx = null,
     Object? qrSettings = null,
+    Object? vault = null,
   }) {
     return _then(_self.copyWith(
       dbName: null == dbName
@@ -1467,6 +1472,10 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
           ? _self.qrSettings
           : qrSettings // ignore: cast_nullable_to_non_nullable
               as QRSettings,
+      vault: null == vault
+          ? _self.vault
+          : vault // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 
@@ -1587,7 +1596,8 @@ extension AppSettingsPatterns on AppSettings {
             DateTime pinUnlockedAt,
             bool offline,
             bool getFx,
-            QRSettings qrSettings)?
+            QRSettings qrSettings,
+            bool vault)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1609,7 +1619,8 @@ extension AppSettingsPatterns on AppSettings {
             _that.pinUnlockedAt,
             _that.offline,
             _that.getFx,
-            _that.qrSettings);
+            _that.qrSettings,
+            _that.vault);
       case _:
         return orElse();
     }
@@ -1645,7 +1656,8 @@ extension AppSettingsPatterns on AppSettings {
             DateTime pinUnlockedAt,
             bool offline,
             bool getFx,
-            QRSettings qrSettings)
+            QRSettings qrSettings,
+            bool vault)
         $default,
   ) {
     final _that = this;
@@ -1666,7 +1678,8 @@ extension AppSettingsPatterns on AppSettings {
             _that.pinUnlockedAt,
             _that.offline,
             _that.getFx,
-            _that.qrSettings);
+            _that.qrSettings,
+            _that.vault);
     }
   }
 
@@ -1699,7 +1712,8 @@ extension AppSettingsPatterns on AppSettings {
             DateTime pinUnlockedAt,
             bool offline,
             bool getFx,
-            QRSettings qrSettings)?
+            QRSettings qrSettings,
+            bool vault)?
         $default,
   ) {
     final _that = this;
@@ -1720,7 +1734,8 @@ extension AppSettingsPatterns on AppSettings {
             _that.pinUnlockedAt,
             _that.offline,
             _that.getFx,
-            _that.qrSettings);
+            _that.qrSettings,
+            _that.vault);
       case _:
         return null;
     }
@@ -1745,7 +1760,8 @@ class _AppSettings implements AppSettings {
       required this.pinUnlockedAt,
       required this.offline,
       required this.getFx,
-      required this.qrSettings});
+      required this.qrSettings,
+      required this.vault});
 
   @override
   final String dbName;
@@ -1778,6 +1794,8 @@ class _AppSettings implements AppSettings {
   final bool getFx;
   @override
   final QRSettings qrSettings;
+  @override
+  final bool vault;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -1814,7 +1832,8 @@ class _AppSettings implements AppSettings {
             (identical(other.offline, offline) || other.offline == offline) &&
             (identical(other.getFx, getFx) || other.getFx == getFx) &&
             (identical(other.qrSettings, qrSettings) ||
-                other.qrSettings == qrSettings));
+                other.qrSettings == qrSettings) &&
+            (identical(other.vault, vault) || other.vault == vault));
   }
 
   @override
@@ -1834,11 +1853,12 @@ class _AppSettings implements AppSettings {
       pinUnlockedAt,
       offline,
       getFx,
-      qrSettings);
+      qrSettings,
+      vault);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault)';
   }
 }
 
@@ -1865,7 +1885,8 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       DateTime pinUnlockedAt,
       bool offline,
       bool getFx,
-      QRSettings qrSettings});
+      QRSettings qrSettings,
+      bool vault});
 
   @override
   $QRSettingsCopyWith<$Res> get qrSettings;
@@ -1898,6 +1919,7 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? offline = null,
     Object? getFx = null,
     Object? qrSettings = null,
+    Object? vault = null,
   }) {
     return _then(_AppSettings(
       dbName: null == dbName
@@ -1960,6 +1982,10 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
           ? _self.qrSettings
           : qrSettings // ignore: cast_nullable_to_non_nullable
               as QRSettings,
+      vault: null == vault
+          ? _self.vault
+          : vault // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 
