@@ -1,0 +1,162 @@
+use std::io::{Read, Write};
+
+use anyhow::{Result, anyhow};
+use argon2::{Algorithm, Argon2, Params, Version};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce, aead::Aead};
+use rand_core::{OsRng, RngCore};
+use x25519_dalek::{PublicKey, StaticSecret};
+
+struct AccountPayload {
+    entropy: [u8; 32],
+    name: String,
+    birth_height: u32,
+}
+
+impl AccountPayload {
+    /// Write: entropy(32) | name_len(1) | name(var) | birth_height(4 BE)
+    fn write_to<W: Write>(&self, mut w: W) -> Result<()> {
+        w.write_all(&self.entropy)?;
+        let name_bytes = self.name.as_bytes();
+        w.write_all(&[name_bytes.len() as u8])?;
+        w.write_all(name_bytes)?;
+        w.write_u32::<BigEndian>(self.birth_height)?;
+        Ok(())
+    }
+
+    fn read_from<R: Read>(mut r: R) -> Result<Self> {
+        let mut entropy = [0u8; 32];
+        r.read_exact(&mut entropy)?;
+        let name_len = r.read_u8()? as usize;
+        let mut name_buf = vec![0u8; name_len];
+        r.read_exact(&mut name_buf)?;
+        let name = String::from_utf8(name_buf)
+            .map_err(|e| anyhow!("Invalid name: {}", e))?;
+        let birth_height = r.read_u32::<BigEndian>()?;
+        Ok(Self { entropy, name, birth_height })
+    }
+}
+
+enum LogEntry {
+    Init {
+        pk: [u8; 32],                     // X25519 public key, plaintext
+        master_key_protected_sk: [u8; 60], // nonce(12) || ciphertext+tag(48), ChaCha20-Poly1305(SK, MasterKey)
+        argon2_salt: [u8; 16],            // random salt for Argon2id, generated at initialization
+    },
+    AddDevice {
+        device_id: [u8; 20], // RIPEMD-160 hash, stable per (device, app) pair
+        prf_key_protected_sk: [u8; 60], // nonce(12) || ciphertext+tag(48), ChaCha20-Poly1305(SK, PRFKey)
+    },
+    Account {
+        ephemeral_pk: [u8; 32],
+        nonce: [u8; 12],
+        ciphertext: Vec<u8>, // ChaCha20-Poly1305(serialized AccountPayload, sk), variable due to name
+    },
+}
+
+impl LogEntry {
+    /// Write: type(1) | data
+    /// Init:      type(1) | pk(32) | protected_sk(60) | salt(16) = 109
+    /// AddDevice: type(1) | device_id(20) | protected_sk(60) = 81
+    /// Account:   type(1) | len(2 BE) | ephemeral_pk(32) | nonce(12) | ciphertext(var)
+    fn write_to<W: Write>(&self, mut w: W) -> Result<()> {
+        match self {
+            LogEntry::Init { pk, master_key_protected_sk, argon2_salt } => {
+                w.write_u8(0)?;
+                w.write_all(pk)?;
+                w.write_all(master_key_protected_sk)?;
+                w.write_all(argon2_salt)?;
+            }
+            LogEntry::AddDevice { device_id, prf_key_protected_sk } => {
+                w.write_u8(1)?;
+                w.write_all(device_id)?;
+                w.write_all(prf_key_protected_sk)?;
+            }
+            LogEntry::Account { ephemeral_pk, nonce, ciphertext } => {
+                w.write_u8(2)?;
+                w.write_u16::<BigEndian>((32 + 12 + ciphertext.len()) as u16)?;
+                w.write_all(ephemeral_pk)?;
+                w.write_all(nonce)?;
+                w.write_all(ciphertext)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn read_from<R: Read>(mut r: R) -> Result<Self> {
+        let tag = r.read_u8()?;
+        match tag {
+            0 => {
+                let mut pk = [0u8; 32];
+                r.read_exact(&mut pk)?;
+                let mut master_key_protected_sk = [0u8; 60];
+                r.read_exact(&mut master_key_protected_sk)?;
+                let mut argon2_salt = [0u8; 16];
+                r.read_exact(&mut argon2_salt)?;
+                Ok(LogEntry::Init { pk, master_key_protected_sk, argon2_salt })
+            }
+            1 => {
+                let mut device_id = [0u8; 20];
+                r.read_exact(&mut device_id)?;
+                let mut prf_key_protected_sk = [0u8; 60];
+                r.read_exact(&mut prf_key_protected_sk)?;
+                Ok(LogEntry::AddDevice { device_id, prf_key_protected_sk })
+            }
+            2 => {
+                let payload_len = (r.read_u16::<BigEndian>()?) as usize;
+                let mut ephemeral_pk = [0u8; 32];
+                r.read_exact(&mut ephemeral_pk)?;
+                let mut nonce = [0u8; 12];
+                r.read_exact(&mut nonce)?;
+                let ct_len = payload_len - 32 - 12;
+                let mut ciphertext = vec![0u8; ct_len];
+                r.read_exact(&mut ciphertext)?;
+                Ok(LogEntry::Account { ephemeral_pk, nonce, ciphertext })
+            }
+            _ => Err(anyhow!("Invalid LogEntry tag: {}", tag)),
+        }
+    }
+}
+
+pub fn derive_master_key(password: &str) -> Result<Vec<u8>> {
+    let mut salt = [0u8; 16];
+    OsRng.fill_bytes(&mut salt);
+
+    let params = Params::new(
+        512 * 1024, // 512 MB in KiB
+        8,          // iterations
+        4,          // parallelism
+        Some(32),   // output length
+    ).map_err(|e| anyhow!("Argon2 params failed: {}", e))?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+    let mut master_key = [0u8; 32];
+    argon2.hash_password_into(password.as_bytes(), &salt, &mut master_key)
+        .map_err(|e| anyhow!("Argon2 hashing failed: {}", e))?;
+
+    let sk = StaticSecret::random_from_rng(OsRng);
+    let pk = PublicKey::from(&sk);
+
+    // encrypt sk with master_key
+    let cipher = ChaCha20Poly1305::new(Key::from_slice(&master_key));
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    let ciphertext = cipher.encrypt(nonce, sk.as_bytes() as &[u8])
+        .map_err(|e| anyhow!("Encryption failed: {}", e))?;
+
+    let mut master_key_protected_sk = [0u8; 60];
+    master_key_protected_sk[..12].copy_from_slice(&nonce_bytes);
+    master_key_protected_sk[12..].copy_from_slice(&ciphertext);
+
+    let entry = LogEntry::Init {
+        pk: *pk.as_bytes(),
+        master_key_protected_sk,
+        argon2_salt: salt,
+    };
+
+    let mut buf = Vec::with_capacity(109);
+    entry.write_to(&mut buf)?;
+    Ok(buf)
+}
