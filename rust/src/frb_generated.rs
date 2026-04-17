@@ -320,6 +320,7 @@ fn wire__crate__api__vault__DartVault_store_account_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DartVault>,
             >>::sse_decode(&mut deserializer);
+            let api_timestamp = <u32>::sse_decode(&mut deserializer);
             let api_name = <String>::sse_decode(&mut deserializer);
             let api_seed = <String>::sse_decode(&mut deserializer);
             let api_aindex = <u32>::sse_decode(&mut deserializer);
@@ -349,6 +350,7 @@ fn wire__crate__api__vault__DartVault_store_account_impl(
                         let api_that_guard = api_that_guard.unwrap();
                         let output_ok = crate::api::vault::DartVault::store_account(
                             &*api_that_guard,
+                            api_timestamp,
                             api_name,
                             api_seed,
                             api_aindex,
