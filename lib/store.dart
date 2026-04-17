@@ -17,8 +17,10 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/vault.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/vault.dart';
 import 'package:zkool/widgets/theme.dart';
 
 part 'store.g.dart';
@@ -857,4 +859,18 @@ sealed class QRSettings with _$QRSettings {
     required int delay,
     required int repair,
   }) = _QRSettings;
+}
+
+@Riverpod(keepAlive: true)
+class VaultNotifier extends _$VaultNotifier {
+  @override
+  Future<DartVault> build() async {
+    final v = await initializeVault();
+    return v;
+  }
+
+  Future<void> test() async {
+    final v = await future;
+    await v.test();
+  }
 }
