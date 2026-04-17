@@ -36,6 +36,18 @@ impl<IO: VaultIO> Vault<IO> {
         Ok(vec![])
     }
 
+    pub async fn register_device(
+        &self,
+        init_bytes: Vec<u8>,
+        master_password: String,
+        device_id_str: String,
+        prf_output: [u8; 32],
+    ) -> Result<()> {
+        let entry_bytes = crypto::register_device(&init_bytes, &master_password, &device_id_str, prf_output)?;
+        self.io_handler.append(entry_bytes).await?;
+        Ok(())
+    }
+
     pub async fn store_account(
         &self,
         name: String,

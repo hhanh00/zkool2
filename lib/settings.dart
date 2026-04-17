@@ -390,11 +390,29 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   onChangedVault(bool? value) async {
     if (value == null) return;
     if (value) {
-      if (!await ref.read(vaultProvider.notifier).hasVault()) {
+      final vault = ref.read(vaultProvider.notifier);
+      String password;
+      if (!await vault.hasVault()) {
         if (!mounted) return;
-        final password = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
-        if (password == null) return;
+        final p = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
+        if (p == null) return;
+        password = p;
         await ref.read(vaultProvider.notifier).initialize(password);
+      } else {
+        if (!mounted) return;
+        final p = await inputPassword(context, title: "Vault Password", required: true);
+        if (p == null) return;
+        password = p;
+      }
+      // register this device
+      try {
+        await registerPasskey();
+        final prf = await authenticatePasskey();
+        await ref.read(vaultProvider.notifier).registerDevice(password: password, prf: prf);
+      } on AnyhowException catch (e) {
+        if (mounted) await showException(context, e.message);
+      } catch (e) {
+        if (mounted) await showException(context, e.toString());
       }
     }
     setState(() {
@@ -404,14 +422,44 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   void onVaultRecover() async {
-    final password = await inputPassword(context, title: "Vault Password", required: true);
-    if (password == null) return;
-    List recovered;
+    // 1. Try passkey first
+    Uint8List? prf;
     try {
-      recovered = await ref.read(vaultProvider.notifier).recover(password);
+      prf = await authenticatePasskey();
+    } catch (_) {
+      // no passkey available
+    }
+
+    // 2. Download vault bytes once
+    Uint8List vaultBytes;
+    try {
+      vaultBytes = await ref.read(vaultProvider.notifier).downloadVaultBytes();
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
       return;
+    }
+
+    // 3. Try PRF recovery
+    List? recovered;
+    if (prf != null) {
+      try {
+        recovered = await ref.read(vaultProvider.notifier).recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
+      } catch (_) {
+        // PRF recovery failed, fall through to password
+      }
+    }
+
+    // 4. Fall back to password recovery
+    if (recovered == null) {
+      if (!mounted) return;
+      final password = await inputPassword(context, title: "Vault Password", required: true);
+      if (password == null) return;
+      try {
+        recovered = await ref.read(vaultProvider.notifier).recoverVault(vaultBytes: vaultBytes, masterPassword: password);
+      } on AnyhowException catch (e) {
+        if (mounted) await showException(context, e.message);
+        return;
+      }
     }
     if (recovered.isEmpty) return;
 
