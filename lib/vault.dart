@@ -4,13 +4,11 @@ import 'package:convert/convert.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:path_provider/path_provider.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/vault.dart';
-import 'package:zkool/store.dart';
 
 // TODO For prod
 // vault should go to appdata folder (hidden)
@@ -20,7 +18,6 @@ enum VaultFile { masterPart, devicePart }
 class Vault {
   late final String deviceId;
   GoogleSignIn? googleSignIn;
-  static Vault? instance;
 
   Vault._(this.deviceId);
 
@@ -66,20 +63,33 @@ class Vault {
     return file.exists();
   }
 
-  Future<void> initialize(WidgetRef ref, String password) async {
+  /// Read pk from vault-mp.bin (the Init LogEntry).
+  /// Returns null if no vault exists. Asserts the entry is an Init.
+  Future<Uint8List?> get masterPk async {
+    final file = await _localMasterFile;
+    if (!await file.exists()) return null;
+    final bytes = await file.readAsBytes();
+    assert(bytes[0] == 0, "Expected Init tag 0, got ${bytes[0]}");
+    return bytes.sublist(1, 33);
+  }
+
+  Future<void> initialize(DartVault dartVault, String password) async {
     final file = await _localMasterFile;
     if (await file.exists()) {
       throw StateError('Vault already initialized');
     }
-    await setMasterPassword(ref, null, password);
+    await setMasterPassword(dartVault, null, password);
+  }
+
+  Future<void> storeAccount(DartVault dartVault, {required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight, required Uint8List pk}) async {
+    await dartVault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
   }
 
   Future<void> setMasterPassword(
-    WidgetRef ref,
+    DartVault dartVault,
     String? oldPassword,
     String newPassword,
   ) async {
-    final dartVault = await ref.read(vaultProvider.future);
     final oldBytes = oldPassword != null ? await _download(VaultFile.masterPart) : null;
 
     final bytes = await dartVault.setMasterPassword(
@@ -100,7 +110,7 @@ class Vault {
   Future<void> append(Uint8List entry) async {
     logger.i("append to log: ${hex.encode(entry)}");
 
-    final localFile = await vault._localFile;
+    final localFile = await _localFile;
     await localFile.writeAsBytes(
       entry,
       mode: FileMode.append,
@@ -133,7 +143,7 @@ class Vault {
     final fileList = await driveApi.files.list(
       // TODO: Update to appdata
       spaces: 'drive',
-      q: "name = '$filename'",
+      q: "name = '$filename' and trashed = false",
       $fields: 'files(id)',
     );
     return fileList.files?.isNotEmpty == true ? fileList.files!.first.id : null;
@@ -221,5 +231,3 @@ class Vault {
     return File('${dir.path}/${_fileName(VaultFile.masterPart)}');
   }
 }
-
-late Vault vault;
