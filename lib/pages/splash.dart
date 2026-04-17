@@ -82,9 +82,6 @@ class SplashPageState extends ConsumerState<SplashPage> {
       // initialize the Vault.instance
       vault = await Vault.create();
       Vault.instance = vault;
-      await vault.signIn();
-      // TODO: Remove test
-      await Vault.append(Uint8List.fromList([1, 2, 3]));
     }
     logger.i("LWD ${settings.lwd}");
     c = c.setLwd(
