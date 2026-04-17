@@ -312,8 +312,8 @@ pub fn recover_with_prf(
         .update(&prf_output)
         .finalize();
 
-    // Find matching AddDevice entry and try to decrypt SK
-    let sk_bytes = entries.iter().find_map(|e| match e {
+    // Find the latest matching AddDevice entry and try to decrypt SK
+    let sk_bytes = entries.iter().rev().find_map(|e| match e {
         LogEntry::AddDevice { device_id: did, prf_key_protected_sk } if *did == device_id => {
             decrypt_sk(prf_key.as_bytes(), prf_key_protected_sk).ok()
         }
