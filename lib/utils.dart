@@ -9,7 +9,11 @@ import 'package:decimal/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter_passkey_service/flutter_passkey_service.dart';
-import 'package:flutter_passkey_service/pigeons/messages.g.dart' show CreatePasskeyResponseData, GetPasskeyAuthenticationResponseData, PasskeyException;
+import 'package:flutter_passkey_service/pigeons/messages.g.dart'
+    show
+        CreatePasskeyResponseData,
+        GetPasskeyAuthenticationResponseData,
+        PasskeyException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -518,23 +522,19 @@ extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);
 }
 
+// flutter_passkey_service only supports Android, iOS, and macOS
+bool get passkeySupported => Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+
 // domain associated with zkool,
 // ie the author's github account
 const rpId = 'hhanh00.github.io';
 const rpName = 'zkool';
 
-Future<CreatePasskeyResponseData?> registerPasskey() async {
-  logger.i("[Passkey] registerPasskey: starting");
+// Credential ID storage removed - always show picker, user selects key each time
 
-  // Silent check: prefer on-device credentials only — no QR/remote prompt
-  try {
-    logger.i("[Passkey] registerPasskey: checking for existing passkey");
-    await authenticatePasskey();
-    logger.i("[Passkey] registerPasskey: existing passkey found, skipping registration");
-    return null; // already registered
-  } catch (e) {
-    logger.i("[Passkey] registerPasskey: no existing passkey ($e), proceeding to register");
-  }
+Future<CreatePasskeyResponseData?> registerPasskey() async {
+  if (!passkeySupported) throw UnsupportedError('Passkey is not supported on this platform');
+  logger.i("[Passkey] registerPasskey: starting");
 
   final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
   final options = FlutterPasskeyService.createRegistrationOptions(
@@ -545,36 +545,47 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
     username: rpName,
     displayName: rpName,
     enablePrf: true,
+    authenticatorAttachment: 'cross-platform', // Allow both platform and YubiKey
+    residentKey: 'preferred', // YubiKeys may not support resident keys
+    requireResidentKey: false,
   );
   try {
     logger.i("[Passkey] registerPasskey: calling FlutterPasskeyService.register");
     final response = await FlutterPasskeyService.register(options);
     logger.i("[Passkey] registerPasskey: registration succeeded, id=${response.id}");
     return response;
+  } on PasskeyException catch (e) {
+    logger.e("[Passkey] registerPasskey: registration failed (${e.errorType}): ${e.message}");
+    rethrow;
   } catch (e) {
-    final msg = e is PasskeyException ? e.message : e.toString();
-    logger.e("[Passkey] registerPasskey: registration failed: $msg");
-    return null;
+    logger.e("[Passkey] registerPasskey: registration failed: $e");
+    rethrow;
   }
 }
 
 const _prfSalt = 'c2FsdA=='; // base64 of "salt"
 
+/// Authenticate with the user's passkey. Does NOT set preferImmediatelyAvailableCredentials
+/// — so the platform is free to offer "use a passkey from another device" (hybrid / CDA)
+/// when no local credential is present. This always shows the picker to let the user
+/// select which key to use.
 Future<Uint8List> authenticatePasskey() async {
+  if (!passkeySupported) throw UnsupportedError('Passkey is not supported on this platform');
   logger.i("[Passkey] authenticatePasskey: starting");
   final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
   final options = FlutterPasskeyService.createAuthenticationOptions(
     challenge: base64Url.encode(challenge),
     rpId: rpId,
     prfEval: {'first': _prfSalt},
-    preferImmediatelyAvailableCredentials: true,
+    // preferImmediatelyAvailableCredentials intentionally omitted — let the
+    // platform offer hybrid/CDA if no local credential is found.
   );
   logger.i("[Passkey] authenticatePasskey: calling FlutterPasskeyService.authenticate");
   final GetPasskeyAuthenticationResponseData response;
   try {
     response = await FlutterPasskeyService.authenticate(options);
   } on PasskeyException catch (e) {
-    logger.e("[Passkey] authenticatePasskey: authentication failed: ${e.message}");
+    logger.e("[Passkey] authenticatePasskey: authentication failed (${e.errorType}): ${e.message}");
     rethrow;
   }
   logger.i("[Passkey] authenticatePasskey: got response, checking PRF result");
