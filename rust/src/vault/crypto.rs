@@ -11,6 +11,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use crate::api::vault::RestoredAccount;
 
 pub struct AccountPayload {
+    pub timestamp: u32,
     pub name: String,
     pub entropy: [u8; 32],
     pub aindex: u32,
@@ -21,6 +22,7 @@ pub struct AccountPayload {
 impl AccountPayload {
     /// Write: name_len(2 BE) | name(var) | entropy(32) | aindex(4 BE) | use_internal(1) | birth_height(4 BE)
     fn write_to<W: Write>(&self, mut w: W) -> Result<()> {
+        w.write_u32::<BigEndian>(self.timestamp)?;
         let name_bytes = self.name.as_bytes();
         w.write_u16::<BigEndian>(name_bytes.len() as u16)?;
         w.write_all(name_bytes)?;
@@ -32,6 +34,7 @@ impl AccountPayload {
     }
 
     fn read_from<R: Read>(mut r: R) -> Result<Self> {
+        let timestamp = r.read_u32::<BigEndian>()?;
         let name_len = r.read_u16::<BigEndian>()? as usize;
         let mut name_buf = vec![0u8; name_len];
         r.read_exact(&mut name_buf)?;
@@ -42,7 +45,7 @@ impl AccountPayload {
         let aindex = r.read_u32::<BigEndian>()?;
         let use_internal = r.read_u8()? != 0;
         let birth_height = r.read_u32::<BigEndian>()?;
-        Ok(Self { name, entropy, aindex, use_internal, birth_height })
+        Ok(Self { timestamp, name, entropy, aindex, use_internal, birth_height })
     }
 }
 
@@ -363,6 +366,8 @@ fn decrypt_accounts(entries: &[LogEntry], sk_bytes: &[u8]) -> Result<Vec<Restore
             let mnemonic = bip39::Mnemonic::from_entropy(&account.entropy)?;
             tracing::info!("Recovered account: name={}, aindex={}, use_internal={}, birth_height={}",
                 account.name, account.aindex, account.use_internal, account.birth_height);
+
+            // TODO: Insert only if new and newer than existing entry
             deduped.insert((account.entropy, account.aindex), RestoredAccount {
                 name: account.name,
                 seed: mnemonic.to_string(),
