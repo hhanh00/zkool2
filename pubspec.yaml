@@ -60,6 +60,8 @@ dependencies:
   bubble: ^1.2.1
   memoize: ^3.0.0
   async: ^2.13.0
+  flutter_passkey_service:
+    git: https://github.com/hhanh00/flutter_passkey_service.git
 
   googleapis: ^13.0.0
   google_sign_in: ^6.0.0

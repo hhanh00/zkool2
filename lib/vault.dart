@@ -80,6 +80,17 @@ class Vault {
     await setMasterPassword(null, password);
   }
 
+  Future<void> registerDevice({required String password, required Uint8List prf}) async {
+    final masterFile = await _localMasterFile;
+    final initBytes = await masterFile.readAsBytes();
+    await rustVault.registerDevice(
+      initBytes: initBytes,
+      masterPassword: password,
+      deviceIdStr: deviceId,
+      prfOutput: prf,
+    );
+  }
+
   Future<void> storeAccount({required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight, required Uint8List pk}) async {
     await rustVault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
   }
@@ -101,8 +112,15 @@ class Vault {
     await _upload(bytes, VaultFile.masterPart, createOnly: oldPassword == null);
   }
 
-  Future<List<rust.RestoredAccount>> recover(String masterPassword) async {
-    final vaultBytes = await _download(VaultFile.devicePart);
+  Future<Uint8List> downloadVaultBytes() async {
+    return _download(VaultFile.devicePart);
+  }
+
+  Future<List<rust.RestoredAccount>> recoverWithPrf({required Uint8List vaultBytes, required Uint8List prf}) async {
+    return rustVault.recoverWithPrf(vaultBytes: vaultBytes, deviceIdStr: deviceId, prfOutput: prf);
+  }
+
+  Future<List<rust.RestoredAccount>> recoverVault({required Uint8List vaultBytes, required String masterPassword}) async {
     return rustVault.recover(vaultBytes: vaultBytes, masterPassword: masterPassword);
   }
 

@@ -15,6 +15,17 @@ abstract class DartVault implements RustOpaqueInterface {
   Future<List<RestoredAccount>> recover(
       {required List<int> vaultBytes, required String masterPassword});
 
+  Future<List<RestoredAccount>> recoverWithPrf(
+      {required List<int> vaultBytes,
+      required String deviceIdStr,
+      required List<int> prfOutput});
+
+  Future<void> registerDevice(
+      {required List<int> initBytes,
+      required String masterPassword,
+      required String deviceIdStr,
+      required List<int> prfOutput});
+
   Future<Uint8List> setMasterPassword(
       {String? oldPassword, required String newPassword, Uint8List? oldBytes});
 
