@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -76,6 +77,39 @@ class SplashPageState extends ConsumerState<SplashPage> {
     if (account != null) c = await c.setAccount(account: account.id);
 
     final settings = await ref.read(appSettingsProvider.future);
+    if (settings.vault) {
+      final googleSignIn = GoogleSignIn(
+        scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+      );
+
+      // Sign in
+      final account = await googleSignIn.signInSilently();
+      if (account == null) {
+        // First time or token revoked — shows consent screen
+        // TODO: Show an explanation why we need this
+        // The app stores the vault in the user's Google Drive
+        await googleSignIn.signIn();
+      }
+      logger.i("Signed in Google Drive.");
+
+      // Get authenticated client for googleapis
+      // commented out and left as reference for the time being
+      // final httpClient = await _googleSignIn.authenticatedClient();
+      // final driveApi = drive.DriveApi(httpClient!);
+
+      // final file = drive.File()
+      //   ..name = 'test.bin'
+      //   ..parents = ['appDataFolder'];
+
+      // final bytes = [1, 2, 3];
+      // final media = drive.Media(
+      //   Stream.value(bytes.toList()),
+      //   bytes.length,
+      //   contentType: 'application/octet-stream',
+      // );
+
+      // await driveApi.files.create(file, uploadMedia: media);
+    }
     logger.i("LWD ${settings.lwd}");
     c = c.setLwd(
       serverType: settings.isLightNode ? 0 : 1,

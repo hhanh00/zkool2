@@ -83,6 +83,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
+        await prefs.setBool("vault", settings.vault);
         ref.read(coinContextProvider.notifier).set(coin: c);
         ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
         ref.invalidate(appSettingsProvider);
@@ -272,6 +273,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     SizedBox(width: 40, child: IconButton(onPressed: onQR, icon: Icon(Icons.chevron_right)))
                   ]),
                 ),
+                Gap(8),
+                FormBuilderSwitch(name: "vault", title: Text("Passkey Cloud Vault"), initialValue: settings.vault, onChanged: onVaultChanged),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
@@ -372,6 +375,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (value == null) return;
     setState(() {
       settings = settings.copyWith(getFx: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  onVaultChanged(bool? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(vault: value);
       widget.onChanged(settings);
     });
   }
