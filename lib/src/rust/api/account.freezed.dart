@@ -22,6 +22,7 @@ mixin _$Account {
   int get aindex;
   int get dindex;
   Uint8List? get icon;
+  bool get useInternal;
   int get birth;
   Folder get folder;
   int get position;
@@ -55,6 +56,8 @@ mixin _$Account {
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.dindex, dindex) || other.dindex == dindex) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
+            (identical(other.useInternal, useInternal) ||
+                other.useInternal == useInternal) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.position, position) ||
@@ -81,6 +84,7 @@ mixin _$Account {
         aindex,
         dindex,
         const DeepCollectionEquality().hash(icon),
+        useInternal,
         birth,
         folder,
         position,
@@ -96,7 +100,7 @@ mixin _$Account {
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
   }
 }
 
@@ -114,6 +118,7 @@ abstract mixin class $AccountCopyWith<$Res> {
       int aindex,
       int dindex,
       Uint8List? icon,
+      bool useInternal,
       int birth,
       Folder folder,
       int position,
@@ -149,6 +154,7 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
     Object? aindex = null,
     Object? dindex = null,
     Object? icon = freezed,
+    Object? useInternal = null,
     Object? birth = null,
     Object? folder = null,
     Object? position = null,
@@ -194,6 +200,10 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
           ? _self.icon
           : icon // ignore: cast_nullable_to_non_nullable
               as Uint8List?,
+      useInternal: null == useInternal
+          ? _self.useInternal
+          : useInternal // ignore: cast_nullable_to_non_nullable
+              as bool,
       birth: null == birth
           ? _self.birth
           : birth // ignore: cast_nullable_to_non_nullable
@@ -352,6 +362,7 @@ extension AccountPatterns on Account {
             int aindex,
             int dindex,
             Uint8List? icon,
+            bool useInternal,
             int birth,
             Folder folder,
             int position,
@@ -378,6 +389,7 @@ extension AccountPatterns on Account {
             _that.aindex,
             _that.dindex,
             _that.icon,
+            _that.useInternal,
             _that.birth,
             _that.folder,
             _that.position,
@@ -418,6 +430,7 @@ extension AccountPatterns on Account {
             int aindex,
             int dindex,
             Uint8List? icon,
+            bool useInternal,
             int birth,
             Folder folder,
             int position,
@@ -443,6 +456,7 @@ extension AccountPatterns on Account {
             _that.aindex,
             _that.dindex,
             _that.icon,
+            _that.useInternal,
             _that.birth,
             _that.folder,
             _that.position,
@@ -480,6 +494,7 @@ extension AccountPatterns on Account {
             int aindex,
             int dindex,
             Uint8List? icon,
+            bool useInternal,
             int birth,
             Folder folder,
             int position,
@@ -505,6 +520,7 @@ extension AccountPatterns on Account {
             _that.aindex,
             _that.dindex,
             _that.icon,
+            _that.useInternal,
             _that.birth,
             _that.folder,
             _that.position,
@@ -534,6 +550,7 @@ class _Account implements Account {
       required this.aindex,
       required this.dindex,
       this.icon,
+      required this.useInternal,
       required this.birth,
       required this.folder,
       required this.position,
@@ -562,6 +579,8 @@ class _Account implements Account {
   final int dindex;
   @override
   final Uint8List? icon;
+  @override
+  final bool useInternal;
   @override
   final int birth;
   @override
@@ -607,6 +626,8 @@ class _Account implements Account {
             (identical(other.aindex, aindex) || other.aindex == aindex) &&
             (identical(other.dindex, dindex) || other.dindex == dindex) &&
             const DeepCollectionEquality().equals(other.icon, icon) &&
+            (identical(other.useInternal, useInternal) ||
+                other.useInternal == useInternal) &&
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.position, position) ||
@@ -633,6 +654,7 @@ class _Account implements Account {
         aindex,
         dindex,
         const DeepCollectionEquality().hash(icon),
+        useInternal,
         birth,
         folder,
         position,
@@ -648,7 +670,7 @@ class _Account implements Account {
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
   }
 }
 
@@ -667,6 +689,7 @@ abstract mixin class _$AccountCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int aindex,
       int dindex,
       Uint8List? icon,
+      bool useInternal,
       int birth,
       Folder folder,
       int position,
@@ -703,6 +726,7 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
     Object? aindex = null,
     Object? dindex = null,
     Object? icon = freezed,
+    Object? useInternal = null,
     Object? birth = null,
     Object? folder = null,
     Object? position = null,
@@ -748,6 +772,10 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
           ? _self.icon
           : icon // ignore: cast_nullable_to_non_nullable
               as Uint8List?,
+      useInternal: null == useInternal
+          ? _self.useInternal
+          : useInternal // ignore: cast_nullable_to_non_nullable
+              as bool,
       birth: null == birth
           ? _self.birth
           : birth // ignore: cast_nullable_to_non_nullable

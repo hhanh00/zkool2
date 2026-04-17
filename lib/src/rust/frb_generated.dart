@@ -4911,8 +4911,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 19)
-      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -4922,17 +4922,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       aindex: dco_decode_u_32(arr[5]),
       dindex: dco_decode_u_32(arr[6]),
       icon: dco_decode_opt_list_prim_u_8_strict(arr[7]),
-      birth: dco_decode_u_32(arr[8]),
-      folder: dco_decode_folder(arr[9]),
-      position: dco_decode_u_8(arr[10]),
-      hidden: dco_decode_bool(arr[11]),
-      saved: dco_decode_bool(arr[12]),
-      enabled: dco_decode_bool(arr[13]),
-      internal: dco_decode_bool(arr[14]),
-      hw: dco_decode_u_8(arr[15]),
-      height: dco_decode_u_32(arr[16]),
-      time: dco_decode_u_32(arr[17]),
-      balance: dco_decode_u_64(arr[18]),
+      useInternal: dco_decode_bool(arr[8]),
+      birth: dco_decode_u_32(arr[9]),
+      folder: dco_decode_folder(arr[10]),
+      position: dco_decode_u_8(arr[11]),
+      hidden: dco_decode_bool(arr[12]),
+      saved: dco_decode_bool(arr[13]),
+      enabled: dco_decode_bool(arr[14]),
+      internal: dco_decode_bool(arr[15]),
+      hw: dco_decode_u_8(arr[16]),
+      height: dco_decode_u_32(arr[17]),
+      time: dco_decode_u_32(arr[18]),
+      balance: dco_decode_u_64(arr[19]),
     );
   }
 
@@ -6200,6 +6201,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_aindex = sse_decode_u_32(deserializer);
     var var_dindex = sse_decode_u_32(deserializer);
     var var_icon = sse_decode_opt_list_prim_u_8_strict(deserializer);
+    var var_useInternal = sse_decode_bool(deserializer);
     var var_birth = sse_decode_u_32(deserializer);
     var var_folder = sse_decode_folder(deserializer);
     var var_position = sse_decode_u_8(deserializer);
@@ -6220,6 +6222,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         aindex: var_aindex,
         dindex: var_dindex,
         icon: var_icon,
+        useInternal: var_useInternal,
         birth: var_birth,
         folder: var_folder,
         position: var_position,
@@ -7762,6 +7765,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.aindex, serializer);
     sse_encode_u_32(self.dindex, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.icon, serializer);
+    sse_encode_bool(self.useInternal, serializer);
     sse_encode_u_32(self.birth, serializer);
     sse_encode_folder(self.folder, serializer);
     sse_encode_u_8(self.position, serializer);
