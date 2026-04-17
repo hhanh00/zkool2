@@ -280,14 +280,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Gap(8),
                 FormBuilderSwitch(
                   name: "vault",
-                  title: Text("Passkey Cloud Vault"),
+                  title: Text("Cloud Vault"),
                   initialValue: settings.vault,
                   onChanged: onChangedVault,
                 ),
                 if (settings.vault)
                   Row(children: [
                     Expanded(child: Text("Recover Accounts from Vault")),
-                    SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right))),
+                    SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right),),),
                   ]),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
@@ -430,16 +430,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 ),
                 const Gap(4),
                 Text("Backups go to app-specific storage — not your entire Drive.", style: tt.bodySmall),
-                const Gap(12),
-                Row(
-                  children: [
-                    Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
-                    const Gap(8),
-                    Text("Biometric protection", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
-                  ],
-                ),
-                const Gap(4),
-                Text("Face ID / Touch ID protects your vault on this device.", style: tt.bodySmall),
+                if (passkeySupported) ...[
+                  const Gap(12),
+                  Row(
+                    children: [
+                      Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                      const Gap(8),
+                      Text("Biometric protection", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+                    ],
+                  ),
+                  const Gap(4),
+                  Text("Face ID / Touch ID protects your vault on this device.", style: tt.bodySmall),
+                ],
               ],
             ),
           ));
@@ -469,37 +471,41 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
           }
         }
 
-        logger.i("[Vault] enable: registering passkey");
-        final newRegistration = (await registerPasskey()) != null;
-        logger.i("[Vault] enable: newRegistration=$newRegistration");
+        if (passkeySupported) {
+          logger.i("[Vault] enable: registering passkey");
+          final newRegistration = (await registerPasskey()) != null;
+          logger.i("[Vault] enable: newRegistration=$newRegistration");
 
-        bool needsDeviceRegistration = newRegistration;
-        Uint8List? prf;
+          bool needsDeviceRegistration = newRegistration;
+          Uint8List? prf;
 
-        if (!newRegistration && !newVault) {
-          // Passkey already exists — verify the PRF can still decrypt the vault
-          logger.i("[Vault] enable: verifying existing passkey PRF against vault");
-          try {
-            prf = await authenticatePasskey();
-            final vaultBytes = await vault.downloadVaultBytes();
-            await vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
-            logger.i("[Vault] enable: existing passkey PRF verified OK");
-          } catch (e) {
-            logger.w("[Vault] enable: existing passkey PRF cannot decrypt vault ($e), will re-register device");
-            needsDeviceRegistration = true;
+          if (!newRegistration && !newVault) {
+            // Passkey already exists — verify the PRF can still decrypt the vault
+            logger.i("[Vault] enable: verifying existing passkey PRF against vault");
+            try {
+              prf = await authenticatePasskey();
+              final vaultBytes = await vault.downloadVaultBytes();
+              await vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
+              logger.i("[Vault] enable: existing passkey PRF verified OK");
+            } catch (e) {
+              logger.w("[Vault] enable: existing passkey PRF cannot decrypt vault ($e), will re-register device");
+              needsDeviceRegistration = true;
+            }
           }
-        }
 
-        if (needsDeviceRegistration) {
-          if (password == null) {
-            if (!mounted) return;
-            final p = await inputPassword(context, title: "Vault Password", required: true);
-            if (p == null) return;
-            password = p;
+          if (needsDeviceRegistration) {
+            if (password == null) {
+              if (!mounted) return;
+              final p = await inputPassword(context, title: "Vault Password", required: true);
+              if (p == null) return;
+              password = p;
+            }
+            prf ??= await authenticatePasskey();
+            logger.i("[Vault] enable: registering device with PRF");
+            await vault.registerDevice(password: password, prf: prf);
           }
-          prf ??= await authenticatePasskey();
-          logger.i("[Vault] enable: registering device with PRF");
-          await vault.registerDevice(password: password, prf: prf);
+        } else {
+          logger.i("[Vault] enable: passkey not supported on this platform, skipping device registration");
         }
 
         if (!mounted) return;
@@ -521,36 +527,38 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   void onVaultRecover() async {
-    // 1. Try passkey first
+    // 1. Try passkey first (only on supported platforms)
     Uint8List? prf;
-    try {
-      if (!mounted) return;
-      final tt = Theme.of(context).textTheme;
-      final usePasskey = await confirmDialog(
-        context,
-        title: "Vault Recovery",
-        message: "",
-        body: Padding(
-          padding: EdgeInsetsGeometry.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
-                  const Gap(8),
-                  Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
-                ],
-              ),
-              const Gap(4),
-              Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
-            ],
+    if (passkeySupported) {
+      try {
+        if (!mounted) return;
+        final tt = Theme.of(context).textTheme;
+        final usePasskey = await confirmDialog(
+          context,
+          title: "Vault Recovery",
+          message: "",
+          body: Padding(
+            padding: EdgeInsetsGeometry.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                    const Gap(8),
+                    Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+                  ],
+                ),
+                const Gap(4),
+                Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
+              ],
+            ),
           ),
-        ),
-      );
-      if (usePasskey) prf = await authenticatePasskey();
-    } catch (_) {
-      // biometric denied or unavailable
+        );
+        if (usePasskey) prf = await authenticatePasskey();
+      } catch (_) {
+        // biometric denied or unavailable
+      }
     }
 
     // 2. Download vault bytes once

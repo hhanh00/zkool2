@@ -518,12 +518,16 @@ extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);
 }
 
+// flutter_passkey_service only supports Android, iOS, and macOS
+bool get passkeySupported => Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+
 // domain associated with zkool,
 // ie the author's github account
 const rpId = 'hhanh00.github.io';
 const rpName = 'zkool';
 
 Future<CreatePasskeyResponseData?> registerPasskey() async {
+  if (!passkeySupported) throw UnsupportedError('Passkey is not supported on this platform');
   logger.i("[Passkey] registerPasskey: starting");
 
   // Silent check: prefer on-device credentials only — no QR/remote prompt
@@ -561,6 +565,7 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
 const _prfSalt = 'c2FsdA=='; // base64 of "salt"
 
 Future<Uint8List> authenticatePasskey() async {
+  if (!passkeySupported) throw UnsupportedError('Passkey is not supported on this platform');
   logger.i("[Passkey] authenticatePasskey: starting");
   final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
   final options = FlutterPasskeyService.createAuthenticationOptions(
