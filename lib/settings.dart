@@ -450,6 +450,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
         final vault = ref.read(vaultProvider.notifier);
         final newVault = !(await vault.hasVault());
+        logger.i("[Vault] enable: newVault=$newVault");
 
         String? password;
         if (newVault) {
@@ -458,23 +459,30 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
           if (p == null) return;
           password = p;
           try {
+            logger.i("[Vault] enable: initializing new vault");
             await vault.initialize(password);
           } catch (e) {
+            logger.e("[Vault] enable: initialization failed: $e");
             await vault.deleteLocalVault();
             if (mounted) await showException(context, e.toString());
             return;
           }
         }
 
+        logger.i("[Vault] enable: registering passkey");
         final newRegistration = (await registerPasskey()) != null;
+        logger.i("[Vault] enable: newRegistration=$newRegistration");
 
         if (newRegistration) {
           if (password == null) {
+            if (!mounted) return;
             final p = await inputPassword(context, title: "Vault Password", required: true);
             if (p == null) return;
             password = p;
           }
+          logger.i("[Vault] enable: authenticating passkey for PRF");
           final prf = await authenticatePasskey();
+          logger.i("[Vault] enable: registering device with PRF");
           await vault.registerDevice(password: password, prf: prf);
         }
 
@@ -508,19 +516,22 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         context,
         title: "Vault Recovery",
         message: "",
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
-                const Gap(8),
-                Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
-              ],
-            ),
-            const Gap(4),
-            Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
-          ],
+        body: Padding(
+          padding: EdgeInsetsGeometry.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                  const Gap(8),
+                  Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+                ],
+              ),
+              const Gap(4),
+              Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
+            ],
+          ),
         ),
       );
       if (usePasskey) prf = await authenticatePasskey();
@@ -531,9 +542,16 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     // 2. Download vault bytes once
     Uint8List vaultBytes;
     try {
+      logger.i("[Recover] step 2: downloading vault bytes");
       vaultBytes = await ref.read(vaultProvider.notifier).downloadVaultBytes();
+      logger.i("[Recover] step 2: downloaded ${vaultBytes.length} bytes");
     } on AnyhowException catch (e) {
+      logger.e("[Recover] step 2: download failed: $e");
       if (mounted) await showException(context, e.message);
+      return;
+    } catch (e) {
+      logger.e("[Recover] step 2: download failed: $e");
+      if (mounted) await showException(context, e.toString());
       return;
     }
 
@@ -541,27 +559,35 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     List? recovered;
     if (prf != null) {
       try {
+        logger.i("[Recover] step 3: trying PRF recovery");
         recovered = await ref.read(vaultProvider.notifier).recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
-        logger.i('[PRF] recovery succeeded, ${recovered.length} accounts');
+        logger.i('[Recover] step 3: PRF recovery succeeded, ${recovered.length} accounts');
       } catch (e) {
         // PRF recovery failed, fall through to password
-        logger.i('[PRF] recovery failed: $e');
+        logger.i('[Recover] step 3: PRF recovery failed: $e');
       }
     }
 
     // 4. Fall back to password recovery
     if (recovered == null) {
+      logger.i("[Recover] step 4: prompting for password");
       if (!mounted) return;
       final password = await inputPassword(context, title: "Vault Password", required: true);
       if (password == null) return;
       try {
+        logger.i("[Recover] step 4: recovering with password");
         recovered = await ref.read(vaultProvider.notifier).recoverVault(vaultBytes: vaultBytes, masterPassword: password);
+        logger.i("[Recover] step 4: recovered ${recovered.length} accounts");
       } on AnyhowException catch (e) {
+        logger.e("[Recover] step 4: password recovery failed: $e");
         if (mounted) await showException(context, e.message);
         return;
       }
     }
-    if (recovered.isEmpty) return;
+    if (recovered.isEmpty) {
+      logger.i("[Recover] no accounts recovered, stopping");
+      return;
+    }
 
     if (!mounted) return;
     final existingAccounts = await ref.read(getAccountsProvider.future);

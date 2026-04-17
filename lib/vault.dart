@@ -11,9 +11,6 @@ import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/vault.dart' as rust;
 export 'package:zkool/src/rust/api/vault.dart' show RestoredAccount;
 
-// TODO For prod
-// vault should go to appdata folder (hidden)
-// scope should be changed in the consent page (google dev console)
 enum VaultFile { masterPart, devicePart }
 
 class Vault {
@@ -46,29 +43,38 @@ class Vault {
     return vault;
   }
 
-  Future<void> signIn() async {
-    logger.i("Signing in");
+  Future<void> signIn({bool silent = true}) async {
+    logger.i("Signing in (silent=$silent)");
     googleSignIn = GoogleSignIn(
-      // TODO: Update to appdata
-      scopes: ['https://www.googleapis.com/auth/drive'],
+      scopes: ['https://www.googleapis.com/auth/drive.appdata'],
     );
-    var account = await googleSignIn!.signInSilently();
+    GoogleSignInAccount? account;
+    if (silent) {
+      account = await googleSignIn!.signInSilently();
+    }
     account ??= await googleSignIn!.signIn();
     logger.i("Signed in ${account!.displayName}");
   }
 
   Future<bool> hasVault() async {
+    logger.i("hasVault: checking local file");
     final file = await _localMasterFile;
-    if (await file.exists()) return true;
+    if (await file.exists()) {
+      logger.i("hasVault: local file exists");
+      return true;
+    }
     // try downloading from Google Drive
     try {
+      logger.i("hasVault: trying Google Drive download");
       final bytes = await _download(VaultFile.masterPart);
       if (bytes.isNotEmpty) {
+        logger.i("hasVault: downloaded ${bytes.length} bytes, saving locally");
         await file.writeAsBytes(bytes);
         return true;
       }
-    } catch (_) {
-      // not signed in or no network
+      logger.i("hasVault: no master file on Drive");
+    } catch (e) {
+      logger.w("hasVault: download failed: $e");
     }
     return false;
   }
@@ -132,16 +138,24 @@ class Vault {
   }
 
   Future<Uint8List> downloadVaultBytes() async {
-    return _download(VaultFile.devicePart);
+    logger.i("downloadVaultBytes: starting");
+    final bytes = await _download(VaultFile.devicePart);
+    logger.i("downloadVaultBytes: got ${bytes.length} bytes");
+    return bytes;
   }
 
   Future<List<rust.RestoredAccount>> recoverWithPrf({required Uint8List vaultBytes, required Uint8List prf}) async {
-    logger.i('[PRF] recoverWithPrf: prf=${hex.encode(prf.sublist(0, 4))}..., deviceId=$deviceId');
-    return rustVault.recoverWithPrf(vaultBytes: vaultBytes, deviceIdStr: deviceId, prfOutput: prf);
+    logger.i('[PRF] recoverWithPrf: vaultBytes=${vaultBytes.length} bytes, prf=${hex.encode(prf.sublist(0, 4))}..., deviceId=$deviceId');
+    final result = await rustVault.recoverWithPrf(vaultBytes: vaultBytes, deviceIdStr: deviceId, prfOutput: prf);
+    logger.i('[PRF] recoverWithPrf: recovered ${result.length} accounts');
+    return result;
   }
 
   Future<List<rust.RestoredAccount>> recoverVault({required Uint8List vaultBytes, required String masterPassword}) async {
-    return rustVault.recover(vaultBytes: vaultBytes, masterPassword: masterPassword);
+    logger.i("recoverVault: vaultBytes=${vaultBytes.length} bytes");
+    final result = await rustVault.recover(vaultBytes: vaultBytes, masterPassword: masterPassword);
+    logger.i("recoverVault: recovered ${result.length} accounts");
+    return result;
   }
 
   Future<void> append(Uint8List entry) async {
@@ -160,15 +174,20 @@ class Vault {
     }
   }
 
-  // TODO: Update to appdata
-  static const String spaces = "root";
+  static const String spaces = "appDataFolder";
 
   // --- Private ---
 
   Future<drive.DriveApi> get _driveApi async {
     if (googleSignIn == null) await signIn();
+    logger.i("_driveApi: getting authenticated client");
     final httpClient = await googleSignIn!.authenticatedClient();
-    return drive.DriveApi(httpClient!);
+    if (httpClient == null) {
+      logger.e("_driveApi: authenticatedClient returned null");
+      throw StateError("Failed to get authenticated HTTP client");
+    }
+    logger.i("_driveApi: client obtained, creating DriveApi");
+    return drive.DriveApi(httpClient);
   }
 
   Future<T> _withReauth<T>(Future<T> Function(drive.DriveApi) fn) async {
@@ -176,17 +195,24 @@ class Vault {
       return await fn(await _driveApi);
     } catch (e) {
       if (_isAuthError(e)) {
-        await googleSignIn?.signOut();
-        await signIn();
-        return await fn(await _driveApi);
+        logger.w("Auth error, disconnecting account and re-authenticating");
+        await googleSignIn?.disconnect();
+        try {
+          await signIn(silent: false);
+          return await fn(await _driveApi);
+        } catch (e2) {
+          logger.e("Re-authentication failed: $e2");
+          rethrow;
+        }
       }
       rethrow;
     }
   }
 
   bool _isAuthError(Object e) {
+    logger.e(e.toString());
     final msg = e.toString().toLowerCase();
-    return msg.contains('401') || (msg.contains('invalid') && msg.contains('bearer'));
+    return msg.contains('401') || msg.contains('invalid_token') || msg.contains('access was denied');
   }
 
   String _fileName(VaultFile file) => switch (file) {
@@ -196,8 +222,7 @@ class Vault {
 
   Future<String?> _findFileId(drive.DriveApi driveApi, String filename) async {
     final fileList = await driveApi.files.list(
-      // TODO: Update to appdata
-      spaces: 'drive',
+      spaces: 'appDataFolder',
       q: "name = '$filename' and trashed = false",
       $fields: 'files(id)',
     );
@@ -205,11 +230,12 @@ class Vault {
   }
 
   Future<Uint8List> _download(VaultFile file) async {
+    logger.i("_download: ${file.name}");
     return _withReauth((driveApi) async {
       if (file == VaultFile.devicePart) {
         // Download all files matching vault-* and aggregate
         final fileList = await driveApi.files.list(
-          spaces: 'drive',
+          spaces: 'appDataFolder',
           q: "name contains 'vault-'",
           $fields: 'files(id, name)',
         );

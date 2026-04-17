@@ -873,6 +873,7 @@ class VaultNotifier extends _$VaultNotifier {
   }
 
   Future<bool> hasVault() async {
+    logger.i("VaultNotifier.hasVault");
     final vault = await future;
     return vault.hasVault();
   }
@@ -893,21 +894,25 @@ class VaultNotifier extends _$VaultNotifier {
   }
 
   Future<void> registerDevice({required String password, required Uint8List prf}) async {
+    logger.i("VaultNotifier.registerDevice");
     final vault = await future;
     await vault.registerDevice(password: password, prf: prf);
   }
 
   Future<Uint8List> downloadVaultBytes() async {
+    logger.i("VaultNotifier.downloadVaultBytes");
     final vault = await future;
     return vault.downloadVaultBytes();
   }
 
   Future<List<RestoredAccount>> recoverWithPrf({required Uint8List vaultBytes, required Uint8List prf}) async {
+    logger.i("VaultNotifier.recoverWithPrf");
     final vault = await future;
     return vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
   }
 
   Future<List<RestoredAccount>> recoverVault({required Uint8List vaultBytes, required String masterPassword}) async {
+    logger.i("VaultNotifier.recoverVault");
     final vault = await future;
     return vault.recoverVault(vaultBytes: vaultBytes, masterPassword: masterPassword);
   }
