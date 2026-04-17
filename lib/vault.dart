@@ -8,7 +8,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:path_provider/path_provider.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/src/rust/api/vault.dart';
+import 'package:zkool/src/rust/api/vault.dart' as rust;
+export 'package:zkool/src/rust/api/vault.dart' show RestoredAccount;
 
 // TODO For prod
 // vault should go to appdata folder (hidden)
@@ -18,6 +19,7 @@ enum VaultFile { masterPart, devicePart }
 class Vault {
   late final String deviceId;
   GoogleSignIn? googleSignIn;
+  late final rust.DartVault rustVault;
 
   Vault._(this.deviceId);
 
@@ -37,14 +39,11 @@ class Vault {
     } else {
       throw PlatformException(code: "Unsupported");
     }
-    return Vault._(id);
-  }
-
-  Future<DartVault> toDartVault() async {
-    return await initVault(
-      append: (entry) => append(entry),
-      readLog: () => readLog(),
+    final vault = Vault._(id);
+    vault.rustVault = await rust.initVault(
+      append: (entry) => vault.append(entry),
     );
+    return vault;
   }
 
   Future<void> signIn() async {
@@ -73,26 +72,25 @@ class Vault {
     return bytes.sublist(1, 33);
   }
 
-  Future<void> initialize(DartVault dartVault, String password) async {
+  Future<void> initialize(String password) async {
     final file = await _localMasterFile;
     if (await file.exists()) {
       throw StateError('Vault already initialized');
     }
-    await setMasterPassword(dartVault, null, password);
+    await setMasterPassword(null, password);
   }
 
-  Future<void> storeAccount(DartVault dartVault, {required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight, required Uint8List pk}) async {
-    await dartVault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
+  Future<void> storeAccount({required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight, required Uint8List pk}) async {
+    await rustVault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
   }
 
   Future<void> setMasterPassword(
-    DartVault dartVault,
     String? oldPassword,
     String newPassword,
   ) async {
     final oldBytes = oldPassword != null ? await _download(VaultFile.masterPart) : null;
 
-    final bytes = await dartVault.setMasterPassword(
+    final bytes = await rustVault.setMasterPassword(
       newPassword: newPassword,
       oldPassword: oldPassword,
       oldBytes: oldBytes != null && oldBytes.isNotEmpty ? oldBytes : null,
@@ -103,8 +101,9 @@ class Vault {
     await _upload(bytes, VaultFile.masterPart, createOnly: oldPassword == null);
   }
 
-  Future<Uint8List> readLog() async {
-    return _download(VaultFile.devicePart);
+  Future<List<rust.RestoredAccount>> recover(String masterPassword) async {
+    final vaultBytes = await _download(VaultFile.devicePart);
+    return rustVault.recover(vaultBytes: vaultBytes, masterPassword: masterPassword);
   }
 
   Future<void> append(Uint8List entry) async {
