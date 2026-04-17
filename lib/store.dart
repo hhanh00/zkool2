@@ -863,14 +863,33 @@ sealed class QRSettings with _$QRSettings {
 
 @Riverpod(keepAlive: true)
 class VaultNotifier extends _$VaultNotifier {
+  Vault? _vault;
+
   @override
   Future<DartVault> build() async {
-    final v = await Vault.create();
-    return v.toDartVault();
+    _vault = await Vault.create();
+    return _vault!.toDartVault();
   }
 
   Future<void> test() async {
     final v = await future;
     await v.test();
+  }
+
+  Future<bool> hasVault() async {
+    return (await _vault?.hasVault()) == true;
+  }
+
+  Future<Uint8List?> get masterPk => _vault!.masterPk;
+
+  Future<void> initialize(String password) async {
+    final dartVault = await future;
+    await _vault!.initialize(dartVault, password);
+  }
+
+  Future<void> storeAccount({required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight}) async {
+    final dartVault = await future;
+    final pk = (await masterPk)!;
+    await _vault!.storeAccount(dartVault, name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
   }
 }

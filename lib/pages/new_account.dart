@@ -342,6 +342,15 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         }
 
         final seed = await getAccountSeed(account: account, c: c);
+        if (seed != null) {
+          await ref.read(vaultProvider.notifier).storeAccount(
+            name: name ?? "",
+            seed: seed.mnemonic,
+            aindex: int.parse(aindex ?? "0"),
+            useInternal: useInternal ?? false,
+            birthHeight: bh,
+          );
+        }
         if (mounted && key.isEmpty && seed != null) {
           await showSeed(context, seed.mnemonic);
         }

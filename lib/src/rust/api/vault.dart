@@ -17,5 +17,13 @@ abstract class DartVault implements RustOpaqueInterface {
   Future<Uint8List> setMasterPassword(
       {String? oldPassword, required String newPassword, Uint8List? oldBytes});
 
+  Future<void> storeAccount(
+      {required String name,
+      required String seed,
+      required int aindex,
+      required bool useInternal,
+      required int birthHeight,
+      required List<int> pk});
+
   Future<void> test();
 }
