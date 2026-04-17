@@ -1,5 +1,34 @@
 # Changelog
 
+## [6.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.0) (2026-04-17)
+
+
+### Features
+
+* add ed25519 keypair to dkg as round 0 for future message signing ([#900](https://github.com/hhanh00/zkool2/issues/900)) ([80733df](https://github.com/hhanh00/zkool2/commit/80733df1a5f5e88a8db9fdab2db47739765294d3))
+* dart vault impl placeholder ([#908](https://github.com/hhanh00/zkool2/issues/908)) ([98a5041](https://github.com/hhanh00/zkool2/commit/98a504188cc6ad48a2873ae777be53a1d406ae75))
+* encrypt and save account keys to vault ([#912](https://github.com/hhanh00/zkool2/issues/912)) ([572813e](https://github.com/hhanh00/zkool2/commit/572813e3a462687f46ab4dea1621ce5df90a060e))
+* google drive integration ([#907](https://github.com/hhanh00/zkool2/issues/907)) ([d2e3712](https://github.com/hhanh00/zkool2/commit/d2e371202ccd5f8488e14204e45e113eeca75980))
+* passkey support for the key vault ([#914](https://github.com/hhanh00/zkool2/issues/914)) ([0bec4cf](https://github.com/hhanh00/zkool2/commit/0bec4cf2a55a4506e862838c51b368a6dce491d4))
+* set master vault password api ([#910](https://github.com/hhanh00/zkool2/issues/910)) ([98d6ddf](https://github.com/hhanh00/zkool2/commit/98d6ddf2829afd816b986e8e0f6099117aa8648b))
+* sign and verify Frost Messages ([#901](https://github.com/hhanh00/zkool2/issues/901)) ([40dc4e1](https://github.com/hhanh00/zkool2/commit/40dc4e1adaa771ef294a80c6d60e4c713ef9a41a))
+* vault impl in dart ([#909](https://github.com/hhanh00/zkool2/issues/909)) ([d36e13e](https://github.com/hhanh00/zkool2/commit/d36e13ebdde74aceb4224baa2391d88219efe9d9))
+* vault master key implementation ([#911](https://github.com/hhanh00/zkool2/issues/911)) ([8220e63](https://github.com/hhanh00/zkool2/commit/8220e637f6e7d1c75ba43954ab46746322ab239a))
+* vault recovery from master password ([#913](https://github.com/hhanh00/zkool2/issues/913)) ([8f09005](https://github.com/hhanh00/zkool2/commit/8f0900511cac591ac0a7178e0cc6b2d4476cb48e))
+
+
+### Bug Fixes
+
+* add confirmation/explanation messages ([#915](https://github.com/hhanh00/zkool2/issues/915)) ([def0c69](https://github.com/hhanh00/zkool2/commit/def0c69e20b9100002b20d5b7c9c1fc0a7c56507))
+* add logging messages and fix passkey on android ([#916](https://github.com/hhanh00/zkool2/issues/916)) ([2d28cbc](https://github.com/hhanh00/zkool2/commit/2d28cbc4318f080487eddb0a28e653a7a1049bb7))
+* add timestamp to vault log entry ([#921](https://github.com/hhanh00/zkool2/issues/921)) ([8488cfb](https://github.com/hhanh00/zkool2/commit/8488cfb656888287f1f12343af751c42bc58e6c8))
+* check for missing witnesses and offer to resync ([#891](https://github.com/hhanh00/zkool2/issues/891)) ([d8c7aa5](https://github.com/hhanh00/zkool2/commit/d8c7aa5f9e361091a5bb01d9799a43a172948439))
+* iOS build ([#919](https://github.com/hhanh00/zkool2/issues/919)) ([087b755](https://github.com/hhanh00/zkool2/commit/087b755970b3c6e2ea64af5c818af64252703908))
+* linux nix build ([#899](https://github.com/hhanh00/zkool2/issues/899)) ([ef778f9](https://github.com/hhanh00/zkool2/commit/ef778f95b079b9fa24f00fecaa15a07ed0dfc9eb))
+* replace zaino by lightwalletd ([#895](https://github.com/hhanh00/zkool2/issues/895)) ([1b0b67f](https://github.com/hhanh00/zkool2/commit/1b0b67fba7db22f2b7244b50683a70987cbe075a))
+* reregister the passkey if it is stale ([#923](https://github.com/hhanh00/zkool2/issues/923)) ([4ed3bb9](https://github.com/hhanh00/zkool2/commit/4ed3bb9f2b3b6e681e85bedebc0d24fd5d65a0f5))
+* **vault:** restore latest logentry ([#922](https://github.com/hhanh00/zkool2/issues/922)) ([59edc06](https://github.com/hhanh00/zkool2/commit/59edc06fa248c16c3606a8c5b06587924b50cd84))
+
 ## [6.13.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.12.0...zkool-v6.13.5) (2026-04-08)
 
 
