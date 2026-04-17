@@ -17,7 +17,6 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/api/vault.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/vault.dart';
@@ -863,33 +862,39 @@ sealed class QRSettings with _$QRSettings {
 
 @Riverpod(keepAlive: true)
 class VaultNotifier extends _$VaultNotifier {
-  Vault? _vault;
-
   @override
-  Future<DartVault> build() async {
-    _vault = await Vault.create();
-    return _vault!.toDartVault();
+  Future<Vault> build() async {
+    return Vault.create();
   }
 
   Future<void> test() async {
-    final v = await future;
-    await v.test();
+    final vault = await future;
+    await vault.rustVault.test();
   }
 
   Future<bool> hasVault() async {
-    return (await _vault?.hasVault()) == true;
+    final vault = await future;
+    return vault.hasVault();
   }
 
-  Future<Uint8List?> get masterPk => _vault!.masterPk;
+  Future<Uint8List?> get masterPk async {
+    final vault = await future;
+    return vault.masterPk;
+  }
 
   Future<void> initialize(String password) async {
-    final dartVault = await future;
-    await _vault!.initialize(dartVault, password);
+    final vault = await future;
+    await vault.initialize(password);
   }
 
   Future<void> storeAccount({required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight}) async {
-    final dartVault = await future;
-    final pk = (await masterPk)!;
-    await _vault!.storeAccount(dartVault, name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
+    final vault = await future;
+    final pk = (await vault.masterPk)!;
+    await vault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
+  }
+
+  Future<List<RestoredAccount>> recover(String password) async {
+    final vault = await future;
+    return vault.recover(password);
   }
 }
