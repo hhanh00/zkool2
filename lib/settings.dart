@@ -473,20 +473,34 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         final newRegistration = (await registerPasskey()) != null;
         logger.i("[Vault] enable: newRegistration=$newRegistration");
 
-        if (newRegistration) {
+        bool needsDeviceRegistration = newRegistration;
+        Uint8List? prf;
+
+        if (!newRegistration && !newVault) {
+          // Passkey already exists — verify the PRF can still decrypt the vault
+          logger.i("[Vault] enable: verifying existing passkey PRF against vault");
+          try {
+            prf = await authenticatePasskey();
+            final vaultBytes = await vault.downloadVaultBytes();
+            await vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
+            logger.i("[Vault] enable: existing passkey PRF verified OK");
+          } catch (e) {
+            logger.w("[Vault] enable: existing passkey PRF cannot decrypt vault ($e), will re-register device");
+            needsDeviceRegistration = true;
+          }
+        }
+
+        if (needsDeviceRegistration) {
           if (password == null) {
             if (!mounted) return;
             final p = await inputPassword(context, title: "Vault Password", required: true);
             if (p == null) return;
             password = p;
           }
-          logger.i("[Vault] enable: authenticating passkey for PRF");
-          final prf = await authenticatePasskey();
+          prf ??= await authenticatePasskey();
           logger.i("[Vault] enable: registering device with PRF");
           await vault.registerDevice(password: password, prf: prf);
         }
-
-        // TODO: Check that the keys we have can decrypt the vault
 
         if (!mounted) return;
         await showMessage(context, "Vault activated");
