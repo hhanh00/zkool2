@@ -1,4 +1,6 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -275,6 +278,11 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 ),
                 Gap(8),
                 FormBuilderSwitch(name: "vault", title: Text("Passkey Cloud Vault"), initialValue: settings.vault, onChanged: onChangedVault),
+                if (settings.vault)
+                  Row(children: [
+                    Expanded(child: Text("Recover Accounts from Vault")),
+                    SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right))),
+                  ]),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
@@ -393,6 +401,67 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       settings = settings.copyWith(vault: value);
       widget.onChanged(settings);
     });
+  }
+
+  void onVaultRecover() async {
+    final password = await inputPassword(context, title: "Vault Password", required: true);
+    if (password == null) return;
+    List recovered;
+    try {
+      recovered = await ref.read(vaultProvider.notifier).recover(password);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+      return;
+    }
+    if (recovered.isEmpty) return;
+
+    if (!mounted) return;
+    final existingAccounts = await ref.read(getAccountsProvider.future);
+    final coin = ref.read(coinContextProvider);
+    final ctx = context;
+    AwesomeDialog? dialog;
+    try {
+      dialog = await showMessage(ctx, "Importing ${recovered.length} account(s)...", dismissable: false);
+      for (final ra in recovered) {
+        // find existing account matching seed + aindex
+        final match = existingAccounts.where((a) => a.seed == ra.seed && a.aindex == ra.aindex).firstOrNull;
+        if (match != null) {
+          // seed exists — only update name and birth height
+          await updateAccount(
+            update: AccountUpdate(
+              coin: coin.coin,
+              id: match.id,
+              name: ra.name,
+              birth: ra.birthHeight,
+              folder: match.folder.id,
+            ),
+            c: coin,
+          );
+        } else {
+          // create new account from seed
+          await newAccount(
+            na: NewAccount(
+              name: ra.name,
+              restore: true,
+              key: ra.seed,
+              aindex: ra.aindex,
+              birth: ra.birthHeight,
+              folder: "",
+              useInternal: ra.useInternal,
+              internal: false,
+              ledger: false,
+            ),
+            c: coin,
+          );
+        }
+      }
+      ref.invalidate(getAccountsProvider);
+      dialog.dismiss();
+      if (mounted) await showMessage(context, "Vault recovery completed");
+    } on AnyhowException catch (e) {
+      dialog?.dismiss();
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   onChangedActionsPerSync(String? value) async {

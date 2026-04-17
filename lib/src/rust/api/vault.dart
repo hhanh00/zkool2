@@ -7,13 +7,14 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 Future<DartVault> initVault(
-        {required FutureOr<void> Function(Uint8List) append,
-        required FutureOr<Uint8List> Function() readLog}) =>
-    RustLib.instance.api
-        .crateApiVaultInitVault(append: append, readLog: readLog);
+        {required FutureOr<void> Function(Uint8List) append}) =>
+    RustLib.instance.api.crateApiVaultInitVault(append: append);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DartVault>>
 abstract class DartVault implements RustOpaqueInterface {
+  Future<List<RestoredAccount>> recover(
+      {required List<int> vaultBytes, required String masterPassword});
+
   Future<Uint8List> setMasterPassword(
       {String? oldPassword, required String newPassword, Uint8List? oldBytes});
 
@@ -26,4 +27,39 @@ abstract class DartVault implements RustOpaqueInterface {
       required List<int> pk});
 
   Future<void> test();
+}
+
+class RestoredAccount {
+  final String name;
+  final String seed;
+  final int aindex;
+  final bool useInternal;
+  final int birthHeight;
+
+  const RestoredAccount({
+    required this.name,
+    required this.seed,
+    required this.aindex,
+    required this.useInternal,
+    required this.birthHeight,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      seed.hashCode ^
+      aindex.hashCode ^
+      useInternal.hashCode ^
+      birthHeight.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RestoredAccount &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          seed == other.seed &&
+          aindex == other.aindex &&
+          useInternal == other.useInternal &&
+          birthHeight == other.birthHeight;
 }

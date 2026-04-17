@@ -7,9 +7,8 @@ use crate::vault::{DartVaultIO, Vault};
 #[frb]
 pub fn init_vault(
     append: impl Fn(Vec<u8>) -> DartFnFuture<Result<()>> + Send + Sync + 'static,
-    read_log: impl Fn() -> DartFnFuture<Result<Vec<u8>>> + Send + Sync + 'static,
 ) -> Result<DartVault> {
-    let io_handler = DartVaultIO::new(append, read_log);
+    let io_handler = DartVaultIO::new(append);
     let vault = Vault::new(io_handler);
     Ok(DartVault(vault))
 }
@@ -47,4 +46,18 @@ impl DartVault {
     ) -> Result<()> {
         self.0.store_account(name, seed, aindex, use_internal, birth_height, pk).await
     }
+
+    #[frb]
+    pub fn recover(&self, vault_bytes: Vec<u8>, master_password: String) -> Result<Vec<RestoredAccount>> {
+        let accounts = crate::vault::crypto::recover(&vault_bytes, &master_password)?;
+        Ok(accounts)
+    }
+}
+
+pub struct RestoredAccount {
+    pub name: String,
+    pub seed: String,
+    pub aindex: u32,
+    pub use_internal: bool,
+    pub birth_height: u32,
 }
