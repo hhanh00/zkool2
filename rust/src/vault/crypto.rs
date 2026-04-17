@@ -7,33 +7,39 @@ use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce, aead::Aead};
 use rand_core::{OsRng, RngCore};
 use x25519_dalek::{PublicKey, StaticSecret};
 
-struct AccountPayload {
-    entropy: [u8; 32],
-    name: String,
-    birth_height: u32,
+pub struct AccountPayload {
+    pub name: String,
+    pub entropy: [u8; 32],
+    pub aindex: u32,
+    pub use_internal: bool,
+    pub birth_height: u32,
 }
 
 impl AccountPayload {
-    /// Write: entropy(32) | name_len(1) | name(var) | birth_height(4 BE)
+    /// Write: name_len(2 BE) | name(var) | entropy(32) | aindex(4 BE) | use_internal(1) | birth_height(4 BE)
     fn write_to<W: Write>(&self, mut w: W) -> Result<()> {
-        w.write_all(&self.entropy)?;
         let name_bytes = self.name.as_bytes();
-        w.write_all(&[name_bytes.len() as u8])?;
+        w.write_u16::<BigEndian>(name_bytes.len() as u16)?;
         w.write_all(name_bytes)?;
+        w.write_all(&self.entropy)?;
+        w.write_u32::<BigEndian>(self.aindex)?;
+        w.write_u8(self.use_internal as u8)?;
         w.write_u32::<BigEndian>(self.birth_height)?;
         Ok(())
     }
 
     fn read_from<R: Read>(mut r: R) -> Result<Self> {
-        let mut entropy = [0u8; 32];
-        r.read_exact(&mut entropy)?;
-        let name_len = r.read_u8()? as usize;
+        let name_len = r.read_u16::<BigEndian>()? as usize;
         let mut name_buf = vec![0u8; name_len];
         r.read_exact(&mut name_buf)?;
         let name = String::from_utf8(name_buf)
             .map_err(|e| anyhow!("Invalid name: {}", e))?;
+        let mut entropy = [0u8; 32];
+        r.read_exact(&mut entropy)?;
+        let aindex = r.read_u32::<BigEndian>()?;
+        let use_internal = r.read_u8()? != 0;
         let birth_height = r.read_u32::<BigEndian>()?;
-        Ok(Self { entropy, name, birth_height })
+        Ok(Self { name, entropy, aindex, use_internal, birth_height })
     }
 }
 
@@ -157,6 +163,39 @@ pub fn derive_master_key(password: &str) -> Result<Vec<u8>> {
     };
 
     let mut buf = Vec::with_capacity(109);
+    entry.write_to(&mut buf)?;
+    Ok(buf)
+}
+
+pub fn encrypt_account(account: AccountPayload, pk: PublicKey) -> Result<Vec<u8>> {
+    let mut plaintext = Vec::new();
+    account.write_to(&mut plaintext)?;
+
+    let ephemeral_sk = StaticSecret::random_from_rng(OsRng);
+    let ephemeral_pk = PublicKey::from(&ephemeral_sk);
+    let shared_secret = ephemeral_sk.diffie_hellman(&pk);
+
+    let derived_key = blake2b_simd::Params::new()
+        .hash_length(32)
+        .key(shared_secret.as_bytes())
+        .personal(b"zkool-vault-acct")
+        .to_state()
+        .finalize();
+    let cipher = ChaCha20Poly1305::new(Key::from_slice(derived_key.as_bytes()));
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    let ciphertext = cipher.encrypt(nonce, plaintext.as_slice() as &[u8])
+        .map_err(|e| anyhow!("Encryption failed: {}", e))?;
+
+    let entry = LogEntry::Account {
+        ephemeral_pk: *ephemeral_pk.as_bytes(),
+        nonce: nonce_bytes,
+        ciphertext,
+    };
+
+    let mut buf = Vec::new();
     entry.write_to(&mut buf)?;
     Ok(buf)
 }

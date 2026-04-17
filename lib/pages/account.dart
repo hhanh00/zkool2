@@ -436,6 +436,16 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         ),
         c: c,
       );
+      final seed = await getAccountSeed(account: accounts[0].id, c: c);
+      if (seed != null) {
+        await ref.read(vaultProvider.notifier).storeAccount(
+          name: name,
+          seed: seed.mnemonic,
+          aindex: accounts[0].aindex,
+          useInternal: accounts[0].internal,
+          birthHeight: accounts[0].height,
+        );
+      }
       ref.invalidate(getAccountsProvider);
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
@@ -474,16 +484,27 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
 
   void onEditBirth(String? birth) async {
     if (birth != null && birth.isNotEmpty) {
-      accounts[0] = accounts[0].copyWith(birth: int.parse(birth));
+      final bh = int.parse(birth);
+      accounts[0] = accounts[0].copyWith(birth: bh);
       await updateAccount(
         update: AccountUpdate(
           coin: accounts[0].coin,
           id: accounts[0].id,
-          birth: int.parse(birth),
+          birth: bh,
           folder: accounts[0].folder.id,
         ),
         c: c,
       );
+      final seed = await getAccountSeed(account: accounts[0].id, c: c);
+      if (seed != null) {
+        await ref.read(vaultProvider.notifier).storeAccount(
+          name: accounts[0].name,
+          seed: seed.mnemonic,
+          aindex: accounts[0].aindex,
+          useInternal: accounts[0].internal,
+          birthHeight: bh,
+        );
+      }
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
     }

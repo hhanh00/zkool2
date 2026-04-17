@@ -34,4 +34,17 @@ impl DartVault {
     ) -> Result<Vec<u8>> {
         Vault::<DartVaultIO>::set_master_password(old_password, new_password, old_bytes).await
     }
+
+    #[frb]
+    pub async fn store_account(
+        &self,
+        name: String,
+        seed: String,
+        aindex: u32,
+        use_internal: bool,
+        birth_height: u32,
+        pk: Vec<u8>,
+    ) -> Result<()> {
+        self.0.store_account(name, seed, aindex, use_internal, birth_height, pk).await
+    }
 }

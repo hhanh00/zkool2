@@ -1014,7 +1014,7 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'a42a90c0a993db5cfbeccfe0541e75b22f7fe705';
+String _$vaultNotifierHash() => r'7ad5b4b3430986da4bfd2cbbb5f16aa1d9cdf47d';
 
 abstract class _$VaultNotifier extends $AsyncNotifier<DartVault> {
   FutureOr<DartVault> build();

@@ -14,7 +14,6 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
-import 'package:zkool/vault.dart';
 
 final logID = GlobalKey();
 final lightnodeID = GlobalKey();
@@ -383,11 +382,11 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   onChangedVault(bool? value) async {
     if (value == null) return;
     if (value) {
-      if (!await vault.hasVault()) {
+      if (!await ref.read(vaultProvider.notifier).hasVault()) {
         if (!mounted) return;
         final password = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
         if (password == null) return;
-        await vault.initialize(ref, password);
+        await ref.read(vaultProvider.notifier).initialize(password);
       }
     }
     setState(() {
