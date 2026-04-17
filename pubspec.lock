@@ -552,7 +552,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "008ff833ab7d09ad2814ffb5a0d04e6691160bde"
+      resolved-ref: "3c740b3732aacc54bccd3294294e66f53e894887"
       url: "https://github.com/hhanh00/flutter_passkey_service.git"
     source: git
     version: "0.0.6"
