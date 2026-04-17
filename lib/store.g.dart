@@ -994,7 +994,7 @@ abstract class _$Lifecycle extends $AsyncNotifier<bool> {
 const vaultProvider = VaultNotifierProvider._();
 
 final class VaultNotifierProvider
-    extends $AsyncNotifierProvider<VaultNotifier, DartVault> {
+    extends $AsyncNotifierProvider<VaultNotifier, Vault> {
   const VaultNotifierProvider._()
       : super(
           from: null,
@@ -1014,18 +1014,18 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'7ad5b4b3430986da4bfd2cbbb5f16aa1d9cdf47d';
+String _$vaultNotifierHash() => r'ebf7e53ce06c20fb96c9f8a14ec3186c1972e2d4';
 
-abstract class _$VaultNotifier extends $AsyncNotifier<DartVault> {
-  FutureOr<DartVault> build();
+abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
+  FutureOr<Vault> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<AsyncValue<DartVault>, DartVault>;
+    final ref = this.ref as $Ref<AsyncValue<Vault>, Vault>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<DartVault>, DartVault>,
-        AsyncValue<DartVault>,
+        AnyNotifier<AsyncValue<Vault>, Vault>,
+        AsyncValue<Vault>,
         Object?,
         Object?>;
     element.handleValue(ref, created);
