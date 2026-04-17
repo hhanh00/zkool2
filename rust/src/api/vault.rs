@@ -50,6 +50,7 @@ impl DartVault {
     #[frb]
     pub async fn store_account(
         &self,
+        timestamp: u32,
         name: String,
         seed: String,
         aindex: u32,
@@ -57,7 +58,7 @@ impl DartVault {
         birth_height: u32,
         pk: Vec<u8>,
     ) -> Result<()> {
-        self.0.store_account(name, seed, aindex, use_internal, birth_height, pk).await
+        self.0.store_account(timestamp, name, seed, aindex, use_internal, birth_height, pk).await
     }
 
     #[frb]

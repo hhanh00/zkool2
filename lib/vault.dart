@@ -117,7 +117,8 @@ class Vault {
   }
 
   Future<void> storeAccount({required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight, required Uint8List pk}) async {
-    await rustVault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
+    final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await rustVault.storeAccount(timestamp: timestamp, name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
   }
 
   Future<void> setMasterPassword(
