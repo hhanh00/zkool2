@@ -887,6 +887,11 @@ class VaultNotifier extends _$VaultNotifier {
     await vault.initialize(password);
   }
 
+  Future<void> deleteLocalVault() async {
+    final vault = await future;
+    await vault.deleteLocalVault();
+  }
+
   Future<void> registerDevice({required String password, required Uint8List prf}) async {
     final vault = await future;
     await vault.registerDevice(password: password, prf: prf);
