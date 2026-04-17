@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.14.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.14.1) (2026-04-17)
+
+
+### Bug Fixes
+
+* disable passkeys on unsupported platforms ([#936](https://github.com/hhanh00/zkool2/issues/936)) ([a365869](https://github.com/hhanh00/zkool2/commit/a3658699f85e27706b8a9450a2844f3484119903))
+* lazily sync with the vault ([#937](https://github.com/hhanh00/zkool2/issues/937)) ([97cb8df](https://github.com/hhanh00/zkool2/commit/97cb8df2f55a1c11009873ee192757a3917a3f4b))
+
 ## [6.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.0) (2026-04-17)
 
 
