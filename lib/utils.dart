@@ -9,7 +9,7 @@ import 'package:decimal/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter_passkey_service/flutter_passkey_service.dart';
-import 'package:flutter_passkey_service/pigeons/messages.g.dart';
+import 'package:flutter_passkey_service/pigeons/messages.g.dart' show CreatePasskeyResponseData, PasskeyException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -24,6 +24,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:password_strength_checker/password_strength_checker.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/store.dart';
@@ -265,6 +266,7 @@ Future<String?> inputPassword(
   bool required = false,
 }) async {
   final formKey = GlobalKey<FormBuilderState>();
+  final passStrengthNotifier = ValueNotifier<PasswordStrength?>(null);
   final password = await inputData<String?>(
     context,
     builder: (context) => FormBuilder(
@@ -279,6 +281,13 @@ Future<String?> inputPassword(
             decoration: InputDecoration(labelText: 'Password', hintText: message),
             obscureText: true,
             validator: required ? FormBuilderValidators.required() : null,
+            onChanged: (v) {
+              passStrengthNotifier.value = PasswordStrength.calculate(text: v ?? '');
+            },
+          ),
+          Gap(4),
+          PasswordStrengthChecker(
+            strength: passStrengthNotifier,
           ),
           Gap(8),
           if (repeated)
@@ -515,12 +524,16 @@ const rpId = 'hhanh00.github.io';
 const rpName = 'zkool';
 
 Future<CreatePasskeyResponseData?> registerPasskey() async {
+  logger.i("[Passkey] registerPasskey: starting");
+
   // Silent check: prefer on-device credentials only — no QR/remote prompt
   try {
+    logger.i("[Passkey] registerPasskey: checking for existing passkey");
     await authenticatePasskey();
+    logger.i("[Passkey] registerPasskey: existing passkey found, skipping registration");
     return null; // already registered
-  } catch (_) {
-    // no existing passkey on this device — proceed to register
+  } catch (e) {
+    logger.i("[Passkey] registerPasskey: no existing passkey ($e), proceeding to register");
   }
 
   final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
@@ -528,16 +541,19 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
     challenge: base64Url.encode(challenge),
     rpName: rpName,
     rpId: rpId,
-    userId: rpName,
+    userId: base64Url.encode(utf8.encode(rpName)),
     username: rpName,
     displayName: rpName,
     enablePrf: true,
   );
   try {
+    logger.i("[Passkey] registerPasskey: calling FlutterPasskeyService.register");
     final response = await FlutterPasskeyService.register(options);
+    logger.i("[Passkey] registerPasskey: registration succeeded, id=${response.id}");
     return response;
-  } catch (_) {
-    // user cancelled or registration failed
+  } catch (e) {
+    final msg = e is PasskeyException ? e.message : e.toString();
+    logger.e("[Passkey] registerPasskey: registration failed: $msg");
     return null;
   }
 }
@@ -545,6 +561,7 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
 const _prfSalt = 'c2FsdA=='; // base64 of "salt"
 
 Future<Uint8List> authenticatePasskey() async {
+  logger.i("[Passkey] authenticatePasskey: starting");
   final challenge = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
   final options = FlutterPasskeyService.createAuthenticationOptions(
     challenge: base64Url.encode(challenge),
@@ -552,10 +569,15 @@ Future<Uint8List> authenticatePasskey() async {
     prfEval: {'first': _prfSalt},
     preferImmediatelyAvailableCredentials: true,
   );
+  logger.i("[Passkey] authenticatePasskey: calling FlutterPasskeyService.authenticate");
   final response = await FlutterPasskeyService.authenticate(options);
+  logger.i("[Passkey] authenticatePasskey: got response, checking PRF result");
   final derivedKey = response.clientExtensionResults?.prf?.results?['first'];
-  if (derivedKey == null || derivedKey.isEmpty) throw StateError('PRF derivation failed');
+  if (derivedKey == null || derivedKey.isEmpty) {
+    logger.e("[Passkey] authenticatePasskey: PRF derivation failed, derivedKey is null or empty");
+    throw StateError('PRF derivation failed');
+  }
   final prfBytes = base64Url.decode(base64Url.normalize(derivedKey));
-  logger.i('[PRF] authenticatePasskey: salt=$_prfSalt, prf=${hex.encode(prfBytes.sublist(0, 4))}...');
+  logger.i('[Passkey] authenticatePasskey: salt=$_prfSalt, prf=${hex.encode(prfBytes.sublist(0, 4))}...');
   return prfBytes;
 }

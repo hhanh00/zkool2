@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="asset_statements">[{\"include\": \"https://hhanh00.github.io/.well-known/assetlinks.json\"}]</string>
+</resources>
