@@ -59,7 +59,18 @@ class Vault {
 
   Future<bool> hasVault() async {
     final file = await _localMasterFile;
-    return file.exists();
+    if (await file.exists()) return true;
+    // try downloading from Google Drive
+    try {
+      final bytes = await _download(VaultFile.masterPart);
+      if (bytes.isNotEmpty) {
+        await file.writeAsBytes(bytes);
+        return true;
+      }
+    } catch (_) {
+      // not signed in or no network
+    }
+    return false;
   }
 
   /// Read pk from vault-mp.bin (the Init LogEntry).
@@ -80,9 +91,17 @@ class Vault {
     await setMasterPassword(null, password);
   }
 
+  Future<void> deleteLocalVault() async {
+    final masterFile = await _localMasterFile;
+    if (await masterFile.exists()) await masterFile.delete();
+    final localFile = await _localFile;
+    if (await localFile.exists()) await localFile.delete();
+  }
+
   Future<void> registerDevice({required String password, required Uint8List prf}) async {
     final masterFile = await _localMasterFile;
     final initBytes = await masterFile.readAsBytes();
+    logger.i('[PRF] registerDevice: prf=${hex.encode(prf.sublist(0, 4))}..., deviceId=$deviceId');
     await rustVault.registerDevice(
       initBytes: initBytes,
       masterPassword: password,
@@ -117,6 +136,7 @@ class Vault {
   }
 
   Future<List<rust.RestoredAccount>> recoverWithPrf({required Uint8List vaultBytes, required Uint8List prf}) async {
+    logger.i('[PRF] recoverWithPrf: prf=${hex.encode(prf.sublist(0, 4))}..., deviceId=$deviceId');
     return rustVault.recoverWithPrf(vaultBytes: vaultBytes, deviceIdStr: deviceId, prfOutput: prf);
   }
 
@@ -151,6 +171,24 @@ class Vault {
     return drive.DriveApi(httpClient!);
   }
 
+  Future<T> _withReauth<T>(Future<T> Function(drive.DriveApi) fn) async {
+    try {
+      return await fn(await _driveApi);
+    } catch (e) {
+      if (_isAuthError(e)) {
+        await googleSignIn?.signOut();
+        await signIn();
+        return await fn(await _driveApi);
+      }
+      rethrow;
+    }
+  }
+
+  bool _isAuthError(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('401') || (msg.contains('invalid') && msg.contains('bearer'));
+  }
+
   String _fileName(VaultFile file) => switch (file) {
         VaultFile.masterPart => "vault-mp.bin",
         VaultFile.devicePart => "vault-dp-$deviceId.bin",
@@ -167,75 +205,76 @@ class Vault {
   }
 
   Future<Uint8List> _download(VaultFile file) async {
-    final driveApi = await _driveApi;
-
-    if (file == VaultFile.devicePart) {
-      // Download all files matching vault-* and aggregate
-      final fileList = await driveApi.files.list(
-        spaces: 'drive',
-        q: "name contains 'vault-'",
-        $fields: 'files(id, name)',
-      );
-      final files = fileList.files ?? [];
-      if (files.isEmpty) {
-        logger.i("No vault device files found on Drive");
+    return _withReauth((driveApi) async {
+      if (file == VaultFile.devicePart) {
+        // Download all files matching vault-* and aggregate
+        final fileList = await driveApi.files.list(
+          spaces: 'drive',
+          q: "name contains 'vault-'",
+          $fields: 'files(id, name)',
+        );
+        final files = fileList.files ?? [];
+        if (files.isEmpty) {
+          logger.i("No vault device files found on Drive");
+          return Uint8List(0);
+        }
+        final allBytes = <int>[];
+        for (final f in files) {
+          final media = await driveApi.files.get(
+            f.id!,
+            downloadOptions: drive.DownloadOptions.fullMedia,
+          ) as drive.Media;
+          final bytes = await media.stream.expand((chunk) => chunk).toList();
+          logger.i("Downloaded ${f.name} (${bytes.length} bytes)");
+          allBytes.addAll(bytes);
+        }
+        return Uint8List.fromList(allBytes);
+      } else {
+        // Single file download (masterPart)
+        final filename = _fileName(file);
+        final id = await _findFileId(driveApi, filename);
+        if (id != null) {
+          final media = await driveApi.files.get(
+            id,
+            downloadOptions: drive.DownloadOptions.fullMedia,
+          ) as drive.Media;
+          final bytes = await media.stream.expand((chunk) => chunk).toList();
+          logger.i("Downloaded $filename (${bytes.length} bytes)");
+          return Uint8List.fromList(bytes);
+        }
+        logger.i("File $filename not found on Drive");
         return Uint8List(0);
       }
-      final allBytes = <int>[];
-      for (final f in files) {
-        final media = await driveApi.files.get(
-          f.id!,
-          downloadOptions: drive.DownloadOptions.fullMedia,
-        ) as drive.Media;
-        final bytes = await media.stream.expand((chunk) => chunk).toList();
-        logger.i("Downloaded ${f.name} (${bytes.length} bytes)");
-        allBytes.addAll(bytes);
-      }
-      return Uint8List.fromList(allBytes);
-    } else {
-      // Single file download (masterPart)
-      final filename = _fileName(file);
-      final id = await _findFileId(driveApi, filename);
-      if (id != null) {
-        final media = await driveApi.files.get(
-          id,
-          downloadOptions: drive.DownloadOptions.fullMedia,
-        ) as drive.Media;
-        final bytes = await media.stream.expand((chunk) => chunk).toList();
-        logger.i("Downloaded $filename (${bytes.length} bytes)");
-        return Uint8List.fromList(bytes);
-      }
-      logger.i("File $filename not found on Drive");
-      return Uint8List(0);
-    }
+    });
   }
 
   Future<void> _upload(Uint8List bytes, VaultFile file, {bool createOnly = false}) async {
-    final filename = _fileName(file);
-    final driveApi = await _driveApi;
-    final id = await _findFileId(driveApi, filename);
+    await _withReauth((driveApi) async {
+      final filename = _fileName(file);
+      final id = await _findFileId(driveApi, filename);
 
-    final media = drive.Media(
-      Stream.value(bytes.toList()),
-      bytes.length,
-      contentType: 'application/octet-stream',
-    );
-
-    if (id != null) {
-      if (createOnly) throw StateError('File $filename already exists');
-      await driveApi.files.update(
-        drive.File(),
-        id,
-        uploadMedia: media,
+      final media = drive.Media(
+        Stream.value(bytes.toList()),
+        bytes.length,
+        contentType: 'application/octet-stream',
       );
-      logger.i("Updated $filename (${bytes.length} bytes)");
-    } else {
-      final driveFile = drive.File()
-        ..name = filename
-        ..parents = [spaces];
-      await driveApi.files.create(driveFile, uploadMedia: media);
-      logger.i("Created $filename (${bytes.length} bytes)");
-    }
+
+      if (id != null) {
+        if (createOnly) throw StateError('File $filename already exists');
+        await driveApi.files.update(
+          drive.File(),
+          id,
+          uploadMedia: media,
+        );
+        logger.i("Updated $filename (${bytes.length} bytes)");
+      } else {
+        final driveFile = drive.File()
+          ..name = filename
+          ..parents = [spaces];
+        await driveApi.files.create(driveFile, uploadMedia: media);
+        logger.i("Created $filename (${bytes.length} bytes)");
+      }
+    });
   }
 
   Future<File> get _localFile async {
