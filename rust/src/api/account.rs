@@ -268,6 +268,7 @@ pub struct Account {
     pub aindex: u32,
     pub dindex: u32,
     pub icon: Option<Vec<u8>>,
+    pub use_internal: bool,
     pub birth: u32,
     pub folder: Folder,
     pub position: u8,

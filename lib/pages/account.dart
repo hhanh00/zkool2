@@ -425,6 +425,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   }
 
   void onEditName(String? name) async {
+    assert(accounts.length == 1);
     if (name != null) {
       accounts[0] = accounts[0].copyWith(name: name);
       await updateAccount(
@@ -443,7 +444,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           seed: seed.mnemonic,
           aindex: accounts[0].aindex,
           useInternal: accounts[0].internal,
-          birthHeight: accounts[0].height,
+          birthHeight: accounts[0].birth,
         );
       }
       ref.invalidate(getAccountsProvider);
