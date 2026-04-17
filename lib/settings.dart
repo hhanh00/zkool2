@@ -14,6 +14,7 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/vault.dart';
 
 final logID = GlobalKey();
 final lightnodeID = GlobalKey();
@@ -274,7 +275,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ]),
                 ),
                 Gap(8),
-                FormBuilderSwitch(name: "vault", title: Text("Passkey Cloud Vault"), initialValue: settings.vault, onChanged: onVaultChanged),
+                FormBuilderSwitch(name: "vault", title: Text("Passkey Cloud Vault"), initialValue: settings.vault, onChanged: onChangedVault),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
@@ -379,8 +380,16 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  onVaultChanged(bool? value) async {
+  onChangedVault(bool? value) async {
     if (value == null) return;
+    if (value) {
+      if (!await vault.hasVault()) {
+        if (!mounted) return;
+        final password = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
+        if (password == null) return;
+        await vault.initialize(ref, password);
+      }
+    }
     setState(() {
       settings = settings.copyWith(vault: value);
       widget.onChanged(settings);
