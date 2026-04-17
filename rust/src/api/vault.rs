@@ -81,7 +81,9 @@ impl DartVault {
     }
 }
 
+#[derive(Clone)]
 pub struct RestoredAccount {
+    pub timestamp: u32,
     pub name: String,
     pub seed: String,
     pub aindex: u32,
