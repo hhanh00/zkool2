@@ -17,6 +17,7 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/main.dart';
 
 final logID = GlobalKey();
 final lightnodeID = GlobalKey();
@@ -124,8 +125,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   void tutorial() async {
-    tutorialHelper(
-        context, "tutSettings0", [logID, lightnodeID, lwdID, torID, coingeckoID, actionsID, autosyncID, cancelID, pinLockID, offlineID, fxID, useQRID, blockExplorerID]);
+    tutorialHelper(context, "tutSettings0",
+        [logID, lightnodeID, lwdID, torID, coingeckoID, actionsID, autosyncID, cancelID, pinLockID, offlineID, fxID, useQRID, blockExplorerID]);
   }
 
   @override
@@ -277,7 +278,12 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ]),
                 ),
                 Gap(8),
-                FormBuilderSwitch(name: "vault", title: Text("Passkey Cloud Vault"), initialValue: settings.vault, onChanged: onChangedVault),
+                FormBuilderSwitch(
+                  name: "vault",
+                  title: Text("Passkey Cloud Vault"),
+                  initialValue: settings.vault,
+                  onChanged: onChangedVault,
+                ),
                 if (settings.vault)
                   Row(children: [
                     Expanded(child: Text("Recover Accounts from Vault")),
@@ -390,29 +396,100 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   onChangedVault(bool? value) async {
     if (value == null) return;
     if (value) {
-      final vault = ref.read(vaultProvider.notifier);
-      String password;
-      if (!await vault.hasVault()) {
-        if (!mounted) return;
-        final p = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
-        if (p == null) return;
-        password = p;
-        await ref.read(vaultProvider.notifier).initialize(password);
-      } else {
-        if (!mounted) return;
-        final p = await inputPassword(context, title: "Vault Password", required: true);
-        if (p == null) return;
-        password = p;
-      }
-      // register this device
+      final tt = Theme.of(context).textTheme;
+      final confirmed = await confirmDialog(context,
+          title: "",
+          message: "",
+          body: Padding(
+            padding: EdgeInsetsGeometry.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Text("Enable Vault", style: tt.titleMedium)),
+                const Gap(16),
+                Divider(),
+                const Gap(16),
+                Text("Your vault keys will be stored securely in the Cloud:", style: tt.bodyMedium),
+                const Gap(16),
+                Row(
+                  children: [
+                    Icon(Icons.lock_outline, size: 18, color: Colors.green.shade700),
+                    const Gap(8),
+                    Text("End-to-end encrypted", style: tt.titleSmall?.copyWith(color: Colors.green.shade700)),
+                  ],
+                ),
+                const Gap(4),
+                Text("Your account keys are encrypted. Only you can decrypt them.", style: tt.bodySmall),
+                const Gap(12),
+                Row(
+                  children: [
+                    Icon(Icons.cloud_outlined, size: 18, color: Colors.blue.shade700),
+                    const Gap(8),
+                    Text("Google Drive (app data only)", style: tt.titleSmall?.copyWith(color: Colors.blue.shade700)),
+                  ],
+                ),
+                const Gap(4),
+                Text("Backups go to app-specific storage — not your entire Drive.", style: tt.bodySmall),
+                const Gap(12),
+                Row(
+                  children: [
+                    Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                    const Gap(8),
+                    Text("Biometric protection", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+                  ],
+                ),
+                const Gap(4),
+                Text("Face ID / Touch ID protects your vault on this device.", style: tt.bodySmall),
+              ],
+            ),
+          ));
+
+      bool success = false;
       try {
-        await registerPasskey();
-        final prf = await authenticatePasskey();
-        await ref.read(vaultProvider.notifier).registerDevice(password: password, prf: prf);
+        if (!confirmed) return;
+
+        final vault = ref.read(vaultProvider.notifier);
+        final newVault = !(await vault.hasVault());
+
+        String? password;
+        if (newVault) {
+          if (!mounted) return;
+          final p = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
+          if (p == null) return;
+          password = p;
+          try {
+            await vault.initialize(password);
+          } catch (e) {
+            await vault.deleteLocalVault();
+            if (mounted) await showException(context, e.toString());
+            return;
+          }
+        }
+
+        final newRegistration = (await registerPasskey()) != null;
+
+        if (newRegistration) {
+          if (password == null) {
+            final p = await inputPassword(context, title: "Vault Password", required: true);
+            if (p == null) return;
+            password = p;
+          }
+          final prf = await authenticatePasskey();
+          await vault.registerDevice(password: password, prf: prf);
+        }
+
+        // TODO: Check that the keys we have can decrypt the vault
+
+        if (!mounted) return;
+        await showMessage(context, "Vault activated");
+        success = true;
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
-      } catch (e) {
-        if (mounted) await showException(context, e.toString());
+        return;
+      } finally {
+        if (!success) {
+          formKey.currentState?.fields['vault']?.didChange(false);
+        }
       }
     }
     setState(() {
@@ -425,9 +502,30 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     // 1. Try passkey first
     Uint8List? prf;
     try {
-      prf = await authenticatePasskey();
+      if (!mounted) return;
+      final tt = Theme.of(context).textTheme;
+      final usePasskey = await confirmDialog(
+        context,
+        title: "Vault Recovery",
+        message: "",
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                const Gap(8),
+                Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+              ],
+            ),
+            const Gap(4),
+            Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
+          ],
+        ),
+      );
+      if (usePasskey) prf = await authenticatePasskey();
     } catch (_) {
-      // no passkey available
+      // biometric denied or unavailable
     }
 
     // 2. Download vault bytes once
@@ -444,8 +542,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (prf != null) {
       try {
         recovered = await ref.read(vaultProvider.notifier).recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
-      } catch (_) {
+        logger.i('[PRF] recovery succeeded, ${recovered.length} accounts');
+      } catch (e) {
         // PRF recovery failed, fall through to password
+        logger.i('[PRF] recovery failed: $e');
       }
     }
 
