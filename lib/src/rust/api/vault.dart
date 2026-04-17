@@ -6,6 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
+
 Future<DartVault> initVault(
         {required FutureOr<void> Function(Uint8List) append}) =>
     RustLib.instance.api.crateApiVaultInitVault(append: append);
@@ -42,6 +44,7 @@ abstract class DartVault implements RustOpaqueInterface {
 }
 
 class RestoredAccount {
+  final int timestamp;
   final String name;
   final String seed;
   final int aindex;
@@ -49,6 +52,7 @@ class RestoredAccount {
   final int birthHeight;
 
   const RestoredAccount({
+    required this.timestamp,
     required this.name,
     required this.seed,
     required this.aindex,
@@ -58,6 +62,7 @@ class RestoredAccount {
 
   @override
   int get hashCode =>
+      timestamp.hashCode ^
       name.hashCode ^
       seed.hashCode ^
       aindex.hashCode ^
@@ -69,6 +74,7 @@ class RestoredAccount {
       identical(this, other) ||
       other is RestoredAccount &&
           runtimeType == other.runtimeType &&
+          timestamp == other.timestamp &&
           name == other.name &&
           seed == other.seed &&
           aindex == other.aindex &&
