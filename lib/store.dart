@@ -865,8 +865,8 @@ sealed class QRSettings with _$QRSettings {
 class VaultNotifier extends _$VaultNotifier {
   @override
   Future<DartVault> build() async {
-    final v = await initializeVault();
-    return v;
+    final v = await Vault.create();
+    return v.toDartVault();
   }
 
   Future<void> test() async {

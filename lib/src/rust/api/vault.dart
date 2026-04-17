@@ -14,5 +14,8 @@ Future<DartVault> initVault(
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DartVault>>
 abstract class DartVault implements RustOpaqueInterface {
+  Future<Uint8List> setMasterPassword(
+      {String? oldPassword, required String newPassword, Uint8List? oldBytes});
+
   Future<void> test();
 }
