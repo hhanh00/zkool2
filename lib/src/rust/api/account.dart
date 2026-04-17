@@ -178,6 +178,7 @@ sealed class Account with _$Account {
     required int aindex,
     required int dindex,
     Uint8List? icon,
+    required bool useInternal,
     required int birth,
     required Folder folder,
     required int position,
