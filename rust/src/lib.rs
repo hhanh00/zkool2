@@ -28,6 +28,7 @@ pub mod pay;
 pub mod recover;
 pub mod sync;
 pub mod warp;
+pub mod vault;
 
 pub type Hash32 = [u8; 32];
 pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;

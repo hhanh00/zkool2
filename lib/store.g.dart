@@ -504,7 +504,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'c4565fe09f2b58589c0ef9b5f9002b3a654669c6';
+    r'e31a10e5cd06cb8c4e1ed66a40a2b25c22a50b5e';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -984,6 +984,48 @@ abstract class _$Lifecycle extends $AsyncNotifier<bool> {
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<bool>, bool>,
         AsyncValue<bool>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(VaultNotifier)
+const vaultProvider = VaultNotifierProvider._();
+
+final class VaultNotifierProvider
+    extends $AsyncNotifierProvider<VaultNotifier, DartVault> {
+  const VaultNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'vaultProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$vaultNotifierHash();
+
+  @$internal
+  @override
+  VaultNotifier create() => VaultNotifier();
+}
+
+String _$vaultNotifierHash() => r'2b0feafeaba8e06f4d21a07e9ed0c60d4c8702cd';
+
+abstract class _$VaultNotifier extends $AsyncNotifier<DartVault> {
+  FutureOr<DartVault> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<DartVault>, DartVault>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<DartVault>, DartVault>,
+        AsyncValue<DartVault>,
         Object?,
         Object?>;
     element.handleValue(ref, created);

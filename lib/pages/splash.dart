@@ -77,7 +77,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
     if (account != null) c = await c.setAccount(account: account.id);
 
     final settings = await ref.read(appSettingsProvider.future);
-    if (settings.vault) {
+    if (settings.vault && !settings.offline) {
       final googleSignIn = GoogleSignIn(
         scopes: ['https://www.googleapis.com/auth/drive.appdata'],
       );
@@ -91,6 +91,11 @@ class SplashPageState extends ConsumerState<SplashPage> {
         await googleSignIn.signIn();
       }
       logger.i("Signed in Google Drive.");
+
+      // TODO: Remove this
+      // Just some basic testing code
+      final vault = ref.read(vaultProvider.notifier);
+      await vault.test();
 
       // Get authenticated client for googleapis
       // commented out and left as reference for the time being
