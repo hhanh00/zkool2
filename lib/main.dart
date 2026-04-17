@@ -9,7 +9,6 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/utils.dart';
-import 'package:zkool/vault.dart';
 
 final logger = Logger(filter: ProductionFilter());
 
