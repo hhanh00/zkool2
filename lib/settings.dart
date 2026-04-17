@@ -1,5 +1,6 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_passkey_service/pigeons/messages.g.dart' show PasskeyException;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -280,14 +281,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Gap(8),
                 FormBuilderSwitch(
                   name: "vault",
-                  title: Text("Passkey Cloud Vault"),
+                  title: Text("Cloud Vault"),
                   initialValue: settings.vault,
                   onChanged: onChangedVault,
                 ),
                 if (settings.vault)
                   Row(children: [
                     Expanded(child: Text("Recover Accounts from Vault")),
-                    SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right))),
+                    SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right),),),
                   ]),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
@@ -396,7 +397,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   onChangedVault(bool? value) async {
     if (value == null) return;
     if (value) {
+      // Vault is activating...
       final tt = Theme.of(context).textTheme;
+      // Ask for confirmation from the user
       final confirmed = await confirmDialog(context,
           title: "",
           message: "",
@@ -430,16 +433,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 ),
                 const Gap(4),
                 Text("Backups go to app-specific storage — not your entire Drive.", style: tt.bodySmall),
-                const Gap(12),
-                Row(
-                  children: [
-                    Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
-                    const Gap(8),
-                    Text("Biometric protection", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
-                  ],
-                ),
-                const Gap(4),
-                Text("Face ID / Touch ID protects your vault on this device.", style: tt.bodySmall),
+                if (passkeySupported) ...[
+                  const Gap(12),
+                  Row(
+                    children: [
+                      Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
+                      const Gap(8),
+                      Text("Biometric protection", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
+                    ],
+                  ),
+                  const Gap(4),
+                  Text("Face ID / Touch ID protects your vault on this device.", style: tt.bodySmall),
+                ],
               ],
             ),
           ));
@@ -449,57 +454,107 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         if (!confirmed) return;
 
         final vault = ref.read(vaultProvider.notifier);
+        // newVault is true iff there is a local master file
         final newVault = !(await vault.hasVault());
         logger.i("[Vault] enable: newVault=$newVault");
 
         String? password;
         if (newVault) {
           if (!mounted) return;
+          // no vault at all, create a new one. Ask for the master password MP
           final p = await inputPassword(context, title: "Create Vault Password", repeated: true, required: true);
           if (p == null) return;
-          password = p;
+          password = p; // now we have MP
           try {
             logger.i("[Vault] enable: initializing new vault");
             await vault.initialize(password);
           } catch (e) {
             logger.e("[Vault] enable: initialization failed: $e");
-            await vault.deleteLocalVault();
+            await vault.deleteLocalVault(); // revert the creation of the vault
             if (mounted) await showException(context, e.toString());
             return;
           }
         }
 
-        logger.i("[Vault] enable: registering passkey");
-        final newRegistration = (await registerPasskey()) != null;
-        logger.i("[Vault] enable: newRegistration=$newRegistration");
+        if (passkeySupported) {
+          logger.i("[Vault] enable: starting passkey authentication flow");
+          Uint8List? prf;
+          bool needsDeviceRegistration = true;
 
-        bool needsDeviceRegistration = newRegistration;
-        Uint8List? prf;
-
-        if (!newRegistration && !newVault) {
-          // Passkey already exists — verify the PRF can still decrypt the vault
-          logger.i("[Vault] enable: verifying existing passkey PRF against vault");
+          // Always show the picker - let user select a key (including remote via QR)
           try {
+            logger.i("[Vault] enable: showing passkey picker");
             prf = await authenticatePasskey();
-            final vaultBytes = await vault.downloadVaultBytes();
-            await vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
-            logger.i("[Vault] enable: existing passkey PRF verified OK");
-          } catch (e) {
-            logger.w("[Vault] enable: existing passkey PRF cannot decrypt vault ($e), will re-register device");
-            needsDeviceRegistration = true;
-          }
-        }
+            logger.i("[Vault] enable: got PRF from passkey, verifying against vault");
 
-        if (needsDeviceRegistration) {
-          if (password == null) {
+            // Verify the PRF can decrypt the vault
+            if (!newVault) {
+              try {
+                final vaultBytes = await vault.downloadVaultBytes();
+                await vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
+                logger.i("[Vault] enable: passkey PRF verified OK, vault decrypted successfully");
+                needsDeviceRegistration = false;
+              } catch (e) {
+                logger.e("[Vault] enable: passkey PRF cannot decrypt vault: $e");
+                if (mounted) {
+                  await showException(context, "This passkey cannot unlock the vault. It may not be the correct key for this vault.");
+                }
+                return;
+              }
+            }
+          } on PasskeyException catch (e) {
+            logger.i("[Vault] enable: passkey picker cancelled or failed (${e.errorType}): ${e.message}");
+            // User cancelled or error - offer to register a new key
             if (!mounted) return;
-            final p = await inputPassword(context, title: "Vault Password", required: true);
+
+            final registerNewKey = await confirmDialog(
+              context,
+              title: "Register New Passkey?",
+              message: "No passkey was selected. Would you like to register a new passkey for this vault?",
+            );
+
+            if (!registerNewKey) {
+              logger.i("[Vault] enable: user declined to register new key");
+              return;
+            }
+
+            // Prompt for Master Password before allowing registration
+            if (!mounted) return;
+            final p = await inputPassword(context, title: "Master Password Required", required: true);
             if (p == null) return;
             password = p;
+
+            // Register new passkey
+            logger.i("[Vault] enable: registering new passkey");
+            final registration = await registerPasskey();
+            if (registration == null) {
+              logger.i("[Vault] enable: passkey registration returned null (already exists?)");
+              if (!newVault) {
+                // Try to authenticate with existing passkey
+                prf = await authenticatePasskey();
+                final vaultBytes = await vault.downloadVaultBytes();
+                await vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
+                needsDeviceRegistration = false;
+              }
+            } else {
+              prf = await authenticatePasskey();
+              logger.i("[Vault] enable: new passkey registered and authenticated");
+            }
           }
-          prf ??= await authenticatePasskey();
-          logger.i("[Vault] enable: registering device with PRF");
-          await vault.registerDevice(password: password, prf: prf);
+
+          if (needsDeviceRegistration) {
+            if (password == null) {
+              if (!mounted) return;
+              final p = await inputPassword(context, title: "Vault Password", required: true);
+              if (p == null) return;
+              password = p;
+            }
+            prf ??= await authenticatePasskey();
+            logger.i("[Vault] enable: registering device with PRF");
+            await vault.registerDevice(password: password, prf: prf);
+          }
+        } else {
+          logger.i("[Vault] enable: passkey not supported on this platform, skipping device registration");
         }
 
         if (!mounted) return;
@@ -507,6 +562,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         success = true;
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
+        return;
+      } on PasskeyException catch (e) {
+        logger.e("[Vault] enable: passkey error (${e.errorType}): ${e.message}");
+        if (mounted) await showException(context, "Passkey error: ${e.message}");
         return;
       } finally {
         if (!success) {
@@ -521,36 +580,17 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   void onVaultRecover() async {
-    // 1. Try passkey first
+    // 1. Try passkey first - always show picker explicitly (local & remote)
     Uint8List? prf;
-    try {
-      if (!mounted) return;
-      final tt = Theme.of(context).textTheme;
-      final usePasskey = await confirmDialog(
-        context,
-        title: "Vault Recovery",
-        message: "",
-        body: Padding(
-          padding: EdgeInsetsGeometry.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.fingerprint, size: 18, color: Colors.orange.shade700),
-                  const Gap(8),
-                  Text("Biometric recovery", style: tt.titleSmall?.copyWith(color: Colors.orange.shade700)),
-                ],
-              ),
-              const Gap(4),
-              Text("If you set up a passkey on this device, we can recover your vault without a password.", style: tt.bodySmall),
-            ],
-          ),
-        ),
-      );
-      if (usePasskey) prf = await authenticatePasskey();
-    } catch (_) {
-      // biometric denied or unavailable
+    if (passkeySupported) {
+      try {
+        logger.i("[Recover] step 1: showing passkey picker");
+        prf = await authenticatePasskey();
+        logger.i("[Recover] step 1: got PRF from passkey");
+      } on PasskeyException catch (e) {
+        logger.i("[Recover] step 1: passkey cancelled or failed (${e.errorType}), falling back to master password");
+        // Passkey cancelled or failed - will fall back to master password below
+      }
     }
 
     // 2. Download vault bytes once
