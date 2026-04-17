@@ -544,10 +544,10 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "9b9fdb1bdf8d7cdd5dbedebbf4c6f9ba30b04937"
+      resolved-ref: "008ff833ab7d09ad2814ffb5a0d04e6691160bde"
       url: "https://github.com/hhanh00/flutter_passkey_service.git"
     source: git
-    version: "0.0.5"
+    version: "0.0.6"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
