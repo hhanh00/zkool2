@@ -5729,14 +5729,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RestoredAccount dco_decode_restored_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return RestoredAccount(
-      name: dco_decode_String(arr[0]),
-      seed: dco_decode_String(arr[1]),
-      aindex: dco_decode_u_32(arr[2]),
-      useInternal: dco_decode_bool(arr[3]),
-      birthHeight: dco_decode_u_32(arr[4]),
+      timestamp: dco_decode_u_32(arr[0]),
+      name: dco_decode_String(arr[1]),
+      seed: dco_decode_String(arr[2]),
+      aindex: dco_decode_u_32(arr[3]),
+      useInternal: dco_decode_bool(arr[4]),
+      birthHeight: dco_decode_u_32(arr[5]),
     );
   }
 
@@ -7218,12 +7219,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   RestoredAccount sse_decode_restored_account(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_timestamp = sse_decode_u_32(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_seed = sse_decode_String(deserializer);
     var var_aindex = sse_decode_u_32(deserializer);
     var var_useInternal = sse_decode_bool(deserializer);
     var var_birthHeight = sse_decode_u_32(deserializer);
     return RestoredAccount(
+        timestamp: var_timestamp,
         name: var_name,
         seed: var_seed,
         aindex: var_aindex,
@@ -8595,6 +8598,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_restored_account(
       RestoredAccount self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.timestamp, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_String(self.seed, serializer);
     sse_encode_u_32(self.aindex, serializer);
