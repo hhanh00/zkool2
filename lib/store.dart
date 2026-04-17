@@ -887,14 +887,29 @@ class VaultNotifier extends _$VaultNotifier {
     await vault.initialize(password);
   }
 
+  Future<void> registerDevice({required String password, required Uint8List prf}) async {
+    final vault = await future;
+    await vault.registerDevice(password: password, prf: prf);
+  }
+
+  Future<Uint8List> downloadVaultBytes() async {
+    final vault = await future;
+    return vault.downloadVaultBytes();
+  }
+
+  Future<List<RestoredAccount>> recoverWithPrf({required Uint8List vaultBytes, required Uint8List prf}) async {
+    final vault = await future;
+    return vault.recoverWithPrf(vaultBytes: vaultBytes, prf: prf);
+  }
+
+  Future<List<RestoredAccount>> recoverVault({required Uint8List vaultBytes, required String masterPassword}) async {
+    final vault = await future;
+    return vault.recoverVault(vaultBytes: vaultBytes, masterPassword: masterPassword);
+  }
+
   Future<void> storeAccount({required String name, required String seed, required int aindex, required bool useInternal, required int birthHeight}) async {
     final vault = await future;
     final pk = (await vault.masterPk)!;
     await vault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
-  }
-
-  Future<List<RestoredAccount>> recover(String password) async {
-    final vault = await future;
-    return vault.recover(password);
   }
 }
