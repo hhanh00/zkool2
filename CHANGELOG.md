@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.14.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.1...zkool-v6.14.2) (2026-04-18)
+
+
+### Bug Fixes
+
+* iOS Google signin to Drive ([#938](https://github.com/hhanh00/zkool2/issues/938)) ([f48c23c](https://github.com/hhanh00/zkool2/commit/f48c23ccefdadb1c633eb3ca4759898db9ed78c0))
+
 ## [6.14.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.14.1) (2026-04-17)
 
 
