@@ -53,7 +53,7 @@ class Vault {
       account = await googleSignIn!.signInSilently();
     }
     account ??= await googleSignIn!.signIn();
-    logger.i("Signed in ${account!.displayName}");
+    logger.i("Signed in ${account!.displayName} ${account.email}");
   }
 
   Future<bool> hasVault() async {
