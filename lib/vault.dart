@@ -17,6 +17,7 @@ class Vault {
   late final String deviceId;
   GoogleSignIn? googleSignIn;
   late final rust.DartVault rustVault;
+  bool _hasDownloadedDevicePart = false;
 
   Vault._(this.deviceId);
 
@@ -163,6 +164,20 @@ class Vault {
     logger.i("append to log: ${hex.encode(entry)}");
 
     final localFile = await _localFile;
+
+    // Lazy download: download once from cloud to ensure we have complete data
+    if (!_hasDownloadedDevicePart) {
+      try {
+        logger.i("append: downloading from cloud first");
+        final cloudBytes = await _download(VaultFile.devicePart);
+        await localFile.writeAsBytes(cloudBytes);
+        logger.i("append: downloaded ${cloudBytes.length} bytes from cloud");
+      } catch (e) {
+        logger.w("append: download from cloud failed: $e");
+      }
+      _hasDownloadedDevicePart = true;
+    }
+
     await localFile.writeAsBytes(
       entry,
       mode: FileMode.append,
