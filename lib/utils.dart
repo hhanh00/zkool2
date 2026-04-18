@@ -546,8 +546,8 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
     displayName: rpName,
     enablePrf: true,
     authenticatorAttachment: 'cross-platform', // Allow both platform and YubiKey
-    residentKey: 'preferred', // YubiKeys may not support resident keys
-    requireResidentKey: false,
+    residentKey: 'required', // GPM requires this
+    requireResidentKey: true,
   );
   try {
     logger.i("[Passkey] registerPasskey: calling FlutterPasskeyService.register");
