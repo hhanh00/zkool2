@@ -545,7 +545,6 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
     username: rpName,
     displayName: rpName,
     enablePrf: true,
-    authenticatorAttachment: 'cross-platform', // Allow both platform and YubiKey
     residentKey: 'required', // GPM requires this
     requireResidentKey: true,
   );
