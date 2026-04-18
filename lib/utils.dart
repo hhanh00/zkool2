@@ -13,7 +13,8 @@ import 'package:flutter_passkey_service/pigeons/messages.g.dart'
     show
         CreatePasskeyResponseData,
         GetPasskeyAuthenticationResponseData,
-        PasskeyException;
+        PasskeyException,
+        PasskeyErrorType;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -552,6 +553,18 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
     logger.i("[Passkey] registerPasskey: calling FlutterPasskeyService.register");
     final response = await FlutterPasskeyService.register(options);
     logger.i("[Passkey] registerPasskey: registration succeeded, id=${response.id}");
+
+    // Check if PRF is actually supported by the authenticator
+    final prfEnabled = response.clientExtensionResults.prf?.enabled ?? false;
+    if (!prfEnabled) {
+      logger.e("[Passkey] registerPasskey: PRF not enabled by authenticator");
+      throw PasskeyException(
+        errorType: PasskeyErrorType.operationNotSupported,
+        message: "This authenticator does not support PRF (Pseudo-Random Function). PRF is required for passkey authentication in this app.",
+        details: "Please use a different authenticator that supports PRF, such as Google Password Manager, Touch ID, or a compatible security key.",
+      );
+    }
+
     return response;
   } on PasskeyException catch (e) {
     logger.e("[Passkey] registerPasskey: registration failed (${e.errorType}): ${e.message}");

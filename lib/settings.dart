@@ -638,10 +638,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         return;
       }
     }
-    if (recovered.isEmpty) {
-      logger.i("[Recover] no accounts recovered, stopping");
-      return;
-    }
 
     if (!mounted) return;
     final existingAccounts = await ref.read(getAccountsProvider.future);
