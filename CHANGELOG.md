@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.2...zkool-v6.14.3) (2026-04-18)
+
+
+### Bug Fixes
+
+* allow platform + cross-platform by removing authenticatorAttachment ([#941](https://github.com/hhanh00/zkool2/issues/941)) ([a2b58a5](https://github.com/hhanh00/zkool2/commit/a2b58a586fd970806b8d3fee8f3a8df20d457fe3))
+
 ## [6.14.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.1...zkool-v6.14.2) (2026-04-18)
 
 
