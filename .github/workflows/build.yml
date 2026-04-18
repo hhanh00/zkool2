@@ -29,10 +29,6 @@ jobs:
           - os: windows-latest
             target: windows
     steps:
-      - name: Install yq
-        if: ${{ matrix.target == 'windows' }}
-        shell: bash
-        run: choco install yq -y
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
       - name: Install PYTHON
@@ -51,7 +47,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          RELEASE_VERSION=$(yq '.version' pubspec.yaml)
+          RELEASE_VERSION=$(sed -n 's/^version: *//p' pubspec.yaml)
           echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
       - name: Build Android
         id: build_android
