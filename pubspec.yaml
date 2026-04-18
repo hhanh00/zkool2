@@ -82,6 +82,13 @@ dev_dependencies:
   riverpod_generator: ^3.0.3
   flutter_launcher_icons: ^0.14.3
 
+# Local development override — points flutter_passkey_service at the sibling
+# checkout so edits there take effect without pushing and bumping the git ref.
+# Remove (or comment out) before committing / publishing.
+# dependency_overrides:
+#   flutter_passkey_service:
+#     path: ../flutter_passkey_service
+
 flutter:
   uses-material-design: true
 
