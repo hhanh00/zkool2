@@ -440,7 +440,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
       final a = accounts[0];
       final seed = a.seed;
       if (seed != null) {
-        await ref.read(vaultProvider.notifier).storeAccount(
+        final settings = await ref.read(appSettingsProvider.future);
+        if (settings.vault) await ref.read(vaultProvider.notifier).storeAccount(
           name: name,
           seed: seed,
           aindex: a.aindex,
@@ -500,7 +501,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
       final a = accounts[0];
       final seed = await getAccountSeed(account: a.id, c: c);
       if (seed != null) {
-        await ref.read(vaultProvider.notifier).storeAccount(
+        final settings = await ref.read(appSettingsProvider.future);
+        if (settings.vault) await ref.read(vaultProvider.notifier).storeAccount(
           name: a.name,
           seed: seed.mnemonic,
           aindex: a.aindex,

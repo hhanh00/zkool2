@@ -225,10 +225,15 @@ class Vault {
     }
   }
 
-  bool _isAuthError(Object e) {
-    logger.e(e.toString());
-    final msg = e.toString().toLowerCase();
-    return msg.contains('401') || msg.contains('invalid_token') || msg.contains('access was denied');
+  bool _isAuthError(Object? e) {
+    if (e == null) return false;
+    try {
+      final msg = e.toString().toLowerCase();
+      logger.e('Auth error check: $msg');
+      return msg.contains('401') || msg.contains('invalid_token') || msg.contains('access was denied');
+    } catch (_) {
+      return false;
+    }
   }
 
   String _fileName(VaultFile file) => switch (file) {
