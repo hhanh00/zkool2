@@ -328,9 +328,9 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         );
         dialog.dismiss();
         dialog = null;
+        final settings = ref.read(appSettingsProvider).requireValue;
         try {
           // ignore errors since it's just caching
-          final settings = ref.read(appSettingsProvider).requireValue;
           if (!settings.offline) await cacheBlockTime(height: bh, c: c);
         } on AnyhowException catch (_) {}
 
@@ -342,7 +342,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         }
 
         final seed = await getAccountSeed(account: account, c: c);
-        if (seed != null) {
+        if (seed != null && settings.vault) {
           await ref.read(vaultProvider.notifier).storeAccount(
             name: name ?? "",
             seed: seed.mnemonic,
