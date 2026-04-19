@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
+import 'package:crypto/crypto.dart';
 import 'package:decimal/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
@@ -575,7 +576,7 @@ Future<CreatePasskeyResponseData?> registerPasskey() async {
   }
 }
 
-const _prfSalt = 'c2FsdA=='; // base64 of "salt"
+final _prfSalt = base64Url.encode(sha256.convert(utf8.encode('cc.methyl.zkool-vault-v1')).bytes);
 
 /// Authenticate with the user's passkey. Does NOT set preferImmediatelyAvailableCredentials
 /// — so the platform is free to offer "use a passkey from another device" (hybrid / CDA)
