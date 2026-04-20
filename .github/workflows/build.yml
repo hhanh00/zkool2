@@ -28,6 +28,9 @@ jobs:
             target: mac
           - os: windows-latest
             target: windows
+    env:
+      FLUTTER_VERSION: 3.41.7
+
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
@@ -40,9 +43,12 @@ jobs:
       - name: Set up Flutter
         shell: bash
         run: |
-          df -h
-          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
+      - run: |
+          flutter --version
+          flutter precache
+        shell: bash
       - name: Get version number
         id: version
         shell: bash
