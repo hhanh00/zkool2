@@ -41,10 +41,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
+          echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
+      - run: |
+          flutter --version
+          flutter precache
+        shell: bash
       - name: Get version number
         id: version
         shell: bash
