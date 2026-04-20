@@ -1,5 +1,16 @@
 # Changelog
 
+## [6.14.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.14.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* do not update vault when disabled ([#947](https://github.com/hhanh00/zkool2/issues/947)) ([98f0199](https://github.com/hhanh00/zkool2/commit/98f019993114631dbb6371aa42ee369fc6329c50))
+* pin to given flutter version ([#949](https://github.com/hhanh00/zkool2/issues/949)) ([6877c9b](https://github.com/hhanh00/zkool2/commit/6877c9b9646db5a47ad4d3e0635d041838b1b6f9))
+* return error msg when no prf support ([#944](https://github.com/hhanh00/zkool2/issues/944)) ([fff6f70](https://github.com/hhanh00/zkool2/commit/fff6f708664927d34ff3a2718b855afe06af5655))
+* upgrade zcvlib ([#948](https://github.com/hhanh00/zkool2/issues/948)) ([9e04041](https://github.com/hhanh00/zkool2/commit/9e0404114a6db7d1018499606f0e6b9e88fcad54))
+* use better constant salt ([#946](https://github.com/hhanh00/zkool2/issues/946)) ([7607b75](https://github.com/hhanh00/zkool2/commit/7607b7506298fe1abaf3f416325eb99e33992281))
+
 ## [6.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.0) (2026-04-18)
 
 
