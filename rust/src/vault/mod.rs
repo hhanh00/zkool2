@@ -43,7 +43,8 @@ impl<IO: VaultIO> Vault<IO> {
         device_id_str: String,
         prf_output: [u8; 32],
     ) -> Result<()> {
-        let entry_bytes = crypto::register_device(&init_bytes, &master_password, &device_id_str, prf_output)?;
+        let entry_bytes =
+            crypto::register_device(&init_bytes, &master_password, &device_id_str, prf_output)?;
         self.io_handler.append(entry_bytes).await?;
         Ok(())
     }
@@ -54,21 +55,32 @@ impl<IO: VaultIO> Vault<IO> {
         name: String,
         seed: String,
         aindex: u32,
-        _use_internal: bool,
+        use_internal: bool,
         birth_height: u32,
         pk: Vec<u8>,
     ) -> Result<()> {
         let mnemonic = bip39::Mnemonic::parse_normalized(&seed)?;
         let (entropy_arr, entropy_len) = mnemonic.to_entropy_array();
-        let mut entropy = [0u8; 32];
-        entropy.copy_from_slice(&entropy_arr[..entropy_len]);
+        if entropy_len == 32 {
+            let mut entropy = [0u8; 32];
+            entropy.copy_from_slice(&entropy_arr[..entropy_len]);
 
-        let xpk = x25519_dalek::PublicKey::from(<[u8; 32]>::try_from(pk).map_err(|_| anyhow::anyhow!("Invalid pk length"))?);
+            let xpk = x25519_dalek::PublicKey::from(
+                <[u8; 32]>::try_from(pk).map_err(|_| anyhow::anyhow!("Invalid pk length"))?,
+            );
 
-        let account = crypto::AccountPayload { timestamp, name, entropy, aindex, use_internal: _use_internal, birth_height };
-        let entry_bytes = crypto::encrypt_account(account, xpk)?;
+            let account = crypto::AccountPayload {
+                timestamp,
+                name,
+                entropy,
+                aindex,
+                use_internal,
+                birth_height,
+            };
+            let entry_bytes = crypto::encrypt_account(account, xpk)?;
 
-        self.io_handler.append(entry_bytes).await?;
+            self.io_handler.append(entry_bytes).await?;
+        }
         Ok(())
     }
 }
