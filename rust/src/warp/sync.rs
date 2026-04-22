@@ -1,12 +1,12 @@
 use std::{collections::HashSet, time::Duration};
 
-use zcash_trees::network::Network;
 use anyhow::Result;
 use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::info;
+use zcash_trees::network::Network;
 
 use crate::{
     lwd::CompactBlock,
@@ -149,13 +149,13 @@ pub async fn warp_sync(
                     }
                     else {
                         info!("no more blocks to process");
+                        if !bs.is_empty() {
+                            tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
+                        }
                         break;
                     }
                 }
             }
-        }
-        if !bs.is_empty() {
-            tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
         }
 
         info!("warp_sync completed");
@@ -185,6 +185,7 @@ pub async fn warp_sync(
                 let _ = tx_decrypted
                     .send(WarpSyncMessage::Rewind(accounts, height))
                     .await;
+                break;
             }
             BlockMessage::SaveHeader(bh) => {
                 let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
