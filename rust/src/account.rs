@@ -1,13 +1,20 @@
 use std::str::FromStr as _;
 
 use crate::{
-    api::{account::{Addresses, get_ledger}, coin::Network,
-}, bip38, db::{
+    api::{
+        account::{get_ledger, Addresses},
+        coin::Network,
+    },
+    bip38,
+    db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
         store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
         store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
-    }, key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk}, pay::plan::sapling_dfvk_to_fvk, tiu
+    },
+    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    pay::plan::sapling_dfvk_to_fvk,
+    tiu,
 };
 use crate::{
     api::{
@@ -16,16 +23,16 @@ use crate::{
         },
         key::generate_seed,
     },
-    db::{
-        get_account_hw, select_account_transparent, store_account_hw, store_account_metadata,
-    },
+    db::{get_account_hw, select_account_transparent, store_account_hw, store_account_metadata},
     pay::pool::ALL_POOLS,
 };
 use secp256k1::{PublicKey, SecretKey};
-use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
+use zcash_keys::keys::{
+    sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey,
+};
 use zcash_transparent::address::TransparentAddress;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use bincode::config::legacy;
 use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use jubjub::Fr;
@@ -125,7 +132,9 @@ pub async fn new_account(
         }
         if pools & 1 != 0 && !has_seed {
             init_account_transparent(&mut db_tx, account, birth).await?;
-            let (pk, taddr) = ledger.get_hw_transparent_address(network, na.aindex, 0, dindex).await?;
+            let (pk, taddr) = ledger
+                .get_hw_transparent_address(network, na.aindex, 0, dindex)
+                .await?;
             store_account_transparent_addr(
                 &mut db_tx,
                 account,
@@ -152,7 +161,8 @@ pub async fn new_account(
             &passphrase,
             &seed_fingerprint,
             na.aindex,
-        ).await?;
+        )
+        .await?;
         let usk = UnifiedSpendingKey::from_seed(
             &network,
             &seed,
@@ -168,18 +178,24 @@ pub async fn new_account(
             store_account_transparent_sk(&mut db_tx, account, tsk).await?;
             let tvk = &tsk.to_account_pubkey();
             store_account_transparent_vk(&mut db_tx, account, tvk).await?;
-            let sk = derive_transparent_sk(tsk, 0, dindex)?;
-            let (pk, taddr) = derive_transparent_address(tvk, 0, dindex)?;
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                dindex,
-                Some(sk),
-                &pk,
-                &taddr.encode(&network),
-            )
-            .await?;
+            for di in &[0, dindex] {
+                let sk = derive_transparent_sk(tsk, 0, *di)?;
+                let (pk, taddr) = derive_transparent_address(tvk, 0, *di)?;
+                store_account_transparent_addr(
+                    &mut db_tx,
+                    account,
+                    0,
+                    *di,
+                    Some(sk),
+                    &pk,
+                    &taddr.encode(&network),
+                )
+                .await?;
+                // do not create two taddrs if dindex == 0
+                if dindex == 0 {
+                    break;
+                }
+            }
         }
 
         if pools & 2 != 0 {
@@ -555,7 +571,8 @@ pub async fn get_orchard_note(
         (scope, position, diversifier, value, rcm, rho, witness)
     })
     .fetch_one(connection)
-    .await.context("retrieve oinput")?;
+    .await
+    .context("retrieve oinput")?;
 
     let scope = scope.unwrap_or(0);
     let scope = match scope {
@@ -687,7 +704,9 @@ pub async fn generate_next_dindex(
     if let Some(svk) = svk.as_ref() {
         dindex += 1;
         let address = if hw != 0 {
-            let (di, address) = ledger.get_hw_next_diversifier_address(network, aindex, dindex).await?;
+            let (di, address) = ledger
+                .get_hw_next_diversifier_address(network, aindex, dindex)
+                .await?;
             dindex = di;
             address
         } else {
@@ -722,7 +741,9 @@ pub async fn generate_next_dindex(
             (sk, pk, Some(address))
         }
         None if hw != 0 => {
-            let (pk, address) = ledger.get_hw_transparent_address(network, aindex, 0, dindex).await?;
+            let (pk, address) = ledger
+                .get_hw_transparent_address(network, aindex, 0, dindex)
+                .await?;
             (None, pk, Some(address))
         }
         _ => (None, vec![], None),
@@ -811,7 +832,12 @@ async fn get_transparent_keys(
     Ok((xsk, xvk))
 }
 
-pub async fn get_addresses(network: &Network, connection: &mut SqliteConnection, account: u32, ua_pools: u8) -> Result<Addresses> {
+pub async fn get_addresses(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    ua_pools: u8,
+) -> Result<Addresses> {
     let dindex = crate::db::get_account_dindex(connection, account).await?;
     let diversifier_index = dindex;
 
@@ -959,7 +985,7 @@ pub async fn get_tx_details(
             diversifier,
             value,
             locked,
-            memo
+            memo,
         }
     })
     .fetch_all(&mut *connection)
