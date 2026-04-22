@@ -28,7 +28,7 @@ use crate::{
 };
 use secp256k1::{PublicKey, SecretKey};
 use zcash_keys::keys::{
-    sapling::ExtendedSpendingKey, ReceiverRequirements, UnifiedFullViewingKey, UnifiedSpendingKey,
+    sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey,
 };
 use zcash_transparent::address::TransparentAddress;
 
@@ -181,7 +181,7 @@ pub async fn new_account(
             for di in &[0, dindex] {
                 let sk = derive_transparent_sk(tsk, 0, *di)?;
                 let (pk, taddr) = derive_transparent_address(tvk, 0, *di)?;
-                let c = store_account_transparent_addr(
+                store_account_transparent_addr(
                     &mut db_tx,
                     account,
                     0,
