@@ -88,6 +88,13 @@ export default defineUserConfig({
         ],
       },
       {
+        text: "Coin Weighted Voting",
+        prefix: "/vote/",
+        children: [
+          "howto",
+        ],
+      },
+      {
         text: "Zcash tech",
         prefix: "/tech/",
         children: [
