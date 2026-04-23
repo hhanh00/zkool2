@@ -102,7 +102,7 @@ class SpendingChart extends ConsumerStatefulWidget {
 }
 
 class SpendingChartState extends ConsumerState<SpendingChart> with AutomaticKeepAliveClientMixin {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   final List<Map<String, dynamic>> income = [];
   final List<Map<String, dynamic>> spending = [];
   bool isIncome = false;
@@ -262,7 +262,7 @@ class CategoryChart extends ConsumerStatefulWidget {
 }
 
 class CategoryChartState extends ConsumerState<CategoryChart> with AutomaticKeepAliveClientMixin {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   late final List<DropdownMenuItem<int>> categoriesMenu;
   int? category = 1;
   bool cumulative = false;

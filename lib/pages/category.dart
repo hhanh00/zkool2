@@ -14,7 +14,7 @@ class CategoryPage extends ConsumerStatefulWidget {
 }
 
 class CategoryPageState extends ConsumerState<CategoryPage> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   List<(Category, bool)> categories = [];
 
   @override

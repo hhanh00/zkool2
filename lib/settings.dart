@@ -18,6 +18,7 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
 
 final logID = GlobalKey();
@@ -42,7 +43,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
-  late Coin c = ref.read(coinContextProvider);
+  late Coin c = coinContext.coin;
   AppSettings? settings;
 
   @override
@@ -89,7 +90,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
         await prefs.setBool("vault", settings.vault);
-        ref.read(coinContextProvider.notifier).set(coin: c);
+        coinContext.set(coin: c);
         ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
         ref.invalidate(appSettingsProvider);
       },
@@ -471,7 +472,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
           } catch (e) {
             logger.e("[Vault] enable: initialization failed: $e");
             await vault.deleteLocalVault(); // revert the creation of the vault
-            if (mounted) await showException(context, e.toString());
+            if (mounted) await ErrorDialog.show(context, error: e);
             return;
           }
         }
@@ -605,7 +606,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       return;
     } catch (e) {
       logger.e("[Recover] step 2: download failed: $e");
-      if (mounted) await showException(context, e.toString());
+      if (mounted) await ErrorDialog.show(context, error: e);
       return;
     }
 
@@ -641,7 +642,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
     if (!mounted) return;
     final existingAccounts = await ref.read(getAccountsProvider.future);
-    final coin = ref.read(coinContextProvider);
+    final coin = coinContext.coin;
     final ctx = context;
     AwesomeDialog? dialog;
     try {
@@ -755,19 +756,16 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
 
   @override
   Widget build(BuildContext context) {
-    final AppSettings settings;
-    try {
-      final settingsAV = ref.watch(appSettingsProvider);
-      ensureAV(context, settingsAV);
-      settings = settingsAV.requireValue;
-    } on Widget catch (w) {
-      return w;
-    }
-    final qrSettings = settings.qrSettings;
+    final settingsAV = ref.watch(appSettingsProvider);
     final t = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text("Settings")),
-      body: SingleChildScrollView(
+      body: settingsAV.when(
+        loading: () => blank(context),
+        error: (error, stack) => showError(error),
+        data: (settings) {
+          final qrSettings = settings.qrSettings;
+          return SingleChildScrollView(
         child: Padding(
           padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
           child: FormBuilder(
@@ -853,7 +851,9 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
               ],
             ),
           ),
-        ),
+          ),
+        );
+        },
       ),
     );
   }

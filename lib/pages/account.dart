@@ -22,6 +22,7 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/theme.dart';
 
@@ -42,7 +43,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
   final List<String> tabNames = ["Transactions", "Memos", "Notes"];
 
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   StreamSubscription<SyncProgress>? progressSubscription;
 
   void tutorial() async {
@@ -51,50 +52,25 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
   @override
   Widget build(BuildContext context) {
-    final AccountData? account;
-    final SyncProgressAccount ss;
-    final double? price;
-    final String? fiat;
-    try {
-      final accountAV = ref.watch(getCurrentAccountProvider);
-      account = ensureAV(context, accountAV);
-      if (account == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/"));
-        return SizedBox.shrink();
-      }
-      final ssAV = ref.watch(syncStateAccountProvider(account.account.id));
-      price = ref.watch(priceProvider);
-      final b = account.balance.field0;
-      fiat = price?.let((p) {
-        final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
-        return "\$ ${fiatFormatter.format(f)}";
-      });
-      ss = ensureAV(context, ssAV);
-    } on Widget catch (w) {
-      return w;
-    }
-
-    final t = Theme.of(context);
-    final tt = t.textTheme;
-    final syncing = ss.start != ss.end;
-
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    Future(tutorial);
+    final fullDataAV = ref.watch(fullAccountPageDataProvider);
 
-    final b = account.balance;
-    final mempool = ref.watch(mempoolProvider);
-    final unconfirmedAmount = mempool.unconfirmedFunds[account.account.id];
+    Future(tutorial);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(account.account.name),
+        title: Text(fullDataAV.value?.currentAccount?.account.name ?? "Loading"),
         actions: [
           Showcase(
             key: sync1ID,
             description: "Synchronize only this account",
-            child: IconButton(tooltip: "Sync this account", onPressed: () => onSync(account!), icon: Icon(Icons.sync)),
+            child: IconButton(
+              tooltip: "Sync this account",
+              onPressed: fullDataAV.value?.currentAccount != null ? () => onSync(fullDataAV.value!.currentAccount!) : null,
+              icon: Icon(Icons.sync),
+            ),
           ),
           Showcase(
             key: receiveID,
@@ -147,61 +123,92 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           tabs: tabNames.map((n) => Tab(text: n)).toList(),
         ),
       ),
-      body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TabBarView(
-            controller: tabController,
-            children: [
-              CustomScrollView(
-                slivers: [
-                  PinnedHeaderSliver(
-                    child: Container(
-                      color: Theme.of(context).colorScheme.surface,
-                      child: Column(
-                        children: [
-                          if (syncing) ...[
-                            HeroProgressWidget(account.account),
-                            Gap(8),
-                          ],
-                          DisplayPanel(
-                              child: Column(children: [
-                            Showcase(
-                              key: balID,
-                              description: "Balance across all pools",
-                              child: Column(children: [
-                                zatToText(
-                                  b.field0[0] + b.field0[1] + b.field0[2],
-                                  selectable: true,
-                                  style: tt.displaySmall!,
-                                ),
-                                if (fiat != null) Text(fiat),
-                              ]),
+      body: fullDataAV.when(
+        loading: () => blank(context),
+        error: (error, stack) => showError(error),
+        data: (fullData) {
+          final account = fullData.currentAccount;
+          if (account == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/"));
+            return const SizedBox.shrink();
+          }
+
+          final b = account.balance.field0;
+          final fiat = fullData.price?.let((p) {
+            final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
+            return "\$ ${fiatFormatter.format(f)}";
+          });
+
+          final t = Theme.of(context);
+          final tt = t.textTheme;
+
+          final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
+
+          return Builder(
+            builder: (context) {
+              final ss = fullData.syncState;
+              if (ss == null) return const SizedBox.shrink();
+
+              final syncing = ss.start != ss.end;
+              return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TabBarView(
+                    controller: tabController,
+                    children: [
+                      CustomScrollView(
+                        slivers: [
+                          PinnedHeaderSliver(
+                            child: Container(
+                              color: Theme.of(context).colorScheme.surface,
+                              child: Column(
+                                children: [
+                                  if (syncing) ...[
+                                    HeroProgressWidget(account.account),
+                                    Gap(8),
+                                  ],
+                                  DisplayPanel(
+                                      child: Column(children: [
+                                    Showcase(
+                                      key: balID,
+                                      description: "Balance across all pools",
+                                      child: Column(children: [
+                                        zatToText(
+                                          b[0] + b[1] + b[2],
+                                          selectable: true,
+                                          style: tt.displaySmall!,
+                                        ),
+                                        if (fiat != null) Text(fiat),
+                                      ]),
+                                    ),
+                                    Gap(8),
+                                    BalanceWidget(account.balance, showcase: true),
+                                  ])),
+                                  Gap(8),
+                                  if (unconfirmedAmount != null) ...[
+                                    zatToText(
+                                      BigInt.from(unconfirmedAmount),
+                                      prefix: "Unconfirmed: ",
+                                      colored: true,
+                                      selectable: true,
+                                      style: tt.bodyLarge,
+                                    ),
+                                    Gap(8),
+                                  ],
+                                ],
+                              ),
                             ),
-                            Gap(8),
-                            BalanceWidget(b, showcase: true),
-                          ])),
-                          Gap(8),
-                          if (unconfirmedAmount != null) ...[
-                            zatToText(
-                              BigInt.from(unconfirmedAmount),
-                              prefix: "Unconfirmed: ",
-                              colored: true,
-                              selectable: true,
-                              style: tt.bodyLarge,
-                            ),
-                            Gap(8),
-                          ],
+                          ),
+                          ...showTxHistory(context, account.transactions),
                         ],
                       ),
-                    ),
-                  ),
-                  ...showTxHistory(context, account.transactions),
-                ],
-              ),
-              showMemos(context, account.memos),
-              showNotes(ref, account.notes),
-            ],
-          )),
+                      showMemos(context, account.memos),
+                      showNotes(ref, account.notes),
+                    ],
+                  ));
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -259,7 +266,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   final resetID = GlobalKey(debugLabel: "resetID");
   final folderID = GlobalKey(debugLabel: "folderID");
 
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
   List<Folder>? folders;
@@ -441,13 +448,14 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
       final seed = a.seed;
       if (seed != null) {
         final settings = await ref.read(appSettingsProvider.future);
-        if (settings.vault) await ref.read(vaultProvider.notifier).storeAccount(
-          name: name,
-          seed: seed,
-          aindex: a.aindex,
-          useInternal: a.useInternal,
-          birthHeight: a.birth,
-        );
+        if (settings.vault)
+          await ref.read(vaultProvider.notifier).storeAccount(
+                name: name,
+                seed: seed,
+                aindex: a.aindex,
+                useInternal: a.useInternal,
+                birthHeight: a.birth,
+              );
       }
       ref.invalidate(getAccountsProvider);
       ref.invalidate(accountProvider(accounts[0].id));
@@ -502,13 +510,14 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
       final seed = await getAccountSeed(account: a.id, c: c);
       if (seed != null) {
         final settings = await ref.read(appSettingsProvider.future);
-        if (settings.vault) await ref.read(vaultProvider.notifier).storeAccount(
-          name: a.name,
-          seed: seed.mnemonic,
-          aindex: a.aindex,
-          useInternal: a.useInternal,
-          birthHeight: bh,
-        );
+        if (settings.vault)
+          await ref.read(vaultProvider.notifier).storeAccount(
+                name: a.name,
+                seed: seed.mnemonic,
+                aindex: a.aindex,
+                useInternal: a.useInternal,
+                birthHeight: bh,
+              );
       }
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
@@ -760,7 +769,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes) {
 
 void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async {
   if (currentHeight == null) return;
-  final c = ref.read(coinContextProvider);
+  final c = coinContext.coin;
   final s = await inputText(context, title: "Enter confirmation threshold");
   final threshold = s?.let((v) => int.tryParse(v));
   if (threshold != null) {
@@ -775,7 +784,7 @@ void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async
 }
 
 void onUnlockAll(WidgetRef ref, BuildContext context) async {
-  final c = ref.read(coinContextProvider);
+  final c = coinContext.coin;
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
     await unlockAllNotes(c: c);
@@ -785,7 +794,7 @@ void onUnlockAll(WidgetRef ref, BuildContext context) async {
 }
 
 void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
-  final c = ref.read(coinContextProvider);
+  final c = coinContext.coin;
   await lockNote(id: id, locked: locked, c: c);
   final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
   ref.invalidate(accountProvider(selectedAccount.id));
@@ -834,7 +843,7 @@ class ViewingKeysPage extends ConsumerStatefulWidget {
 }
 
 class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   int pools = 7;
   String? uvk;
   String? fingerprint;
