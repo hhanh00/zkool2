@@ -348,6 +348,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final price = ref.watch(priceProvider.notifier);
     price.setAutoFetchFx(getFx, coingecko);
     final vault = await prefs.getBool("vault") ?? false;
+    final expertMode = await prefs.getBool("expert_mode") ?? false;
 
     return AppSettings(
       dbName: dbName,
@@ -366,6 +367,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       blockExplorer: blockExplorer,
       qrSettings: qrSettings,
       vault: vault,
+      expertMode: expertMode,
     );
   }
 
@@ -428,6 +430,7 @@ sealed class AppSettings with _$AppSettings {
     required bool getFx,
     required QRSettings qrSettings,
     required bool vault,
+    required bool expertMode,
   }) = _AppSettings;
 }
 
