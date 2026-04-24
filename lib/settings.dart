@@ -154,7 +154,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         child: FormBuilder(
           key: formKey,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             child: Column(
               children: [
                 Showcase(
