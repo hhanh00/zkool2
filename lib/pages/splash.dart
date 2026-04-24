@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -50,7 +51,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
 
   void tryOpenDatabase() async {
     String? password;
-    var c = ref.read(coinContextProvider);
+    var c = coinContext.coin;
     while (true) {
       final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
@@ -59,8 +60,15 @@ class SplashPageState extends ConsumerState<SplashPage> {
       try {
         c = await c.openDatabase(dbFilepath: dbFilepath, password: password);
         break;
-      } catch (e) {
+      } catch (e, s) {
         logger.e(e);
+        if (mounted) {
+          await ErrorDialog.show(
+            context,
+            error: e,
+            stackTrace: s,
+          );
+        }
         password = await inputPassword(context, title: "Enter Database Password for $dbName", btnCancelText: "Database Manager");
         if (password == null) {
           setState(() => openDatabaseSuccess = false);
@@ -68,7 +76,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
         }
       }
     }
-    ref.read(coinContextProvider.notifier).set(coin: c);
+    coinContext.set(coin: c);
     final hasDb = ref.read(hasDbProvider.notifier);
     hasDb.setHasDb();
     ref.invalidate(appSettingsProvider);
@@ -86,7 +94,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
       url: settings.lwd,
     );
     c = await c.setUseTor(useTor: settings.useTor);
-    ref.read(coinContextProvider.notifier).set(coin: c);
+    coinContext.set(coin: c);
     final synchronizer = ref.read(synchronizerProvider.notifier);
     synchronizer.autoSync();
     final mempool = ref.read(mempoolProvider.notifier);

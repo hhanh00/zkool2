@@ -55,48 +55,49 @@ abstract class _$HasDb extends $Notifier<bool> {
   }
 }
 
-@ProviderFor(CoinContext)
-const coinContextProvider = CoinContextProvider._();
+@ProviderFor(SelectedAccountId)
+const selectedAccountIdProvider = SelectedAccountIdProvider._();
 
-final class CoinContextProvider extends $NotifierProvider<CoinContext, Coin> {
-  const CoinContextProvider._()
+final class SelectedAccountIdProvider
+    extends $NotifierProvider<SelectedAccountId, int> {
+  const SelectedAccountIdProvider._()
       : super(
           from: null,
           argument: null,
           retry: null,
-          name: r'coinContextProvider',
+          name: r'selectedAccountIdProvider',
           isAutoDispose: true,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
 
   @override
-  String debugGetCreateSourceHash() => _$coinContextHash();
+  String debugGetCreateSourceHash() => _$selectedAccountIdHash();
 
   @$internal
   @override
-  CoinContext create() => CoinContext();
+  SelectedAccountId create() => SelectedAccountId();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Coin value) {
+  Override overrideWithValue(int value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<Coin>(value),
+      providerOverride: $SyncValueProvider<int>(value),
     );
   }
 }
 
-String _$coinContextHash() => r'91273110574fa3fe4e8412e92c99d1cb4fff0997';
+String _$selectedAccountIdHash() => r'833aad0e4b19e6812674eedc0418e83387d5ee59';
 
-abstract class _$CoinContext extends $Notifier<Coin> {
-  Coin build();
+abstract class _$SelectedAccountId extends $Notifier<int> {
+  int build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<Coin, Coin>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<Coin, Coin>, Coin, Object?, Object?>;
+    final ref = this.ref as $Ref<int, int>;
+    final element = ref.element
+        as $ClassProviderElement<AnyNotifier<int, int>, int, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -220,7 +221,7 @@ final class SelectedAccountProvider extends $FunctionalProvider<
   }
 }
 
-String _$selectedAccountHash() => r'730f32748a616d776d3781bb7c627e095f779c4c';
+String _$selectedAccountHash() => r'749b6e2d1f8d9a677d054da6da362642a8a4198d';
 
 @ProviderFor(SelectedFolder)
 const selectedFolderProvider = SelectedFolderProvider._();
@@ -301,7 +302,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
   }
 }
 
-String _$getAccountsHash() => r'0b15066a7f8a3dfccb92626b55f4de7c5fac850b';
+String _$getAccountsHash() => r'4628dce465555f59311a5f3232bb00fbfb6e428c';
 
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
@@ -335,7 +336,7 @@ final class GetFoldersProvider extends $FunctionalProvider<
   }
 }
 
-String _$getFoldersHash() => r'5a55b95e2e52415b9ee7208ddca359f635e36acf';
+String _$getFoldersHash() => r'2458237b23db05d19a7b49856e9987542680249e';
 
 @ProviderFor(getCategories)
 const getCategoriesProvider = GetCategoriesProvider._();
@@ -369,7 +370,7 @@ final class GetCategoriesProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCategoriesHash() => r'ff720b53a6f29d3cc907abf278f14e2fc7ffc7e5';
+String _$getCategoriesHash() => r'b936c571d89ff2ede483f5239881ba90219af321';
 
 @ProviderFor(account)
 const accountProvider = AccountFamily._();
@@ -423,7 +424,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'9594c3daf455e8f1905a6fbf6d26727e69ed579c';
+String _$accountHash() => r'0c9f9dc4a92e89a15e9f89d71949c1c84c1a5817';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -457,7 +458,7 @@ final class GetCurrentAccountProvider extends $FunctionalProvider<
           argument: null,
           retry: null,
           name: r'getCurrentAccountProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -477,7 +478,7 @@ final class GetCurrentAccountProvider extends $FunctionalProvider<
   }
 }
 
-String _$getCurrentAccountHash() => r'd96b535adcd641dbfc5444f924a82c621d592e56';
+String _$getCurrentAccountHash() => r'fb9e03f8c767fe77e0f33e71495c3bf0c167c7a1';
 
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
@@ -504,7 +505,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'e31a10e5cd06cb8c4e1ed66a40a2b25c22a50b5e';
+    r'd9771f9ad0db346653ce1f2f9a22f28d21ea76d2';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -699,7 +700,7 @@ final class ElectionNotifierProvider
   }
 }
 
-String _$electionNotifierHash() => r'fa2f024dda600a56be8a9e6ba300f2398c672102';
+String _$electionNotifierHash() => r'7ab19af17d5ec65bbf88cd66f2cd7b912022bfe0';
 
 abstract class _$ElectionNotifier extends $Notifier<ElectionData?> {
   ElectionData? build();
@@ -749,7 +750,7 @@ final class MempoolNotifierProvider
   }
 }
 
-String _$mempoolNotifierHash() => r'f77b11ae77832e8c57c246017ac9b656de99f4dc';
+String _$mempoolNotifierHash() => r'e30275d3d759d1bee1dc3b4f5eb18fa1bd0cedc4';
 
 abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
   MempoolState build();
@@ -800,7 +801,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'b8a4c26b505c5fc5207b862d4aaa6cc38bd22551';
+    r'a5f47097b8bcb7187b66b4e7ca657931f08b443e';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -847,7 +848,7 @@ final class TransparentScanProvider
   }
 }
 
-String _$transparentScanHash() => r'550050f25e966a0eec3b5c1bea6955df5b76a962';
+String _$transparentScanHash() => r'9a8d590be183064d275865b9fa96668cf104996c';
 
 abstract class _$TransparentScan extends $Notifier<String> {
   String build();
@@ -902,7 +903,7 @@ final class GetTxDetailsProvider
   }
 }
 
-String _$getTxDetailsHash() => r'4f15b77e50e66ecfb895bc53a2e5c5cf017689e0';
+String _$getTxDetailsHash() => r'67175e914e53d2de8944db85e0f9225374cba276';
 
 final class GetTxDetailsFamily extends $Family
     with
@@ -990,6 +991,151 @@ abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   }
 }
 
+@ProviderFor(accountsPageData)
+const accountsPageDataProvider = AccountsPageDataProvider._();
+
+final class AccountsPageDataProvider extends $FunctionalProvider<
+        AsyncValue<AccountsPageData>,
+        AccountsPageData,
+        FutureOr<AccountsPageData>>
+    with $FutureModifier<AccountsPageData>, $FutureProvider<AccountsPageData> {
+  const AccountsPageDataProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'accountsPageDataProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountsPageDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<AccountsPageData> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<AccountsPageData> create(Ref ref) {
+    return accountsPageData(ref);
+  }
+}
+
+String _$accountsPageDataHash() => r'e37b6e048a3a3938c9c2b03ae41328036271956d';
+
+@ProviderFor(basicAccountData)
+const basicAccountDataProvider = BasicAccountDataProvider._();
+
+final class BasicAccountDataProvider extends $FunctionalProvider<
+        AsyncValue<BasicAccountData>,
+        BasicAccountData,
+        FutureOr<BasicAccountData>>
+    with $FutureModifier<BasicAccountData>, $FutureProvider<BasicAccountData> {
+  const BasicAccountDataProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'basicAccountDataProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$basicAccountDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<BasicAccountData> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<BasicAccountData> create(Ref ref) {
+    return basicAccountData(ref);
+  }
+}
+
+String _$basicAccountDataHash() => r'5f755167b7edd069b07888af935e53d49e425a16';
+
+@ProviderFor(accountPageData)
+const accountPageDataProvider = AccountPageDataProvider._();
+
+final class AccountPageDataProvider extends $FunctionalProvider<
+        AsyncValue<AccountPageData>, AccountPageData, FutureOr<AccountPageData>>
+    with $FutureModifier<AccountPageData>, $FutureProvider<AccountPageData> {
+  const AccountPageDataProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'accountPageDataProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountPageDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<AccountPageData> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<AccountPageData> create(Ref ref) {
+    return accountPageData(ref);
+  }
+}
+
+String _$accountPageDataHash() => r'1b27ca25c3ccb2705f247b0ca97780de0df30679';
+
+@ProviderFor(fullAccountPageData)
+const fullAccountPageDataProvider = FullAccountPageDataProvider._();
+
+final class FullAccountPageDataProvider extends $FunctionalProvider<
+        AsyncValue<FullAccountPageData>,
+        FullAccountPageData,
+        FutureOr<FullAccountPageData>>
+    with
+        $FutureModifier<FullAccountPageData>,
+        $FutureProvider<FullAccountPageData> {
+  const FullAccountPageDataProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'fullAccountPageDataProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$fullAccountPageDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<FullAccountPageData> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<FullAccountPageData> create(Ref ref) {
+    return fullAccountPageData(ref);
+  }
+}
+
+String _$fullAccountPageDataHash() =>
+    r'742c766717c6b4f146d1f6fa7c6a5aa2512fa0b6';
+
 @ProviderFor(VaultNotifier)
 const vaultProvider = VaultNotifierProvider._();
 
@@ -1014,7 +1160,7 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'a048d1a6cde8461a2df0b54a2bd9c753bf91bd6b';
+String _$vaultNotifierHash() => r'ad17084e8f4fbc34a37bf08a77b4b49ea50f2c0d';
 
 abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
   FutureOr<Vault> build();

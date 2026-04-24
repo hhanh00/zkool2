@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
@@ -20,6 +21,7 @@ import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/vault.dart';
 import 'package:zkool/widgets/theme.dart';
 
@@ -37,20 +39,31 @@ class HasDb extends _$HasDb {
 }
 
 @riverpod
-class CoinContext extends _$CoinContext {
+class SelectedAccountId extends _$SelectedAccountId {
   @override
-  Coin build() {
-    return Coin();
+  int build() => 0;
+
+  void set(int account) {
+    state = account;
   }
+}
+
+// Singleton coin context - not a provider, just a data container for Rust
+class CoinContext {
+  Coin _coin = Coin();
+
+  Coin get coin => _coin;
 
   Future<void> setAccount({required int account}) async {
-    state = await state.setAccount(account: account);
+    _coin = await _coin.setAccount(account: account);
   }
 
   void set({required Coin coin}) {
-    state = coin;
+    _coin = coin;
   }
 }
+
+final coinContext = CoinContext();
 
 @freezed
 sealed class SyncState with _$SyncState {
@@ -213,10 +226,10 @@ class HeroProgressWidget extends StatelessWidget {
 
 @riverpod
 Future<Account?> selectedAccount(Ref ref) async {
-  final c = ref.watch(coinContextProvider);
-  final account = c.account;
+  final accountId = ref.watch(selectedAccountIdProvider);
+  if (accountId == 0) return null;
   final accounts = await ref.watch(getAccountsProvider.future);
-  final acc = accounts.firstWhereOrNull((a) => a.id == account);
+  final acc = accounts.firstWhere((a) => a.id == accountId);
   return acc;
 }
 
@@ -238,26 +251,26 @@ class SelectedFolder extends _$SelectedFolder {
 
 @Riverpod(keepAlive: true)
 Future<List<Account>> getAccounts(Ref ref) async {
-  final c = ref.watch(coinContextProvider);
+  final c = coinContext.coin;
   final as = await listAccounts(c: c);
   return as;
 }
 
 @riverpod
 Future<List<Folder>> getFolders(Ref ref) async {
-  final c = ref.watch(coinContextProvider);
+  final c = coinContext.coin;
   return await listFolders(c: c);
 }
 
 @riverpod
 Future<List<Category>> getCategories(Ref ref) async {
-  final c = ref.watch(coinContextProvider);
+  final c = coinContext.coin;
   return await listCategories(c: c);
 }
 
 @riverpod
 Future<AccountData> account(Ref ref, int id) async {
-  final c = ref.watch(coinContextProvider);
+  final c = coinContext.coin;
   final accounts = await ref.watch(getAccountsProvider.future);
   final account = accounts.firstWhere((a) => a.id == id);
   final poolBalance = await balance(c: c);
@@ -278,10 +291,12 @@ Future<AccountData> account(Ref ref, int id) async {
   );
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<AccountData?> getCurrentAccount(Ref ref) async {
   final selectedAccount = await ref.watch(selectedAccountProvider.future);
-  if (selectedAccount == null) return null;
+  if (selectedAccount == null) {
+    return null;
+  }
   return await ref.watch(accountProvider(selectedAccount.id).future);
 }
 
@@ -302,7 +317,7 @@ sealed class AccountData with _$AccountData {
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   @override
   Future<AppSettings> build() async {
-    final c = ref.watch(coinContextProvider);
+    final c = coinContext.coin;
     final hasDb = ref.watch(hasDbProvider);
     final prefs = SharedPreferencesAsync();
     String dbName = await prefs.getString("database") ?? appName;
@@ -455,13 +470,13 @@ class ElectionNotifier extends _$ElectionNotifier {
   ElectionData? build() => null;
 
   Future<void> fetch(int account, String url) async {
-    final c = ref.watch(coinContextProvider);
+    final c = coinContext.coin;
     final election = await fetchElection(account: account, url: url, c: c);
     state = ElectionData(election: election, account: account, url: url);
   }
 
   Future<ElectionPropsPub?> init() async {
-    final c = ref.watch(coinContextProvider);
+    final c = coinContext.coin;
     final (account, url, election) = await getElection(c: c);
     state = ElectionData(election: election, account: account, url: url);
     return election;
@@ -487,7 +502,7 @@ class MempoolNotifier extends _$MempoolNotifier {
   }
 
   void runMempoolListener() async {
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     final settings = await ref.read(appSettingsProvider.future);
     if (settings.offline) return;
 
@@ -627,7 +642,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       return;
     }
 
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
 
@@ -690,9 +705,18 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     retryCount++;
     final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
     final delay = 30 + Random().nextInt(maxDelay); // randomize delay
-    final message = "Sync error $e, $retryCount retries, retrying in $delay seconds";
+    final message = "Sync error: $e\n\nRetrying in $delay seconds (attempt $retryCount)";
     logger.e(message);
-    showSnackbar(message);
+
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      ErrorDialog.show(
+        context,
+        error: e,
+        customMessage: "Sync error (attempt $retryCount of ~10). Retrying in $delay seconds...",
+      );
+    }
+
     retrySyncTimer?.cancel();
     retrySyncTimer = Timer(Duration(seconds: delay), () async {
       await startSynchronize(
@@ -710,7 +734,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       return;
     }
     try {
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       final currentHeight = await getCurrentHeight(c: c);
       final h = ref.read(currentHeightProvider.notifier);
       if (h.setHeight(currentHeight)) {
@@ -759,7 +783,7 @@ class TransparentScan extends _$TransparentScan {
   bool get running => state.isNotEmpty;
 
   Future<void> run(BuildContext context, int gapLimit, {required void Function() onComplete}) async {
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     final sc = await TransparentScanner.newInstance();
     scanner = sc;
     final endHeight = await getCurrentHeight(c: c);
@@ -796,7 +820,7 @@ class TransparentScan extends _$TransparentScan {
 class GetTxDetails extends _$GetTxDetails {
   @override
   Future<TxAccount> build(int id) async {
-    final c = ref.watch(coinContextProvider);
+    final c = coinContext.coin;
     return await getTxDetails(idTx: id, c: c);
   }
 }
@@ -848,6 +872,101 @@ class LifecycleWatcher with WidgetsBindingObserver {
       scope.read(lifecycleProvider.notifier).lock(force: false);
     }
   }
+}
+
+@freezed
+sealed class AccountsPageData with _$AccountsPageData {
+  const factory AccountsPageData({
+    required AppSettings settings,
+    required List<Account> accounts,
+    required double? price,
+    required Folder? selectedFolder,
+  }) = _AccountsPageData;
+}
+
+@riverpod
+Future<AccountsPageData> accountsPageData(Ref ref) async {
+  final settings = await ref.watch(appSettingsProvider.future);
+  final accounts = await ref.watch(getAccountsProvider.future);
+  final price = ref.watch(priceProvider);
+  final selectedFolder = ref.watch(selectedFolderProvider);
+
+  return AccountsPageData(
+    settings: settings,
+    accounts: accounts,
+    price: price,
+    selectedFolder: selectedFolder,
+  );
+}
+
+// Base account data - accounts + currentAccount
+@freezed
+sealed class BasicAccountData with _$BasicAccountData {
+  const factory BasicAccountData({
+    required List<Account> allAccounts,
+    required AccountData? currentAccount,
+  }) = _BasicAccountData;
+}
+
+@riverpod
+Future<BasicAccountData> basicAccountData(Ref ref) async {
+  final allAccounts = await ref.watch(getAccountsProvider.future);
+  final currentAccount = await ref.watch(getCurrentAccountProvider.future);
+
+  return BasicAccountData(
+    allAccounts: allAccounts,
+    currentAccount: currentAccount,
+  );
+}
+
+// Account page data - extends BasicAccountData with syncState
+@freezed
+sealed class AccountPageData with _$AccountPageData {
+  const factory AccountPageData({
+    required List<Account> allAccounts,
+    required AccountData? currentAccount,
+    required SyncProgressAccount? syncState,
+  }) = _AccountPageData;
+}
+
+@riverpod
+Future<AccountPageData> accountPageData(Ref ref) async {
+  final basicData = await ref.watch(basicAccountDataProvider.future);
+  final accountId = basicData.currentAccount?.account.id ?? 0;
+  final syncState = await ref.watch(syncStateAccountProvider(accountId).future);
+
+  return AccountPageData(
+    allAccounts: basicData.allAccounts,
+    currentAccount: basicData.currentAccount,
+    syncState: syncState,
+  );
+}
+
+// Full account page data - extends AccountPageData with price + mempool
+@freezed
+sealed class FullAccountPageData with _$FullAccountPageData {
+  const factory FullAccountPageData({
+    required List<Account> allAccounts,
+    required AccountData? currentAccount,
+    required SyncProgressAccount? syncState,
+    required double? price,
+    required MempoolState mempool,
+  }) = _FullAccountPageData;
+}
+
+@riverpod
+Future<FullAccountPageData> fullAccountPageData(Ref ref) async {
+  final accountData = await ref.watch(accountPageDataProvider.future);
+  final price = ref.watch(priceProvider);
+  final mempool = ref.watch(mempoolProvider);
+
+  return FullAccountPageData(
+    allAccounts: accountData.allAccounts,
+    currentAccount: accountData.currentAccount,
+    syncState: accountData.syncState,
+    price: price,
+    mempool: mempool,
+  );
 }
 
 @freezed
