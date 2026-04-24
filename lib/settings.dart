@@ -90,6 +90,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
         await prefs.setBool("vault", settings.vault);
+        await prefs.setBool("expert_mode", settings.expertMode);
         coinContext.set(coin: c);
         ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
         ref.invalidate(appSettingsProvider);
@@ -280,13 +281,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ]),
                 ),
                 Gap(8),
-                FormBuilderSwitch(
-                  name: "vault",
-                  title: Text("Cloud Vault"),
-                  initialValue: settings.vault,
-                  onChanged: onChangedVault,
-                ),
-                if (settings.vault)
+                if (settings.expertMode)
+                  FormBuilderSwitch(
+                    name: "vault",
+                    title: Text("Cloud Vault"),
+                    initialValue: settings.vault,
+                    onChanged: onChangedVault,
+                  ),
+                if (settings.expertMode && settings.vault)
                   Row(children: [
                     Expanded(child: Text("Recover Accounts from Vault")),
                     SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right),),),
@@ -294,7 +296,27 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
-                Text(versionString),
+                GestureDetector(
+                  onLongPress: () async {
+                    final prefs = SharedPreferencesAsync();
+                    final newExpertMode = !settings.expertMode;
+                    await prefs.setBool("expert_mode", newExpertMode);
+                    setState(() {
+                      settings = settings.copyWith(expertMode: newExpertMode);
+                      widget.onChanged(settings);
+                    });
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(versionString),
+                      if (settings.expertMode) ...[
+                        Gap(8),
+                        Text("expert", style: t.bodySmall?.copyWith(color: Colors.grey)),
+                      ],
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
