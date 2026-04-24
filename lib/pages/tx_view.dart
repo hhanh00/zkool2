@@ -63,9 +63,11 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
         loading: () => blank(context),
         error: (error, stack) => showError(error),
         data: (txDetails) => SingleChildScrollView(
-            child: Column(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: Column(
           children: show(txDetails),
-        )),
+        ))),
       ),
     );
   }

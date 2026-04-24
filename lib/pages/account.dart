@@ -151,7 +151,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
               final syncing = ss.start != ss.end;
               return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                   child: TabBarView(
                     controller: tabController,
                     children: [
