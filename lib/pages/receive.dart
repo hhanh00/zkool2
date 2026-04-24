@@ -9,6 +9,7 @@ import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
 final viewID = GlobalKey();
@@ -24,7 +25,7 @@ class ReceivePage extends ConsumerStatefulWidget {
 }
 
 class ReceivePageState extends ConsumerState<ReceivePage> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   Account? account;
   Addresses? addresses;
   int uaPools = 0;
