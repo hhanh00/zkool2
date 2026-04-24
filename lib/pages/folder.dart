@@ -12,7 +12,7 @@ class FolderPage extends ConsumerStatefulWidget {
 }
 
 class FolderPageState extends ConsumerState<FolderPage> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   List<(Folder, bool)> folders = [];
   int? selectedIndex;
 

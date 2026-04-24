@@ -13,6 +13,7 @@ import 'package:zkool/src/rust/api/account.dart' show resetSync;
 import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:async/async.dart';
 import 'package:zkool/widgets/input_amount.dart';
 
@@ -65,7 +66,7 @@ class VotePage1State extends ConsumerState<VotePage1> {
       final fields = form.fields;
       final url = fields["url"]!.value as String;
 
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       final e = ref.read(electionProvider.notifier);
       final witnessesOk = await checkWitnesses(account: c.account, url: url, c: c);
       if (!witnessesOk) {
@@ -182,7 +183,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
   void onQuit() async {
     final confirmed = await confirmDialog(context, title: "Close Election?", message: "Do you want to quit this election?");
     if (confirmed) {
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       await deleteElection(c: c);
       GoRouter.of(context).pop();
     }
@@ -196,7 +197,7 @@ class VotePage2State extends ConsumerState<VotePage2> {
     if (!formKey.currentState!.validate()) return;
     final confirmed = await confirmDialog(context, title: "Vote", message: "Do you want to submit this vote of $amount?");
     if (!confirmed) return;
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     final voteContent = hex.encode(answers);
     AwesomeDialog? dialog;
     try {
@@ -270,7 +271,7 @@ class VoteDelegateState extends ConsumerState<VoteDelegatePage> {
   void initState() {
     super.initState();
     Future(() async {
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       address = await getElectionAddress(idAccount: c.account, c: c);
       setState(() {});
     });
@@ -303,7 +304,7 @@ class VoteDelegateState extends ConsumerState<VoteDelegatePage> {
 
   void onOK() async {
     try {
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       final recipient = formKey.currentState!.fields["address"]!.value as String;
       final confirmed = await confirmDialog(context, title: "Delegate", message: "Sending ${widget.amount} votes to $recipient");
       if (confirmed) {
@@ -331,7 +332,7 @@ Future<BigInt> refresh(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final c = ref.read(coinContextProvider);
+  final c = coinContext.coin;
   AwesomeDialog? dialog;
   try {
     dialog = await showMessage(
