@@ -16,6 +16,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 final coordinatorID = GlobalKey();
 final fundingID2 = GlobalKey();
@@ -65,7 +66,7 @@ Widget buildFrostPage(
 }
 
 class FrostPage1State extends ConsumerState<FrostPage1> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   final formKey = GlobalKey<FormBuilderState>();
   List<Account> accounts = [];
   AccountData? account;
@@ -82,100 +83,99 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
 
   @override
   Widget build(BuildContext context) {
-    try {
-      final accountsAV = ref.watch(getAccountsProvider);
-      ensureAV(context, accountsAV);
-      accounts = accountsAV.requireValue.where((e) => !e.hidden).toList();
-
-      final accountAV = ref.watch(getCurrentAccountProvider);
-      ensureAV(context, accountAV);
-      account = accountAV.requireValue!;
-    } on Widget catch (w) {
-      return w;
-    }
-
-    if (frostParams == null) {
-      frostParams = account!.frostParams;
-      Future(() async {
-        final signing = await isSigningInProgress(c: c);
-        if (signing) {
-          if (context.mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              GoRouter.of(context).pushReplacement("/frost2");
-            });
-          }
-        }
-        setState(() {});
-      });
-    }
-
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    Future(tutorial);
+    final accountDataAV = ref.watch(basicAccountDataProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Frost Multi Party Signature")),
-      body: FormBuilder(
-        key: formKey,
-        child: Column(
-          children: [
-            ListTile(
-              title: Text("Your Participant ID"),
-              subtitle: Text(frostParams!.id.toString()),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Showcase(
-                key: coordinatorID,
-                description: "Participant ID who is coordinating the multisignature",
-                child: FormBuilderDropdown(
-                  name: "coordinator",
-                  decoration: const InputDecoration(
-                    labelText: "ID of the coordinator",
-                  ),
-                  initialValue: 1,
-                  items: List.generate(
-                    5,
-                    (i) => DropdownMenuItem(
-                      value: i + 1,
-                      child: Text("${i + 1}"),
+    return accountDataAV.when(
+      loading: () => blank(context),
+      error: (error, stack) => showError(error),
+      data: (accountData) {
+        accounts = accountData.allAccounts.where((e) => !e.hidden).toList();
+        account = accountData.currentAccount;
+
+        if (frostParams == null) {
+          frostParams = account!.frostParams;
+          Future(() async {
+            final signing = await isSigningInProgress(c: c);
+            if (signing) {
+              if (context.mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  GoRouter.of(context).pushReplacement("/frost2");
+                });
+              }
+            }
+            setState(() {});
+          });
+        }
+
+        Future(tutorial);
+
+        return Scaffold(
+          appBar: AppBar(title: const Text("Frost Multi Party Signature")),
+          body: FormBuilder(
+            key: formKey,
+            child: Column(
+              children: [
+                ListTile(
+                  title: Text("Your Participant ID"),
+                  subtitle: Text(frostParams!.id.toString()),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Showcase(
+                    key: coordinatorID,
+                    description: "Participant ID who is coordinating the multisignature",
+                    child: FormBuilderDropdown(
+                      name: "coordinator",
+                      decoration: const InputDecoration(
+                        labelText: "ID of the coordinator",
+                      ),
+                      initialValue: 1,
+                      items: List.generate(
+                        5,
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text("${i + 1}"),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Showcase(
-                key: fundingID2,
-                description: "Multisig uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
-                child: FormBuilderDropdown(
-                  name: "account",
-                  decoration: const InputDecoration(
-                    labelText: "Funding Account for the FROST messages",
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Showcase(
+                    key: fundingID2,
+                    description: "Multisig uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                    child: FormBuilderDropdown(
+                      name: "account",
+                      decoration: const InputDecoration(
+                        labelText: "Funding Account for the FROST messages",
+                      ),
+                      items: accounts
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(a.name),
+                            ),
+                          )
+                          .toList(),
+                      validator: FormBuilderValidators.required(),
+                    ),
                   ),
-                  items: accounts
-                      .map(
-                        (a) => DropdownMenuItem(
-                          value: a.id,
-                          child: Text(a.name),
-                        ),
-                      )
-                      .toList(),
-                  validator: FormBuilderValidators.required(),
                 ),
-              ),
+                Gap(16),
+                ElevatedButton.icon(
+                  onPressed: onNext,
+                  label: Text("Next"),
+                  icon: Icon(Icons.arrow_forward),
+                ),
+              ],
             ),
-            Gap(16),
-            ElevatedButton.icon(
-              onPressed: onNext,
-              label: Text("Next"),
-              icon: Icon(Icons.arrow_forward),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -199,7 +199,7 @@ class FrostPage2 extends ConsumerStatefulWidget {
 }
 
 class FrostPage2State extends ConsumerState<FrostPage2> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   String message = "";
   Timer? timer;
   int currentIndex = 0;
@@ -344,7 +344,7 @@ class FrostSteps extends StatelessWidget {
 }
 
 void onCancel(BuildContext context, WidgetRef ref) async {
-  final c = ref.read(coinContextProvider);
+  final c = coinContext.coin;
   final confirmed = await confirmDialog(
     context,
     title: "Cancel Multi Signature",

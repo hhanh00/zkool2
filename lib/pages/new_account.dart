@@ -14,6 +14,7 @@ import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
@@ -40,7 +41,7 @@ class NewAccountPage extends ConsumerStatefulWidget {
 }
 
 class NewAccountPageState extends ConsumerState<NewAccountPage> {
-  late var c = ref.read(coinContextProvider);
+  late var c = coinContext.coin;
   var name = "";
   var restore = false;
   var key = "";
@@ -334,8 +335,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           if (!settings.offline) await cacheBlockTime(height: bh, c: c);
         } on AnyhowException catch (_) {}
 
-        await ref.read(coinContextProvider.notifier).setAccount(account: account);
-        c = ref.read(coinContextProvider);
+        await coinContext.setAccount(account: account);
+        c = coinContext.coin;
 
         if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
           await showTransparentScan(ref, context);

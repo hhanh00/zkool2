@@ -14,6 +14,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/editable_list.dart';
 import 'package:zkool/widgets/theme.dart';
 
@@ -32,7 +33,6 @@ class AccountListPage extends ConsumerStatefulWidget {
 }
 
 class AccountListPageState extends ConsumerState<AccountListPage> with RouteAware {
-  late final c = ref.read(coinContextProvider);
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
 
@@ -51,8 +51,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   @override
   void didPopNext() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final c = ref.read(coinContextProvider.notifier);
-      c.setAccount(account: 0);
+      coinContext.setAccount(account: 0);
     });
     super.didPopNext();
   }
@@ -61,7 +60,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
     try {
-      final height = await getCurrentHeight(c: c);
+      final height = await getCurrentHeight(c: coinContext.coin);
       final currentHeight = ref.read(currentHeightProvider.notifier);
       currentHeight.setHeight(height);
       if (fetchPrice) {
@@ -87,129 +86,122 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
 
     Future(tutorial);
 
-    final List<Account> accountList;
-    final AppSettings settings;
-    final double? price;
-    try {
-      final pinlockAV = ref.watch(lifecycleProvider);
-      ensureAV(context, pinlockAV);
-      if (pinlockAV.requireValue) return PinLock();
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
 
-      final settingsAV = ref.watch(appSettingsProvider);
-      ensureAV(context, settingsAV);
-      settings = settingsAV.requireValue;
-      final selectedFolder = ref.watch(selectedFolderProvider);
-      final accountsAV = ref.watch(getAccountsProvider);
-      ensureAV(context, accountsAV);
-      price = ref.watch(priceProvider);
+    final pageDataAV = ref.watch(accountsPageDataProvider);
 
-      accountList = accountsAV.requireValue.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (selectedFolder?.id ?? 0)).toList();
-    } on Widget catch (w) {
-      return w;
-    }
+    return pageDataAV.when(
+      loading: () => blank(context),
+      error: (error, stack) => showError(error),
+      data: (pageData) {
+        final accountList =
+            pageData.accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (pageData.selectedFolder?.id ?? 0)).toList();
 
-    final currentHeight = ref.watch(currentHeightProvider);
-    final h = currentHeight != null ? currentHeight.toString() : 'N/A';
+        final currentHeight = ref.watch(currentHeightProvider);
+        final h = currentHeight != null ? currentHeight.toString() : 'N/A';
 
-    return Showcase(
-      key: accountListID,
-      description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
-      child: EditableList<Account>(
-        key: listKey,
-        items: accountList,
-        headerBuilder: (context) => [
-          Showcase(
-            key: heightID,
-            description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
-            child: ElevatedButton(
-              onPressed: () => Future(() => refreshHeight(true)),
-              onLongPress: () => Future(() => refreshHeight(false)),
-              child: Text("Height: $h"),
-            ),
-          ),
-          const Gap(8),
-          if (price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: $price USD")),
-          const Gap(8),
-          if (settings.offline) ...[
-            Text("Wallet is in offline mode", style: tt.labelSmall),
-            const Gap(8),
-          ],
-        ],
-        builder: (context, index, account, {selected, onSelectChanged}) {
-          final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
-          final fiat = price?.let((p) {
-            final f = account.balance.toDouble() * p / zatsPerZec.toDouble();
-            return fiatFormatter.format(f);
-          });
-          return Material(
-            key: ValueKey(account.id),
-            child: GestureDetector(
-              child: AccountCard(
-                leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
-                name: account.name,
-                balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
-                fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
-                height: SmallProgressWidget(account, style: tt.labelSmall),
+        return Showcase(
+          key: accountListID,
+          description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
+          child: EditableList<Account>(
+            key: listKey,
+            items: accountList,
+            headerBuilder: (context) => [
+              Showcase(
+                key: heightID,
+                description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
+                child: ElevatedButton(
+                  onPressed: () => Future(() => refreshHeight(true)),
+                  onLongPress: () => Future(() => refreshHeight(false)),
+                  child: Text("Height: $h"),
+                ),
               ),
-              onTap: () => onOpen(context, account),
-            ),
-          );
-        },
-        title: "Account List",
-        createBuilder: (context) => GoRouter.of(context).push("/account/new"),
-        editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
-        deleteBuilder: (context, accounts) async {
-          final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
-          if (confirmed) {
-            for (var a in accounts) {
-              await deleteAccount(account: a.id, c: c);
-            }
-            ref.invalidate(getAccountsProvider);
-          }
-        },
-        isEqual: (a, b) => a.id == b.id,
-        onReorder: onReorder,
-        buttons: [
-          Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
-          Showcase(
-            key: syncID,
-            description: "Synchronize all enabled accounts or the accounts currently selected",
-            child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (String result) {
-              switch (result) {
-                case "mempool":
-                  onMempool();
-                case "hide":
-                  onHide();
-                case "category":
-                  onCategory();
-                case "folder":
-                  onFolder();
+              const Gap(8),
+              if (pageData.price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: ${pageData.price} USD")),
+              const Gap(8),
+              if (pageData.settings.offline) ...[
+                Text("Wallet is in offline mode", style: tt.labelSmall),
+                const Gap(8),
+              ],
+            ],
+            builder: (context, index, account, {selected, onSelectChanged}) {
+              final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
+              final fiat = pageData.price?.let((p) {
+                final f = account.balance.toDouble() * p / zatsPerZec.toDouble();
+                return fiatFormatter.format(f);
+              });
+              return Material(
+                key: ValueKey(account.id),
+                child: GestureDetector(
+                  child: AccountCard(
+                    leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                    name: account.name,
+                    balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
+                    fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
+                    height: SmallProgressWidget(account, style: tt.labelSmall),
+                  ),
+                  onTap: () => onOpen(context, account),
+                ),
+              );
+            },
+            title: "Account List",
+            createBuilder: (context) => GoRouter.of(context).push("/account/new"),
+            editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
+            deleteBuilder: (context, accounts) async {
+              final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
+              if (confirmed) {
+                for (var a in accounts) {
+                  await deleteAccount(account: a.id, c: coinContext.coin);
+                }
+                ref.invalidate(getAccountsProvider);
               }
             },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: "mempool",
-                child: Text("Mempool"),
+            isEqual: (a, b) => a.id == b.id,
+            onReorder: onReorder,
+            buttons: [
+              Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
+              Showcase(
+                key: syncID,
+                description: "Synchronize all enabled accounts or the accounts currently selected",
+                child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
               ),
-              const PopupMenuItem<String>(
-                value: "folder",
-                child: Text("Folders"),
-              ),
-              const PopupMenuItem<String>(
-                value: "category",
-                child: Text("Categories"),
-              ),
-              PopupMenuItem<String>(
-                value: 'hide',
-                child: Text("Show All"),
+              PopupMenuButton<String>(
+                onSelected: (String result) {
+                  switch (result) {
+                    case "mempool":
+                      onMempool();
+                    case "hide":
+                      onHide();
+                    case "category":
+                      onCategory();
+                    case "folder":
+                      onFolder();
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: "mempool",
+                    child: Text("Mempool"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "folder",
+                    child: Text("Folders"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "category",
+                    child: Text("Categories"),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'hide',
+                    child: Text("Show All"),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -256,8 +248,13 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void onOpen(BuildContext context, Account account) async {
-    final c = ref.read(coinContextProvider.notifier);
-    await c.setAccount(account: account.id);
+    // Invalidate cache to ensure fresh data
+    ref.invalidate(getCurrentAccountProvider);
+    // Update both the coin context and selected account ID
+    await coinContext.setAccount(account: account.id);
+    ref.read(selectedAccountIdProvider.notifier).set(account.id);
+    // Wait for getCurrentAccountProvider (what the page watches) to complete
+    await ref.read(getCurrentAccountProvider.future);
     if (!context.mounted) return;
     await GoRouter.of(context).push('/account', extra: account);
   }
@@ -267,7 +264,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     await reorderAccount(
       oldPosition: listState.items[oldIndex].position,
       newPosition: listState.items[newIndex].position,
-      c: c,
+      c: coinContext.coin,
     );
     ref.invalidate(getAccountsProvider);
   }

@@ -18,6 +18,7 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/input_amount.dart';
 import 'package:zkool/widgets/pool_select.dart';
@@ -40,7 +41,7 @@ class SendPage extends ConsumerStatefulWidget {
 }
 
 class SendPageState extends ConsumerState<SendPage> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   final formKey = GlobalKey<FormBuilderState>();
   final amountKey = GlobalKey<InputAmountState>();
   List<Recipient> recipients = [];
@@ -62,7 +63,7 @@ class SendPageState extends ConsumerState<SendPage> {
   void initState() {
     super.initState();
     Future(() async {
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final data = (await ref.read(accountProvider(selectedAccount.id).future));
       final bal = await balance(c: c);
@@ -84,7 +85,7 @@ class SendPageState extends ConsumerState<SendPage> {
     if (pinlock.value ?? false) return PinLock();
 
     Future(tutorial);
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
@@ -440,7 +441,7 @@ class Send2Page extends ConsumerStatefulWidget {
 }
 
 class Send2PageState extends ConsumerState<Send2Page> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   String? txId;
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
   var recipientPaysFee = false;

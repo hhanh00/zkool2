@@ -11,11 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:fixed/fixed.dart';
 import 'package:flutter_passkey_service/flutter_passkey_service.dart';
 import 'package:flutter_passkey_service/pigeons/messages.g.dart'
-    show
-        CreatePasskeyResponseData,
-        GetPasskeyAuthenticationResponseData,
-        PasskeyException,
-        PasskeyErrorType;
+    show CreatePasskeyResponseData, GetPasskeyAuthenticationResponseData, PasskeyException, PasskeyErrorType;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -31,6 +27,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:password_strength_checker/password_strength_checker.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/store.dart';
@@ -136,27 +133,36 @@ String exactTimeToString(int time) {
 String compactBetween(DateTime from, DateTime to) {
   final parts = <String>[];
 
-  int years  = to.year - from.year;
+  int years = to.year - from.year;
   int months = to.month - from.month;
-  int days   = to.day - from.day;
-  int hours  = to.hour - from.hour;
-  int mins   = to.minute - from.minute;
+  int days = to.day - from.day;
+  int hours = to.hour - from.hour;
+  int mins = to.minute - from.minute;
 
   // Cascade borrows
-  if (mins < 0)   { mins += 60;   hours -= 1; }
-  if (hours < 0)  { hours += 24;  days -= 1; }
+  if (mins < 0) {
+    mins += 60;
+    hours -= 1;
+  }
+  if (hours < 0) {
+    hours += 24;
+    days -= 1;
+  }
   if (days < 0) {
     final prevMonth = DateTime(to.year, to.month - 1);
     days += DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
     months -= 1;
   }
-  if (months < 0) { months += 12; years -= 1; }
+  if (months < 0) {
+    months += 12;
+    years -= 1;
+  }
 
-  if (years  > 0) parts.add('${years}y');
+  if (years > 0) parts.add('${years}y');
   if (months > 0) parts.add('${months}mo');
-  if (days   > 0) parts.add('${days}d');
-  if (hours  > 0) parts.add('${hours}h');
-  if (mins   > 0) parts.add('${mins}m');
+  if (days > 0) parts.add('${days}d');
+  if (hours > 0) parts.add('${hours}h');
+  if (mins > 0) parts.add('${mins}m');
 
   return parts.take(2).join('');
 }
@@ -176,18 +182,6 @@ Future<String> getFullDatabasePath(String dbName) async {
   final dbDir = await getApplicationDocumentsDirectory();
   final dbFilepath = '${dbDir.path}/$dbName.db';
   return dbFilepath;
-}
-
-Future<void> showException(BuildContext context, String message) async {
-  await AwesomeDialog(
-    context: context,
-    dialogType: DialogType.error,
-    animType: AnimType.rightSlide,
-    title: 'ERROR',
-    desc: message,
-    btnOkOnPress: () {},
-    autoDismiss: true,
-  ).show();
 }
 
 Future<AwesomeDialog> showMessage(BuildContext context, String message, {String? title, bool dismissable = true}) async {
@@ -422,7 +416,14 @@ Future<bool> authenticate({String? reason}) async {
       case auth_error.notAvailable:
         return true; // don't require if the device doesn't support it
       default:
-        showSnackbar("Authentication denied: ${e.code} - ${e.message}");
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          await ErrorDialog.show(
+            context,
+            error: e,
+            customMessage: "Authentication denied: ${e.code} - ${e.message}",
+          );
+        }
         return false;
     }
   } on MissingPluginException {
@@ -507,17 +508,6 @@ Future<String?> saveFile({String? title, String? fileName, required Uint8List da
     fileName: fileName,
     bytes: data,
   );
-}
-
-T ensureAV<T>(BuildContext context, AsyncValue<T> av) {
-  switch (av) {
-    case AsyncLoading():
-      throw blank(context);
-    case AsyncError(:final error):
-      throw showError(error);
-    case AsyncData<T>(:final value):
-      return value;
-  }
 }
 
 extension ScopeFunctions<T> on T {
