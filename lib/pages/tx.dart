@@ -16,6 +16,7 @@ import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 final cancelID = GlobalKey();
 final sendID4 = GlobalKey();
@@ -30,7 +31,7 @@ class TxPage extends ConsumerStatefulWidget {
 }
 
 class TxPageState extends ConsumerState<TxPage> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   String? txId;
   late final TxPlan txPlan = toPlan(package: widget.pczt, c: c);
   bool canBroadcast = false;
@@ -284,7 +285,7 @@ class MempoolPage extends ConsumerWidget {
   }
 
   onMempoolTx(BuildContext context, WidgetRef ref, String txId) async {
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     final mempoolTx = await getMempoolTx(txId: txId, c: c);
     if (!context.mounted) return;
     await GoRouter.of(context).push("/mempool_view", extra: mempoolTx);

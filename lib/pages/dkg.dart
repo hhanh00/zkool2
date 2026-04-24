@@ -15,6 +15,7 @@ import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 
 final nameID3 = GlobalKey();
@@ -65,7 +66,7 @@ class DKGPage1 extends ConsumerStatefulWidget {
 }
 
 class DKGPage1State extends ConsumerState<DKGPage1> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   final formKey = GlobalKey<FormBuilderState>();
   List<Account> accounts = [];
 
@@ -247,7 +248,7 @@ class DKGPage2 extends ConsumerStatefulWidget {
 }
 
 class DKGPage2State extends ConsumerState<DKGPage2> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   final formKey = GlobalKey<FormBuilderState>();
   List<String> addresses = [];
 
@@ -339,7 +340,7 @@ class DKGPage3 extends ConsumerStatefulWidget {
 }
 
 class DKGPage3State extends ConsumerState<DKGPage3> {
-  late final c = ref.read(coinContextProvider);
+  late final c = coinContext.coin;
   String message = "";
   int index = 0;
   Timer? runTimer;
@@ -473,7 +474,7 @@ void onCancel(BuildContext context, WidgetRef ref) async {
     message: "Are you sure you want to cancel the DKG process?",
   );
   if (confirmed) {
-    final c = ref.read(coinContextProvider);
+    final c = coinContext.coin;
     await cancelDkg(c: c);
     if (!context.mounted) return;
     GoRouter.of(context).pop();

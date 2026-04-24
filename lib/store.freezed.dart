@@ -2661,6 +2661,1676 @@ class __$MempoolStateCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$AccountsPageData {
+  AppSettings get settings;
+  List<Account> get accounts;
+  double? get price;
+  Folder? get selectedFolder;
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $AccountsPageDataCopyWith<AccountsPageData> get copyWith =>
+      _$AccountsPageDataCopyWithImpl<AccountsPageData>(
+          this as AccountsPageData, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is AccountsPageData &&
+            (identical(other.settings, settings) ||
+                other.settings == settings) &&
+            const DeepCollectionEquality().equals(other.accounts, accounts) &&
+            (identical(other.price, price) || other.price == price) &&
+            (identical(other.selectedFolder, selectedFolder) ||
+                other.selectedFolder == selectedFolder));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, settings,
+      const DeepCollectionEquality().hash(accounts), price, selectedFolder);
+
+  @override
+  String toString() {
+    return 'AccountsPageData(settings: $settings, accounts: $accounts, price: $price, selectedFolder: $selectedFolder)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $AccountsPageDataCopyWith<$Res> {
+  factory $AccountsPageDataCopyWith(
+          AccountsPageData value, $Res Function(AccountsPageData) _then) =
+      _$AccountsPageDataCopyWithImpl;
+  @useResult
+  $Res call(
+      {AppSettings settings,
+      List<Account> accounts,
+      double? price,
+      Folder? selectedFolder});
+
+  $AppSettingsCopyWith<$Res> get settings;
+  $FolderCopyWith<$Res>? get selectedFolder;
+}
+
+/// @nodoc
+class _$AccountsPageDataCopyWithImpl<$Res>
+    implements $AccountsPageDataCopyWith<$Res> {
+  _$AccountsPageDataCopyWithImpl(this._self, this._then);
+
+  final AccountsPageData _self;
+  final $Res Function(AccountsPageData) _then;
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? settings = null,
+    Object? accounts = null,
+    Object? price = freezed,
+    Object? selectedFolder = freezed,
+  }) {
+    return _then(_self.copyWith(
+      settings: null == settings
+          ? _self.settings
+          : settings // ignore: cast_nullable_to_non_nullable
+              as AppSettings,
+      accounts: null == accounts
+          ? _self.accounts
+          : accounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      price: freezed == price
+          ? _self.price
+          : price // ignore: cast_nullable_to_non_nullable
+              as double?,
+      selectedFolder: freezed == selectedFolder
+          ? _self.selectedFolder
+          : selectedFolder // ignore: cast_nullable_to_non_nullable
+              as Folder?,
+    ));
+  }
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AppSettingsCopyWith<$Res> get settings {
+    return $AppSettingsCopyWith<$Res>(_self.settings, (value) {
+      return _then(_self.copyWith(settings: value));
+    });
+  }
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $FolderCopyWith<$Res>? get selectedFolder {
+    if (_self.selectedFolder == null) {
+      return null;
+    }
+
+    return $FolderCopyWith<$Res>(_self.selectedFolder!, (value) {
+      return _then(_self.copyWith(selectedFolder: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [AccountsPageData].
+extension AccountsPageDataPatterns on AccountsPageData {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_AccountsPageData value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _AccountsPageData() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_AccountsPageData value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountsPageData():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_AccountsPageData value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountsPageData() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(AppSettings settings, List<Account> accounts,
+            double? price, Folder? selectedFolder)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _AccountsPageData() when $default != null:
+        return $default(
+            _that.settings, _that.accounts, _that.price, _that.selectedFolder);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(AppSettings settings, List<Account> accounts,
+            double? price, Folder? selectedFolder)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountsPageData():
+        return $default(
+            _that.settings, _that.accounts, _that.price, _that.selectedFolder);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(AppSettings settings, List<Account> accounts,
+            double? price, Folder? selectedFolder)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountsPageData() when $default != null:
+        return $default(
+            _that.settings, _that.accounts, _that.price, _that.selectedFolder);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _AccountsPageData implements AccountsPageData {
+  const _AccountsPageData(
+      {required this.settings,
+      required final List<Account> accounts,
+      required this.price,
+      required this.selectedFolder})
+      : _accounts = accounts;
+
+  @override
+  final AppSettings settings;
+  final List<Account> _accounts;
+  @override
+  List<Account> get accounts {
+    if (_accounts is EqualUnmodifiableListView) return _accounts;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_accounts);
+  }
+
+  @override
+  final double? price;
+  @override
+  final Folder? selectedFolder;
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$AccountsPageDataCopyWith<_AccountsPageData> get copyWith =>
+      __$AccountsPageDataCopyWithImpl<_AccountsPageData>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _AccountsPageData &&
+            (identical(other.settings, settings) ||
+                other.settings == settings) &&
+            const DeepCollectionEquality().equals(other._accounts, _accounts) &&
+            (identical(other.price, price) || other.price == price) &&
+            (identical(other.selectedFolder, selectedFolder) ||
+                other.selectedFolder == selectedFolder));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, settings,
+      const DeepCollectionEquality().hash(_accounts), price, selectedFolder);
+
+  @override
+  String toString() {
+    return 'AccountsPageData(settings: $settings, accounts: $accounts, price: $price, selectedFolder: $selectedFolder)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$AccountsPageDataCopyWith<$Res>
+    implements $AccountsPageDataCopyWith<$Res> {
+  factory _$AccountsPageDataCopyWith(
+          _AccountsPageData value, $Res Function(_AccountsPageData) _then) =
+      __$AccountsPageDataCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {AppSettings settings,
+      List<Account> accounts,
+      double? price,
+      Folder? selectedFolder});
+
+  @override
+  $AppSettingsCopyWith<$Res> get settings;
+  @override
+  $FolderCopyWith<$Res>? get selectedFolder;
+}
+
+/// @nodoc
+class __$AccountsPageDataCopyWithImpl<$Res>
+    implements _$AccountsPageDataCopyWith<$Res> {
+  __$AccountsPageDataCopyWithImpl(this._self, this._then);
+
+  final _AccountsPageData _self;
+  final $Res Function(_AccountsPageData) _then;
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? settings = null,
+    Object? accounts = null,
+    Object? price = freezed,
+    Object? selectedFolder = freezed,
+  }) {
+    return _then(_AccountsPageData(
+      settings: null == settings
+          ? _self.settings
+          : settings // ignore: cast_nullable_to_non_nullable
+              as AppSettings,
+      accounts: null == accounts
+          ? _self._accounts
+          : accounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      price: freezed == price
+          ? _self.price
+          : price // ignore: cast_nullable_to_non_nullable
+              as double?,
+      selectedFolder: freezed == selectedFolder
+          ? _self.selectedFolder
+          : selectedFolder // ignore: cast_nullable_to_non_nullable
+              as Folder?,
+    ));
+  }
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AppSettingsCopyWith<$Res> get settings {
+    return $AppSettingsCopyWith<$Res>(_self.settings, (value) {
+      return _then(_self.copyWith(settings: value));
+    });
+  }
+
+  /// Create a copy of AccountsPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $FolderCopyWith<$Res>? get selectedFolder {
+    if (_self.selectedFolder == null) {
+      return null;
+    }
+
+    return $FolderCopyWith<$Res>(_self.selectedFolder!, (value) {
+      return _then(_self.copyWith(selectedFolder: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$BasicAccountData {
+  List<Account> get allAccounts;
+  AccountData? get currentAccount;
+
+  /// Create a copy of BasicAccountData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $BasicAccountDataCopyWith<BasicAccountData> get copyWith =>
+      _$BasicAccountDataCopyWithImpl<BasicAccountData>(
+          this as BasicAccountData, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is BasicAccountData &&
+            const DeepCollectionEquality()
+                .equals(other.allAccounts, allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType,
+      const DeepCollectionEquality().hash(allAccounts), currentAccount);
+
+  @override
+  String toString() {
+    return 'BasicAccountData(allAccounts: $allAccounts, currentAccount: $currentAccount)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $BasicAccountDataCopyWith<$Res> {
+  factory $BasicAccountDataCopyWith(
+          BasicAccountData value, $Res Function(BasicAccountData) _then) =
+      _$BasicAccountDataCopyWithImpl;
+  @useResult
+  $Res call({List<Account> allAccounts, AccountData? currentAccount});
+
+  $AccountDataCopyWith<$Res>? get currentAccount;
+}
+
+/// @nodoc
+class _$BasicAccountDataCopyWithImpl<$Res>
+    implements $BasicAccountDataCopyWith<$Res> {
+  _$BasicAccountDataCopyWithImpl(this._self, this._then);
+
+  final BasicAccountData _self;
+  final $Res Function(BasicAccountData) _then;
+
+  /// Create a copy of BasicAccountData
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? allAccounts = null,
+    Object? currentAccount = freezed,
+  }) {
+    return _then(_self.copyWith(
+      allAccounts: null == allAccounts
+          ? _self.allAccounts
+          : allAccounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      currentAccount: freezed == currentAccount
+          ? _self.currentAccount
+          : currentAccount // ignore: cast_nullable_to_non_nullable
+              as AccountData?,
+    ));
+  }
+
+  /// Create a copy of BasicAccountData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AccountDataCopyWith<$Res>? get currentAccount {
+    if (_self.currentAccount == null) {
+      return null;
+    }
+
+    return $AccountDataCopyWith<$Res>(_self.currentAccount!, (value) {
+      return _then(_self.copyWith(currentAccount: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [BasicAccountData].
+extension BasicAccountDataPatterns on BasicAccountData {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_BasicAccountData value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _BasicAccountData() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_BasicAccountData value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BasicAccountData():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_BasicAccountData value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BasicAccountData() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _BasicAccountData() when $default != null:
+        return $default(_that.allAccounts, _that.currentAccount);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BasicAccountData():
+        return $default(_that.allAccounts, _that.currentAccount);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(List<Account> allAccounts, AccountData? currentAccount)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BasicAccountData() when $default != null:
+        return $default(_that.allAccounts, _that.currentAccount);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _BasicAccountData implements BasicAccountData {
+  const _BasicAccountData(
+      {required final List<Account> allAccounts, required this.currentAccount})
+      : _allAccounts = allAccounts;
+
+  final List<Account> _allAccounts;
+  @override
+  List<Account> get allAccounts {
+    if (_allAccounts is EqualUnmodifiableListView) return _allAccounts;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_allAccounts);
+  }
+
+  @override
+  final AccountData? currentAccount;
+
+  /// Create a copy of BasicAccountData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$BasicAccountDataCopyWith<_BasicAccountData> get copyWith =>
+      __$BasicAccountDataCopyWithImpl<_BasicAccountData>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _BasicAccountData &&
+            const DeepCollectionEquality()
+                .equals(other._allAccounts, _allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType,
+      const DeepCollectionEquality().hash(_allAccounts), currentAccount);
+
+  @override
+  String toString() {
+    return 'BasicAccountData(allAccounts: $allAccounts, currentAccount: $currentAccount)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$BasicAccountDataCopyWith<$Res>
+    implements $BasicAccountDataCopyWith<$Res> {
+  factory _$BasicAccountDataCopyWith(
+          _BasicAccountData value, $Res Function(_BasicAccountData) _then) =
+      __$BasicAccountDataCopyWithImpl;
+  @override
+  @useResult
+  $Res call({List<Account> allAccounts, AccountData? currentAccount});
+
+  @override
+  $AccountDataCopyWith<$Res>? get currentAccount;
+}
+
+/// @nodoc
+class __$BasicAccountDataCopyWithImpl<$Res>
+    implements _$BasicAccountDataCopyWith<$Res> {
+  __$BasicAccountDataCopyWithImpl(this._self, this._then);
+
+  final _BasicAccountData _self;
+  final $Res Function(_BasicAccountData) _then;
+
+  /// Create a copy of BasicAccountData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? allAccounts = null,
+    Object? currentAccount = freezed,
+  }) {
+    return _then(_BasicAccountData(
+      allAccounts: null == allAccounts
+          ? _self._allAccounts
+          : allAccounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      currentAccount: freezed == currentAccount
+          ? _self.currentAccount
+          : currentAccount // ignore: cast_nullable_to_non_nullable
+              as AccountData?,
+    ));
+  }
+
+  /// Create a copy of BasicAccountData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AccountDataCopyWith<$Res>? get currentAccount {
+    if (_self.currentAccount == null) {
+      return null;
+    }
+
+    return $AccountDataCopyWith<$Res>(_self.currentAccount!, (value) {
+      return _then(_self.copyWith(currentAccount: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$AccountPageData {
+  List<Account> get allAccounts;
+  AccountData? get currentAccount;
+  SyncProgressAccount? get syncState;
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $AccountPageDataCopyWith<AccountPageData> get copyWith =>
+      _$AccountPageDataCopyWithImpl<AccountPageData>(
+          this as AccountPageData, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is AccountPageData &&
+            const DeepCollectionEquality()
+                .equals(other.allAccounts, allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(allAccounts),
+      currentAccount,
+      syncState);
+
+  @override
+  String toString() {
+    return 'AccountPageData(allAccounts: $allAccounts, currentAccount: $currentAccount, syncState: $syncState)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $AccountPageDataCopyWith<$Res> {
+  factory $AccountPageDataCopyWith(
+          AccountPageData value, $Res Function(AccountPageData) _then) =
+      _$AccountPageDataCopyWithImpl;
+  @useResult
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState});
+
+  $AccountDataCopyWith<$Res>? get currentAccount;
+  $SyncProgressAccountCopyWith<$Res>? get syncState;
+}
+
+/// @nodoc
+class _$AccountPageDataCopyWithImpl<$Res>
+    implements $AccountPageDataCopyWith<$Res> {
+  _$AccountPageDataCopyWithImpl(this._self, this._then);
+
+  final AccountPageData _self;
+  final $Res Function(AccountPageData) _then;
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? allAccounts = null,
+    Object? currentAccount = freezed,
+    Object? syncState = freezed,
+  }) {
+    return _then(_self.copyWith(
+      allAccounts: null == allAccounts
+          ? _self.allAccounts
+          : allAccounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      currentAccount: freezed == currentAccount
+          ? _self.currentAccount
+          : currentAccount // ignore: cast_nullable_to_non_nullable
+              as AccountData?,
+      syncState: freezed == syncState
+          ? _self.syncState
+          : syncState // ignore: cast_nullable_to_non_nullable
+              as SyncProgressAccount?,
+    ));
+  }
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AccountDataCopyWith<$Res>? get currentAccount {
+    if (_self.currentAccount == null) {
+      return null;
+    }
+
+    return $AccountDataCopyWith<$Res>(_self.currentAccount!, (value) {
+      return _then(_self.copyWith(currentAccount: value));
+    });
+  }
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $SyncProgressAccountCopyWith<$Res>? get syncState {
+    if (_self.syncState == null) {
+      return null;
+    }
+
+    return $SyncProgressAccountCopyWith<$Res>(_self.syncState!, (value) {
+      return _then(_self.copyWith(syncState: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [AccountPageData].
+extension AccountPageDataPatterns on AccountPageData {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_AccountPageData value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _AccountPageData() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_AccountPageData value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountPageData():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_AccountPageData value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountPageData() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _AccountPageData() when $default != null:
+        return $default(
+            _that.allAccounts, _that.currentAccount, _that.syncState);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountPageData():
+        return $default(
+            _that.allAccounts, _that.currentAccount, _that.syncState);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AccountPageData() when $default != null:
+        return $default(
+            _that.allAccounts, _that.currentAccount, _that.syncState);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _AccountPageData implements AccountPageData {
+  const _AccountPageData(
+      {required final List<Account> allAccounts,
+      required this.currentAccount,
+      required this.syncState})
+      : _allAccounts = allAccounts;
+
+  final List<Account> _allAccounts;
+  @override
+  List<Account> get allAccounts {
+    if (_allAccounts is EqualUnmodifiableListView) return _allAccounts;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_allAccounts);
+  }
+
+  @override
+  final AccountData? currentAccount;
+  @override
+  final SyncProgressAccount? syncState;
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$AccountPageDataCopyWith<_AccountPageData> get copyWith =>
+      __$AccountPageDataCopyWithImpl<_AccountPageData>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _AccountPageData &&
+            const DeepCollectionEquality()
+                .equals(other._allAccounts, _allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_allAccounts),
+      currentAccount,
+      syncState);
+
+  @override
+  String toString() {
+    return 'AccountPageData(allAccounts: $allAccounts, currentAccount: $currentAccount, syncState: $syncState)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$AccountPageDataCopyWith<$Res>
+    implements $AccountPageDataCopyWith<$Res> {
+  factory _$AccountPageDataCopyWith(
+          _AccountPageData value, $Res Function(_AccountPageData) _then) =
+      __$AccountPageDataCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState});
+
+  @override
+  $AccountDataCopyWith<$Res>? get currentAccount;
+  @override
+  $SyncProgressAccountCopyWith<$Res>? get syncState;
+}
+
+/// @nodoc
+class __$AccountPageDataCopyWithImpl<$Res>
+    implements _$AccountPageDataCopyWith<$Res> {
+  __$AccountPageDataCopyWithImpl(this._self, this._then);
+
+  final _AccountPageData _self;
+  final $Res Function(_AccountPageData) _then;
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? allAccounts = null,
+    Object? currentAccount = freezed,
+    Object? syncState = freezed,
+  }) {
+    return _then(_AccountPageData(
+      allAccounts: null == allAccounts
+          ? _self._allAccounts
+          : allAccounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      currentAccount: freezed == currentAccount
+          ? _self.currentAccount
+          : currentAccount // ignore: cast_nullable_to_non_nullable
+              as AccountData?,
+      syncState: freezed == syncState
+          ? _self.syncState
+          : syncState // ignore: cast_nullable_to_non_nullable
+              as SyncProgressAccount?,
+    ));
+  }
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AccountDataCopyWith<$Res>? get currentAccount {
+    if (_self.currentAccount == null) {
+      return null;
+    }
+
+    return $AccountDataCopyWith<$Res>(_self.currentAccount!, (value) {
+      return _then(_self.copyWith(currentAccount: value));
+    });
+  }
+
+  /// Create a copy of AccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $SyncProgressAccountCopyWith<$Res>? get syncState {
+    if (_self.syncState == null) {
+      return null;
+    }
+
+    return $SyncProgressAccountCopyWith<$Res>(_self.syncState!, (value) {
+      return _then(_self.copyWith(syncState: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$FullAccountPageData {
+  List<Account> get allAccounts;
+  AccountData? get currentAccount;
+  SyncProgressAccount? get syncState;
+  double? get price;
+  MempoolState get mempool;
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $FullAccountPageDataCopyWith<FullAccountPageData> get copyWith =>
+      _$FullAccountPageDataCopyWithImpl<FullAccountPageData>(
+          this as FullAccountPageData, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is FullAccountPageData &&
+            const DeepCollectionEquality()
+                .equals(other.allAccounts, allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState) &&
+            (identical(other.price, price) || other.price == price) &&
+            (identical(other.mempool, mempool) || other.mempool == mempool));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(allAccounts),
+      currentAccount,
+      syncState,
+      price,
+      mempool);
+
+  @override
+  String toString() {
+    return 'FullAccountPageData(allAccounts: $allAccounts, currentAccount: $currentAccount, syncState: $syncState, price: $price, mempool: $mempool)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $FullAccountPageDataCopyWith<$Res> {
+  factory $FullAccountPageDataCopyWith(
+          FullAccountPageData value, $Res Function(FullAccountPageData) _then) =
+      _$FullAccountPageDataCopyWithImpl;
+  @useResult
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState,
+      double? price,
+      MempoolState mempool});
+
+  $AccountDataCopyWith<$Res>? get currentAccount;
+  $SyncProgressAccountCopyWith<$Res>? get syncState;
+  $MempoolStateCopyWith<$Res> get mempool;
+}
+
+/// @nodoc
+class _$FullAccountPageDataCopyWithImpl<$Res>
+    implements $FullAccountPageDataCopyWith<$Res> {
+  _$FullAccountPageDataCopyWithImpl(this._self, this._then);
+
+  final FullAccountPageData _self;
+  final $Res Function(FullAccountPageData) _then;
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? allAccounts = null,
+    Object? currentAccount = freezed,
+    Object? syncState = freezed,
+    Object? price = freezed,
+    Object? mempool = null,
+  }) {
+    return _then(_self.copyWith(
+      allAccounts: null == allAccounts
+          ? _self.allAccounts
+          : allAccounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      currentAccount: freezed == currentAccount
+          ? _self.currentAccount
+          : currentAccount // ignore: cast_nullable_to_non_nullable
+              as AccountData?,
+      syncState: freezed == syncState
+          ? _self.syncState
+          : syncState // ignore: cast_nullable_to_non_nullable
+              as SyncProgressAccount?,
+      price: freezed == price
+          ? _self.price
+          : price // ignore: cast_nullable_to_non_nullable
+              as double?,
+      mempool: null == mempool
+          ? _self.mempool
+          : mempool // ignore: cast_nullable_to_non_nullable
+              as MempoolState,
+    ));
+  }
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AccountDataCopyWith<$Res>? get currentAccount {
+    if (_self.currentAccount == null) {
+      return null;
+    }
+
+    return $AccountDataCopyWith<$Res>(_self.currentAccount!, (value) {
+      return _then(_self.copyWith(currentAccount: value));
+    });
+  }
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $SyncProgressAccountCopyWith<$Res>? get syncState {
+    if (_self.syncState == null) {
+      return null;
+    }
+
+    return $SyncProgressAccountCopyWith<$Res>(_self.syncState!, (value) {
+      return _then(_self.copyWith(syncState: value));
+    });
+  }
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $MempoolStateCopyWith<$Res> get mempool {
+    return $MempoolStateCopyWith<$Res>(_self.mempool, (value) {
+      return _then(_self.copyWith(mempool: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [FullAccountPageData].
+extension FullAccountPageDataPatterns on FullAccountPageData {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_FullAccountPageData value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _FullAccountPageData() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_FullAccountPageData value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FullAccountPageData():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_FullAccountPageData value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FullAccountPageData() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            List<Account> allAccounts,
+            AccountData? currentAccount,
+            SyncProgressAccount? syncState,
+            double? price,
+            MempoolState mempool)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _FullAccountPageData() when $default != null:
+        return $default(_that.allAccounts, _that.currentAccount,
+            _that.syncState, _that.price, _that.mempool);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState, double? price, MempoolState mempool)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FullAccountPageData():
+        return $default(_that.allAccounts, _that.currentAccount,
+            _that.syncState, _that.price, _that.mempool);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            List<Account> allAccounts,
+            AccountData? currentAccount,
+            SyncProgressAccount? syncState,
+            double? price,
+            MempoolState mempool)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FullAccountPageData() when $default != null:
+        return $default(_that.allAccounts, _that.currentAccount,
+            _that.syncState, _that.price, _that.mempool);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _FullAccountPageData implements FullAccountPageData {
+  const _FullAccountPageData(
+      {required final List<Account> allAccounts,
+      required this.currentAccount,
+      required this.syncState,
+      required this.price,
+      required this.mempool})
+      : _allAccounts = allAccounts;
+
+  final List<Account> _allAccounts;
+  @override
+  List<Account> get allAccounts {
+    if (_allAccounts is EqualUnmodifiableListView) return _allAccounts;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_allAccounts);
+  }
+
+  @override
+  final AccountData? currentAccount;
+  @override
+  final SyncProgressAccount? syncState;
+  @override
+  final double? price;
+  @override
+  final MempoolState mempool;
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$FullAccountPageDataCopyWith<_FullAccountPageData> get copyWith =>
+      __$FullAccountPageDataCopyWithImpl<_FullAccountPageData>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _FullAccountPageData &&
+            const DeepCollectionEquality()
+                .equals(other._allAccounts, _allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState) &&
+            (identical(other.price, price) || other.price == price) &&
+            (identical(other.mempool, mempool) || other.mempool == mempool));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_allAccounts),
+      currentAccount,
+      syncState,
+      price,
+      mempool);
+
+  @override
+  String toString() {
+    return 'FullAccountPageData(allAccounts: $allAccounts, currentAccount: $currentAccount, syncState: $syncState, price: $price, mempool: $mempool)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$FullAccountPageDataCopyWith<$Res>
+    implements $FullAccountPageDataCopyWith<$Res> {
+  factory _$FullAccountPageDataCopyWith(_FullAccountPageData value,
+          $Res Function(_FullAccountPageData) _then) =
+      __$FullAccountPageDataCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState,
+      double? price,
+      MempoolState mempool});
+
+  @override
+  $AccountDataCopyWith<$Res>? get currentAccount;
+  @override
+  $SyncProgressAccountCopyWith<$Res>? get syncState;
+  @override
+  $MempoolStateCopyWith<$Res> get mempool;
+}
+
+/// @nodoc
+class __$FullAccountPageDataCopyWithImpl<$Res>
+    implements _$FullAccountPageDataCopyWith<$Res> {
+  __$FullAccountPageDataCopyWithImpl(this._self, this._then);
+
+  final _FullAccountPageData _self;
+  final $Res Function(_FullAccountPageData) _then;
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? allAccounts = null,
+    Object? currentAccount = freezed,
+    Object? syncState = freezed,
+    Object? price = freezed,
+    Object? mempool = null,
+  }) {
+    return _then(_FullAccountPageData(
+      allAccounts: null == allAccounts
+          ? _self._allAccounts
+          : allAccounts // ignore: cast_nullable_to_non_nullable
+              as List<Account>,
+      currentAccount: freezed == currentAccount
+          ? _self.currentAccount
+          : currentAccount // ignore: cast_nullable_to_non_nullable
+              as AccountData?,
+      syncState: freezed == syncState
+          ? _self.syncState
+          : syncState // ignore: cast_nullable_to_non_nullable
+              as SyncProgressAccount?,
+      price: freezed == price
+          ? _self.price
+          : price // ignore: cast_nullable_to_non_nullable
+              as double?,
+      mempool: null == mempool
+          ? _self.mempool
+          : mempool // ignore: cast_nullable_to_non_nullable
+              as MempoolState,
+    ));
+  }
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AccountDataCopyWith<$Res>? get currentAccount {
+    if (_self.currentAccount == null) {
+      return null;
+    }
+
+    return $AccountDataCopyWith<$Res>(_self.currentAccount!, (value) {
+      return _then(_self.copyWith(currentAccount: value));
+    });
+  }
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $SyncProgressAccountCopyWith<$Res>? get syncState {
+    if (_self.syncState == null) {
+      return null;
+    }
+
+    return $SyncProgressAccountCopyWith<$Res>(_self.syncState!, (value) {
+      return _then(_self.copyWith(syncState: value));
+    });
+  }
+
+  /// Create a copy of FullAccountPageData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $MempoolStateCopyWith<$Res> get mempool {
+    return $MempoolStateCopyWith<$Res>(_self.mempool, (value) {
+      return _then(_self.copyWith(mempool: value));
+    });
+  }
+}
+
+/// @nodoc
 mixin _$QRSettings {
   bool get enabled;
   double get size;
