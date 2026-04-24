@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.14.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.1...zkool-v6.14.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* add expert mode flag and gate the vault behind it ([#957](https://github.com/hhanh00/zkool2/issues/957)) ([fec35e8](https://github.com/hhanh00/zkool2/commit/fec35e8a43e26840faf848bb2981ea99ba5c3ed4))
+* add some extra padding ([#956](https://github.com/hhanh00/zkool2/issues/956)) ([f3ed9b4](https://github.com/hhanh00/zkool2/commit/f3ed9b472c3e69fc4de0091dae0b5d0746a016f1))
+* lots of UI glitches ([#955](https://github.com/hhanh00/zkool2/issues/955)) ([bb55a73](https://github.com/hhanh00/zkool2/commit/bb55a73da0d2ab69978a1a87ac66cdc18744a741))
+* sync sends extra chunk of blocks when reorg/abort ([#951](https://github.com/hhanh00/zkool2/issues/951)) ([023f29a](https://github.com/hhanh00/zkool2/commit/023f29a0a040366ce8d91007739c39c8aad0b360))
+* taddress at dindex=0 should always be created ([#953](https://github.com/hhanh00/zkool2/issues/953)) ([ba8d1ea](https://github.com/hhanh00/zkool2/commit/ba8d1eaf66b890ab1698fd85d3a027af9896921f))
+* **vault:** skip accounts that use a short seed phrase ([#954](https://github.com/hhanh00/zkool2/issues/954)) ([d9caf20](https://github.com/hhanh00/zkool2/commit/d9caf2042bdaa90cefcf65f34f1c7671e9d6f875))
+
 ## [6.14.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.14.1) (2026-04-20)
 
 
