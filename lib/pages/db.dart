@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 class DatabaseManagerPage extends ConsumerStatefulWidget {
   const DatabaseManagerPage({super.key});
@@ -129,9 +130,9 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     if (res != null) {
       final (name, password) = res;
       final dbFilepath = await getFullDatabasePath(name);
-      final c = ref.read(coinContextProvider);
+      final c = coinContext.coin;
       final c2 = await c.openDatabase(dbFilepath: dbFilepath, password: password);
-      ref.read(coinContextProvider.notifier).set(coin: c2);
+      coinContext.set(coin: c2);
       await refresh();
     }
   }
