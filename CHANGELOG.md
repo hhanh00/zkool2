@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.14.3) (2026-04-25)
+
+
+### Bug Fixes
+
+* add expert mode flag and gate the vault behind it ([#957](https://github.com/hhanh00/zkool2/issues/957)) ([2603bcd](https://github.com/hhanh00/zkool2/commit/2603bcdb7d686562918fd856e92fad17fba35fb9))
+* add some extra padding ([#956](https://github.com/hhanh00/zkool2/issues/956)) ([f64014e](https://github.com/hhanh00/zkool2/commit/f64014e36ff18c97489d573a59413629c2ba19b3))
+* do not update vault when disabled ([#947](https://github.com/hhanh00/zkool2/issues/947)) ([d56c7f0](https://github.com/hhanh00/zkool2/commit/d56c7f0c73b6bc2e5ccf424c8ff2b11955814b14))
+* eliminate UI refresh "flash" at end of sync ([#958](https://github.com/hhanh00/zkool2/issues/958)) ([20f9bde](https://github.com/hhanh00/zkool2/commit/20f9bded8105e2861ffe4838cebabb0a46371635))
+* lots of UI glitches ([#955](https://github.com/hhanh00/zkool2/issues/955)) ([2189fb9](https://github.com/hhanh00/zkool2/commit/2189fb9c5fbfd184d44b95f0b67d3680c6c87d10))
+* pin to given flutter version ([#949](https://github.com/hhanh00/zkool2/issues/949)) ([fe63f75](https://github.com/hhanh00/zkool2/commit/fe63f750426e9c84b08d9864a593affd5475adc7))
+* return error msg when no prf support ([#944](https://github.com/hhanh00/zkool2/issues/944)) ([5f8216f](https://github.com/hhanh00/zkool2/commit/5f8216f1022fa36de44ce80c08fe9c7ff88364ff))
+* sync sends extra chunk of blocks when reorg/abort ([#951](https://github.com/hhanh00/zkool2/issues/951)) ([83a2f1b](https://github.com/hhanh00/zkool2/commit/83a2f1b9470af31a58f09b7090229528bd76fe3a))
+* taddress at dindex=0 should always be created ([#953](https://github.com/hhanh00/zkool2/issues/953)) ([5aa35c2](https://github.com/hhanh00/zkool2/commit/5aa35c22f5cbca688f1639fa8b302ff6f66e3a7e))
+* upgrade zcvlib ([#948](https://github.com/hhanh00/zkool2/issues/948)) ([0850576](https://github.com/hhanh00/zkool2/commit/0850576d942590fb241551952d7ece17f406c73f))
+* use better constant salt ([#946](https://github.com/hhanh00/zkool2/issues/946)) ([008a942](https://github.com/hhanh00/zkool2/commit/008a942066f98e35c23f63100743be45a81a616b))
+* **vault:** skip accounts that use a short seed phrase ([#954](https://github.com/hhanh00/zkool2/issues/954)) ([b80c4dd](https://github.com/hhanh00/zkool2/commit/b80c4dd712488915b446a992cac5dbf25aa788a3))
+
 ## [6.14.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.0) (2026-04-18)
 
 
