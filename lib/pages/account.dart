@@ -124,6 +124,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         ),
       ),
       body: fullDataAV.when(
+        skipLoadingOnReload: true,
+        skipLoadingOnRefresh: true,
         loading: () => blank(context),
         error: (error, stack) => showError(error),
         data: (fullData) {
