@@ -18,15 +18,26 @@ enum Pool { transparent, sapling, orchard }
 class _PoolSelectState extends State<PoolSelect> {
   late Set<Pool> pools;
 
+  Set<Pool> _valueToPools(int value) {
+    return {
+      if (value & 1 != 0) Pool.transparent,
+      if (value & 2 != 0) Pool.sapling,
+      if (value & 4 != 0) Pool.orchard,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
-    final initialValue = widget.initialValue;
-    pools = {
-      if (initialValue & 1 != 0) Pool.transparent,
-      if (initialValue & 2 != 0) Pool.sapling,
-      if (initialValue & 4 != 0) Pool.orchard,
-    };
+    pools = _valueToPools(widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant PoolSelect oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue != widget.initialValue) {
+      pools = _valueToPools(widget.initialValue);
+    }
   }
 
   @override
