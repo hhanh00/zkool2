@@ -29,6 +29,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   Account? account;
   Addresses? addresses;
   int uaPools = 0;
+  int availablePools = 0;
 
   @override
   void initState() {
@@ -37,12 +38,14 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
     Future(() async {
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final a = await ref.read(accountProvider(selectedAccount.id).future);
-      final pools = a.pool & 6; // Exclude transparent pool
-      final addrs = await getAddresses(uaPools: pools, c: c);
+      final pools = a.pool; // All pools including transparent
+      final defaultPools = pools & 6; // Default to shielded pools only
+      final addrs = await getAddresses(uaPools: defaultPools, c: c);
       setState(() {
         account = a.account;
         addresses = addrs;
-        uaPools = pools;
+        availablePools = pools;
+        uaPools = defaultPools;
       });
     });
   }
@@ -103,7 +106,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
             children: [
               if (addresses.saddr != null || addresses.oaddr != null)
                 PoolSelect(
-                  enabled: uaPools,
+                  enabled: availablePools,
                   initialValue: uaPools,
                   onChanged: onChangedUAPools,
                 ),
