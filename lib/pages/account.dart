@@ -235,7 +235,13 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final settings = await ref.read(appSettingsProvider.future);
     final confirmed =
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
-    if (confirmed) await fillMissingTxPrices(c: c, api: settings.coingecko);
+    if (confirmed) {
+      try {
+        await fillMissingTxPrices(c: c, api: settings.coingecko);
+      } on AnyhowException catch (e) {
+        if (mounted) await showException(context, e.message);
+      }
+    }
   }
 
   void onExport(int index) async {

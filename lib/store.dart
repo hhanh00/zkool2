@@ -690,8 +690,12 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
             logger.i("Synchronization Completed");
             // Fetch tx details in the background
             unawaited(Future(() async {
-              await fetchTxDetails(c: c);
-              ref.invalidate(accountProvider);
+              try {
+                await fetchTxDetails(c: c);
+                ref.invalidate(accountProvider);
+              } on AnyhowException catch (e) {
+                logger.e("Error fetching tx details: $e");
+              }
             }));
             completer.complete();
           });
@@ -786,25 +790,29 @@ class TransparentScan extends _$TransparentScan {
   bool get running => state.isNotEmpty;
 
   Future<void> run(BuildContext context, int gapLimit, {required void Function() onComplete}) async {
-    final c = coinContext.coin;
-    final sc = await TransparentScanner.newInstance();
-    scanner = sc;
-    final endHeight = await getCurrentHeight(c: c);
-    final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, c: c);
-    progressSubscription = sub.listen(
-      (a) {
-        state = a;
-      },
-      onDone: () {
-        state = "";
-        onComplete();
-      },
-      onError: (e) {
-        final exception = e as AnyhowException;
-        if (context.mounted) showException(context, exception.message);
-      },
-      cancelOnError: true,
-    );
+    try {
+      final c = coinContext.coin;
+      final sc = await TransparentScanner.newInstance();
+      scanner = sc;
+      final endHeight = await getCurrentHeight(c: c);
+      final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, c: c);
+      progressSubscription = sub.listen(
+        (a) {
+          state = a;
+        },
+        onDone: () {
+          state = "";
+          onComplete();
+        },
+        onError: (e) {
+          final exception = e as AnyhowException;
+          if (context.mounted) showException(context, exception.message);
+        },
+        cancelOnError: true,
+      );
+    } on AnyhowException catch (e) {
+      if (context.mounted) await showException(context, e.message);
+    }
   }
 
   Future<void> cancel() async {

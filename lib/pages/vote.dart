@@ -350,6 +350,9 @@ Future<BigInt> refresh(
       c: c,
     );
     return b;
+  } on AnyhowException catch (e) {
+    if (context.mounted) await showException(context, e.message);
+    rethrow;
   } finally {
     dialog?.dismiss();
   }
