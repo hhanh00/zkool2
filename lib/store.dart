@@ -688,10 +688,12 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
             ref.invalidate(accountProvider);
             if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) showSnackbar("Synchronization Completed");
             logger.i("Synchronization Completed");
-            // Fetch tx details in the background
+            // Fetch tx details in the background for all accounts
             unawaited(Future(() async {
               try {
-                await fetchTxDetails(c: c);
+                for (final account in accounts) {
+                  await fetchTxDetails(account: account.id, c: c);
+                }
                 ref.invalidate(accountProvider);
               } on AnyhowException catch (e) {
                 logger.e("Error fetching tx details: $e");
