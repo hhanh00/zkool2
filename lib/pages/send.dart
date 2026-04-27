@@ -226,9 +226,13 @@ class SendPageState extends ConsumerState<SendPage> {
       data = await openFile(title: "Please select a transaction to sign");
       if (data == null) return;
     }
-    final pczt = await unpackTransaction(bytes: data!);
-    if (!mounted) return;
-    GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
+    try {
+      final pczt = await unpackTransaction(bytes: data!);
+      if (!mounted) return;
+      GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   void onMax() async {

@@ -363,59 +363,64 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   }
 
   Future<void> runDkg() async {
-    final h = await getCurrentHeight(c: c);
-    if (currentHeight != null && currentHeight == h) return;
-    currentHeight = h;
-    final as = await ref.read(getAccountsProvider.future);
-    final accounts = as.where((e) => e.enabled).toList();
-    final synchronizer = ref.read(synchronizerProvider.notifier);
-    await synchronizer.startSynchronize(
-      accounts,
-    );
+    try {
+      final h = await getCurrentHeight(c: c);
+      if (currentHeight != null && currentHeight == h) return;
+      currentHeight = h;
+      final as = await ref.read(getAccountsProvider.future);
+      final accounts = as.where((e) => e.enabled).toList();
+      final synchronizer = ref.read(synchronizerProvider.notifier);
+      await synchronizer.startSynchronize(
+        accounts,
+      );
 
-    final status = doDkg(c: c);
-    status.listen(
-      (s) {
-        if (s is DKGStatus_PublishRound1Pkg) {
-          setState(() {
-            message = "Broadcasting round 1 packages";
-            index = 1;
-          });
-        }
-        if (s is DKGStatus_WaitRound1Pkg) {
-          setState(() {
-            message = "Waiting for other participants to send their round 1 packages";
-            index = 1;
-          });
-        }
-        if (s is DKGStatus_PublishRound2Pkg) {
-          setState(() {
-            message = "Broadcasting round 2 packages";
-            index = 2;
-          });
-        }
-        if (s is DKGStatus_WaitRound2Pkg) {
-          setState(() {
-            message = "Waiting for other participants to send their round 2 packages";
-            index = 2;
-          });
-        }
-        if (s is DKGStatus_SharedAddress) {
-          final sharedUA = s.field0;
-          ref.invalidate(getAccountsProvider);
-          setState(() {
-            message = "The shared address is: $sharedUA";
-            index = 3;
-            finished = true;
-          });
-        }
-      },
-      onError: (Object e) async {
-        final exc = e as AnyhowException;
-        if (!context.mounted) return;
-        await showException(context, exc.message);
-      },
-    );
+      final status = doDkg(c: c);
+      status.listen(
+        (s) {
+          if (s is DKGStatus_PublishRound1Pkg) {
+            setState(() {
+              message = "Broadcasting round 1 packages";
+              index = 1;
+            });
+          }
+          if (s is DKGStatus_WaitRound1Pkg) {
+            setState(() {
+              message = "Waiting for other participants to send their round 1 packages";
+              index = 1;
+            });
+          }
+          if (s is DKGStatus_PublishRound2Pkg) {
+            setState(() {
+              message = "Broadcasting round 2 packages";
+              index = 2;
+            });
+          }
+          if (s is DKGStatus_WaitRound2Pkg) {
+            setState(() {
+              message = "Waiting for other participants to send their round 2 packages";
+              index = 2;
+            });
+          }
+          if (s is DKGStatus_SharedAddress) {
+            final sharedUA = s.field0;
+            ref.invalidate(getAccountsProvider);
+            setState(() {
+              message = "The shared address is: $sharedUA";
+              index = 3;
+              finished = true;
+            });
+          }
+        },
+        onError: (Object e) async {
+          final exc = e as AnyhowException;
+          if (!context.mounted) return;
+          await showException(context, exc.message);
+        },
+      );
+    } on AnyhowException catch (e) {
+      if (!context.mounted) return;
+      await showException(context, e.message);
+    }
   }
 
   @override
