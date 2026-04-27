@@ -142,15 +142,21 @@ class TxPageState extends ConsumerState<TxPage> {
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
           final comp = Completer();
-          signLedgerTransaction(package: widget.pczt, c: c).listen((e) {
-            switch (e) {
-              case SigningEvent_Progress p:
-                showSnackbar(p.field0);
-              case SigningEvent_Result r:
-                pczt = r.field0;
-                comp.complete();
-            }
-          });
+          signLedgerTransaction(package: widget.pczt, c: c).listen(
+            (e) {
+              switch (e) {
+                case SigningEvent_Progress p:
+                  showSnackbar(p.field0);
+                case SigningEvent_Result r:
+                  pczt = r.field0;
+                  comp.complete();
+              }
+            },
+            onError: (e) {
+              final exc = e as AnyhowException;
+              comp.completeError(exc);
+            },
+          );
           await comp.future;
         } else {
           pczt = await signTransaction(
