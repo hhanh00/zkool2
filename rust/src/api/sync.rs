@@ -71,10 +71,10 @@ pub async fn get_db_height(c: &Coin) -> Result<SyncHeight> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_tx_details(c: &Coin) -> Result<()> {
+pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::memo::fetch_tx_details(&c.network(), &mut *connection, &mut client, c.account).await?;
+    crate::memo::fetch_tx_details(&c.network(), &mut *connection, &mut client, account).await?;
     Ok(())
 }
 
