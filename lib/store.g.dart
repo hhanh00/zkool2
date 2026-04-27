@@ -801,7 +801,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'a5f47097b8bcb7187b66b4e7ca657931f08b443e';
+    r'b37f55e4203ecb01144d63471d352f24caf7d136';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -848,7 +848,7 @@ final class TransparentScanProvider
   }
 }
 
-String _$transparentScanHash() => r'9a8d590be183064d275865b9fa96668cf104996c';
+String _$transparentScanHash() => r'8b7776a597f9527392f23125ea5eac64f6568cdf';
 
 abstract class _$TransparentScan extends $Notifier<String> {
   String build();

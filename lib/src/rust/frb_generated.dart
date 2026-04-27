@@ -254,7 +254,8 @@ abstract class RustLibApi extends BaseApi {
   Future<List<TAddressTxCount>> crateApiAccountFetchTransparentAddressTxCount(
       {required Coin c});
 
-  Future<void> crateApiSyncFetchTxDetails({required Coin c});
+  Future<void> crateApiSyncFetchTxDetails(
+      {required int account, required Coin c});
 
   Future<void> crateApiTransactionFillMissingTxPrices(
       {required String api, required Coin c});
@@ -1986,11 +1987,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiSyncFetchTxDetails({required Coin c}) {
+  Future<void> crateApiSyncFetchTxDetails(
+      {required int account, required Coin c}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(account, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 49, port: port_);
@@ -2000,7 +2003,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiSyncFetchTxDetailsConstMeta,
-        argValues: [c],
+        argValues: [account, c],
         apiImpl: this,
       ),
     );
@@ -2008,7 +2011,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSyncFetchTxDetailsConstMeta => const TaskConstMeta(
         debugName: "fetch_tx_details",
-        argNames: ["c"],
+        argNames: ["account", "c"],
       );
 
   @override

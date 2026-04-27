@@ -40,8 +40,8 @@ Future<void> rewindSync(
 Future<SyncHeight> getDbHeight({required Coin c}) =>
     RustLib.instance.api.crateApiSyncGetDbHeight(c: c);
 
-Future<void> fetchTxDetails({required Coin c}) =>
-    RustLib.instance.api.crateApiSyncFetchTxDetails(c: c);
+Future<void> fetchTxDetails({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiSyncFetchTxDetails(account: account, c: c);
 
 Future<void> cacheBlockTime({required int height, required Coin c}) =>
     RustLib.instance.api.crateApiSyncCacheBlockTime(height: height, c: c);
