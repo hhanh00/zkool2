@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.14.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.3...zkool-v6.14.4) (2026-04-27)
+
+
+### Bug Fixes
+
+* add try/catch around rust code ([#963](https://github.com/hhanh00/zkool2/issues/963)) ([ae646b7](https://github.com/hhanh00/zkool2/commit/ae646b73fa3c319aa158cc52fd465f66af245401))
+* ua pool selection ([#961](https://github.com/hhanh00/zkool2/issues/961)) ([e15b98e](https://github.com/hhanh00/zkool2/commit/e15b98ec71b5dc5cfbf5c19af9fb9d919d49a9df))
+
 ## [6.14.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.0...zkool-v6.14.3) (2026-04-25)
 
 
