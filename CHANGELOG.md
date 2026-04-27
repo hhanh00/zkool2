@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.14.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.4...zkool-v6.14.5) (2026-04-27)
+
+
+### Bug Fixes
+
+* fetch tx details from account manager ([#964](https://github.com/hhanh00/zkool2/issues/964)) ([89bc7a4](https://github.com/hhanh00/zkool2/commit/89bc7a4769a2b4a9b88e6d76f204c0e3fac3df69))
+
 ## [6.14.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.3...zkool-v6.14.4) (2026-04-27)
 
 
