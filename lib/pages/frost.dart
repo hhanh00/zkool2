@@ -235,77 +235,82 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   int? currentHeight;
 
   void runFrost() async {
-    final h = await getCurrentHeight(c: c);
-    if (currentHeight != null && currentHeight == h) return;
-    currentHeight = h;
-    final as = await ref.read(getAccountsProvider.future);
-    final accounts = as.where((e) => e.enabled).toList();
-    final synchronizer = ref.read(synchronizerProvider.notifier);
-    await synchronizer.startSynchronize(accounts);
+    try {
+      final h = await getCurrentHeight(c: c);
+      if (currentHeight != null && currentHeight == h) return;
+      currentHeight = h;
+      final as = await ref.read(getAccountsProvider.future);
+      final accounts = as.where((e) => e.enabled).toList();
+      final synchronizer = ref.read(synchronizerProvider.notifier);
+      await synchronizer.startSynchronize(accounts);
 
-    final status = doSign(c: c);
-    status.listen(
-      (s) {
-        if (s is SigningStatus_WaitingForCommitments) {
-          setState(() {
-            message = "Waiting for other participants to send their commitments";
-            currentIndex = 1; // coordinator
-          });
-        } else if (s is SigningStatus_SendingCommitment) {
-          setState(() {
-            message = "Sending our commitments to the coordinator";
-            currentIndex = 1; // other
-          });
-        } else if (s is SigningStatus_SendingSigningPackage) {
-          setState(() {
-            message = "Broadcasting the signing package to all participants";
-            currentIndex = 2; // coordinator
-          });
-        } else if (s is SigningStatus_WaitingForSigningPackage) {
-          setState(() {
-            message = "Waiting for the signing package from the coordinator";
-            currentIndex = 2; // other
-          });
-        } else if (s is SigningStatus_SendingSignatureShare) {
-          setState(() {
-            message = "Sending our signature share to the coordinator";
-            currentIndex = 3; // other
-          });
-        } else if (s is SigningStatus_SigningCompleted) {
-          setState(() {
-            message = "Signing completed";
-            currentIndex = 3; // other
-            finished = true;
-          });
-        } else if (s is SigningStatus_WaitingForSignatureShares) {
-          setState(() {
-            message = "Waiting for the signature share from the other participants";
-            currentIndex = 2; // coordinator
-          });
-        } else if (s is SigningStatus_PreparingTransaction) {
-          setState(() {
-            message = "Assembling the transaction";
-            currentIndex = 3; // coordinator
-          });
-        } else if (s is SigningStatus_SendingTransaction) {
-          setState(() {
-            message = "Sending the transaction to the network";
-            currentIndex = 3; // coordinator
-          });
-        } else if (s is SigningStatus_TransactionSent) {
-          setState(() {
-            message = "TX ID: ${s.field0}";
-            currentIndex = 3; // coordinator
-            finished = true;
-          });
-        }
-      },
-      onError: (e) async {
-        final exc = e as AnyhowException;
-        if (!context.mounted) return;
-        await showException(context, exc.message);
-      },
-    );
+      final status = doSign(c: c);
+      status.listen(
+        (s) {
+          if (s is SigningStatus_WaitingForCommitments) {
+            setState(() {
+              message = "Waiting for other participants to send their commitments";
+              currentIndex = 1; // coordinator
+            });
+          } else if (s is SigningStatus_SendingCommitment) {
+            setState(() {
+              message = "Sending our commitments to the coordinator";
+              currentIndex = 1; // other
+            });
+          } else if (s is SigningStatus_SendingSigningPackage) {
+            setState(() {
+              message = "Broadcasting the signing package to all participants";
+              currentIndex = 2; // coordinator
+            });
+          } else if (s is SigningStatus_WaitingForSigningPackage) {
+            setState(() {
+              message = "Waiting for the signing package from the coordinator";
+              currentIndex = 2; // other
+            });
+          } else if (s is SigningStatus_SendingSignatureShare) {
+            setState(() {
+              message = "Sending our signature share to the coordinator";
+              currentIndex = 3; // other
+            });
+          } else if (s is SigningStatus_SigningCompleted) {
+            setState(() {
+              message = "Signing completed";
+              currentIndex = 3; // other
+              finished = true;
+            });
+          } else if (s is SigningStatus_WaitingForSignatureShares) {
+            setState(() {
+              message = "Waiting for the signature share from the other participants";
+              currentIndex = 2; // coordinator
+            });
+          } else if (s is SigningStatus_PreparingTransaction) {
+            setState(() {
+              message = "Assembling the transaction";
+              currentIndex = 3; // coordinator
+            });
+          } else if (s is SigningStatus_SendingTransaction) {
+            setState(() {
+              message = "Sending the transaction to the network";
+              currentIndex = 3; // coordinator
+            });
+          } else if (s is SigningStatus_TransactionSent) {
+            setState(() {
+              message = "TX ID: ${s.field0}";
+              currentIndex = 3; // coordinator
+              finished = true;
+            });
+          }
+        },
+        onError: (e) async {
+          final exc = e as AnyhowException;
+          if (!context.mounted) return;
+          await showException(context, exc.message);
+        },
+      );
+    } on AnyhowException catch (e) {
+      if (!context.mounted) return;
+      await showException(context, e.message);
+    }
   }
 }
 
