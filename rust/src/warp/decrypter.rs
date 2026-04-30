@@ -1,4 +1,5 @@
 use crate::lwd::{CompactOrchardAction, CompactSaplingOutput};
+use zcash_protocol::consensus::ZIP212_GRACE_PERIOD;
 use zcash_trees::network::Network;
 use zcash_trees::types::Note;
 
@@ -19,7 +20,9 @@ use orchard::{
     note_encryption::{CompactAction, OrchardDomain},
 };
 use sapling_crypto::{
-    note_encryption::{plaintext_version_is_valid, SaplingDomain, Zip212Enforcement, KDF_SAPLING_PERSONALIZATION},
+    note_encryption::{
+        plaintext_version_is_valid, SaplingDomain, Zip212Enforcement, KDF_SAPLING_PERSONALIZATION,
+    },
     SaplingIvk,
 };
 use zcash_note_encryption::EphemeralKeyBytes;
@@ -30,9 +33,16 @@ fn zip212(network: &Network, height: u32) -> Zip212Enforcement {
     use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
     let height = BlockHeight::from_u32(height);
     match network.activation_height(NetworkUpgrade::Canopy) {
-        Some(h) if height >= h => Zip212Enforcement::On,
-        None => Zip212Enforcement::On,
-        _ => Zip212Enforcement::GracePeriod,
+        Some(h) => {
+            if height >= h + ZIP212_GRACE_PERIOD {
+                Zip212Enforcement::On
+            } else if height >= h {
+                Zip212Enforcement::GracePeriod
+            } else {
+                Zip212Enforcement::Off
+            }
+        }
+        _ => Zip212Enforcement::On, // this doesn't apply for Zcash
     }
 }
 
