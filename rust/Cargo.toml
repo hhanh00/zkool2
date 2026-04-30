@@ -12,7 +12,7 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = {git = "https://github.com/hhanh00/zcash-trees.git", rev = "59aed0867b4923437b725a9ded365e458a823d8a"}
+zcash-trees = {git = "https://github.com/hhanh00/zcash-trees.git", rev = "83bd1e4f03e2afacc54cd0f16f365194dccf09b5"}
 flutter_rust_bridge = {version = "=2.11.1", optional = true}
 
 anyhow = "1.0.97"
@@ -122,7 +122,7 @@ ledger-transport-zemu = {version = "0.10.0", optional = true}
 #path = "../../zcv/zcvlib"
 git = "https://github.com/hhanh00/zcv"
 version = "0.6.0"
-rev = "57edfb2d23d029954194f0941c63be5e6d06b218"
+rev = "aaa248edb5ff04c5ddb7ed2d733923c5e1d97129"
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies]

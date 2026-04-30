@@ -550,7 +550,7 @@ async fn handle_message(
     msg: WarpSyncMessage,
     tx_progress: &Sender<SyncProgress>,
 ) -> Result<()> {
-    tracing::info!(target: "warp", "Warp Message: {msg}");
+    tracing::info!(target: "warp", "Warp Message: {msg:?}");
     match msg {
         WarpSyncMessage::Transaction(tx) => {
             // ignore duplicate transactions because they could have been created
