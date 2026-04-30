@@ -9932,7 +9932,7 @@ dependencies = [
 [[package]]
 name = "zcash-trees"
 version = "0.1.0"
-source = "git+https://github.com/hhanh00/zcash-trees.git?rev=59aed0867b4923437b725a9ded365e458a823d8a#59aed0867b4923437b725a9ded365e458a823d8a"
+source = "git+https://github.com/hhanh00/zcash-trees.git?rev=83bd1e4f03e2afacc54cd0f16f365194dccf09b5#83bd1e4f03e2afacc54cd0f16f365194dccf09b5"
 dependencies = [
  "anyhow",
  "bincode",
@@ -10134,7 +10134,7 @@ dependencies = [
 [[package]]
 name = "zcvlib"
 version = "0.6.0"
-source = "git+https://github.com/hhanh00/zcv?rev=57edfb2d23d029954194f0941c63be5e6d06b218#57edfb2d23d029954194f0941c63be5e6d06b218"
+source = "git+https://github.com/hhanh00/zcv?rev=aaa248edb5ff04c5ddb7ed2d733923c5e1d97129#aaa248edb5ff04c5ddb7ed2d733923c5e1d97129"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
