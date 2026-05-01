@@ -5,7 +5,7 @@ members = [
 resolver = "2"
 
 [patch."https://github.com/hhanh00/zcash-trees"]
-#path = "../../zcash-trees"
+#zcash-trees = { path = "../zcash-trees" }
 
 [patch.crates-io]
 orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "714e2e8feaf70894448644f6793796741240bcd9"}
