@@ -757,13 +757,14 @@ pub async fn trim_sync_data(
     Ok(())
 }
 
+#[cfg(debug_assertions)]
 pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Result<()> {
     let notes = sqlx::query(
     "WITH utxo AS (SELECT * FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE s.id_note IS NULL),
     db_height AS (SELECT * FROM sync_heights)
     SELECT u.account, u.pool, u.height, u.value, d.height FROM utxo u
     JOIN db_height d ON d.account = u.account AND d.pool = u.pool
-    JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
+    LEFT JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
     AND w.height = d.height
     AND w.note IS NULL
     ")
@@ -784,6 +785,11 @@ pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Res
         anyhow::bail!("Some notes have no witness data. Abort Sync");
     }
     info!("Db check passed");
+    Ok(())
+}
+
+#[cfg(not(debug_assertions))]
+pub async fn check_witness_consistency(_connection: &mut SqliteConnection) -> Result<()> {
     Ok(())
 }
 
