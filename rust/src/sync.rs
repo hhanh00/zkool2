@@ -766,8 +766,7 @@ pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Res
     JOIN db_height d ON d.account = u.account AND d.pool = u.pool
     LEFT JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
     AND w.height = d.height
-    AND w.note IS NULL
-    ")
+    WHERE w.id_witness IS NULL AND u.pool <> 0")
     .map(|r: SqliteRow| {
         let account: u32 = r.get(0);
         let pool: u8 = r.get(1);
