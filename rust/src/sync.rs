@@ -899,7 +899,7 @@ pub async fn transparent_sweep(
             let mut gap = 0;
             loop {
                 let (pk, taddr) = match xvk.as_ref() {
-                    Some(xvk) => derive_transparent_address(xvk, scope, dindex)?,
+                    Some(xvk) => derive_transparent_address(xvk, scope, dindex, false)?,
                     None if hw != 0 => {
                         ledger
                             .get_hw_transparent_address(&network, aindex, scope, dindex)
@@ -927,7 +927,7 @@ pub async fn transparent_sweep(
                                 None
                             };
                             if store_account_transparent_addr(
-                                &mut connection, account, scope, dindex, sk, &pk, &taddr,
+                                &mut connection, account, scope, dindex, sk, &pk, &taddr, false,
                             )
                             .await?
                             {

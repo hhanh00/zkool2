@@ -434,7 +434,7 @@ pub async fn plan_transaction(
                 match pool {
                     0 => {
                         let row = sqlx::query(
-                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex, t.address FROM notes
+                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex, t.address, t.uncompressed FROM notes
                             JOIN transparent_address_accounts t ON notes.taddress = t.id_taddress
                             WHERE id_note = ?",
                         )
@@ -448,6 +448,7 @@ pub async fn plan_transaction(
                         let scope: u32 = row.get(3);
                         let dindex: u32 = row.get(4);
                         let taddress: String = row.get(5);
+                        let uncompressed: bool = row.get(6);
 
                         if sk.is_none() {
                             can_sign = false;
@@ -458,18 +459,22 @@ pub async fn plan_transaction(
                         hash.copy_from_slice(&nf[0..32]);
                         let n = u32::from_le_bytes(nf[32..36].try_into().unwrap());
                         let utxo = OutPoint::new(hash, n);
-                        let pkh: [u8; 20] =
-                            Ripemd160::digest(Sha256::digest(pubkey.serialize())).into();
+                        let pk_bytes = if uncompressed {
+                            pubkey.serialize_uncompressed().to_vec()
+                        } else {
+                            pubkey.serialize().to_vec()
+                        };
+                        let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&pk_bytes)).into();
                         let addr = TransparentAddress::PublicKeyHash(pkh);
                         let coin =
                             TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder.add_transparent_input(
-                            TransparentInputInfo::from_parts(utxo, coin, SpendInfo::P2pkh { pubkey })
+                            TransparentInputInfo::from_parts(utxo, coin, SpendInfo::P2pkh { pubkey, uncompressed })
                                 .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
                         );
-                        tsk_dindex.push((pubkey, scope, dindex, taddress));
+                        tsk_dindex.push((pubkey, scope, dindex, taddress, uncompressed));
                     }
                     1 => {
                         let (note, scope, merkle_path) = get_sapling_note(
@@ -625,14 +630,23 @@ pub async fn plan_transaction(
     let updater = Updater::new(pczt);
     let updater = updater
         .update_transparent_with(|mut u| {
-            for (i, (pubkey, scope, dindex, taddress)) in tsk_dindex.into_iter().enumerate() {
+            for (i, (pubkey, scope, dindex, taddress, uncompressed)) in tsk_dindex.into_iter().enumerate() {
                 u.update_input_with(i, |mut u| {
                     let derivation_path = vec![scope, dindex];
                     let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
-                    u.set_bip32_derivation(pubkey.serialize(), path);
+                    u.set_bip32_derivation(pubkey.serialize().to_vec(), path);
                     u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
                     u.set_proprietary("dindex".to_string(), dindex.to_le_bytes().to_vec());
                     u.set_proprietary("address".to_string(), taddress.into_bytes());
+                    u.set_proprietary("uncompressed".to_string(), vec![uncompressed as u8]);
+                    // Set the hash160 preimage with the public key in the correct format
+                    // This is needed for the signer to find the correct pubkey when verifying
+                    let pk_bytes = if uncompressed {
+                        pubkey.serialize_uncompressed().to_vec()
+                    } else {
+                        pubkey.serialize().to_vec()
+                    };
+                    u.set_hash160_preimage(pk_bytes);
                     Ok(())
                 })?;
             }
@@ -801,6 +815,20 @@ pub async fn sign_transaction(
         let inp = &tbundle.inputs()[index];
         let scope = u32::from_le_bytes(inp.proprietary()["scope"].clone().try_into().unwrap());
         let dindex = u32::from_le_bytes(inp.proprietary()["dindex"].clone().try_into().unwrap());
+        // Check if "uncompressed" flag exists in proprietary, default to false (compressed)
+        let uncompressed_flag = if let Some(val) = inp.proprietary().get("uncompressed") {
+            if !val.is_empty() {
+                val[0] != 0
+            } else {
+                info!("Invalid uncompressed flag length: {}, defaulting to compressed", val.len());
+                false
+            }
+        } else {
+            info!("No 'uncompressed' proprietary field found, defaulting to compressed");
+            false
+        };
+        info!("Signing transparent input {}: scope={}, dindex={}, uncompressed={}", index, scope, dindex, uncompressed_flag);
+
         // Get the signing key
         let sk = match tsk.as_ref() {
             // From the derivation path if we have the xsk
@@ -826,7 +854,28 @@ pub async fn sign_transaction(
             }
         };
         let sk = sk.ok_or(Error::NoSigningKey)?;
-        signer.sign_transparent(index, &sk).unwrap();
+
+        // Derive pubkey from secret key to check
+        let secp = secp256k1::Secp256k1::new();
+        let derived_pubkey = secp256k1::PublicKey::from_secret_key(&secp, &sk);
+        let derived_compressed = derived_pubkey.serialize();
+        let derived_uncompressed = derived_pubkey.serialize_uncompressed();
+        let hash_compressed = zcash_transparent::util::hash160::hash(&derived_compressed);
+        let hash_uncompressed = zcash_transparent::util::hash160::hash(&derived_uncompressed);
+        info!("Derived pubkey (compressed): hash={}, len={}", hex::encode(hash_compressed), derived_compressed.len());
+        info!("Derived pubkey (uncompressed): hash={}, len={}", hex::encode(hash_uncompressed), 65);
+
+        // Get the sighash and sign manually
+        let sighash = signer.transparent_sighash(index).unwrap();
+        let msg = secp256k1::Message::from_digest(sighash);
+        let sig = secp.sign_ecdsa(&msg, &sk);
+
+        // Append the signature - the pubkey will be retrieved from hash160_preimages
+        info!("Appending signature for input {}", index);
+        match signer.append_transparent_signature(index, sig) {
+            Ok(_) => info!("Successfully appended signature"),
+            Err(e) => info!("Failed to append signature: {:?}", e),
+        }
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {
         debug!("signing sapling {index}");

@@ -129,7 +129,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     }
 
     info!("Exporting transparent addresses");
-    let t_addresses = sqlx::query("SELECT id_taddress, scope, dindex, sk, pk, address FROM transparent_address_accounts WHERE account = ?")
+    let t_addresses = sqlx::query("SELECT id_taddress, scope, dindex, sk, pk, address, uncompressed FROM transparent_address_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let id_taddress: u32 = row.get(0);
@@ -138,10 +138,11 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let sk: Option<Vec<u8>> = row.get(3);
             let pk: Vec<u8> = row.get(4);
             let address: String = row.get(5);
+            let uncompressed: bool = row.get(6);
 
             TAddress {
                 id_taddress, scope, dindex, sk: sk.map(HexBytes),
-                pk: pk.into(), address
+                pk: pk.into(), address, uncompressed,
             }
 
         })
@@ -816,6 +817,7 @@ pub struct TAddress {
     pub sk: Option<HexBytes>,
     pub pk: HexBytes,
     pub address: String,
+    pub uncompressed: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
