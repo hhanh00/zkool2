@@ -83,6 +83,11 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
+    let _ =
+        sqlx::query("ALTER TABLE transparent_address_accounts ADD COLUMN uncompressed BOOL NOT NULL DEFAULT FALSE")
+            .execute(&mut *connection)
+            .await;
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS sapling_accounts(
         account INTEGER PRIMARY KEY,
@@ -682,10 +687,11 @@ pub async fn store_account_transparent_addr(
     sk: Option<Vec<u8>>,
     pk: &[u8],
     address: &str,
+    uncompressed: bool,
 ) -> Result<bool> {
     let r = sqlx::query(
-        "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, pk, address)
-        VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+        "INSERT INTO transparent_address_accounts(account, scope, dindex, sk, pk, address, uncompressed)
+        VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
     )
     .bind(account)
     .bind(scope)
@@ -693,6 +699,7 @@ pub async fn store_account_transparent_addr(
     .bind(sk)
     .bind(pk)
     .bind(address)
+    .bind(uncompressed)
     .execute(&mut *connection)
     .await?;
 
