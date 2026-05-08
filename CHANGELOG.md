@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.15.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.6...zkool-v6.15.0) (2026-05-07)
+
+
+### Features
+
+* support uncompressed transparent private keys (5XXX) ([#973](https://github.com/hhanh00/zkool2/issues/973)) ([f20bb8a](https://github.com/hhanh00/zkool2/commit/f20bb8a0ead97b74b5e2a62b5deeefaba1083706))
+
 ## [6.14.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.13.5...zkool-v6.14.6) (2026-05-01)
 
 
