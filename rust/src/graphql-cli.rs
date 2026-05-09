@@ -27,7 +27,7 @@ pub struct Config {
     pub lwd_url: Option<String>,
     #[clap(short, long, value_parser)]
     pub port: Option<u16>,
-    #[clap(short, long, value_parser)]
+    #[clap(short, long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false)]
     pub no_mempool: Option<bool>,
     // Note: Once set in a config file, jwt_public_key_file
     // cannot be unset by a later config source because
