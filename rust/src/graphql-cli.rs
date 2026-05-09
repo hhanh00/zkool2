@@ -74,9 +74,12 @@ async fn main() -> Result<()> {
     if decoding_key.is_none() {
         tracing::warn!("Server is running WITHOUT authentication. Everyone has full access.");
     }
+
     // Note: To generate a pk/sk pair
     // sk: openssl ecparam -name prime256v1 -genkey -noout -out private.pem
     // pk: openssl ec -in private.pem -pubout -out public.pem
+    // convert key format: openssl pkcs8 -topk8 -nocrypt -in private.pem -out private_p8.pem
+    // issue jwt: jwt encode --secret @private_p8.pem --alg ES256 --exp=<epoch secs> --sub=<account id> '{"write": true}'
 
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
     let coin = Coin::new()
