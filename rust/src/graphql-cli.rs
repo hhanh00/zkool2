@@ -16,6 +16,7 @@ use warp::Filter;
 
 type Schema = RootNode<Query, Mutation, Subscription>;
 
+#[serde_with::skip_serializing_none]
 #[derive(Parser, Serialize, Deserialize, Debug)]
 pub struct Config {
     #[clap(short, long, value_parser)]
