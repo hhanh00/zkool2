@@ -67,6 +67,9 @@ async fn main() -> Result<()> {
             Ok::<_, anyhow::Error>(s)
         })
         .transpose()?;
+    if secret.is_none() {
+        tracing::warn!("Server is running WITHOUT authentication. Everyone has full access.");
+    }
 
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
     let coin = Coin::new()
