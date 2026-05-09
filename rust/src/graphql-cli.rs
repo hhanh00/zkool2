@@ -27,10 +27,13 @@ pub struct Config {
     pub lwd_url: Option<String>,
     #[clap(short, long, value_parser)]
     pub port: Option<u16>,
-    #[clap(short, long)]
-    pub no_mempool: bool,
+    #[clap(short, long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false)]
+    pub no_mempool: Option<bool>,
+    // Note: Once set in a config file, jwt_public_key_file
+    // cannot be unset by a later config source because
+    // None means skip
     #[clap(short, long, value_parser)]
-    pub jwt_secret_file: Option<String>,
+    pub jwt_public_key_file: Option<String>,
 }
 
 #[tokio::main]
@@ -53,23 +56,27 @@ async fn main() -> Result<()> {
         db_path,
         lwd_url,
         port,
-        jwt_secret_file,
+        jwt_public_key_file,
         no_mempool,
         ..
     } = config;
     let db_path = db_path.unwrap_or("zkool.db".to_string());
     let lwd_url = lwd_url.unwrap_or("https://zec.rocks".to_string());
     let port = port.unwrap_or(8000);
+    let no_mempool = no_mempool.unwrap_or_default();
 
-    let secret = jwt_secret_file
+    let decoding_key = jwt_public_key_file
         .map(|path| {
-            let s = std::fs::read_to_string(&path)?.trim().to_string();
-            Ok::<_, anyhow::Error>(s)
+            let pem = std::fs::read_to_string(&path)?;
+            Ok::<_, anyhow::Error>(DecodingKey::from_ec_pem(pem.as_bytes())?)
         })
         .transpose()?;
-    if secret.is_none() {
+    if decoding_key.is_none() {
         tracing::warn!("Server is running WITHOUT authentication. Everyone has full access.");
     }
+    // Note: To generate a pk/sk pair
+    // sk: openssl ecparam -name prime256v1 -genkey -noout -out private.pem
+    // pk: openssl ec -in private.pem -pubout -out public.pem
 
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
     let coin = Coin::new()
@@ -86,11 +93,11 @@ async fn main() -> Result<()> {
 
     let c = context.clone();
     let c2 = c.clone();
-    let context_extractor = match secret {
-        Some(secret) => {
+    let context_extractor = match decoding_key {
+        Some(decoding_key) => {
             let filter = warp::header::optional::<String>("authorization").and_then(
                 move |auth_header: Option<String>| {
-                    let secret = secret.clone();
+                    let decoding_key = decoding_key.clone();
                     let c = c2.clone();
                     async move {
                         let token = match auth_header {
@@ -100,10 +107,12 @@ async fn main() -> Result<()> {
                             _ => return Err(warp::reject::custom(AuthError)), // missing or malformed
                         };
 
+                        let mut validation = Validation::new(jsonwebtoken::Algorithm::ES256);
+                        validation.validate_exp = true;
                         let token_data = jsonwebtoken::decode::<Claims>(
                             token,
-                            &DecodingKey::from_secret(secret.as_bytes()),
-                            &Validation::default(),
+                            &decoding_key,
+                            &validation,
                         )
                         .map_err(|_| warp::reject::custom(AuthError))?;
                         let auth_context = Context {
