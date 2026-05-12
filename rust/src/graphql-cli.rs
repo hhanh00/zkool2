@@ -16,6 +16,15 @@ use warp::Filter;
 
 type Schema = RootNode<Query, Mutation, Subscription>;
 
+/// Validate JWT token and return claims, or AuthError if invalid
+fn validate_jwt(token: &str, decoding_key: &DecodingKey) -> Result<Claims, AuthError> {
+    let mut validation = Validation::new(jsonwebtoken::Algorithm::ES256);
+    validation.validate_exp = true;
+    jsonwebtoken::decode::<Claims>(token, decoding_key, &validation)
+        .map(|data| data.claims)
+        .map_err(|_| AuthError)
+}
+
 #[serde_with::skip_serializing_none]
 #[derive(Parser, Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -74,6 +83,7 @@ async fn main() -> Result<()> {
     if decoding_key.is_none() {
         tracing::warn!("Server is running WITHOUT authentication. Everyone has full access.");
     }
+    let decoding_key = Arc::new(decoding_key);
 
     // Note: To generate a pk/sk pair
     // sk: openssl ecparam -name prime256v1 -genkey -noout -out private.pem
@@ -94,46 +104,27 @@ async fn main() -> Result<()> {
 
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});
 
-    let c = context.clone();
-    let c2 = c.clone();
-    let context_extractor = match decoding_key {
-        Some(decoding_key) => {
-            let filter = warp::header::optional::<String>("authorization").and_then(
-                move |auth_header: Option<String>| {
-                    let decoding_key = decoding_key.clone();
-                    let c = c2.clone();
-                    async move {
-                        let token = match auth_header {
-                            Some(h) if h.starts_with("Bearer ") => {
-                                h.trim_start_matches("Bearer ").trim().to_string()
-                            }
-                            _ => return Err(warp::reject::custom(AuthError)), // missing or malformed
-                        };
-
-                        let mut validation = Validation::new(jsonwebtoken::Algorithm::ES256);
-                        validation.validate_exp = true;
-                        let token_data = jsonwebtoken::decode::<Claims>(
-                            token,
-                            &decoding_key,
-                            &validation,
-                        )
-                        .map_err(|_| warp::reject::custom(AuthError))?;
-                        let auth_context = Context {
-                            auth: Some(token_data.claims),
-                            ..c
-                        };
-
-                        Ok::<_, warp::reject::Rejection>(auth_context)
-                    }
-                },
-            );
-            filter.boxed()
-        }
-        None => {
-            let filter = warp::any().map(move || c2.clone());
-            filter.boxed()
-        }
-    };
+    let ctx = context.clone();
+    let dk = Arc::clone(&decoding_key); // For HTTP
+    let context_extractor = warp::header::optional::<String>("authorization").and_then(
+        move |auth_header: Option<String>| {
+            let decoding_key = Arc::clone(&dk);
+            let base_ctx = ctx.clone();
+            async move {
+                let token = auth_header
+                    .and_then(|h| h.strip_prefix("Bearer ").map(str::trim).map(String::from));
+                let ctx = match (&*decoding_key, token) {
+                    (Some(key), Some(t)) => Context {
+                        auth: Some(validate_jwt(&t, key).map_err(warp::reject::custom)?),
+                        ..base_ctx
+                    },
+                    (Some(_), None) => return Err(warp::reject::custom(AuthError)),
+                    (None, _) => base_ctx,
+                };
+                Ok::<_, warp::reject::Rejection>(ctx)
+            }
+        },
+    );
 
     let schema = Arc::new(schema);
 
@@ -141,12 +132,29 @@ async fn main() -> Result<()> {
         .and(warp::path("graphql"))
         .and(juniper_warp::make_graphql_filter(
             schema.clone(),
-            context_extractor,
+            context_extractor.clone(),
         )))
     .or(
         warp::path("subscriptions").and(juniper_warp::subscriptions::make_ws_filter(
             schema,
-            ConnectionConfig::new(c),
+            move |variables: juniper::Variables| {
+                let base_ctx = context.clone();
+                let decoding_key = Arc::clone(&decoding_key);
+                async move {
+                    let auth_token = variables.get("authToken").and_then(|v| v.convert::<String>().ok());
+
+                    let ctx = match (&*decoding_key, auth_token) {
+                        (Some(key), Some(token)) => Context {
+                            auth: Some(validate_jwt(&token, key)?),
+                            ..base_ctx
+                        },
+                        (Some(_), None) => return Err(AuthError),
+                        (None, _) => base_ctx,
+                    };
+
+                    Ok::<_, AuthError>(ConnectionConfig::new(ctx))
+                }
+            },
         )),
     )
     .or(warp::get()
