@@ -16,8 +16,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install gq
-        run: npm install -g graphqurl
       - name: Setup regtest
         uses: hhanh00/zkool2/.github/actions/zebra@main
         with:
@@ -31,13 +29,11 @@ jobs:
             sudo apt-get install -y pkg-config libudev-dev
             cd rust
             cargo build --release --bin zkool_graphql --features=graphql
-      - name: Run smoke tests
+      - name: Run pytest tests
         run: |
-          rm -f regtest.db
-          nohup ./target/release/zkool_graphql -d regtest.db -l http://localhost:8137 -n &
-          cd example/sh
-          ./smoke.sh
-          ./smoke-dkg.sh
-          ./smoke-frost.sh
+          cd tests
+          pip install uv
+          uv sync --all-groups
+          uv run pytest tests/test_smoke.py tests/test_dkg.py tests/test_frost.py -v -s
         env:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
