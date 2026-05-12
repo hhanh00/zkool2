@@ -12,3 +12,11 @@ pub struct Claims {
 pub struct AuthError;
 
 impl Reject for AuthError {}
+
+impl std::fmt::Display for AuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Authentication failed")
+    }
+}
+
+impl std::error::Error for AuthError {}
