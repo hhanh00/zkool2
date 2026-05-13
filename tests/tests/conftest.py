@@ -1,3 +1,6 @@
+"""Shared pytest fixtures for zkool tests."""
+
+import contextlib
 import os
 from pathlib import Path
 
@@ -23,6 +26,27 @@ def rpc_url():
     return os.getenv("RPC_URL", "http://127.0.0.1:18232/")
 
 
+@pytest.fixture(scope="session")
+def lwd_url():
+    return os.getenv("LWD_URL", "http://localhost:8137")
+
+
+@pytest.fixture(scope="session")
+def seed():
+    seed_path = Path(__file__).parent.parent.parent / "example" / "sh" / "seed"
+    if seed_path.exists():
+        return seed_path.read_text().strip()
+    return os.getenv("SEED", "")
+
+
+@pytest.fixture(scope="session")
+def zkool_binary():
+    """Path to zkool_graphql binary."""
+    return os.path.join(
+        os.path.dirname(__file__), "..", "..", "target", "release", "zkool_graphql"
+    )
+
+
 @pytest.fixture
 async def gql_client(graphql_url):
     timeout = httpx.Timeout(300.0, connect=60.0)
@@ -42,9 +66,20 @@ async def ws_client(ws_url):
         yield client
 
 
-@pytest.fixture(scope="session")
-def seed():
-    seed_path = Path(__file__).parent.parent.parent / "example" / "sh" / "seed"
-    if seed_path.exists():
-        return seed_path.read_text().strip()
-    return os.getenv("SEED", "")
+@pytest.fixture
+def gql_client_factory():
+    """Factory to create GraphQL clients for different URLs."""
+
+    @contextlib.asynccontextmanager
+    async def _create_client(url: str):
+        timeout = httpx.Timeout(300.0, connect=60.0)
+        transport = HTTPXAsyncTransport(url=url, timeout=timeout)
+        client = Client(
+            transport=transport, fetch_schema_from_transport=False, execute_timeout=300.0
+        )
+        try:
+            yield client
+        finally:
+            await client.close_async()
+
+    return _create_client
