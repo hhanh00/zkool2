@@ -22,7 +22,7 @@ runs:
     - name: Install zkool
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.11.4 --features=graphql --root ./tools --bin zkool_graphql
+      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.15.0 --features=graphql --root ./tools --bin zkool_graphql
 
     - name: Install zebra & zaino
       if: steps.cache-zebra.outputs.cache-hit != 'true'
