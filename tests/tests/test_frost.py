@@ -327,6 +327,8 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary):
                 return
 
             await asyncio.sleep(10)
+            # Mine a block to process FROST signing message transactions
+            await mine_blocks(rpc_url, 1)
             ELAPSED += 10
 
         pytest.fail(f"Transaction did not complete within {TIMEOUT} seconds. Final receiver balance: {receiver_balance} ZEC (expected {expected_amount} ZEC)")

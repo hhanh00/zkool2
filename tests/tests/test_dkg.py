@@ -409,6 +409,8 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
                 break
 
             await asyncio.sleep(10)
+            # Mine a block to process DKG message transactions
+            await mine_blocks(rpc_url, 1)
             ELAPSED += 10
 
         if ELAPSED >= TIMEOUT:
