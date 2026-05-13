@@ -6,8 +6,7 @@ listen_addr = "0.0.0.0:18232"
 enable_cookie_auth = false
 
 [mining]
-internal_miner = true
-miner_address = "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+miner_address = ""
 
 [network.testnet_parameters.activation_heights]
 "NU6.1" = 1
