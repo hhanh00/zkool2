@@ -8,22 +8,22 @@ resolver = "2"
 #zcash-trees = { path = "../zcash-trees" }
 
 [patch.crates-io]
-orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "714e2e8feaf70894448644f6793796741240bcd9"}
+orchard = {git = "https://github.com/hhanh00/orchard.git", rev = "f0c6280e188de01b14da6991d8fba7eb946b5b38"}
 
 zcash_note_encryption = {git = "https://github.com/zcash/zcash_note_encryption.git", rev = "ede44ea608e667c78309c598fbf4d70f69c15c29"}
 
-sapling-crypto = {git = "https://github.com/hhanh00/sapling-crypto.git", rev = "50f15ecc5c292a7738e3c43d6879601bd7d241c8"}
+sapling-crypto = {git = "https://github.com/hhanh00/sapling-crypto.git", rev = "17b70e3ace75cc83e20306d356ebd6b811f35745"}
 reddsa = {git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d"}
 
-pczt = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_address = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_encoding = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_keys = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_primitives = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_proofs = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_protocol = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zcash_transparent = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
-zip321 = {git = "https://github.com/hhanh00/librustzcash.git", rev = "883d2883a319b7e9d0eae206e15626c90f317e28"}
+pczt = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_address = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_encoding = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_keys = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_primitives = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_proofs = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_protocol = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zcash_transparent = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
+zip321 = {git = "https://github.com/hhanh00/librustzcash.git", rev = "75e7e3dc958380155385a26ad98769abd5e899ad"}
 
 #pczt = {path = "../librustzcash/pczt"}
 #zcash_address = {path = "../librustzcash/components/zcash_address"}
