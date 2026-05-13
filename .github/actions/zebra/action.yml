@@ -17,12 +17,7 @@ runs:
       with:
         path: |
           ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-4.2.0
-
-    - name: Install zkool
-      if: steps.cache-zebra.outputs.cache-hit != 'true'
-      shell: bash
-      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.15.0 --features=graphql --root ./tools --bin zkool_graphql
+        key: ${{ runner.os }}-zebra-lwd-4.4.1
 
     - name: Install zebra & zaino
       if: steps.cache-zebra.outputs.cache-hit != 'true'
@@ -30,16 +25,21 @@ runs:
       run: |
         sudo apt update && sudo apt install -y libclang-dev clang
 
-        cargo install --git https://github.com/ZcashFoundation/zebra --tag v4.2.0 --features=internal-miner --root ./tools zebrad
+        cargo install --git https://github.com/ZcashFoundation/zebra --tag v4.4.1 --features=internal-miner --root ./tools zebrad
         go install github.com/zcash/lightwalletd@latest
         cp $HOME/go/bin/lightwalletd tools/bin
+
+    - name: Install zkool
+      if: steps.cache-zebra.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-regtest --features=graphql --root ./tools --bin zkool_graphql
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         path: ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-4.2.0
+        key: ${{ runner.os }}-zebra-lwd-4.4.1
 
     - name: Install config
       if: github.repository != 'hhanh00/zkool2'
