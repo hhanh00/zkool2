@@ -1,39 +1,21 @@
-import asyncio
-import contextlib
-import os
-import subprocess
+"""Smoke test for zkool GraphQL API including subscriptions."""
 
-import httpx
+import asyncio
+import os
+
 import pytest
 from gql import Client, GraphQLRequest, gql
-from gql.transport.httpx import HTTPXAsyncTransport
+from gql.transport.websockets import WebsocketsTransport
 
-from utils import get_current_height, mine_blocks, wait_for_blocks
-
-
-@pytest.fixture(scope="session")
-def zkool_binary():
-    """Path to zkool_graphql binary."""
-    return os.path.join(os.path.dirname(__file__), "..", "..", "target", "release", "zkool_graphql")
-
-
-@pytest.fixture
-def gql_client_factory():
-    """Factory to create GraphQL clients for different URLs."""
-
-    @contextlib.asynccontextmanager
-    async def _create_client(url: str):
-        timeout = httpx.Timeout(300.0, connect=60.0)
-        transport = HTTPXAsyncTransport(url=url, timeout=timeout)
-        client = Client(
-            transport=transport, fetch_schema_from_transport=False, execute_timeout=300.0
-        )
-        try:
-            yield client
-        finally:
-            await client.close_async()
-
-    return _create_client
+from utils import (
+    cleanup_test_files,
+    get_current_height,
+    kill_existing_zkool_processes,
+    mine_blocks,
+    start_zkool_instance,
+    stop_zkool_instance,
+    wait_for_blocks,
+)
 
 
 @pytest.mark.asyncio
@@ -54,25 +36,13 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
     process = None
 
     try:
-        # Kill any existing zkool_graphql processes
-        print("Killing any existing zkool_graphql processes...")
-        subprocess.run(["pkill", "-9", "zkool_graphql"], stderr=subprocess.DEVNULL)
-        await asyncio.sleep(1)
+        await kill_existing_zkool_processes()
+        await asyncio.sleep(2)  # Give time for processes to fully terminate
 
-        # Remove existing database
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-
-        # Start zkool_graphql instance
         print(f"Starting zkool_graphql on port {PORT}")
-        process = subprocess.Popen(
-            [zkool_binary, "-d", DB_PATH, "-p", str(PORT), "-l", LWD_URL],
-            stdout=open(LOG_PATH, "w"),
-            stderr=subprocess.STDOUT,
-        )
-        await asyncio.sleep(2)
+        process = await start_zkool_instance(zkool_binary, DB_PATH, PORT, LWD_URL, LOG_PATH)
+        await asyncio.sleep(3)  # Give server more time to fully start
 
-        # Create client and run test
         async with gql_client_factory(GRAPHQL_URL) as client:
             # Import funded wallet
             create_account_mutation = gql(
@@ -223,15 +193,5 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
             print("✅ Smoke test passed!")
 
     finally:
-        # Cleanup
-        if process:
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-        if os.path.exists(LOG_PATH):
-            os.remove(LOG_PATH)
+        await stop_zkool_instance(process)
+        cleanup_test_files(DB_PATH, LOG_PATH)
