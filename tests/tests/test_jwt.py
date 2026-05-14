@@ -643,11 +643,27 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
 
             # Test 2: Account 1 JWT SHOULD receive events for account 1
             print("\n--- Test 2: Account 1 JWT subscribing to own account (account 1) events ---")
-            # First send a transaction to account 1 to generate events
-            result = await client.execute_async(
-                GraphQLRequest(address_query, variable_values={"account": account1_id})
+            # First sync admin account to ensure fresh notes
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": admin_id})
             )
-            account1_address = result["addressByAccount"]["orchard"]
+            # Generate a new address for account 1 to receive funds
+            result = await client.execute_async(
+                GraphQLRequest(
+                    gql("""
+                        mutation ($account: Int!) {
+                            newAddresses(idAccount: $account) {
+                                orchard
+                            }
+                        }
+                    """),
+                    variable_values={"account": account1_id}
+                )
+            )
+            account1_address = result["newAddresses"]["orchard"]
+            print(f"Generated new address for account 1")
+
+            # Send transaction from admin to account 1
             result = await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
@@ -657,9 +673,14 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             txid_to_account1 = result["pay"]
             print(f"Sent transaction to account 1, txid: {txid_to_account1}")
 
+            # Mine blocks and sync to process the transaction
             height_before = await get_current_height(client)
-            await mine_blocks(rpc_url, 2)
-            await wait_for_blocks(client, height_before, 2)
+            await mine_blocks(rpc_url, 3)
+            await wait_for_blocks(client, height_before, 3)
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": account1_id})
+            )
+            print("Synced account 1 after receiving transaction")
 
             events = await collect_subscription_events(jwt1_token, [account1_id], duration=5)
             tx_events_for_account1 = [e for e in events if e["type"] == "TX"]
@@ -765,11 +786,28 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             # Wait a moment for the subscription to be established
             await asyncio.sleep(2)
 
-            # Now send a transaction to Account 2 (not Account 1)
-            result = await client.execute_async(
-                GraphQLRequest(address_query, variable_values={"account": account2_id})
+            # Sync admin account to ensure fresh notes
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": admin_id})
             )
-            account2_address = result["addressByAccount"]["orchard"]
+
+            # Generate a new address for account 2
+            result = await client.execute_async(
+                GraphQLRequest(
+                    gql("""
+                        mutation ($account: Int!) {
+                            newAddresses(idAccount: $account) {
+                                orchard
+                            }
+                        }
+                    """),
+                    variable_values={"account": account2_id}
+                )
+            )
+            account2_address = result["newAddresses"]["orchard"]
+            print(f"Generated new address for account 2")
+
+            # Now send a transaction to Account 2 (not Account 1)
             result = await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
@@ -781,8 +819,12 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
 
             # Mine blocks to trigger the transaction
             height_before = await get_current_height(client)
-            await mine_blocks(rpc_url, 2)
-            await wait_for_blocks(client, height_before, 2)
+            await mine_blocks(rpc_url, 3)
+            await wait_for_blocks(client, height_before, 3)
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": account2_id})
+            )
+            print("Synced account 2 after receiving transaction")
 
             # Wait for the subscription task to complete
             events_for_account1 = await subscription_task
