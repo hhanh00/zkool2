@@ -34,6 +34,6 @@ jobs:
           cd tests
           pip install uv
           uv sync --all-groups
-          uv run pytest tests/test_smoke.py tests/test_dkg.py tests/test_frost.py tests/test_jwt.py tests/test_transactions.py tests/test_account_management.py tests/test_tx_details.py -v -s
+          uv run pytest tests/test_smoke.py tests/test_subscriptions.py tests/test_dkg.py tests/test_frost.py tests/test_jwt.py tests/test_transactions.py tests/test_account_management.py tests/test_tx_details.py -v -s
         env:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
