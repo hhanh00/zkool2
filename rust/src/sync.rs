@@ -91,6 +91,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
         // Get account heights
         let mut account_heights = HashMap::new();
+        info!("Current network height: {}", current_height);
         for account in accounts.iter() {
             let r: (Option<u32>, Option<u32>) = sqlx::query_as(
                 r#"SELECT account, MIN(height) FROM sync_heights
@@ -101,6 +102,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             .fetch_one(&mut *connection)
             .await?;
             if let (Some(account), Some(height)) = r {
+                info!("Account {} - current DB sync height: {}, next sync height: {}", account, height, height + 1);
                 account_heights.insert(account, height + 1);
 
                 let (use_internal,): (bool,) =
@@ -117,6 +119,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
         unique_heights.sort_unstable();
         unique_heights.dedup();
+        info!("Unique sync start heights for accounts: {:?}", unique_heights);
 
         let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
 
@@ -147,8 +150,11 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
             // Skip if no accounts to sync
             if accounts_to_sync.is_empty() {
+                info!("No accounts to sync for start_height {}", start_height);
                 continue;
             }
+
+            info!("Syncing accounts {:?} from height {} to {}", accounts_to_sync.iter().map(|(a, _)| a).collect::<Vec<_>>(), start_height, end_height);
 
             let pool = c.get_pool()?;
             // Update the sync heights for these accounts
@@ -158,6 +164,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             info!("End height: {}", end_height);
 
             if start_height > end_height {
+                info!("Skipping sync: start_height ({}) > end_height ({}), wallet is ahead of network", start_height, end_height);
                 return Ok(());
             }
 
