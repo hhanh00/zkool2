@@ -264,7 +264,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             transactions_query = gql(
                 """
                 query ($account: Int!, $height: Int) {
-                    transactionsByAccount(idAccount: $account, afterHeight: $height) {
+                    transactionsByAccount(idAccount: $account, height: $height) {
                         id
                         txid
                         height
