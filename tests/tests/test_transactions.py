@@ -1,56 +1,19 @@
 """Test transaction history, account listing, address generation, and all address pools."""
 
-import asyncio
-import contextlib
 import os
-import subprocess
 
-import httpx
 import pytest
-from gql import Client, GraphQLRequest, gql
-from gql.transport.httpx import HTTPXAsyncTransport
+from gql import GraphQLRequest, gql
 
-from utils import get_current_height, mine_blocks, wait_for_blocks
-
-
-@pytest.fixture(scope="session")
-def zkool_binary():
-    """Path to zkool_graphql binary."""
-    return os.path.join(os.path.dirname(__file__), "..", "..", "target", "release", "zkool_graphql")
-
-
-@pytest.fixture(scope="session")
-def rpc_url():
-    return os.getenv("RPC_URL", "http://127.0.0.1:18232/")
-
-
-@pytest.fixture(scope="session")
-def seed():
-    return os.getenv("SEED", "")
-
-
-@pytest.fixture(scope="session")
-def lwd_url():
-    return os.getenv("LWD_URL", "http://localhost:8137")
-
-
-@pytest.fixture
-def gql_client_factory():
-    """Factory to create GraphQL clients for different URLs."""
-
-    @contextlib.asynccontextmanager
-    async def _create_client(url: str):
-        timeout = httpx.Timeout(300.0, connect=60.0)
-        transport = HTTPXAsyncTransport(url=url, timeout=timeout)
-        client = Client(
-            transport=transport, fetch_schema_from_transport=False, execute_timeout=300.0
-        )
-        try:
-            yield client
-        finally:
-            await client.close_async()
-
-    return _create_client
+from utils import (
+    cleanup_test_files,
+    get_current_height,
+    kill_existing_zkool_processes,
+    mine_blocks,
+    start_zkool_instance,
+    stop_zkool_instance,
+    wait_for_blocks,
+)
 
 
 @pytest.mark.asyncio
@@ -70,22 +33,10 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
     process = None
 
     try:
-        # Kill any existing zkool_graphql processes
-        subprocess.run(["pkill", "-9", "zkool_graphql"], stderr=subprocess.DEVNULL)
-        await asyncio.sleep(1)
+        await kill_existing_zkool_processes()
 
-        # Remove existing database
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-
-        # Start zkool_graphql instance
         print(f"Starting zkool_graphql on port {PORT}")
-        process = subprocess.Popen(
-            [zkool_binary, "-d", DB_PATH, "-p", str(PORT), "-l", lwd_url],
-            stdout=open(LOG_PATH, "w"),
-            stderr=subprocess.STDOUT,
-        )
-        await asyncio.sleep(2)
+        process = await start_zkool_instance(zkool_binary, DB_PATH, PORT, lwd_url, LOG_PATH)
 
         # Check if process is still running
         poll_result = process.poll()
@@ -108,7 +59,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         birth: 1
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(create_account_mutation, variable_values={"main": seed})
@@ -116,13 +67,12 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             funding_id = int(result["createAccount"])
             print(f"Created funding wallet: {funding_id}")
 
-            # Synchronize funding wallet
             sync_mutation = gql(
                 """
                 mutation ($account: Int!) {
                     synchronizeAccount(idAccount: $account)
                 }
-            """
+                """
             )
             await client.execute_async(
                 GraphQLRequest(sync_mutation, variable_values={"account": funding_id})
@@ -140,7 +90,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         birth: 1
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(create_account_mutation, variable_values={"name": "Account1"})
@@ -169,7 +119,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         name
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(GraphQLRequest(accounts_query))
             accounts = result["accounts"]
@@ -192,7 +142,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         name
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(accounts_filter_query, variable_values={"name": "Account1"})
@@ -213,7 +163,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         orchard
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": account1_id})
@@ -225,7 +175,6 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print(f"  Sapling: {addresses['sapling'][:50]}..." if addresses['sapling'] else "  Sapling: None")
             print(f"  Orchard: {addresses['orchard'][:50]}..." if addresses['orchard'] else "  Orchard: None")
 
-            # Orchard should always be present for new accounts
             assert addresses["orchard"], "Orchard address should be present"
 
             print("\n=== Step 6: Test new_addresses mutation ===")
@@ -240,7 +189,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         diversifierIndex
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(new_addresses_mutation, variable_values={"account": account1_id})
@@ -260,7 +209,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         }]
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(
@@ -297,7 +246,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         total
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": account1_id})
@@ -314,8 +263,8 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print("\n=== Step 9: Test transactions_by_account query ===")
             transactions_query = gql(
                 """
-                query ($account: Int!) {
-                    transactionsByAccount(idAccount: $account) {
+                query ($account: Int!, $height: Int) {
+                    transactionsByAccount(idAccount: $account, height: $height) {
                         id
                         txid
                         height
@@ -323,15 +272,15 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         fee
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
-                GraphQLRequest(transactions_query, variable_values={"account": account1_id})
+                GraphQLRequest(transactions_query, variable_values={"account": account1_id, "height": None})
             )
             transactions = result["transactionsByAccount"]
             print(f"Found {len(transactions)} transactions for account 1")
             assert len(transactions) >= 1, "Should have at least one transaction"
-            for tx in transactions[:3]:  # Show first 3
+            for tx in transactions[:3]:
                 print(f"  - TX: {tx['txid']}, Height: {tx['height']}, Value: {tx['value']} ZEC")
 
             print("\n=== Step 10: Test transaction_by_id query ===")
@@ -346,7 +295,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         fee
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(
@@ -395,13 +344,13 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
 
             print("\n=== Step 12: Verify transaction history for both accounts ===")
             result = await client.execute_async(
-                GraphQLRequest(transactions_query, variable_values={"account": account1_id})
+                GraphQLRequest(transactions_query, variable_values={"account": account1_id, "height": None})
             )
             account1_txs = result["transactionsByAccount"]
             print(f"Account 1 has {len(account1_txs)} transactions")
 
             result = await client.execute_async(
-                GraphQLRequest(transactions_query, variable_values={"account": account2_id})
+                GraphQLRequest(transactions_query, variable_values={"account": account2_id, "height": None})
             )
             account2_txs = result["transactionsByAccount"]
             print(f"Account 2 has {len(account2_txs)} transactions")
@@ -416,11 +365,9 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             )
             all_txs = result["transactionsByAccount"]
 
-            # Get current height and filter
             result = await client.execute_async(GraphQLRequest(gql("query { currentHeight }")))
             current_height = result["currentHeight"]
 
-            # Query from a higher height (should return fewer transactions)
             result = await client.execute_async(
                 GraphQLRequest(
                     transactions_query,
@@ -435,15 +382,5 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print("\n✅ Transactions and addresses test passed!")
 
     finally:
-        # Cleanup
-        if process:
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-        if os.path.exists(LOG_PATH):
-            os.remove(LOG_PATH)
+        await stop_zkool_instance(process)
+        cleanup_test_files(DB_PATH, LOG_PATH)
