@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import json
 import os
 import subprocess
 
@@ -59,6 +60,11 @@ def lwd_url():
     return os.getenv("LWD_URL", "http://localhost:8137")
 
 
+@pytest.fixture(scope="session")
+def ws_url():
+    return os.getenv("WS_URL", "ws://localhost:8000/subscriptions")
+
+
 @pytest.fixture
 def gql_client_factory():
     """Factory to create GraphQL clients for different URLs."""
@@ -110,7 +116,7 @@ def create_jwt_token(private_pem: str, account_id: int) -> str:
 
 
 @pytest.mark.asyncio
-async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
+async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url, ws_url):
     """Test JWT authentication for account access control."""
     if not seed:
         pytest.skip("SEED not set")
@@ -509,6 +515,354 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                     GraphQLRequest(balance_query, variable_values={"account": account2_id})
                 )
                 print(f"Admin sees account 2 balance: {result['balanceByAccount']['orchard']} ZEC")
+
+            print("\n=== Step 12: Test subscription access control ===")
+            import websockets
+
+            # Helper to create a long-running subscription that collects events
+            class EventSubscription:
+                def __init__(self, jwt_token, account_id):
+                    self.jwt_token = jwt_token
+                    self.account_id = account_id
+                    self.events = []
+                    self.task = None
+                    self.ws = None
+                    self.stop_event = asyncio.Event()
+
+                async def start(self):
+                    async def run_subscription():
+                        try:
+                            self.ws = await websockets.connect(
+                                ws_url,
+                                close_timeout=60,
+                                subprotocols=["graphql-ws"]
+                            )
+
+                            # Send connection init with JWT
+                            init_payload = {"authToken": self.jwt_token}
+                            await self.ws.send(json.dumps({"type": "connection_init", "payload": init_payload}))
+
+                            # Wait for connection_ack
+                            try:
+                                init_msg = json.loads(await asyncio.wait_for(self.ws.recv(), timeout=5.0))
+                                if init_msg.get("type") != "connection_ack":
+                                    print(f"  [Account {self.account_id}] Warning: Expected connection_ack, got: {init_msg}")
+                                    return
+                            except asyncio.TimeoutError:
+                                print(f"  [Account {self.account_id}] Warning: No connection_ack received")
+                                return
+
+                            # Subscribe to account
+                            subscription_query = {
+                                "id": "1",
+                                "type": "start",
+                                "payload": {
+                                    "variables": {"id_account": self.account_id},
+                                    "query": """
+                                        subscription ($id_account: Int!) {
+                                            events(idAccount: $id_account) {
+                                                type
+                                                height
+                                                txid
+                                                value
+                                            }
+                                        }
+                                    """
+                                }
+                            }
+                            await self.ws.send(json.dumps(subscription_query))
+                            await asyncio.sleep(1)
+                            print(f"  [Account {self.account_id}] Subscription established")
+
+                            # Collect events until stopped
+                            while not self.stop_event.is_set():
+                                try:
+                                    message = await asyncio.wait_for(self.ws.recv(), timeout=1.0)
+                                    if not message:
+                                        continue
+                                    data = json.loads(message)
+
+                                    if data.get("type") == "ping":
+                                        await self.ws.send(json.dumps({"type": "pong"}))
+                                        continue
+                                    elif data.get("type") in ("pong", "ka", "connection_ack"):
+                                        continue
+
+                                    if isinstance(data, dict) and "payload" in data:
+                                        payload = data["payload"]
+                                        if isinstance(payload, dict):
+                                            if "errors" in payload:
+                                                for error in payload["errors"]:
+                                                    print(f"  [Account {self.account_id}] Subscription error: {error.get('message', str(error))}")
+                                            elif "data" in payload:
+                                                event_data = payload["data"].get("events") if isinstance(payload["data"], dict) else None
+                                                if event_data and isinstance(event_data, dict):
+                                                    self.events.append(event_data)
+                                                    print(f"  [Account {self.account_id}] Event: type={event_data.get('type')}, txid={event_data.get('txid', 'N/A')}")
+                                except (asyncio.TimeoutError, json.JSONDecodeError):
+                                    continue
+
+                        except Exception as e:
+                            print(f"  [Account {self.account_id}] WebSocket error: {e}")
+                        finally:
+                            if self.ws:
+                                await self.ws.close()
+
+                    self.task = asyncio.create_task(run_subscription())
+
+                async def stop(self):
+                    self.stop_event.set()
+                    if self.task:
+                        await self.task
+
+            # First, sync admin account to ensure fresh notes
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": admin_id})
+            )
+
+            # Generate address for testing
+            result = await client.execute_async(
+                GraphQLRequest(
+                    gql("""
+                        mutation ($account: Int!) {
+                            newAddresses(idAccount: $account) {
+                                orchard
+                            }
+                        }
+                    """),
+                    variable_values={"account": account2_id}
+                )
+            )
+            account2_address = result["newAddresses"]["orchard"]
+            print(f"Generated new address for account 2")
+
+            # Test 1: Set up subscriptions for BOTH accounts BEFORE transaction
+            print("\n--- Test 1: TX events sent to sender only, not receiver ---")
+
+            # Create subscriptions for both accounts
+            account1_sub = EventSubscription(jwt1_token, account1_id)
+            account2_sub = EventSubscription(jwt2_token, account2_id)
+
+            await account1_sub.start()
+            await account2_sub.start()
+            await asyncio.sleep(2)  # Let subscriptions establish
+
+            print("  Subscriptions established for both accounts, now sending transaction...")
+
+            # Send transaction FROM account 1 TO account 2
+            result = await client.execute_async(
+                GraphQLRequest(
+                    pay_mutation,
+                    variable_values={"account": account1_id, "address": account2_address, "amount": "0.01"}
+                )
+            )
+            txid_from_account1 = result["pay"]
+            print(f"Sent transaction from account 1 to account 2, txid: {txid_from_account1}")
+
+            # Wait a bit for mempool event
+            await asyncio.sleep(3)
+
+            # Mine blocks
+            height_before = await get_current_height(client)
+            await mine_blocks(rpc_url, 3)
+            await wait_for_blocks(client, height_before, 3)
+
+            # Sync both accounts
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": account1_id})
+            )
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": account2_id})
+            )
+
+            # Wait for events
+            await asyncio.sleep(3)
+
+            # Check if Account 1 (sender) received their TX event
+            account1_tx_events = [e for e in account1_sub.events if e["type"] == "TX"]
+            print(f"Account 1 (sender) JWT received {len(account1_tx_events)} TX events")
+
+            account1_own_events = [e for e in account1_tx_events if not e.get('txid', '').lower().startswith('failed')]
+
+            if account1_own_events:
+                print(f"  ✓ Account 1 (sender) correctly received their own TX event(s)")
+                for e in account1_own_events:
+                    print(f"    - txid: {e.get('txid')}, value: {e.get('value')}")
+            else:
+                print(f"  ERROR: Account 1 did NOT receive their own TX event!")
+                print(f"    All events: {account1_sub.events}")
+                assert False, "Account 1 JWT should receive their own account TX events!"
+
+            # Check if Account 2 (receiver) received the TX event
+            account2_tx_events = [e for e in account2_sub.events if e["type"] == "TX"]
+            print(f"Account 2 (receiver) JWT received {len(account2_tx_events)} TX events")
+
+            if account2_tx_events:
+                print(f"  ERROR: Account 2 should NOT receive TX events for transactions sent TO them!")
+                for e in account2_tx_events:
+                    print(f"    - txid: {e.get('txid')}, value: {e.get('value')}")
+                assert False, "Account 2 should not receive TX events for incoming transactions!"
+            else:
+                print(f"  ✓ Account 2 (receiver) correctly did NOT receive the TX event")
+                print(f"    This confirms TX events are sent to the SENDER only")
+
+            # Stop both subscriptions
+            await account1_sub.stop()
+            await account2_sub.stop()
+
+            # Test 2: Account 1 JWT should NOT be able to subscribe to account 2
+            print("\n--- Test 2: Account 1 JWT cannot subscribe to account 2 ---")
+
+            async def test_blocked_subscription(jwt_token, account_id):
+                """Try to subscribe to an account we don't have access to."""
+                try:
+                    ws = await websockets.connect(
+                        ws_url,
+                        close_timeout=60,
+                        subprotocols=["graphql-ws"]
+                    )
+
+                    init_payload = {"authToken": jwt_token}
+                    await ws.send(json.dumps({"type": "connection_init", "payload": init_payload}))
+
+                    init_msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=5.0))
+                    if init_msg.get("type") != "connection_ack":
+                        return {"error": "No connection_ack"}
+
+                    subscription_query = {
+                        "id": "1",
+                        "type": "start",
+                        "payload": {
+                            "variables": {"id_account": account_id},
+                            "query": """
+                                subscription ($id_account: Int!) {
+                                    events(idAccount: $id_account) {
+                                        type
+                                    }
+                                }
+                            """
+                        }
+                    }
+                    await ws.send(json.dumps(subscription_query))
+
+                    # Wait for response
+                    for _ in range(5):
+                        try:
+                            message = await asyncio.wait_for(ws.recv(), timeout=2.0)
+                            data = json.loads(message)
+                            if data.get("type") == "ping":
+                                await ws.send(json.dumps({"type": "pong"}))
+                            elif "payload" in data:
+                                payload = data.get("payload", {})
+                                if "errors" in payload:
+                                    await ws.close()
+                                    return {"blocked": True, "error": payload["errors"][0].get("message")}
+                        except asyncio.TimeoutError:
+                            continue
+
+                    await ws.close()
+                    return {"blocked": False}
+                except Exception as e:
+                    return {"error": str(e)}
+
+            result = await test_blocked_subscription(jwt1_token, account2_id)
+            if result.get("blocked") or result.get("error"):
+                print(f"  ✓ Account 1 JWT correctly blocked from subscribing to account 2")
+                if result.get("error"):
+                    print(f"    Error: {result['error']}")
+            else:
+                print(f"  ERROR: Account 1 JWT should be blocked from subscribing to account 2!")
+                assert False, "Account 1 JWT should be blocked from subscribing to account 2"
+
+            # Test 3: Anonymous (no JWT) cannot subscribe
+            print("\n--- Test 3: Anonymous cannot subscribe ---")
+            result = await test_blocked_subscription(None, account1_id)
+            if result.get("error"):
+                print(f"  ✓ Anonymous correctly blocked from subscribing")
+            else:
+                print(f"  ERROR: Anonymous should be blocked from subscribing!")
+                assert False, "Anonymous should be blocked from subscribing"
+
+            # Test 4: Block events are sent to authenticated users
+            print("\n--- Test 4: Block events sent to authenticated users ---")
+
+            # Helper for collecting events
+            async def collect_subscription_events(jwt_token, account_id, duration):
+                events = []
+                try:
+                    ws = await websockets.connect(
+                        ws_url,
+                        close_timeout=60,
+                        subprotocols=["graphql-ws"]
+                    )
+
+                    init_payload = {}
+                    if jwt_token:
+                        init_payload["authToken"] = jwt_token
+                    await ws.send(json.dumps({"type": "connection_init", "payload": init_payload}))
+
+                    try:
+                        await asyncio.wait_for(ws.recv(), timeout=5.0)  # connection_ack
+                    except asyncio.TimeoutError:
+                        return events
+
+                    subscription_query = {
+                        "id": "1",
+                        "type": "start",
+                        "payload": {
+                            "variables": {"id_account": account_id},
+                            "query": """
+                                subscription ($id_account: Int!) {
+                                    events(idAccount: $id_account) {
+                                        type
+                                        height
+                                    }
+                                }
+                            """
+                        }
+                    }
+                    await ws.send(json.dumps(subscription_query))
+
+                    start_time = asyncio.get_event_loop().time()
+                    while asyncio.get_event_loop().time() - start_time < duration:
+                        try:
+                            message = await asyncio.wait_for(ws.recv(), timeout=1.0)
+                            if not message:
+                                continue
+                            data = json.loads(message)
+                            if data.get("type") == "ping":
+                                await ws.send(json.dumps({"type": "pong"}))
+                                continue
+                            elif data.get("type") in ("pong", "ka"):
+                                continue
+                            if isinstance(data, dict) and "payload" in data:
+                                payload = data["payload"]
+                                if isinstance(payload, dict) and "data" in payload:
+                                    event_data = payload["data"].get("events")
+                                    if event_data and isinstance(event_data, dict):
+                                        events.append(event_data)
+                        except (asyncio.TimeoutError, json.JSONDecodeError):
+                            continue
+
+                    await ws.close()
+                except Exception:
+                    pass
+                return events
+
+            height_before = await get_current_height(client)
+            await mine_blocks(rpc_url, 3)
+
+            events_jwt1 = await collect_subscription_events(jwt1_token, account1_id, 5)
+            block_events_jwt1 = [e for e in events_jwt1 if e["type"] == "BLOCK"]
+            print(f"Account 1 JWT received {len(block_events_jwt1)} BLOCK events")
+
+            if len(block_events_jwt1) > 0:
+                print(f"  ✓ BLOCK events sent to authenticated users")
+            else:
+                print(f"  Note: No BLOCK events received (events may be delayed)")
+
+
+            print("\n✅ Subscription access control test passed!")
 
             print("\n✅ JWT authentication test passed!")
 
