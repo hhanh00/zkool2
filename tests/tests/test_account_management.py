@@ -1,56 +1,19 @@
 """Test account lifecycle management, notes, and memos."""
 
-import asyncio
-import contextlib
 import os
-import subprocess
 
-import httpx
 import pytest
-from gql import Client, GraphQLRequest, gql
-from gql.transport.httpx import HTTPXAsyncTransport
+from gql import GraphQLRequest, gql
 
-from utils import get_current_height, mine_blocks, wait_for_blocks
-
-
-@pytest.fixture(scope="session")
-def zkool_binary():
-    """Path to zkool_graphql binary."""
-    return os.path.join(os.path.dirname(__file__), "..", "..", "target", "release", "zkool_graphql")
-
-
-@pytest.fixture(scope="session")
-def rpc_url():
-    return os.getenv("RPC_URL", "http://127.0.0.1:18232/")
-
-
-@pytest.fixture(scope="session")
-def seed():
-    return os.getenv("SEED", "")
-
-
-@pytest.fixture(scope="session")
-def lwd_url():
-    return os.getenv("LWD_URL", "http://localhost:8137")
-
-
-@pytest.fixture
-def gql_client_factory():
-    """Factory to create GraphQL clients for different URLs."""
-
-    @contextlib.asynccontextmanager
-    async def _create_client(url: str):
-        timeout = httpx.Timeout(300.0, connect=60.0)
-        transport = HTTPXAsyncTransport(url=url, timeout=timeout)
-        client = Client(
-            transport=transport, fetch_schema_from_transport=False, execute_timeout=300.0
-        )
-        try:
-            yield client
-        finally:
-            await client.close_async()
-
-    return _create_client
+from utils import (
+    cleanup_test_files,
+    get_current_height,
+    kill_existing_zkool_processes,
+    mine_blocks,
+    start_zkool_instance,
+    stop_zkool_instance,
+    wait_for_blocks,
+)
 
 
 @pytest.mark.asyncio
@@ -70,22 +33,10 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
     process = None
 
     try:
-        # Kill any existing zkool_graphql processes
-        subprocess.run(["pkill", "-9", "zkool_graphql"], stderr=subprocess.DEVNULL)
-        await asyncio.sleep(1)
+        await kill_existing_zkool_processes()
 
-        # Remove existing database
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-
-        # Start zkool_graphql instance
         print(f"Starting zkool_graphql on port {PORT}")
-        process = subprocess.Popen(
-            [zkool_binary, "-d", DB_PATH, "-p", str(PORT), "-l", lwd_url],
-            stdout=open(LOG_PATH, "w"),
-            stderr=subprocess.STDOUT,
-        )
-        await asyncio.sleep(2)
+        process = await start_zkool_instance(zkool_binary, DB_PATH, PORT, lwd_url, LOG_PATH)
 
         # Check if process is still running
         poll_result = process.poll()
@@ -108,7 +59,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         birth: 1
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(create_account_mutation, variable_values={"main": seed})
@@ -116,13 +67,12 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             funding_id = int(result["createAccount"])
             print(f"Created funding wallet: {funding_id}")
 
-            # Synchronize funding wallet
             sync_mutation = gql(
                 """
                 mutation ($account: Int!) {
                     synchronizeAccount(idAccount: $account)
                 }
-            """
+                """
             )
             await client.execute_async(
                 GraphQLRequest(sync_mutation, variable_values={"account": funding_id})
@@ -140,7 +90,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         birth: 1
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(create_account_mutation, variable_values={"name": "TestAccount"})
@@ -154,7 +104,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 mutation ($account: Int!, $name: String!) {
                     editAccount(idAccount: $account, updateAccount: {name: $name})
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(
@@ -175,7 +125,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         height
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(accounts_query, variable_values={"id": test_account_id})
@@ -193,7 +143,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         orchard
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": test_account_id})
@@ -210,7 +160,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         }]
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(
@@ -247,7 +197,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         scope
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(notes_query, variable_values={"account": test_account_id})
@@ -269,7 +219,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         txid
                     }
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(transactions_query, variable_values={"account": test_account_id})
@@ -283,14 +233,13 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 query ($account: Int!, $tx: Int!) {
                     memosByTransaction(idAccount: $account, idTransaction: $tx)
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(memos_query, variable_values={"account": test_account_id, "tx": tx_id})
             )
             memos = result["memosByTransaction"]
             print(f"Found {len(memos)} memos for transaction {tx_id}")
-            # Memos might be empty for regular transactions
             if len(memos) > 0:
                 for memo in memos:
                     print(f"  - Memo: {memo}")
@@ -320,7 +269,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         }]
                     })
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(
@@ -376,7 +325,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 mutation ($account: Int!) {
                     resetAccount(idAccount: $account)
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(reset_mutation, variable_values={"account": test_account_id})
@@ -390,7 +339,6 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             )
             reset_height = result["accounts"][0]["height"]
             print(f"Height after reset: {reset_height}")
-            # Height should be lower (typically 0 or birth height)
             assert reset_height < original_height, f"Height should be lower after reset, was {original_height}, now {reset_height}"
 
             print("\n=== Step 9: Re-sync account after reset ===")
@@ -410,7 +358,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 mutation ($account: Int!) {
                     deleteAccount(idAccount: $account)
                 }
-            """
+                """
             )
             result = await client.execute_async(
                 GraphQLRequest(delete_mutation, variable_values={"account": receiver_id})
@@ -428,15 +376,5 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             print("\n✅ Account management test passed!")
 
     finally:
-        # Cleanup
-        if process:
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-        if os.path.exists(LOG_PATH):
-            os.remove(LOG_PATH)
+        await stop_zkool_instance(process)
+        cleanup_test_files(DB_PATH, LOG_PATH)
