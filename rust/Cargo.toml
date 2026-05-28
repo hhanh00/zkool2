@@ -144,3 +144,17 @@ graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp"
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 flutter_rust_bridge = ["dep:flutter_rust_bridge"]
+
+[patch.crates-io]
+#orchard = { path = "../../orchard" }
+#sapling-crypto = { path = "../../sapling-crypto" }
+#zcash_address = { path = "../../librustzcash/components/zcash_address" }
+#zcash_encoding = { path = "../../librustzcash/components/zcash_encoding" }
+#zcash_keys = { path = "../../librustzcash/zcash_keys" }
+#zcash_note_encryption = { path = "../../zcash_note_encryption" }
+#zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
+#zcash_proofs = { path = "../../librustzcash/zcash_proofs" }
+#zcash_protocol = { path = "../../librustzcash/components/zcash_protocol" }
+#zcash_transparent = { path = "../../librustzcash/zcash_transparent" }
+#pczt = { path = "../../librustzcash/pczt" }
+#zip321 = { path = "../../librustzcash/components/zip321" }
