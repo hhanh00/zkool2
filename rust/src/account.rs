@@ -38,7 +38,7 @@ use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use jubjub::Fr;
 use orchard::{
     keys::FullViewingKey,
-    note::{RandomSeed, Rho},
+    note::{AssetBase, RandomSeed, Rho},
     tree::MerkleHashOrchard,
     value::NoteValue,
     Note,
@@ -620,7 +620,7 @@ pub async fn get_orchard_note(
     let recipient = ovk.address(diversifer, scope);
     let value = NoteValue::from_raw(value);
     let rseed = RandomSeed::from_bytes(rcm.try_into().unwrap(), &rho).unwrap();
-    let note = Note::from_parts(recipient, value, rho, rseed)
+    let note = Note::from_parts(recipient, value, AssetBase::zatoshi(), rho, rseed)
         .into_option()
         .unwrap();
 

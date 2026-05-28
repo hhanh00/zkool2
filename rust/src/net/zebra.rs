@@ -18,13 +18,14 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_rustls::TlsConnector;
 use tor_rtcompat::PreferredRuntime;
 use webpki_roots::TLS_SERVER_ROOTS;
-use zcash_note_encryption::COMPACT_NOTE_SIZE;
 use zcash_primitives::{block::BlockHeader, transaction::Transaction};
 
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::async_trait;
 use zcash_protocol::consensus::{BlockHeight, BranchId};
+
+const COMPACT_NOTE_SIZE: usize = 52;
 
 use crate::{
     IntoAnyhow, api::coin::{Network, TOR}, lwd::*, net::LwdServer
@@ -353,18 +354,18 @@ pub fn parse_block(
                 outputs.push(CompactSaplingOutput {
                     cmu: output.cmu().to_bytes().to_vec(),
                     epk: output.ephemeral_key().0.to_vec(),
-                    ciphertext: output.enc_ciphertext()[..COMPACT_NOTE_SIZE].to_vec(),
+                    ciphertext: output.enc_ciphertext().as_ref()[..COMPACT_NOTE_SIZE].to_vec(),
                 });
             }
         }
         let mut actions = vec![];
         if let Some(orchard_bundle) = tx_data.orchard_bundle() {
-            for action in orchard_bundle.actions().iter() {
+            for action in orchard_bundle.as_vanilla_bundle().actions().iter() {
                 actions.push(CompactOrchardAction {
                     nullifier: action.nullifier().to_bytes().to_vec(),
                     cmx: action.cmx().to_bytes().to_vec(),
                     ephemeral_key: action.encrypted_note().epk_bytes.to_vec(),
-                    ciphertext: action.encrypted_note().enc_ciphertext[..COMPACT_NOTE_SIZE]
+                    ciphertext: action.encrypted_note().enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE]
                         .to_vec(),
                 });
             }
