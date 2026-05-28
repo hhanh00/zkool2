@@ -399,7 +399,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 Some(recipient.to_bytes()),
                 Some(value.inner()),
                 tiu!(epk.as_ref()),
-                enc.to_vec(),
+                enc.0.to_vec(),
                 cout.to_vec(),
                 Some(rseed),
                 Some(rcv),

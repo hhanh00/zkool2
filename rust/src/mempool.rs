@@ -2,7 +2,7 @@ use crate::api::coin::Network;
 use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::{keys::Scope, note_encryption::OrchardDomain};
+use orchard::{keys::Scope, primitives::OrchardDomain, flavor::OrchardVanilla};
 use sapling_crypto::{
     keys::PreparedIncomingViewingKey,
     note_encryption::SaplingDomain,
@@ -272,7 +272,7 @@ pub async fn decode_raw_transaction(
     }
 
     if let Some(obundle) = tx_data.orchard_bundle() {
-        for v in obundle.actions().iter() {
+        for v in obundle.as_vanilla_bundle().actions().iter() {
             let nf = v.nullifier().to_bytes().to_vec();
             let spent_amount = sqlx::query(
                 "SELECT a.id_account, a.name, n.value, n.pool, n.scope, n.diversifier, m.memo_text
@@ -297,7 +297,7 @@ pub async fn decode_raw_transaction(
             .await?;
             notes.extend(spent_amount);
 
-            let domain = OrchardDomain::for_action(v);
+            let domain = OrchardDomain::<OrchardVanilla>::for_action(v);
             for (account, name, fvk) in okeys.iter() {
                 for scope in [Scope::External, Scope::Internal] {
                     let ivk = fvk.to_ivk(scope);
