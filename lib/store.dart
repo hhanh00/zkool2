@@ -19,7 +19,6 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/api/vote.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/vault.dart';
@@ -455,34 +454,6 @@ class CurrentHeightNotifier extends _$CurrentHeightNotifier {
     if (state == height) return false;
     state = height;
     return true;
-  }
-}
-
-@freezed
-sealed class ElectionData with _$ElectionData {
-  factory ElectionData({
-    required ElectionPropsPub? election,
-    required String url,
-    required int account,
-  }) = _ElectionData;
-}
-
-@Riverpod(keepAlive: true)
-class ElectionNotifier extends _$ElectionNotifier {
-  @override
-  ElectionData? build() => null;
-
-  Future<void> fetch(int account, String url) async {
-    final c = coinContext.coin;
-    final election = await fetchElection(account: account, url: url, c: c);
-    state = ElectionData(election: election, account: account, url: url);
-  }
-
-  Future<ElectionPropsPub?> init() async {
-    final c = coinContext.coin;
-    final (account, url, election) = await getElection(c: c);
-    state = ElectionData(election: election, account: account, url: url);
-    return election;
   }
 }
 

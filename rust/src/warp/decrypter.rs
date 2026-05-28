@@ -17,7 +17,8 @@ use halo2_proofs::pasta::{
 use orchard::{
     keys::IncomingViewingKey,
     note::{ExtractedNoteCommitment, Nullifier, Rho},
-    note_encryption::{CompactAction, OrchardDomain},
+    primitives::{CompactAction, OrchardDomain},
+    flavor::OrchardVanilla,
 };
 use sapling_crypto::{
     note_encryption::{
@@ -25,7 +26,7 @@ use sapling_crypto::{
     },
     SaplingIvk,
 };
-use zcash_note_encryption::EphemeralKeyBytes;
+use zcash_note_encryption::{note_bytes::{NoteBytesData, NoteBytes}, EphemeralKeyBytes};
 
 const COMPACT_NOTE_SIZE: usize = 52;
 
@@ -81,7 +82,7 @@ pub fn try_sapling_decrypt(
         use zcash_note_encryption::Domain;
         let pivk = sapling_crypto::keys::PreparedIncomingViewingKey::new(ivk);
         let d = SaplingDomain::new(zip212_enforcement);
-        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &plaintext)
+        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &NoteBytesData(plaintext))
         {
             let cmx = note.cmu();
             if cmx.to_bytes() == *co.cmu {
@@ -134,7 +135,7 @@ pub fn try_orchard_decrypt(
         .update(&ka.to_bytes())
         .update(&ca.ephemeral_key)
         .finalize();
-    let mut plaintext = [0; COMPACT_NOTE_SIZE];
+    let mut plaintext = [0u8; 52];
     plaintext.copy_from_slice(&ca.ciphertext);
     let mut keystream = ChaCha20::new(key.as_ref().into(), [0u8; 12][..].into());
     keystream.seek(64);
@@ -146,14 +147,14 @@ pub fn try_orchard_decrypt(
         use zcash_note_encryption::Domain;
         let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
         let rho = Rho::from_bytes(&ca.nullifier.clone().try_into().unwrap()).unwrap();
-        let cca = CompactAction::from_parts(
+        let cca = CompactAction::<OrchardVanilla>::from_parts(
             Nullifier::from_bytes(&rho.to_bytes()).unwrap(),
             ExtractedNoteCommitment::from_bytes(&ca.cmx.clone().try_into().unwrap()).unwrap(),
             EphemeralKeyBytes(ca.ephemeral_key.clone().try_into().unwrap()),
-            ca.ciphertext.clone().try_into().unwrap(),
+            NoteBytesData::from_slice(&ca.ciphertext).unwrap(),
         );
-        let d = OrchardDomain::for_compact_action(&cca);
-        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &plaintext)
+        let d = OrchardDomain::<OrchardVanilla>::for_compact_action(&cca);
+        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &NoteBytesData(plaintext))
         {
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let value = note.value().inner();
