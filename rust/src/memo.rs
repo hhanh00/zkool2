@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain};
+use orchard::{keys::Scope, note::ExtractedNoteCommitment, primitives::OrchardDomain, flavor::OrchardVanilla};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
@@ -208,7 +208,7 @@ pub async fn decrypt_memo(
     let ovk = get_orchard_vk(connection, account).await?;
 
     if let Some(bundle) = tx_data.orchard_bundle() {
-        for _action in bundle.actions().iter() {
+        for _action in bundle.as_vanilla_bundle().actions().iter() {
             fee_manager.add_input(2);
             fee_manager.add_output(2);
         }
@@ -216,8 +216,8 @@ pub async fn decrypt_memo(
         if let Some(ovk) = ovk.as_ref() {
             let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
             let ovk = ovk.to_ovk(Scope::External);
-            for (vout, action) in bundle.actions().iter().enumerate() {
-                let domain = OrchardDomain::for_action(action);
+            for (vout, action) in bundle.as_vanilla_bundle().actions().iter().enumerate() {
+                let domain = OrchardDomain::<OrchardVanilla>::for_action(action);
 
                 if let Some((note, _address, memo_bytes)) =
                     try_note_decryption(&domain, &pivk, action)
