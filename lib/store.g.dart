@@ -668,56 +668,6 @@ abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
   }
 }
 
-@ProviderFor(ElectionNotifier)
-const electionProvider = ElectionNotifierProvider._();
-
-final class ElectionNotifierProvider
-    extends $NotifierProvider<ElectionNotifier, ElectionData?> {
-  const ElectionNotifierProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'electionProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
-
-  @override
-  String debugGetCreateSourceHash() => _$electionNotifierHash();
-
-  @$internal
-  @override
-  ElectionNotifier create() => ElectionNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ElectionData? value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<ElectionData?>(value),
-    );
-  }
-}
-
-String _$electionNotifierHash() => r'7ab19af17d5ec65bbf88cd66f2cd7b912022bfe0';
-
-abstract class _$ElectionNotifier extends $Notifier<ElectionData?> {
-  ElectionData? build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final created = build();
-    final ref = this.ref as $Ref<ElectionData?, ElectionData?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<ElectionData?, ElectionData?>,
-        ElectionData?,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
-  }
-}
-
 @ProviderFor(MempoolNotifier)
 const mempoolProvider = MempoolNotifierProvider._();
 
@@ -801,7 +751,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'b37f55e4203ecb01144d63471d352f24caf7d136';
+    r'558e7832444bfa102f87a85a6b00bccda2323e01';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

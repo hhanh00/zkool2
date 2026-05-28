@@ -6,8 +6,9 @@ use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
     circuit::ProvingKey,
+    flavor::OrchardVanilla,
     keys::{Scope, SpendAuthorizingKey},
-    note::ExtractedNoteCommitment,
+    note::{AssetBase, ExtractedNoteCommitment},
     Address,
 };
 use pczt::{
@@ -608,6 +609,7 @@ pub async fn plan_transaction(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
                     value,
+                    AssetBase::zatoshi(),
                     memo,
                 )?;
             }
@@ -1246,4 +1248,4 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
 }
 
 pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(LocalTxProver::bundled);
-pub static ORCHARD_PK: LazyLock<ProvingKey> = LazyLock::new(ProvingKey::build);
+pub static ORCHARD_PK: LazyLock<ProvingKey> = LazyLock::new(ProvingKey::build::<OrchardVanilla>);
