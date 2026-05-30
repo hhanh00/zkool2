@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "zkool": {
+      "url": "http://localhost:8001/mcp"
+    }
+  }
+}
