@@ -271,6 +271,7 @@ pub(crate) const fn _regtest() -> LocalNetwork {
         nu5: Some(BlockHeight::from_u32(1)),
         nu6: Some(BlockHeight::from_u32(1)),
         nu6_1: Some(BlockHeight::from_u32(1)),
+        nu7: Some(BlockHeight::from_u32(1)),
     }
 }
 
