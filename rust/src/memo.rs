@@ -1,5 +1,6 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, primitives::OrchardDomain, flavor::OrchardVanilla};
+use orchard::{keys::Scope, note::ExtractedNoteCommitment, primitives::OrchardDomain, flavor::{OrchardVanilla, OrchardZSA}};
+use zcash_primitives::transaction::OrchardBundle;
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
@@ -207,78 +208,89 @@ pub async fn decrypt_memo(
 
     let ovk = get_orchard_vk(connection, account).await?;
 
-    if let Some(bundle) = tx_data.orchard_bundle() {
-        for _action in bundle.as_vanilla_bundle().actions().iter() {
-            fee_manager.add_input(2);
-            fee_manager.add_output(2);
-        }
+    macro_rules! process_orchard_memo {
+        ($bundle:expr, $flavor:ty) => {{
+            let bundle = $bundle;
+            for _action in bundle.actions().iter() {
+                fee_manager.add_input(2);
+                fee_manager.add_output(2);
+            }
 
-        if let Some(ovk) = ovk.as_ref() {
-            let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
-            let ovk = ovk.to_ovk(Scope::External);
-            for (vout, action) in bundle.as_vanilla_bundle().actions().iter().enumerate() {
-                let domain = OrchardDomain::<OrchardVanilla>::for_action(action);
+            if let Some(ovk) = ovk.as_ref() {
+                let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
+                let ovk = ovk.to_ovk(Scope::External);
+                for (vout, action) in bundle.actions().iter().enumerate() {
+                    let domain = OrchardDomain::<$flavor>::for_action(action);
 
-                if let Some((note, _address, memo_bytes)) =
-                    try_note_decryption(&domain, &pivk, action)
-                {
-                    let cmx: ExtractedNoteCommitment = note.commitment().into();
-                    let id_note =
-                        sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
-                            .bind(account)
-                            .bind(&cmx.to_bytes()[..])
-                            .map(|row: SqliteRow| row.get::<u32, _>(0))
-                            .fetch_one(&mut *connection)
-                            .await
-                            .context("Failed to find note")?;
+                    if let Some((note, _address, memo_bytes)) =
+                        try_note_decryption(&domain, &pivk, action)
+                    {
+                        let cmx: ExtractedNoteCommitment = note.commitment().into();
+                        let id_note =
+                            sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
+                                .bind(account)
+                                .bind(&cmx.to_bytes()[..])
+                                .map(|row: SqliteRow| row.get::<u32, _>(0))
+                                .fetch_one(&mut *connection)
+                                .await
+                                .context("Failed to find note")?;
 
-                    process_memo(
-                        connection,
-                        account,
-                        height,
-                        id_tx,
-                        Some(id_note),
-                        None,
-                        2,
-                        vout as u32,
-                        &memo_bytes,
-                    )
-                    .await?;
-                } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
-                    &domain,
-                    &ovk,
-                    action,
-                    action.cv_net(),
-                    &action.encrypted_note().out_ciphertext,
-                ) {
-                    let address =
-                        UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
-                    let id_output = store_output(
-                        connection,
-                        account,
-                        height,
-                        id_tx,
-                        2, // Orchard pool
-                        vout as u32,
-                        note.value().inner(),
-                        &address.encode(network),
-                    )
-                    .await?;
+                        process_memo(
+                            connection,
+                            account,
+                            height,
+                            id_tx,
+                            Some(id_note),
+                            None,
+                            2,
+                            vout as u32,
+                            &memo_bytes,
+                        )
+                        .await?;
+                    } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
+                        &domain,
+                        &ovk,
+                        action,
+                        action.cv_net(),
+                        &action.encrypted_note().out_ciphertext,
+                    ) {
+                        let address =
+                            UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+                        let id_output = store_output(
+                            connection,
+                            account,
+                            height,
+                            id_tx,
+                            2, // Orchard pool
+                            vout as u32,
+                            note.value().inner(),
+                            &address.encode(network),
+                        )
+                        .await?;
 
-                    process_memo(
-                        connection,
-                        account,
-                        height,
-                        id_tx,
-                        None,
-                        Some(id_output),
-                        2,
-                        vout as u32,
-                        &memo_bytes,
-                    )
-                    .await?;
+                        process_memo(
+                            connection,
+                            account,
+                            height,
+                            id_tx,
+                            None,
+                            Some(id_output),
+                            2,
+                            vout as u32,
+                            &memo_bytes,
+                        )
+                        .await?;
+                    }
                 }
             }
+        }};
+    }
+
+    if let Some(bundle) = tx_data.orchard_bundle() {
+        match bundle {
+            OrchardBundle::OrchardVanilla(b) => process_orchard_memo!(b, OrchardVanilla),
+            #[cfg(zcash_unstable = "nu7")]
+            OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
         }
     }
 

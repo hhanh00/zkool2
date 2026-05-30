@@ -18,7 +18,7 @@ use orchard::{
     keys::IncomingViewingKey,
     note::{ExtractedNoteCommitment, Nullifier, Rho},
     primitives::{CompactAction, OrchardDomain},
-    flavor::OrchardVanilla,
+    flavor::{OrchardVanilla, OrchardZSA},
 };
 use sapling_crypto::{
     note_encryption::{
@@ -135,10 +135,62 @@ pub fn try_orchard_decrypt(
         .update(&ka.to_bytes())
         .update(&ca.ephemeral_key)
         .finalize();
-    let mut plaintext = [0u8; 52];
-    plaintext.copy_from_slice(&ca.ciphertext);
+    let ciphertext_len = ca.ciphertext.len();
     let mut keystream = ChaCha20::new(key.as_ref().into(), [0u8; 12][..].into());
     keystream.seek(64);
+
+    // Handle ZSA (84-byte) and vanilla (52-byte) ciphertext sizes
+    if ciphertext_len >= 84 {
+        let mut plaintext = [0u8; 84];
+        plaintext.copy_from_slice(&ca.ciphertext);
+        keystream.apply_keystream(&mut plaintext);
+
+        // ZSA notes use leadbyte 0x03, vanilla uses 0x01/0x02
+        let is_zsa = plaintext[0] == 0x03;
+        if (is_zsa || plaintext[0] == 0x01 || plaintext[0] == 0x02)
+            && (is_zsa || plaintext_version_is_valid(zip212_enforcement, plaintext[0]))
+        {
+            use zcash_note_encryption::Domain;
+            let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
+            let rho = Rho::from_bytes(&ca.nullifier.clone().try_into().unwrap()).unwrap();
+            let cca = CompactAction::<OrchardZSA>::from_parts(
+                Nullifier::from_bytes(&rho.to_bytes()).unwrap(),
+                ExtractedNoteCommitment::from_bytes(&ca.cmx.clone().try_into().unwrap()).unwrap(),
+                EphemeralKeyBytes(ca.ephemeral_key.clone().try_into().unwrap()),
+                NoteBytesData::from_slice(&ca.ciphertext).unwrap(),
+            );
+            let d = OrchardDomain::<OrchardZSA>::for_compact_action(&cca);
+            if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(
+                &pivk,
+                &NoteBytesData(plaintext),
+            ) {
+                let cmx = ExtractedNoteCommitment::from(note.commitment());
+                let value = note.value().inner();
+                if cmx.to_bytes() == *ca.cmx {
+                    let dbn = Note {
+                        pool: 2,
+                        account,
+                        scope,
+                        height,
+                        value,
+                        rcm: note.rseed().as_bytes().to_vec(),
+                        rho: rho.to_bytes().to_vec(),
+                        vout,
+                        diversifier: recipient.diversifier().as_array().to_vec(),
+                        ivtx,
+                        cmx: cmx.to_bytes().to_vec(),
+                        ..Note::default()
+                    };
+                    return Ok(Some((note, dbn)));
+                }
+            }
+        }
+        return Ok(None);
+    }
+
+    // Vanilla (52-byte) path
+    let mut plaintext = [0u8; 52];
+    plaintext.copy_from_slice(&ca.ciphertext);
     keystream.apply_keystream(&mut plaintext);
 
     if (plaintext[0] == 0x01 || plaintext[0] == 0x02)
@@ -154,7 +206,10 @@ pub fn try_orchard_decrypt(
             NoteBytesData::from_slice(&ca.ciphertext).unwrap(),
         );
         let d = OrchardDomain::<OrchardVanilla>::for_compact_action(&cca);
-        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &NoteBytesData(plaintext))
+        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(
+            &pivk,
+            &NoteBytesData(plaintext),
+        )
         {
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let value = note.value().inner();
