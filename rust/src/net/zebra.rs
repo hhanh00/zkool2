@@ -18,7 +18,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_rustls::TlsConnector;
 use tor_rtcompat::PreferredRuntime;
 use webpki_roots::TLS_SERVER_ROOTS;
-use zcash_primitives::{block::BlockHeader, transaction::Transaction};
+use zcash_primitives::{block::BlockHeader, transaction::{OrchardBundle, Transaction}};
 
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;
@@ -360,14 +360,24 @@ pub fn parse_block(
         }
         let mut actions = vec![];
         if let Some(orchard_bundle) = tx_data.orchard_bundle() {
-            for action in orchard_bundle.as_vanilla_bundle().actions().iter() {
-                actions.push(CompactOrchardAction {
-                    nullifier: action.nullifier().to_bytes().to_vec(),
-                    cmx: action.cmx().to_bytes().to_vec(),
-                    ephemeral_key: action.encrypted_note().epk_bytes.to_vec(),
-                    ciphertext: action.encrypted_note().enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE]
-                        .to_vec(),
-                });
+            macro_rules! push_actions {
+                ($bundle:expr, $actions:expr) => {{
+                    let bundle = $bundle;
+                    for action in bundle.actions().iter() {
+                        let ciphertext = action.encrypted_note().enc_ciphertext.as_ref().to_vec();
+                        $actions.push(CompactOrchardAction {
+                            nullifier: action.nullifier().to_bytes().to_vec(),
+                            cmx: action.cmx().to_bytes().to_vec(),
+                            ephemeral_key: action.encrypted_note().epk_bytes.to_vec(),
+                            ciphertext,
+                        });
+                    }
+                }};
+            }
+            match orchard_bundle {
+                OrchardBundle::OrchardVanilla(b) => push_actions!(b, actions),
+                #[cfg(zcash_unstable = "nu7")]
+                OrchardBundle::OrchardZSA(b) => push_actions!(b, actions),
             }
         }
 
