@@ -171,6 +171,31 @@ impl Mutation {
         Ok(txid)
     }
 
+    /// Issue a new ZSA (Zcash Shielded Asset).
+    ///
+    /// Returns the transaction ID of the issuance transaction.
+    async fn issue_asset(
+        id_account: i32,
+        asset_name: String,
+        amount: String,
+        first_issuance: bool,
+        finalize: bool,
+        context: &Context,
+    ) -> FieldResult<String> {
+        check_auth(context, id_account, true)?;
+        let amount: u64 = amount
+            .parse()
+            .map_err(|_| "Invalid amount: must be a non-negative integer")?;
+        let coin = &context.coin;
+        let tx_bytes =
+            crate::api::issuance::issue_asset(asset_name, amount, first_issuance, finalize, coin)
+                .await?;
+        let mut client = coin.client().await?;
+        let height = client.latest_height().await?;
+        let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
+        Ok(txid)
+    }
+
     async fn new_addresses(id_account: i32, context: &Context) -> FieldResult<Addresses> {
         check_auth(context, id_account, false)?;
         let network = context.coin.network();

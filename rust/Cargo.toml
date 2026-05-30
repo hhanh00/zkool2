@@ -17,6 +17,7 @@ flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
 bip39 = "2.1.0"
+nonempty = "0.11"
 env_logger = "0.11"
 hex = "0.4"
 log = "0.4"
@@ -49,13 +50,13 @@ tower = "0.5"
 qrcode = "0.14.1"
 raptorq = "2.0.0"
 
-orchard = {version = "0.13.1", features = ["unstable-frost"]}
-pczt = {version = "0.6", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard"]}
+orchard = {version = "0.13.1", features = ["unstable-frost", "zsa-issuance"]}
+pczt = {version = "0.6", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "issuer", "zip-233"]}
 zcash_address = "0.11"
 zcash_encoding = "0.4"
 zcash_keys = {version = "0.13", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.4"
-zcash_primitives = {version = "0.27", features = ["transparent-inputs"]}
+zcash_primitives = {version = "0.27", features = ["transparent-inputs", "zip-233"]}
 zcash_proofs = {version = "0.27", features = ["bundled-prover"]}
 zcash_protocol = {version = "0.8", features = ["local-consensus"]}
 zcash_script = "0.4"
