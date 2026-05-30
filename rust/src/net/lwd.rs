@@ -126,6 +126,23 @@ impl LwdServer for GRPCClient {
                 let branch_id =
                     BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
                 let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
+                let txid = tx.txid();
+                let has_tb = tx.transparent_bundle().is_some();
+                let (n_vin, n_vout) = tx
+                    .transparent_bundle()
+                    .map(|tb| (tb.vin.len(), tb.vout.len()))
+                    .unwrap_or((0, 0));
+                info!(
+                    "LWD raw_tx: height={} branch_id={:?} txid={} size={} has_transparent={} n_vin={} n_vout={} raw_hex_first120={}",
+                    rtx.height,
+                    branch_id,
+                    txid,
+                    len,
+                    has_tb,
+                    n_vin,
+                    n_vout,
+                    hex::encode(&rtx.data[..rtx.data.len().min(120)]),
+                );
                 sender.send((rtx.height as u32, tx, len)).await?;
             }
             Ok::<_, anyhow::Error>(())
