@@ -3,6 +3,7 @@ pub mod account;
 pub mod db;
 pub mod frost;
 pub mod init;
+pub mod issuance;
 pub mod key;
 pub mod mempool;
 pub mod network;
