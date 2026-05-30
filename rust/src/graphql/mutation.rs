@@ -188,7 +188,7 @@ impl Mutation {
             .map_err(|_| "Invalid amount: must be a non-negative integer")?;
         let coin = &context.coin;
         let tx_bytes =
-            crate::api::issuance::issue_asset(asset_name, amount, first_issuance, finalize, coin)
+            crate::api::issuance::issue_asset(asset_name, amount, first_issuance, finalize, id_account as u32, coin)
                 .await?;
         let mut client = coin.client().await?;
         let height = client.latest_height().await?;
