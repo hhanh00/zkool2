@@ -51,7 +51,7 @@ use flutter_rust_bridge::frb;
 use crate::{
     account::{derive_transparent_sk, get_account_seed, get_orchard_note, get_orchard_sk, get_orchard_vk},
     api::coin::Coin,
-    db::{get_account_dindex, lock_note, select_account_transparent},
+    db::{get_account_dindex, select_account_transparent},
     pay::plan::fetch_unspent_notes_grouped_by_pool,
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
 };
@@ -80,12 +80,13 @@ pub async fn issue_asset(
     amount: u64,
     first_issuance: bool,
     finalize: bool,
+    id_account: u32,
     c: &Coin,
 ) -> Result<Vec<u8>> {
     let network = &c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    let account = c.account;
+    let account = id_account;
 
     // ── 1. Derive issuance key from wallet seed ──────────────────────────
     let seed_info = get_account_seed(&mut connection, account)
@@ -98,7 +99,7 @@ pub async fn issue_asset(
         NetworkType::Main => 133u32,
         _ => 1u32,
     };
-    let isk = IssueAuthKey::<ZSASchnorr>::from_zip32_seed(&seed, coin_type, account)
+    let isk = IssueAuthKey::<ZSASchnorr>::from_zip32_seed(&seed, coin_type, 0)
         .map_err(|e| anyhow!("Failed to derive issue auth key: {e:?}"))?;
 
     // ── 2. Get orchard keys and address ──────────────────────────────────
@@ -126,7 +127,7 @@ pub async fn issue_asset(
 
     // Find an orchard note with sufficient value for fees.
     // Est. fee: 2 actions × 5k + 2 outputs × 5k ≈ 20k zats.
-    let est_fee: u64 = 20_000;
+    let est_fee: u64 = 10_000;
     let orchard_note = unspent
         .iter()
         .find(|n| n.pool == 2 && n.height <= height && n.amount >= est_fee)
@@ -139,16 +140,12 @@ pub async fn issue_asset(
         })?;
 
     let orchard_note_id = orchard_note.id;
-    lock_note(&mut connection, account, orchard_note_id, true).await?;
 
     // ── 5. Optionally select a transparent UTXO for extra fee coverage ───
+    // Skip the orchard note already selected above to avoid double-spend.
     let transparent_note = unspent
         .iter()
-        .find(|n| n.pool == 0 && n.height <= height && n.amount >= est_fee);
-
-    if let Some(tnote) = transparent_note {
-        lock_note(&mut connection, account, tnote.id, true).await?;
-    }
+        .find(|n| n.pool == 0 && n.height <= height && n.amount >= est_fee && n.id != orchard_note_id);
 
     // ── 6. Get tree state and anchors ────────────────────────────────────
     let h = crate::sync::get_db_height(&mut connection, account).await?;
@@ -452,12 +449,6 @@ pub async fn issue_asset(
         tx_bytes.len()
     );
     debug!("{}", hex::encode(&tx_bytes));
-
-    // Unlock notes
-    lock_note(&mut connection, account, orchard_note_id, false).await?;
-    if let Some(tnote) = transparent_note {
-        lock_note(&mut connection, account, tnote.id, false).await?;
-    }
 
     Ok(tx_bytes)
 }
