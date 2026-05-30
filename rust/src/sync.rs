@@ -112,6 +112,17 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                         .await
                         .context("Fetch use_internal")?;
                 account_use_internal.insert(account, use_internal);
+
+                // Check which pools this account has
+                let t_count: (i64,) = sqlx::query_as(
+                    "SELECT COUNT(*) FROM transparent_address_accounts WHERE account = ?"
+                ).bind(account).fetch_one(&mut *connection).await?;
+                info!(
+                    "Account {} - has {} transparent addresses, use_internal={}",
+                    account, t_count.0, use_internal
+                );
+            } else {
+                info!("Account {} - NO sync_heights entry found, will be skipped", account);
             }
         }
 
@@ -267,6 +278,10 @@ pub(crate) async fn transparent_sync(
     mut rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
     let mut addresses = vec![];
+    info!(
+        "transparent_sync: scanning accounts {:?} from height {} to {} with limit {}",
+        accounts, start_height, end_height, limit
+    );
     for account in accounts {
         // scan latest 5 receive and change addresses
         let mut rows = sqlx::query("
@@ -284,13 +299,33 @@ pub(crate) async fn transparent_sync(
             })
             .fetch(&mut *connection);
 
+        let mut addr_count = 0u32;
         while let Some((id_taddress, address)) = rows.try_next().await? {
+            info!(
+                "transparent_sync: account {} has taddress id={} addr={}",
+                account, id_taddress, address
+            );
+            addr_count += 1;
             // Add the address to the client
             addresses.push((*account, (id_taddress, address)));
         }
+        info!(
+            "transparent_sync: account {} has {} transparent addresses to scan",
+            account, addr_count
+        );
     }
+    info!(
+        "transparent_sync: total {} addresses to scan across all accounts",
+        addresses.len()
+    );
     for (account, address_row) in addresses.iter() {
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
+        info!(
+            "transparent_sync: scanning account {} address {} (decoded: {:?})",
+            account,
+            address_row.1,
+            my_address.encode(network)
+        );
         let mut txs = client
             .taddress_txs(network, &address_row.1, start_height, end_height)
             .await?
@@ -306,18 +341,35 @@ pub(crate) async fn transparent_sync(
                 m = txs.recv() => {
                     if let Some((height, transaction, _)) = m {
                         let txid = transaction.txid().as_ref().to_vec();
+                        info!(
+                            "transparent_sync: found tx {} at height {} for account {} version={:?} branch_id={:?}",
+                            hex::encode(&txid),
+                            height,
+                            account,
+                            transaction.version(),
+                            transaction.consensus_branch_id(),
+                        );
                         // tx time is available in the block (not here)
-                        sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")
+                        let tx_insert_result = sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")
                         .bind(account)
                         .bind(&txid)
                         .bind(height)
                         .execute(&mut *db_tx)
                         .await?;
+                        info!(
+                            "transparent_sync: tx {} inserted into transactions (rows_affected={})",
+                            hex::encode(&txid),
+                            tx_insert_result.rows_affected()
+                        );
 
                         // Access the transparent bundle part
                         if let Some(transparent_bundle) = transaction.transparent_bundle() {
-                            info!("Transaction: {}", transaction.txid());
-                            info!("Transparent inputs: {}", transparent_bundle.vin.len());
+                            info!(
+                                "transparent_sync: tx {} has transparent bundle: {} vins, {} vouts",
+                                transaction.txid(),
+                                transparent_bundle.vin.len(),
+                                transparent_bundle.vout.len()
+                            );
 
                             let vins = &transparent_bundle.vin;
                             for vin in vins.iter() {
@@ -334,6 +386,12 @@ pub(crate) async fn transparent_sync(
                             .await?;
 
                                 if let Some((id, amount)) = row {
+                                    info!(
+                                        "transparent_sync: tx {} vin spends note {} amount {}",
+                                        transaction.txid(),
+                                        id,
+                                        amount
+                                    );
                                     // note was found
                                     // add a spent entry
                                     sqlx::query(
@@ -354,30 +412,63 @@ pub(crate) async fn transparent_sync(
 
                             let vouts = &transparent_bundle.vout;
                             for (i, vout) in vouts.iter().enumerate() {
-                                if let Some(address) = vout.recipient_address() {
-                                    if address == my_address {
+                                let vout_value = vout.value().into_u64();
+                                if let Some(vout_addr) = vout.recipient_address() {
+                                    let vout_addr_encoded = vout_addr.encode(network);
+                                    let my_addr_encoded = my_address.encode(network);
+                                    let is_match = vout_addr == my_address;
+                                    info!(
+                                        "transparent_sync: tx {} vout[{}] value={} recipient={} my_address={} match={}",
+                                        transaction.txid(),
+                                        i,
+                                        vout_value,
+                                        vout_addr_encoded,
+                                        my_addr_encoded,
+                                        is_match,
+                                    );
+                                    if is_match {
                                         // It is for me
                                         // add a new note entry
                                         let mut nf = transaction.txid().as_ref().to_vec();
                                         nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                                        sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
+                                        let note_result = sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
                                     SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
                                     AND account = ? ON CONFLICT DO NOTHING")
                                         .bind(account)
                                         .bind(height)
                                         .bind(address_row.0)
                                         .bind(&nf)
-                                        .bind(vout.value().into_u64() as i64)
+                                        .bind(vout_value as i64)
                                         .bind(&txid)
                                         .bind(account)
                                         .execute(&mut *db_tx)
                                         .await?;
+                                        info!(
+                                            "transparent_sync: tx {} vout[{}] NOTE CREATED value={} rows_affected={}",
+                                            transaction.txid(),
+                                            i,
+                                            vout_value,
+                                            note_result.rows_affected()
+                                        );
                                     }
+                                } else {
+                                    info!(
+                                        "transparent_sync: tx {} vout[{}] value={} has NO recipient address (script cannot be decoded)",
+                                        transaction.txid(),
+                                        i,
+                                        vout_value,
+                                    );
                                 }
                             }
-
-                            info!("Transparent outputs: {}", transparent_bundle.vout.len());
+                        } else {
+                            info!(
+                                "transparent_sync: tx {} has NO transparent bundle (shielded-only tx) version={:?} branch_id={:?} height={}",
+                                transaction.txid(),
+                                transaction.version(),
+                                transaction.consensus_branch_id(),
+                                height,
+                            );
                         }
                     }
                     else {

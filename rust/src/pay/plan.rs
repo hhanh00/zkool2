@@ -6,7 +6,7 @@ use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
     circuit::ProvingKey,
-    flavor::OrchardVanilla,
+    flavor::OrchardZSA,
     keys::{Scope, SpendAuthorizingKey},
     note::{AssetBase, ExtractedNoteCommitment},
     Address,
@@ -620,7 +620,7 @@ pub async fn plan_transaction(
     debug!("Building");
     event!(Level::INFO, "Preparing PCZT");
 
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
 
@@ -1248,4 +1248,4 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
 }
 
 pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(LocalTxProver::bundled);
-pub static ORCHARD_PK: LazyLock<ProvingKey> = LazyLock::new(ProvingKey::build::<OrchardVanilla>);
+pub static ORCHARD_PK: LazyLock<ProvingKey> = LazyLock::new(ProvingKey::build::<OrchardZSA>);
