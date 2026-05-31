@@ -97,9 +97,17 @@ async fn preprocess(
                 let oasset_id = OrchardAssetId::new_v0(&ik, &desc_hash);
                 let asset_base = OrchardAssetBase::custom(&oasset_id);
                 let asset_base_bytes = asset_base.to_bytes().to_vec();
-                let owner = ik_owners.get(&iss.ik).copied();
+                let ik_owner = ik_owners.get(&iss.ik).copied();
 
                 for note_data in &iss.notes {
+                    // Zip-227 requires a zero-value reference note as the
+                    // first note on first issuance. Its cmx must enter the
+                    // Merkle tree, but we must not create a wallet note for it.
+                    let owner = if note_data.value == 0 {
+                        None
+                    } else {
+                        ik_owner
+                    };
                     // Compute cmx from plaintext note fields
                     let recipient_bytes: [u8; 43] =
                         note_data.recipient.as_slice().try_into().unwrap();
