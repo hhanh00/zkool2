@@ -464,6 +464,8 @@ pub async fn publish(
             user_memo: None,
             memo_bytes: Some(to_arb_memo(data)),
             price: None,
+            asset_base: [0u8; 32].to_vec(),
+            asset_name: None,
         })
         .collect::<Vec<_>>();
     let pczt = plan_transaction(

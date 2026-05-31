@@ -23,6 +23,8 @@ pub struct Recipient {
     pub user_memo: Option<String>,
     pub memo_bytes: Option<Vec<u8>>,
     pub price: Option<f64>,
+    pub asset_base: Vec<u8>,
+    pub asset_name: Option<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -30,6 +32,7 @@ pub struct RecipientState {
     pub recipient: Recipient,
     pub remaining: u64,
     pub pool_mask: PoolMask,
+    pub asset_base: Vec<u8>,
 }
 
 impl RecipientState {
@@ -38,10 +41,16 @@ impl RecipientState {
         let pool_mask = PoolMask::from_address(&recipient.address)?.trim_transparent()?;
         let pm = pool_mask.0;
         assert!(pm == 1 || pm == 2 || pm == 4 || pm == 6);
+        let asset_base = if recipient.asset_base.is_empty() {
+            [0u8; 32].to_vec()
+        } else {
+            recipient.asset_base.clone()
+        };
         Ok(Self {
             recipient,
             remaining: amount,
             pool_mask,
+            asset_base,
         })
     }
 
@@ -53,6 +62,7 @@ impl RecipientState {
             },
             remaining: amount,
             pool_mask: PoolMask::from_pool(pool),
+            asset_base: [0u8; 32].to_vec(),
         }
     }
 
@@ -68,6 +78,8 @@ pub struct InputNote {
     pub amount: u64,
     pub remaining: u64,
     pub pool: u8,
+    pub id_asset: Option<u32>,
+    pub asset_base: Vec<u8>,
 }
 
 impl InputNote {
