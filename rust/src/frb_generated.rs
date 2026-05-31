@@ -6173,6 +6173,8 @@ impl SseDecode for crate::pay::Recipient {
         let mut var_userMemo = <Option<String>>::sse_decode(deserializer);
         let mut var_memoBytes = <Option<Vec<u8>>>::sse_decode(deserializer);
         let mut var_price = <Option<f64>>::sse_decode(deserializer);
+        let mut var_assetBase = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_assetName = <Option<String>>::sse_decode(deserializer);
         return crate::pay::Recipient {
             address: var_address,
             amount: var_amount,
@@ -6180,6 +6182,8 @@ impl SseDecode for crate::pay::Recipient {
             user_memo: var_userMemo,
             memo_bytes: var_memoBytes,
             price: var_price,
+            asset_base: var_assetBase,
+            asset_name: var_assetName,
         };
     }
 }
@@ -6426,6 +6430,7 @@ impl SseDecode for crate::api::account::TxNote {
         let mut var_value = <u64>::sse_decode(deserializer);
         let mut var_locked = <bool>::sse_decode(deserializer);
         let mut var_memo = <Option<String>>::sse_decode(deserializer);
+        let mut var_idAsset = <Option<i64>>::sse_decode(deserializer);
         return crate::api::account::TxNote {
             id: var_id,
             pool: var_pool,
@@ -6436,6 +6441,7 @@ impl SseDecode for crate::api::account::TxNote {
             value: var_value,
             locked: var_locked,
             memo: var_memo,
+            id_asset: var_idAsset.map(|v| v as u32),
         };
     }
 }
@@ -7380,6 +7386,8 @@ impl flutter_rust_bridge::IntoDart for crate::pay::Recipient {
             self.user_memo.into_into_dart().into_dart(),
             self.memo_bytes.into_into_dart().into_dart(),
             self.price.into_into_dart().into_dart(),
+            self.asset_base.into_into_dart().into_dart(),
+            self.asset_name.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -7640,6 +7648,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TxNote {
             self.value.into_into_dart().into_dart(),
             self.locked.into_into_dart().into_dart(),
             self.memo.into_into_dart().into_dart(),
+            self.id_asset.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8551,6 +8560,8 @@ impl SseEncode for crate::pay::Recipient {
         <Option<String>>::sse_encode(self.user_memo, serializer);
         <Option<Vec<u8>>>::sse_encode(self.memo_bytes, serializer);
         <Option<f64>>::sse_encode(self.price, serializer);
+        <Vec<u8>>::sse_encode(self.asset_base, serializer);
+        <Option<String>>::sse_encode(self.asset_name, serializer);
     }
 }
 
@@ -8734,6 +8745,7 @@ impl SseEncode for crate::api::account::TxNote {
         <u64>::sse_encode(self.value, serializer);
         <bool>::sse_encode(self.locked, serializer);
         <Option<String>>::sse_encode(self.memo, serializer);
+        <Option<u32>>::sse_encode(self.id_asset, serializer);
     }
 }
 

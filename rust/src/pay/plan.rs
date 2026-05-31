@@ -207,7 +207,7 @@ pub async fn plan_transaction(
     // has at least one ZEC action (required by ZIP-226).
     let has_zsa = recipient_states.iter().any(|r| r.asset_base != zec_key);
     let has_zec_recipient = recipient_states.iter().any(|r| r.asset_base == zec_key);
-    let has_zec_notes = input_pools[2].iter().any(|n: &InputNote| n.asset_base == zec_key);
+    let has_zec_notes = inputs.iter().any(|n: &InputNote| n.pool == 2 && n.asset_base == zec_key);
     if has_zsa && !has_zec_recipient && !has_zec_notes {
         recipient_states.push(RecipientState {
             recipient: Recipient {
@@ -294,17 +294,28 @@ pub async fn plan_transaction(
         }
     }
 
-    // Pre-check: verify each recipient's asset bucket has sufficient balance
+    // Pre-check: verify each recipient's asset bucket has sufficient balance.
+    // For orchard recipients, the fill_order can use notes from any pool:
+    //   - ZEC recipients: transparent/sapling notes can satisfy via T->O or S->O.
+    //   - ZSA recipients: only orchard notes of the matching asset can be used.
+    // We check all eligible source pools to avoid false "not enough funds" errors
+    // when the sender holds funds in a lower-priority pool than the recipient's best pool.
     for r in single.iter().chain(double.iter()) {
         let needed = r.remaining;
         if needed == 0 { continue; }
         let pool = r.pool_mask.to_best_pool().unwrap_or(2);
+        let is_zec = r.asset_base == zec_key;
         if pool == 2 {
-            let available: u64 = orchard_buckets.get(&r.asset_base)
+            let mut available: u64 = orchard_buckets.get(&r.asset_base)
                 .map(|b| b.iter().map(|n| n.remaining).sum())
                 .unwrap_or(0);
+            // ZEC can also be drawn from transparent and sapling pools
+            if is_zec {
+                available += input_pools[0].iter().map(|n| n.remaining).sum::<u64>();
+                available += input_pools[1].iter().map(|n| n.remaining).sum::<u64>();
+            }
             if available < needed {
-                let asset_label = if r.asset_base == zec_key {
+                let asset_label = if is_zec {
                     "ZEC".to_string()
                 } else if let Some(ref name) = r.recipient.asset_name {
                     name.clone()
@@ -489,6 +500,7 @@ pub async fn plan_transaction(
         .collect();
 
     // Add per-asset orchard change outputs
+    let outputs_before_change = outputs.len();
     for (asset_key, (used, outs)) in orchard_per_asset.iter() {
         let asset_change = used.saturating_sub(*outs);
         // For ZEC, also subtract fee (fees are ZEC)
@@ -511,24 +523,41 @@ pub async fn plan_transaction(
             });
         }
     }
-    // Non-orchard change (transparent, sapling)
-    let non_orchard_change = non_orchard_input
-        .saturating_sub(
-            single.iter().chain(double.iter())
-                .filter(|r| r.pool_mask.to_best_pool().unwrap_or(2) != 2)
-                .map(|r| r.recipient.amount).sum::<u64>()
-        );
-    if non_orchard_change > 0 && change_pool != 2 {
-        outputs.push(RecipientState {
-            recipient: Recipient {
-                address: change_address,
-                amount: non_orchard_change,
-                ..Recipient::default()
-            },
-            remaining: 0,
-            pool_mask: PoolMask::from_pool(change_pool),
-            asset_base: zec_key.clone(),
-        });
+    // Non-orchard change (transparent, sapling, or orchard when
+    // change_pool == 2). Compute total change then subtract what the
+    // per-asset orchard loop already allocated.
+    let total_change = total_input.saturating_sub(total_output.saturating_add(fee));
+    let orchard_change_allocated: u64 = outputs
+        .iter()
+        .skip(outputs_before_change)
+        .map(|o| o.recipient.amount)
+        .sum();
+    let remaining_change = total_change.saturating_sub(orchard_change_allocated);
+    if remaining_change > 0 {
+        if change_pool == 2 {
+            outputs.push(RecipientState {
+                recipient: Recipient {
+                    address: change_address.clone(),
+                    amount: remaining_change,
+                    asset_base: zec_key.clone(),
+                    ..Recipient::default()
+                },
+                remaining: 0,
+                pool_mask: PoolMask::from_pool(2),
+                asset_base: zec_key.clone(),
+            });
+        } else {
+            outputs.push(RecipientState {
+                recipient: Recipient {
+                    address: change_address,
+                    amount: remaining_change,
+                    ..Recipient::default()
+                },
+                remaining: 0,
+                pool_mask: PoolMask::from_pool(change_pool),
+                asset_base: zec_key.clone(),
+            });
+        }
     }
 
     info!("Initializing Builder");
@@ -883,15 +912,22 @@ pub async fn plan_transaction(
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
     info!("IO finalized");
 
+    // Collect action indices that need signing: real spends + ZSA split
+    // spends. ZEC dummies are signed by the IoFinalizer via dummy_sk.
+    let mut orchard_indices: Vec<usize> = (0..n_spends[2])
+        .map(|n| orchard_meta.spend_action_index(n).unwrap())
+        .collect();
+    for n in 0..orchard_meta.num_split_spends() {
+        orchard_indices.push(orchard_meta.split_spend_action_index(n).unwrap());
+    }
+
     let pczt_package = PcztPackage {
         pczt: pczt.serialize(),
         n_spends,
         sapling_indices: (0..n_spends[1])
             .map(|n| sapling_meta.spend_index(n).unwrap())
             .collect(),
-        orchard_indices: (0..n_spends[2])
-            .map(|n| orchard_meta.spend_action_index(n).unwrap())
-            .collect(),
+        orchard_indices,
         can_sign,
         can_broadcast: false,
         price,
@@ -1054,7 +1090,7 @@ pub async fn sign_transaction(
         }
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {
-        debug!("signing sapling {index}");
+        info!("signing sapling {index}");
         let spend = &sbundle.spends()[*bundle_index];
         let scope = u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
         let ssk = ssk.as_ref().map(|ssk| {
@@ -1070,7 +1106,7 @@ pub async fn sign_transaction(
         signer.sign_sapling(*bundle_index, sk).unwrap();
     }
     for (index, bundle_index) in orchard_indices.iter().enumerate() {
-        debug!("signing orchard {index}");
+        info!("signing orchard {index}");
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
@@ -1262,7 +1298,8 @@ fn fill_single_receivers(
                 };
                 if let Some(bucket) = bucket {
                     for inp in bucket.iter_mut() {
-                        if inp.remaining == 0 || inp.amount < COST_PER_ACTION { continue; }
+                        let is_dust = is_zec && inp.amount < COST_PER_ACTION;
+                        if inp.remaining == 0 || is_dust { continue; }
 
                         // Count the input for fee calculation (both ZEC and non-ZEC).
                         let is_first_touch = inp.amount == inp.remaining;

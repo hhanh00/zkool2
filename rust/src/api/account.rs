@@ -660,6 +660,7 @@ pub struct TxNote {
     pub value: u64,
     pub locked: bool,
     pub memo: Option<String>,
+    pub id_asset: Option<u32>,
 }
 
 #[derive(Default, Debug)]

@@ -10,7 +10,7 @@ use zcash_keys::keys::UnifiedFullViewingKey;
 use crate::api::coin::{Coin, Network};
 use crate::api::pay::PcztPackage;
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, Balance, Note, Transaction, UnconfirmedTx};
+use crate::graphql::data::{Account, Addresses, AssetInfo, Balance, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::{Context, check_admin_auth, check_auth};
@@ -213,6 +213,52 @@ impl Query {
         Ok(notes)
     }
 
+    /// List all known assets with per-account unspent balances.
+    async fn assets(id_account: i32, context: &Context) -> FieldResult<Vec<AssetInfo>> {
+        check_auth(context, id_account, false)?;
+        let mut conn = context.coin.get_connection().await?;
+        use sqlx::Row;
+        let rows = sqlx::query(
+            "SELECT a.id_asset, a.asset_desc_hash, a.asset_name, a.ik, a.asset_base,
+                    a.finalized, a.first_seen_height,
+                    COALESCE(SUM(n.value), 0) AS balance
+             FROM assets a
+             LEFT JOIN notes n ON n.id_asset = a.id_asset
+               AND n.account = ?1
+               AND n.id_note NOT IN (SELECT id_note FROM spends)
+               AND n.locked = 0
+             GROUP BY a.id_asset
+             ORDER BY a.asset_name, a.asset_desc_hash",
+        )
+        .bind(id_account)
+        .map(|row: sqlx::sqlite::SqliteRow| {
+            let id_asset: i32 = row.get(0);
+            let asset_desc_hash: Vec<u8> = row.get(1);
+            let asset_name: Option<String> = row.get(2);
+            let ik: Vec<u8> = row.get(3);
+            let asset_base: Vec<u8> = row.get(4);
+            let finalized: bool = row.get(5);
+            let first_seen_height: i32 = row.get(6);
+            let balance: i64 = row.get(7);
+            let is_zec = asset_base == [0u8; 32];
+            AssetInfo {
+                id_asset,
+                asset_desc_hash: hex::encode(&asset_desc_hash),
+                asset_name,
+                ik: hex::encode(&ik),
+                asset_base: hex::encode(&asset_base),
+                finalized,
+                first_seen_height,
+                balance: if is_zec { zats_to_zec(balance) } else { BigDecimal::from(balance) },
+            }
+        })
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(|e| format!("Failed to query assets: {e}"))?;
+
+        Ok(rows)
+    }
+
     async fn current_height(context: &Context) -> FieldResult<i32> {
         let height = crate::api::network::get_current_height(&context.coin).await?;
         Ok(height as i32)
@@ -286,20 +332,68 @@ pub async fn prepare_tx(
     payment: Payment,
     coin: &Coin,
 ) -> FieldResult<crate::api::pay::PcztPackage> {
+    let mut connection = coin.get_connection().await?;
+    let mut client = coin.client().await?;
+
     let mut recipients = vec![];
     for r in payment.recipients {
+        let (asset_base, asset_name) = if let Some(ref desc) = r.asset_desc {
+            if desc.is_empty() {
+                ([0u8; 32].to_vec(), None)
+            } else {
+                // Resolve by asset_name (exact) or asset_desc_hash (hex prefix)
+                let rows = sqlx::query(
+                    "SELECT asset_base, asset_name FROM assets
+                     WHERE asset_name = ?1 OR hex(asset_desc_hash) LIKE ?2 || '%'",
+                )
+                .bind(desc)
+                .bind(desc)
+                .fetch_all(&mut *connection)
+                .await
+                .map_err(|e| format!("Asset lookup failed: {e}"))?;
+
+                match rows.len() {
+                    0 => return Err(format!("No asset matches '{desc}'").into()),
+                    1 => {
+                        let ab: Vec<u8> = rows[0].get(0);
+                        let an: Option<String> = rows[0].get(1);
+                        (ab, an)
+                    }
+                    n => return Err(format!("Ambiguous query '{desc}', matches {n} assets").into()),
+                }
+            }
+        } else {
+            ([0u8; 32].to_vec(), None)
+        };
+
+        // ZEC amounts are scaled by 10^8 (zats); ZSA amounts are raw units
+        let is_zec = asset_base == [0u8; 32];
+        let amount = if is_zec {
+            zec_to_zats(r.amount)? as u64
+        } else {
+            if r.amount.fractional_digit_count() > 0 {
+                return Err(format!(
+                    "ZSA amounts must be whole numbers (no decimals). Got {} for asset {}",
+                    r.amount,
+                    asset_name.as_deref().unwrap_or("unknown")
+                ).into());
+            }
+            r.amount.to_string().parse::<u64>()
+                .map_err(|e| format!("Invalid ZSA amount: {e}"))?
+        };
+
         recipients.push(crate::pay::Recipient {
             address: r.address,
-            amount: zec_to_zats(r.amount)? as u64,
+            amount,
             pools: None,
             user_memo: r.memo,
             memo_bytes: None,
             price: None,
+            asset_base,
+            asset_name,
         });
     }
     let network = coin.network();
-    let mut connection = coin.get_connection().await?;
-    let mut client = coin.client().await?;
 
     let pczt = crate::pay::plan::plan_transaction(
         &network,
@@ -356,6 +450,12 @@ fn resolve_note(
         _ => (None, None),
     };
 
+    let asset_base = if n.pool == 2 && n.id_asset.is_some() {
+        Some("".to_string()) // Placeholder: could look up actual asset_base from assets
+    } else {
+        None
+    };
+
     Note {
         id: n.id as i32,
         height: n.height as i32,
@@ -367,6 +467,8 @@ fn resolve_note(
         address: address.unwrap_or_default(),
         value: zats_to_zec(n.value as i64),
         memo: n.memo,
+        id_asset: n.id_asset.map(|v| v as i32),
+        asset_base,
     }
 }
 
@@ -495,6 +597,7 @@ impl Transaction {
             value: r.get(6),
             locked: r.get(7),
             memo: r.get(8),
+            id_asset: None,
         })
         .fetch_all(&mut *conn)
         .await?;

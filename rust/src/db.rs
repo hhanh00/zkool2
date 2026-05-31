@@ -244,6 +244,13 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await;
 
+    // Migration: add asset_name to assets for human-readable naming
+    let _ = sqlx::query(
+        "ALTER TABLE assets ADD COLUMN asset_name TEXT",
+    )
+    .execute(&mut *connection)
+    .await;
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS dkg_params (
         account INTEGER PRIMARY KEY,
@@ -1319,7 +1326,7 @@ pub async fn get_account_hw(connection: &mut SqliteConnection, account: u32) -> 
 pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
     let notes = sqlx::query(
         "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
-        m.memo_text
+        m.memo_text, n.id_asset
         FROM notes n LEFT JOIN spends s
 	    ON n.id_note = s.id_note
         LEFT JOIN memos m ON n.id_note = m.note
@@ -1342,7 +1349,7 @@ pub async fn get_notes_txid(
     // including the ones that may be spent
     let notes = sqlx::query(
         "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
-        m.memo_text
+        m.memo_text, n.id_asset
        FROM notes n
        JOIN transactions t ON n.tx = t.id_tx
        LEFT JOIN memos m ON n.id_note = m.note
@@ -1368,6 +1375,7 @@ fn row_to_note(row: SqliteRow) -> TxNote {
     let value: u64 = row.get(6);
     let locked: bool = row.get(7);
     let memo: Option<String> = row.get(8);
+    let id_asset: Option<i64> = row.get(9);
 
     TxNote {
         id: id_note,
@@ -1378,6 +1386,7 @@ fn row_to_note(row: SqliteRow) -> TxNote {
         diversifier,
         value,
         locked,
+        id_asset: id_asset.map(|v| v as u32),
         memo,
     }
 }

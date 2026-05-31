@@ -62,5 +62,9 @@ node_modules/
 
 target/
 
+# Database and transaction artifacts
+*.db
+*.hex
+
 # FVM Version Cache
 .fvm/

@@ -12,7 +12,7 @@ use orchard::{
         compute_asset_desc_hash,
     },
     keys::SpendAuthorizingKey,
-    note::AssetBase,
+    note::{AssetBase, AssetId},
     value::NoteValue,
 };
 use pczt::{
@@ -442,6 +442,25 @@ pub async fn issue_asset(
     let mut tx_bytes = vec![];
     tx.write(&mut tx_bytes)
         .map_err(|e| anyhow!("Failed to serialize transaction: {e}"))?;
+
+    // Pre-insert the asset with its name so that when the sync handler later
+    // encounters this asset via compact block, the name is already set.
+    // INSERT OR IGNORE ensures no duplicate if the row already exists.
+    let ik = orchard::issuance::auth::IssueValidatingKey::from(&isk);
+    let asset_id = orchard::note::AssetId::new_v0(&ik, &desc_hash);
+    let asset_base_bytes = AssetBase::custom(&asset_id).to_bytes().to_vec();
+    sqlx::query(
+        "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, asset_name, finalized, first_seen_height)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+    )
+    .bind(desc_hash.to_vec())
+    .bind(ik.encode())
+    .bind(&asset_base_bytes)
+    .bind(&asset_name)
+    .bind(finalize)
+    .bind(0_i64)     // first_seen_height — updated by sync to the actual block height
+    .execute(&mut *connection)
+    .await?;
 
     info!(
         "Issued asset \"{asset_name}\" (amount={amount}, first={first_issuance}, finalize={finalize}), \

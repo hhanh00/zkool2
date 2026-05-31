@@ -35,6 +35,7 @@ pub struct Recipient {
     pub address: String,
     pub amount: BigDecimal,
     pub memo: Option<String>,
+    pub asset_desc: Option<String>,
 }
 
 #[derive(GraphQLInputObject)]
@@ -194,6 +195,32 @@ impl Mutation {
         let height = client.latest_height().await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
         Ok(txid)
+    }
+
+    /// Set or update the human-readable name of an asset.
+    ///
+    /// This is needed for assets discovered via blockchain scan (where the
+    /// name is not transmitted on-chain). Also useful for renaming.
+    async fn set_asset_name(
+        id_asset: i32,
+        name: String,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        check_admin_auth(context)?;
+        let coin = &context.coin;
+        let mut connection = coin.get_connection().await?;
+        let r = sqlx::query(
+            "UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2",
+        )
+        .bind(&name)
+        .bind(id_asset)
+        .execute(&mut *connection)
+        .await
+        .map_err(|e| format!("Failed to set asset name: {e}"))?;
+        if r.rows_affected() == 0 {
+            return Err(format!("No asset with id_asset={id_asset}").into());
+        }
+        Ok(true)
     }
 
     async fn new_addresses(id_account: i32, context: &Context) -> FieldResult<Addresses> {
