@@ -26,7 +26,7 @@ use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
 use crate::{api::account::TxNote, tiu};
 
-pub const DB_VERSION: u16 = 7;
+pub const DB_VERSION: u16 = 8;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
@@ -223,6 +223,26 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     )
     .execute(&mut *connection)
     .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS assets(
+        id_asset INTEGER PRIMARY KEY,
+        asset_desc_hash BLOB NOT NULL,
+        ik BLOB NOT NULL,
+        asset_base BLOB NOT NULL,
+        finalized BOOL NOT NULL DEFAULT FALSE,
+        first_seen_height INTEGER NOT NULL,
+        UNIQUE (asset_desc_hash, ik))",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    // Migration: add id_asset to notes for ZSA note→asset linking
+    let _ = sqlx::query(
+        "ALTER TABLE notes ADD COLUMN id_asset INTEGER REFERENCES assets(id_asset)",
+    )
+    .execute(&mut *connection)
+    .await;
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS dkg_params (
