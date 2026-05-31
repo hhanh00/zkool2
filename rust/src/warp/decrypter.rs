@@ -5,6 +5,7 @@ use zcash_trees::types::Note;
 
 use anyhow::Result;
 use blake2b_simd::Params;
+use tracing::info;
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher, StreamCipherSeek},
     ChaCha20,
@@ -167,6 +168,15 @@ pub fn try_orchard_decrypt(
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
                 if cmx.to_bytes() == *ca.cmx {
+                    let asset_base = if is_zsa {
+                        info!(
+                            "ZSA note: account={account} scope={scope} height={height} value={value} asset={asset:?}",
+                            asset = note.asset()
+                        );
+                        note.asset().to_bytes().to_vec()
+                    } else {
+                        vec![]
+                    };
                     let dbn = Note {
                         pool: 2,
                         account,
@@ -179,6 +189,7 @@ pub fn try_orchard_decrypt(
                         diversifier: recipient.diversifier().as_array().to_vec(),
                         ivtx,
                         cmx: cmx.to_bytes().to_vec(),
+                        asset_base,
                         ..Note::default()
                     };
                     return Ok(Some((note, dbn)));
@@ -226,6 +237,7 @@ pub fn try_orchard_decrypt(
                     diversifier: recipient.diversifier().as_array().to_vec(),
                     ivtx,
                     cmx: cmx.to_bytes().to_vec(),
+                    asset_base: vec![],
                     ..Note::default()
                 };
                 return Ok(Some((note, dbn)));
