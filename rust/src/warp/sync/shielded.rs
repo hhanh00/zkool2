@@ -11,10 +11,11 @@ use sqlx::{Row, SqliteConnection};
 use tokio::sync::mpsc::Sender;
 use tracing::{enabled, info};
 
-use crate::lwd::{CompactBlock, CompactTx};
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
 use crate::Hash32;
 use zcash_trees::types::{Note, Transaction, WarpSyncMessage, UTXO};
+
+use super::block::{SyncBlock, SyncTx};
 
 pub mod orchard;
 pub mod sapling;
@@ -27,13 +28,30 @@ pub trait ShieldedProtocol {
     type Spend;
     type Output: Sync;
 
+    /// Issuance key type. Set to `()` for protocols that don't support issuance.
+    type IssueAuth: Sync;
+
+    /// Whether this protocol supports issuance note synthesis.
+    fn supports_issuance() -> bool {
+        false
+    }
+
     fn extract_ivk(
         connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
     ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
-    fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend>;
-    fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output>;
+    /// Resolve issuance key per account. Only called when `supports_issuance()`.
+    /// Returns `(issue_auth, nk)` for ik-matching and nullifier derivation.
+    fn extract_issue_auth(
+        _connection: &mut SqliteConnection,
+        _account: u32,
+        _coin_type: u32,
+    ) -> impl std::future::Future<Output = Result<Option<(Self::IssueAuth, Self::NK)>>> {
+        async { Ok(None) }
+    }
+    fn extract_inputs(tx: &SyncTx) -> &Vec<Self::Spend>;
+    fn extract_outputs(tx: &SyncTx) -> &Vec<Self::Output>;
 
     fn extract_nf(i: &Self::Spend) -> Hash32;
     fn extract_cmx(o: &Self::Output) -> Hash32;
@@ -156,11 +174,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         self.keys.is_empty()
     }
 
-    pub async fn add(
-        &mut self,
-        blocks: &[CompactBlock],
-        issuance_cmxs: &HashMap<(u32, usize), Vec<crate::Hash32>>,
-    ) -> Result<()> {
+    pub async fn add(&mut self, blocks: &[SyncBlock]) -> Result<()> {
         if blocks.is_empty() {
             return Ok(());
         }
@@ -265,19 +279,10 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
 
             if depth == 0 {
                 for cb in blocks.iter() {
-                    for (ivtx, vtx) in cb.vtx.iter().enumerate() {
+                    for vtx in cb.vtx.iter() {
                         for co in P::extract_outputs(vtx).iter() {
                             let cmx = P::extract_cmx(co);
                             cmxs.push(Some(cmx));
-                        }
-                        // Add issuance note cmxs after Orchard outputs in this tx
-                        if let Some(icmxs) =
-                            issuance_cmxs.get(&(cb.height as u32, ivtx))
-                        {
-                            for cmx in icmxs {
-                                cmxs.push(Some(*cmx));
-                            }
-                            count_cmxs += icmxs.len();
                         }
                         count_cmxs += P::extract_outputs(vtx).len();
                     }
