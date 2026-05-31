@@ -220,6 +220,30 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     }
     io_account.blocks = blocks;
 
+    info!("Exporting assets");
+    let assets = sqlx::query(
+        "SELECT id_asset, asset_desc_hash, ik, asset_base, finalized, first_seen_height FROM assets",
+    )
+    .map(|row: SqliteRow| {
+        let id_asset: u32 = row.get(0);
+        let asset_desc_hash: Vec<u8> = row.get(1);
+        let ik: Vec<u8> = row.get(2);
+        let asset_base: Vec<u8> = row.get(3);
+        let finalized: bool = row.get(4);
+        let first_seen_height: u32 = row.get(5);
+        IOAsset {
+            id_asset,
+            asset_desc_hash: asset_desc_hash.into(),
+            ik: ik.into(),
+            asset_base: asset_base.into(),
+            finalized,
+            first_seen_height,
+        }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    io_account.assets = assets;
+
     info!("Exporting categories");
     let categories = sqlx::query("SELECT id_category, name, income FROM categories")
         .map(|r: SqliteRow| {
@@ -274,7 +298,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
         // Get the notes and memos for the given transaction
         let notes = sqlx::query(
             "SELECT id_note, n.height, n.account, n.pool, n.scope, nullifier, value, cmx,
-        taddress, position, diversifier, rcm, rho, locked, vout, memo_text, memo_bytes
+        taddress, position, diversifier, rcm, rho, locked, vout, id_asset, memo_text, memo_bytes
         FROM notes n LEFT JOIN memos m ON n.id_note = m.note WHERE n.tx = ?",
         )
         .bind(tx.id_tx)
@@ -294,8 +318,9 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
             let rho: Option<Vec<u8>> = row.get(12);
             let locked: bool = row.get(13);
             let vout: Option<u32> = row.get(14);
-            let memo_text: Option<String> = row.get(15);
-            let memo_bytes: Option<Vec<u8>> = row.get(16);
+            let id_asset: Option<u32> = row.get(15);
+            let memo_text: Option<String> = row.get(16);
+            let memo_bytes: Option<Vec<u8>> = row.get(17);
 
             IONote {
                 id_note,
@@ -313,6 +338,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 rho: rho.map(HexBytes),
                 locked,
                 vout,
+                id_asset,
                 memo_text,
                 memo_bytes: memo_bytes.map(HexBytes),
             }
@@ -467,6 +493,30 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         category_map.insert(category.id_category, new_id_category);
     }
 
+    let mut new_assets: HashMap<u32, u32> = HashMap::new();
+    for asset in io_account.assets.iter() {
+        sqlx::query(
+            "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, finalized, first_seen_height)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+        )
+        .bind(&asset.asset_desc_hash)
+        .bind(&asset.ik)
+        .bind(&asset.asset_base)
+        .bind(asset.finalized)
+        .bind(asset.first_seen_height)
+        .execute(&mut *tx)
+        .await?;
+        // Look up the id_asset (either newly created or existing)
+        let new_id_asset: (u32,) = sqlx::query_as(
+            "SELECT id_asset FROM assets WHERE asset_desc_hash = ?1 AND ik = ?2",
+        )
+        .bind(&asset.asset_desc_hash)
+        .bind(&asset.ik)
+        .fetch_one(&mut *tx)
+        .await?;
+        new_assets.insert(asset.id_asset, new_id_asset.0);
+    }
+
     let mut folder: Option<u32> = None;
     let folder_name = &io_account.folder;
     if !folder_name.is_empty() {
@@ -608,10 +658,13 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
             let new_taddress = note
                 .taddress
                 .and_then(|id_taddress| new_taddresses.get(&id_taddress));
+            let new_id_asset = note
+                .id_asset
+                .and_then(|id_asset| new_assets.get(&id_asset));
             let r = sqlx::query("INSERT INTO notes
                 (tx, height, account, pool, scope, nullifier, value, cmx, taddress, position, diversifier,
-                rcm, rho, locked)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                rcm, rho, locked, id_asset)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .bind(new_id_tx)
                 .bind(note.height)
                 .bind(new_id_account)
@@ -626,6 +679,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
                 .bind(&note.rcm)
                 .bind(&note.rho)
                 .bind(note.locked)
+                .bind(new_id_asset)
                 .execute(&mut *tx)
                 .await?;
             let new_id_note = r.last_insert_rowid() as u32;
@@ -801,6 +855,17 @@ pub struct IOAccount {
     pub dkg_params: Option<DKGParams>,
     pub dkg_packages: Vec<DKGPackage>,
     pub categories: Vec<IOCategory>,
+    pub assets: Vec<IOAsset>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+pub struct IOAsset {
+    pub id_asset: u32,
+    pub asset_desc_hash: HexBytes,
+    pub ik: HexBytes,
+    pub asset_base: HexBytes,
+    pub finalized: bool,
+    pub first_seen_height: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
@@ -883,6 +948,7 @@ pub struct IONote {
     pub rho: Option<HexBytes>,
     pub locked: bool,
     pub vout: Option<u32>,
+    pub id_asset: Option<u32>,
     pub memo_text: Option<String>,
     pub memo_bytes: Option<HexBytes>,
 }
