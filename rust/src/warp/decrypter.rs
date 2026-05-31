@@ -168,15 +168,14 @@ pub fn try_orchard_decrypt(
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
                 if cmx.to_bytes() == *ca.cmx {
-                    let asset_base = if is_zsa {
+                    // Always 32 bytes: [0u8; 32] for ZEC, non-zero for ZSA
+                    let asset_base = note.asset().to_bytes().to_vec();
+                    if is_zsa {
                         info!(
                             "ZSA note: account={account} scope={scope} height={height} value={value} asset={asset:?}",
-                            asset = note.asset()
+                            asset = hex::encode(&asset_base)
                         );
-                        note.asset().to_bytes().to_vec()
-                    } else {
-                        vec![]
-                    };
+                    }
                     let dbn = Note {
                         pool: 2,
                         account,
@@ -237,7 +236,7 @@ pub fn try_orchard_decrypt(
                     diversifier: recipient.diversifier().as_array().to_vec(),
                     ivtx,
                     cmx: cmx.to_bytes().to_vec(),
-                    asset_base: vec![],
+                    asset_base: note.asset().to_bytes().to_vec(),
                     ..Note::default()
                 };
                 return Ok(Some((note, dbn)));

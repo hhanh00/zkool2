@@ -586,10 +586,13 @@ pub async fn get_orchard_note(
     eo: &FragmentAuthPath,
     ero: &AuthPath,
 ) -> Result<(orchard::Note, orchard::tree::MerklePath)> {
-    let (scope, position, diversifier, value, rcm, rho, witness) = sqlx::query(
-        "SELECT scope, position, diversifier, value, rcm, rho, witness FROM notes
-        JOIN witnesses w ON notes.id_note = w.note
-        WHERE id_note = ? AND w.height = ?",
+    let (scope, position, diversifier, value, rcm, rho, witness, asset_base) = sqlx::query(
+        "SELECT scope, position, diversifier, value, rcm, rho, witness,
+                COALESCE(a.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base
+         FROM notes
+         JOIN witnesses w ON notes.id_note = w.note
+         LEFT JOIN assets a ON notes.id_asset = a.id_asset
+         WHERE id_note = ? AND w.height = ?",
     )
     .bind(id)
     .bind(height)
@@ -601,7 +604,8 @@ pub async fn get_orchard_note(
         let rcm: Vec<u8> = row.get(4);
         let rho: Vec<u8> = row.get(5);
         let witness: Vec<u8> = row.get(6);
-        (scope, position, diversifier, value, rcm, rho, witness)
+        let asset_base: Vec<u8> = row.get(7);
+        (scope, position, diversifier, value, rcm, rho, witness, asset_base)
     })
     .fetch_one(connection)
     .await
@@ -620,7 +624,13 @@ pub async fn get_orchard_note(
     let recipient = ovk.address(diversifer, scope);
     let value = NoteValue::from_raw(value);
     let rseed = RandomSeed::from_bytes(rcm.try_into().unwrap(), &rho).unwrap();
-    let note = Note::from_parts(recipient, value, AssetBase::zatoshi(), rho, rseed)
+    let zec_asset_base = [0u8; 32];
+    let asset_base = if asset_base == zec_asset_base {
+        AssetBase::zatoshi()
+    } else {
+        AssetBase::from_bytes(&asset_base.try_into().unwrap()).unwrap()
+    };
+    let note = Note::from_parts(recipient, value, asset_base, rho, rseed)
         .into_option()
         .unwrap();
 
@@ -1021,6 +1031,7 @@ pub async fn get_tx_details(
             value,
             locked,
             memo,
+            id_asset: None,
         }
     })
     .fetch_all(&mut *connection)
