@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::{collections::HashMap, mem::swap};
+use std::mem::swap;
 
 use zcash_trees::network::Network;
 use anyhow::{Context as _, Result};
@@ -155,7 +156,11 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         self.keys.is_empty()
     }
 
-    pub async fn add(&mut self, blocks: &[CompactBlock]) -> Result<()> {
+    pub async fn add(
+        &mut self,
+        blocks: &[CompactBlock],
+        issuance_cmxs: &HashMap<(u32, usize), Vec<crate::Hash32>>,
+    ) -> Result<()> {
         if blocks.is_empty() {
             return Ok(());
         }
@@ -260,10 +265,19 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
 
             if depth == 0 {
                 for cb in blocks.iter() {
-                    for vtx in cb.vtx.iter() {
+                    for (ivtx, vtx) in cb.vtx.iter().enumerate() {
                         for co in P::extract_outputs(vtx).iter() {
                             let cmx = P::extract_cmx(co);
                             cmxs.push(Some(cmx));
+                        }
+                        // Add issuance note cmxs after Orchard outputs in this tx
+                        if let Some(icmxs) =
+                            issuance_cmxs.get(&(cb.height as u32, ivtx))
+                        {
+                            for cmx in icmxs {
+                                cmxs.push(Some(*cmx));
+                            }
+                            count_cmxs += icmxs.len();
                         }
                         count_cmxs += P::extract_outputs(vtx).len();
                     }

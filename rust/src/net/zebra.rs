@@ -381,12 +381,37 @@ pub fn parse_block(
             }
         }
 
+        // Extract ZSA issuance data from the issue bundle.
+        //
+        // TODO: Per-note encrypted data (cmx, ephemeral_key, ciphertext) from
+        // each IssueAction should also be extracted into `CompactOrchardAction`
+        // entries so the decryption pipeline can decrypt the newly minted notes.
+        // Currently only metadata is captured in `CompactIssuance`; the actual
+        // note ciphertexts are not available for Orchard decryption when using
+        // the direct-zebra path. The lightwalletd (LWD) path is unaffected
+        // because the server supplies the CompactOrchardAction entries.
+        let mut issuances = vec![];
+        if let Some(ref issue_bundle) = tx_data.issue_bundle() {
+            let ik = issue_bundle.ik().encode(); // 33 bytes: algorithm_byte + x-only pubkey
+            for action in issue_bundle.actions().iter() {
+                let issued_amount: u64 = action.notes().iter().map(|n| n.value().inner()).sum();
+                issuances.push(CompactIssuance {
+                    asset_desc_hash: action.asset_desc_hash().to_vec(),
+                    finalize: action.is_finalized(),
+                    ik: ik.clone(),
+                    issued_amount,
+                    notes: vec![], // per-note data not available in direct-zebra path
+                });
+            }
+        }
+
         vtx.push(CompactTx {
             index: ivtx as u64,
             hash: txid,
             spends,
             outputs,
             actions,
+            issuances,
             ..Default::default()
         });
     }
