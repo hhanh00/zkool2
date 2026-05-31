@@ -1,4 +1,4 @@
-use std::{convert::Infallible, str::FromStr as _, sync::LazyLock};
+use std::{collections::HashMap, convert::Infallible, str::FromStr as _, sync::LazyLock};
 
 use anyhow::{anyhow, Result};
 
@@ -138,6 +138,12 @@ pub async fn plan_transaction(
             .fetch_one(&mut *connection)
             .await?;
 
+    // Pre-fetch the orchard change address. Used for dummy ZEC outputs
+    // and later for actual change outputs.
+    let change_scope = if use_internal { 1 } else { 0 };
+    let change_address =
+        get_account_full_address(network, connection, account, change_scope, hw).await?;
+
     let effective_src_pools = if has_tex || smart_transparent {
         PoolMask::from_pool(0) // restrict to transparent pool
     } else {
@@ -188,10 +194,37 @@ pub async fn plan_transaction(
         )
     };
 
-    let recipient_states = recipients
+    let mut recipient_states = recipients
         .into_iter()
         .map(|r| RecipientState::new(r).unwrap())
         .collect::<Vec<_>>();
+
+    let zec_key = [0u8; 32].to_vec();
+
+    // If ZSA assets are involved but there will be no ZEC action in the
+    // orchard bundle (no ZEC recipient AND no ZEC notes to spend), add a
+    // dummy ZEC recipient with amount 0. This ensures the orchard bundle
+    // has at least one ZEC action (required by ZIP-226).
+    let has_zsa = recipient_states.iter().any(|r| r.asset_base != zec_key);
+    let has_zec_recipient = recipient_states.iter().any(|r| r.asset_base == zec_key);
+    let has_zec_notes = input_pools[2].iter().any(|n: &InputNote| n.asset_base == zec_key);
+    if has_zsa && !has_zec_recipient && !has_zec_notes {
+        recipient_states.push(RecipientState {
+            recipient: Recipient {
+                address: change_address.clone(),
+                amount: 0,
+                asset_base: zec_key.clone(),
+                ..Default::default()
+            },
+            remaining: 0,
+            pool_mask: PoolMask::from_pool(2), // orchard
+            asset_base: zec_key.clone(),
+        });
+    }
+
+    // Ensure ZEC recipients come before ZSA recipients so the builder
+    // processes them first, producing a ZEC-first action.
+    recipient_states.sort_by_key(|r| r.asset_base != zec_key);
 
     debug!("Unspent notes:");
     for inp in inputs.iter() {
@@ -210,6 +243,17 @@ pub async fn plan_transaction(
             continue;
         }
         input_pools[group as usize].extend(items);
+    }
+
+    // Split orchard notes (pool 2) by asset_base.
+    // All orchard notes go into orchard_buckets for asset-aware fill.
+    // ZEC orchard notes are referenced via orchard_buckets[zec_key] for fees.
+    let mut orchard_buckets: HashMap<Vec<u8>, Vec<InputNote>> = HashMap::new();
+    for note in input_pools[2].drain(..) {
+        orchard_buckets
+            .entry(note.asset_base.clone())
+            .or_default()
+            .push(note);
     }
 
     // we can merge notes from the same pool because they are fully fungible
@@ -237,9 +281,55 @@ pub async fn plan_transaction(
         .into_iter()
         .partition::<Vec<_>, _>(|r| r.pool_mask != PoolMask(6));
 
+    // Account for per-asset orchard change outputs in the fee estimation.
+    // Line 163 already counted one change output for the ZEC asset; add one
+    // more for each unique non-ZEC asset among the recipients, since
+    // per-asset change (lines 446-468) produces one output per asset.
+    {
+        let mut seen = std::collections::HashSet::new();
+        for r in single.iter().chain(double.iter()) {
+            if r.asset_base != zec_key && seen.insert(&r.asset_base) {
+                fee_manager.add_output(change_pool);
+            }
+        }
+    }
+
+    // Pre-check: verify each recipient's asset bucket has sufficient balance
+    for r in single.iter().chain(double.iter()) {
+        let needed = r.remaining;
+        if needed == 0 { continue; }
+        let pool = r.pool_mask.to_best_pool().unwrap_or(2);
+        if pool == 2 {
+            let available: u64 = orchard_buckets.get(&r.asset_base)
+                .map(|b| b.iter().map(|n| n.remaining).sum())
+                .unwrap_or(0);
+            if available < needed {
+                let asset_label = if r.asset_base == zec_key {
+                    "ZEC".to_string()
+                } else if let Some(ref name) = r.recipient.asset_name {
+                    name.clone()
+                } else {
+                    hex::encode(&r.asset_base)
+                };
+                return Err(Error::NotEnoughFunds(
+                    format!("{} (need {}, have {})", asset_label, needed, available)
+                ).into());
+            }
+        } else {
+            let available: u64 = input_pools[pool as usize]
+                .iter().map(|n| n.remaining).sum();
+            if available < needed {
+                return Err(Error::NotEnoughFunds(
+                    format!("pool {}: need {}, have {}", pool, needed, available)
+                ).into());
+            }
+        }
+    }
+
     let mut fee_paid = 0;
     fill_single_receivers(
         &mut input_pools,
+        &mut orchard_buckets,
         &mut single,
         &mut fee_manager,
         recipient_pays_fee,
@@ -278,6 +368,7 @@ pub async fn plan_transaction(
 
     fill_single_receivers(
         &mut input_pools,
+        &mut orchard_buckets,
         &mut double,
         &mut fee_manager,
         recipient_pays_fee,
@@ -301,7 +392,14 @@ pub async fn plan_transaction(
     let recipients = single.iter_mut().chain(double.iter_mut());
     for (i, r) in recipients.enumerate() {
         if r.remaining > 0 {
-            return Err(Error::NotEnoughFunds(to_zec(r.remaining)).into());
+            let amt = if r.asset_base == zec_key {
+                to_zec(r.remaining)
+            } else if let Some(ref name) = r.recipient.asset_name {
+                format!("{} {} (raw units)", r.remaining, name)
+            } else {
+                format!("{} (raw units, asset={})", r.remaining, hex::encode(&r.asset_base))
+            };
+            return Err(Error::NotEnoughFunds(amt).into());
         }
         if i == 0 && recipient_pays_fee {
             // if the recipient pays the fee, we need to pay it
@@ -313,24 +411,43 @@ pub async fn plan_transaction(
         }
     }
 
-    let recipients = single.iter().chain(double.iter());
-    let total_input = input_pools
-        .iter()
-        .map(|pool| {
-            pool.iter()
-                .map(|n| if n.is_used() { n.amount } else { 0 })
-                .sum::<u64>()
-        })
-        .sum::<u64>();
-    let total_output = recipients.map(|r| r.recipient.amount).sum::<u64>();
+    // Total input from transparent + sapling
+    let non_orchard_input: u64 = input_pools[0].iter()
+        .map(|n| if n.is_used() { n.amount } else { 0 })
+        .sum::<u64>()
+        + input_pools[1].iter()
+            .map(|n| if n.is_used() { n.amount } else { 0 })
+            .sum::<u64>();
+    // Total input from all orchard buckets
+    let mut total_input: u64 = non_orchard_input;
+    let mut orchard_per_asset: HashMap<Vec<u8>, (u64, u64)> = HashMap::new(); // (used_in, output) per asset
+    for (asset_key, bucket) in orchard_buckets.iter() {
+        let used: u64 = bucket.iter()
+            .map(|n| if n.is_used() { n.amount } else { 0 })
+            .sum::<u64>();
+        total_input += used;
+        orchard_per_asset.insert(asset_key.clone(), (used, 0));
+    }
 
-    let change = total_input - total_output - fee;
+    let total_output: u64 = single.iter().chain(double.iter())
+        .map(|r| r.recipient.amount).sum();
+    // Track output per asset for change computation
+    for r in single.iter().chain(double.iter()) {
+        if r.pool_mask.to_best_pool().unwrap_or(2) == 2 {
+            if let Some((_, ref mut out)) = orchard_per_asset.get_mut(&r.asset_base) {
+                *out += r.recipient.amount;
+            }
+        }
+    }
+
+    let change = total_input.saturating_sub(total_output.saturating_add(fee));
 
     for o in single.iter_mut().chain(double.iter_mut()) {
         let RecipientState {
             recipient,
             remaining,
             pool_mask,
+            ..
         } = o;
         assert_eq!(*remaining, 0);
         debug!(
@@ -365,23 +482,54 @@ pub async fn plan_transaction(
         get_account_full_address(network, connection, account, change_scope, hw).await?
     };
 
-    let change_recipient = RecipientState {
-        recipient: Recipient {
-            address: change_address,
-            amount: change,
-            ..Recipient::default()
-        },
-        remaining: 0,
-        pool_mask: PoolMask::from_pool(change_pool),
-    };
-
-    let mut outputs = single
+    let mut outputs: Vec<RecipientState> = single
         .iter()
         .chain(double.iter())
         .cloned()
-        .collect::<Vec<_>>();
+        .collect();
 
-    outputs.push(change_recipient.clone());
+    // Add per-asset orchard change outputs
+    for (asset_key, (used, outs)) in orchard_per_asset.iter() {
+        let asset_change = used.saturating_sub(*outs);
+        // For ZEC, also subtract fee (fees are ZEC)
+        let asset_change = if asset_key == &zec_key {
+            asset_change.saturating_sub(fee)
+        } else {
+            asset_change
+        };
+        if asset_change > 0 {
+            outputs.push(RecipientState {
+                recipient: Recipient {
+                    address: change_address.clone(),
+                    amount: asset_change,
+                    asset_base: asset_key.clone(),
+                    ..Recipient::default()
+                },
+                remaining: 0,
+                pool_mask: PoolMask::from_pool(2), // orchard change
+                asset_base: asset_key.clone(),
+            });
+        }
+    }
+    // Non-orchard change (transparent, sapling)
+    let non_orchard_change = non_orchard_input
+        .saturating_sub(
+            single.iter().chain(double.iter())
+                .filter(|r| r.pool_mask.to_best_pool().unwrap_or(2) != 2)
+                .map(|r| r.recipient.amount).sum::<u64>()
+        );
+    if non_orchard_change > 0 && change_pool != 2 {
+        outputs.push(RecipientState {
+            recipient: Recipient {
+                address: change_address,
+                amount: non_orchard_change,
+                ..Recipient::default()
+            },
+            remaining: 0,
+            pool_mask: PoolMask::from_pool(change_pool),
+            asset_base: zec_key.clone(),
+        });
+    }
 
     info!("Initializing Builder");
 
@@ -418,6 +566,19 @@ pub async fn plan_transaction(
 
     let ssk = get_sapling_sk(&mut *connection, account).await?;
     let osk = get_orchard_sk(&mut *connection, account).await?;
+
+    // Sync orchard notes from orchard_buckets back to input_pools[2] for the
+    // builder input loop, since fill_single_receivers modified the buckets copy.
+    // ZEC notes go first so the builder processes ZEC spends before ZSA spends.
+    input_pools[2].clear();
+    if let Some(zec_notes) = orchard_buckets.get(&zec_key) {
+        input_pools[2].extend(zec_notes.clone());
+    }
+    for (asset_key, notes) in orchard_buckets.iter() {
+        if asset_key != &zec_key {
+            input_pools[2].extend(notes.clone());
+        }
+    }
 
     let mut n_spends: [usize; 3] = [0, 0, 0];
     let mut inputs = vec![];
@@ -516,11 +677,19 @@ pub async fn plan_transaction(
                             can_sign = false;
                         }
 
+                        let is_zec = note.asset().is_zatoshi().into();
+                        let asset_label = if is_zec {
+                            "ZEC".to_string()
+                        } else {
+                            hex::encode(note.asset().to_bytes())
+                        };
                         info!(
-                            "Adding orchard input {}",
+                            "Adding orchard input {} value={} asset={}",
                             hex::encode(
                                 ExtractedNoteCommitment::from(note.commitment()).to_bytes()
-                            )
+                            ),
+                            to_zec(note.value().inner()),
+                            asset_label
                         );
                         builder.add_orchard_spend::<Infallible>(
                             ovk.clone().unwrap(),
@@ -553,6 +722,7 @@ pub async fn plan_transaction(
             recipient,
             remaining,
             pool_mask,
+            ..
         } = r;
         assert_eq!(*remaining, 0);
         assert!(pool_mask.single_pool());
@@ -600,16 +770,22 @@ pub async fn plan_transaction(
             }
             2 => {
                 let to = get_orchard_address(network, &recipient.address)?;
+                let asset_base = if r.asset_base == zec_key {
+                    AssetBase::zatoshi()
+                } else {
+                    AssetBase::from_bytes(&r.asset_base.clone().try_into().unwrap()).unwrap()
+                };
                 info!(
-                    "Adding orchard output {} {}",
+                    "Adding orchard output {} {} asset={}",
                     &recipient.address,
-                    to_zec(value.into())
+                    to_zec(value.into()),
+                    hex::encode(&r.asset_base)
                 );
                 builder.add_orchard_output::<Infallible>(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
                     value,
-                    AssetBase::zatoshi(),
+                    asset_base,
                     memo,
                 )?;
             }
@@ -617,17 +793,14 @@ pub async fn plan_transaction(
         }
     }
 
-    debug!("Building");
-    event!(Level::INFO, "Preparing PCZT");
-
+    event!(Level::INFO, "Building PCZT parts");
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
-
-    debug!("Prepared");
+    info!("PCZT parts built");
 
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
-    debug!("Created");
+    info!("PCZT created");
 
     let updater = Updater::new(pczt);
     let updater = updater
@@ -705,9 +878,10 @@ pub async fn plan_transaction(
         .unwrap();
 
     let pczt = updater.finish();
+    info!("PCZT metadata updated");
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
-    debug!("IO Finalized");
+    info!("IO finalized");
 
     let pczt_package = PcztPackage {
         pczt: pczt.serialize(),
@@ -1029,6 +1203,7 @@ fn get_orchard_address(network: &Network, address: &str) -> Result<Address> {
 
 fn fill_single_receivers(
     input_pools: &mut [Vec<InputNote>],
+    orchard_buckets: &mut HashMap<Vec<u8>, Vec<InputNote>>,
     recipients: &mut [RecipientState],
     fee_manager: &mut FeeManager,
     recipient_pays_fee: bool,
@@ -1050,70 +1225,142 @@ fn fill_single_receivers(
         (0, 0), // T->T
     ];
 
+    let zec_key = [0u8; 32].to_vec();
+
     for (src, dst) in fill_order {
         for r in recipients.iter_mut() {
-            for inp in input_pools[src as usize].iter_mut() {
-                if inp.remaining == 0 || inp.amount < COST_PER_ACTION {
-                    continue;
+            // skip if the recipient is not interested in this pool
+            if r.pool_mask.intersect(&PoolMask::from_pool(dst)).is_empty() {
+                continue;
+            }
+
+            if src == 2 {
+                // Orchard: pay fees from ZEC bucket, recipient from asset bucket.
+                let is_zec = r.asset_base == zec_key;
+
+                // First pass: pay fees from ZEC orchard notes if not yet covered
+                let fee_remaining = if recipient_pays_fee { 0 } else { fee_manager.fee() - *fee_paid };
+                if fee_remaining > 0 {
+                    if let Some(zec_bucket) = orchard_buckets.get_mut(&zec_key) {
+                        for inp in zec_bucket.iter_mut() {
+                            if inp.remaining == 0 || inp.amount < COST_PER_ACTION { continue; }
+                            if inp.amount == inp.remaining { fee_manager.add_input(src); }
+                            let fr = if recipient_pays_fee { 0 } else { fee_manager.fee() - *fee_paid };
+                            if fr == 0 { break; }
+                            let a = inp.remaining.min(fr);
+                            *fee_paid += a;
+                            inp.remaining -= a;
+                        }
+                    }
                 }
 
-                // skip if the recipient is not interested in this pool
-                if r.pool_mask.intersect(&PoolMask::from_pool(dst)).is_empty() {
-                    continue;
-                }
-
-                // if the recipient pays the fees, we do not need to pay now
-                let fee_remaining = if recipient_pays_fee {
-                    0
+                // Second pass: pay recipient from asset-specific bucket
+                let bucket = if is_zec {
+                    orchard_buckets.get_mut(&zec_key)
                 } else {
-                    fee_manager.fee() - *fee_paid
+                    orchard_buckets.get_mut(&r.asset_base)
                 };
+                if let Some(bucket) = bucket {
+                    for inp in bucket.iter_mut() {
+                        if inp.remaining == 0 || inp.amount < COST_PER_ACTION { continue; }
 
-                if fee_remaining == 0 && r.remaining == 0 {
-                    // nothing to pay anymore
-                    break;
+                        // Count the input for fee calculation (both ZEC and non-ZEC).
+                        let is_first_touch = inp.amount == inp.remaining;
+                        if is_first_touch {
+                            fee_manager.add_input(src);
+                        }
+
+                        let fee_remaining = if recipient_pays_fee || !is_zec { 0 } else { fee_manager.fee() - *fee_paid };
+                        let to_pay = r.remaining + fee_remaining;
+                        if to_pay == 0 { break; }
+
+                        let mut amount = inp.remaining.min(to_pay);
+                        let a = amount.min(fee_remaining);
+                        *fee_paid += a;
+                        inp.remaining -= a;
+                        amount -= a;
+                        r.remaining -= amount;
+                        inp.remaining -= amount;
+
+                        debug!(
+                            "Input id: {}, amount: {}, remaining: {}",
+                            inp.id,
+                            to_zec(inp.amount),
+                            to_zec(inp.remaining)
+                        );
+                        debug!(
+                            "Recipient id: {}, amount: {}, remaining: {}",
+                            r.recipient.address,
+                            to_zec(r.recipient.amount),
+                            to_zec(r.remaining)
+                        );
+                    }
                 }
+            } else {
+                // Transparent and sapling: existing behavior (all notes are ZEC)
+                for inp in input_pools[src as usize].iter_mut() {
+                    if inp.remaining == 0 || inp.amount < COST_PER_ACTION {
+                        continue;
+                    }
 
-                // first time we see this note, add it to the fee manager
-                if inp.amount == inp.remaining {
-                    fee_manager.add_input(src)
+                    // if the recipient is not interested in this pool
+                    if r.pool_mask.intersect(&PoolMask::from_pool(dst)).is_empty() {
+                        continue;
+                    }
+
+                    // if the recipient pays the fees, we do not need to pay now
+                    let fee_remaining = if recipient_pays_fee {
+                        0
+                    } else {
+                        fee_manager.fee() - *fee_paid
+                    };
+
+                    if fee_remaining == 0 && r.remaining == 0 {
+                        // nothing to pay anymore
+                        break;
+                    }
+
+                    // first time we see this note, add it to the fee manager
+                    if inp.amount == inp.remaining {
+                        fee_manager.add_input(src)
+                    }
+
+                    // re-evaluate the fee after adding the input
+                    // this is needed because the fee is based on the inputs
+                    let fee_remaining = if recipient_pays_fee {
+                        0
+                    } else {
+                        fee_manager.fee() - *fee_paid
+                    };
+
+                    // if the fee is not paid, we need to pay it on top of the output
+                    let to_pay = r.remaining + fee_remaining;
+                    // transfer the amount to the recipient
+                    let mut amount = inp.remaining.min(to_pay);
+
+                    // pay the fee first
+                    let a = amount.min(fee_remaining);
+                    *fee_paid += a;
+                    inp.remaining -= a;
+                    amount -= a;
+
+                    // use the rest to pay the output
+                    r.remaining -= amount;
+                    inp.remaining -= amount;
+
+                    debug!(
+                        "Input id: {}, amount: {}, remaining: {}",
+                        inp.id,
+                        to_zec(inp.amount),
+                        to_zec(inp.remaining)
+                    );
+                    debug!(
+                        "Recipient id: {}, amount: {}, remaining: {}",
+                        r.recipient.address,
+                        to_zec(r.recipient.amount),
+                        to_zec(r.remaining)
+                    );
                 }
-
-                // re-evaluate the fee after adding the input
-                // this is needed because the fee is based on the inputs
-                let fee_remaining = if recipient_pays_fee {
-                    0
-                } else {
-                    fee_manager.fee() - *fee_paid
-                };
-
-                // if the fee is not paid, we need to pay it on top of the output
-                let to_pay = r.remaining + fee_remaining;
-                // transfer the amount to the recipient
-                let mut amount = inp.remaining.min(to_pay);
-
-                // pay the fee first
-                let a = amount.min(fee_remaining);
-                *fee_paid += a;
-                inp.remaining -= a;
-                amount -= a;
-
-                // use the rest to pay the output
-                r.remaining -= amount;
-                inp.remaining -= amount;
-
-                debug!(
-                    "Input id: {}, amount: {}, remaining: {}",
-                    inp.id,
-                    to_zec(inp.amount),
-                    to_zec(inp.remaining)
-                );
-                debug!(
-                    "Recipient id: {}, amount: {}, remaining: {}",
-                    r.recipient.address,
-                    to_zec(r.recipient.amount),
-                    to_zec(r.remaining)
-                );
             }
         }
     }
@@ -1192,6 +1439,8 @@ async fn fetch_one_taddr_unspent_notes(
                 amount: value,
                 remaining: value,
                 pool: 0, // transparent pool
+                id_asset: None,
+                asset_base: [0u8; 32].to_vec(),
             },
         )
     })
@@ -1220,9 +1469,11 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     account: u32,
 ) -> Result<Vec<InputNote>> {
     let unspent_notes = sqlx::query(
-        "SELECT a.id_note, a.height, a.pool, a.value
+        "SELECT a.id_note, a.height, a.pool, a.value, a.id_asset,
+                COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
+        LEFT JOIN assets ast ON a.id_asset = ast.id_asset
         WHERE b.id_note IS NULL AND a.account = ?
         AND locked = 0
         ORDER BY a.pool",
@@ -1233,12 +1484,16 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
         let height: u32 = row.get(1);
         let pool: u8 = row.get(2);
         let value: i64 = row.get(3);
+        let id_asset: Option<i64> = row.get(4);
+        let asset_base: Vec<u8> = row.get(5);
         InputNote {
             id: id_note,
             height,
             amount: value as u64,
             remaining: value as u64,
             pool,
+            id_asset: id_asset.map(|v| v as u32),
+            asset_base,
         }
     })
     .fetch_all(connection)
