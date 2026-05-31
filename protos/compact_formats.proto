@@ -40,7 +40,30 @@ message CompactTx {
     repeated CompactSaplingSpend spends = 4;   // inputs
     repeated CompactSaplingOutput outputs = 5; // outputs
     repeated CompactOrchardAction actions = 6;
+    repeated CompactIssuance issuances = 9; // ZSA issuance actions
 }
+
+// CompactIssueNote carries the unencrypted note fields for a single note
+// within an IssueAction.
+message CompactIssueNote {
+    bytes recipient = 1;    // 43 bytes — recipient address encoding
+    uint64 value = 2;       // Note value in asset base units
+    bytes rho = 3;          // [32] Nullifier derivation base
+    bytes rseed = 4;        // [32] Random seed
+}
+
+// CompactIssuance contains the minimal data needed for a light client to
+// record a ZSA issuance event. Each message corresponds to one IssueAction
+// within a transaction's IssueBundle (ZIP-227).
+message CompactIssuance {
+    bytes assetDescHash = 1;    // [32] BLAKE2b-256 hash of the asset description string
+    bool finalize = 2;          // Whether this action finalizes the asset
+    bytes ik = 3;               // [33] Issuer Validating Key (algorithm byte + x-only pubkey)
+    uint64 issuedAmount = 4;    // Sum of all note values in this IssueAction (in asset base units)
+    repeated CompactIssueNote notes = 5;  // Per-note unencrypted data
+}
+
+// CompactSaplingSpend is a Sapling Spend Description as described in 7.3 of the Zcash
 
 // CompactSaplingSpend is a Sapling Spend Description as described in 7.3 of the Zcash
 // protocol specification.
