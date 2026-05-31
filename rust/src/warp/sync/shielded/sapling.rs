@@ -4,11 +4,12 @@ use sqlx::SqliteConnection;
 use zip32::Scope;
 
 use crate::{
-    lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx},
+    lwd::{CompactSaplingOutput, CompactSaplingSpend},
     Hash32,
 };
 use zcash_trees::{network::Network, types};
 
+use crate::warp::sync::block::SyncTx;
 use crate::warp::{hasher::SaplingHasher, try_sapling_decrypt};
 
 use super::ShieldedProtocol;
@@ -22,13 +23,22 @@ impl ShieldedProtocol for SaplingProtocol {
     type Note = Note;
     type Spend = CompactSaplingSpend;
     type Output = CompactSaplingOutput;
+    type IssueAuth = ();
 
-    fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend> {
+    fn extract_inputs(tx: &SyncTx) -> &Vec<Self::Spend> {
         &tx.spends
     }
 
-    fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output> {
-        &tx.outputs
+    fn extract_outputs(tx: &SyncTx) -> &Vec<Self::Output> {
+        &tx.sapling_outputs
+    }
+
+    async fn extract_issue_auth(
+        _connection: &mut SqliteConnection,
+        _account: u32,
+        _coin_type: u32,
+    ) -> Result<Option<(Self::IssueAuth, Self::NK)>> {
+        Ok(None)
     }
 
     fn extract_nf(i: &Self::Spend) -> Hash32 {
