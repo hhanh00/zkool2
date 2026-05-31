@@ -131,8 +131,10 @@ impl ShieldedProtocol for OrchardProtocol {
                 ..
             } => {
                 // Only synthesize if this account owns the issuance key and
-                // we are on the external scope (issuance uses Scope::External)
-                if *owner != Some(account) || scope != 0 {
+                // we are on the external scope (issuance uses Scope::External).
+                // Skip zero-value reference notes (consensus requirement for
+                // first issuance — their cmx is in the tree but they carry no value).
+                if *owner != Some(account) || scope != 0 || note_data.value == 0 {
                     return Ok(None);
                 }
                 let recipient_bytes: [u8; 43] =
