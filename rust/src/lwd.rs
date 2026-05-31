@@ -54,6 +54,8 @@ pub struct CompactTx {
     pub outputs: ::prost::alloc::vec::Vec<CompactSaplingOutput>,
     #[prost(message, repeated, tag = "6")]
     pub actions: ::prost::alloc::vec::Vec<CompactOrchardAction>,
+    #[prost(message, repeated, tag = "9")]
+    pub issuances: ::prost::alloc::vec::Vec<CompactIssuance>,
 }
 /// CompactSaplingSpend is a Sapling Spend Description as described in 7.3 of the Zcash
 /// protocol specification.
@@ -93,6 +95,44 @@ pub struct CompactOrchardAction {
     /// \[52\] The note plaintext component of the encCiphertext field
     #[prost(bytes = "vec", tag = "4")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
+}
+/// CompactIssueNote carries the unencrypted note fields for a single note
+/// within an IssueAction.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CompactIssueNote {
+    /// 43 bytes — recipient address encoding
+    #[prost(bytes = "vec", tag = "1")]
+    pub recipient: ::prost::alloc::vec::Vec<u8>,
+    /// Note value in asset base units
+    #[prost(uint64, tag = "2")]
+    pub value: u64,
+    /// [32] Nullifier derivation base
+    #[prost(bytes = "vec", tag = "3")]
+    pub rho: ::prost::alloc::vec::Vec<u8>,
+    /// [32] Random seed
+    #[prost(bytes = "vec", tag = "4")]
+    pub rseed: ::prost::alloc::vec::Vec<u8>,
+}
+/// CompactIssuance contains the minimal data needed for a light client to
+/// record a ZSA issuance event. Each message corresponds to one IssueAction
+/// within a transaction's IssueBundle (ZIP-227).
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CompactIssuance {
+    /// [32] BLAKE2b-256 hash of the asset description
+    #[prost(bytes = "vec", tag = "1")]
+    pub asset_desc_hash: ::prost::alloc::vec::Vec<u8>,
+    /// Whether this action finalizes the asset
+    #[prost(bool, tag = "2")]
+    pub finalize: bool,
+    /// [33] Issuer Validating Key (algorithm byte + 32-byte x-only pubkey)
+    #[prost(bytes = "vec", tag = "3")]
+    pub ik: ::prost::alloc::vec::Vec<u8>,
+    /// Sum of all note values in this IssueAction (in asset base units)
+    #[prost(uint64, tag = "4")]
+    pub issued_amount: u64,
+    /// Per-note unencrypted data
+    #[prost(message, repeated, tag = "5")]
+    pub notes: ::prost::alloc::vec::Vec<CompactIssueNote>,
 }
 /// A BlockID message contains identifiers to select a block: a height or a
 /// hash. Specification by hash is not implemented, but may be in the future.

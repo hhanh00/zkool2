@@ -42,7 +42,7 @@ use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
 
-pub use zcash_trees::types::{BlockHeader, Note, Transaction, WarpSyncMessage, UTXO};
+pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
 pub use zcash_trees::types::SyncError;
 
 pub struct NoteExtended {
@@ -650,6 +650,34 @@ async fn handle_message(
 ) -> Result<()> {
     tracing::info!(target: "warp", "Warp Message: {msg:?}");
     match msg {
+        WarpSyncMessage::Issuance(iss) => {
+            sqlx::query(
+                "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, finalized, first_seen_height)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+            )
+            .bind(&iss.asset_desc_hash)
+            .bind(&iss.ik)
+            .bind(&iss.asset_base)
+            .bind(iss.finalized)
+            .bind(iss.height)
+            .execute(&mut **db_tx)
+            .await?;
+            tracing::info!("asset base {}", hex::encode(&iss.asset_base));
+
+            if iss.finalized {
+                sqlx::query(
+                    "UPDATE assets SET finalized = TRUE WHERE asset_desc_hash = ?1 AND ik = ?2",
+                )
+                .bind(&iss.asset_desc_hash)
+                .bind(&iss.ik)
+                .execute(&mut **db_tx)
+                .await?;
+            }
+            info!(
+                "Processing Issuance: height={}, finalized={}",
+                iss.height, iss.finalized
+            );
+        }
         WarpSyncMessage::Transaction(tx) => {
             // ignore duplicate transactions because they could have been created
             // by a previous type of scan (i.e transparent)
@@ -666,10 +694,18 @@ async fn handle_message(
             info!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {
+            // Resolve id_asset via LEFT JOIN on the assets table.
+            // For ZSA notes (non-empty asset_base), the JOIN finds the
+            // matching row inserted earlier by an Issuance message.
+            // For vanilla ZEC notes, asset_base is empty and id_asset
+            // resolves to NULL.
+            tracing::info!("note asset base {}", hex::encode(&note.asset_base));
             let r = sqlx::query
                     ("INSERT INTO notes
-                        (account, height, pool, scope, tx, nullifier, value, cmx, position, diversifier, rcm, rho)
-                        SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ? FROM transactions t
+                        (account, height, pool, scope, tx, nullifier, value, cmx, position, diversifier, rcm, rho, id_asset)
+                        SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ?, a.id_asset
+                        FROM transactions t
+                        LEFT JOIN assets a ON a.asset_base = ?
                         WHERE t.account = ? AND t.txid = ?")
                     .bind(note.height)
                     .bind(note.pool)
@@ -681,6 +717,7 @@ async fn handle_message(
                     .bind(&note.diversifier)
                     .bind(&note.rcm)
                     .bind(&note.rho)
+                    .bind(&note.asset_base)
                     .bind(note.account)
                     .bind(&note.txid)
                     .execute(&mut **db_tx).await?;
