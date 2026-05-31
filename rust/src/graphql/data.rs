@@ -59,6 +59,8 @@ pub struct Note {
     pub diversifier_index: Option<BigDecimal>,
     pub address: String,
     pub memo: Option<String>,
+    pub id_asset: Option<i32>,
+    pub asset_base: Option<String>,
 }
 
 #[derive(GraphQLObject)]
@@ -102,6 +104,18 @@ pub enum EventType {
     #[default] Block,
     Tx,
     DKG,
+}
+
+#[derive(GraphQLObject)]
+pub struct AssetInfo {
+    pub id_asset: i32,
+    pub asset_desc_hash: String,
+    pub asset_name: Option<String>,
+    pub ik: String,
+    pub asset_base: String,
+    pub finalized: bool,
+    pub first_seen_height: i32,
+    pub balance: BigDecimal,
 }
 
 pub type EventStream = Pin<Box<dyn Stream<Item = FieldResult<Event>> + Send>>;
