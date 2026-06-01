@@ -109,10 +109,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   value: "charts",
                   child: Text("Charts"),
                 ),
-              const PopupMenuItem<String>(
-                value: "zsa",
-                child: Text("ZSA Holdings"),
-              ),
+              if (ref.watch(appSettingsProvider).value?.supportZsa ?? false)
+                const PopupMenuItem<String>(
+                  value: "zsa",
+                  child: Text("ZSA Holdings"),
+                ),
             ],
           ),
         ],

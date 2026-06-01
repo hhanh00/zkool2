@@ -11,6 +11,8 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: '--cfg zcash_unstable="nu7"'
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable

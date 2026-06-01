@@ -1811,7 +1811,7 @@ extension AppSettingsPatterns on AppSettings {
 
 /// @nodoc
 
-class _AppSettings implements AppSettings {
+class _AppSettings extends AppSettings {
   _AppSettings(
       {required this.dbName,
       required this.net,
@@ -1829,7 +1829,8 @@ class _AppSettings implements AppSettings {
       required this.getFx,
       required this.qrSettings,
       required this.vault,
-      required this.expertMode});
+      required this.expertMode})
+      : super._();
 
   @override
   final String dbName;

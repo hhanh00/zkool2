@@ -435,6 +435,10 @@ sealed class AppSettings with _$AppSettings {
     required bool vault,
     required bool expertMode,
   }) = _AppSettings;
+
+  const AppSettings._();
+
+  bool get supportZsa => dbName.toLowerCase().contains("zsa");
 }
 
 @Riverpod(keepAlive: true)
