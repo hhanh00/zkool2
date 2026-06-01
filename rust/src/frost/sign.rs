@@ -252,7 +252,7 @@ pub async fn do_sign_impl(
     info!("sign: got keys");
     let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Failed to parse PCZT");
     let sighash = get_sighash(pczt.clone());
-    let nsigs = pczt_pkg.orchard_indices.len() as u32;
+    let nsigs = (pczt_pkg.orchard_indices.len() + pczt_pkg.orchard_split_spend_indices.len()) as u32;
     info!("sign: sighash={}, nsigs={}", hex::encode(&sighash), nsigs);
 
     // Create a mailbox account if it doesn't exist
@@ -446,7 +446,11 @@ pub async fn do_sign_impl(
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
 
             // get the randomizer from the pczt
-            let action_index = pczt_pkg.orchard_indices[idx];
+            let action_index = if idx < pczt_pkg.orchard_indices.len() {
+                pczt_pkg.orchard_indices[idx]
+            } else {
+                pczt_pkg.orchard_split_spend_indices[idx - pczt_pkg.orchard_indices.len()]
+            };
             let signer = Signer::new(pczt.clone());
             let mut alpha = Fq::zero();
             signer
@@ -668,7 +672,11 @@ pub async fn do_sign_impl(
         let signer = signer
             .sign_orchard_with(|_pczt, bundle, _| {
                 for (idx, signature) in signatures.into_iter().enumerate() {
-                    let action_index = pczt_pkg.orchard_indices[idx];
+                    let action_index = if idx < pczt_pkg.orchard_indices.len() {
+                        pczt_pkg.orchard_indices[idx]
+                    } else {
+                        pczt_pkg.orchard_split_spend_indices[idx - pczt_pkg.orchard_indices.len()]
+                    };
                     let action = &mut bundle.actions_mut()[action_index];
                     let _ = action.apply_signature(sighash, signature);
                     // How do we update the spend_auth_sig?
