@@ -6120,6 +6120,7 @@ impl SseDecode for crate::api::pay::PcztPackage {
             n_spends: var_nSpends,
             sapling_indices: var_saplingIndices,
             orchard_indices: var_orchardIndices,
+            orchard_split_spend_indices: vec![],
             can_sign: var_canSign,
             can_broadcast: var_canBroadcast,
             price: var_price,
@@ -7302,6 +7303,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PcztPackage {
             self.n_spends.into_into_dart().into_dart(),
             self.sapling_indices.into_into_dart().into_dart(),
             self.orchard_indices.into_into_dart().into_dart(),
+            self.orchard_split_spend_indices.into_into_dart().into_dart(),
             self.can_sign.into_into_dart().into_dart(),
             self.can_broadcast.into_into_dart().into_dart(),
             self.price.into_into_dart().into_dart(),
@@ -8519,6 +8521,7 @@ impl SseEncode for crate::api::pay::PcztPackage {
         <[usize; 3]>::sse_encode(self.n_spends, serializer);
         <Vec<usize>>::sse_encode(self.sapling_indices, serializer);
         <Vec<usize>>::sse_encode(self.orchard_indices, serializer);
+        <Vec<usize>>::sse_encode(self.orchard_split_spend_indices, serializer);
         <bool>::sse_encode(self.can_sign, serializer);
         <bool>::sse_encode(self.can_broadcast, serializer);
         <Option<f64>>::sse_encode(self.price, serializer);
