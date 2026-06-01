@@ -320,6 +320,9 @@ pub struct Tx {
     pub value: i64,
     pub tpe: Option<u8>,
     pub category: Option<String>,
+    pub zsa_value: i64,
+    pub asset_id: Option<i32>,
+    pub asset_display: String,
 }
 
 pub struct TAddressTxCount {
@@ -661,6 +664,7 @@ pub struct TxNote {
     pub locked: bool,
     pub memo: Option<String>,
     pub id_asset: Option<u32>,
+    pub asset_display: String,
 }
 
 #[derive(Default, Debug)]
@@ -669,6 +673,8 @@ pub struct TxSpend {
     pub pool: u8,
     pub height: u32,
     pub value: u64,
+    pub id_asset: Option<u32>,
+    pub asset_display: String,
 }
 
 #[derive(Default, Debug)]

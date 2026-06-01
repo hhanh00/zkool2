@@ -387,6 +387,9 @@ sealed class Tx with _$Tx {
     required PlatformInt64 value,
     int? tpe,
     String? category,
+    required PlatformInt64 zsaValue,
+    int? assetId,
+    required String assetDisplay,
   }) = _Tx;
 }
 
@@ -494,6 +497,7 @@ class TxNote {
   final bool locked;
   final String? memo;
   final int? idAsset;
+  final String assetDisplay;
 
   const TxNote({
     required this.id,
@@ -506,6 +510,7 @@ class TxNote {
     required this.locked,
     this.memo,
     this.idAsset,
+    required this.assetDisplay,
   });
 
   static Future<TxNote> default_() =>
@@ -522,7 +527,8 @@ class TxNote {
       value.hashCode ^
       locked.hashCode ^
       memo.hashCode ^
-      idAsset.hashCode;
+      idAsset.hashCode ^
+      assetDisplay.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -538,7 +544,8 @@ class TxNote {
           value == other.value &&
           locked == other.locked &&
           memo == other.memo &&
-          idAsset == other.idAsset;
+          idAsset == other.idAsset &&
+          assetDisplay == other.assetDisplay;
 }
 
 class TxOutput {
@@ -584,12 +591,16 @@ class TxSpend {
   final int pool;
   final int height;
   final BigInt value;
+  final int? idAsset;
+  final String assetDisplay;
 
   const TxSpend({
     required this.id,
     required this.pool,
     required this.height,
     required this.value,
+    this.idAsset,
+    required this.assetDisplay,
   });
 
   static Future<TxSpend> default_() =>
@@ -597,7 +608,12 @@ class TxSpend {
 
   @override
   int get hashCode =>
-      id.hashCode ^ pool.hashCode ^ height.hashCode ^ value.hashCode;
+      id.hashCode ^
+      pool.hashCode ^
+      height.hashCode ^
+      value.hashCode ^
+      idAsset.hashCode ^
+      assetDisplay.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -607,5 +623,7 @@ class TxSpend {
           id == other.id &&
           pool == other.pool &&
           height == other.height &&
-          value == other.value;
+          value == other.value &&
+          idAsset == other.idAsset &&
+          assetDisplay == other.assetDisplay;
 }

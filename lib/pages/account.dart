@@ -690,6 +690,8 @@ List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
           date: tx.time,
           id: tx.id,
           onTap: () => gotoTransaction(context, tx.id),
+          zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
+          zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
         );
 
         return Column(children: [

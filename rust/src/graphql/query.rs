@@ -555,25 +555,34 @@ impl Transaction {
         let spends = query(
             "SELECT n.id_note, n.pool, n.height, n.tx,
             n.scope, n.diversifier, n.value, n.locked,
-            m.memo_text
+            m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
             FROM spends s
             JOIN notes n ON s.id_note = n.id_note
             LEFT JOIN memos m ON s.id_note = m.note
+            LEFT JOIN assets a ON n.id_asset = a.id_asset
             WHERE s.tx = ?1
             ORDER BY s.id_note",
         )
         .bind(self.id)
-        .map(|r: SqliteRow| crate::api::account::TxNote {
-            id: r.get(0),
-            pool: r.get(1),
-            height: r.get(2),
-            tx: r.get(3),
-            scope: r.get(4),
-            diversifier: r.get(5),
-            value: r.get(6),
-            locked: r.get(7),
-            memo: r.get(8),
-            id_asset: None,
+        .map(|r: SqliteRow| {
+            let id_asset: Option<i32> = r.get(9);
+            crate::api::account::TxNote {
+                id: r.get(0),
+                pool: r.get(1),
+                height: r.get(2),
+                tx: r.get(3),
+                scope: r.get(4),
+                diversifier: r.get(5),
+                value: r.get(6),
+                locked: r.get(7),
+                memo: r.get(8),
+                id_asset: id_asset.map(|v| v as u32),
+                asset_display: crate::account::asset_display(
+                    id_asset,
+                    r.get(10),
+                    r.get(11),
+                ),
+            }
         })
         .fetch_all(&mut *conn)
         .await?;
