@@ -53,4 +53,5 @@ apply from: "../cargokit/gradle/plugin.gradle"
 cargokit {
     manifestDir = "../../rust"
     libname = "rlz"
+    rustflags = ['--cfg', 'zcash_unstable="nu7"']
 }
