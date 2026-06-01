@@ -39,20 +39,33 @@ export CARGOKIT_ROOT_PROJECT_DIR=$SRCROOT
 
 # Propagate Cargo rustflags for iOS builds:
 # - If `CARGO_ENCODED_RUSTFLAGS` is already set in the environment, keep it.
-# - Otherwise, try to read `.cargo/config.toml` in the manifest dir and extract
-#   a `rustflags = [...]` entry, encoding the flags with the unit separator.
+# - Otherwise, try to read `.cargo/config.toml` from a few likely locations and
+#   extract a `rustflags = [...]` entry, encoding the flags with the unit separator.
 if [ -z "$CARGO_ENCODED_RUSTFLAGS" ]; then
-  CONFIG_FILE="$PODS_TARGET_SRCROOT/$1/.cargo/config.toml"
-  if [ -f "$CONFIG_FILE" ]; then
+  # Candidate locations (manifest relative, manifest/.cargo, workspace root .cargo)
+  CANDIDATES=(
+    "$PODS_TARGET_SRCROOT/$1/.cargo/config.toml"
+    "$CARGOKIT_MANIFEST_DIR/.cargo/config.toml"
+    "$CARGOKIT_MANIFEST_DIR/../.cargo/config.toml"
+    "$PODS_ROOT/../../.cargo/config.toml"
+  )
+  FOUND_CONFIG=""
+  for cfg in "${CANDIDATES[@]}"; do
+    if [ -f "$cfg" ]; then
+      FOUND_CONFIG="$cfg"
+      break
+    fi
+  done
+
+  if [ -n "$FOUND_CONFIG" ]; then
     # Extract the rustflags line and parse comma-separated items. This is a
     # lightweight parser that handles simple cases like: rustflags = ['--cfg', 'foo']
-    RUSTFLAGS_LINE=$(sed -n "s/^[[:space:]]*rustflags[[:space:]]*=\(.*\)/\1/p" "$CONFIG_FILE" | tr -d '\r' | tr -d '\n' | sed "s/^\s*//;s/\s*$//")
+    RUSTFLAGS_LINE=$(sed -n "s/^[[:space:]]*rustflags[[:space:]]*=\(.*\)/\1/p" "$FOUND_CONFIG" | tr -d '\r' | tr -d '\n' | sed "s/^\s*//;s/\s*$//")
     if [ -n "$RUSTFLAGS_LINE" ]; then
       # Remove surrounding brackets and quotes, then split on commas
       # Example input: ['--cfg', 'zcash_unstable="nu7"']
-      RUSTFLAGS_CONTENT=$(echo "$RUSTFLAGS_LINE" | sed -e "s/^\[//" -e "s/\]$//" -e "s/\'\"\'//g")
-      # Remove single quotes and double quotes, then split by comma
-      # and trim whitespace
+      RUSTFLAGS_CONTENT=$(echo "$RUSTFLAGS_LINE" | sed -e "s/^\[//" -e "s/\]$//" -e "s/\\'\"\\'//g")
+      # Split by comma and trim whitespace/quotes
       IFS=',' read -ra PARTS <<< "$RUSTFLAGS_CONTENT"
       ENCODED=""
       SEP=$(printf "\x1f")
