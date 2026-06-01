@@ -289,7 +289,6 @@ pub async fn decrypt_memo(
     if let Some(bundle) = tx_data.orchard_bundle() {
         match bundle {
             OrchardBundle::OrchardVanilla(b) => process_orchard_memo!(b, OrchardVanilla),
-            #[cfg(zcash_unstable = "nu7")]
             OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
         }
     }
