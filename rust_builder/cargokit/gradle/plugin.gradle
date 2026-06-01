@@ -11,6 +11,7 @@ apply plugin: CargoKitPlugin
 class CargoKitExtension {
     String manifestDir; // Relative path to folder containing Cargo.toml
     String libname; // Library name within Cargo.toml. Must be a cdylib
+    List<String> rustflags; // Optional rustc flags to pass to CargoKit Android builds
 }
 
 abstract class CargoKitBuildTask extends DefaultTask {
@@ -80,6 +81,14 @@ abstract class CargoKitBuildTask extends DefaultTask {
             environment "CARGOKIT_MIN_SDK_VERSION", minSdkVersion
             environment "CARGOKIT_TARGET_PLATFORMS", targetPlatforms.join(",")
             environment "CARGOKIT_JAVA_HOME", System.properties['java.home']
+            if (project.cargokit.rustflags != null && !project.cargokit.rustflags.isEmpty()) {
+                def rustflags = project.cargokit.rustflags.join('\u001f')
+                def existingRustflags = System.getenv('CARGO_ENCODED_RUSTFLAGS')
+                if (existingRustflags != null && !existingRustflags.isEmpty()) {
+                    rustflags = existingRustflags + '\u001f' + rustflags
+                }
+                environment "CARGO_ENCODED_RUSTFLAGS", rustflags
+            }
         }
     }
 }
