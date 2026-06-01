@@ -30,6 +30,7 @@ jobs:
             target: windows
     env:
       FLUTTER_VERSION: 3.41.7
+      RUSTFLAGS: '--cfg zcash_unstable="nu7"'
 
     steps:
       - name: Install RUST
