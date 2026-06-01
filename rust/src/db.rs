@@ -362,6 +362,12 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN price REAL")
         .execute(&mut *connection)
         .await;
+    let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN zsa_value INTEGER NOT NULL DEFAULT 0")
+        .execute(&mut *connection)
+        .await;
+    let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN asset_id INTEGER REFERENCES assets(id_asset)")
+        .execute(&mut *connection)
+        .await;
     if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='categories'")
         .fetch_optional(&mut *connection)
         .await?
@@ -1196,7 +1202,7 @@ pub async fn calculate_balance(
     let height = height.unwrap_or(u32::MAX);
 
     let mut rows = sqlx::query("
-    WITH N AS (SELECT value, pool, height FROM notes WHERE account = ?1 UNION ALL SELECT value, pool, height FROM spends WHERE account = ?1)
+    WITH N AS (SELECT value, pool, height FROM notes WHERE account = ?1 AND id_asset IS NULL UNION ALL SELECT s.value, s.pool, s.height FROM spends s JOIN notes n ON s.id_note = n.id_note WHERE s.account = ?1 AND n.id_asset IS NULL)
     SELECT pool, SUM(value) FROM N WHERE height <= ?2 GROUP BY pool")
         .bind(account)
         .bind(height)
@@ -1214,8 +1220,11 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
     let transactions = sqlx::query(
-        "SELECT id_tx, txid, height, time, value, tpe, c.name FROM transactions t
+        "SELECT id_tx, txid, height, time, value, tpe, c.name, t.zsa_value, t.asset_id,
+            a.asset_name, a.asset_desc_hash
+            FROM transactions t
             LEFT JOIN categories c ON c.id_category = t.category
+            LEFT JOIN assets a ON t.asset_id = a.id_asset
             WHERE account = ?
             ORDER BY height DESC",
     )
@@ -1228,6 +1237,10 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
         let value: i64 = row.get(4);
         let tpe: Option<u8> = row.get(5);
         let category: Option<String> = row.get(6);
+        let zsa_value: i64 = row.get(7);
+        let asset_id: Option<i32> = row.get(8);
+        let asset_name: Option<String> = row.get(9);
+        let asset_desc_hash: Option<Vec<u8>> = row.get(10);
         Tx {
             id,
             txid,
@@ -1236,6 +1249,13 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
             value,
             tpe,
             category,
+            zsa_value,
+            asset_id,
+            asset_display: crate::account::asset_display(
+                asset_id,
+                asset_name,
+                asset_desc_hash,
+            ),
         }
     })
     .fetch_all(&mut *connection)
@@ -1326,10 +1346,11 @@ pub async fn get_account_hw(connection: &mut SqliteConnection, account: u32) -> 
 pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
     let notes = sqlx::query(
         "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
-        m.memo_text, n.id_asset
+        m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
         FROM notes n LEFT JOIN spends s
 	    ON n.id_note = s.id_note
         LEFT JOIN memos m ON n.id_note = m.note
+        LEFT JOIN assets a ON n.id_asset = a.id_asset
 	    WHERE n.account = ? AND s.id_note IS NULL ORDER BY n.height DESC",
     )
     .bind(account)
@@ -1349,10 +1370,11 @@ pub async fn get_notes_txid(
     // including the ones that may be spent
     let notes = sqlx::query(
         "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
-        m.memo_text, n.id_asset
+        m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
        FROM notes n
        JOIN transactions t ON n.tx = t.id_tx
        LEFT JOIN memos m ON n.id_note = m.note
+       LEFT JOIN assets a ON n.id_asset = a.id_asset
 	   WHERE n.account = ?1
        AND t.txid = ?2",
     )
@@ -1376,6 +1398,8 @@ fn row_to_note(row: SqliteRow) -> TxNote {
     let locked: bool = row.get(7);
     let memo: Option<String> = row.get(8);
     let id_asset: Option<i64> = row.get(9);
+    let asset_name: Option<String> = row.get(10);
+    let asset_desc_hash: Option<Vec<u8>> = row.get(11);
 
     TxNote {
         id: id_note,
@@ -1388,6 +1412,11 @@ fn row_to_note(row: SqliteRow) -> TxNote {
         locked,
         id_asset: id_asset.map(|v| v as u32),
         memo,
+        asset_display: crate::account::asset_display(
+            id_asset.map(|v| v as i32),
+            asset_name,
+            asset_desc_hash,
+        ),
     }
 }
 
@@ -1669,7 +1698,7 @@ pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -
 pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> Result<u64> {
     let (amount,): (Option<u64>,) = sqlx::query_as(
         "SELECT SUM(n.value) FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
-    WHERE s.id_note IS NULL AND n.account = ?1 AND NOT(locked)",
+    WHERE s.id_note IS NULL AND n.account = ?1 AND n.id_asset IS NULL AND NOT(locked)",
     )
     .bind(account)
     .fetch_one(connection)

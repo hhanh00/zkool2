@@ -5594,6 +5594,13 @@ impl SseDecode for crate::api::frost::FrostSignParams {
     }
 }
 
+impl SseDecode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
+    }
+}
+
 impl SseDecode for i64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -6108,6 +6115,17 @@ impl SseDecode for Option<crate::api::account::FrostParams> {
     }
 }
 
+impl SseDecode for Option<i32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<i32>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<i64> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -6459,6 +6477,9 @@ impl SseDecode for crate::api::account::Tx {
         let mut var_value = <i64>::sse_decode(deserializer);
         let mut var_tpe = <Option<u8>>::sse_decode(deserializer);
         let mut var_category = <Option<String>>::sse_decode(deserializer);
+        let mut var_zsaValue = <i64>::sse_decode(deserializer);
+        let mut var_assetId = <Option<i32>>::sse_decode(deserializer);
+        let mut var_assetDisplay = <String>::sse_decode(deserializer);
         return crate::api::account::Tx {
             id: var_id,
             txid: var_txid,
@@ -6467,6 +6488,9 @@ impl SseDecode for crate::api::account::Tx {
             value: var_value,
             tpe: var_tpe,
             category: var_category,
+            zsa_value: var_zsaValue,
+            asset_id: var_assetId,
+            asset_display: var_assetDisplay,
         };
     }
 }
@@ -6530,6 +6554,7 @@ impl SseDecode for crate::api::account::TxNote {
         let mut var_locked = <bool>::sse_decode(deserializer);
         let mut var_memo = <Option<String>>::sse_decode(deserializer);
         let mut var_idAsset = <Option<u32>>::sse_decode(deserializer);
+        let mut var_assetDisplay = <String>::sse_decode(deserializer);
         return crate::api::account::TxNote {
             id: var_id,
             pool: var_pool,
@@ -6541,6 +6566,7 @@ impl SseDecode for crate::api::account::TxNote {
             locked: var_locked,
             memo: var_memo,
             id_asset: var_idAsset,
+            asset_display: var_assetDisplay,
         };
     }
 }
@@ -6616,11 +6642,15 @@ impl SseDecode for crate::api::account::TxSpend {
         let mut var_pool = <u8>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_value = <u64>::sse_decode(deserializer);
+        let mut var_idAsset = <Option<u32>>::sse_decode(deserializer);
+        let mut var_assetDisplay = <String>::sse_decode(deserializer);
         return crate::api::account::TxSpend {
             id: var_id,
             pool: var_pool,
             height: var_height,
             value: var_value,
+            id_asset: var_idAsset,
+            asset_display: var_assetDisplay,
         };
     }
 }
@@ -6694,13 +6724,6 @@ impl SseDecode for crate::api::zsa::ZsaHolding {
             first_seen_height: var_firstSeenHeight,
             balance: var_balance,
         };
-    }
-}
-
-impl SseDecode for i32 {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
     }
 }
 
@@ -7703,6 +7726,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Tx {
             self.value.into_into_dart().into_dart(),
             self.tpe.into_into_dart().into_dart(),
             self.category.into_into_dart().into_dart(),
+            self.zsa_value.into_into_dart().into_dart(),
+            self.asset_id.into_into_dart().into_dart(),
+            self.asset_display.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -7777,6 +7803,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TxNote {
             self.locked.into_into_dart().into_dart(),
             self.memo.into_into_dart().into_dart(),
             self.id_asset.into_into_dart().into_dart(),
+            self.asset_display.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -7871,6 +7898,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TxSpend {
             self.pool.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
             self.value.into_into_dart().into_dart(),
+            self.id_asset.into_into_dart().into_dart(),
+            self.asset_display.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8188,6 +8217,13 @@ impl SseEncode for crate::api::frost::FrostSignParams {
         <u32>::sse_encode(self.account, serializer);
         <u8>::sse_encode(self.coordinator, serializer);
         <u32>::sse_encode(self.funding_account, serializer);
+    }
+}
+
+impl SseEncode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
     }
 }
 
@@ -8594,6 +8630,16 @@ impl SseEncode for Option<crate::api::account::FrostParams> {
     }
 }
 
+impl SseEncode for Option<i32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <i32>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<i64> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -8866,6 +8912,9 @@ impl SseEncode for crate::api::account::Tx {
         <i64>::sse_encode(self.value, serializer);
         <Option<u8>>::sse_encode(self.tpe, serializer);
         <Option<String>>::sse_encode(self.category, serializer);
+        <i64>::sse_encode(self.zsa_value, serializer);
+        <Option<i32>>::sse_encode(self.asset_id, serializer);
+        <String>::sse_encode(self.asset_display, serializer);
     }
 }
 
@@ -8909,6 +8958,7 @@ impl SseEncode for crate::api::account::TxNote {
         <bool>::sse_encode(self.locked, serializer);
         <Option<String>>::sse_encode(self.memo, serializer);
         <Option<u32>>::sse_encode(self.id_asset, serializer);
+        <String>::sse_encode(self.asset_display, serializer);
     }
 }
 
@@ -8959,6 +9009,8 @@ impl SseEncode for crate::api::account::TxSpend {
         <u8>::sse_encode(self.pool, serializer);
         <u32>::sse_encode(self.height, serializer);
         <u64>::sse_encode(self.value, serializer);
+        <Option<u32>>::sse_encode(self.id_asset, serializer);
+        <String>::sse_encode(self.asset_display, serializer);
     }
 }
 
@@ -9029,13 +9081,6 @@ impl SseEncode for crate::api::zsa::ZsaHolding {
         <bool>::sse_encode(self.finalized, serializer);
         <u32>::sse_encode(self.first_seen_height, serializer);
         <u64>::sse_encode(self.balance, serializer);
-    }
-}
-
-impl SseEncode for i32 {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
     }
 }
 

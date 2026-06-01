@@ -35,19 +35,23 @@ pub async fn fetch_tx_details(
 
     for (id_tx, txid) in txids.iter() {
         decrypt_memo(network, connection, client, account, txid).await?;
-        let (tpe, value) = summarize_tx(connection, *id_tx).await?;
-        sqlx::query("UPDATE transactions SET details = TRUE, tpe = ?, value = ? WHERE id_tx = ?")
-            .bind(tpe)
-            .bind(value)
-            .bind(*id_tx)
-            .execute(&mut *connection)
-            .await?;
+        let (tpe, value, asset_id, zsa_value) = summarize_tx(connection, *id_tx).await?;
+        sqlx::query(
+            "UPDATE transactions SET details = TRUE, tpe = ?, value = ?, zsa_value = ?, asset_id = ? WHERE id_tx = ?",
+        )
+        .bind(tpe)
+        .bind(value)
+        .bind(zsa_value)
+        .bind(asset_id)
+        .bind(*id_tx)
+        .execute(&mut *connection)
+        .await?;
     }
 
     Ok(())
 }
 
-async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8, i64)> {
+async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8, i64, Option<i32>, i64)> {
     let (value, fee) = sqlx::query(
         "WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
         SELECT SUM(n.value), t.fee FROM n JOIN transactions t ON t.id_tx = n.tx WHERE n.tx = ?",
@@ -60,12 +64,33 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
     })
     .fetch_one(&mut *connection)
     .await?;
+
+    // Compute ZSA summary: pick the first asset's net transfer amount
+    let (asset_id, zsa_value) = sqlx::query(
+        "WITH n AS (
+            SELECT value, id_asset, tx FROM notes WHERE id_asset IS NOT NULL
+            UNION ALL
+            SELECT s.value, n.id_asset, s.tx FROM spends s
+            JOIN notes n ON s.id_note = n.id_note WHERE n.id_asset IS NOT NULL
+        )
+        SELECT id_asset, SUM(value) FROM n WHERE tx = ? GROUP BY id_asset LIMIT 1",
+    )
+    .bind(tx)
+    .map(|row: SqliteRow| {
+        let id_asset: Option<i32> = row.get(0);
+        let zsa_value: Option<i64> = row.get(1);
+        (id_asset, zsa_value.unwrap_or_default())
+    })
+    .fetch_optional(&mut *connection)
+    .await?
+    .unwrap_or((None, 0));
+
     if value > 0 {
         // receiving
-        Ok((1, value))
+        Ok((1, value, asset_id, zsa_value))
     } else if value < -fee {
         // sending
-        Ok((2, value))
+        Ok((2, value, asset_id, zsa_value))
     } else {
         // self transfer
         let has_tspend = sqlx::query("SELECT 1 FROM spends WHERE tx = ? AND pool = 0")
@@ -79,7 +104,7 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
             .await?
             .is_some();
         let tpe: u8 = (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 });
-        Ok((tpe, value))
+        Ok((tpe, value, asset_id, zsa_value))
     }
 }
 
