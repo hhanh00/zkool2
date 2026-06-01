@@ -98,6 +98,7 @@ sealed class PcztPackage with _$PcztPackage {
     required UsizeArray3 nSpends,
     required Uint64List saplingIndices,
     required Uint64List orchardIndices,
+    required Uint64List orchardSplitSpendIndices,
     required bool canSign,
     required bool canBroadcast,
     double? price,

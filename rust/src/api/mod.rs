@@ -13,3 +13,4 @@ pub mod transaction;
 pub mod sweep;
 pub mod raptor;
 pub mod vault;
+pub mod zsa;

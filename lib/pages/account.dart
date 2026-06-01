@@ -89,6 +89,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   onUpdateAllTxPrices();
                 case "charts":
                   GoRouter.of(context).push("/chart");
+                case "zsa":
+                  GoRouter.of(context).push("/zsa");
                 default:
                   onExport(int.parse(result));
               }
@@ -107,6 +109,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   value: "charts",
                   child: Text("Charts"),
                 ),
+              const PopupMenuItem<String>(
+                value: "zsa",
+                child: Text("ZSA Holdings"),
+              ),
             ],
           ),
         ],

@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:collection/collection.dart';
+import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +18,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -23,6 +27,9 @@ import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/input_amount.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/scanner.dart';
+
+/// The native ZEC asset base (32 zero bytes).
+final zecBase = Uint8List(32);
 
 final addressID = GlobalKey();
 final scanID = GlobalKey();
@@ -54,6 +61,9 @@ class SendPageState extends ConsumerState<SendPage> {
   String? address;
   String? amount;
   String? memo;
+  List<ZsaHolding> zsas = [];
+  Uint8List selectedAssetBase = zecBase;
+  String? selectedAssetName;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
@@ -68,11 +78,13 @@ class SendPageState extends ConsumerState<SendPage> {
       final data = (await ref.read(accountProvider(selectedAccount.id).future));
       final bal = await balance(c: c);
       final addrs = await getAddresses(uaPools: data.pool, c: c);
+      final zsaHoldings = await listZsaHoldings(c: c);
 
       setState(() {
         account = data;
         pbalance = bal;
         addresses = addrs;
+        zsas = zsaHoldings;
       });
     });
   }
@@ -191,12 +203,34 @@ class SendPageState extends ConsumerState<SendPage> {
                     ),
                   ],
                 ),
+                FormBuilderDropdown<Uint8List>(
+                  name: "asset",
+                  decoration: const InputDecoration(labelText: "Currency"),
+                  initialValue: zecBase,
+                  items: [
+                    DropdownMenuItem(value: zecBase, child: const Text("ZEC")),
+                    ...zsas.map((z) => DropdownMenuItem(
+                          value: z.assetBase,
+                          child: Text(z.assetName.isNotEmpty ? z.assetName : hex.encode(z.assetDescHash.sublist(0, 8))),
+                        )),
+                  ],
+                  onChanged: (v) {
+                    setState(() {
+                      selectedAssetBase = v ?? zecBase;
+                      selectedAssetName = zsas.firstWhereOrNull((z) => z.assetBase == v)?.assetName;
+                    });
+                  },
+                ),
                 InputAmount(
                   key: amountKey,
                   name: "amount",
                   initialValue: amount,
                   onChanged: (v) => setState(() => amount = v),
-                  onMax: onMax,
+                  onMax: selectedAssetBase.every((b) => b == 0) ? onMax : null,
+                  showFx: selectedAssetBase.every((b) => b == 0),
+                  label: selectedAssetName != null
+                      ? "Amount in $selectedAssetName"
+                      : "Amount in ZEC",
                 ),
                 Visibility(
                   visible: supportsMemo,
@@ -273,6 +307,7 @@ class SendPageState extends ConsumerState<SendPage> {
           Recipient(
             address: addresses?.oaddr ?? addresses?.saddr ?? "", // Shield to Orchard or Sapling address
             amount: pbalance?.field0[0] ?? BigInt.zero,
+            assetBase: zecBase,
           ),
         ],
         options: options,
@@ -293,7 +328,7 @@ class SendPageState extends ConsumerState<SendPage> {
         smartTransparent: false,
       );
       final pczt = await prepare(
-        recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero))],
+        recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero), assetBase: zecBase)],
         options: options,
         c: c,
       );
@@ -398,7 +433,15 @@ class SendPageState extends ConsumerState<SendPage> {
       final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
       logger.i("Send $amount to $address");
 
-      final recipient = Recipient(address: address, amount: stringToZat(amount), userMemo: memo, price: price);
+      final isZec = selectedAssetBase.every((b) => b == 0);
+      final recipient = Recipient(
+        address: address,
+        amount: isZec ? stringToZat(amount) : BigInt.parse(amount),
+        userMemo: memo,
+        price: price,
+        assetBase: selectedAssetBase,
+        assetName: selectedAssetName,
+      );
       return recipient;
     }
     return null;

@@ -424,7 +424,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'0c9f9dc4a92e89a15e9f89d71949c1c84c1a5817';
+String _$accountHash() => r'25f96180687d929a226176253f8fc71fb74a5964';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
