@@ -8,6 +8,7 @@ import 'api/coin.dart';
 import 'api/db.dart';
 import 'api/frost.dart';
 import 'api/init.dart';
+import 'api/issuance.dart';
 import 'api/key.dart';
 import 'api/mempool.dart';
 import 'api/network.dart';
@@ -17,6 +18,7 @@ import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
+import 'api/zsa.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -302,6 +304,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> dco_decode_list_tx_spend(dynamic raw);
 
   @protected
+  List<ZsaHolding> dco_decode_list_zsa_holding(dynamic raw);
+
+  @protected
   LogMessage dco_decode_log_message(dynamic raw);
 
   @protected
@@ -447,6 +452,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray3 dco_decode_usize_array_3(dynamic raw);
+
+  @protected
+  ZsaHolding dco_decode_zsa_holding(dynamic raw);
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
@@ -714,6 +722,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> sse_decode_list_tx_spend(SseDeserializer deserializer);
 
   @protected
+  List<ZsaHolding> sse_decode_list_zsa_holding(SseDeserializer deserializer);
+
+  @protected
   LogMessage sse_decode_log_message(SseDeserializer deserializer);
 
   @protected
@@ -861,6 +872,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray3 sse_decode_usize_array_3(SseDeserializer deserializer);
+
+  @protected
+  ZsaHolding sse_decode_zsa_holding(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -1152,6 +1166,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_tx_spend(List<TxSpend> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_zsa_holding(
+      List<ZsaHolding> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_log_message(LogMessage self, SseSerializer serializer);
 
   @protected
@@ -1306,6 +1324,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_zsa_holding(ZsaHolding self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);

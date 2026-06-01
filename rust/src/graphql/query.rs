@@ -217,46 +217,32 @@ impl Query {
     async fn assets(id_account: i32, context: &Context) -> FieldResult<Vec<AssetInfo>> {
         check_auth(context, id_account, false)?;
         let mut conn = context.coin.get_connection().await?;
-        use sqlx::Row;
-        let rows = sqlx::query(
-            "SELECT a.id_asset, a.asset_desc_hash, a.asset_name, a.ik, a.asset_base,
-                    a.finalized, a.first_seen_height,
-                    COALESCE(SUM(n.value), 0) AS balance
-             FROM assets a
-             LEFT JOIN notes n ON n.id_asset = a.id_asset
-               AND n.account = ?1
-               AND n.id_note NOT IN (SELECT id_note FROM spends)
-               AND n.locked = 0
-             GROUP BY a.id_asset
-             ORDER BY a.asset_name, a.asset_desc_hash",
-        )
-        .bind(id_account)
-        .map(|row: sqlx::sqlite::SqliteRow| {
-            let id_asset: i32 = row.get(0);
-            let asset_desc_hash: Vec<u8> = row.get(1);
-            let asset_name: Option<String> = row.get(2);
-            let ik: Vec<u8> = row.get(3);
-            let asset_base: Vec<u8> = row.get(4);
-            let finalized: bool = row.get(5);
-            let first_seen_height: i32 = row.get(6);
-            let balance: i64 = row.get(7);
-            let is_zec = asset_base == [0u8; 32];
-            AssetInfo {
-                id_asset,
-                asset_desc_hash: hex::encode(&asset_desc_hash),
-                asset_name,
-                ik: hex::encode(&ik),
-                asset_base: hex::encode(&asset_base),
-                finalized,
-                first_seen_height,
-                balance: if is_zec { zats_to_zec(balance) } else { BigDecimal::from(balance) },
-            }
-        })
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(|e| format!("Failed to query assets: {e}"))?;
+        let rows = crate::db::get_zsa_holdings(&mut conn, id_account as u32)
+            .await
+            .map_err(|e| format!("Failed to query assets: {e}"))?;
 
-        Ok(rows)
+        let assets = rows
+            .into_iter()
+            .map(|r| {
+                let is_zec = r.asset_base == [0u8; 32];
+                AssetInfo {
+                    id_asset: r.id_asset as i32,
+                    asset_desc_hash: hex::encode(&r.asset_desc_hash),
+                    asset_name: r.asset_name,
+                    ik: hex::encode(&r.ik),
+                    asset_base: hex::encode(&r.asset_base),
+                    finalized: r.finalized,
+                    first_seen_height: r.first_seen_height,
+                    balance: if is_zec {
+                        zats_to_zec(r.balance)
+                    } else {
+                        BigDecimal::from(r.balance)
+                    },
+                }
+            })
+            .collect();
+
+        Ok(assets)
     }
 
     async fn current_height(context: &Context) -> FieldResult<i32> {

@@ -19,6 +19,7 @@ import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/vault.dart';
@@ -278,6 +279,7 @@ Future<AccountData> account(Ref ref, int id) async {
   final transactions = await listTxHistory(c: c);
   final memos = await listMemos(c: c);
   final notes = await listNotes(c: c);
+  final zsas = await listZsaHoldings(c: c);
 
   return AccountData(
     account: account,
@@ -286,6 +288,7 @@ Future<AccountData> account(Ref ref, int id) async {
     transactions: transactions,
     memos: memos,
     notes: notes,
+    zsas: zsas,
     frostParams: frostParams,
   );
 }
@@ -308,6 +311,7 @@ sealed class AccountData with _$AccountData {
     required List<Tx> transactions,
     required List<Memo> memos,
     required List<TxNote> notes,
+    required List<ZsaHolding> zsas,
     FrostParams? frostParams,
   }) = _AccountData;
 }

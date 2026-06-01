@@ -15,7 +15,8 @@ class InputAmount extends ConsumerStatefulWidget {
   final void Function(String?)? onChanged;
   final bool showFx;
   final BigInt? max;
-  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, this.max, super.key});
+  final String label;
+  const InputAmount({required this.name, this.initialValue, this.onMax, this.onChanged, this.showFx = true, this.max, this.label = "Amount in ZEC", super.key});
 
   @override
   ConsumerState<InputAmount> createState() => InputAmountState();
@@ -58,7 +59,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                   Expanded(
                     child: FormBuilderTextField(
                       name: "zat",
-                      decoration: InputDecoration(label: Text("Amount in ZEC")),
+                      decoration: InputDecoration(label: Text(widget.label)),
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                       initialValue: widget.initialValue,
                       onChanged: (v) => onChanged(v, interactive: true),
@@ -106,7 +107,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                   ],
                 ),
               Gap(16),
-              if (widget.showFx) Text("The Amount in USD is indicative. The transaction is always made in ZEC."),
+              if (widget.showFx) Text("The Amount in USD is indicative. The transaction is always made in crypto."),
             ],
           ),
         );

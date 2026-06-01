@@ -765,6 +765,7 @@ mixin _$AccountData {
   List<Tx> get transactions;
   List<Memo> get memos;
   List<TxNote> get notes;
+  List<ZsaHolding> get zsas;
   FrostParams? get frostParams;
 
   /// Create a copy of AccountData
@@ -786,6 +787,7 @@ mixin _$AccountData {
                 .equals(other.transactions, transactions) &&
             const DeepCollectionEquality().equals(other.memos, memos) &&
             const DeepCollectionEquality().equals(other.notes, notes) &&
+            const DeepCollectionEquality().equals(other.zsas, zsas) &&
             (identical(other.frostParams, frostParams) ||
                 other.frostParams == frostParams));
   }
@@ -799,11 +801,12 @@ mixin _$AccountData {
       const DeepCollectionEquality().hash(transactions),
       const DeepCollectionEquality().hash(memos),
       const DeepCollectionEquality().hash(notes),
+      const DeepCollectionEquality().hash(zsas),
       frostParams);
 
   @override
   String toString() {
-    return 'AccountData(account: $account, pool: $pool, balance: $balance, transactions: $transactions, memos: $memos, notes: $notes, frostParams: $frostParams)';
+    return 'AccountData(account: $account, pool: $pool, balance: $balance, transactions: $transactions, memos: $memos, notes: $notes, zsas: $zsas, frostParams: $frostParams)';
   }
 }
 
@@ -820,6 +823,7 @@ abstract mixin class $AccountDataCopyWith<$Res> {
       List<Tx> transactions,
       List<Memo> memos,
       List<TxNote> notes,
+      List<ZsaHolding> zsas,
       FrostParams? frostParams});
 
   $AccountCopyWith<$Res> get account;
@@ -844,6 +848,7 @@ class _$AccountDataCopyWithImpl<$Res> implements $AccountDataCopyWith<$Res> {
     Object? transactions = null,
     Object? memos = null,
     Object? notes = null,
+    Object? zsas = null,
     Object? frostParams = freezed,
   }) {
     return _then(_self.copyWith(
@@ -871,6 +876,10 @@ class _$AccountDataCopyWithImpl<$Res> implements $AccountDataCopyWith<$Res> {
           ? _self.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as List<TxNote>,
+      zsas: null == zsas
+          ? _self.zsas
+          : zsas // ignore: cast_nullable_to_non_nullable
+              as List<ZsaHolding>,
       frostParams: freezed == frostParams
           ? _self.frostParams
           : frostParams // ignore: cast_nullable_to_non_nullable
@@ -1001,6 +1010,7 @@ extension AccountDataPatterns on AccountData {
             List<Tx> transactions,
             List<Memo> memos,
             List<TxNote> notes,
+            List<ZsaHolding> zsas,
             FrostParams? frostParams)?
         $default, {
     required TResult orElse(),
@@ -1008,8 +1018,15 @@ extension AccountDataPatterns on AccountData {
     final _that = this;
     switch (_that) {
       case _AccountData() when $default != null:
-        return $default(_that.account, _that.pool, _that.balance,
-            _that.transactions, _that.memos, _that.notes, _that.frostParams);
+        return $default(
+            _that.account,
+            _that.pool,
+            _that.balance,
+            _that.transactions,
+            _that.memos,
+            _that.notes,
+            _that.zsas,
+            _that.frostParams);
       case _:
         return orElse();
     }
@@ -1037,14 +1054,22 @@ extension AccountDataPatterns on AccountData {
             List<Tx> transactions,
             List<Memo> memos,
             List<TxNote> notes,
+            List<ZsaHolding> zsas,
             FrostParams? frostParams)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountData():
-        return $default(_that.account, _that.pool, _that.balance,
-            _that.transactions, _that.memos, _that.notes, _that.frostParams);
+        return $default(
+            _that.account,
+            _that.pool,
+            _that.balance,
+            _that.transactions,
+            _that.memos,
+            _that.notes,
+            _that.zsas,
+            _that.frostParams);
     }
   }
 
@@ -1069,14 +1094,22 @@ extension AccountDataPatterns on AccountData {
             List<Tx> transactions,
             List<Memo> memos,
             List<TxNote> notes,
+            List<ZsaHolding> zsas,
             FrostParams? frostParams)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountData() when $default != null:
-        return $default(_that.account, _that.pool, _that.balance,
-            _that.transactions, _that.memos, _that.notes, _that.frostParams);
+        return $default(
+            _that.account,
+            _that.pool,
+            _that.balance,
+            _that.transactions,
+            _that.memos,
+            _that.notes,
+            _that.zsas,
+            _that.frostParams);
       case _:
         return null;
     }
@@ -1093,10 +1126,12 @@ class _AccountData implements AccountData {
       required final List<Tx> transactions,
       required final List<Memo> memos,
       required final List<TxNote> notes,
+      required final List<ZsaHolding> zsas,
       this.frostParams})
       : _transactions = transactions,
         _memos = memos,
-        _notes = notes;
+        _notes = notes,
+        _zsas = zsas;
 
   @override
   final Account account;
@@ -1128,6 +1163,14 @@ class _AccountData implements AccountData {
     return EqualUnmodifiableListView(_notes);
   }
 
+  final List<ZsaHolding> _zsas;
+  @override
+  List<ZsaHolding> get zsas {
+    if (_zsas is EqualUnmodifiableListView) return _zsas;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_zsas);
+  }
+
   @override
   final FrostParams? frostParams;
 
@@ -1151,6 +1194,7 @@ class _AccountData implements AccountData {
                 .equals(other._transactions, _transactions) &&
             const DeepCollectionEquality().equals(other._memos, _memos) &&
             const DeepCollectionEquality().equals(other._notes, _notes) &&
+            const DeepCollectionEquality().equals(other._zsas, _zsas) &&
             (identical(other.frostParams, frostParams) ||
                 other.frostParams == frostParams));
   }
@@ -1164,11 +1208,12 @@ class _AccountData implements AccountData {
       const DeepCollectionEquality().hash(_transactions),
       const DeepCollectionEquality().hash(_memos),
       const DeepCollectionEquality().hash(_notes),
+      const DeepCollectionEquality().hash(_zsas),
       frostParams);
 
   @override
   String toString() {
-    return 'AccountData(account: $account, pool: $pool, balance: $balance, transactions: $transactions, memos: $memos, notes: $notes, frostParams: $frostParams)';
+    return 'AccountData(account: $account, pool: $pool, balance: $balance, transactions: $transactions, memos: $memos, notes: $notes, zsas: $zsas, frostParams: $frostParams)';
   }
 }
 
@@ -1187,6 +1232,7 @@ abstract mixin class _$AccountDataCopyWith<$Res>
       List<Tx> transactions,
       List<Memo> memos,
       List<TxNote> notes,
+      List<ZsaHolding> zsas,
       FrostParams? frostParams});
 
   @override
@@ -1213,6 +1259,7 @@ class __$AccountDataCopyWithImpl<$Res> implements _$AccountDataCopyWith<$Res> {
     Object? transactions = null,
     Object? memos = null,
     Object? notes = null,
+    Object? zsas = null,
     Object? frostParams = freezed,
   }) {
     return _then(_AccountData(
@@ -1240,6 +1287,10 @@ class __$AccountDataCopyWithImpl<$Res> implements _$AccountDataCopyWith<$Res> {
           ? _self._notes
           : notes // ignore: cast_nullable_to_non_nullable
               as List<TxNote>,
+      zsas: null == zsas
+          ? _self._zsas
+          : zsas // ignore: cast_nullable_to_non_nullable
+              as List<ZsaHolding>,
       frostParams: freezed == frostParams
           ? _self.frostParams
           : frostParams // ignore: cast_nullable_to_non_nullable
