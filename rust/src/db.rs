@@ -1406,6 +1406,62 @@ pub async fn lock_note(
     Ok(())
 }
 
+/// Raw row from the assets table joined with unspent note balances.
+#[derive(Clone, Debug)]
+pub struct ZsaAssetRow {
+    pub id_asset: i64,
+    pub asset_desc_hash: Vec<u8>,
+    pub asset_name: Option<String>,
+    pub ik: Vec<u8>,
+    pub asset_base: Vec<u8>,
+    pub finalized: bool,
+    pub first_seen_height: i32,
+    pub balance: i64,
+}
+
+pub async fn get_zsa_holdings(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<ZsaAssetRow>> {
+    let holdings = sqlx::query(
+        "SELECT a.id_asset, a.asset_desc_hash, a.asset_name, a.ik, a.asset_base,
+                a.finalized, a.first_seen_height,
+                COALESCE(SUM(n.value), 0) AS balance
+         FROM assets a
+         LEFT JOIN notes n ON n.id_asset = a.id_asset
+           AND n.account = ?1
+           AND n.id_note NOT IN (SELECT id_note FROM spends)
+           AND n.locked = 0
+         GROUP BY a.id_asset
+         ORDER BY a.asset_name, a.asset_desc_hash",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id_asset: i64 = row.get(0);
+        let asset_desc_hash: Vec<u8> = row.get(1);
+        let asset_name: Option<String> = row.get(2);
+        let ik: Vec<u8> = row.get(3);
+        let asset_base: Vec<u8> = row.get(4);
+        let finalized: bool = row.get(5);
+        let first_seen_height: i32 = row.get(6);
+        let balance: i64 = row.get(7);
+        ZsaAssetRow {
+            id_asset,
+            asset_desc_hash,
+            asset_name,
+            ik,
+            asset_base,
+            finalized,
+            first_seen_height,
+            balance,
+        }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+
+    Ok(holdings)
+}
+
 pub async fn fetch_transparent_address_tx_count(
     connection: &mut SqliteConnection,
     account: u32,
