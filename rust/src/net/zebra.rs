@@ -376,7 +376,6 @@ pub fn parse_block(
             }
             match orchard_bundle {
                 OrchardBundle::OrchardVanilla(b) => push_actions!(b, actions),
-                #[cfg(zcash_unstable = "nu7")]
                 OrchardBundle::OrchardZSA(b) => push_actions!(b, actions),
             }
         }

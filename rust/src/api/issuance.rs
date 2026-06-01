@@ -12,7 +12,7 @@ use orchard::{
         compute_asset_desc_hash,
     },
     keys::SpendAuthorizingKey,
-    note::{AssetBase, AssetId},
+    note::AssetBase,
     value::NoteValue,
 };
 use pczt::{
