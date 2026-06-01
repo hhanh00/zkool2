@@ -509,19 +509,19 @@ pub async fn plan_transaction(
         } else {
             asset_change
         };
-        if asset_change > 0 {
-            outputs.push(RecipientState {
-                recipient: Recipient {
-                    address: change_address.clone(),
-                    amount: asset_change,
-                    asset_base: asset_key.clone(),
-                    ..Recipient::default()
-                },
-                remaining: 0,
-                pool_mask: PoolMask::from_pool(2), // orchard change
+        // Always add a change output even if 0, so the fee estimator
+        // and builder value balance stay in sync.
+        outputs.push(RecipientState {
+            recipient: Recipient {
+                address: change_address.clone(),
+                amount: asset_change,
                 asset_base: asset_key.clone(),
-            });
-        }
+                ..Recipient::default()
+            },
+            remaining: 0,
+            pool_mask: PoolMask::from_pool(2), // orchard change
+            asset_base: asset_key.clone(),
+        });
     }
     // Non-orchard change (transparent, sapling, or orchard when
     // change_pool == 2). Compute total change then subtract what the
@@ -823,7 +823,7 @@ pub async fn plan_transaction(
     }
 
     event!(Level::INFO, "Building PCZT parts");
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_| false)?;
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |asset: &AssetBase| *asset != AssetBase::zatoshi())?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
     info!("PCZT parts built");
