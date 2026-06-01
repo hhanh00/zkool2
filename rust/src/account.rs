@@ -968,6 +968,19 @@ pub async fn init_sync_heights(
     Ok(())
 }
 
+pub(crate) fn asset_display(id_asset: Option<i32>, asset_name: Option<String>, asset_desc_hash: Option<Vec<u8>>) -> String {
+    match id_asset {
+        Some(_) => asset_name
+            .filter(|n| !n.is_empty())
+            .unwrap_or_else(|| {
+                asset_desc_hash
+                    .map(|h| hex::encode(&h[..8.min(h.len())]))
+                    .unwrap_or_else(|| "ZSA".to_string())
+            }),
+        None => "ZEC".to_string(),
+    }
+}
+
 pub async fn get_tx_details(
     connection: &mut SqliteConnection,
     account: u32,
@@ -1004,9 +1017,11 @@ pub async fn get_tx_details(
 
     let notes = sqlx::query(
         "SELECT n.id_note, n.pool, n.height, n.tx, n.scope,
-        n.diversifier, n.value, n.locked, m.memo_text
+        n.diversifier, n.value, n.locked, m.memo_text, n.id_asset,
+        a.asset_name, a.asset_desc_hash
         FROM notes n
         LEFT JOIN memos m ON n.id_note = m.note
+        LEFT JOIN assets a ON n.id_asset = a.id_asset
         WHERE n.account = ? AND n.tx = ?",
     )
     .bind(account)
@@ -1021,6 +1036,9 @@ pub async fn get_tx_details(
         let value: u64 = row.get(6);
         let locked: bool = row.get(7);
         let memo = row.get(8);
+        let id_asset: Option<i32> = row.get(9);
+        let asset_name: Option<String> = row.get(10);
+        let asset_desc_hash: Option<Vec<u8>> = row.get(11);
         TxNote {
             id: id_note,
             pool,
@@ -1031,7 +1049,8 @@ pub async fn get_tx_details(
             value,
             locked,
             memo,
-            id_asset: None,
+            id_asset: id_asset.map(|v| v as u32),
+            asset_display: asset_display(id_asset, asset_name, asset_desc_hash),
         }
     })
     .fetch_all(&mut *connection)
@@ -1061,8 +1080,12 @@ pub async fn get_tx_details(
     .await?;
 
     let spends = sqlx::query(
-        "SELECT id_note, pool, height, value FROM spends
-        WHERE account = ? AND tx = ?",
+        "SELECT s.id_note, s.pool, s.height, s.value,
+        n.id_asset, a.asset_name, a.asset_desc_hash
+        FROM spends s
+        JOIN notes n ON s.id_note = n.id_note
+        LEFT JOIN assets a ON n.id_asset = a.id_asset
+        WHERE s.account = ? AND s.tx = ?",
     )
     .bind(account)
     .bind(tx.id)
@@ -1071,11 +1094,16 @@ pub async fn get_tx_details(
         let pool: u8 = row.get(1);
         let height: u32 = row.get(2);
         let value: i64 = row.get(3);
+        let id_asset: Option<i32> = row.get(4);
+        let asset_name: Option<String> = row.get(5);
+        let asset_desc_hash: Option<Vec<u8>> = row.get(6);
         TxSpend {
             id,
             pool,
             height,
             value: -value as u64,
+            id_asset: id_asset.map(|v| v as u32),
+            asset_display: asset_display(id_asset, asset_name, asset_desc_hash),
         }
     })
     .fetch_all(&mut *connection)
