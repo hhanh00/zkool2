@@ -1051,6 +1051,13 @@ pub async fn sign_transaction(
         };
         signer.sign_orchard(*bundle_index, osak).unwrap();
     }
+    for (index, bundle_index) in orchard_split_spend_indices.iter().enumerate() {
+        debug!("signing orchard split-spend {index}");
+        let Some(osak) = osak.as_ref() else {
+            return Err(Error::NoSigningKey.into());
+        };
+        signer.sign_orchard(*bundle_index, osak).unwrap();
+    }
     let pczt = signer.finish();
 
     span.in_scope(|| {

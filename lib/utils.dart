@@ -601,3 +601,4 @@ Future<Uint8List> authenticatePasskey() async {
   logger.i('[Passkey] authenticatePasskey: salt=$_prfSalt, prf=${hex.encode(prfBytes.sublist(0, 4))}...');
   return prfBytes;
 }
+
