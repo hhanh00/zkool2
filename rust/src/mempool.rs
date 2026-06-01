@@ -337,7 +337,6 @@ pub async fn decode_raw_transaction(
     if let Some(obundle) = tx_data.orchard_bundle() {
         match obundle {
             OrchardBundle::OrchardVanilla(b) => process_orchard_bundle!(b, OrchardVanilla),
-            #[cfg(zcash_unstable = "nu7")]
             OrchardBundle::OrchardZSA(b) => process_orchard_bundle!(b, OrchardZSA),
         }
     }
