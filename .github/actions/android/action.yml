@@ -28,7 +28,7 @@ runs:
         flutter build apk --split-per-abi --target-platform android-arm64,android-x64
         flutter build aab --target-platform android-arm64,android-x64
       env:
-        CARGO_ENCODED_RUSTFLAGS: '--cfg\x1fzcash_unstable="nu7"'
+        CARGO_ENCODED_RUSTFLAGS: "--cfg\u001fzcash_unstable=\"nu7\""
     - name: Move to outdir
       id: out
       shell: bash
