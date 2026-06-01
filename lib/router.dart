@@ -20,6 +20,7 @@ import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
+import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/pay.dart';
@@ -109,6 +110,8 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
         GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
+        GoRoute(path: '/zsa', builder: (context, state) => const ZsaHoldingsPage()),
+        GoRoute(path: '/zsa/issue', builder: (context, state) => const IssueAssetPage()),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
       ],
     );
