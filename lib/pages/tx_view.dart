@@ -135,9 +135,12 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
       ...txd.spends.expand(
         (n) => [
           ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
+          ListTile(title: Text("Asset"), subtitle: CopyableText(n.assetDisplay)),
           ListTile(
             title: Text("Value"),
-            subtitle: zatToText(n.value, selectable: true),
+            subtitle: n.idAsset != null
+                ? Text(n.value.toString())
+                : zatToText(n.value, selectable: true),
           ),
           Divider(),
         ],
@@ -146,9 +149,12 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
       ...txd.notes.expand(
         (n) => [
           ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
+          ListTile(title: Text("Asset"), subtitle: CopyableText(n.assetDisplay)),
           ListTile(
             title: Text("Value"),
-            subtitle: zatToText(n.value, selectable: true),
+            subtitle: n.idAsset != null
+                ? Text(n.value.toString())
+                : zatToText(n.value, selectable: true),
           ),
           Divider(),
         ],
