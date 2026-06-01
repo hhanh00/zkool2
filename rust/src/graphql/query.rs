@@ -341,7 +341,6 @@ pub async fn prepare_tx(
             if desc.is_empty() {
                 ([0u8; 32].to_vec(), None)
             } else {
-                // Resolve by asset_name (exact) or asset_desc_hash (hex prefix)
                 let rows = sqlx::query(
                     "SELECT asset_base, asset_name FROM assets
                      WHERE asset_name = ?1 OR hex(asset_desc_hash) LIKE ?2 || '%'",
@@ -366,18 +365,9 @@ pub async fn prepare_tx(
             ([0u8; 32].to_vec(), None)
         };
 
-        // ZEC amounts are scaled by 10^8 (zats); ZSA amounts are raw units
-        let is_zec = asset_base == [0u8; 32];
-        let amount = if is_zec {
+        let amount: u64 = if asset_base == [0u8; 32] {
             zec_to_zats(r.amount)? as u64
         } else {
-            if r.amount.fractional_digit_count() > 0 {
-                return Err(format!(
-                    "ZSA amounts must be whole numbers (no decimals). Got {} for asset {}",
-                    r.amount,
-                    asset_name.as_deref().unwrap_or("unknown")
-                ).into());
-            }
             r.amount.to_string().parse::<u64>()
                 .map_err(|e| format!("Invalid ZSA amount: {e}"))?
         };
