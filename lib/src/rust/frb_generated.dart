@@ -4630,6 +4630,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_i_64(raw);
@@ -4795,6 +4801,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       coordinator: dco_decode_u_8(arr[1]),
       fundingAccount: dco_decode_u_32(arr[2]),
     );
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -5117,6 +5129,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
+  }
+
+  @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_i_64(raw);
@@ -5395,8 +5413,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Tx dco_decode_tx(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return Tx(
       id: dco_decode_u_32(arr[0]),
       txid: dco_decode_list_prim_u_8_strict(arr[1]),
@@ -5405,6 +5423,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       value: dco_decode_i_64(arr[4]),
       tpe: dco_decode_opt_box_autoadd_u_8(arr[5]),
       category: dco_decode_opt_String(arr[6]),
+      zsaValue: dco_decode_i_64(arr[7]),
+      assetId: dco_decode_opt_box_autoadd_i_32(arr[8]),
+      assetDisplay: dco_decode_String(arr[9]),
     );
   }
 
@@ -5447,8 +5468,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxNote dco_decode_tx_note(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return TxNote(
       id: dco_decode_u_32(arr[0]),
       pool: dco_decode_u_8(arr[1]),
@@ -5460,6 +5481,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       locked: dco_decode_bool(arr[7]),
       memo: dco_decode_opt_String(arr[8]),
       idAsset: dco_decode_opt_box_autoadd_u_32(arr[9]),
+      assetDisplay: dco_decode_String(arr[10]),
     );
   }
 
@@ -5523,13 +5545,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxSpend dco_decode_tx_spend(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return TxSpend(
       id: dco_decode_u_32(arr[0]),
       pool: dco_decode_u_8(arr[1]),
       height: dco_decode_u_32(arr[2]),
       value: dco_decode_u_64(arr[3]),
+      idAsset: dco_decode_opt_box_autoadd_u_32(arr[4]),
+      assetDisplay: dco_decode_String(arr[5]),
     );
   }
 
@@ -5882,6 +5906,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_64(deserializer));
@@ -6040,6 +6070,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         account: var_account,
         coordinator: var_coordinator,
         fundingAccount: var_fundingAccount);
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -6527,6 +6563,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -6829,6 +6876,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_value = sse_decode_i_64(deserializer);
     var var_tpe = sse_decode_opt_box_autoadd_u_8(deserializer);
     var var_category = sse_decode_opt_String(deserializer);
+    var var_zsaValue = sse_decode_i_64(deserializer);
+    var var_assetId = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_assetDisplay = sse_decode_String(deserializer);
     return Tx(
         id: var_id,
         txid: var_txid,
@@ -6836,7 +6886,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         time: var_time,
         value: var_value,
         tpe: var_tpe,
-        category: var_category);
+        category: var_category,
+        zsaValue: var_zsaValue,
+        assetId: var_assetId,
+        assetDisplay: var_assetDisplay);
   }
 
   @protected
@@ -6891,6 +6944,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_locked = sse_decode_bool(deserializer);
     var var_memo = sse_decode_opt_String(deserializer);
     var var_idAsset = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_assetDisplay = sse_decode_String(deserializer);
     return TxNote(
         id: var_id,
         pool: var_pool,
@@ -6901,7 +6955,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         value: var_value,
         locked: var_locked,
         memo: var_memo,
-        idAsset: var_idAsset);
+        idAsset: var_idAsset,
+        assetDisplay: var_assetDisplay);
   }
 
   @protected
@@ -6962,8 +7017,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_pool = sse_decode_u_8(deserializer);
     var var_height = sse_decode_u_32(deserializer);
     var var_value = sse_decode_u_64(deserializer);
+    var var_idAsset = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_assetDisplay = sse_decode_String(deserializer);
     return TxSpend(
-        id: var_id, pool: var_pool, height: var_height, value: var_value);
+        id: var_id,
+        pool: var_pool,
+        height: var_height,
+        value: var_value,
+        idAsset: var_idAsset,
+        assetDisplay: var_assetDisplay);
   }
 
   @protected
@@ -7028,12 +7090,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         finalized: var_finalized,
         firstSeenHeight: var_firstSeenHeight,
         balance: var_balance);
-  }
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -7362,6 +7418,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_i_64(
       PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -7506,6 +7568,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.account, serializer);
     sse_encode_u_8(self.coordinator, serializer);
     sse_encode_u_32(self.fundingAccount, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
   }
 
   @protected
@@ -7897,6 +7965,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_i_64(
       PlatformInt64? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -8145,6 +8223,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_64(self.value, serializer);
     sse_encode_opt_box_autoadd_u_8(self.tpe, serializer);
     sse_encode_opt_String(self.category, serializer);
+    sse_encode_i_64(self.zsaValue, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.assetId, serializer);
+    sse_encode_String(self.assetDisplay, serializer);
   }
 
   @protected
@@ -8185,6 +8266,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.locked, serializer);
     sse_encode_opt_String(self.memo, serializer);
     sse_encode_opt_box_autoadd_u_32(self.idAsset, serializer);
+    sse_encode_String(self.assetDisplay, serializer);
   }
 
   @protected
@@ -8230,6 +8312,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_8(self.pool, serializer);
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_64(self.value, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.idAsset, serializer);
+    sse_encode_String(self.assetDisplay, serializer);
   }
 
   @protected
@@ -8284,12 +8368,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.finalized, serializer);
     sse_encode_u_32(self.firstSeenHeight, serializer);
     sse_encode_u_64(self.balance, serializer);
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
   }
 }
 

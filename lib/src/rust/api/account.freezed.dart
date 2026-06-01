@@ -3556,6 +3556,9 @@ mixin _$Tx {
   PlatformInt64 get value;
   int? get tpe;
   String? get category;
+  PlatformInt64 get zsaValue;
+  int? get assetId;
+  String get assetDisplay;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3575,7 +3578,12 @@ mixin _$Tx {
             (identical(other.value, value) || other.value == value) &&
             (identical(other.tpe, tpe) || other.tpe == tpe) &&
             (identical(other.category, category) ||
-                other.category == category));
+                other.category == category) &&
+            (identical(other.zsaValue, zsaValue) ||
+                other.zsaValue == zsaValue) &&
+            (identical(other.assetId, assetId) || other.assetId == assetId) &&
+            (identical(other.assetDisplay, assetDisplay) ||
+                other.assetDisplay == assetDisplay));
   }
 
   @override
@@ -3587,11 +3595,14 @@ mixin _$Tx {
       time,
       value,
       tpe,
-      category);
+      category,
+      zsaValue,
+      assetId,
+      assetDisplay);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay)';
   }
 }
 
@@ -3606,7 +3617,10 @@ abstract mixin class $TxCopyWith<$Res> {
       int time,
       PlatformInt64 value,
       int? tpe,
-      String? category});
+      String? category,
+      PlatformInt64 zsaValue,
+      int? assetId,
+      String assetDisplay});
 }
 
 /// @nodoc
@@ -3628,6 +3642,9 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
     Object? value = null,
     Object? tpe = freezed,
     Object? category = freezed,
+    Object? zsaValue = null,
+    Object? assetId = freezed,
+    Object? assetDisplay = null,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -3658,6 +3675,18 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
           ? _self.category
           : category // ignore: cast_nullable_to_non_nullable
               as String?,
+      zsaValue: null == zsaValue
+          ? _self.zsaValue
+          : zsaValue // ignore: cast_nullable_to_non_nullable
+              as PlatformInt64,
+      assetId: freezed == assetId
+          ? _self.assetId
+          : assetId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      assetDisplay: null == assetDisplay
+          ? _self.assetDisplay
+          : assetDisplay // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -3753,16 +3782,34 @@ extension TxPatterns on Tx {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int id, Uint8List txid, int height, int time,
-            PlatformInt64 value, int? tpe, String? category)?
+    TResult Function(
+            int id,
+            Uint8List txid,
+            int height,
+            int time,
+            PlatformInt64 value,
+            int? tpe,
+            String? category,
+            PlatformInt64 zsaValue,
+            int? assetId,
+            String assetDisplay)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _Tx() when $default != null:
-        return $default(_that.id, _that.txid, _that.height, _that.time,
-            _that.value, _that.tpe, _that.category);
+        return $default(
+            _that.id,
+            _that.txid,
+            _that.height,
+            _that.time,
+            _that.value,
+            _that.tpe,
+            _that.category,
+            _that.zsaValue,
+            _that.assetId,
+            _that.assetDisplay);
       case _:
         return orElse();
     }
@@ -3783,15 +3830,33 @@ extension TxPatterns on Tx {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int id, Uint8List txid, int height, int time,
-            PlatformInt64 value, int? tpe, String? category)
+    TResult Function(
+            int id,
+            Uint8List txid,
+            int height,
+            int time,
+            PlatformInt64 value,
+            int? tpe,
+            String? category,
+            PlatformInt64 zsaValue,
+            int? assetId,
+            String assetDisplay)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _Tx():
-        return $default(_that.id, _that.txid, _that.height, _that.time,
-            _that.value, _that.tpe, _that.category);
+        return $default(
+            _that.id,
+            _that.txid,
+            _that.height,
+            _that.time,
+            _that.value,
+            _that.tpe,
+            _that.category,
+            _that.zsaValue,
+            _that.assetId,
+            _that.assetDisplay);
     }
   }
 
@@ -3809,15 +3874,33 @@ extension TxPatterns on Tx {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int id, Uint8List txid, int height, int time,
-            PlatformInt64 value, int? tpe, String? category)?
+    TResult? Function(
+            int id,
+            Uint8List txid,
+            int height,
+            int time,
+            PlatformInt64 value,
+            int? tpe,
+            String? category,
+            PlatformInt64 zsaValue,
+            int? assetId,
+            String assetDisplay)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _Tx() when $default != null:
-        return $default(_that.id, _that.txid, _that.height, _that.time,
-            _that.value, _that.tpe, _that.category);
+        return $default(
+            _that.id,
+            _that.txid,
+            _that.height,
+            _that.time,
+            _that.value,
+            _that.tpe,
+            _that.category,
+            _that.zsaValue,
+            _that.assetId,
+            _that.assetDisplay);
       case _:
         return null;
     }
@@ -3834,7 +3917,10 @@ class _Tx implements Tx {
       required this.time,
       required this.value,
       this.tpe,
-      this.category});
+      this.category,
+      required this.zsaValue,
+      this.assetId,
+      required this.assetDisplay});
 
   @override
   final int id;
@@ -3850,6 +3936,12 @@ class _Tx implements Tx {
   final int? tpe;
   @override
   final String? category;
+  @override
+  final PlatformInt64 zsaValue;
+  @override
+  final int? assetId;
+  @override
+  final String assetDisplay;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3870,7 +3962,12 @@ class _Tx implements Tx {
             (identical(other.value, value) || other.value == value) &&
             (identical(other.tpe, tpe) || other.tpe == tpe) &&
             (identical(other.category, category) ||
-                other.category == category));
+                other.category == category) &&
+            (identical(other.zsaValue, zsaValue) ||
+                other.zsaValue == zsaValue) &&
+            (identical(other.assetId, assetId) || other.assetId == assetId) &&
+            (identical(other.assetDisplay, assetDisplay) ||
+                other.assetDisplay == assetDisplay));
   }
 
   @override
@@ -3882,11 +3979,14 @@ class _Tx implements Tx {
       time,
       value,
       tpe,
-      category);
+      category,
+      zsaValue,
+      assetId,
+      assetDisplay);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay)';
   }
 }
 
@@ -3902,7 +4002,10 @@ abstract mixin class _$TxCopyWith<$Res> implements $TxCopyWith<$Res> {
       int time,
       PlatformInt64 value,
       int? tpe,
-      String? category});
+      String? category,
+      PlatformInt64 zsaValue,
+      int? assetId,
+      String assetDisplay});
 }
 
 /// @nodoc
@@ -3924,6 +4027,9 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
     Object? value = null,
     Object? tpe = freezed,
     Object? category = freezed,
+    Object? zsaValue = null,
+    Object? assetId = freezed,
+    Object? assetDisplay = null,
   }) {
     return _then(_Tx(
       id: null == id
@@ -3954,6 +4060,18 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
           ? _self.category
           : category // ignore: cast_nullable_to_non_nullable
               as String?,
+      zsaValue: null == zsaValue
+          ? _self.zsaValue
+          : zsaValue // ignore: cast_nullable_to_non_nullable
+              as PlatformInt64,
+      assetId: freezed == assetId
+          ? _self.assetId
+          : assetId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      assetDisplay: null == assetDisplay
+          ? _self.assetDisplay
+          : assetDisplay // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }

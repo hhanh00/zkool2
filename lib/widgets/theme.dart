@@ -86,6 +86,8 @@ class TransactionTile extends StatelessWidget {
   final int date;
   final int id;
   final void Function()? onTap;
+  final BigInt? zsaValue;
+  final String? zsaLabel;
 
   const TransactionTile({
     super.key,
@@ -96,11 +98,14 @@ class TransactionTile extends StatelessWidget {
     required this.date,
     required this.id,
     this.onTap,
+    this.zsaValue,
+    this.zsaLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     final d = timeToWidget(context, date);
+    final hasZsa = zsaValue != null && zsaValue != BigInt.zero;
     return ListTile(
       onTap: onTap,
       leading: Container(
@@ -113,13 +118,28 @@ class TransactionTile extends StatelessWidget {
       ),
       title: Text(label),
       subtitle: d,
-      trailing: Text(
-        zatToShortString(amount),
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            zatToShortString(amount),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          if (hasZsa)
+            Text(
+              "$zsaValue ${zsaLabel ?? ""}",
+              style: TextStyle(
+                color: Colors.purple,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+        ],
       ),
     );
   }
