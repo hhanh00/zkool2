@@ -237,12 +237,14 @@ pub async fn plan_transaction(
             }
 
             let mut used = 0u64;
+            let mut total_selected = 0u64;
             for note in notes.iter_mut() {
                 if used >= needed { break; }
                 let take = (note.remaining).min(needed - used);
                 note.remaining -= take;
                 used += take;
                 if note.is_used() {
+                    total_selected += note.amount;
                     fee_manager.add_input(2);
                     buffered_zsaspends.push(note.clone());
                     info!(
@@ -264,7 +266,7 @@ pub async fn plan_transaction(
             }
 
             // ZSA change output (only if actual change)
-            let asset_change = used.saturating_sub(needed);
+            let asset_change = total_selected.saturating_sub(needed);
             if asset_change > 0 {
                 fee_manager.add_output(2);
                 buffered_zsaoutputs.push(RecipientState {
@@ -850,6 +852,10 @@ pub async fn plan_transaction(
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
     debug!("IO Finalized");
 
+    let orchard_split_spend_indices: Vec<usize> = (0..orchard_meta.num_split_spends())
+        .map(|n| orchard_meta.split_spend_action_index(n).unwrap())
+        .collect();
+
     let pczt_package = PcztPackage {
         pczt: pczt.serialize(),
         n_spends,
@@ -859,6 +865,7 @@ pub async fn plan_transaction(
         orchard_indices: (0..n_spends[2])
             .map(|n| orchard_meta.spend_action_index(n).unwrap())
             .collect(),
+        orchard_split_spend_indices,
         can_sign,
         can_broadcast: false,
         price,
@@ -905,6 +912,7 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
+        orchard_split_spend_indices,
         price,
         category,
         ..
@@ -1066,6 +1074,7 @@ pub async fn sign_transaction(
         n_spends: *n_spends,
         sapling_indices: sapling_indices.clone(),
         orchard_indices: orchard_indices.clone(),
+        orchard_split_spend_indices: orchard_split_spend_indices.clone(),
         can_sign: true,
         can_broadcast: true,
         price: *price,
