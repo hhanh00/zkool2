@@ -982,7 +982,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         unspent AS (SELECT a.*
                 FROM notes a
                 LEFT JOIN spends b ON a.id_note = b.id_note
-                WHERE b.id_note IS NULL)
+                WHERE b.id_note IS NULL AND a.id_asset IS NULL)
         SELECT id_account, a.name, seed, passphrase, aindex, dindex,
         icon, birth, use_internal, a.position, hidden, saved, enabled, internal,
         sh.height, COALESCE(hdr.time, 0), COALESCE(SUM(unspent.value), 0) AS balance,
