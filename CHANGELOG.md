@@ -1,5 +1,43 @@
 # Changelog
 
+## [6.16.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.15.0...zkool-v6.16.0) (2026-06-02)
+
+
+### Features
+
+* account, pay, issuance, GraphQL, FROST, and warp decrypter updates ([dc4cb3c](https://github.com/hhanh00/zkool2/commit/dc4cb3c8b5fe25295d885c2f5c6e6fada4c8530e))
+* issuance note synthesis from per-note CompactBlock data ([1493924](https://github.com/hhanh00/zkool2/commit/1493924b4563b35a26b3952356d60d8475f0efcc))
+* MCP server ([#992](https://github.com/hhanh00/zkool2/issues/992)) ([ed256bf](https://github.com/hhanh00/zkool2/commit/ed256bf32d04f93a138f8dac47078af29ff705f9))
+* remove voting feature ([#993](https://github.com/hhanh00/zkool2/issues/993)) ([f3b296c](https://github.com/hhanh00/zkool2/commit/f3b296c469e9233b452bebf00de39b6303585a52))
+* ZSA holdings, issuance, send support + fix split-spend signing ([a716a0b](https://github.com/hhanh00/zkool2/commit/a716a0b79aebba9e79bb72d08bab2675c535ead3))
+* ZSA-aware transaction history (list + detail view) ([ddfa640](https://github.com/hhanh00/zkool2/commit/ddfa6402e7a88785f3584d2084c6f1174e6ec166))
+
+
+### Bug Fixes
+
+* add mining to dkg, frost loop ([#987](https://github.com/hhanh00/zkool2/issues/987)) ([9750017](https://github.com/hhanh00/zkool2/commit/9750017b3625db3a76d9f1a86dc33c0f9e480968))
+* add warning when server is running without JWT auth ([#977](https://github.com/hhanh00/zkool2/issues/977)) ([d778209](https://github.com/hhanh00/zkool2/commit/d778209becb3f77d4fec1a139a598462745aad03))
+* **android:** propagate CargoKit rustflags for zcash_unstable nu7 ([b46aff8](https://github.com/hhanh00/zkool2/commit/b46aff8f0c8840b77f38864392862dd9ceae4a8d))
+* authenticate jwt subscriptions ([#980](https://github.com/hhanh00/zkool2/issues/980)) ([4caa8b4](https://github.com/hhanh00/zkool2/commit/4caa8b48123b5daf3e0b94b6785eb51809fe53ae))
+* conditional NU7 activation and Orchard proving key selection ([7f737b6](https://github.com/hhanh00/zkool2/commit/7f737b6ea0246db75c02bd4b86cd603f5d673517))
+* filter zero-value issuance notes in preprocessor, not try_decrypt ([7d5797f](https://github.com/hhanh00/zkool2/commit/7d5797fbc06f4bf6f31742f64ed7934837aca595))
+* **frost:** add orchard_split_spend_indices to PcztPackage and sign them ([35e5162](https://github.com/hhanh00/zkool2/commit/35e5162800d9b2ed99628f73a3b1bd3d528f1b05))
+* incorrect config parsing. toml is overridden by command line args ([#975](https://github.com/hhanh00/zkool2/issues/975)) ([998b87c](https://github.com/hhanh00/zkool2/commit/998b87c140f24980a0e60b23355b9ade452c7c4a))
+* io save/load assets + id_asset, skip zero-value issuance notes ([05f875f](https://github.com/hhanh00/zkool2/commit/05f875f304f0e917d09321bcc538fed23e7b1622))
+* **ios:** propagate Cargo rustflags from .cargo/config.toml into CARGO_ENCODED_RUSTFLAGS ([d8f72ff](https://github.com/hhanh00/zkool2/commit/d8f72ffa08b3d9763b49b0b03d576728573cf1d9))
+* **ios:** search workspace .cargo/config.toml for rustflags when building pod ([18a72f1](https://github.com/hhanh00/zkool2/commit/18a72f16c58e5b67697cea11a5e24462cc2193d4))
+* **macos:** replace Flutter SPM with CocoaPods resources and configure manual code signing ([0c7275b](https://github.com/hhanh00/zkool2/commit/0c7275b0a714ad9e6f15010ea956d4f25f6cd4a9))
+* no_mempool should be overridable ([#978](https://github.com/hhanh00/zkool2/issues/978)) ([e921bfe](https://github.com/hhanh00/zkool2/commit/e921bfe13607a491f4c0ba289b1a5618298e4bea))
+* pass id_account to issue_asset, remove lock_note race, fix ZIP-32 account param ([5ce4b69](https://github.com/hhanh00/zkool2/commit/5ce4b694bd7846fecd23b26d04ca2e60920d380a))
+* **pay:** always emit per-asset change output and correct ZSA filter ([ee27664](https://github.com/hhanh00/zkool2/commit/ee2766441245538076de963806990b987e50a220))
+* **pay:** ZSA fee estimation, input selection, and PCZT split spend support ([20af2cb](https://github.com/hhanh00/zkool2/commit/20af2cb83232685a82ae17ecc6aeaab5c20c7721))
+* skip zero-value issuance reference notes in wallet, keep cmx in tree ([017f9f5](https://github.com/hhanh00/zkool2/commit/017f9f5446a92dc2d1c3da5d22f590f678d8ce02))
+* update zkool for regtest ([e24ffc7](https://github.com/hhanh00/zkool2/commit/e24ffc7acaf406e07f8ebc2197136b24ba2aedd0))
+* use CARGO_ENCODED_RUSTFLAGS for Android to avoid cargokit override ([d5c209b](https://github.com/hhanh00/zkool2/commit/d5c209b5950609e98e01fd92b2470f6e6b41f1fc))
+* use CARGO_ENCODED_RUSTFLAGS with \u001f escape for Android ([ac49bb9](https://github.com/hhanh00/zkool2/commit/ac49bb99bc5d617193f3ff795e5609064c749eb5))
+* V6/ZSA orchard bundle support across mempool, memo, zebra, and decryptor ([39b67bd](https://github.com/hhanh00/zkool2/commit/39b67bd6ba568bb12cab0825083a81a232f700c1))
+* v6/ZSA transaction support for transparent sync and shielding ([7350f9a](https://github.com/hhanh00/zkool2/commit/7350f9a750eb1383bd0a805b11f89efce1b3b76f))
+
 ## [6.15.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.14.6...zkool-v6.15.0) (2026-05-07)
 
 
