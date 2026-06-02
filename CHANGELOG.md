@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.16.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.0...zkool-v6.16.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* exclude ZSA notes from ZEC value computations ([#997](https://github.com/hhanh00/zkool2/issues/997)) ([0e4f6c0](https://github.com/hhanh00/zkool2/commit/0e4f6c01875819af3098adf40f5be5f5088d7096))
+* filter ZSA notes from ZEC selection in issuance and payment planning; add issuance progress dialog ([#999](https://github.com/hhanh00/zkool2/issues/999)) ([5d90a73](https://github.com/hhanh00/zkool2/commit/5d90a736fe0140cf2573570210d791168fbe142b))
+
 ## [6.16.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.15.0...zkool-v6.16.0) (2026-06-02)
 
 
