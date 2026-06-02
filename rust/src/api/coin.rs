@@ -82,7 +82,26 @@ impl Coin {
         match self.coin {
             0 => Network::Main,
             1 => Network::Test,
-            2 => REGTEST,
+            2 => {
+                #[cfg(zcash_unstable = "nu7")]
+                let nu7 = if self.db_filepath.to_lowercase().contains("zsa") {
+                    Some(BlockHeight::from_u32(1))
+                } else {
+                    None
+                };
+                Network::Regtest(LocalNetwork {
+                    overwinter: Some(BlockHeight::from_u32(1)),
+                    sapling: Some(BlockHeight::from_u32(1)),
+                    blossom: Some(BlockHeight::from_u32(1)),
+                    heartwood: Some(BlockHeight::from_u32(1)),
+                    canopy: Some(BlockHeight::from_u32(1)),
+                    nu5: Some(BlockHeight::from_u32(1)),
+                    nu6: Some(BlockHeight::from_u32(1)),
+                    nu6_1: Some(BlockHeight::from_u32(1)),
+                    #[cfg(zcash_unstable = "nu7")]
+                    nu7,
+                })
+            }
             _ => Network::Main,
         }
     }
@@ -261,20 +280,6 @@ fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteCo
 
 pub(crate) use zcash_trees::network::Network;
 
-pub(crate) const fn _regtest() -> LocalNetwork {
-    LocalNetwork {
-        overwinter: Some(BlockHeight::from_u32(1)),
-        sapling: Some(BlockHeight::from_u32(1)),
-        blossom: Some(BlockHeight::from_u32(1)),
-        heartwood: Some(BlockHeight::from_u32(1)),
-        canopy: Some(BlockHeight::from_u32(1)),
-        nu5: Some(BlockHeight::from_u32(1)),
-        nu6: Some(BlockHeight::from_u32(1)),
-        nu6_1: Some(BlockHeight::from_u32(1)),
-        nu7: Some(BlockHeight::from_u32(1)),
-    }
-}
-
 pub async fn init_datadir(directory: &str) -> Result<()> {
     let _ = DATADIR.set(directory.to_string());
     Ok(())
@@ -296,6 +301,5 @@ pub async fn get_tor_client() -> &'static Mutex<TorClient<PreferredRuntime>> {
 
 pub static TOR: OnceCell<Mutex<TorClient<PreferredRuntime>>> = OnceCell::const_new();
 pub static DATADIR: OnceLock<String> = OnceLock::new();
-pub static REGTEST: Network = Network::Regtest(_regtest());
 pub static POOLS: LazyLock<std::sync::Mutex<HashMap<String, SqlitePool>>> =
     LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
