@@ -127,13 +127,21 @@ pub async fn issue_asset(
 
     // Find an orchard note with sufficient value for fees.
     // Est. fee: 2 actions × 5k + 2 outputs × 5k ≈ 20k zats.
+    // We must select a ZEC note (asset_base == [0u8; 32]), not a ZSA note,
+    // because the fee and change output are in ZEC, not the ZSA asset.
     let est_fee: u64 = 10_000;
+    let zec_key = [0u8; 32];
     let orchard_note = unspent
         .iter()
-        .find(|n| n.pool == 2 && n.height <= height && n.amount >= est_fee)
+        .find(|n| {
+            n.pool == 2
+                && n.asset_base == zec_key
+                && n.height <= height
+                && n.amount >= est_fee
+        })
         .ok_or_else(|| {
             anyhow!(
-                "No unspent orchard note with ≥ {est_fee} zats available. \
+                "No unspent orchard ZEC note with ≥ {est_fee} zats available. \
                  An orchard note is required for issuance (provides the nullifier \
                  for rho derivation per ZIP-227). Shield some ZEC first."
             )
