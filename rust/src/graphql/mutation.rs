@@ -166,7 +166,8 @@ impl Mutation {
         let mut connection = coin.get_connection().await?;
         let mut client = coin.client().await?;
         let height = client.latest_height().await?;
-        let signed_pczt = sign_transaction(&mut connection, id_account as u32, &pczt).await?;
+        let network = coin.network();
+        let signed_pczt = sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?;
         let tx_bytes = extract_transaction(&signed_pczt).await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
         Ok(txid)

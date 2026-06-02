@@ -482,7 +482,7 @@ pub async fn publish(
     )
     .await
     .unwrap();
-    let pczt = sign_transaction(connection, account, &pczt).await?;
+    let pczt = sign_transaction(connection, account, network, &pczt).await?;
     let txb = extract_transaction(&pczt).await?;
     let result = crate::pay::send(client, height, &txb).await?;
     if hex::decode(&result).is_err() {

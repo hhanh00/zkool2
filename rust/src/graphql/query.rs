@@ -277,8 +277,9 @@ impl Query {
         let pczt = hex::decode(&pczt)?;
         let (pczt, _) =
             bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
+        let network = context.coin.network();
         let signed =
-            crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &pczt).await?;
+            crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?;
         let tx_bin = crate::pay::plan::extract_transaction(&signed).await?;
         let tx = hex::encode(&tx_bin);
         Ok(tx)
