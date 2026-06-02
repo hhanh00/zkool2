@@ -129,7 +129,7 @@ hidapi = {version = "2.6.3", optional = true, default-features = false, features
 hidapi = {version = "2.6.3", optional = true, default-features = false, features = ["windows-native"]}
 
 [lints.rust]
-unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
+unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)', 'cfg(zcash_unstable, values("nu7"))']}
 
 [dev-dependencies]
 chrono = "0.4"
