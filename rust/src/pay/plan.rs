@@ -284,11 +284,14 @@ pub async fn plan_transaction(
 
         }
 
-        // Replace inputs: keep non-orchard + ZEC orchard notes (ZSA notes already handled)
-        inputs = inputs.into_iter()
-            .filter(|n| !(n.pool == 2 && n.asset_base != zec_key))
-            .collect();
     }
+
+    // Filter ZSA orchard notes from inputs — they're handled above or are
+    // non-ZEC and shouldn't be selected for ZEC payments. This must run
+    // regardless of whether there were ZSA recipients.
+    inputs = inputs.into_iter()
+        .filter(|n| !(n.pool == 2 && n.asset_base != zec_key))
+        .collect();
 
     let recipient_states = zec_recipients;
 
