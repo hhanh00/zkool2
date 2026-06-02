@@ -53,7 +53,10 @@ pub async fn fetch_tx_details(
 
 async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8, i64, Option<i32>, i64)> {
     let (value, fee) = sqlx::query(
-        "WITH n AS (SELECT value, tx FROM notes UNION ALL SELECT value, tx FROM spends)
+        "WITH n AS (SELECT value, tx FROM notes WHERE id_asset IS NULL
+                    UNION ALL
+                    SELECT s.value, s.tx FROM spends s
+                    JOIN notes n ON s.id_note = n.id_note WHERE n.id_asset IS NULL)
         SELECT SUM(n.value), t.fee FROM n JOIN transactions t ON t.id_tx = n.tx WHERE n.tx = ?",
     )
     .bind(tx)
