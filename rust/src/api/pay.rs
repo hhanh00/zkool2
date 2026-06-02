@@ -43,8 +43,9 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
 pub async fn sign_transaction(pczt: &PcztPackage, c: &Coin) -> Result<PcztPackage> {
     let account = c.account;
     let mut connection = c.get_connection().await?;
+    let network = c.network();
 
-    let tx = crate::pay::plan::sign_transaction(&mut *connection, account, pczt).await?;
+    let tx = crate::pay::plan::sign_transaction(&mut *connection, account, &network, pczt).await?;
 
     Ok(tx)
 }

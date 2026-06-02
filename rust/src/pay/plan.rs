@@ -6,7 +6,7 @@ use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
     circuit::ProvingKey,
-    flavor::OrchardZSA,
+    flavor::{OrchardVanilla, OrchardZSA},
     keys::{Scope, SpendAuthorizingKey},
     note::{AssetBase, ExtractedNoteCommitment},
     Address,
@@ -903,6 +903,7 @@ fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
 pub async fn sign_transaction(
     connection: &mut SqliteConnection,
     account: u32,
+    network: &crate::api::coin::Network,
     pczt: &PcztPackage,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
@@ -1068,7 +1069,7 @@ pub async fn sign_transaction(
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
-        .create_orchard_proof(&ORCHARD_PK)
+        .create_orchard_proof(get_orchard_pk(network))
         .unwrap()
         .finish();
     debug!("Proved");
@@ -1416,4 +1417,22 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
 }
 
 pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(LocalTxProver::bundled);
-pub static ORCHARD_PK: LazyLock<ProvingKey> = LazyLock::new(ProvingKey::build::<OrchardZSA>);
+pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>());
+pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>());
+
+pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKey {
+    // Check if NU7 is active (ZSA-enabled)
+    let uses_orchard_zsa = match network {
+        crate::api::coin::Network::Regtest(config) => {
+            // NU7 active means ZSA transactions
+            config.nu7.is_some()
+        }
+        _ => false,
+    };
+
+    if uses_orchard_zsa {
+        &ORCHARD_ZSA_PK
+    } else {
+        &ORCHARD_VANILLA_PK
+    }
+}
