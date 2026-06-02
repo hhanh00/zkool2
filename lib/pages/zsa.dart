@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -190,7 +191,14 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
     );
     if (!confirmed) return;
 
+    AwesomeDialog? dialog;
     try {
+      dialog = await showMessage(
+        context,
+        "Building and broadcasting issuance transaction...",
+        dismissable: false,
+      );
+
       final txBytes = await issueAsset(
         assetName: assetName,
         amount: BigInt.parse(amount),
@@ -205,12 +213,17 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
         txBytes: txBytes,
         c: coinContext.coin,
       );
+
+      dialog.dismiss();
+      dialog = null;
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Transaction broadcast: $txid")),
       );
       GoRouter.of(context).pop();
     } on AnyhowException catch (e) {
+      dialog?.dismiss();
       if (mounted) await showException(context, e.message);
     }
   }
