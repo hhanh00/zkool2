@@ -47,7 +47,7 @@ use crate::{
         get_mailbox_account, publish,
     },
     pay::{
-        plan::{ORCHARD_PK, SAPLING_PROVER},
+        plan::{get_orchard_pk, SAPLING_PROVER},
         send,
     },
     Client, Sink,
@@ -693,7 +693,7 @@ pub async fn do_sign_impl(
         let pczt = Prover::new(pczt)
             .create_sapling_proofs(sapling_prover, sapling_prover)
             .unwrap()
-            .create_orchard_proof(&ORCHARD_PK)
+            .create_orchard_proof(get_orchard_pk(network))
             .unwrap()
             .finish();
         info!("Proved");
