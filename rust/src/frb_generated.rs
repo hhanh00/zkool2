@@ -6614,9 +6614,11 @@ impl SseDecode for crate::pay::TxPlanIn {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_pool = <u8>::sse_decode(deserializer);
         let mut var_amount = <Option<u64>>::sse_decode(deserializer);
+        let mut var_assetName = <String>::sse_decode(deserializer);
         return crate::pay::TxPlanIn {
             pool: var_pool,
             amount: var_amount,
+            asset_name: var_assetName,
         };
     }
 }
@@ -6627,10 +6629,12 @@ impl SseDecode for crate::pay::TxPlanOut {
         let mut var_pool = <u8>::sse_decode(deserializer);
         let mut var_amount = <u64>::sse_decode(deserializer);
         let mut var_address = <String>::sse_decode(deserializer);
+        let mut var_assetName = <String>::sse_decode(deserializer);
         return crate::pay::TxPlanOut {
             pool: var_pool,
             amount: var_amount,
             address: var_address,
+            asset_name: var_assetName,
         };
     }
 }
@@ -7863,6 +7867,7 @@ impl flutter_rust_bridge::IntoDart for crate::pay::TxPlanIn {
         [
             self.pool.into_into_dart().into_dart(),
             self.amount.into_into_dart().into_dart(),
+            self.asset_name.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -7880,6 +7885,7 @@ impl flutter_rust_bridge::IntoDart for crate::pay::TxPlanOut {
             self.pool.into_into_dart().into_dart(),
             self.amount.into_into_dart().into_dart(),
             self.address.into_into_dart().into_dart(),
+            self.asset_name.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8990,6 +8996,7 @@ impl SseEncode for crate::pay::TxPlanIn {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u8>::sse_encode(self.pool, serializer);
         <Option<u64>>::sse_encode(self.amount, serializer);
+        <String>::sse_encode(self.asset_name, serializer);
     }
 }
 
@@ -8999,6 +9006,7 @@ impl SseEncode for crate::pay::TxPlanOut {
         <u8>::sse_encode(self.pool, serializer);
         <u64>::sse_encode(self.amount, serializer);
         <String>::sse_encode(self.address, serializer);
+        <String>::sse_encode(self.asset_name, serializer);
     }
 }
 

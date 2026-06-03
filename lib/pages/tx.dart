@@ -241,19 +241,37 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
     itemBuilder: (context, index) {
       if (index < txPlan.inputs.length) {
         final input = txPlan.inputs[index];
+        final isZsa = input.assetName != "ZEC";
         return ListTile(
           leading: Text("Input ${index + 1}"),
-          trailing: input.amount != null ? zatToText(input.amount!, selectable: true) : null,
-          subtitle: Text("Pool: ${poolToString(input.pool)}"),
+          trailing: input.amount != null
+              ? (isZsa
+                  ? Text(input.amount.toString(),
+                      style: TextStyle(
+                          color: Colors.purple, fontWeight: FontWeight.bold))
+                  : zatToText(input.amount!, selectable: true))
+              : null,
+          subtitle: Text([
+            "Pool: ${poolToString(input.pool)}",
+            if (isZsa) input.assetName,
+          ].join(" · ")),
         );
       } else {
         final index2 = index - txPlan.inputs.length;
         final output = txPlan.outputs[index2];
+        final isZsa = output.assetName != "ZEC";
         return ListTile(
           leading: Text("Output ${index2 + 1}"),
           title: Text("Address: ${output.address}"),
-          trailing: zatToText(output.amount, selectable: true),
-          subtitle: Text("Pool: ${poolToString(output.pool)}"),
+          trailing: isZsa
+              ? Text(output.amount.toString(),
+                  style: TextStyle(
+                      color: Colors.purple, fontWeight: FontWeight.bold))
+              : zatToText(output.amount, selectable: true),
+          subtitle: Text([
+            "Pool: ${poolToString(output.pool)}",
+            if (isZsa) output.assetName,
+          ].join(" · ")),
         );
       }
     },
