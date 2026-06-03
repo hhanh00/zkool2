@@ -115,6 +115,7 @@ impl TxPlan {
                     inputs.push(TxPlanIn {
                         pool: 0,
                         amount: Some(value),
+                        asset_name: "ZEC".to_string(),
                     });
                     fee += value as i64;
                 }
@@ -125,6 +126,7 @@ impl TxPlan {
                         pool: 0,
                         amount: o.value().into_u64(),
                         address: address.encode(network),
+                        asset_name: "ZEC".to_string(),
                     });
                     fee -= o.value().into_u64() as i64;
                 }
@@ -138,6 +140,7 @@ impl TxPlan {
                     inputs.push(TxPlanIn {
                         pool: 1,
                         amount: None,
+                        asset_name: "ZEC".to_string(),
                     });
                 }
                 for o in bundle.outputs().iter() {
@@ -145,6 +148,7 @@ impl TxPlan {
                         pool: 1,
                         amount: o.value().unwrap().inner(),
                         address: o.user_address().as_ref().cloned().unwrap_or_default(),
+                        asset_name: "ZEC".to_string(),
                     });
                 }
                 fee += bundle.value_sum().to_raw() as i64;
@@ -155,9 +159,22 @@ impl TxPlan {
         let _verifier = verifier
             .with_orchard(|bundle| {
                 for a in bundle.actions().iter() {
+                    let input_asset_name = a
+                        .spend()
+                        .proprietary()
+                        .get("asset_name")
+                        .and_then(|v| String::from_utf8(v.clone()).ok())
+                        .unwrap_or_else(|| "ZEC".to_string());
+                    let output_asset_name = a
+                        .output()
+                        .proprietary()
+                        .get("asset_name")
+                        .and_then(|v| String::from_utf8(v.clone()).ok())
+                        .unwrap_or_else(|| "ZEC".to_string());
                     inputs.push(TxPlanIn {
                         pool: 2,
                         amount: None,
+                        asset_name: input_asset_name,
                     });
                     outputs.push(TxPlanOut {
                         pool: 2,
@@ -168,6 +185,7 @@ impl TxPlan {
                             .as_ref()
                             .cloned()
                             .unwrap_or_default(),
+                        asset_name: output_asset_name,
                     });
                 }
                 let f: i64 = (*bundle.value_sum()).try_into().unwrap();
@@ -191,6 +209,7 @@ impl TxPlan {
 pub struct TxPlanIn {
     pub pool: u8,
     pub amount: Option<u64>,
+    pub asset_name: String, // "ZEC" for ZEC, asset name for ZSA
 }
 
 #[derive(Serialize, Deserialize)]
@@ -198,6 +217,7 @@ pub struct TxPlanOut {
     pub pool: u8,
     pub amount: u64,
     pub address: String,
+    pub asset_name: String, // "ZEC" for ZEC, asset name for ZSA
 }
 
 pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<String> {
