@@ -95,14 +95,16 @@ class TxPlan {
 class TxPlanIn {
   final int pool;
   final BigInt? amount;
+  final String assetName;
 
   const TxPlanIn({
     required this.pool,
     this.amount,
+    required this.assetName,
   });
 
   @override
-  int get hashCode => pool.hashCode ^ amount.hashCode;
+  int get hashCode => pool.hashCode ^ amount.hashCode ^ assetName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -110,22 +112,26 @@ class TxPlanIn {
       other is TxPlanIn &&
           runtimeType == other.runtimeType &&
           pool == other.pool &&
-          amount == other.amount;
+          amount == other.amount &&
+          assetName == other.assetName;
 }
 
 class TxPlanOut {
   final int pool;
   final BigInt amount;
   final String address;
+  final String assetName;
 
   const TxPlanOut({
     required this.pool,
     required this.amount,
     required this.address,
+    required this.assetName,
   });
 
   @override
-  int get hashCode => pool.hashCode ^ amount.hashCode ^ address.hashCode;
+  int get hashCode =>
+      pool.hashCode ^ amount.hashCode ^ address.hashCode ^ assetName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -134,5 +140,6 @@ class TxPlanOut {
           runtimeType == other.runtimeType &&
           pool == other.pool &&
           amount == other.amount &&
-          address == other.address;
+          address == other.address &&
+          assetName == other.assetName;
 }
