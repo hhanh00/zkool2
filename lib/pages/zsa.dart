@@ -88,7 +88,6 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
         name: newName,
         c: coinContext.coin,
       );
-      ref.invalidate(getCurrentAccountProvider);
       ref.invalidate(accountProvider);
     } on AnyhowException catch (e) {
       if (mounted) {
@@ -141,7 +140,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
 
                     final displayName = h.assetName.isNotEmpty
                         ? h.assetName
-                        : hex.encode(h.assetDescHash.sublist(0, 8));
+                        : hex.encode(h.assetDescHash.sublist(0, 4));
 
                     final isEditing = _editingIndex == index;
 
@@ -167,7 +166,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                                       contentPadding: const EdgeInsets.symmetric(vertical: 4),
                                       border: const OutlineInputBorder(),
                                       hintText: h.assetName.isEmpty
-                                          ? hex.encode(h.assetDescHash.sublist(0, 8))
+                                          ? hex.encode(h.assetDescHash.sublist(0, 4))
                                           : null,
                                     ),
                                     style: tt.titleMedium,
@@ -176,7 +175,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                                     onTap: () => _startEditing(index, h),
                                     child: Text(displayName),
                                   ),
-                            subtitle: Text(hex.encode(h.assetDescHash.sublist(0, 8))),
+                            subtitle: Text(hex.encode(h.assetDescHash.sublist(0, 4))),
                             trailing: Text(h.balance.toString(), style: tt.titleMedium),
                           ),
                         ),
