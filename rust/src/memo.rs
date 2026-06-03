@@ -88,10 +88,10 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
     .await?
     .unwrap_or((None, 0));
 
-    if value > 0 {
+    if value > 0 || zsa_value > 0 {
         // receiving
         Ok((1, value, asset_id, zsa_value))
-    } else if value < -fee {
+    } else if value < -fee || zsa_value < 0 {
         // sending
         Ok((2, value, asset_id, zsa_value))
     } else {
