@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.16.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.1...zkool-v6.16.2) (2026-06-03)
+
+
+### Features
+
+* ZSA asset name display in transaction plan + holdings fixes ([#1000](https://github.com/hhanh00/zkool2/issues/1000)) ([9bea93f](https://github.com/hhanh00/zkool2/commit/9bea93fe7592aafc4fa48bdd0d9d6cba016d02ef))
+
+
+### Bug Fixes
+
+* correct ZSA transaction type; hide payment URI for ZSA sends ([#1002](https://github.com/hhanh00/zkool2/issues/1002)) ([18359dd](https://github.com/hhanh00/zkool2/commit/18359ddafa0368956163712ab985da25a1a45ea9))
+* set RUSTFLAGS for NU7 consensus upgrade in alpine dockerfile ([82f8bbd](https://github.com/hhanh00/zkool2/commit/82f8bbd3359d60150501c757607995cfa1faabcf))
+
 ## [6.16.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.0...zkool-v6.16.1) (2026-06-02)
 
 
