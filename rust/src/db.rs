@@ -1462,6 +1462,7 @@ pub async fn get_zsa_holdings(
            AND n.id_note NOT IN (SELECT id_note FROM spends)
            AND n.locked = 0
          GROUP BY a.id_asset
+         HAVING balance > 0
          ORDER BY a.asset_name, a.asset_desc_hash",
     )
     .bind(account)
