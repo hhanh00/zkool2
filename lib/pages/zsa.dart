@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/issuance.dart';
 import 'package:zkool/src/rust/api/pay.dart';
+import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -21,6 +22,80 @@ class ZsaHoldingsPage extends ConsumerStatefulWidget {
 }
 
 class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
+  int? _editingIndex;
+  late final TextEditingController _nameController;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _nameController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _editingIndex != null) {
+      _commitEditing();
+    }
+  }
+
+  void _startEditing(int index, ZsaHolding holding) {
+    if (_editingIndex != null && _editingIndex != index) {
+      _commitEditing(); // save then switch
+    }
+    _editingIndex = index;
+    if (holding.assetName.isNotEmpty) {
+      _nameController.text = holding.assetName;
+    } else {
+      _nameController.clear();
+    }
+    _nameController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _nameController.text.length),
+    );
+    _focusNode.requestFocus();
+    setState(() {});
+  }
+
+  Future<void> _commitEditing() async {
+    final index = _editingIndex;
+    if (index == null) return;
+
+    final accountData = ref.read(getCurrentAccountProvider).value;
+    if (accountData == null) return;
+
+    final h = accountData.zsas[index];
+    final newName = _nameController.text;
+
+    // Close editor immediately (optimistic)
+    _editingIndex = null;
+    if (mounted) setState(() {});
+
+    // Noop if unchanged
+    if (newName == h.assetName) return;
+
+    try {
+      await setAssetName(
+        idAsset: h.idAsset,
+        name: newName,
+        c: coinContext.coin,
+      );
+      ref.invalidate(getCurrentAccountProvider);
+    } on AnyhowException catch (e) {
+      if (mounted) {
+        await showException(context, e.message);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
@@ -67,6 +142,8 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                         ? h.assetName
                         : hex.encode(h.assetDescHash.sublist(0, 8));
 
+                    final isEditing = _editingIndex == index;
+
                     return Column(
                       children: [
                         Expanded(
@@ -78,7 +155,26 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                                 style: tt.titleMedium?.copyWith(color: Colors.white),
                               ),
                             ),
-                            title: Text(displayName),
+                            title: isEditing
+                                ? TextField(
+                                    controller: _nameController,
+                                    focusNode: _focusNode,
+                                    textInputAction: TextInputAction.done,
+                                    onEditingComplete: _commitEditing,
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                      border: const OutlineInputBorder(),
+                                      hintText: h.assetName.isEmpty
+                                          ? hex.encode(h.assetDescHash.sublist(0, 8))
+                                          : null,
+                                    ),
+                                    style: tt.titleMedium,
+                                  )
+                                : GestureDetector(
+                                    onTap: () => _startEditing(index, h),
+                                    child: Text(displayName),
+                                  ),
                             subtitle: Text(hex.encode(h.assetDescHash.sublist(0, 8))),
                             trailing: Text(h.balance.toString(), style: tt.titleMedium),
                           ),

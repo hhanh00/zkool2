@@ -41,3 +41,19 @@ pub async fn list_zsa_holdings(c: &Coin) -> Result<Vec<ZsaHolding>> {
     let rows = crate::db::get_zsa_holdings(&mut connection, c.account).await?;
     Ok(rows.into_iter().map(ZsaHolding::from).collect())
 }
+
+/// Set or update the human-readable name for a ZSA asset.
+/// Pass an empty string to clear the name (reverting to the hex fallback display).
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn set_asset_name(id_asset: i64, name: String, c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    let r = sqlx::query("UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2")
+        .bind(&name)
+        .bind(id_asset)
+        .execute(&mut *connection)
+        .await?;
+    if r.rows_affected() == 0 {
+        anyhow::bail!("No asset with id_asset={id_asset}");
+    }
+    Ok(())
+}
