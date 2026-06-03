@@ -89,6 +89,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
         c: coinContext.coin,
       );
       ref.invalidate(getCurrentAccountProvider);
+      ref.invalidate(accountProvider);
     } on AnyhowException catch (e) {
       if (mounted) {
         await showException(context, e.message);
