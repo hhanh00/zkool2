@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.16.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.2...zkool-v6.16.3) (2026-06-03)
+
+
+### Features
+
+* inline editing for ZSA asset names ([#1004](https://github.com/hhanh00/zkool2/issues/1004)) ([79ba511](https://github.com/hhanh00/zkool2/commit/79ba511841a33577e6e067c23a4371078ab3259e))
+* show ZSA amount as primary for ZSA-only transfers, hide ZEC fee ([3903753](https://github.com/hhanh00/zkool2/commit/3903753cfd99976c00ae49bff02989976fb9b443))
+
+
+### Bug Fixes
+
+* invalidate accountProvider after ZSA rename to refresh holdings ([3aad309](https://github.com/hhanh00/zkool2/commit/3aad30943b33fec81ae8aa0f87d30cf3f2e04a61))
+
 ## [6.16.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.1...zkool-v6.16.2) (2026-06-03)
 
 
