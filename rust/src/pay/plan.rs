@@ -565,6 +565,7 @@ pub async fn plan_transaction(
                 inputs.push(TxPlanIn {
                     amount: Some(*amount),
                     pool: *pool,
+                    asset_name: "ZEC".to_string(),
                 });
                 match pool {
                     0 => {
@@ -696,6 +697,10 @@ pub async fn plan_transaction(
             pool: pool_mask.to_best_pool().unwrap(),
             amount: recipient.amount,
             address: recipient.address.clone(),
+            asset_name: recipient
+                .asset_name
+                .clone()
+                .unwrap_or_else(|| "ZEC".to_string()),
         });
 
         let pool = pool_mask.to_best_pool().unwrap();
@@ -830,8 +835,71 @@ pub async fn plan_transaction(
         })
         .unwrap();
 
+    // Look up human-readable asset names from the assets table.
+    let asset_names: HashMap<Vec<u8>, String> = sqlx::query(
+        "SELECT asset_base, asset_name FROM assets WHERE asset_name IS NOT NULL AND asset_name != ''",
+    )
+    .map(|row: SqliteRow| {
+        let base: Vec<u8> = row.get(0);
+        let name: String = row.get(1);
+        (base, name)
+    })
+    .fetch_all(&mut *connection)
+    .await?
+    .into_iter()
+    .collect();
+
     let updater = updater
         .update_orchard_with(|mut u| {
+            // Collect asset info for ALL actions upfront (before any mutable
+            // access) so we can set proprietary on every action, including
+            // split spends, dummy outputs, and padding actions.
+            let action_count = u.bundle().actions().len();
+            let action_assets: Vec<(
+                Option<orchard::note::AssetBase>,
+                orchard::note::AssetBase,
+            )> = (0..action_count)
+                .map(|idx| {
+                    let a = &u.bundle().actions()[idx];
+                    (*a.spend().asset(), *a.output().asset())
+                })
+                .collect();
+
+            for action_idx in 0..action_count {
+                let (spend_asset_opt, output_asset) = &action_assets[action_idx];
+
+                let resolve = |a: &orchard::note::AssetBase| -> String {
+                    if bool::from(a.is_zatoshi()) {
+                        "ZEC".to_string()
+                    } else {
+                        let bytes = a.to_bytes().to_vec();
+                        asset_names
+                            .get(&bytes)
+                            .cloned()
+                            .unwrap_or_else(|| hex::encode(&bytes))
+                    }
+                };
+                let spend_name = match spend_asset_opt {
+                    Some(a) => resolve(a),
+                    None => "ZEC".to_string(),
+                };
+                let output_name = resolve(output_asset);
+
+                u.update_action_with(action_idx, |mut u| {
+                    u.set_spend_proprietary(
+                        "asset_name".to_string(),
+                        spend_name.as_bytes().to_vec(),
+                    );
+                    u.set_output_proprietary(
+                        "asset_name".to_string(),
+                        output_name.as_bytes().to_vec(),
+                    );
+                    Ok(())
+                })?;
+            }
+
+            // Set user_address on actions that have a real output (tracked
+            // by output_action_index).
             let mut i = 0;
             for o in outputs.iter() {
                 let pool = o.pool_mask.to_best_pool().unwrap();

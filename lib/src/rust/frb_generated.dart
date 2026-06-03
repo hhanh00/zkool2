@@ -5520,11 +5520,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxPlanIn dco_decode_tx_plan_in(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return TxPlanIn(
       pool: dco_decode_u_8(arr[0]),
       amount: dco_decode_opt_box_autoadd_u_64(arr[1]),
+      assetName: dco_decode_String(arr[2]),
     );
   }
 
@@ -5532,12 +5533,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxPlanOut dco_decode_tx_plan_out(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return TxPlanOut(
       pool: dco_decode_u_8(arr[0]),
       amount: dco_decode_u_64(arr[1]),
       address: dco_decode_String(arr[2]),
+      assetName: dco_decode_String(arr[3]),
     );
   }
 
@@ -6998,7 +7000,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_pool = sse_decode_u_8(deserializer);
     var var_amount = sse_decode_opt_box_autoadd_u_64(deserializer);
-    return TxPlanIn(pool: var_pool, amount: var_amount);
+    var var_assetName = sse_decode_String(deserializer);
+    return TxPlanIn(
+        pool: var_pool, amount: var_amount, assetName: var_assetName);
   }
 
   @protected
@@ -7007,7 +7011,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_pool = sse_decode_u_8(deserializer);
     var var_amount = sse_decode_u_64(deserializer);
     var var_address = sse_decode_String(deserializer);
-    return TxPlanOut(pool: var_pool, amount: var_amount, address: var_address);
+    var var_assetName = sse_decode_String(deserializer);
+    return TxPlanOut(
+        pool: var_pool,
+        amount: var_amount,
+        address: var_address,
+        assetName: var_assetName);
   }
 
   @protected
@@ -8295,6 +8304,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_8(self.pool, serializer);
     sse_encode_opt_box_autoadd_u_64(self.amount, serializer);
+    sse_encode_String(self.assetName, serializer);
   }
 
   @protected
@@ -8303,6 +8313,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_8(self.pool, serializer);
     sse_encode_u_64(self.amount, serializer);
     sse_encode_String(self.address, serializer);
+    sse_encode_String(self.assetName, serializer);
   }
 
   @protected
