@@ -122,21 +122,31 @@ class TransactionTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            zatToShortString(amount),
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          if (hasZsa)
+          if (hasZsa) ...[
             Text(
-              "$zsaValue ${zsaLabel ?? ""}",
+              "$zsaValue",
               style: TextStyle(
-                color: Colors.purple,
+                color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
+                fontSize: 16,
+              ),
+            ),
+            if (zsaLabel != null)
+              Text(
+                zsaLabel!,
+                style: TextStyle(
+                  color: Colors.purple,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+          ] else
+            Text(
+              zatToShortString(amount),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
         ],
