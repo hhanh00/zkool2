@@ -2,7 +2,7 @@ FROM rust:alpine AS builder
 
 WORKDIR /zkool
 COPY . .
-ENV RUSTFLAGS='--cfg=zcash_unsafe="nu7"'
+ENV RUSTFLAGS='--cfg zcash_unstable="nu7"'
 RUN apk add perl build-base
 RUN cd rust && cargo b --release --features=graphql --bin zkool_graphql
 
