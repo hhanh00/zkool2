@@ -491,6 +491,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
   late final c = coinContext.coin;
   String? txId;
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
+  late final hasZsa = widget.recipients.any((r) => !r.assetBase.every((b) => b == 0));
   var recipientPaysFee = false;
   int? category;
   var puri = "";
@@ -506,7 +507,8 @@ class Send2PageState extends ConsumerState<Send2Page> {
   void initState() {
     super.initState();
     Future(() async {
-      final uri = await buildPuri(recipients: widget.recipients);
+      // Payment URIs (ZIP-321) do not support ZSA assets.
+      final uri = hasZsa ? "" : await buildPuri(recipients: widget.recipients);
       final categoryList = await ref.read(getCategoriesProvider.future);
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final data = (await ref.read(accountProvider(selectedAccount.id).future));
@@ -590,17 +592,18 @@ class Send2PageState extends ConsumerState<Send2Page> {
                 Gap(16),
                 Divider(),
                 Gap(8),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    label: Text("Payment URI"),
-                    suffixIcon: IconButton(
-                      tooltip: "Show Payment URI",
-                      icon: Icon(Icons.qr_code),
-                      onPressed: onUriQr,
+                if (!hasZsa)
+                  InputDecorator(
+                    decoration: InputDecoration(
+                      label: Text("Payment URI"),
+                      suffixIcon: IconButton(
+                        tooltip: "Show Payment URI",
+                        icon: Icon(Icons.qr_code),
+                        onPressed: onUriQr,
+                      ),
                     ),
+                    child: CopyableText(puri),
                   ),
-                  child: CopyableText(puri),
-                ),
               ],
             ),
           ),
