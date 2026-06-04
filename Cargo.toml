@@ -9,7 +9,7 @@ resolver = "2"
 
 [patch.crates-io]
 # -- local overrides (librustzcash + direct deps) --
-orchard = { git = "https://github.com/hhanh00/orchard", rev = "dbc0b1b5533bb58c9d11398e97969b6d68e64b10" }
+orchard = { git = "https://github.com/hhanh00/orchard", rev = "d06b7661c16b9be3e6ab9bda65ca8c3b24420f1f" }
 sapling-crypto = { git = "https://github.com/QED-it/sapling-crypto.git", rev = "3a45a01108fc43c1aed49d914c08623652f6e4ec" }
 
 pczt = { git = "https://github.com/hhanh00/librustzcash.git", rev = "cfb29cd035e021e6fd1587e9bbee4cc3fcf7d05d" }
@@ -27,5 +27,6 @@ zcash_note_encryption = { git = "https://github.com/zcash/zcash_note_encryption"
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
 sinsemilla = { git = "https://github.com/zcash/sinsemilla", rev = "aabb707e862bc3d7b803c77d14e5a771bcee3e8c" }
 zcash_spec = { git = "https://github.com/QED-it/zcash_spec", rev = "d5e84264d2ad0646b587a837f4e2424ca64d3a05" }
-halo2_gadgets = { git = "https://github.com/QED-it/halo2", rev = "bbc42b6313936e164bb50c6fe3b627184e890af3" }
-halo2_proofs = { git = "https://github.com/QED-it/halo2", rev = "bbc42b6313936e164bb50c6fe3b627184e890af3" }
+halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "d687ce0e3e913549cab370ec66765e6d59d4612f" }
+halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "d687ce0e3e913549cab370ec66765e6d59d4612f" }
+halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "d687ce0e3e913549cab370ec66765e6d59d4612f" }
