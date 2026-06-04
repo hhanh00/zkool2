@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.16.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.3...zkool-v6.16.4) (2026-06-04)
+
+
+### Bug Fixes
+
+* set RUSTFLAGS for NU7 in alpine dockerfile ([29cd81b](https://github.com/hhanh00/zkool2/commit/29cd81bd7f67bc128083f519396a9c11869ec123))
+* update librustzcash, orchard, zcash-trees deps; add nu6_2 activation ([2722dcd](https://github.com/hhanh00/zkool2/commit/2722dcd5f6392358cfe42ebe04a2bd0a84b65358))
+
 ## [6.16.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.2...zkool-v6.16.3) (2026-06-03)
 
 
