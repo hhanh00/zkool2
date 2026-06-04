@@ -12,7 +12,7 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = {git = "https://github.com/hhanh00/zcash-trees", rev = "83fb965823e32d097580bca59ec952653763b456"}
+zcash-trees = {git = "https://github.com/hhanh00/zcash-trees", rev = "5c76c9bb8a969c8d7f5063d73b9878459cb053a5"}
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
