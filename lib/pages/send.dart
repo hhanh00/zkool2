@@ -427,7 +427,9 @@ class SendPageState extends ConsumerState<SendPage> {
     final form = formKey.currentState!;
     if (form.saveAndValidate()) {
       final address = form.fields['address']?.value as String;
-      final amount = form.fields['amount']?.value as String;
+      final amountValue = form.fields['amount']?.value;
+      if (amountValue == null || amountValue.isEmpty) return null;
+      final amount = amountValue as String;
       final memo = form.fields['memo']?.value as String?;
       final fxStr = amountKey.currentState!.fx();
       final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
@@ -552,22 +554,23 @@ class Send2PageState extends ConsumerState<Send2Page> {
             key: formKey,
             child: Column(
               children: [
-                Showcase(
-                  key: sourceID,
-                  description: "Pools to take funds from. Uncheck any pool you do not want to use",
-                  child: InputDecorator(
-                    decoration: InputDecoration(labelText: "Source Pools"),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: FormBuilderField<int>(
-                        name: "source pools",
-                        initialValue: hasTex ? 1 : account!.pool,
-                        builder: (field) =>
-                            PoolSelect(enabled: account!.pool, initialValue: field.value!, onChanged: hasTex ? null : (v) => field.didChange(v)),
+                if (!hasTex)
+                  Showcase(
+                    key: sourceID,
+                    description: "Pools to take funds from. Uncheck any pool you do not want to use",
+                    child: InputDecorator(
+                      decoration: InputDecoration(labelText: "Source Pools"),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: FormBuilderField<int>(
+                          name: "source pools",
+                          initialValue: account!.pool,
+                          builder: (field) =>
+                              PoolSelect(enabled: account!.pool, initialValue: field.value!, onChanged: (v) => field.didChange(v)),
+                        ),
                       ),
                     ),
                   ),
-                ),
                 Showcase(
                   key: feeSourceID,
                   description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
@@ -618,7 +621,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       return;
     }
 
-    final srcPools = form.fields['source pools']?.value ?? 7;
+    final srcPools = form.fields['source pools']?.value ?? (hasTex ? 1 : 7);
 
     try {
       final options = PaymentOptions(
