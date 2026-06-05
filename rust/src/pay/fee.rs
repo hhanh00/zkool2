@@ -1,9 +1,17 @@
 pub const COST_PER_ACTION: u64 = 5000;
 
+/// ZIP-317 creation cost per new asset, in equivalent logical actions.
+/// Zebra currently uses 0; this matches the upstream `FeeRule::standard()`
+/// constant but may diverge on networks where zebra configures it differently.
+pub const CREATION_COST: u64 = 0;
+
 #[derive(Clone, Default, Debug)]
 pub struct FeeManager {
     pub num_inputs: [u8; 3],
     pub num_outputs: [u8; 3],
+    /// Logical actions contributed by the issue bundle (ZIP-317).
+    /// Equal to `total_issue_note_count + CREATION_COST * asset_creation_count`.
+    pub issuance_actions: u64,
 }
 
 impl FeeManager {
@@ -20,6 +28,13 @@ impl FeeManager {
     // Remove an output
     pub fn remove_output(&mut self, pool: u8) {
         self.num_outputs[pool as usize] -= 1;
+    }
+
+    /// Add logical actions from the issue bundle.
+    /// `issue_note_count` — total number of issue notes across all issue actions.
+    /// `asset_creation_count` — number of new assets being created (first issuance).
+    pub fn add_issuance_actions(&mut self, issue_note_count: u64, asset_creation_count: u64) {
+        self.issuance_actions += issue_note_count + CREATION_COST * asset_creation_count;
     }
 
     // Return the current amount of fees
@@ -51,7 +66,7 @@ impl FeeManager {
             0
         };
         let f = (t + s + o).max(2); // minimum 2 logical actions (due to grace? actions)
-        f as u64 * COST_PER_ACTION
+        (f as u64 + self.issuance_actions) * COST_PER_ACTION
     }
 
     #[allow(dead_code)]
@@ -68,13 +83,14 @@ impl std::fmt::Display for FeeManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "fee: {}:{} {}:{} {}:{}",
+            "fee: {}:{} {}:{} {}:{} issuance:{}",
             self.num_inputs[0],
             self.num_outputs[0],
             self.num_inputs[1],
             self.num_outputs[1],
             self.num_inputs[2],
             self.num_outputs[2],
+            self.issuance_actions,
         )
     }
 }

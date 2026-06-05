@@ -35,6 +35,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         None,
         options.smart_transparent,
         options.category,
+        None, // issuance — normal sends have no issuance
     )
     .await
 }
@@ -73,6 +74,7 @@ pub struct PcztPackage {
     pub can_broadcast: bool,
     pub price: Option<f64>,
     pub category: Option<u32>,
+    pub is_issuance: bool,
 }
 
 #[cfg_attr(feature = "flutter", frb)]

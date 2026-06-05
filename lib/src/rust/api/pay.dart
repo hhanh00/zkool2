@@ -103,6 +103,7 @@ sealed class PcztPackage with _$PcztPackage {
     required bool canBroadcast,
     double? price,
     int? category,
+    required bool isIssuance,
   }) = _PcztPackage;
 }
 

@@ -118,7 +118,7 @@ pub async fn merge_pending_txs(
     // they were probably never mined
     sqlx::query("DELETE FROM pending_txs WHERE account = ?1 AND height < ?2")
         .bind(account)
-        .bind(height - 100)
+        .bind(height.saturating_sub(100))
         .execute(&mut *connection)
         .await?;
     Ok(())

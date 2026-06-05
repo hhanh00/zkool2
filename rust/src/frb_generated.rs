@@ -6270,6 +6270,7 @@ impl SseDecode for crate::api::pay::PcztPackage {
         let mut var_canBroadcast = <bool>::sse_decode(deserializer);
         let mut var_price = <Option<f64>>::sse_decode(deserializer);
         let mut var_category = <Option<u32>>::sse_decode(deserializer);
+        let mut var_isIssuance = <bool>::sse_decode(deserializer);
         return crate::api::pay::PcztPackage {
             pczt: var_pczt,
             n_spends: var_nSpends,
@@ -6280,6 +6281,7 @@ impl SseDecode for crate::api::pay::PcztPackage {
             can_broadcast: var_canBroadcast,
             price: var_price,
             category: var_category,
+            is_issuance: var_isIssuance,
         };
     }
 }
@@ -7501,6 +7503,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PcztPackage {
             self.can_broadcast.into_into_dart().into_dart(),
             self.price.into_into_dart().into_dart(),
             self.category.into_into_dart().into_dart(),
+            self.is_issuance.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8778,6 +8781,7 @@ impl SseEncode for crate::api::pay::PcztPackage {
         <bool>::sse_encode(self.can_broadcast, serializer);
         <Option<f64>>::sse_encode(self.price, serializer);
         <Option<u32>>::sse_encode(self.category, serializer);
+        <bool>::sse_encode(self.is_issuance, serializer);
     }
 }
 

@@ -383,6 +383,7 @@ pub async fn prepare_tx(
         payment.confirmations.map(|v| v as u32),
         false,
         None,
+        None,
     )
     .await?;
     Ok(pczt)

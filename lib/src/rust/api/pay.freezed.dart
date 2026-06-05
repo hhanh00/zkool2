@@ -23,6 +23,7 @@ mixin _$PcztPackage {
   bool get canBroadcast;
   double? get price;
   int? get category;
+  bool get isIssuance;
 
   /// Create a copy of PcztPackage
   /// with the given fields replaced by the non-null parameter values.
@@ -49,7 +50,9 @@ mixin _$PcztPackage {
                 other.canBroadcast == canBroadcast) &&
             (identical(other.price, price) || other.price == price) &&
             (identical(other.category, category) ||
-                other.category == category));
+                other.category == category) &&
+            (identical(other.isIssuance, isIssuance) ||
+                other.isIssuance == isIssuance));
   }
 
   @override
@@ -63,11 +66,12 @@ mixin _$PcztPackage {
       canSign,
       canBroadcast,
       price,
-      category);
+      category,
+      isIssuance);
 
   @override
   String toString() {
-    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, orchardSplitSpendIndices: $orchardSplitSpendIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category)';
+    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, orchardSplitSpendIndices: $orchardSplitSpendIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category, isIssuance: $isIssuance)';
   }
 }
 
@@ -86,7 +90,8 @@ abstract mixin class $PcztPackageCopyWith<$Res> {
       bool canSign,
       bool canBroadcast,
       double? price,
-      int? category});
+      int? category,
+      bool isIssuance});
 }
 
 /// @nodoc
@@ -110,6 +115,7 @@ class _$PcztPackageCopyWithImpl<$Res> implements $PcztPackageCopyWith<$Res> {
     Object? canBroadcast = null,
     Object? price = freezed,
     Object? category = freezed,
+    Object? isIssuance = null,
   }) {
     return _then(_self.copyWith(
       pczt: null == pczt
@@ -148,6 +154,10 @@ class _$PcztPackageCopyWithImpl<$Res> implements $PcztPackageCopyWith<$Res> {
           ? _self.category
           : category // ignore: cast_nullable_to_non_nullable
               as int?,
+      isIssuance: null == isIssuance
+          ? _self.isIssuance
+          : isIssuance // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -252,7 +262,8 @@ extension PcztPackagePatterns on PcztPackage {
             bool canSign,
             bool canBroadcast,
             double? price,
-            int? category)?
+            int? category,
+            bool isIssuance)?
         $default, {
     required TResult orElse(),
   }) {
@@ -268,7 +279,8 @@ extension PcztPackagePatterns on PcztPackage {
             _that.canSign,
             _that.canBroadcast,
             _that.price,
-            _that.category);
+            _that.category,
+            _that.isIssuance);
       case _:
         return orElse();
     }
@@ -298,7 +310,8 @@ extension PcztPackagePatterns on PcztPackage {
             bool canSign,
             bool canBroadcast,
             double? price,
-            int? category)
+            int? category,
+            bool isIssuance)
         $default,
   ) {
     final _that = this;
@@ -313,7 +326,8 @@ extension PcztPackagePatterns on PcztPackage {
             _that.canSign,
             _that.canBroadcast,
             _that.price,
-            _that.category);
+            _that.category,
+            _that.isIssuance);
     }
   }
 
@@ -340,7 +354,8 @@ extension PcztPackagePatterns on PcztPackage {
             bool canSign,
             bool canBroadcast,
             double? price,
-            int? category)?
+            int? category,
+            bool isIssuance)?
         $default,
   ) {
     final _that = this;
@@ -355,7 +370,8 @@ extension PcztPackagePatterns on PcztPackage {
             _that.canSign,
             _that.canBroadcast,
             _that.price,
-            _that.category);
+            _that.category,
+            _that.isIssuance);
       case _:
         return null;
     }
@@ -374,7 +390,8 @@ class _PcztPackage implements PcztPackage {
       required this.canSign,
       required this.canBroadcast,
       this.price,
-      this.category});
+      this.category,
+      required this.isIssuance});
 
   @override
   final Uint8List pczt;
@@ -394,6 +411,8 @@ class _PcztPackage implements PcztPackage {
   final double? price;
   @override
   final int? category;
+  @override
+  final bool isIssuance;
 
   /// Create a copy of PcztPackage
   /// with the given fields replaced by the non-null parameter values.
@@ -421,7 +440,9 @@ class _PcztPackage implements PcztPackage {
                 other.canBroadcast == canBroadcast) &&
             (identical(other.price, price) || other.price == price) &&
             (identical(other.category, category) ||
-                other.category == category));
+                other.category == category) &&
+            (identical(other.isIssuance, isIssuance) ||
+                other.isIssuance == isIssuance));
   }
 
   @override
@@ -435,11 +456,12 @@ class _PcztPackage implements PcztPackage {
       canSign,
       canBroadcast,
       price,
-      category);
+      category,
+      isIssuance);
 
   @override
   String toString() {
-    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, orchardSplitSpendIndices: $orchardSplitSpendIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category)';
+    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, orchardSplitSpendIndices: $orchardSplitSpendIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category, isIssuance: $isIssuance)';
   }
 }
 
@@ -460,7 +482,8 @@ abstract mixin class _$PcztPackageCopyWith<$Res>
       bool canSign,
       bool canBroadcast,
       double? price,
-      int? category});
+      int? category,
+      bool isIssuance});
 }
 
 /// @nodoc
@@ -484,6 +507,7 @@ class __$PcztPackageCopyWithImpl<$Res> implements _$PcztPackageCopyWith<$Res> {
     Object? canBroadcast = null,
     Object? price = freezed,
     Object? category = freezed,
+    Object? isIssuance = null,
   }) {
     return _then(_PcztPackage(
       pczt: null == pczt
@@ -522,6 +546,10 @@ class __$PcztPackageCopyWithImpl<$Res> implements _$PcztPackageCopyWith<$Res> {
           ? _self.category
           : category // ignore: cast_nullable_to_non_nullable
               as int?,
+      isIssuance: null == isIssuance
+          ? _self.isIssuance
+          : isIssuance // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }

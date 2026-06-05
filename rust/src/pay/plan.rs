@@ -9,12 +9,14 @@ use orchard::{
     flavor::{OrchardVanilla, OrchardZSA},
     keys::{Scope, SpendAuthorizingKey},
     note::{AssetBase, ExtractedNoteCommitment},
+    value::NoteValue,
     Address,
 };
 use pczt::{
     roles::{
-        creator::Creator, io_finalizer::IoFinalizer, prover::Prover, signer::Signer,
-        spend_finalizer::SpendFinalizer, tx_extractor::TransactionExtractor, updater::Updater,
+        creator::Creator, io_finalizer::IoFinalizer, issuer::Issuer, prover::Prover,
+        signer::Signer, spend_finalizer::SpendFinalizer,
+        tx_extractor::TransactionExtractor, updater::Updater,
     },
     Pczt,
 };
@@ -30,6 +32,7 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder},
     fees::zip317::FeeRule,
+    zsa_builder::ZsaBuilder,
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
@@ -51,7 +54,11 @@ use crate::{
         get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
         get_sapling_vk,
     },
-    api::{coin::Network, pay::PcztPackage},
+    api::{
+        coin::Network,
+        issuance::IssuanceInfo,
+        pay::PcztPackage,
+    },
     db::{get_account_dindex, get_account_hw, select_account_transparent},
     pay::{
         error::Error,
@@ -104,6 +111,7 @@ pub async fn plan_transaction(
     confirmations: Option<u32>,
     smart_transparent: bool,
     category: Option<u32>,
+    issuance: Option<&IssuanceInfo>,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
@@ -159,9 +167,11 @@ pub async fn plan_transaction(
     let change_pool = get_change_pool(effective_src_pools, recipient_pools);
     // ZSA assets only exist in orchard; force change to orchard if any ZSA recipient.
     // The ZEC change output also satisfies ZIP-226 (no dummy needed).
-    let has_zsa = recipients.iter().any(|r| r.asset_base != [0u8; 32]);
+    // Issuance also forces orchard change (needs orchard ZEC note for nullifier).
+    let has_zsa = recipients.iter().any(|r| r.asset_base != [0u8; 32])
+        || issuance.is_some();
     let change_pool = if has_zsa { 2 } else { change_pool };
-    debug!("change_pool: {:#b}", change_pool);
+    info!("change_pool: {:#b}", change_pool);
 
     // Pre-fetch change address (needed early by ZSA block)
     let change_scope = if use_internal { 1 } else { 0 };
@@ -170,6 +180,16 @@ pub async fn plan_transaction(
 
     let mut fee_manager = FeeManager::default();
     fee_manager.add_output(change_pool);
+
+    // Issuance fee is separate from the orchard bundle (ZIP-317).
+    // total_issue_note_count: 2 for first issuance (reference + real), 1 otherwise.
+    // finalize adds 1 more note. CREATION_COST is 0 in current zebra.
+    if let Some(info) = issuance {
+        let issue_note_count: u64 = if info.first_issuance { 2 } else { 1 }
+            + if info.finalize { 1 } else { 0 };
+        let asset_creation_count: u64 = if info.first_issuance { 1 } else { 0 };
+        fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
+    }
 
     let confirmations = confirmations.unwrap_or_default();
     let height = client.latest_height().await?;
@@ -295,9 +315,9 @@ pub async fn plan_transaction(
 
     let recipient_states = zec_recipients;
 
-    debug!("Unspent notes:");
+    info!("Unspent notes:");
     for inp in inputs.iter() {
-        debug!(
+        info!(
             "id: {}, pool: {}, amount: {}",
             inp.id,
             inp.pool,
@@ -463,7 +483,7 @@ pub async fn plan_transaction(
             ..
         } = o;
         assert_eq!(*remaining, 0);
-        debug!(
+        info!(
             "address: {}, pool: {}, amount: {}",
             recipient.address,
             pool_mask.to_best_pool().unwrap(),
@@ -671,7 +691,7 @@ pub async fn plan_transaction(
                         .bind(id)
                         .fetch_one(&mut *connection)
                         .await?;
-                debug!(
+                info!(
                     "id: {id}, pool: {pool}, nullifier: {}, amount: {}",
                     hex::encode(nf),
                     to_zec(*amount)
@@ -768,17 +788,43 @@ pub async fn plan_transaction(
         }
     }
 
-    debug!("Building");
+    info!("Building");
     event!(Level::INFO, "Preparing PCZT");
 
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |asset: &AssetBase| *asset != AssetBase::zatoshi())?;
+    // Attach the ZsaBuilder before build_for_pczt so the Builder includes
+    // issuance actions in its fee computation (ZIP-317), avoiding a mismatch
+    // with FeeManager that would cause ChangeRequired.
+    if let Some(info) = issuance {
+        let oaddress = ovk
+            .as_ref()
+            .ok_or_else(|| anyhow!("No orchard key for issuance"))?
+            .address_at(dindex, Scope::External);
+        let mut zsa = ZsaBuilder::new(info.isk.clone());
+        zsa.add_issue_output(
+            info.desc_hash,
+            oaddress,
+            NoteValue::from_raw(info.amount),
+            info.first_issuance,
+            &mut OsRng,
+        )
+        .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
+        if info.finalize {
+            zsa.finalize_asset(&info.desc_hash)
+                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
+        }
+        builder.set_zsa_builder(zsa);
+    }
+
+    // we pass false to the fee rule callback because Zebra does not track new ZSA issuance and does not
+    // charge the CREATION_COST
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |asset: &AssetBase| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
 
-    debug!("Prepared");
+    info!("Prepared");
 
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
-    debug!("Created");
+    info!("Created");
 
     let updater = Updater::new(pczt);
     let updater = updater
@@ -920,8 +966,45 @@ pub async fn plan_transaction(
 
     let pczt = updater.finish();
 
+    // ── Issuance: build ZsaBuilder + Issuer phase 1 (build_awaiting_sighash) ──
+    let pczt = if let Some(info) = issuance {
+        let oaddress = ovk
+            .as_ref()
+            .ok_or_else(|| anyhow!("No orchard key for issuance"))?
+            .address_at(dindex, Scope::External);
+        let mut zsa_builder = ZsaBuilder::new(info.isk.clone());
+        zsa_builder
+            .add_issue_output(
+                info.desc_hash,
+                oaddress,
+                NoteValue::from_raw(info.amount),
+                info.first_issuance,
+                &mut OsRng,
+            )
+            .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
+        if info.finalize {
+            zsa_builder
+                .finalize_asset(&info.desc_hash)
+                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
+        }
+        Issuer::new(pczt)
+            .build_awaiting_sighash(zsa_builder, OsRng)
+            .map_err(|e| anyhow!("Issuer (phase 1) failed: {e:?}"))?
+    } else {
+        pczt
+    };
+
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
-    debug!("IO Finalized");
+    info!("IO Finalized");
+
+    // ── Issuance: Issuer phase 2 (sign) ──
+    let pczt = if let Some(info) = issuance {
+        Issuer::new(pczt)
+            .sign(&info.isk)
+            .map_err(|e| anyhow!("Issuer (phase 2/sign) failed: {e:?}"))?
+    } else {
+        pczt
+    };
 
     let orchard_split_spend_indices: Vec<usize> = (0..orchard_meta.num_split_spends())
         .map(|n| orchard_meta.split_spend_action_index(n).unwrap())
@@ -941,6 +1024,7 @@ pub async fn plan_transaction(
         can_broadcast: false,
         price,
         category,
+        is_issuance: issuance.is_some(),
     };
 
     Ok(pczt_package)
@@ -987,6 +1071,7 @@ pub async fn sign_transaction(
         orchard_split_spend_indices,
         price,
         category,
+        is_issuance,
         ..
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
@@ -1028,13 +1113,13 @@ pub async fn sign_transaction(
         })
         .unwrap();
     let pczt = updater.finish();
-    debug!("Updated");
+    info!("Updated");
 
     let mut signer = Signer::new(pczt.clone()).unwrap();
     let tbundle = pczt.transparent();
     let sbundle = pczt.sapling();
     for index in 0..n_spends[0] {
-        debug!("signing transparent {index}");
+        info!("signing transparent {index}");
         let inp = &tbundle.inputs()[index];
         let scope = u32::from_le_bytes(inp.proprietary()["scope"].clone().try_into().unwrap());
         let dindex = u32::from_le_bytes(inp.proprietary()["dindex"].clone().try_into().unwrap());
@@ -1101,7 +1186,7 @@ pub async fn sign_transaction(
         }
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {
-        debug!("signing sapling {index}");
+        info!("signing sapling {index}");
         let spend = &sbundle.spends()[*bundle_index];
         let scope = u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
         let ssk = ssk.as_ref().map(|ssk| {
@@ -1117,14 +1202,14 @@ pub async fn sign_transaction(
         signer.sign_sapling(*bundle_index, sk).unwrap();
     }
     for (index, bundle_index) in orchard_indices.iter().enumerate() {
-        debug!("signing orchard {index}");
+        info!("signing orchard {index}");
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
         signer.sign_orchard(*bundle_index, osak).unwrap();
     }
     for (index, bundle_index) in orchard_split_spend_indices.iter().enumerate() {
-        debug!("signing orchard split-spend {index}");
+        info!("signing orchard split-spend {index}");
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
@@ -1140,13 +1225,13 @@ pub async fn sign_transaction(
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
-        .create_orchard_proof(get_orchard_pk(network))
+        .create_orchard_proof(if *is_issuance { &ORCHARD_ZSA_PK } else { get_orchard_pk(network) })
         .unwrap()
         .finish();
-    debug!("Proved");
+    info!("Proved");
 
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
-    debug!("Spend Finalized");
+    info!("Spend Finalized");
 
     Ok(PcztPackage {
         pczt: pczt.serialize(),
@@ -1158,6 +1243,7 @@ pub async fn sign_transaction(
         can_broadcast: true,
         price: *price,
         category: *category,
+        is_issuance: *is_issuance,
     })
 }
 
@@ -1175,12 +1261,12 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     let tx = tx_extractor.extract().unwrap();
     let mut tx_bytes = vec![];
     tx.write(&mut tx_bytes).unwrap();
-    debug!("Tx Extracted");
+    info!("Tx Extracted");
 
     span.in_scope(|| {
         info!("Tx Ready - {} bytes", tx_bytes.len());
     });
-    debug!("{}", hex::encode(&tx_bytes));
+    info!("{}", hex::encode(&tx_bytes));
 
     Ok(tx_bytes)
 }
@@ -1334,13 +1420,13 @@ fn fill_single_receivers(
                 r.remaining -= amount;
                 inp.remaining -= amount;
 
-                debug!(
+                info!(
                     "Input id: {}, amount: {}, remaining: {}",
                     inp.id,
                     to_zec(inp.amount),
                     to_zec(inp.remaining)
                 );
-                debug!(
+                info!(
                     "Recipient id: {}, amount: {}, remaining: {}",
                     r.recipient.address,
                     to_zec(r.recipient.amount),
