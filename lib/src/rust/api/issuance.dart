@@ -7,6 +7,8 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `IssuanceInfo`
+
 /// Issue a new ZSA (Zcash Shielded Asset) via the PCZT workflow.
 ///
 /// This creates, signs, and extracts a full issuance transaction. The issuance

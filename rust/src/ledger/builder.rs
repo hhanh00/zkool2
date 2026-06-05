@@ -625,6 +625,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             can_broadcast,
             price,
             category,
+            is_issuance,
             ..
         } = package;
 
@@ -639,6 +640,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             can_broadcast: *can_broadcast,
             price: *price,
             category: *category,
+            is_issuance: *is_issuance,
         };
         Ok(new_package)
     };

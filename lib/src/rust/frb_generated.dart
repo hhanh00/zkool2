@@ -5226,8 +5226,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PcztPackage dco_decode_pczt_package(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return PcztPackage(
       pczt: dco_decode_list_prim_u_8_strict(arr[0]),
       nSpends: dco_decode_usize_array_3(arr[1]),
@@ -5238,6 +5238,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       canBroadcast: dco_decode_bool(arr[6]),
       price: dco_decode_opt_box_autoadd_f_64(arr[7]),
       category: dco_decode_opt_box_autoadd_u_32(arr[8]),
+      isIssuance: dco_decode_bool(arr[9]),
     );
   }
 
@@ -6711,6 +6712,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_canBroadcast = sse_decode_bool(deserializer);
     var var_price = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_category = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_isIssuance = sse_decode_bool(deserializer);
     return PcztPackage(
         pczt: var_pczt,
         nSpends: var_nSpends,
@@ -6720,7 +6722,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         canSign: var_canSign,
         canBroadcast: var_canBroadcast,
         price: var_price,
-        category: var_category);
+        category: var_category,
+        isIssuance: var_isIssuance);
   }
 
   @protected
@@ -8111,6 +8114,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.canBroadcast, serializer);
     sse_encode_opt_box_autoadd_f_64(self.price, serializer);
     sse_encode_opt_box_autoadd_u_32(self.category, serializer);
+    sse_encode_bool(self.isIssuance, serializer);
   }
 
   @protected
