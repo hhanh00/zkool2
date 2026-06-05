@@ -479,6 +479,7 @@ pub async fn publish(
         None,
         false,
         None,
+        None,
     )
     .await
     .unwrap();
