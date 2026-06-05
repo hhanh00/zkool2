@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.16.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.4...zkool-v6.16.5) (2026-06-05)
+
+
+### Bug Fixes
+
+* delegate issuance to plan_transaction and integrate ZSA PCZT roles ([16b0e04](https://github.com/hhanh00/zkool2/commit/16b0e046ea7a2bf881d8d810b50f1d95edf277c9))
+* handle null amount when sending to TEX address and hide pool selector for TEX ([f94c3f4](https://github.com/hhanh00/zkool2/commit/f94c3f409ac6ed1704d83151cfa61f16620de526))
+
 ## [6.16.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.3...zkool-v6.16.4) (2026-06-04)
 
 
