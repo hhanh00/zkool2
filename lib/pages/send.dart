@@ -23,6 +23,7 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/address_resolver.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/input_amount.dart';
 import 'package:zkool/widgets/pool_select.dart';
@@ -64,6 +65,8 @@ class SendPageState extends ConsumerState<SendPage> {
   List<ZsaHolding> zsas = [];
   Uint8List selectedAssetBase = zecBase;
   String? selectedAssetName;
+  List<Account> _accountSuggestions = [];
+  bool _resolvingAccount = false;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
@@ -203,6 +206,37 @@ class SendPageState extends ConsumerState<SendPage> {
                     ),
                   ],
                 ),
+                if (_accountSuggestions.isNotEmpty)
+                  Container(
+                    margin: EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: cs.outline.withAlpha(77)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    constraints: BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _accountSuggestions.length,
+                      itemBuilder: (context, i) {
+                        final a = _accountSuggestions[i];
+                        return ListTile(
+                          dense: true,
+                          leading: a.avatar(),
+                          title: Text(a.name),
+                          subtitle: Text('Account #${a.id}', style: t.bodySmall),
+                          onTap: () {
+                            final fields = formKey.currentState!.fields;
+                            final value = '@${a.name}';
+                            fields["address"]!.didChange(value);
+                            setState(() {
+                              address = value;
+                              _accountSuggestions = [];
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
                 FormBuilderDropdown<Uint8List>(
                   name: "asset",
                   decoration: const InputDecoration(labelText: "Currency"),
@@ -391,7 +425,23 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   void onAddressChanged(String? v) {
-    if (v == null || v.isEmpty) return;
+    if (v == null || v.isEmpty) {
+      setState(() => _accountSuggestions = []);
+      return;
+    }
+    // Show account suggestions when typing after @
+    if (v.startsWith('@')) {
+      final query = v.substring(1).toLowerCase();
+      final accounts = ref.read(getAccountsProvider).requireValue;
+      setState(() {
+        _accountSuggestions = query.isEmpty
+            ? accounts.toList()
+            : accounts.where((a) => a.name.toLowerCase().contains(query)).toList();
+      });
+    } else {
+      setState(() => _accountSuggestions = []);
+    }
+
     final recipients2 = parsePaymentUri(uri: v);
     if (recipients2 != null) {
       if (recipients2.length == 1) {
@@ -426,13 +476,41 @@ class SendPageState extends ConsumerState<SendPage> {
   Future<Recipient?> validateAndGetRecipient() async {
     final form = formKey.currentState!;
     if (form.saveAndValidate()) {
-      final address = form.fields['address']?.value as String;
+      var address = form.fields['address']?.value as String;
       final amountValue = form.fields['amount']?.value;
       if (amountValue == null || amountValue.isEmpty) return null;
       final amount = amountValue as String;
       final memo = form.fields['memo']?.value as String?;
       final fxStr = amountKey.currentState!.fx();
       final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
+
+      // Resolve @accountname to actual address
+      if (address.startsWith('@')) {
+        setState(() => _resolvingAccount = true);
+        final accounts = ref.read(getAccountsProvider).requireValue;
+        final resolved = await resolveAccountName(address, accounts, c);
+        setState(() => _resolvingAccount = false);
+        if (resolved == null) {
+          if (mounted) {
+            showException(context, 'Unknown account: ${address.substring(1)}');
+          }
+          return null;
+        }
+        // Warn if sending to own account
+        if (addresses != null) {
+          final ownAddrs = [addresses!.ua, addresses!.oaddr, addresses!.saddr, addresses!.taddr];
+          if (ownAddrs.any((a) => a != null && a == resolved)) {
+            final confirmed = await confirmDialog(
+              context,
+              title: 'Self-Send',
+              message: 'You are sending to your own account. Continue?',
+            );
+            if (!confirmed) return null;
+          }
+        }
+        address = resolved;
+      }
+
       logger.i("Send $amount to $address");
 
       final isZec = selectedAssetBase.every((b) => b == 0);
@@ -473,6 +551,7 @@ class SendPageState extends ConsumerState<SendPage> {
       address = null;
       amount = null;
       memo = null;
+      _accountSuggestions = [];
     });
   }
 }

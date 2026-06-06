@@ -40,6 +40,10 @@ String? validAddressOrPaymentURI(String? s) {
   if ((s == null || s.isEmpty)) {
     return null;
   }
+  // Allow @accountname references — resolution happens later
+  if (s.startsWith('@') && s.length > 1) {
+    return null;
+  }
   final checkAddress = validAddress(s);
   if (checkAddress == null) return null;
   final checkURI = validPaymentURI(s);

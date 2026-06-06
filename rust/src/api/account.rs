@@ -372,6 +372,12 @@ pub async fn get_addresses(ua_pools: u8, c: &Coin) -> Result<Addresses> {
     crate::account::get_addresses(&c.network(), &mut connection, c.account, ua_pools).await
 }
 
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_account_addresses(account: u32, ua_pools: u8, c: &Coin) -> Result<Addresses> {
+    let mut connection = c.get_connection().await?;
+    crate::account::get_addresses(&c.network(), &mut connection, account, ua_pools).await
+}
+
 pub struct Addresses {
     pub taddr: Option<String>,
     pub saddr: Option<String>,

@@ -80,6 +80,11 @@ Future<List<Memo>> listMemos({required Coin c}) =>
 Future<Addresses> getAddresses({required int uaPools, required Coin c}) =>
     RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools, c: c);
 
+Future<Addresses> getAccountAddresses(
+        {required int account, required int uaPools, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountAddresses(
+        account: account, uaPools: uaPools, c: c);
+
 Future<TxAccount> getTxDetails({required int idTx, required Coin c}) =>
     RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx, c: c);
 
