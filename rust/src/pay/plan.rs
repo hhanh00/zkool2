@@ -627,7 +627,7 @@ pub async fn plan_transaction(
 
                         info!("Adding transparent input {}", hex::encode(utxo.hash()));
                         builder.add_transparent_input(
-                            TransparentInputInfo::from_parts(utxo, coin, SpendInfo::P2pkh { pubkey, uncompressed })
+                            TransparentInputInfo::from_parts(utxo, coin, SpendInfo::P2pkh { pubkey })
                                 .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
                         );
                         tsk_dindex.push((pubkey, scope, dindex, taddress, uncompressed));
@@ -833,7 +833,7 @@ pub async fn plan_transaction(
                 u.update_input_with(i, |mut u| {
                     let derivation_path = vec![scope, dindex];
                     let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
-                    u.set_bip32_derivation(pubkey.serialize().to_vec(), path);
+                    u.set_bip32_derivation(pubkey.serialize(), path);
                     u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
                     u.set_proprietary("dindex".to_string(), dindex.to_le_bytes().to_vec());
                     u.set_proprietary("address".to_string(), taddress.into_bytes());
