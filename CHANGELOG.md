@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.6...zkool-v6.17.0) (2026-06-06)
+
+
+### Features
+
+* add NU6_2 canonmgr to parse_shield_tx test ([b38a076](https://github.com/hhanh00/zkool2/commit/b38a0760593c993e821aea2fa0f793e86f81ada8))
+* disable send button during tx broadcast, re-enable on error ([4c37ce5](https://github.com/hhanh00/zkool2/commit/4c37ce56a8aaccc935d052654605b83d77ce3fca))
+* resolve [@accountname](https://github.com/accountname) to address in send form, show avatar instead of generic icon ([d864df7](https://github.com/hhanh00/zkool2/commit/d864df73d57facab1244c6d579da0c222d01cd8e))
+
 ## [6.16.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.5...zkool-v6.16.6) (2026-06-06)
 
 
