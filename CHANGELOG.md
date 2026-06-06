@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.16.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.5...zkool-v6.16.6) (2026-06-06)
+
+
+### Bug Fixes
+
+* update librustzcash to zsa2 branch with ZSA issuer port ([c9e4725](https://github.com/hhanh00/zkool2/commit/c9e4725ce683826d19564dae1947f40987783167))
+
 ## [6.16.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.4...zkool-v6.16.5) (2026-06-05)
 
 
