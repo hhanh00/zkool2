@@ -37,6 +37,7 @@ class TxPageState extends ConsumerState<TxPage> {
   bool canBroadcast = false;
   Account? account;
   AccountData? details;
+  bool _sending = false;
 
   @override
   void initState() {
@@ -88,7 +89,7 @@ class TxPageState extends ConsumerState<TxPage> {
             key: sendID4,
             description: "Confirm, broadcast transaction",
             child: IconButton(
-              onPressed: canSend ? onSend : onSave,
+              onPressed: _sending ? null : (canSend ? onSend : onSave),
               icon: Icon(
                 canSend
                     ? Icons.send
@@ -131,13 +132,17 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   void onSend() async {
+    setState(() => _sending = true);
     try {
       final confirmed = await confirmDialog(
         context,
         title: "Confirm Transaction",
         message: "Are you sure you want to send this transaction?",
       );
-      if (!confirmed) return;
+      if (!confirmed) {
+        setState(() => _sending = false);
+        return;
+      }
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
@@ -173,8 +178,17 @@ class TxPageState extends ConsumerState<TxPage> {
         c: c,
       );
       logger.i("tx result $result");
+
+      // broadcastTransaction returns Ok for node-level failures (e.g.
+      // double-spend) as an error message string rather than Err.
+      // Decode the hex txid to distinguish success from failure.
+      Uint8List? txidHex;
       try {
-        final txidHex = hex.decode(result);
+        txidHex = Uint8List.fromList(hex.decode(result));
+      } on FormatException {
+        // result is not valid hex — broadcast returned an error message
+      }
+      if (txidHex != null) {
         await storePendingTx(
           height: txPlan.height,
           txid: txidHex,
@@ -184,11 +198,13 @@ class TxPageState extends ConsumerState<TxPage> {
         );
         await showMessage(context, result);
         showSnackbar("Transaction broadcasted successfully");
-      } catch (_) {
+      } else {
+        setState(() => _sending = false);
         if (mounted) await showException(context, result);
       }
       if (mounted) setState(() => txId = result);
     } on AnyhowException catch (e) {
+      setState(() => _sending = false);
       if (mounted) await showException(context, e.message);
     }
   }
