@@ -18,6 +18,7 @@ fn parse_shield_tx() {
         nu5: Some(BlockHeight::from_u32(1)),
         nu6: Some(BlockHeight::from_u32(1)),
         nu6_1: Some(BlockHeight::from_u32(1)),
+        nu6_2: Some(BlockHeight::from_u32(1)),
         nu7: Some(BlockHeight::from_u32(1)),
     };
 
@@ -26,13 +27,13 @@ fn parse_shield_tx() {
     println!("branch_id for height 152: {:?}", branch_id);
 
     let tx = Transaction::read(&mut &data[..], branch_id).unwrap();
-    
+
     println!("\n=== Transaction ===");
     println!("version: {:?}", tx.version());
     println!("consensus_branch_id: {:?}", tx.consensus_branch_id());
     println!("lock_time: {}", tx.lock_time());
     println!("expiry_height: {}", u32::from(tx.expiry_height()));
-    
+
     println!("\n=== Transparent Bundle ===");
     if let Some(tb) = tx.transparent_bundle() {
         println!("vins: {}", tb.vin.len());
@@ -43,13 +44,13 @@ fn parse_shield_tx() {
     } else {
         println!("NONE");
     }
-    
+
     println!("\n=== Sapling Bundle ===");
     if let Some(sb) = tx.sapling_bundle() {
         println!("spends: {}", sb.shielded_spends().len());
         println!("outputs: {}", sb.shielded_outputs().len());
         for (i, out) in sb.shielded_outputs().iter().enumerate() {
-            println!("  output[{}]: enc_ciphertext_len={}, out_ciphertext_len={}", 
+            println!("  output[{}]: enc_ciphertext_len={}, out_ciphertext_len={}",
                 i,
                 out.enc_ciphertext().as_ref().len(),
                 out.out_ciphertext().len(),
@@ -59,7 +60,7 @@ fn parse_shield_tx() {
     } else {
         println!("NONE");
     }
-    
+
     println!("\n=== Orchard Bundle ===");
     if let Some(ob) = tx.orchard_bundle() {
         println!("has orchard bundle, value_balance: {:?}", ob.value_balance());
@@ -73,7 +74,7 @@ fn parse_shield_tx() {
     } else {
         println!("NONE");
     }
-    
+
     // Write back and check size
     let mut written = vec![];
     tx.write(&mut written).unwrap();
@@ -81,7 +82,7 @@ fn parse_shield_tx() {
     println!("Original size: {}", data.len());
     println!("Roundtrip size: {}", written.len());
     println!("Match: {}", data == written);
-    
+
     if data != written {
         let diff_pos = data.iter().zip(written.iter()).position(|(a, b)| a != b);
         println!("First difference at byte: {:?}", diff_pos);
