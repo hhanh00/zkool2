@@ -32,16 +32,27 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Tag is e.g. "zkool-v6.17.1"; strip prefix to get "6.17.1"
+          set -euo pipefail
+
+          # Tag is e.g. "zkool-v6.17.1"; parse semver from tag
           TAG="${{ steps.release.outputs.tag_name }}"
-          VERSION="${TAG#zkool-v}"
-          MAJOR="${{ steps.release.outputs.major }}"
-          MINOR="${{ steps.release.outputs.minor }}"
+          VERSION="${TAG#zkool-v}"                        # "6.17.1"
+          MAJOR="${VERSION%%.*}"                          # "6"
+          REST="${VERSION#*.}"                            # "17.1"
+          MINOR="${REST%%.*}"                             # "17"
+
+          echo "TAG=$TAG VERSION=$VERSION MAJOR=$MAJOR MINOR=$MINOR"
 
           # CHANGELOG.md is reverse chronological (newest first).
           # Start from the FIRST (newest) entry of this minor series
           # and collect everything until we hit a different minor version.
           START_LINE=$(grep -n "^## \[${MAJOR}\.${MINOR}\." CHANGELOG.md | head -1 | cut -d: -f1)
+          echo "START_LINE=$START_LINE"
+
+          if [ -z "$START_LINE" ]; then
+            echo "ERROR: No CHANGELOG entry found for ${MAJOR}.${MINOR}.x"
+            exit 1
+          fi
 
           sed -n "${START_LINE},\$ p" CHANGELOG.md | awk -v major="$MAJOR" -v minor="$MINOR" '
             /^## \[/ {
@@ -50,7 +61,6 @@ jobs:
             { print }
           ' > /tmp/release-body.md
 
-          # Truncate if too long (GitHub release body limit is 125 KiB)
-          truncate -s 120000 /tmp/release-body.md 2>/dev/null || true
+          echo "Release body lines: $(wc -l < /tmp/release-body.md)"
 
           gh release edit "$TAG" --notes-file /tmp/release-body.md
