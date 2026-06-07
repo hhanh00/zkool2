@@ -20,6 +20,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// - `first_issuance`: Whether this is the first issuance of this asset — adds a zero-value
 ///   reference note per ZIP-227.
 /// - `finalize`: Whether to finalize the asset, preventing any future issuance of this type.
+/// - `desc_hash`: Optional pre-computed asset description hash. When provided (reissuance),
+///   this is used directly instead of being derived from `asset_name`. This ensures the
+///   correct desc_hash is used even if the asset was renamed client-side.
 /// - `c`: Wallet state.
 ///
 /// # Returns
@@ -29,6 +32,7 @@ Future<Uint8List> issueAsset(
         required BigInt amount,
         required bool firstIssuance,
         required bool finalize,
+        Uint8List? descHash,
         required int idAccount,
         required Coin c}) =>
     RustLib.instance.api.crateApiIssuanceIssueAsset(
@@ -36,5 +40,6 @@ Future<Uint8List> issueAsset(
         amount: amount,
         firstIssuance: firstIssuance,
         finalize: finalize,
+        descHash: descHash,
         idAccount: idAccount,
         c: c);

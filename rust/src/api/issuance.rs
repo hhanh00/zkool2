@@ -48,6 +48,9 @@ pub struct IssuanceInfo {
 /// - `first_issuance`: Whether this is the first issuance of this asset — adds a zero-value
 ///   reference note per ZIP-227.
 /// - `finalize`: Whether to finalize the asset, preventing any future issuance of this type.
+/// - `desc_hash`: Optional pre-computed asset description hash. When provided (reissuance),
+///   this is used directly instead of being derived from `asset_name`. This ensures the
+///   correct desc_hash is used even if the asset was renamed client-side.
 /// - `c`: Wallet state.
 ///
 /// # Returns
@@ -58,6 +61,7 @@ pub async fn issue_asset(
     amount: u64,
     first_issuance: bool,
     finalize: bool,
+    desc_hash: Option<Vec<u8>>,
     id_account: u32,
     c: &Coin,
 ) -> Result<Vec<u8>> {
@@ -80,11 +84,17 @@ pub async fn issue_asset(
     let isk = IssueAuthKey::<ZSASchnorr>::from_zip32_seed(&seed, coin_type, 0)
         .map_err(|e| anyhow!("Failed to derive issue auth key: {e:?}"))?;
 
-    // ── 2. Compute asset description hash ────────────────────────────────
-    let name_bytes = asset_name.as_bytes().to_vec();
-    let non_empty = NonEmpty::from_slice(&name_bytes)
-        .ok_or_else(|| anyhow!("Asset name cannot be empty"))?;
-    let desc_hash = compute_asset_desc_hash(&non_empty);
+    // ── 2. Compute or use provided asset description hash ────────────────
+    let is_reissuance = desc_hash.is_some();
+    let desc_hash: [u8; 32] = if let Some(hash) = desc_hash {
+        hash.clone().try_into()
+            .map_err(|_| anyhow!("desc_hash must be exactly 32 bytes"))?
+    } else {
+        let name_bytes = asset_name.as_bytes().to_vec();
+        let non_empty = NonEmpty::from_slice(&name_bytes)
+            .ok_or_else(|| anyhow!("Asset name cannot be empty"))?;
+        compute_asset_desc_hash(&non_empty)
+    };
 
     // ── 3. Derive identifiers for DB pre-insert ──────────────────────────
     let ik = orchard::issuance::auth::IssueValidatingKey::from(&isk);
@@ -124,18 +134,21 @@ pub async fn issue_asset(
     let tx_bytes = extract_transaction(&pczt_package).await?;
 
     // ── 8. Pre-insert asset into DB for sync name resolution ─────────────
-    sqlx::query(
-        "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, asset_name, finalized, first_seen_height)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-    )
-    .bind(desc_hash.to_vec())
-    .bind(ik.encode())
-    .bind(&asset_base_bytes)
-    .bind(&asset_name)
-    .bind(finalize)
-    .bind(0_i64)
-    .execute(&mut *connection)
-    .await?;
+    // Only needed for first issuance; reissuance already has the asset row.
+    if !is_reissuance {
+        sqlx::query(
+            "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, asset_name, finalized, first_seen_height)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        )
+        .bind(desc_hash.to_vec())
+        .bind(ik.encode())
+        .bind(&asset_base_bytes)
+        .bind(&asset_name)
+        .bind(finalize)
+        .bind(0_i64)
+        .execute(&mut *connection)
+        .await?;
+    }
 
     info!(
         "Issued asset \"{asset_name}\" (amount={amount}, first={first_issuance}, finalize={finalize}), \
