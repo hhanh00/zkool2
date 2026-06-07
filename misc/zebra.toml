@@ -9,7 +9,7 @@ enable_cookie_auth = false
 miner_address = ""
 
 [network.testnet_parameters.activation_heights]
-"NU6.1" = 1
+"NU6.2" = 1
 
 [[network.testnet_parameters.lockbox_disbursements]]
 # dummy address
