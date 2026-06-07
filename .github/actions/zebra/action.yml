@@ -26,7 +26,7 @@ runs:
         sudo apt update && sudo apt install -y libclang-dev clang
 
         cargo install --git https://github.com/ZcashFoundation/zebra --tag v5.0.0 --features=internal-miner --root ./tools zebrad
-        go install github.com/zcash-shielded-assets/lightwalletd@latest
+        go install github.com/zcash-shielded-assets/lightwalletd@44adcde
         cp $HOME/go/bin/lightwalletd tools/bin
 
     - name: Install zkool
