@@ -343,6 +343,7 @@ abstract class RustLibApi extends BaseApi {
       required BigInt amount,
       required bool firstIssuance,
       required bool finalize,
+      Uint8List? descHash,
       required int idAccount,
       required Coin c});
 
@@ -2927,6 +2928,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       required BigInt amount,
       required bool firstIssuance,
       required bool finalize,
+      Uint8List? descHash,
       required int idAccount,
       required Coin c}) {
     return handler.executeNormal(
@@ -2937,6 +2939,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_64(amount, serializer);
           sse_encode_bool(firstIssuance, serializer);
           sse_encode_bool(finalize, serializer);
+          sse_encode_opt_list_prim_u_8_strict(descHash, serializer);
           sse_encode_u_32(idAccount, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
@@ -2947,7 +2950,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiIssuanceIssueAssetConstMeta,
-        argValues: [assetName, amount, firstIssuance, finalize, idAccount, c],
+        argValues: [
+          assetName,
+          amount,
+          firstIssuance,
+          finalize,
+          descHash,
+          idAccount,
+          c
+        ],
         apiImpl: this,
       ),
     );
@@ -2960,6 +2971,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "amount",
           "firstIssuance",
           "finalize",
+          "descHash",
           "idAccount",
           "c"
         ],

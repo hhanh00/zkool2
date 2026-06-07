@@ -111,7 +111,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/zsa', builder: (context, state) => const ZsaHoldingsPage()),
-        GoRoute(path: '/zsa/issue', builder: (context, state) => const IssueAssetPage()),
+        GoRoute(path: '/zsa/issue', builder: (context, state) => IssueAssetPage(args: state.extra as IssuanceArgs?)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
       ],
     );
