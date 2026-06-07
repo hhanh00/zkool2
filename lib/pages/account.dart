@@ -16,10 +16,12 @@ import 'package:searchable_listview/searchable_listview.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
+import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
+import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -39,12 +41,86 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   final receiveID = GlobalKey(debugLabel: "receiveID");
   final sendID = GlobalKey(debugLabel: "sendID");
   final balID = GlobalKey(debugLabel: "balID");
-  late final tabController = TabController(length: 3, vsync: this);
+  late final tabController = TabController(length: 4, vsync: this);
 
-  final List<String> tabNames = ["Transactions", "Memos", "Notes"];
+  final List<String> tabNames = ["Transactions", "Memos", "Notes", "ZSA Holdings"];
 
   late final c = coinContext.coin;
   StreamSubscription<SyncProgress>? progressSubscription;
+
+  // ZSA Holdings inline editing state
+  int? _editingIndex;
+  late final TextEditingController _nameController = TextEditingController();
+  late final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _nameController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _editingIndex != null) {
+      _commitEditing();
+    }
+  }
+
+  void _startEditing(int index, ZsaHolding holding) {
+    if (_editingIndex != null && _editingIndex != index) {
+      _commitEditing(); // save then switch
+    }
+    _editingIndex = index;
+    if (holding.assetName.isNotEmpty) {
+      _nameController.text = holding.assetName;
+    } else {
+      _nameController.clear();
+    }
+    _nameController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _nameController.text.length),
+    );
+    _focusNode.requestFocus();
+    setState(() {});
+  }
+
+  Future<void> _commitEditing() async {
+    final index = _editingIndex;
+    if (index == null) return;
+
+    final fullData = ref.read(fullAccountPageDataProvider).value;
+    final account = fullData?.currentAccount;
+    if (account == null) return;
+
+    final h = account.zsas[index];
+    final newName = _nameController.text;
+
+    // Close editor immediately (optimistic)
+    _editingIndex = null;
+    if (mounted) setState(() {});
+
+    // Noop if unchanged
+    if (newName == h.assetName) return;
+
+    try {
+      await setAssetName(
+        idAsset: h.idAsset,
+        name: newName,
+        c: c,
+      );
+      ref.invalidate(accountProvider);
+    } on AnyhowException catch (e) {
+      if (mounted) {
+        await showException(context, e.message);
+      }
+    }
+  }
 
   void tutorial() async {
     tutorialHelper(context, "tutAccount0", [balID, logID, sync1ID, receiveID, sendID]);
@@ -89,8 +165,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   onUpdateAllTxPrices();
                 case "charts":
                   GoRouter.of(context).push("/chart");
-                case "zsa":
-                  GoRouter.of(context).push("/zsa");
                 default:
                   onExport(int.parse(result));
               }
@@ -109,10 +183,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   value: "charts",
                   child: Text("Charts"),
                 ),
-              const PopupMenuItem<String>(
-                value: "zsa",
-                child: Text("ZSA Holdings"),
-              ),
             ],
           ),
         ],
@@ -203,6 +273,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                       ),
                       showMemos(context, account.memos),
                       showNotes(ref, account.notes),
+                      _showZsaHoldings(context, account.zsas),
                     ],
                   ));
             },
@@ -247,6 +318,82 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final filename = await saveFile(data: utf8.encode(data));
     if (!mounted) return;
     if (filename != null) await showMessage(context, "$filename Saved");
+  }
+
+  Widget _showZsaHoldings(BuildContext context, List<ZsaHolding> zsas) {
+    final tt = Theme.of(context).textTheme;
+
+    return CustomScrollView(
+      slivers: [
+        if (zsas.isEmpty)
+          SliverFillRemaining(
+            child: Center(
+              child: Text("Any ZSA tokens you receive will appear here.", style: tt.bodyMedium),
+            ),
+          )
+        else
+          SliverFixedExtentList.builder(
+            itemCount: zsas.length,
+            itemExtent: 64,
+            itemBuilder: (context, index) {
+              final h = zsas[index];
+
+              final displayName = h.assetName.isNotEmpty
+                  ? h.assetName
+                  : hex.encode(h.assetDescHash.sublist(0, 4));
+
+              final isEditing = _editingIndex == index;
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListTile(
+                      onTap: () => GoRouter.of(context).push(
+                        "/zsa/issue",
+                        extra: IssuanceArgs(
+                          assetName: displayName,
+                          isReissuance: true,
+                          assetDescHash: h.assetDescHash,
+                        ),
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: Text(
+                          initials(displayName),
+                          style: tt.titleMedium?.copyWith(color: Colors.white),
+                        ),
+                      ),
+                      title: isEditing
+                          ? TextField(
+                              controller: _nameController,
+                              focusNode: _focusNode,
+                              textInputAction: TextInputAction.done,
+                              onEditingComplete: _commitEditing,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                border: const OutlineInputBorder(),
+                                hintText: h.assetName.isEmpty
+                                    ? hex.encode(h.assetDescHash.sublist(0, 4))
+                                    : null,
+                              ),
+                              style: tt.titleMedium,
+                            )
+                          : GestureDetector(
+                              onLongPress: () => _startEditing(index, h),
+                              child: Text(displayName),
+                            ),
+                      subtitle: Text(hex.encode(h.assetDescHash.sublist(0, 4))),
+                      trailing: Text(h.balance.toString(), style: tt.titleMedium),
+                    ),
+                  ),
+                  const Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
+                ],
+              );
+            },
+          ),
+      ],
+    );
   }
 
   int tabIndex(BuildContext context) => tabController.index;
