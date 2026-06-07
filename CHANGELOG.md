@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.17.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.0...zkool-v6.17.1) (2026-06-07)
+
+
+### Features
+
+* move ZSA Holdings to a tab and add export support ([65d3b69](https://github.com/hhanh00/zkool2/commit/65d3b69ee76e6e1b997dc579cac4e959fd872fd7))
+
+
+### Bug Fixes
+
+* parse semver from tag in release body script, add error handling ([d8c15f8](https://github.com/hhanh00/zkool2/commit/d8c15f8d785b0460968321644845cd3315358efb))
+
 ## [6.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.6...zkool-v6.17.0) (2026-06-07)
 
 
