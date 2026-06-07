@@ -3397,6 +3397,7 @@ fn wire__crate__api__issuance__issue_asset_impl(
             let api_amount = <u64>::sse_decode(&mut deserializer);
             let api_first_issuance = <bool>::sse_decode(&mut deserializer);
             let api_finalize = <bool>::sse_decode(&mut deserializer);
+            let api_desc_hash = <Option<Vec<u8>>>::sse_decode(&mut deserializer);
             let api_id_account = <u32>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
@@ -3408,6 +3409,7 @@ fn wire__crate__api__issuance__issue_asset_impl(
                             api_amount,
                             api_first_issuance,
                             api_finalize,
+                            api_desc_hash,
                             api_id_account,
                             &api_c,
                         )

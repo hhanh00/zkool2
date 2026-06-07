@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,13 @@ import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+
+class IssuanceArgs {
+  final String? assetName;
+  final bool isReissuance;
+  final Uint8List? assetDescHash;
+  const IssuanceArgs({this.assetName, this.isReissuance = false, this.assetDescHash});
+}
 
 class ZsaHoldingsPage extends ConsumerStatefulWidget {
   const ZsaHoldingsPage({super.key});
@@ -148,6 +157,14 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                       children: [
                         Expanded(
                           child: ListTile(
+                            onTap: () => GoRouter.of(context).push(
+                              "/zsa/issue",
+                              extra: IssuanceArgs(
+                                assetName: displayName,
+                                isReissuance: true,
+                                assetDescHash: h.assetDescHash,
+                              ),
+                            ),
                             leading: CircleAvatar(
                               backgroundColor: Colors.blue,
                               child: Text(
@@ -172,7 +189,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                                     style: tt.titleMedium,
                                   )
                                 : GestureDetector(
-                                    onTap: () => _startEditing(index, h),
+                                    onLongPress: () => _startEditing(index, h),
                                     child: Text(displayName),
                                   ),
                             subtitle: Text(hex.encode(h.assetDescHash.sublist(0, 4))),
@@ -193,7 +210,8 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
 }
 
 class IssueAssetPage extends ConsumerStatefulWidget {
-  const IssueAssetPage({super.key});
+  final IssuanceArgs? args;
+  const IssueAssetPage({super.key, this.args});
 
   @override
   ConsumerState<IssueAssetPage> createState() => _IssueAssetPageState();
@@ -203,11 +221,18 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
   static final _maxSupply = BigInt.from(21000000) * BigInt.from(100000000);
   final _formKey = GlobalKey<FormBuilderState>();
 
+  bool get _isReissuance => widget.args?.isReissuance == true;
+  String? get _prefilledName => widget.args?.assetName;
+  Uint8List? get _descHash => widget.args?.assetDescHash;
+
   @override
   Widget build(BuildContext context) {
+    final reissuance = _isReissuance;
+    final name = _prefilledName ?? "";
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Issue New Token"),
+        title: Text(reissuance ? "Issue More $name" : "Issue New Token"),
         actions: [
           IconButton(
             tooltip: "Issue",
@@ -220,19 +245,18 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
         padding: const EdgeInsets.all(16),
         child: FormBuilder(
           key: _formKey,
-          initialValue: const {
-            "first_issuance": false,
+          initialValue: {
+            "asset_name": name,
+            "first_issuance": reissuance ? false : false,
             "finalize": false,
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // TODO: to support adding supply to an existing asset, we need
-              // an optional asset_desc_hash field. The asset name alone doesn't
-              // identify the asset — the desc_hash is the canonical identifier.
               FormBuilderTextField(
                 name: "asset_name",
                 decoration: const InputDecoration(labelText: "Asset Name"),
+                enabled: !reissuance,
                 validator: FormBuilderValidators.required(),
               ),
               const Gap(16),
@@ -258,6 +282,7 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
                 name: "first_issuance",
                 title: const Text("First Issuance"),
                 subtitle: const Text("Include a zero-value reference note (ZIP-227)"),
+                enabled: !reissuance,
               ),
               FormBuilderSwitch(
                 name: "finalize",
@@ -277,13 +302,14 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
 
     final assetName = form.value["asset_name"] as String;
     final amount = form.value["amount"] as String;
-    final firstIssuance = form.value["first_issuance"] as bool;
+    final firstIssuance = _isReissuance ? false : form.value["first_issuance"] as bool;
     final finalize = form.value["finalize"] as bool;
 
+    final label = _isReissuance ? "more " : "";
     final confirmed = await confirmDialog(
       context,
       title: "Issue $assetName",
-      message: "Issue $amount units of $assetName?${finalize ? ' This will finalize the asset.' : ''}",
+      message: "Issue $amount ${label}units of $assetName?${finalize ? ' This will finalize the asset.' : ''}",
     );
     if (!confirmed) return;
 
@@ -300,6 +326,7 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
         amount: BigInt.parse(amount),
         firstIssuance: firstIssuance,
         finalize: finalize,
+        descHash: _descHash,
         idAccount: coinContext.coin.account,
         c: coinContext.coin,
       );
