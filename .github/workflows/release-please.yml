@@ -13,9 +13,44 @@ on:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      major: ${{ steps.release.outputs.major }}
+      minor: ${{ steps.release.outputs.minor }}
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: actions/checkout@v4
+      - id: release
+        uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Update release body with cumulative changelog
+        if: steps.release.outputs.release_created
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Tag is e.g. "zkool-v6.17.1"; strip prefix to get "6.17.1"
+          TAG="${{ steps.release.outputs.tag_name }}"
+          VERSION="${TAG#zkool-v}"
+          MAJOR="${{ steps.release.outputs.major }}"
+          MINOR="${{ steps.release.outputs.minor }}"
+
+          # CHANGELOG.md is reverse chronological (newest first).
+          # Start from the FIRST (newest) entry of this minor series
+          # and collect everything until we hit a different minor version.
+          START_LINE=$(grep -n "^## \[${MAJOR}\.${MINOR}\." CHANGELOG.md | head -1 | cut -d: -f1)
+
+          sed -n "${START_LINE},\$ p" CHANGELOG.md | awk -v major="$MAJOR" -v minor="$MINOR" '
+            /^## \[/ {
+              if ($0 !~ "^## \\[" major "\\." minor "\\.") exit
+            }
+            { print }
+          ' > /tmp/release-body.md
+
+          # Truncate if too long (GitHub release body limit is 125 KiB)
+          truncate -s 120000 /tmp/release-body.md 2>/dev/null || true
+
+          gh release edit "$TAG" --notes-file /tmp/release-body.md
