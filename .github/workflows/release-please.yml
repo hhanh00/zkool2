@@ -54,12 +54,13 @@ jobs:
             exit 1
           fi
 
-          sed -n "${START_LINE},\$ p" CHANGELOG.md | awk -v major="$MAJOR" -v minor="$MINOR" '
+          awk -v start="$START_LINE" -v major="$MAJOR" -v minor="$MINOR" '
+            NR < start { next }
             /^## \[/ {
               if ($0 !~ "^## \\[" major "\\." minor "\\.") exit
             }
             { print }
-          ' > /tmp/release-body.md
+          ' CHANGELOG.md > /tmp/release-body.md
 
           echo "Release body lines: $(wc -l < /tmp/release-body.md)"
 
