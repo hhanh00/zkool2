@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.17.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.0...zkool-v6.17.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* remove incorrect finalize bonus from issuance fee calculation ([03b7429](https://github.com/hhanh00/zkool2/commit/03b742957239b07c6ad13d8f27abad46fc41658d))
+
 ## [6.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.6...zkool-v6.17.0) (2026-06-06)
 
 
