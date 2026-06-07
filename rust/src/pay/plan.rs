@@ -183,10 +183,10 @@ pub async fn plan_transaction(
 
     // Issuance fee is separate from the orchard bundle (ZIP-317).
     // total_issue_note_count: 2 for first issuance (reference + real), 1 otherwise.
-    // finalize adds 1 more note. CREATION_COST is 0 in current zebra.
+    // finalize only sets a flag on the action — it does NOT add a note,
+    // so it doesn't affect the fee. CREATION_COST is 0 in current zebra.
     if let Some(info) = issuance {
-        let issue_note_count: u64 = if info.first_issuance { 2 } else { 1 }
-            + if info.finalize { 1 } else { 0 };
+        let issue_note_count: u64 = if info.first_issuance { 2 } else { 1 };
         let asset_creation_count: u64 = if info.first_issuance { 1 } else { 0 };
         fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
     }
