@@ -1628,6 +1628,7 @@ pub async fn export_data(
         0 => "SELECT t.*, c.name FROM transactions t LEFT JOIN categories c ON c.id_category = t.category WHERE account = ?1 ORDER BY height",
         1 => "SELECT * FROM memos WHERE account = ?1 ORDER BY height",
         2 => "SELECT n.* FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE n.account = ?1 AND s.id_note IS NULL ORDER BY height",
+        3 => "WITH N AS (SELECT id_asset, value FROM notes WHERE account = ?1 AND id_asset IS NOT NULL UNION ALL SELECT n.id_asset, s.value FROM spends s JOIN notes n ON s.id_note = n.id_note WHERE s.account = ?1 AND n.id_asset IS NOT NULL) SELECT a.id_asset, hex(a.asset_desc_hash), a.asset_name, a.finalized, a.first_seen_height, COALESCE(SUM(N.value), 0) AS balance FROM assets a LEFT JOIN N ON N.id_asset = a.id_asset GROUP BY a.id_asset HAVING balance > 0 ORDER BY a.asset_name, a.asset_desc_hash",
         _ => anyhow::bail!("Invalid exported data type")
     };
 
