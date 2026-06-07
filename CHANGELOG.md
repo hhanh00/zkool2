@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.17.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.6...zkool-v6.17.0) (2026-06-07)
+
+
+### Features
+
+* add NU6_2 canonmgr to parse_shield_tx test ([b38a076](https://github.com/hhanh00/zkool2/commit/b38a0760593c993e821aea2fa0f793e86f81ada8))
+* cumulative changelog in GitHub release body per minor series ([7172f3c](https://github.com/hhanh00/zkool2/commit/7172f3c2b7e9aff6474aacaa8f9347e57100ce3f))
+* disable send button during tx broadcast, re-enable on error ([4c37ce5](https://github.com/hhanh00/zkool2/commit/4c37ce56a8aaccc935d052654605b83d77ce3fca))
+* reissuance — tap a ZSA holding to issue more tokens ([0fbe9fe](https://github.com/hhanh00/zkool2/commit/0fbe9fee6789f7058e9cf4a8284100dc46f05488))
+* resolve [@accountname](https://github.com/accountname) to address in send form, show avatar instead of generic icon ([d864df7](https://github.com/hhanh00/zkool2/commit/d864df73d57facab1244c6d579da0c222d01cd8e))
+
+
+### Bug Fixes
+
+* remove incorrect finalize bonus from issuance fee calculation ([bfbb360](https://github.com/hhanh00/zkool2/commit/bfbb360431a9010e75309f8faf324ce4f69cbd44))
+
 ## [6.16.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.5...zkool-v6.16.6) (2026-06-06)
 
 
