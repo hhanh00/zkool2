@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.17.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.1...zkool-v6.17.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* replace sed|awk with single awk to avoid pipefail on SIGPIPE ([62f06b7](https://github.com/hhanh00/zkool2/commit/62f06b71f0352a9dccfe9e21a2e957bfcc294f08))
+* resolve ZSA recipient pool_mask to orchard when UA has 2 receivers ([d43bfda](https://github.com/hhanh00/zkool2/commit/d43bfda4bb9a552b82ce917a4bc148e77eacad16))
+
 ## [6.17.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.0...zkool-v6.17.1) (2026-06-07)
 
 
