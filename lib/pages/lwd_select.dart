@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
-import 'package:shared_preferences_async/shared_preferences_async.dart';
-import 'package:zkool/src/rust/api/coin.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 
