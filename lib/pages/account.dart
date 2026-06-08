@@ -161,6 +161,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           PopupMenuButton<String>(
             onSelected: (String result) async {
               switch (result) {
+                case "edit_account":
+                  final account = fullDataAV.value?.currentAccount?.account;
+                  if (account != null) {
+                    GoRouter.of(context).push("/account/edit", extra: [account]);
+                  }
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "charts":
@@ -170,6 +175,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: "edit_account",
+                child: Text("Edit Account"),
+              ),
               const PopupMenuItem<String>(
                 value: "update_fx",
                 child: Text("Fetch Tx Prices"),
