@@ -411,7 +411,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   }
 
   onTheme() async {
-    await GoRouter.of(context).push("/settings/theme", extra: (String paletteName, bool darkMode) {
+    await GoRouter.of(context).push("/settings/theme", extra: ((String, bool) v) {
+      final (paletteName, darkMode) = v;
       setState(() {
         settings = settings.copyWith(paletteName: paletteName, darkMode: darkMode);
         widget.onChanged(settings);
