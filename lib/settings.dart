@@ -315,35 +315,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Gap(16),
                 Divider(),
                 Gap(8),
-                Text("Theme", style: t.titleMedium),
-                Gap(8),
-                FormBuilderSwitch(
-                  name: "dark_mode",
-                  title: Text("Dark Mode"),
-                  initialValue: settings.darkMode,
-                  onChanged: onDarkModeChanged,
-                ),
-                Gap(8),
-                Text("Color Scheme", style: t.bodyLarge),
-                Gap(4),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: FlexScheme.values.map((s) {
-                    final cs = FlexColorScheme.light(scheme: s).colorScheme!;
-                    final selected = settings.paletteName == s.name;
-                    return ElevatedButton(
-                      onPressed: () => onSchemeChanged(s.name),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: selected ? Colors.white : cs.onPrimary,
-                        backgroundColor: cs.primary,
-                        side: selected ? BorderSide(color: cs.onPrimary, width: 2) : null,
-                        elevation: selected ? 4 : 0,
-                      ),
-                      child: Text(s.name),
-                    );
-                  }).toList(),
-                ),
+                Row(children: [
+                  Expanded(child: Text("Theme")),
+                  SizedBox(width: 40, child: IconButton(onPressed: onTheme, icon: Icon(Icons.palette))),
+                ]),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
@@ -435,18 +410,12 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  onDarkModeChanged(bool? value) async {
-    if (value == null) return;
-    setState(() {
-      settings = settings.copyWith(darkMode: value);
-      widget.onChanged(settings);
-    });
-  }
-
-  onSchemeChanged(String name) {
-    setState(() {
-      settings = settings.copyWith(paletteName: name);
-      widget.onChanged(settings);
+  onTheme() async {
+    await GoRouter.of(context).push("/settings/theme", extra: (String paletteName, bool darkMode) {
+      setState(() {
+        settings = settings.copyWith(paletteName: paletteName, darkMode: darkMode);
+        widget.onChanged(settings);
+      });
     });
   }
 
@@ -964,5 +933,140 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
       );
       widget.onClose(settings);
     }
+  }
+}
+
+class SettingsThemePage extends ConsumerStatefulWidget {
+  final VoidFunction<(String, bool)> onClose;
+  const SettingsThemePage({required this.onClose, super.key});
+
+  @override
+  ConsumerState<SettingsThemePage> createState() => _SettingsThemePageState();
+}
+
+class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with RouteAware {
+  late String _paletteName;
+  late bool _darkMode;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPop() {
+    super.didPop();
+    widget.onClose((_paletteName, _darkMode));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settingsAV = ref.watch(appSettingsProvider);
+    final t = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(title: Text("Theme")),
+      body: settingsAV.when(
+        loading: () => blank(context),
+        error: (error, stack) => showError(error),
+        data: (settings) {
+          _paletteName = settings.paletteName;
+          _darkMode = settings.darkMode;
+          final scheme = FlexScheme.values.firstWhere(
+            (s) => s.name == _paletteName,
+            orElse: () => FlexScheme.blue,
+          );
+          final cs = FlexColorScheme.light(scheme: scheme).colorScheme!;
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Appearance", style: t.titleMedium),
+                  Gap(16),
+                  SwitchListTile(
+                    title: Text("Dark Mode"),
+                    value: _darkMode,
+                    onChanged: (v) => setState(() => _darkMode = v),
+                    secondary: Icon(_darkMode ? Icons.dark_mode : Icons.light_mode),
+                  ),
+                  Gap(16),
+                  Text("Color Scheme", style: t.titleMedium),
+                  Gap(8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: FlexScheme.values.map((s) {
+                      final sc = FlexColorScheme.light(scheme: s).colorScheme!;
+                      final selected = _paletteName == s.name;
+                      return ElevatedButton(
+                        onPressed: () => setState(() => _paletteName = s.name),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: selected ? Colors.white : sc.onPrimary,
+                          backgroundColor: sc.primary,
+                          side: selected ? const BorderSide(color: Colors.white, width: 2) : null,
+                          elevation: selected ? 4 : 0,
+                        ),
+                        child: Text(s.name),
+                      );
+                    }).toList(),
+                  ),
+                  Gap(16),
+                  // Preview
+                  Text("Preview", style: t.titleMedium),
+                  Gap(8),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outline.withAlpha(50)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.circle, color: cs.primary, size: 16),
+                            Gap(8),
+                            Text("Primary", style: t.bodyLarge?.copyWith(color: cs.primary)),
+                          ],
+                        ),
+                        Gap(8),
+                        Row(
+                          children: [
+                            Icon(Icons.circle, color: cs.secondary, size: 16),
+                            Gap(8),
+                            Text("Secondary", style: t.bodyLarge?.copyWith(color: cs.secondary)),
+                          ],
+                        ),
+                        Gap(8),
+                        Row(
+                          children: [
+                            Icon(Icons.circle, color: cs.error, size: 16),
+                            Gap(8),
+                            Text("Error", style: t.bodyLarge?.copyWith(color: cs.error)),
+                          ],
+                        ),
+                        Gap(12),
+                        ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary),
+                          child: Text("Sample Button"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
