@@ -109,7 +109,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
             routes: [
               GoRoute(path: 'qr', builder: (context, state) => SettingsQRPage(onClose: state.extra as VoidFunction<QRSettings>)),
               GoRoute(path: 'theme', builder: (context, state) {
-                final onClose = state.extra as void Function(String paletteName, bool darkMode);
+                final onClose = state.extra as void Function((String, bool));
                 return SettingsThemePage(onClose: onClose);
               }),
             ],
