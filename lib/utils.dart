@@ -403,6 +403,10 @@ void tutorialHelper(BuildContext context, String id, List<GlobalKey<State<Statef
 Future<bool> authenticate({String? reason}) async {
   final LocalAuthentication auth = LocalAuthentication();
   try {
+    final canCheckBiometrics = await auth.canCheckBiometrics;
+    if (!canCheckBiometrics) {
+      return true; // device has no biometric hardware
+    }
     final didAuthenticate =
         await auth.authenticate(localizedReason: reason ?? "Authenticate to continue", options: const AuthenticationOptions(useErrorDialogs: false));
     // if (didAuthenticate) runInAction(() => appStore.unlocked = DateTime.now());
