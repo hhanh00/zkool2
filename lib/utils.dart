@@ -415,6 +415,14 @@ Future<bool> authenticate({String? reason}) async {
         return true; // no fingerprint enrolled
       case auth_error.notAvailable:
         return true; // don't require if the device doesn't support it
+      // The device has no biometric/auth hardware at all. This is not an
+      // authentication failure - the device simply cannot perform the check.
+      // Allow access but warn the user that this screen is unprotected
+      // instead of locking them out entirely.
+      case "NoHardware":
+      case auth_error.biometricOnlyNotSupported:
+        showSnackbar("Biometric lock unavailable on this device - access not protected");
+        return true;
       default:
         final context = navigatorKey.currentContext;
         if (context != null) {

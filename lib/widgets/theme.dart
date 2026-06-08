@@ -8,7 +8,23 @@ class DisplayPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+    final isDark = t.brightness == Brightness.dark;
+
+    // In dark mode, drop the gradient/shadow in favor of a flat surface with an
+    // outline (using the accent color) for a cleaner look.
+    if (isDark) {
+      return Container(
+        padding: EdgeInsetsGeometry.all(16),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cs.primary.withAlpha(120)),
+        ),
+        child: child,
+      );
+    }
 
     return Container(
       padding: EdgeInsetsGeometry.all(16),

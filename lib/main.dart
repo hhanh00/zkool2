@@ -8,6 +8,7 @@ import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
+import 'package:zkool/theme_mode.dart';
 import 'package:zkool/utils.dart';
 
 final logger = Logger(filter: ProductionFilter());
@@ -37,13 +38,18 @@ Future<void> main() async {
             const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
           ],
           builder: (context) {
-            return MaterialApp.router(
-              key: appKey,
-              routerConfig: r,
-              themeMode: ThemeMode.system,
-              theme: ThemeData.light(),
-              darkTheme: ThemeData.dark(),
-              debugShowCheckedModeBanner: false,
+            return Consumer(
+              builder: (context, ref, _) {
+                final themeMode = ref.watch(themeModeProvider);
+                return MaterialApp.router(
+                  key: appKey,
+                  routerConfig: r,
+                  themeMode: themeMode,
+                  theme: zcashLightTheme,
+                  darkTheme: zcashDarkTheme,
+                  debugShowCheckedModeBanner: false,
+                );
+              },
             );
           },
         ),

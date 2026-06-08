@@ -17,6 +17,7 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/theme_mode.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
@@ -158,6 +159,25 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             child: Column(
               children: [
+                Consumer(
+                  builder: (context, ref, _) {
+                    final themeMode = ref.watch(themeModeProvider);
+                    return FormBuilderDropdown<ThemeMode>(
+                      name: "theme",
+                      decoration: const InputDecoration(labelText: "Theme"),
+                      initialValue: themeMode,
+                      items: const [
+                        DropdownMenuItem(value: ThemeMode.dark, child: Text("Dark")),
+                        DropdownMenuItem(value: ThemeMode.light, child: Text("Light")),
+                        DropdownMenuItem(value: ThemeMode.system, child: Text("System")),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) ref.read(themeModeProvider.notifier).set(value);
+                      },
+                    );
+                  },
+                ),
+                Gap(8),
                 Showcase(
                   key: lightnodeID,
                   description: "Whether the server is a light node or not",

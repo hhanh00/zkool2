@@ -148,6 +148,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               icon: Icon(Icons.sync),
             ),
           ),
+          IconButton(
+            tooltip: "Rescan from Height",
+            onPressed: fullDataAV.value?.currentAccount != null ? () => onRescan(fullDataAV.value!.currentAccount!.account) : null,
+            icon: Icon(Icons.restart_alt),
+          ),
+          IconButton(
+            tooltip: "Remove Account",
+            onPressed: fullDataAV.value?.currentAccount != null ? () => onRemove(fullDataAV.value!.currentAccount!.account) : null,
+            icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+          ),
           Showcase(
             key: receiveID,
             description: "Show the account receiving addresses",
@@ -294,6 +304,69 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
   void onReceive() async {
     await GoRouter.of(context).push("/receive");
+  }
+
+  void onRescan(Account account) async {
+    final controller = TextEditingController(text: account.birth.toString());
+    final height = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Rescan Account"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Reset transaction history & balances and re-sync from this height."),
+            const Gap(16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: "Height"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(int.tryParse(controller.text)),
+            child: const Text("Rescan"),
+          ),
+        ],
+      ),
+    );
+    if (height == null) return;
+    try {
+      // Set birth height, then clear sync data so the account re-syncs from there,
+      // rebuilding tx history and the available UTXO/note set.
+      await updateAccount(
+        update: AccountUpdate(coin: account.coin, id: account.id, birth: height, folder: account.folder.id),
+        c: c,
+      );
+      await resetSync(id: account.id, c: c);
+      ref.invalidate(getAccountsProvider);
+      ref.invalidate(accountProvider(account.id));
+      showSnackbar("Rescan scheduled — re-sync to rebuild history");
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
+  }
+
+  void onRemove(Account account) async {
+    final confirmed = await confirmDialog(
+      context,
+      title: "Remove Account",
+      message:
+          "Remove '${account.name}'? This deletes the account and its data from this device. Make sure you have backed up the seed/keys.",
+    );
+    if (!confirmed) return;
+    try {
+      await deleteAccount(account: account.id, c: c);
+      ref.invalidate(getAccountsProvider);
+      if (mounted) GoRouter.of(context).go("/");
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   void onSend() async {

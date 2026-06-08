@@ -11,6 +11,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/key.dart';
+import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -295,16 +296,33 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final icon = iconBytes;
 
       final r = restore ?? false;
-      if (r && birth == null) {
+      final birthEmpty = birth == null || birth.isEmpty;
+      if (r && birthEmpty) {
         final confirmed = await confirmDialog(
           context,
           title: "No Birth Height",
-          message: "Are you sure you don't want to enter the birth height?",
+          message: "Are you sure you don't want to enter the birth height? The account will default to the latest block.",
         );
         if (!confirmed) return;
       }
 
-      final bh = birth != null ? int.parse(birth) : currentHeight ?? 1;
+      // When no birth height is given, default to the latest block height.
+      // Fetch it fresh (the cached provider may be null if height wasn't loaded yet)
+      // so we don't fall back to an arbitrary low height.
+      int? resolvedHeight = currentHeight;
+      if (birthEmpty) {
+        final settings = ref.read(appSettingsProvider).requireValue;
+        if (!settings.offline) {
+          try {
+            resolvedHeight = await getCurrentHeight(c: c);
+            ref.read(currentHeightProvider.notifier).setHeight(resolvedHeight);
+          } on AnyhowException catch (_) {
+            // keep whatever the provider had (may be null -> falls back below)
+          }
+        }
+      }
+
+      final bh = !birthEmpty ? int.parse(birth) : (resolvedHeight ?? 1);
       AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";

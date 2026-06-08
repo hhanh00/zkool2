@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
@@ -131,17 +132,21 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                 final f = account.balance.toDouble() * p / zatsPerZec.toDouble();
                 return fiatFormatter.format(f);
               });
-              return Material(
+              return Padding(
                 key: ValueKey(account.id),
-                child: GestureDetector(
-                  child: AccountCard(
-                    leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
-                    name: account.name,
-                    balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
-                    fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
-                    height: SmallProgressWidget(account, style: tt.labelSmall),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Material(
+                  child: GestureDetector(
+                    child: AccountCard(
+                      leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                      name: account.name,
+                      balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
+                      fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
+                      height: SmallProgressWidget(account, style: tt.labelSmall),
+                    ),
+                    onTap: () => onOpen(context, account),
+                    onLongPressStart: (details) => onAccountMenu(context, account, details.globalPosition),
                   ),
-                  onTap: () => onOpen(context, account),
                 ),
               );
             },
@@ -257,6 +262,188 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     await ref.read(getCurrentAccountProvider.future);
     if (!context.mounted) return;
     await GoRouter.of(context).push('/account', extra: account);
+  }
+
+  void onAccountMenu(BuildContext context, Account account, Offset position) async {
+    final frozen = !account.enabled;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final cs = Theme.of(context).colorScheme;
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & const Size(40, 40),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        const PopupMenuItem<String>(
+          value: "rename",
+          child: ListTile(leading: Icon(Icons.edit), title: Text("Rename Account")),
+        ),
+        PopupMenuItem<String>(
+          value: "freeze",
+          child: ListTile(
+            leading: Icon(frozen ? Icons.play_arrow : Icons.ac_unit),
+            title: Text(frozen ? "Unfreeze Account" : "Freeze Account"),
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: "rescan",
+          child: ListTile(leading: Icon(Icons.restart_alt), title: Text("Rescan from Height")),
+        ),
+        PopupMenuItem<String>(
+          value: "remove",
+          child: ListTile(
+            leading: Icon(Icons.delete, color: cs.error),
+            title: Text("Remove Account", style: TextStyle(color: cs.error)),
+          ),
+        ),
+      ],
+    );
+    switch (selected) {
+      case "rename":
+        onRenameAccount(account);
+      case "freeze":
+        onToggleFreeze(account);
+      case "rescan":
+        onRescanAccount(account);
+      case "remove":
+        onRemoveAccount(account);
+    }
+  }
+
+  void onRenameAccount(Account account) async {
+    final controller = TextEditingController(text: account.name);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Rename Account"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: "Name"),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(controller.text), child: const Text("OK")),
+        ],
+      ),
+    );
+    if (newName == null || newName.isEmpty || newName == account.name) return;
+    final c = coinContext.coin;
+    await updateAccount(
+      update: AccountUpdate(
+        coin: account.coin,
+        id: account.id,
+        name: newName,
+        folder: account.folder.id,
+      ),
+      c: c,
+    );
+    // Mirror the vault sync done in the edit page.
+    final seed = account.seed;
+    if (seed != null) {
+      final settings = await ref.read(appSettingsProvider.future);
+      if (settings.vault)
+        await ref.read(vaultProvider.notifier).storeAccount(
+              name: newName,
+              seed: seed,
+              aindex: account.aindex,
+              useInternal: account.useInternal,
+              birthHeight: account.birth,
+            );
+    }
+    ref.invalidate(getAccountsProvider);
+    ref.invalidate(accountProvider(account.id));
+  }
+
+  void onToggleFreeze(Account account) async {
+    final v = !account.enabled; // enabled=false means frozen
+    final c = coinContext.coin;
+    await updateAccount(
+      update: AccountUpdate(
+        coin: account.coin,
+        id: account.id,
+        enabled: v,
+        folder: account.folder.id,
+      ),
+      c: c,
+    );
+    ref.invalidate(getAccountsProvider);
+    ref.invalidate(accountProvider(account.id));
+    showSnackbar(v ? "Account unfrozen" : "Account frozen");
+  }
+
+  void onRescanAccount(Account account) async {
+    final controller = TextEditingController(text: account.birth.toString());
+    final height = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Rescan Account"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Reset transaction history & balances and re-sync from this height."),
+            const Gap(16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: "Height"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () {
+              final h = int.tryParse(controller.text);
+              Navigator.of(dialogContext).pop(h);
+            },
+            child: const Text("Rescan"),
+          ),
+        ],
+      ),
+    );
+    if (height == null) return;
+    final c = coinContext.coin;
+    try {
+      // Set the birth height to the requested value, then clear sync data so the
+      // account re-syncs (rebuilding tx history and the available UTXO/note set)
+      // from that height. Per-account only.
+      await updateAccount(
+        update: AccountUpdate(
+          coin: account.coin,
+          id: account.id,
+          birth: height,
+          folder: account.folder.id,
+        ),
+        c: c,
+      );
+      await resetSync(id: account.id, c: c);
+      ref.invalidate(getAccountsProvider);
+      ref.invalidate(accountProvider(account.id));
+      showSnackbar("Rescan scheduled — re-sync to rebuild history");
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
+  }
+
+  void onRemoveAccount(Account account) async {
+    final confirmed = await confirmDialog(
+      context,
+      title: "Remove Account",
+      message:
+          "Remove '${account.name}'? This deletes the account and its data from this device. Make sure you have backed up the seed/keys.",
+    );
+    if (!confirmed) return;
+    final c = coinContext.coin;
+    try {
+      await deleteAccount(account: account.id, c: c);
+      ref.invalidate(getAccountsProvider);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 
   void onReorder(int oldIndex, int newIndex) async {
