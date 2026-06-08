@@ -171,11 +171,27 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Showcase(
                   key: lwdID,
                   description: "Node server to connect to",
-                  child: FormBuilderTextField(
-                    name: "lwd",
-                    decoration: InputDecoration(labelText: "${settings.isLightNode ? 'Light' : 'Full'} Node Server"),
-                    initialValue: settings.lwd,
-                    onChanged: onChangedLWD,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FormBuilderTextField(
+                          name: "lwd",
+                          decoration: InputDecoration(labelText: "${settings.isLightNode ? 'Light' : 'Full'} Node Server"),
+                          initialValue: settings.lwd,
+                          onChanged: onChangedLWD,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: "Select from server list",
+                        icon: const Icon(Icons.list),
+                        onPressed: () async {
+                          final selected = await GoRouter.of(context).push<String>("/lwd_select");
+                          if (selected != null) {
+                            formKey.currentState!.fields["lwd"]!.didChange(selected);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 if (settings.isLightNode)

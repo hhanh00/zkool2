@@ -170,11 +170,17 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   onUpdateAllTxPrices();
                 case "charts":
                   GoRouter.of(context).push("/chart");
+                case "settings":
+                  GoRouter.of(context).push("/settings");
                 default:
                   onExport(int.parse(result));
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: "settings",
+                child: Text("Settings"),
+              ),
               const PopupMenuItem<String>(
                 value: "edit_account",
                 child: Text("Edit Account"),

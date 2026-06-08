@@ -26,7 +26,7 @@ use sapling_crypto::{keys::FullViewingKey, zip32::DiversifiableFullViewingKey, P
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use tracing::{debug, event, info, span, Level};
+use tracing::{event, info, span, Level};
 use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
@@ -818,7 +818,7 @@ pub async fn plan_transaction(
 
     // we pass false to the fee rule callback because Zebra does not track new ZSA issuance and does not
     // charge the CREATION_COST
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |asset: &AssetBase| false)?;
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
 
