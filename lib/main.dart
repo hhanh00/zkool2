@@ -1,3 +1,4 @@
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
@@ -8,6 +9,7 @@ import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 final logger = Logger(filter: ProductionFilter());
@@ -37,14 +39,26 @@ Future<void> main() async {
             const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
           ],
           builder: (context) {
-            return MaterialApp.router(
-              key: appKey,
-              routerConfig: r,
-              themeMode: ThemeMode.system,
-              theme: ThemeData.light(),
-              darkTheme: ThemeData.dark(),
-              debugShowCheckedModeBanner: false,
-            );
+            return Consumer(builder: (context, ref, _) {
+              final settings = ref.watch(appSettingsProvider).value;
+              final scheme = settings?.let((s) {
+                try {
+                  return FlexScheme.values.byName(s.paletteName);
+                } catch (_) {
+                  return FlexScheme.blue;
+                }
+              }) ?? FlexScheme.blue;
+              final theme = FlexThemeData.light(scheme: scheme).copyWith(useMaterial3: true);
+              final darkTheme = FlexThemeData.dark(scheme: scheme).copyWith(useMaterial3: true);
+              return MaterialApp.router(
+                key: appKey,
+                routerConfig: r,
+                themeMode: settings?.darkMode == true ? ThemeMode.dark : ThemeMode.light,
+                theme: theme,
+                darkTheme: darkTheme,
+                debugShowCheckedModeBanner: false,
+              );
+            });
           },
         ),
       ),
