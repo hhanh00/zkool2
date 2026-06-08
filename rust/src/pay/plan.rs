@@ -281,6 +281,7 @@ pub async fn plan_transaction(
                     fee_manager.add_output(2);
                     let mut rs = r.clone();
                     rs.remaining = 0;
+                    rs.pool_mask = PoolMask::from_pool(2); // ZSA only exists in orchard
                     buffered_zsaoutputs.push(rs);
                 }
             }
