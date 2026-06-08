@@ -245,6 +245,13 @@ pub async fn generate_next_dindex(c: &Coin) -> Result<u32> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn generate_prev_dindex(c: &Coin) -> Result<u32> {
+    let mut connection = c.get_connection().await?;
+
+    crate::account::generate_prev_dindex(&c.network(), &mut connection, c.account).await
+}
+
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn generate_next_change_address(c: &Coin) -> Result<Option<String>> {
     let mut connection = c.get_connection().await?;
 

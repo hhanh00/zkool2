@@ -248,6 +248,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<int> crateApiAccountGenerateNextDindex({required Coin c});
 
+  Future<int> crateApiAccountGeneratePrevDindex({required Coin c});
+
   String crateApiKeyGenerateSeed();
 
   Future<Addresses> crateApiAccountGetAccountAddresses(
@@ -1916,6 +1918,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountGenerateNextDindexConstMeta =>
       const TaskConstMeta(
         debugName: "generate_next_dindex",
+        argNames: ["c"],
+      );
+
+  @override
+  Future<int> crateApiAccountGeneratePrevDindex({required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 135, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiAccountGeneratePrevDindexConstMeta,
+        argValues: [c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAccountGeneratePrevDindexConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_prev_dindex",
         argNames: ["c"],
       );
 

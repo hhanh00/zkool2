@@ -61,6 +61,9 @@ Future<bool> hasTransparentPubKey({required Coin c}) =>
 Future<int> generateNextDindex({required Coin c}) =>
     RustLib.instance.api.crateApiAccountGenerateNextDindex(c: c);
 
+Future<int> generatePrevDindex({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGeneratePrevDindex(c: c);
+
 Future<String?> generateNextChangeAddress({required Coin c}) =>
     RustLib.instance.api.crateApiAccountGenerateNextChangeAddress(c: c);
 
