@@ -1,5 +1,26 @@
 # Changelog
 
+## [6.17.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.3...zkool-v6.17.4) (2026-06-08)
+
+
+### Features
+
+* max button turns on receiver pays fees ([1568ad6](https://github.com/hhanh00/zkool2/commit/1568ad6947d1c3d4756304f4a9b0e2ba3ccdabbc))
+* move theme button to settings app bar ([92336b2](https://github.com/hhanh00/zkool2/commit/92336b23596b0cc56b72dfcd53f07e8d54ec4208))
+* move theme selector to separate settings page ([1f98cf4](https://github.com/hhanh00/zkool2/commit/1f98cf4ab9c7dfd939e9423d8f635d776766a35f))
+* move view keys from Edit Account to Backup on account page ([bdc3202](https://github.com/hhanh00/zkool2/commit/bdc3202186cd39a01bd028614a02c5a76690340c))
+* port theme manager from zwallet with flex_color_scheme ([f9ee00e](https://github.com/hhanh00/zkool2/commit/f9ee00e51cf686f158b4765f2d86cd39348c8de2))
+
+
+### Bug Fixes
+
+* add URL scheme to LWD server list and enable Tor for onion addresses ([d3edc08](https://github.com/hhanh00/zkool2/commit/d3edc08ef93554b5a53e1d4b021d37f19c5617a8))
+* correct record type mismatch in theme page callback ([4842ed7](https://github.com/hhanh00/zkool2/commit/4842ed73289d42d8fcf4605082590c8c3e0d0e0b))
+* correct shared_preferences import in LWD select page ([f27ab12](https://github.com/hhanh00/zkool2/commit/f27ab12382ae9e47d415e8ddb6e7fa89508230d2))
+* ensure GitHub release is always marked as prerelease ([5e52fc8](https://github.com/hhanh00/zkool2/commit/5e52fc835ecf025577d2d0dceae4b5de04c94556))
+* invalidate account data after transparent scan completes ([49ad1f6](https://github.com/hhanh00/zkool2/commit/49ad1f6829346c78ca0a307a89faf0211b3f023a))
+* remove gradient from account card list items ([192a699](https://github.com/hhanh00/zkool2/commit/192a6990661f9e97e018c3c5e7ccdacb3a849095))
+
 ## [6.17.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.2...zkool-v6.17.3) (2026-06-08)
 
 
