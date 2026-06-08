@@ -62,6 +62,9 @@ class SendPageState extends ConsumerState<SendPage> {
   String? address;
   String? amount;
   String? memo;
+  // True when the amount currently reflects a "Max" click. Cleared as soon as
+  // the user manually edits the amount. Used to default Recipient-Pays-Fee.
+  bool maxSelected = false;
   List<ZsaHolding> zsas = [];
   Uint8List selectedAssetBase = zecBase;
   String? selectedAssetName;
@@ -259,7 +262,12 @@ class SendPageState extends ConsumerState<SendPage> {
                   key: amountKey,
                   name: "amount",
                   initialValue: amount,
-                  onChanged: (v) => setState(() => amount = v),
+                  onChanged: (v) => setState(() {
+                    // Any amount value that no longer matches the Max-selected
+                    // amount means the user edited it manually: drop the flag.
+                    if (maxSelected && v != amount) maxSelected = false;
+                    amount = v;
+                  }),
                   onMax: selectedAssetBase.every((b) => b == 0) ? onMax : null,
                   showFx: selectedAssetBase.every((b) => b == 0),
                   label: selectedAssetName != null
@@ -308,7 +316,12 @@ class SendPageState extends ConsumerState<SendPage> {
     final total = await maxSpendable(c: c);
     final a = zatToString(total);
     form.fields['amount']?.didChange(a);
-    setState(() => amount = a);
+    setState(() {
+      amount = a;
+      // Mark that the full balance was selected so the next page defaults
+      // "Recipient Pays Fee" on (fee is deducted from this amount).
+      maxSelected = true;
+    });
   }
 
   void onAdd() async {
@@ -412,8 +425,13 @@ class SendPageState extends ConsumerState<SendPage> {
     }
 
     if (!mounted) return;
+    // Capture before onClear() resets the form/flags.
+    final wasMax = maxSelected;
+    final toSend = List<Recipient>.from(recipients);
     onClear();
-    if (recipients.isNotEmpty) await GoRouter.of(context).push("/send2", extra: recipients);
+    if (toSend.isNotEmpty) {
+      await GoRouter.of(context).push("/send2", extra: (toSend, wasMax));
+    }
   }
 
   void onScan() async {
@@ -551,6 +569,7 @@ class SendPageState extends ConsumerState<SendPage> {
       address = null;
       amount = null;
       memo = null;
+      maxSelected = false;
       _accountSuggestions = [];
     });
   }
@@ -562,7 +581,11 @@ final sendID3 = GlobalKey();
 
 class Send2Page extends ConsumerStatefulWidget {
   final List<Recipient> recipients;
-  const Send2Page(this.recipients, {super.key});
+  // When the user used the "Max" button on the previous page, default the
+  // "Recipient Pays Fee" switch to on so the fee is deducted from the amount
+  // (avoids "Not enough funds" when sending the full balance).
+  final bool maxSelected;
+  const Send2Page(this.recipients, {this.maxSelected = false, super.key});
 
   @override
   ConsumerState<Send2Page> createState() => Send2PageState();
@@ -573,7 +596,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
   String? txId;
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
   late final hasZsa = widget.recipients.any((r) => !r.assetBase.every((b) => b == 0));
-  var recipientPaysFee = false;
+  late var recipientPaysFee = widget.maxSelected;
   int? category;
   var puri = "";
   AccountData? account;
@@ -656,7 +679,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
                   child: FormBuilderSwitch(
                     name: "recipientPaysFee",
                     title: Text("Recipient Pays Fee"),
-                    initialValue: false,
+                    initialValue: widget.maxSelected,
                     onChanged: (v) => setState(() => recipientPaysFee = v!),
                   ),
                 ),

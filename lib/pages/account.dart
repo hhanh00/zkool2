@@ -154,6 +154,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             icon: Icon(Icons.restart_alt),
           ),
           IconButton(
+            tooltip: "Backup Seed & Keys",
+            onPressed: fullDataAV.value?.currentAccount != null ? () => onBackup(fullDataAV.value!.currentAccount!.account) : null,
+            icon: Icon(Icons.save),
+          ),
+          IconButton(
             tooltip: "Remove Account",
             onPressed: fullDataAV.value?.currentAccount != null ? () => onRemove(fullDataAV.value!.currentAccount!.account) : null,
             icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
@@ -279,7 +284,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                               ),
                             ),
                           ),
-                          ...showTxHistory(context, account.transactions),
+                          ...showTxHistory(context, account.transactions, currentHeight: ref.watch(currentHeightProvider)),
                         ],
                       ),
                       showMemos(context, account.memos),
@@ -351,6 +356,13 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
+  }
+
+  void onBackup(Account account) async {
+    final authenticated = await authenticate(reason: "Backup Seed & Keys");
+    if (!authenticated) return;
+    if (!mounted) return;
+    await GoRouter.of(context).push("/backup", extra: account.id);
   }
 
   void onRemove(Account account) async {
@@ -885,7 +897,7 @@ class BalanceWidget extends StatelessWidget {
   }
 }
 
-List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
+List<Widget> showTxHistory(BuildContext context, List<Tx> transactions, {int? currentHeight}) {
   final t = Theme.of(context).textTheme;
   return [
     SliverToBoxAdapter(
@@ -903,6 +915,11 @@ List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
       itemBuilder: (context, index) {
         final tx = transactions[index];
         final (color, icon, label) = getTransactionType(tx.tpe);
+        // Confirmations = blocks mined on top of (and including) the tx block.
+        // Only shown for mined txs (height > 0) once the current height is known.
+        final int? confirmations = (currentHeight != null && tx.height > 0)
+            ? (currentHeight - tx.height + 1).clamp(0, 1 << 30)
+            : null;
         final tile = TransactionTile(
           icon: icon,
           color: color,
@@ -913,6 +930,7 @@ List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
           onTap: () => gotoTransaction(context, tx.id),
           zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
           zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
+          confirmations: confirmations,
         );
 
         return Column(children: [
@@ -1153,5 +1171,114 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     setState(() {
       showSeed = true;
     });
+  }
+}
+
+/// Backup page: shows the seed phrase (if any) and the unified viewing key for
+/// an account so the user can write them down. Opened from the account toolbar
+/// after biometric/device authentication.
+class BackupPage extends ConsumerStatefulWidget {
+  final int account;
+  const BackupPage(this.account, {super.key});
+
+  @override
+  ConsumerState<BackupPage> createState() => BackupPageState();
+}
+
+class BackupPageState extends ConsumerState<BackupPage> {
+  late final c = coinContext.coin;
+  Seed? seed;
+  String? uvk;
+  String? fingerprint;
+  bool loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() async {
+      try {
+        final s = await getAccountSeed(account: widget.account, c: c);
+        final fp = await getAccountFingerprint(account: widget.account, c: c);
+        final pools = await getAccountPools(account: widget.account, c: c);
+        String? u;
+        try {
+          u = await getAccountUfvk(account: widget.account, pools: pools, c: c);
+        } on AnyhowException {
+          u = null;
+        }
+        if (!mounted) return;
+        setState(() {
+          seed = s;
+          fingerprint = fp;
+          uvk = u;
+          loaded = true;
+        });
+      } on AnyhowException catch (e) {
+        if (mounted) await showException(context, e.message);
+        if (mounted) setState(() => loaded = true);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
+
+    if (!loaded) return blank(context);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Backup")),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                color: Theme.of(context).colorScheme.errorContainer,
+                child: const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    "Write down your seed phrase and keep it secret. "
+                    "Anyone with this information can spend your funds.",
+                  ),
+                ),
+              ),
+              const Gap(16),
+              if (seed != null) ...[
+                _BackupTile(icon: Icons.save, label: "Seed Phrase", value: seed!.mnemonic),
+                if (seed!.phrase.isNotEmpty) _BackupTile(icon: Icons.password, label: "Passphrase", value: seed!.phrase),
+                _BackupTile(icon: Icons.tag, label: "Account Index", value: seed!.aindex.toString()),
+              ] else
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text("This account has no seed phrase (watch-only or imported key)."),
+                ),
+              if (uvk != null) _BackupTile(icon: Icons.visibility, label: "Unified Viewing Key", value: uvk!),
+              if (fingerprint != null) _BackupTile(icon: Icons.fingerprint, label: "Fingerprint", value: fingerprint!),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BackupTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _BackupTile({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(label),
+        subtitle: CopyableText(value),
+      ),
+    );
   }
 }

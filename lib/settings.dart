@@ -25,6 +25,15 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
 
+/// Named block-explorer templates. Each maps a display label to a URL template
+/// using {net} (mainnet/testnet) and {txid} placeholders. Templates without
+/// {net} simply ignore the network (mainnet-only hosts).
+const Map<String, String> kBlockExplorers = {
+  "zcashexplorer.app": "https://{net}.zcashexplorer.app/transactions/{txid}",
+  "zcashinfo.com": "https://zcashinfo.com/tx/{txid}",
+  "cipherscan.app": "https://cipherscan.app/tx/{txid}",
+};
+
 final logID = GlobalKey();
 final lightnodeID = GlobalKey();
 final lwdID = GlobalKey();
@@ -123,6 +132,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   List<String> topServers = [];
   bool forceCustomServer = false;
   static const String customServer = "__custom__";
+  bool forceCustomExplorer = false;
+  static const String customExplorer = "__custom__";
 
   @override
   void initState() {
@@ -141,6 +152,19 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   // Whether to show the free-form LWD URL field: when the user explicitly chose
   // "Custom…", or the current server isn't one of the bundled top servers.
   bool get showCustomServerField => forceCustomServer || !topServers.contains(settings.lwd);
+
+  // The label of the currently-selected named explorer, or null if the stored
+  // template isn't one of the bundled explorers (i.e. a custom URL).
+  String? get currentExplorerLabel {
+    for (final e in kBlockExplorers.entries) {
+      if (e.value == settings.blockExplorer) return e.key;
+    }
+    return null;
+  }
+
+  // Show the free-form explorer URL field when "Custom Explorer" was chosen, or
+  // the stored template isn't one of the bundled explorers.
+  bool get showCustomExplorerField => forceCustomExplorer || currentExplorerLabel == null;
 
   void tutorial() async {
     tutorialHelper(context, "tutSettings0",
@@ -175,15 +199,16 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
               children: [
                 Consumer(
                   builder: (context, ref, _) {
-                    final themeMode = ref.watch(themeModeProvider);
-                    return FormBuilderDropdown<ThemeMode>(
+                    final appTheme = ref.watch(themeModeProvider);
+                    return FormBuilderDropdown<AppTheme>(
                       name: "theme",
                       decoration: const InputDecoration(labelText: "Theme"),
-                      initialValue: themeMode,
+                      initialValue: appTheme,
                       items: const [
-                        DropdownMenuItem(value: ThemeMode.dark, child: Text("Dark")),
-                        DropdownMenuItem(value: ThemeMode.light, child: Text("Light")),
-                        DropdownMenuItem(value: ThemeMode.system, child: Text("System")),
+                        DropdownMenuItem(value: AppTheme.zkool, child: Text("Zkool")),
+                        DropdownMenuItem(value: AppTheme.dark, child: Text("Dark")),
+                        DropdownMenuItem(value: AppTheme.light, child: Text("Light")),
+                        DropdownMenuItem(value: AppTheme.system, child: Text("System")),
                       ],
                       onChanged: (value) {
                         if (value != null) ref.read(themeModeProvider.notifier).set(value);
@@ -207,7 +232,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     children: [
                       const Expanded(child: Text("Light Node Server")),
                       SizedBox(
-                        width: 180,
+                        width: 360,
                         child: FormBuilderDropdown<String>(
                           name: "server",
                           isDense: true,
@@ -370,16 +395,44 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Gap(8),
                 Showcase(
                   key: blockExplorerID,
-                  description: "Block Explorer URL",
-                  child: FormBuilderTextField(
+                  description: "Block Explorer used to open transactions",
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text("Block Explorer")),
+                      SizedBox(
+                        width: 200,
+                        child: FormBuilderDropdown<String>(
+                          name: "explorer",
+                          isDense: true,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            border: OutlineInputBorder(),
+                          ),
+                          initialValue: currentExplorerLabel ?? customExplorer,
+                          items: [
+                            ...kBlockExplorers.keys.map((label) => DropdownMenuItem(
+                                  value: label,
+                                  child: Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
+                                )),
+                            const DropdownMenuItem(value: customExplorer, child: Text("Custom Explorer")),
+                          ],
+                          onChanged: onChangedExplorer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (showCustomExplorerField)
+                  FormBuilderTextField(
                     name: "block_explorer",
-                    decoration: InputDecoration(
-                      label: Text("Block Explorer"),
+                    decoration: const InputDecoration(
+                      labelText: "Custom Explorer URL",
+                      hintText: "https://host/tx/{txid}",
                     ),
                     initialValue: settings.blockExplorer,
                     onChanged: onChangedBlockExplorer,
                   ),
-                ),
                 Gap(8),
                 Showcase(
                   key: useQRID,
@@ -489,6 +542,23 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (value == null) return;
     setState(() {
       settings = settings.copyWith(blockExplorer: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  void onChangedExplorer(String? value) async {
+    if (value == null) return;
+    if (value == customExplorer) {
+      // Reveal the free-form URL field; keep the current template editable.
+      setState(() => forceCustomExplorer = true);
+      return;
+    }
+    // A bundled explorer was selected: store its URL template.
+    final template = kBlockExplorers[value];
+    if (template == null) return;
+    setState(() {
+      forceCustomExplorer = false;
+      settings = settings.copyWith(blockExplorer: template);
       widget.onChanged(settings);
     });
   }

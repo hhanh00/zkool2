@@ -39,12 +39,12 @@ Future<void> main() async {
           builder: (context) {
             return Consumer(
               builder: (context, ref, _) {
-                final themeMode = ref.watch(themeModeProvider);
+                final appTheme = ref.watch(themeModeProvider);
                 return MaterialApp.router(
                   key: appKey,
                   routerConfig: r,
-                  themeMode: themeMode,
-                  theme: zcashLightTheme,
+                  themeMode: themeModeFor(appTheme),
+                  theme: lightThemeFor(appTheme),
                   darkTheme: zcashDarkTheme,
                   debugShowCheckedModeBanner: false,
                 );

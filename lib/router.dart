@@ -63,6 +63,10 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
           builder: (context, state) => ViewingKeysPage(state.extra as int),
         ),
         GoRoute(
+          path: '/backup',
+          builder: (context, state) => BackupPage(state.extra as int),
+        ),
+        GoRoute(
           path: '/receive',
           builder: (context, state) => ReceivePage(),
         ),
@@ -76,7 +80,15 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         ),
         GoRoute(
           path: '/send2',
-          builder: (context, state) => Send2Page(state.extra as List<Recipient>),
+          builder: (context, state) {
+            final extra = state.extra;
+            // Accept either a bare recipients list, or a (recipients, maxSelected)
+            // record so the "Max" button can default Recipient-Pays-Fee on.
+            if (extra is (List<Recipient>, bool)) {
+              return Send2Page(extra.$1, maxSelected: extra.$2);
+            }
+            return Send2Page(extra as List<Recipient>);
+          },
         ),
         GoRoute(path: '/tx', builder: (context, state) => TxPage(state.extra as PcztPackage)),
         GoRoute(path: '/tx_view', builder: (context, state) => TxViewPage(state.extra as int)),

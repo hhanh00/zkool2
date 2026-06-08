@@ -104,6 +104,7 @@ class TransactionTile extends StatelessWidget {
   final void Function()? onTap;
   final BigInt? zsaValue;
   final String? zsaLabel;
+  final int? confirmations;
 
   const TransactionTile({
     super.key,
@@ -116,6 +117,7 @@ class TransactionTile extends StatelessWidget {
     this.onTap,
     this.zsaValue,
     this.zsaLabel,
+    this.confirmations,
   });
 
   @override
@@ -132,7 +134,19 @@ class TransactionTile extends StatelessWidget {
         ),
         child: Icon(icon, color: color),
       ),
-      title: Text(label),
+      title: confirmations != null
+          ? Builder(builder: (context) {
+              final base = DefaultTextStyle.of(context).style;
+              final smaller = base.fontSize == null ? null : base.fontSize! * 0.8;
+              return Text.rich(TextSpan(children: [
+                TextSpan(text: label),
+                TextSpan(
+                  text: " ( $confirmations conf )",
+                  style: TextStyle(fontSize: smaller, color: base.color?.withAlpha(160)),
+                ),
+              ]));
+            })
+          : Text(label),
       subtitle: d,
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,

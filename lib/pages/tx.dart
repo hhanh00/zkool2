@@ -198,6 +198,12 @@ class TxPageState extends ConsumerState<TxPage> {
         );
         await showMessage(context, result);
         showSnackbar("Transaction broadcasted successfully");
+        if (mounted) {
+          setState(() => txId = result);
+          // After acknowledging the TXID, return to the account page.
+          GoRouter.of(context).go("/account");
+          return;
+        }
       } else {
         setState(() => _sending = false);
         if (mounted) await showException(context, result);

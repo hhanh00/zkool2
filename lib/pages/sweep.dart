@@ -79,7 +79,15 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
                     await scanner.run(
                       context,
                       gapLimit,
-                      onComplete: () => showSnackbar("Scan Completed"),
+                      onComplete: () {
+                        showSnackbar("Scan Completed");
+                        // Refresh the account list so the newly imported
+                        // transparent account is shown immediately, then
+                        // dismiss and return to the account list page.
+                        ref.invalidate(getAccountsProvider);
+                        dialog.dismiss();
+                        if (context.mounted) GoRouter.of(context).go("/");
+                      },
                     );
                   }
                 },
@@ -88,7 +96,10 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
     ),
     btnCancelText: "Close",
     onDismissCallback: (type) {
-      GoRouter.of(context).pop();
+      // Refresh the account list (in case a scan imported a new account) and
+      // return to the account list page.
+      ref.invalidate(getAccountsProvider);
+      if (context.mounted) GoRouter.of(context).go("/");
     },
     dismissOnTouchOutside: false,
     autoDismiss: false,

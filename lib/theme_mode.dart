@@ -12,56 +12,79 @@ const _zcashDarkSurfaceHigh = Color(0xFF262626);
 
 const _kThemeModePref = "theme_mode";
 
-ThemeMode _parseThemeMode(String? s) {
+/// App theme selection. In addition to the standard light/dark/system modes,
+/// "zkool" restores the original pink/Material light look that existed before
+/// the gold Zcash theme (pre-commit 8fe8f35e).
+enum AppTheme { zkool, dark, light, system }
+
+AppTheme _parseAppTheme(String? s) {
   switch (s) {
+    case "zkool":
+      return AppTheme.zkool;
     case "light":
-      return ThemeMode.light;
+      return AppTheme.light;
     case "system":
-      return ThemeMode.system;
+      return AppTheme.system;
     case "dark":
     default:
       // Default to dark when no preference is stored (requested default).
-      return ThemeMode.dark;
+      return AppTheme.dark;
   }
 }
 
-String themeModeToString(ThemeMode m) {
-  switch (m) {
-    case ThemeMode.light:
+String appThemeToString(AppTheme t) {
+  switch (t) {
+    case AppTheme.zkool:
+      return "zkool";
+    case AppTheme.light:
       return "light";
-    case ThemeMode.system:
+    case AppTheme.system:
       return "system";
-    case ThemeMode.dark:
+    case AppTheme.dark:
       return "dark";
   }
 }
 
-/// Theme mode preference, defaulting to dark and persisted across launches.
-class ThemeModeNotifier extends Notifier<ThemeMode> {
+/// The Flutter [ThemeMode] implied by an [AppTheme]. "Zkool" forces the light
+/// slot (where the pink theme is installed by main.dart).
+ThemeMode themeModeFor(AppTheme t) {
+  switch (t) {
+    case AppTheme.zkool:
+    case AppTheme.light:
+      return ThemeMode.light;
+    case AppTheme.dark:
+      return ThemeMode.dark;
+    case AppTheme.system:
+      return ThemeMode.system;
+  }
+}
+
+/// App theme preference, defaulting to dark and persisted across launches.
+class ThemeModeNotifier extends Notifier<AppTheme> {
   @override
-  ThemeMode build() {
+  AppTheme build() {
     // Default synchronously to dark, then load the saved preference async.
     _load();
-    return ThemeMode.dark;
+    return AppTheme.dark;
   }
 
   Future<void> _load() async {
     final prefs = SharedPreferencesAsync();
     final saved = await prefs.getString(_kThemeModePref);
     if (saved != null) {
-      final m = _parseThemeMode(saved);
-      if (m != state) state = m;
+      final t = _parseAppTheme(saved);
+      if (t != state) state = t;
     }
   }
 
-  Future<void> set(ThemeMode mode) async {
-    state = mode;
+  Future<void> set(AppTheme t) async {
+    state = t;
     final prefs = SharedPreferencesAsync();
-    await prefs.setString(_kThemeModePref, themeModeToString(mode));
+    await prefs.setString(_kThemeModePref, appThemeToString(t));
   }
 }
 
-final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, AppTheme>(ThemeModeNotifier.new);
 
 /// Zcash dark theme: charcoal surfaces with the gold accent for lines/highlights.
 final ThemeData zcashDarkTheme = () {
@@ -125,3 +148,30 @@ final ThemeData zcashLightTheme = () {
     colorScheme: cs,
   );
 }();
+
+/// "Zkool" pink light theme: restores the original pink/Material light look
+/// that existed before the gold Zcash theme (pre-commit 8fe8f35e).
+final ThemeData zkoolPinkTheme = () {
+  final cs = ColorScheme.fromSeed(
+    seedColor: const Color(0xFFE91E63), // Material Pink 500
+    brightness: Brightness.light,
+  );
+  return ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    colorScheme: cs,
+  );
+}();
+
+/// The light [ThemeData] to install for a given [AppTheme]. Dark/System are
+/// handled separately via [zcashDarkTheme] in the darkTheme slot.
+ThemeData lightThemeFor(AppTheme t) {
+  switch (t) {
+    case AppTheme.zkool:
+      return zkoolPinkTheme;
+    case AppTheme.light:
+    case AppTheme.dark:
+    case AppTheme.system:
+      return zcashLightTheme;
+  }
+}
