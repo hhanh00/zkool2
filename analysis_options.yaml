@@ -9,6 +9,19 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  # Don't analyze third-party / generated trees. These are not our code and only
+  # add noise to `flutter analyze`:
+  #   * build-win/flutter   - the cloned Flutter SDK (its own tests/packages)
+  #   * rust_builder        - cargokit's internal build_tool (unresolved deps)
+  #   * build/, .dart_tool/ - build output
+  exclude:
+    - build-win/**
+    - rust_builder/**
+    - build/**
+    - .dart_tool/**
+    - "**/*_generated*"
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

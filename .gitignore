@@ -32,10 +32,12 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/build-win/
 flatpak-build/
 .flatpak-builder/
 export/
 *.flatpak
+rust/cargokit.yaml
 
 # Symbolication related
 app.*.symbols
@@ -68,3 +70,4 @@ target/
 
 # FVM Version Cache
 .fvm/
+out/
