@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:shared_preferences_async/shared_preferences_async.dart';
+import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/store.dart';
 
 class LWDSelectPage extends ConsumerStatefulWidget {
   const LWDSelectPage({super.key});
@@ -18,6 +21,26 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
   List<LWDInfo>? _servers;
   bool _loading = true;
   String? _error;
+
+  Future<void> _onSelectServer(LWDInfo server) async {
+    var url = server.url;
+    // Ensure URL has a scheme (defense in depth)
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      final scheme = server.isTor ? 'http' : 'https';
+      url = '$scheme://$url';
+    }
+    // Enable Tor for onion addresses
+    if (server.isTor) {
+      final prefs = SharedPreferencesAsync();
+      await prefs.setBool("use_tor", true);
+      final c = coinContext.coin;
+      await c.setUseTor(useTor: true);
+      ref.invalidate(appSettingsProvider);
+    }
+    if (mounted) {
+      Navigator.of(context).pop(url);
+    }
+  }
 
   @override
   void initState() {
@@ -171,7 +194,7 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
                       size: ColumnSize.S,
                     ),
                   ],
-                  source: _LwdDataSource(filtered, context),
+                  source: _LwdDataSource(filtered, context, _onSelectServer),
                 ),
               ),
             ],
@@ -192,8 +215,9 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
 class _LwdDataSource extends DataTableSource {
   final List<LWDInfo> servers;
   final BuildContext context;
+  final void Function(LWDInfo) onSelect;
 
-  _LwdDataSource(this.servers, this.context);
+  _LwdDataSource(this.servers, this.context, this.onSelect);
 
   @override
   DataRow? getRow(int index) {
@@ -206,7 +230,7 @@ class _LwdDataSource extends DataTableSource {
         DataCell(
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).pop(server.url),
+            onTap: () => onSelect(server),
             child: Row(
               children: [
                 Icon(
