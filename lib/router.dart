@@ -77,7 +77,10 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         ),
         GoRoute(
           path: '/send2',
-          builder: (context, state) => Send2Page(state.extra as List<Recipient>),
+          builder: (context, state) {
+            final (recipients, recipientPaysFee) = state.extra as (List<Recipient>, bool);
+            return Send2Page(recipients, recipientPaysFee: recipientPaysFee);
+          },
         ),
         GoRoute(path: '/tx', builder: (context, state) => TxPage(state.extra as PcztPackage)),
         GoRoute(path: '/tx_view', builder: (context, state) => TxViewPage(state.extra as int)),

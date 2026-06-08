@@ -66,6 +66,7 @@ class SendPageState extends ConsumerState<SendPage> {
   Uint8List selectedAssetBase = zecBase;
   String? selectedAssetName;
   List<Account> _accountSuggestions = [];
+  var _recipientPaysFee = false;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
@@ -307,7 +308,10 @@ class SendPageState extends ConsumerState<SendPage> {
     final total = await maxSpendable(c: c);
     final a = zatToString(total);
     form.fields['amount']?.didChange(a);
-    setState(() => amount = a);
+    setState(() {
+      amount = a;
+      _recipientPaysFee = true;
+    });
   }
 
   void onAdd() async {
@@ -412,7 +416,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
     if (!mounted) return;
     onClear();
-    if (recipients.isNotEmpty) await GoRouter.of(context).push("/send2", extra: recipients);
+    if (recipients.isNotEmpty) await GoRouter.of(context).push("/send2", extra: (recipients, _recipientPaysFee));
   }
 
   void onScan() async {
@@ -559,7 +563,8 @@ final sendID3 = GlobalKey();
 
 class Send2Page extends ConsumerStatefulWidget {
   final List<Recipient> recipients;
-  const Send2Page(this.recipients, {super.key});
+  final bool recipientPaysFee;
+  const Send2Page(this.recipients, {super.key, this.recipientPaysFee = false});
 
   @override
   ConsumerState<Send2Page> createState() => Send2PageState();
@@ -570,7 +575,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
   String? txId;
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
   late final hasZsa = widget.recipients.any((r) => !r.assetBase.every((b) => b == 0));
-  var recipientPaysFee = false;
+  late var recipientPaysFee = widget.recipientPaysFee;
   int? category;
   var puri = "";
   AccountData? account;
@@ -653,7 +658,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
                   child: FormBuilderSwitch(
                     name: "recipientPaysFee",
                     title: Text("Recipient Pays Fee"),
-                    initialValue: false,
+                    initialValue: widget.recipientPaysFee,
                     onChanged: (v) => setState(() => recipientPaysFee = v!),
                   ),
                 ),
