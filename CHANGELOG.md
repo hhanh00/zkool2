@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.17.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.2...zkool-v6.17.3) (2026-06-08)
+
+
+### Features
+
+* add configurable LWD server selection ([609fe1a](https://github.com/hhanh00/zkool2/commit/609fe1a36418d95c87c7e910b98dd248f8779c1e))
+* add edit account entry to account page app menu ([c1a9222](https://github.com/hhanh00/zkool2/commit/c1a9222b38015c08021f53e6e42b85a5538b7a83))
+
+
+### Bug Fixes
+
+* skip biometric authentication when device has no biometric hardware ([33c5b1d](https://github.com/hhanh00/zkool2/commit/33c5b1dcef6fb7cb59b9d76884a37335e9265dcc))
+
 ## [6.17.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.1...zkool-v6.17.2) (2026-06-08)
 
 
