@@ -164,6 +164,63 @@ curl -s -X POST http://localhost:8080/graphql \
 
 **Regtest note:** Transactions sit in the mempool until the node mines a block that includes them. This may take a few minutes.
 
+## ZSA Transfer Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. Wrong assetDesc Format
+**Error**: `Expected input scalar String. Got: {idAsset: 7}`
+**Problem**: Passing assetDesc as an object instead of a string
+**Solution**: assetDesc must be a string value
+
+#### 2. Ambiguous Asset Reference
+**Error**: `Ambiguous query '7', matches 2 assets`
+**Problem**: Using asset ID instead of full descriptor hash
+**Solution**: Always use the full asset descriptor hash, not just the ID
+
+#### 3. Insufficient Funds / Address Type Mismatch
+**Error**: `Insufficient funds for transaction construction; need an additional ZatBalance(X) zatoshis`
+**Problem**: Trying to send ZSA to incompatible address type (e.g., transparent address for Orchard-based assets)
+**Solution**: Use compatible address types:
+- Orchard-based ZSA → Orchard or unified address
+- Sapling-based ZSA → Sapling or unified address
+- Transparent-based ZSA → Transparent address
+
+### Critical Requirements for ZSA Transfers
+
+1. **Asset Descriptor Hash**: Always use the full `assetDescHash` (64-character hex string), never just the `idAsset` number
+2. **Address Type Compatibility**: ZSA assets can only be sent to compatible address types:
+   - Orchard pool assets → Orchard addresses (`uregtest1...`)
+   - Sapling pool assets → Sapling addresses (`zregtestsapling1...`)
+   - Transparent pool assets → Transparent addresses (`tmX...`)
+3. **Unified addresses work for all types**
+
+### Example: Successful ZSA Transfer
+
+```bash
+curl -s -X POST http://localhost:8080/graphql \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "mutation($id: Int!, $pay: Payment!) { pay(idAccount: $id, payment: $pay) }",
+    "variables": {
+      "id": <SENDER_ACCOUNT_ID>,
+      "pay": {
+        "recipients": [{
+          "address": "<ORCHARD_OR_UNIFIED_ADDRESS>",
+          "amount": "<AMOUNT>",
+          "assetDesc": "<FULL_ASSET_DESCRIPTOR_HASH>"
+        }],
+        "srcPools": 4
+      }
+    }
+  }'
+```
+
+**Key points:**
+- Use full asset descriptor hash (64-char hex)
+- Use Orchard/unified address for Orchard-based assets
+- `srcPools: 4` for Orchard-based assets
+
 ## GraphQL API Reference
 
 ### Queries
@@ -197,7 +254,7 @@ curl -s -X POST http://localhost:8080/graphql \
 
 **Payment:** `recipients!` (list), `srcPools` (bitmask), `recipientPaysFee`, `confirmations`
 
-**Recipient:** `address!`, `amount!` (string in ZEC), `memo`, `assetDesc` (for ZSA transfers)
+**Recipient:** `address!`, `amount!` (string in ZEC), `memo`, `assetDesc` (string - must use full asset descriptor hash for ZSA transfers, not asset ID)
 
 **UpdateAccount:** `name`, `birth`
 
@@ -209,3 +266,4 @@ curl -s -X POST http://localhost:8080/graphql \
 
 ## Remarks
 - When polling for transaction confirmation, synchronize the receiving account to update its balance and transaction history.
+- Test account with some ZSA: "poet key eye depart surprise cloth jaguar brisk tackle husband horse upset goddess prize chimney vote grief wall index strong common video wool host"
