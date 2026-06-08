@@ -1,5 +1,5 @@
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::api::coin::Coin;
 #[cfg(feature = "flutter")]
@@ -31,6 +31,11 @@ pub async fn get_network_name(c: &Coin) -> String {
     c.get_name().to_string()
 }
 
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn query_lwd_list() -> Result<Vec<LWDInfo>> {
+    crate::net::lwd::query_lwd_list().await
+}
+
 #[derive(Deserialize)]
 struct Usd {
     usd: f64,
@@ -41,3 +46,14 @@ struct ZcashUSD {
     zcash: Usd,
 }
 
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LWDInfo {
+    pub url: String,
+    pub is_tor: bool,
+    pub height: u32,
+    pub status: String,
+    pub uptime: u32,
+    pub version: String,
+    pub ping: u32,
+}
