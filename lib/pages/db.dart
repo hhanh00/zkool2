@@ -131,7 +131,8 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
       final (name, password) = res;
       final dbFilepath = await getFullDatabasePath(name);
       final c = coinContext.coin;
-      final c2 = await c.openDatabase(dbFilepath: dbFilepath, password: password);
+      // New databases created here belong to the currently-active network.
+      final c2 = await c.openDatabase(dbFilepath: dbFilepath, password: password, coin: c.coin);
       coinContext.set(coin: c2);
       await refresh();
     }

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Whole glyph uses currentColor so a flutter_svg colorFilter tints it to the
+       theme/network accent. Transparent background => reads on any card color. -->
+  <g fill="currentColor">
+    <!-- coin disc as a ring so the Z is legible at small sizes -->
+    <path fill-rule="evenodd" clip-rule="evenodd"
+      d="M24 1C11.3 1 1 11.3 1 24s10.3 23 23 23 23-10.3 23-23S36.7 1 24 1zm0 4C13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19S34.5 5 24 5z"/>
+    <!-- Zcash "Ƶ": top & bottom crossbars + diagonal + small serifs -->
+    <rect x="15" y="15" width="18" height="3.6" rx="1"/>
+    <rect x="15" y="29.4" width="18" height="3.6" rx="1"/>
+    <polygon points="28.8,15 33,15 19.2,33 15,33"/>
+    <rect x="22.2" y="10.5" width="3.6" height="5"/>
+    <rect x="22.2" y="32.5" width="3.6" height="5"/>
+  </g>
+</svg>

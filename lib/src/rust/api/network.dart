@@ -7,8 +7,6 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Usd`, `ZcashUSD`
-
 Future<void> initDatadir({required String directory}) =>
     RustLib.instance.api.crateApiNetworkInitDatadir(directory: directory);
 

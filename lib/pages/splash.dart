@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -52,13 +53,18 @@ class SplashPageState extends ConsumerState<SplashPage> {
   void tryOpenDatabase() async {
     String? password;
     var c = coinContext.coin;
+    // Restore the previously-selected network (if any). When absent, pass null
+    // so the stored `coin` prop / filename fallback determines the network,
+    // preserving behavior for existing single-network installs.
+    final prefs = SharedPreferencesAsync();
+    final netCoin = await prefs.getInt("network");
     while (true) {
       final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
       final dbFilepath = await getFullDatabasePath(dbName);
       logger.i("dbFilepath: $dbFilepath");
       try {
-        c = await c.openDatabase(dbFilepath: dbFilepath, password: password);
+        c = await c.openDatabase(dbFilepath: dbFilepath, password: password, coin: netCoin);
         break;
       } catch (e, s) {
         logger.e(e);

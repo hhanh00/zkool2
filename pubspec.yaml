@@ -98,3 +98,4 @@ flutter:
     - misc/icon.png
     - servers/servers.json
     - assets/tor.svg
+    - assets/zcash.svg

@@ -42,9 +42,8 @@ impl Coin {
         self,
         db_filepath: String,
         password: Option<String>,
+        coin: Option<u8>,
     ) -> Result<Coin> {
-        let network = self.network();
-
         let pool = try_open(&db_filepath, &password).await?;
         {
             let mut pools = POOLS.lock().unwrap();
@@ -53,23 +52,40 @@ impl Coin {
 
         let mut connection = pool.acquire().await?;
 
-        let coin = crate::db::get_prop(&mut connection, "coin")
-            .await?
-            .unwrap_or("0".to_string());
-        let coin = coin.parse::<u8>()?;
+        // Determine the authoritative coin for this database.
+        // - If the caller passed an explicit coin (network selection), it wins and is
+        //   persisted to the `coin` prop.
+        // - Otherwise fall back to the stored prop, defaulting to mainnet (0).
+        let coin = match coin {
+            Some(c) => {
+                put_prop(&mut *connection, "coin", &c.to_string()).await?;
+                c
+            }
+            None => {
+                let stored = crate::db::get_prop(&mut connection, "coin")
+                    .await?
+                    .unwrap_or("0".to_string());
+                stored.parse::<u8>()?
+            }
+        };
         let account = crate::db::get_prop(&mut connection, "account")
             .await?
             .unwrap_or("0".to_string());
         let account = account.parse::<u32>()?;
 
-        migrate_sapling_addresses(&network, &mut connection).await?;
-
-        Ok(Coin {
+        let coin = Coin {
             coin,
             db_filepath,
             account,
             ..self
-        })
+        };
+
+        // Derive the network from the resolved coin (not the pre-open value) so
+        // sapling address migration uses the correct consensus parameters.
+        let network = coin.network();
+        migrate_sapling_addresses(&network, &mut connection).await?;
+
+        Ok(coin)
     }
 
     pub fn get_name(&self) -> &'static str {
@@ -200,10 +216,17 @@ async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<Sqlite
 
     let mut connection = pool.acquire().await?;
     create_schema(&mut connection).await?;
+    // Seed the `coin` prop only when it is missing (first-time creation), inferring
+    // from the filename. The authoritative value is set by `open_database` when the
+    // caller passes an explicit coin (network selection); we must not overwrite it
+    // on every open here.
     if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='props'")
         .fetch_optional(&mut *connection)
         .await?
         .is_some()
+        && crate::db::get_prop(&mut connection, "coin")
+            .await?
+            .is_none()
     {
         let testnet = db_filepath.contains("testnet");
         let regtest = db_filepath.contains("regtest");

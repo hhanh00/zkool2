@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
+import 'package:zkool/network.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
@@ -25,14 +26,33 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
 
-/// Named block-explorer templates. Each maps a display label to a URL template
-/// using {net} (mainnet/testnet) and {txid} placeholders. Templates without
-/// {net} simply ignore the network (mainnet-only hosts).
+/// Named mainnet block-explorer templates. Each maps a display label to a URL
+/// template with a {txid} placeholder (no network placeholder — these are the
+/// mainnet hosts).
 const Map<String, String> kBlockExplorers = {
-  "zcashexplorer.app": "https://{net}.zcashexplorer.app/transactions/{txid}",
+  "zcashexplorer.app": "https://mainnet.zcashexplorer.app/transactions/{txid}",
   "zcashinfo.com": "https://zcashinfo.com/tx/{txid}",
   "cipherscan.app": "https://cipherscan.app/tx/{txid}",
 };
+
+/// Named testnet block-explorer templates (testnet hosts of the same explorers).
+const Map<String, String> kTestnetBlockExplorers = {
+  "testnet.zcashexplorer.app": "https://testnet.zcashexplorer.app/transactions/{txid}",
+  "testnet.cipherscan.app": "https://testnet.cipherscan.app/tx/{txid}",
+};
+
+/// The explorer set to offer for [net] (testnet has its own hosts; regtest has
+/// none; everything else uses the mainnet set).
+Map<String, String> blockExplorersFor(ZNetwork net) {
+  switch (net) {
+    case ZNetwork.testnet:
+      return kTestnetBlockExplorers;
+    case ZNetwork.regtest:
+      return const {};
+    case ZNetwork.mainnet:
+      return kBlockExplorers;
+  }
+}
 
 final logID = GlobalKey();
 final lightnodeID = GlobalKey();
@@ -140,7 +160,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     super.initState();
     Future(() async {
       dbFullPath = await getFullDatabasePath(settings.dbName);
-      topServers = await loadTopServers();
+      // Server list is network-specific: mainnet uses the bundled top servers;
+      // testnet/regtest offer their known defaults.
+      final net = networkForName(settings.net);
+      topServers = net == ZNetwork.mainnet ? await loadTopServers() : networkInfo(net).servers;
       final packageInfo = await PackageInfo.fromPlatform();
       final version = packageInfo.version;
       final buildNumber = packageInfo.buildNumber;
@@ -153,10 +176,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   // "Custom…", or the current server isn't one of the bundled top servers.
   bool get showCustomServerField => forceCustomServer || !topServers.contains(settings.lwd);
 
+  // The explorers offered for the active network.
+  Map<String, String> get explorers => blockExplorersFor(networkForName(settings.net));
+
   // The label of the currently-selected named explorer, or null if the stored
   // template isn't one of the bundled explorers (i.e. a custom URL).
   String? get currentExplorerLabel {
-    for (final e in kBlockExplorers.entries) {
+    for (final e in explorers.entries) {
       if (e.value == settings.blockExplorer) return e.key;
     }
     return null;
@@ -228,32 +254,38 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 if (settings.isLightNode && topServers.isNotEmpty)
-                  Row(
-                    children: [
-                      const Expanded(child: Text("Light Node Server")),
-                      SizedBox(
-                        width: 360,
-                        child: FormBuilderDropdown<String>(
-                          name: "server",
-                          isDense: true,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            border: OutlineInputBorder(),
-                          ),
-                          initialValue: topServers.contains(settings.lwd) ? settings.lwd : customServer,
-                          items: [
-                            ...topServers.map((s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(s, overflow: TextOverflow.ellipsis, maxLines: 1),
-                                )),
-                            const DropdownMenuItem(value: customServer, child: Text("Custom…")),
-                          ],
-                          onChanged: onChangedServer,
-                        ),
+                  Builder(builder: (context) {
+                    final isMobile = MediaQuery.of(context).size.width < 600;
+                    final dropdown = FormBuilderDropdown<String>(
+                      name: "server",
+                      isDense: true,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: isMobile ? "Light Node Server" : null,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        border: const OutlineInputBorder(),
                       ),
-                    ],
-                  ),
+                      initialValue: topServers.contains(settings.lwd) ? settings.lwd : customServer,
+                      items: [
+                        ...topServers.map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            )),
+                        const DropdownMenuItem(value: customServer, child: Text("Custom…")),
+                      ],
+                      onChanged: onChangedServer,
+                    );
+                    if (isMobile) return dropdown;
+                    return Row(
+                      children: [
+                        const Expanded(child: Text("Light Node Server")),
+                        SizedBox(
+                          width: 324,
+                          child: dropdown,
+                        ),
+                      ],
+                    );
+                  }),
                 if (!settings.isLightNode || showCustomServerField)
                   Showcase(
                     key: lwdID,
@@ -411,7 +443,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                           ),
                           initialValue: currentExplorerLabel ?? customExplorer,
                           items: [
-                            ...kBlockExplorers.keys.map((label) => DropdownMenuItem(
+                            ...explorers.keys.map((label) => DropdownMenuItem(
                                   value: label,
                                   child: Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
                                 )),
@@ -554,7 +586,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       return;
     }
     // A bundled explorer was selected: store its URL template.
-    final template = kBlockExplorers[value];
+    final template = explorers[value];
     if (template == null) return;
     setState(() {
       forceCustomExplorer = false;

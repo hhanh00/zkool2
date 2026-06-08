@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:collection/collection.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -10,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/network.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
@@ -721,6 +721,23 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     });
   }
 
+  /// Tear down any in-flight synchronization. Used when switching networks so
+  /// no sync stream keeps writing to the previous network's database pool.
+  Future<void> stop() async {
+    retrySyncTimer?.cancel();
+    retrySyncTimer = null;
+    try {
+      await cancelSync();
+    } catch (_) {
+      // best-effort; the underlying stream may already be torn down
+    }
+    await syncProgressSubscription?.cancel();
+    syncProgressSubscription = null;
+    syncInProgress = false;
+    retryCount = 0;
+    end();
+  }
+
   void autoSync({bool now = false}) async {
     final settings = await ref.read(appSettingsProvider.future);
     final interval = int.tryParse(settings.syncInterval) ?? 0;
@@ -1044,4 +1061,129 @@ class VaultNotifier extends _$VaultNotifier {
       await vault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
     });
   }
+}
+
+/// Seed a freshly-created network database's `props` with sensible per-network
+/// defaults (LWD server, light-node flag, block explorer) when they are absent.
+/// Existing databases keep whatever the user has already configured.
+Future<void> _seedNetworkDefaults(Coin c, ZNetwork net) async {
+  final info = networkInfo(net);
+  final lwd = await getProp(key: "lwd", c: c);
+  if (lwd == null || lwd.isEmpty) {
+    await putProp(key: "lwd", value: info.defaultLwd, c: c);
+  }
+  final isLight = await getProp(key: "is_light_node", c: c);
+  if (isLight == null || isLight.isEmpty) {
+    await putProp(key: "is_light_node", value: info.defaultIsLightNode.toString(), c: c);
+  }
+  if (info.defaultExplorer.isNotEmpty) {
+    final explorer = await getProp(key: "block_explorer", c: c);
+    if (explorer == null || explorer.isEmpty) {
+      await putProp(key: "block_explorer", value: info.defaultExplorer, c: c);
+    }
+  }
+}
+
+/// Open [dbFilepath] (prompting for a password via [askPassword] on failure),
+/// seed defaults for [net], wire the LWD/Tor/proxy from the now per-DB settings,
+/// and publish the resulting [Coin] to [coinContext]. Returns the opened Coin.
+///
+/// Shared by the splash open-flow and live network switching so both behave
+/// identically. [askPassword] returns null to abort (e.g. user cancelled).
+Future<Coin?> openAndWireDatabase(
+  WidgetRef ref, {
+  required String dbFilepath,
+  required ZNetwork net,
+  String? password,
+  required Future<String?> Function() askPassword,
+}) async {
+  var c = coinContext.coin;
+  while (true) {
+    try {
+      c = await c.openDatabase(dbFilepath: dbFilepath, password: password, coin: net.coin);
+      break;
+    } catch (e) {
+      logger.e(e);
+      final pw = await askPassword();
+      if (pw == null) return null;
+      password = pw;
+    }
+  }
+  coinContext.set(coin: c);
+  // First-open seeding must happen before settings are read so the defaults
+  // are visible to appSettingsProvider.
+  await _seedNetworkDefaults(c, net);
+
+  // hasDb gates appSettingsProvider's per-DB prop reads.
+  ref.read(hasDbProvider.notifier).setHasDb();
+  ref.invalidate(appSettingsProvider);
+  final settings = await ref.read(appSettingsProvider.future);
+
+  c = c.setLwd(serverType: settings.isLightNode ? 0 : 1, url: settings.lwd);
+  c = await c.setUseTor(useTor: settings.useTor);
+  c = c.setProxy(proxy: settings.proxy);
+  coinContext.set(coin: c);
+  return c;
+}
+
+/// Switch the active network to [net] without restarting the app.
+///
+/// Tears down the current sync/mempool activity, opens the network's dedicated
+/// database (derived from the current DB family base name), rewires the coin
+/// context and persisted selection, invalidates all network-scoped providers,
+/// then restarts auto-sync and the mempool listener.
+///
+/// [askPassword] is invoked if the target database is password-protected.
+/// Returns true on success, false if aborted (e.g. password cancelled).
+Future<bool> switchNetwork(
+  WidgetRef ref,
+  ZNetwork net, {
+  required Future<String?> Function() askPassword,
+}) async {
+  final prefs = SharedPreferencesAsync();
+  final currentDbName = await prefs.getString("database") ?? appName;
+  final targetDbName = dbNameForNetwork(currentDbName, net);
+  final dbFilepath = await getFullDatabasePath(targetDbName);
+
+  // 1. Tear down activity tied to the current database.
+  await ref.read(synchronizerProvider.notifier).stop();
+  ref.read(mempoolProvider.notifier).clear();
+  // Reset selected-account state so we don't carry an id from the old network.
+  await coinContext.setAccount(account: 0);
+  ref.read(selectedAccountIdProvider.notifier).set(0);
+
+  // 2/3. Open + wire the target database.
+  final c = await openAndWireDatabase(
+    ref,
+    dbFilepath: dbFilepath,
+    net: net,
+    askPassword: askPassword,
+  );
+  if (c == null) {
+    // Aborted: restart sync on whatever DB is still active and bail.
+    ref.read(synchronizerProvider.notifier).autoSync();
+    return false;
+  }
+
+  // 4. Persist the selection.
+  await prefs.setString("database", targetDbName);
+  await prefs.setInt("network", net.coin);
+
+  // 5. Invalidate every network-scoped provider so the UI rebuilds against the
+  // new database.
+  ref.invalidate(appSettingsProvider);
+  ref.invalidate(getAccountsProvider);
+  ref.invalidate(getCurrentAccountProvider);
+  ref.invalidate(accountsPageDataProvider);
+  ref.read(currentHeightProvider.notifier).setHeight(0);
+
+  // 6. Restart background work against the new network.
+  final settings = await ref.read(appSettingsProvider.future);
+  if (settings.vault && !settings.offline) {
+    await ref.read(vaultProvider.future);
+  }
+  ref.read(synchronizerProvider.notifier).autoSync();
+  final mempool = ref.read(mempoolProvider.notifier);
+  unawaited(Future(mempool.runMempoolListener));
+  return true;
 }

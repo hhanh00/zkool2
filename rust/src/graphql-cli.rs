@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
 
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
     let coin = Coin::new()
-        .open_database(db_path, None)
+        .open_database(db_path, None, None)
         .await?
         .set_lwd(0, lwd_url)?;
 

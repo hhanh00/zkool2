@@ -9,6 +9,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/network.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -21,6 +22,7 @@ import 'package:zkool/widgets/theme.dart';
 
 final heightID = GlobalKey();
 final settingsID = GlobalKey();
+final networkID = GlobalKey();
 final syncID = GlobalKey();
 
 final accountListID = GlobalKey();
@@ -74,7 +76,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, heightID]);
+    tutorialHelper(context, "tutMain0", [newAccountId, networkID, settingsID, syncID, heightID]);
 
     final accounts = await ref.read(getAccountsProvider.future);
     if (!mounted) return;
@@ -153,7 +155,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                 ),
               );
             },
-            title: "Account List",
+            title: networkTitle(appName, networkForName(pageData.settings.net)),
             createBuilder: (context) => GoRouter.of(context).push("/account/new"),
             editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
             deleteBuilder: (context, accounts) async {
@@ -168,6 +170,11 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
             isEqual: (a, b) => a.id == b.id,
             onReorder: onReorder,
             buttons: [
+              Showcase(
+                key: networkID,
+                description: "Switch the active network (Mainnet / Testnet / Regtest)",
+                child: IconButton(onPressed: onSwitchNetwork, icon: Icon(Icons.public)),
+              ),
               Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
               Showcase(
                 key: syncID,
@@ -465,6 +472,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     if (authenticated) {
       await GoRouter.of(context).push('/settings');
     }
+  }
+
+  void onSwitchNetwork() async {
+    await GoRouter.of(context).push('/networks');
   }
 
   void onPrice() {

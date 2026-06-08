@@ -13,6 +13,7 @@ import 'package:zkool/pages/dkg.dart';
 import 'package:zkool/pages/frost.dart';
 import 'package:zkool/pages/log.dart';
 import 'package:zkool/pages/market.dart';
+import 'package:zkool/pages/networks.dart';
 import 'package:zkool/pages/new_account.dart';
 import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/pages/receive.dart';
@@ -105,6 +106,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
         GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
         GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
+        GoRoute(path: '/networks', builder: (context, state) => NetworksPage()),
         GoRoute(path: '/folders', builder: (context, state) => FolderPage()),
         GoRoute(path: '/categories', builder: (context, state) => CategoryPage()),
         GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),

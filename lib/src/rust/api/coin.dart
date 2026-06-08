@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'coin.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `network`, `try_open`
+// These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `connect_over_proxy`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `http_connect_tunnel`, `network`, `open_proxied_stream`, `try_open`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 Future<void> initDatadir({required String directory}) =>
@@ -34,9 +34,10 @@ sealed class Coin with _$Coin {
 
   factory Coin() => RustLib.instance.api.crateApiCoinCoinNew();
 
-  Future<Coin> openDatabase({required String dbFilepath, String? password}) =>
+  Future<Coin> openDatabase(
+          {required String dbFilepath, String? password, int? coin}) =>
       RustLib.instance.api.crateApiCoinCoinOpenDatabase(
-          that: this, dbFilepath: dbFilepath, password: password);
+          that: this, dbFilepath: dbFilepath, password: password, coin: coin);
 
   Future<Coin> setAccount({required int account}) => RustLib.instance.api
       .crateApiCoinCoinSetAccount(that: this, account: account);

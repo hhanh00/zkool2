@@ -135,6 +135,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
     Future(tutorial);
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(fullDataAV.value?.currentAccount?.account.name ?? "Loading"),
@@ -148,21 +150,24 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               icon: Icon(Icons.sync),
             ),
           ),
-          IconButton(
-            tooltip: "Rescan from Height",
-            onPressed: fullDataAV.value?.currentAccount != null ? () => onRescan(fullDataAV.value!.currentAccount!.account) : null,
-            icon: Icon(Icons.restart_alt),
-          ),
-          IconButton(
-            tooltip: "Backup Seed & Keys",
-            onPressed: fullDataAV.value?.currentAccount != null ? () => onBackup(fullDataAV.value!.currentAccount!.account) : null,
-            icon: Icon(Icons.save),
-          ),
-          IconButton(
-            tooltip: "Remove Account",
-            onPressed: fullDataAV.value?.currentAccount != null ? () => onRemove(fullDataAV.value!.currentAccount!.account) : null,
-            icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
-          ),
+          if (!isMobile)
+            IconButton(
+              tooltip: "Rescan from Height",
+              onPressed: fullDataAV.value?.currentAccount != null ? () => onRescan(fullDataAV.value!.currentAccount!.account) : null,
+              icon: Icon(Icons.restart_alt),
+            ),
+          if (!isMobile)
+            IconButton(
+              tooltip: "Backup Seed & Keys",
+              onPressed: fullDataAV.value?.currentAccount != null ? () => onBackup(fullDataAV.value!.currentAccount!.account) : null,
+              icon: Icon(Icons.save),
+            ),
+          if (!isMobile)
+            IconButton(
+              tooltip: "Remove Account",
+              onPressed: fullDataAV.value?.currentAccount != null ? () => onRemove(fullDataAV.value!.currentAccount!.account) : null,
+              icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+            ),
           Showcase(
             key: receiveID,
             description: "Show the account receiving addresses",
@@ -175,7 +180,14 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           ),
           PopupMenuButton<String>(
             onSelected: (String result) async {
+              final account = fullDataAV.value?.currentAccount?.account;
               switch (result) {
+                case "rescan":
+                  if (account != null) onRescan(account);
+                case "backup":
+                  if (account != null) onBackup(account);
+                case "remove":
+                  if (account != null) onRemove(account);
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "charts":
@@ -185,6 +197,21 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              if (isMobile)
+                const PopupMenuItem<String>(
+                  value: "rescan",
+                  child: Text("Rescan from Height"),
+                ),
+              if (isMobile)
+                const PopupMenuItem<String>(
+                  value: "backup",
+                  child: Text("Backup Seed & Keys"),
+                ),
+              if (isMobile)
+                PopupMenuItem<String>(
+                  value: "remove",
+                  child: Text("Remove Account", style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ),
               const PopupMenuItem<String>(
                 value: "update_fx",
                 child: Text("Fetch Tx Prices"),

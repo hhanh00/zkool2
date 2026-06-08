@@ -188,7 +188,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   void openBlockExplorer(Uint8List txid) async {
     final settings = ref.read(appSettingsProvider).requireValue;
     final blockExplorer = settings.blockExplorer;
-    final url = blockExplorer.replaceAll("{net}", settings.net).replaceAll("{txid}", txIdToString(txid));
+    final url = blockExplorer.replaceAll("{txid}", txIdToString(txid));
     await launchUrl(Uri.parse(url));
   }
 
