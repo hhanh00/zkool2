@@ -161,6 +161,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           PopupMenuButton<String>(
             onSelected: (String result) async {
               switch (result) {
+                case "backup":
+                  final account = fullDataAV.value?.currentAccount?.account;
+                  if (account != null) {
+                    GoRouter.of(context).push("/viewing_keys", extra: account.id);
+                  }
                 case "edit_account":
                   final account = fullDataAV.value?.currentAccount?.account;
                   if (account != null) {
@@ -184,6 +189,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               const PopupMenuItem<String>(
                 value: "edit_account",
                 child: Text("Edit Account"),
+              ),
+              const PopupMenuItem<String>(
+                value: "backup",
+                child: Text("Backup"),
               ),
               const PopupMenuItem<String>(
                 value: "update_fx",
@@ -428,7 +437,6 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   final birthID2 = GlobalKey(debugLabel: "birthID2");
   final enableID = GlobalKey(debugLabel: "enableID");
   final hideID2 = GlobalKey(debugLabel: "hideID2");
-  final viewID = GlobalKey(debugLabel: "viewID");
   final exportID = GlobalKey(debugLabel: "exportID");
   final rewindID = GlobalKey(debugLabel: "rewindID");
   final resetID = GlobalKey(debugLabel: "resetID");
@@ -470,7 +478,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   }
 
   void tutorial() async {
-    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2, enableID, hideID2, folderID, viewID, exportID, rewindID, resetID]);
+    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2, enableID, hideID2, folderID, exportID, rewindID, resetID]);
   }
 
   @override
@@ -494,16 +502,6 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
       appBar: AppBar(
         title: Text('Account Edit'),
         actions: [
-          if (account != null)
-            Showcase(
-              key: viewID,
-              description: "Show Viewing Keys",
-              child: IconButton(
-                tooltip: "Show Viewing Keys",
-                onPressed: () => GoRouter.of(context).push("/viewing_keys", extra: account.id),
-                icon: Icon(Icons.visibility),
-              ),
-            ),
           if (account != null) ...[
             Showcase(
               key: exportID,
