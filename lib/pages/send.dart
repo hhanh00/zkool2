@@ -66,7 +66,6 @@ class SendPageState extends ConsumerState<SendPage> {
   Uint8List selectedAssetBase = zecBase;
   String? selectedAssetName;
   List<Account> _accountSuggestions = [];
-  bool _resolvingAccount = false;
 
   void tutorial() async {
     tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
@@ -486,10 +485,8 @@ class SendPageState extends ConsumerState<SendPage> {
 
       // Resolve @accountname to actual address
       if (address.startsWith('@')) {
-        setState(() => _resolvingAccount = true);
         final accounts = ref.read(getAccountsProvider).requireValue;
         final resolved = await resolveAccountName(address, accounts, c);
-        setState(() => _resolvingAccount = false);
         if (resolved == null) {
           if (mounted) {
             showException(context, 'Unknown account: ${address.substring(1)}');

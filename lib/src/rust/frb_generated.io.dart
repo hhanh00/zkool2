@@ -246,6 +246,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<LWDInfo> dco_decode_list_lwd_info(dynamic raw);
+
+  @protected
   List<Memo> dco_decode_list_memo(dynamic raw);
 
   @protected
@@ -314,6 +317,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LogMessage dco_decode_log_message(dynamic raw);
+
+  @protected
+  LWDInfo dco_decode_lwd_info(dynamic raw);
 
   @protected
   Memo dco_decode_memo(dynamic raw);
@@ -669,6 +675,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<LWDInfo> sse_decode_list_lwd_info(SseDeserializer deserializer);
+
+  @protected
   List<Memo> sse_decode_list_memo(SseDeserializer deserializer);
 
   @protected
@@ -741,6 +750,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LogMessage sse_decode_log_message(SseDeserializer deserializer);
+
+  @protected
+  LWDInfo sse_decode_lwd_info(SseDeserializer deserializer);
 
   @protected
   Memo sse_decode_memo(SseDeserializer deserializer);
@@ -1110,6 +1122,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<Uint8List> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_lwd_info(List<LWDInfo> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_memo(List<Memo> self, SseSerializer serializer);
 
   @protected
@@ -1192,6 +1207,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_log_message(LogMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_lwd_info(LWDInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_memo(Memo self, SseSerializer serializer);

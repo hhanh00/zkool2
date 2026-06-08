@@ -7,7 +7,7 @@ use tonic::{async_trait, Request};
 use zcash_protocol::consensus::{BlockHeight, BranchId};
 
 use crate::{
-    GRPCClient, api::coin::Network, lwd::*, net::LwdServer
+    GRPCClient, api::{coin::Network, network::LWDInfo}, lwd::*, net::LwdServer
 };
 
 #[async_trait]
@@ -186,3 +186,47 @@ impl LwdServer for GRPCClient {
     }
 }
 
+pub async fn query_lwd_list() -> Result<Vec<LWDInfo>> {
+    // Implement by querying https://hosh.zec.rocks/api/v0/zec.json
+     let rep = reqwest::get("https://hosh.zec.rocks/api/v0/zec.json")
+        .await?
+        .error_for_status()?
+        .json::<serde_json::Value>()
+        .await?;
+
+    // Parse the JSON response and convert it to Vec<LWDInfo>
+    let servers = rep["servers"].as_array().cloned().unwrap_or_default();
+    let mut lwd_list = Vec::new();
+    for item in servers {
+        let hostname = item["hostname"].as_str().unwrap_or_default();
+        let port = item["port"].as_u64().unwrap_or(9067);
+        let url = format!("{}:{}", hostname, port);
+        let is_tor = hostname.ends_with(".onion");
+        let height = item["height"].as_u64().unwrap_or(0) as u32;
+        let status = if item["online"].as_bool().unwrap_or(false) {
+            "online"
+        } else {
+            "offline"
+        };
+        let uptime = (item["uptime_30d"].as_f64().unwrap_or(0.0) * 100.0) as u32;
+        let ping = item["ping"].as_f64().unwrap_or(0.0) as u32;
+        // These fields are not present in the API response, use defaults
+        let version = item["node_version"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+
+        let lwd_info = LWDInfo {
+            url,
+            is_tor,
+            height,
+            status: status.to_string(),
+            uptime,
+            version,
+            ping,
+        };
+        lwd_list.push(lwd_info);
+    }
+
+    Ok(lwd_list)
+}
