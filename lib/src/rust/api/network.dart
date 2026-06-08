@@ -15,8 +15,10 @@ Future<void> initDatadir({required String directory}) =>
 Future<int> getCurrentHeight({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetCurrentHeight(c: c);
 
-Future<double> getCoingeckoPrice({required String api}) =>
-    RustLib.instance.api.crateApiNetworkGetCoingeckoPrice(api: api);
+Future<double> getCoingeckoPrice(
+        {required String api, required String currency}) =>
+    RustLib.instance.api
+        .crateApiNetworkGetCoingeckoPrice(api: api, currency: currency);
 
 Future<String> getNetworkName({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);

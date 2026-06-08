@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Tor onion mark: concentric onion rings with a vertical stem.
+       Drawn with currentColor so it inherits the IconButton foreground color. -->
+  <g fill="none" stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- outer onion bulb -->
+    <path d="M12 21.2
+             C7.4 21.2 4.2 17.8 4.2 13.4
+             C4.2 8.4 8.0 4.2 12 2.8
+             C16.0 4.2 19.8 8.4 19.8 13.4
+             C19.8 17.8 16.6 21.2 12 21.2 Z"/>
+    <!-- middle ring -->
+    <path d="M12 18.6
+             C9.0 18.6 7.0 16.2 7.0 13.4
+             C7.0 10.2 9.3 7.2 12 6.0
+             C14.7 7.2 17.0 10.2 17.0 13.4
+             C17.0 16.2 15.0 18.6 12 18.6 Z"/>
+    <!-- inner ring -->
+    <path d="M12 16.0
+             C10.4 16.0 9.4 14.6 9.4 13.2
+             C9.4 11.4 10.6 9.8 12 9.0
+             C13.4 9.8 14.6 11.4 14.6 13.2
+             C14.6 14.6 13.6 16.0 12 16.0 Z"/>
+    <!-- vertical stem through the center -->
+    <line x1="12" y1="2.8" x2="12" y2="21.2"/>
+  </g>
+</svg>

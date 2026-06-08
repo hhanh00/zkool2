@@ -33,7 +33,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
   }
 
   Future<void> refresh() async {
-    final dbDir = await getApplicationDocumentsDirectory();
+    final dbDir = await getDataDirectory();
     dbNames = (await listDbNames(dir: dbDir.path)).sorted().map((n) => (n, false)).toList();
     setState(() {});
   }

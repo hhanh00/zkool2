@@ -169,9 +169,42 @@ pub async fn new_account(
             &seed,
             AccountId::try_from(na.aindex).unwrap(),
         )?;
-        let uvk = usk.to_unified_full_viewing_key();
-        let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
-        let dindex: u32 = di.try_into()?;
+
+        // Determine the diversifier index for the receive address.
+        //
+        // The receive address must follow the BIP44 Account Index (na.aindex,
+        // already baked into the UnifiedSpendingKey above) and use diversifier
+        // index 0 -> m/44'/133'/aindex'/0/0.
+        //
+        // We must NOT use the unified/Sapling FVK's default_address(), because
+        // default_address() returns the *first valid* diversifier index by
+        // searching forward from 0. For Sapling roughly half of all indices are
+        // invalid, and the unified address is dominated by the Orchard receiver,
+        // so default_address() frequently returns a non-zero value (e.g. 3 or 7).
+        // That made imported mnemonics show a receive address at
+        // m/44'/133'/aindex'/0/3 instead of .../0/0.
+        //
+        // Transparent and Orchard addresses are valid at every index, so they
+        // always use diversifier index 0. The shared account diversifier index
+        // (stored via update_dindex and used by get_addresses for all pools) is
+        // therefore 0 in the normal case. Sapling is the only pool that can have
+        // an invalid diversifier at index 0; only in that (rare) case do we fall
+        // back to the smallest valid Sapling index so we can still store a valid
+        // Sapling address. We prefer 0 whenever it is valid.
+        let dindex: u32 = if pools & 2 != 0 {
+            let sxvk = usk.sapling().to_diversifiable_full_viewing_key();
+            // find_address(0) returns the first valid index at or after 0,
+            // i.e. 0 itself whenever diversifier 0 is valid for this key.
+            match sxvk.find_address(0u32.into()) {
+                Some((di, _)) => {
+                    let di: u128 = di.into();
+                    di as u32
+                }
+                None => 0,
+            }
+        } else {
+            0
+        };
 
         if pools & 1 != 0 {
             init_account_transparent(&mut db_tx, account, birth).await?;
@@ -179,24 +212,28 @@ pub async fn new_account(
             store_account_transparent_sk(&mut db_tx, account, tsk).await?;
             let tvk = &tsk.to_account_pubkey();
             store_account_transparent_vk(&mut db_tx, account, tvk).await?;
-            for di in &[0, dindex] {
-                let sk = derive_transparent_sk(tsk, 0, *di)?;
-                let (pk, taddr) = derive_transparent_address(tvk, 0, *di, false)?;
+            // Transparent addresses are valid at every index; the receive
+            // address is at index 0. We also store the address at `dindex`
+            // (the shared account diversifier) so the unified receive address
+            // is consistent across pools when Sapling forced a non-zero index.
+            let mut tindices = vec![0u32];
+            if dindex != 0 {
+                tindices.push(dindex);
+            }
+            for di in tindices {
+                let sk = derive_transparent_sk(tsk, 0, di)?;
+                let (pk, taddr) = derive_transparent_address(tvk, 0, di, false)?;
                 store_account_transparent_addr(
                     &mut db_tx,
                     account,
                     0,
-                    *di,
+                    di,
                     Some(sk),
                     &pk,
                     &taddr.encode(&network),
                     false,
                 )
                 .await?;
-                // do not create two taddrs if dindex == 0
-                if dindex == 0 {
-                    break;
-                }
             }
         }
 

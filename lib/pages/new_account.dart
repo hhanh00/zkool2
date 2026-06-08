@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -328,6 +330,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         String message = "Please wait while we create the account";
         if (ledger) message += "\nConfirm on your Ledger device";
         dialog = await showMessage(context, message, dismissable: false);
+
+        // Account creation is a purely local DB operation and returns quickly.
         final account = await newAccount(
           na: NewAccount(
             icon: icon,
@@ -343,21 +347,37 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             internal: false,
             ledger: ledger,
           ),
-          c: c
+          c: c,
         );
+
+        // Always dismiss the "Please wait" modal as soon as the (local) account
+        // is created, BEFORE any network call, so it can never hang on-screen.
         dialog.dismiss();
         dialog = null;
+
         final settings = ref.read(appSettingsProvider).requireValue;
-        try {
-          // ignore errors since it's just caching
-          if (!settings.offline) await cacheBlockTime(height: bh, c: c);
-        } on AnyhowException catch (_) {}
+        // Block-time caching is best-effort and must not block the UI: fire it
+        // off without awaiting and guard it with a timeout so a slow/unreachable
+        // server can't stall account creation.
+        if (!settings.offline) {
+          unawaited(() async {
+            try {
+              await cacheBlockTime(height: bh, c: c).timeout(const Duration(seconds: 15));
+            } catch (_) {
+              // ignore - just caching
+            }
+          }());
+        }
 
         await coinContext.setAccount(account: account);
         c = coinContext.coin;
 
+        // showTransparentScan pops the route itself via its onDismissCallback,
+        // so we must NOT pop again at the end when it runs.
+        var navigationHandled = false;
         if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
           await showTransparentScan(ref, context);
+          navigationHandled = true;
         }
 
         final seed = await getAccountSeed(account: account, c: c);
@@ -374,9 +394,11 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           await showSeed(context, seed.mnemonic);
         }
         ref.invalidate(getAccountsProvider);
-        if (mounted) GoRouter.of(context).pop();
+        if (mounted && !navigationHandled) GoRouter.of(context).pop();
       } on AnyhowException catch (e) {
         await showException(context, e.message);
+      } finally {
+        // Safety net: never leave the modal up if anything threw before dismiss.
         dialog?.dismiss();
       }
     }

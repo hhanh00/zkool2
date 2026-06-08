@@ -1,0 +1,4 @@
+node_modules/
+dist/
+servers.json
+package-lock.json

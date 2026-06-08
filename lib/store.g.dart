@@ -142,7 +142,7 @@ final class SyncStateAccountProvider
   }
 }
 
-String _$syncStateAccountHash() => r'cb3d58d81b59192492c0aab60de138055b823f7f';
+String _$syncStateAccountHash() => r'077b360e89d4d12d651500afbadefd05afb6a728';
 
 final class SyncStateAccountFamily extends $Family
     with
@@ -505,7 +505,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'9680d5ab393488ae6266d2acf0812dd6d51f2078';
+    r'0efa8e688abeeb38c49b6c9bc68eb8fe9f55d0db';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -555,7 +555,7 @@ final class PriceNotifierProvider
   }
 }
 
-String _$priceNotifierHash() => r'9c6f7b369e9fef6348fa6fdda446294b8c8dac98';
+String _$priceNotifierHash() => r'e8fd9665432916241c2bf8a7c98fc810d9c20867';
 
 abstract class _$PriceNotifier extends $Notifier<double?> {
   double? build();

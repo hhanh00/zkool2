@@ -45,6 +45,49 @@ final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP 
 
 final int zatsPerZec = 100000000;
 
+/// Fiat (and BTC) currencies offered for CoinGecko price conversion.
+/// These are passed verbatim as the `vs_currency` / `vs_currencies` value to
+/// the CoinGecko API (it expects lower-case codes).
+const List<String> fxCurrencies = [
+  "btc",
+  "usd",
+  "cny",
+  "eur",
+  "jpy",
+  "gbp",
+  "inr",
+  "rub",
+  "brl",
+  "cad",
+  "aud",
+  "mxn",
+  "krw",
+  "try",
+  "vnd",
+];
+
+const Map<String, String> _fxSymbols = {
+  "btc": "₿",
+  "usd": "\$",
+  "cny": "¥",
+  "eur": "€",
+  "jpy": "¥",
+  "gbp": "£",
+  "inr": "₹",
+  "rub": "₽",
+  "brl": "R\$",
+  "cad": "C\$",
+  "aud": "A\$",
+  "mxn": "MX\$",
+  "krw": "₩",
+  "try": "₺",
+  "vnd": "₫",
+};
+
+/// Symbol to show alongside a fiat amount; falls back to the upper-case code.
+String fxSymbol(String currency) =>
+    _fxSymbols[currency.toLowerCase()] ?? "${currency.toUpperCase()} ";
+
 String doubleToString(double v, {required int decimals}) {
   final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: decimals);
   return formatter.format(v);
@@ -178,10 +221,57 @@ Uint8List stringToTxId(String txid) {
   return Uint8List.fromList(bytes.reversed.toList());
 }
 
+/// True when running as the portable build (executable named `zkool_portable`).
+/// In portable mode all data lives in a `./db` directory next to the exe.
+bool get isPortable {
+  final exe = Platform.resolvedExecutable;
+  final base = exe.split(Platform.pathSeparator).last.toLowerCase();
+  return base.startsWith('zkool_portable');
+}
+
+/// Single source of truth for where the app stores its data.
+/// Portable build -> `<exe dir>/db`; otherwise the OS documents directory.
+Future<Directory> getDataDirectory() async {
+  if (isPortable) {
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    final dir = Directory('$exeDir${Platform.pathSeparator}db');
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir;
+  }
+  return getApplicationDocumentsDirectory();
+}
+
+/// Joins [dir] and [name] using the platform separator and normalizes any
+/// mixed slashes so Windows paths render consistently (e.g.
+/// `C:\Users\User\Documents\zkool.db` instead of `...Documents/zkool.db`).
+String joinPath(String dir, String name) {
+  final sep = Platform.pathSeparator;
+  var path = '$dir$sep$name';
+  if (Platform.isWindows) path = path.replaceAll('/', sep);
+  return path;
+}
+
 Future<String> getFullDatabasePath(String dbName) async {
-  final dbDir = await getApplicationDocumentsDirectory();
-  final dbFilepath = '${dbDir.path}/$dbName.db';
-  return dbFilepath;
+  final dbDir = await getDataDirectory();
+  return joinPath(dbDir.path, '$dbName.db');
+}
+
+/// Loads the bundled list of lightwallet servers (servers/servers.json) and
+/// returns the URLs of the first [count] entries as-is (no re-sort/filter).
+/// Bundled into the app via pubspec `assets`, so it works in the packaged exe.
+Future<List<String>> loadTopServers({int count = 10}) async {
+  try {
+    final raw = await rootBundle.loadString('servers/servers.json');
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final servers = (data['servers'] as List<dynamic>? ?? <dynamic>[]);
+    return servers
+        .take(count)
+        .map((s) => (s as Map<String, dynamic>)['url'] as String?)
+        .whereType<String>()
+        .toList();
+  } catch (_) {
+    return <String>[];
+  }
 }
 
 Future<AwesomeDialog> showMessage(BuildContext context, String message, {String? title, bool dismissable = true}) async {

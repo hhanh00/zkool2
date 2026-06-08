@@ -214,9 +214,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           }
 
           final b = account.balance.field0;
+          final fxCurrency = ref.watch(appSettingsProvider).value?.fxCurrency ?? "usd";
           final fiat = fullData.price?.let((p) {
             final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
-            return "\$ ${fiatFormatter.format(f)}";
+            return "${fxSymbol(fxCurrency)}${fiatFormatter.format(f)}";
           });
 
           final t = Theme.of(context);
@@ -379,7 +380,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
     if (confirmed) {
       try {
-        await fillMissingTxPrices(c: c, api: settings.coingecko);
+        await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.fxCurrency);
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
       }

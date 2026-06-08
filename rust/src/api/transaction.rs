@@ -5,9 +5,9 @@ use crate::api::coin::Coin;
 use flutter_rust_bridge::frb;
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fill_missing_tx_prices(api: String, c: &Coin) -> Result<()> {
+pub async fn fill_missing_tx_prices(api: String, currency: String, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::budget::fill_missing_tx_prices(&mut connection, c.account, &api).await?;
+    crate::budget::fill_missing_tx_prices(&mut connection, c.account, &api, &currency).await?;
     Ok(())
 }
 

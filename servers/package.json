@@ -1,0 +1,17 @@
+{
+  "name": "zcash-lightwallet-sync",
+  "version": "1.0.0",
+  "description": "Fetch the latest Zcash light wallet servers from hosh.zec.rocks and save them as a JSON list.",
+  "type": "module",
+  "scripts": {
+    "sync": "tsx sync.ts",
+    "build": "tsc",
+    "start": "node dist/sync.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.0"
+  }
+}

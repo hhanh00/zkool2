@@ -1168,6 +1168,39 @@ fn wire__crate__api__coin__coin_set_lwd_impl(
         },
     )
 }
+fn wire__crate__api__coin__coin_set_proxy_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "coin_set_proxy",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_proxy = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                (move || {
+                    let output_ok = crate::api::coin::Coin::set_proxy(api_that, api_proxy)?;
+                    Ok(output_ok)
+                })(),
+            )
+        },
+    )
+}
 fn wire__crate__api__coin__coin_set_use_tor_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1877,13 +1910,14 @@ fn wire__crate__api__transaction__fill_missing_tx_prices_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_api = <String>::sse_decode(&mut deserializer);
+            let api_currency = <String>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok =
-                            crate::api::transaction::fill_missing_tx_prices(api_api, &api_c)
+                            crate::api::transaction::fill_missing_tx_prices(api_api, api_currency, &api_c)
                                 .await?;
                         Ok(output_ok)
                     })()
@@ -2326,11 +2360,12 @@ fn wire__crate__api__network__get_coingecko_price_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_api = <String>::sse_decode(&mut deserializer);
+            let api_currency = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::network::get_coingecko_price(&api_api).await?;
+                        let output_ok = crate::api::network::get_coingecko_price(&api_api, &api_currency).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5582,6 +5617,7 @@ impl SseDecode for crate::api::coin::Coin {
         let mut var_url = <String>::sse_decode(deserializer);
         let mut var_serverType = <u8>::sse_decode(deserializer);
         let mut var_useTor = <bool>::sse_decode(deserializer);
+        let mut var_proxy = <String>::sse_decode(deserializer);
         return crate::api::coin::Coin {
             coin: var_coin,
             account: var_account,
@@ -5589,6 +5625,7 @@ impl SseDecode for crate::api::coin::Coin {
             url: var_url,
             server_type: var_serverType,
             use_tor: var_useTor,
+            proxy: var_proxy,
         };
     }
 }
@@ -7053,6 +7090,7 @@ fn pde_ffi_dispatcher_sync_impl(
         8 => wire__crate__api__mempool__Mempool_new_impl(ptr, rust_vec_len, data_len),
         21 => wire__crate__api__coin__coin_new_impl(ptr, rust_vec_len, data_len),
         24 => wire__crate__api__coin__coin_set_lwd_impl(ptr, rust_vec_len, data_len),
+        133 => wire__crate__api__coin__coin_set_proxy_impl(ptr, rust_vec_len, data_len),
         47 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
         60 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
         64 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
@@ -7237,6 +7275,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::coin::Coin {
             self.url.into_into_dart().into_dart(),
             self.server_type.into_into_dart().into_dart(),
             self.use_tor.into_into_dart().into_dart(),
+            self.proxy.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8244,6 +8283,7 @@ impl SseEncode for crate::api::coin::Coin {
         <String>::sse_encode(self.url, serializer);
         <u8>::sse_encode(self.server_type, serializer);
         <bool>::sse_encode(self.use_tor, serializer);
+        <String>::sse_encode(self.proxy, serializer);
     }
 }
 

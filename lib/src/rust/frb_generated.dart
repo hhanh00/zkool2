@@ -188,6 +188,8 @@ abstract class RustLibApi extends BaseApi {
   Coin crateApiCoinCoinSetLwd(
       {required Coin that, required int serverType, required String url});
 
+  Coin crateApiCoinCoinSetProxy({required Coin that, required String proxy});
+
   Future<Coin> crateApiCoinCoinSetUseTor(
       {required Coin that, required bool useTor});
 
@@ -238,7 +240,7 @@ abstract class RustLibApi extends BaseApi {
       {required int account, required Coin c});
 
   Future<void> crateApiTransactionFillMissingTxPrices(
-      {required String api, required Coin c});
+      {required String api, required String currency, required Coin c});
 
   Future<FrostSignParams> crateApiFrostFrostSignParamsDefault();
 
@@ -268,7 +270,8 @@ abstract class RustLibApi extends BaseApi {
   Future<Addresses> crateApiAccountGetAddresses(
       {required int uaPools, required Coin c});
 
-  Future<double> crateApiNetworkGetCoingeckoPrice({required String api});
+  Future<double> crateApiNetworkGetCoingeckoPrice(
+      {required String api, required String currency});
 
   Future<int> crateApiNetworkGetCurrentHeight({required Coin c});
 
@@ -1265,6 +1268,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Coin crateApiCoinCoinSetProxy({required Coin that, required String proxy}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_coin(that, serializer);
+          sse_encode_String(proxy, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 133)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_coin,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiCoinCoinSetProxyConstMeta,
+        argValues: [that, proxy],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCoinCoinSetProxyConstMeta => const TaskConstMeta(
+        debugName: "coin_set_proxy",
+        argNames: ["that", "proxy"],
+      );
+
+  @override
   Future<Coin> crateApiCoinCoinSetUseTor(
       {required Coin that, required bool useTor}) {
     return handler.executeNormal(
@@ -1781,12 +1811,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<void> crateApiTransactionFillMissingTxPrices(
-      {required String api, required Coin c}) {
+      {required String api, required String currency, required Coin c}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(api, serializer);
+          sse_encode_String(currency, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 43, port: port_);
@@ -1796,7 +1827,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiTransactionFillMissingTxPricesConstMeta,
-        argValues: [api, c],
+        argValues: [api, currency, c],
         apiImpl: this,
       ),
     );
@@ -1805,7 +1836,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiTransactionFillMissingTxPricesConstMeta =>
       const TaskConstMeta(
         debugName: "fill_missing_tx_prices",
-        argNames: ["api", "c"],
+        argNames: ["api", "currency", "c"],
       );
 
   @override
@@ -2116,12 +2147,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<double> crateApiNetworkGetCoingeckoPrice({required String api}) {
+  Future<double> crateApiNetworkGetCoingeckoPrice(
+      {required String api, required String currency}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(api, serializer);
+          sse_encode_String(currency, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 55, port: port_);
         },
@@ -2130,7 +2163,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiNetworkGetCoingeckoPriceConstMeta,
-        argValues: [api],
+        argValues: [api, currency],
         apiImpl: this,
       ),
     );
@@ -2139,7 +2172,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiNetworkGetCoingeckoPriceConstMeta =>
       const TaskConstMeta(
         debugName: "get_coingecko_price",
-        argNames: ["api"],
+        argNames: ["api", "currency"],
       );
 
   @override
@@ -4795,8 +4828,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Coin dco_decode_coin(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return Coin.raw(
       coin: dco_decode_u_8(arr[0]),
       account: dco_decode_u_32(arr[1]),
@@ -4804,6 +4837,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       url: dco_decode_String(arr[3]),
       serverType: dco_decode_u_8(arr[4]),
       useTor: dco_decode_bool(arr[5]),
+      proxy: dco_decode_String(arr[6]),
     );
   }
 
@@ -6079,13 +6113,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_url = sse_decode_String(deserializer);
     var var_serverType = sse_decode_u_8(deserializer);
     var var_useTor = sse_decode_bool(deserializer);
+    var var_proxy = sse_decode_String(deserializer);
     return Coin.raw(
         coin: var_coin,
         account: var_account,
         dbFilepath: var_dbFilepath,
         url: var_url,
         serverType: var_serverType,
-        useTor: var_useTor);
+        useTor: var_useTor,
+        proxy: var_proxy);
   }
 
   @protected
@@ -7602,6 +7638,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.url, serializer);
     sse_encode_u_8(self.serverType, serializer);
     sse_encode_bool(self.useTor, serializer);
+    sse_encode_String(self.proxy, serializer);
   }
 
   @protected

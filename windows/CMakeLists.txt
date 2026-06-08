@@ -75,6 +75,19 @@ set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
+# Also ship a "portable" copy of the executable next to the normal one. The app
+# detects the portable variant purely by the executable's file name (see
+# `isPortable` in lib/utils.dart) and, when launched as zkool_portable.exe,
+# stores its database and settings in a local ./db directory beside the exe
+# instead of the user's Documents folder. The binary is byte-for-byte identical;
+# only the name differs, so a plain copy is sufficient.
+install(CODE "
+  execute_process(COMMAND \"${CMAKE_COMMAND}\" -E copy_if_different
+    \"${CMAKE_INSTALL_PREFIX}/${BINARY_NAME}.exe\"
+    \"${CMAKE_INSTALL_PREFIX}/${BINARY_NAME}_portable.exe\")
+  message(STATUS \"Created portable copy: ${BINARY_NAME}_portable.exe\")
+  " COMPONENT Runtime)
+
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 

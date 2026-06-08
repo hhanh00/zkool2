@@ -38,8 +38,11 @@ class InputAmountState extends ConsumerState<InputAmount> {
 
   @override
   Widget build(BuildContext context) {
-    final coingecko = ref.watch(appSettingsProvider).whenData((s) => s.coingecko);
-    if (coingecko.value == null) return blank(context);
+    final settingsAV = ref.watch(appSettingsProvider);
+    if (settingsAV.value == null) return blank(context);
+    final coingecko = settingsAV.requireValue.coingecko;
+    final fxCurrency = settingsAV.requireValue.fxCurrency;
+    final fxLabel = fxCurrency.toUpperCase();
 
     final price = ref.watch(priceProvider);
     return FormBuilderField<String>(
@@ -81,7 +84,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                     Expanded(
                       child: FormBuilderTextField(
                         name: "fiat",
-                        decoration: InputDecoration(label: Text("Amount in USD")),
+                        decoration: InputDecoration(label: Text("Amount in $fxLabel")),
                         validator: validAmount,
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
                         onChanged: (v) => onFiatChanged(v, interactive: true),
@@ -101,13 +104,13 @@ class InputAmountState extends ConsumerState<InputAmount> {
                     ),
                     Gap(8),
                     IconButton(
-                      onPressed: () => onUpdateFx(coingecko.requireValue),
+                      onPressed: () => onUpdateFx(coingecko, fxCurrency),
                       icon: Icon(Icons.refresh),
                     ),
                   ],
                 ),
               Gap(16),
-              if (widget.showFx) Text("The Amount in USD is indicative. The transaction is always made in crypto."),
+              if (widget.showFx) Text("The Amount in $fxLabel is indicative. The transaction is always made in crypto."),
             ],
           ),
         );
@@ -115,8 +118,8 @@ class InputAmountState extends ConsumerState<InputAmount> {
     );
   }
 
-  void onUpdateFx(String coingecko) async {
-    final p = await getCoingeckoPrice(api: coingecko);
+  void onUpdateFx(String coingecko, String currency) async {
+    final p = await getCoingeckoPrice(api: coingecko, currency: currency);
     setState(() {
       final price = ref.read(priceProvider.notifier);
       price.setPrice(p);

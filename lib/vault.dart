@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
-import 'package:path_provider/path_provider.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/vault.dart' as rust;
+import 'package:zkool/utils.dart';
 export 'package:zkool/src/rust/api/vault.dart' show RestoredAccount;
 
 enum VaultFile { masterPart, devicePart }
@@ -325,12 +325,12 @@ class Vault {
   }
 
   Future<File> get _localFile async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/${_fileName(VaultFile.devicePart)}');
+    final dir = await getDataDirectory();
+    return File(joinPath(dir.path, _fileName(VaultFile.devicePart)));
   }
 
   Future<File> get _localMasterFile async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/${_fileName(VaultFile.masterPart)}');
+    final dir = await getDataDirectory();
+    return File(joinPath(dir.path, _fileName(VaultFile.masterPart)));
   }
 }

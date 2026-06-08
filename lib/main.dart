@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:toastification/toastification.dart';
@@ -21,7 +20,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await RustLib.init();
-  final dataDir = await getApplicationDocumentsDirectory();
+  final dataDir = await getDataDirectory();
   await initDatadir(directory: dataDir.path);
   final prefs = SharedPreferencesAsync();
   final recovery = await prefs.getBool("recovery") ?? false;

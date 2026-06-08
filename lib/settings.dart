@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_passkey_service/pigeons/messages.g.dart' show PasskeyException;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
@@ -81,8 +84,10 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await putProp(key: "proxy", value: settings.proxy, c: c);
         await prefs.setBool("get_fx", settings.getFx);
         await prefs.setString("coingecko", settings.coingecko);
+        await prefs.setString("fx_currency", settings.fxCurrency);
         await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
         await putProp(key: "qr_size", value: settings.qrSettings.size.toString(), c: c);
         await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString(), c: c);
@@ -90,10 +95,11 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
+        c = c.setProxy(proxy: settings.proxy);
         await prefs.setBool("vault", settings.vault);
         await prefs.setBool("expert_mode", settings.expertMode);
         coinContext.set(coin: c);
-        ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
+        ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko, settings.fxCurrency);
         ref.invalidate(appSettingsProvider);
       },
     );
@@ -114,12 +120,16 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   String dbFullPath = "";
   String versionString = "";
+  List<String> topServers = [];
+  bool forceCustomServer = false;
+  static const String customServer = "__custom__";
 
   @override
   void initState() {
     super.initState();
     Future(() async {
       dbFullPath = await getFullDatabasePath(settings.dbName);
+      topServers = await loadTopServers();
       final packageInfo = await PackageInfo.fromPlatform();
       final version = packageInfo.version;
       final buildNumber = packageInfo.buildNumber;
@@ -127,6 +137,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       setState(() {});
     });
   }
+
+  // Whether to show the free-form LWD URL field: when the user explicitly chose
+  // "Custom…", or the current server isn't one of the bundled top servers.
+  bool get showCustomServerField => forceCustomServer || !topServers.contains(settings.lwd);
 
   void tutorial() async {
     tutorialHelper(context, "tutSettings0",
@@ -188,27 +202,80 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     onChanged: onChangedIsLightNode,
                   ),
                 ),
-                Showcase(
-                  key: lwdID,
-                  description: "Node server to connect to",
-                  child: FormBuilderTextField(
-                    name: "lwd",
-                    decoration: InputDecoration(labelText: "${settings.isLightNode ? 'Light' : 'Full'} Node Server"),
-                    initialValue: settings.lwd,
-                    onChanged: onChangedLWD,
+                if (settings.isLightNode && topServers.isNotEmpty)
+                  Row(
+                    children: [
+                      const Expanded(child: Text("Light Node Server")),
+                      SizedBox(
+                        width: 180,
+                        child: FormBuilderDropdown<String>(
+                          name: "server",
+                          isDense: true,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            border: OutlineInputBorder(),
+                          ),
+                          initialValue: topServers.contains(settings.lwd) ? settings.lwd : customServer,
+                          items: [
+                            ...topServers.map((s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s, overflow: TextOverflow.ellipsis, maxLines: 1),
+                                )),
+                            const DropdownMenuItem(value: customServer, child: Text("Custom…")),
+                          ],
+                          onChanged: onChangedServer,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                if (settings.isLightNode)
+                if (!settings.isLightNode || showCustomServerField)
                   Showcase(
-                    key: torID,
-                    description: "Use TOR to connect to lightwallet server. Need App Restart",
-                    child: FormBuilderSwitch(
-                      name: "tor",
-                      title: Text("Use TOR"),
-                      initialValue: settings.useTor,
-                      onChanged: onChangedUseTOR,
+                    key: lwdID,
+                    description: "Node server to connect to",
+                    child: FormBuilderTextField(
+                      name: "lwd",
+                      decoration: InputDecoration(labelText: "${settings.isLightNode ? 'Light' : 'Full'} Node Server"),
+                      initialValue: settings.lwd,
+                      onChanged: onChangedLWD,
                     ),
                   ),
+                Showcase(
+                  key: torID,
+                  description: "Route every server connection through a proxy. "
+                      "Supports socks5://, socks5h://, http:// and https://. "
+                      "Tap the Tor button to use a local Tor SOCKS5 proxy. Leave empty for a direct connection. Needs App Restart",
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: FormBuilderTextField(
+                          name: "proxy",
+                          decoration: InputDecoration(
+                            labelText: "HTTP / SOCKS5 Proxy",
+                            hintText: torProxyUrl,
+                          ),
+                          initialValue: settings.proxy,
+                          onChanged: onChangedProxy,
+                        ),
+                      ),
+                      const Gap(8),
+                      IconButton.outlined(
+                        tooltip: "Use Tor (prefill $torProxyUrl)",
+                        onPressed: onEnableTor,
+                        icon: SvgPicture.asset(
+                          "assets/tor.svg",
+                          width: 22,
+                          height: 22,
+                          colorFilter: ColorFilter.mode(
+                            Theme.of(context).colorScheme.primary,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Showcase(
                   key: actionsID,
                   description: "Number actions per synchronization chunk",
@@ -264,6 +331,28 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   key: fxID,
                   description: "Toggle auto update of market price",
                   child: FormBuilderSwitch(name: "fx", title: Text("Auto Fetch Market Price"), initialValue: settings.getFx, onChanged: onGetFxChanged),
+                ),
+                Gap(8),
+                Row(
+                  children: [
+                    const Expanded(child: Text("Market Price Currency")),
+                    SizedBox(
+                      width: 120,
+                      child: FormBuilderDropdown<String>(
+                        name: "fx_currency",
+                        isDense: true,
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          border: OutlineInputBorder(),
+                        ),
+                        initialValue: fxCurrencies.contains(settings.fxCurrency) ? settings.fxCurrency : "usd",
+                        items: fxCurrencies
+                            .map((c) => DropdownMenuItem(value: c, child: Text(c.toUpperCase())))
+                            .toList(),
+                        onChanged: onChangedFxCurrency,
+                      ),
+                    ),
+                  ],
                 ),
                 Gap(8),
                 Showcase(
@@ -372,6 +461,22 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
+  void onChangedServer(String? value) async {
+    if (value == null) return;
+    if (value == customServer) {
+      // Reveal the free-form URL field; keep the current lwd so it stays
+      // editable.
+      setState(() => forceCustomServer = true);
+      return;
+    }
+    // A bundled server was selected: use it as the active LWD URL.
+    setState(() {
+      forceCustomServer = false;
+      settings = settings.copyWith(lwd: value);
+      widget.onChanged(settings);
+    });
+  }
+
   void onChangedCoingecko(String? value) async {
     if (value == null) return;
     setState(() {
@@ -396,10 +501,28 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  onChangedUseTOR(bool? value) async {
+  void onChangedProxy(String? value) async {
     if (value == null) return;
     setState(() {
-      settings = settings.copyWith(useTor: value);
+      settings = settings.copyWith(proxy: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  // On Windows the common Tor setup is the Tor Browser bundle, whose SOCKS
+  // proxy listens on 9150. Elsewhere the standalone tor daemon defaults to 9050.
+  //
+  // We use the socks5h:// scheme (not socks5://) so DNS resolution happens at
+  // the proxy. This is required for .onion server addresses to resolve and also
+  // prevents DNS leaks when routing over Tor.
+  static String get torProxyUrl =>
+      Platform.isWindows ? "socks5h://127.0.0.1:9150" : "socks5h://127.0.0.1:9050";
+
+  void onEnableTor() async {
+    final url = torProxyUrl;
+    formKey.currentState?.fields["proxy"]?.didChange(url);
+    setState(() {
+      settings = settings.copyWith(proxy: url);
       widget.onChanged(settings);
     });
   }
@@ -433,6 +556,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (value == null) return;
     setState(() {
       settings = settings.copyWith(getFx: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  void onChangedFxCurrency(String? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(fxCurrency: value);
       widget.onChanged(settings);
     });
   }

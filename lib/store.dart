@@ -84,12 +84,18 @@ class SyncStateAccount extends _$SyncStateAccount {
     final account = accounts.firstWhere((a) => a.id == accountId);
     final ss = ref.watch(synchronizerProvider);
     if (ss.accounts.any((a) => a.id == account.id)) {
+      // Account is part of the active sync: drive the displayed height from the
+      // live synchronizer progress (ss.height) so the card climbs toward the
+      // chain tip in real time, instead of staying frozen at account.height
+      // (which is only refreshed from the DB after the whole sync completes).
+      // Use the account's stored height as the sync start so the progress bar
+      // renders correctly.
       return SyncProgressAccount(
         account: account,
-        start: max(ss.start, account.height),
+        start: account.height,
         end: ss.end,
         height: max(ss.height, account.height),
-        time: max(ss.time, account.time),
+        time: ss.time != 0 ? ss.time : account.time,
       );
     } else {
       return SyncProgressAccount(
@@ -327,13 +333,15 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
-    final getFx = await prefs.getBool("get_fx") ?? false;
+    final proxy = (hasDb ? await getProp(key: "proxy", c: c) : null) ?? "";
+    final getFx = await prefs.getBool("get_fx") ?? true;
     final coingecko = await prefs.getString("coingecko") ?? "";
+    final fxCurrency = await prefs.getString("fx_currency") ?? "usd";
     final recovery = await prefs.getBool("recovery") ?? false;
     final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
     final isLightNode = (hasDb ? await getProp(key: "is_light_node", c: c) : null) ?? "true";
     final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? "https://zec.rocks";
-    final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
+    final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "1";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
@@ -349,7 +357,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       repair: int.parse(qrRepair),
     );
     final price = ref.watch(priceProvider.notifier);
-    price.setAutoFetchFx(getFx, coingecko);
+    price.setAutoFetchFx(getFx, coingecko, fxCurrency);
     final vault = await prefs.getBool("vault") ?? false;
     final expertMode = await prefs.getBool("expert_mode") ?? false;
 
@@ -362,8 +370,10 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       pinUnlockedAt: DateTime.now(),
       offline: offline,
       useTor: useTor,
+      proxy: proxy,
       getFx: getFx,
       coingecko: coingecko,
+      fxCurrency: fxCurrency,
       recovery: recovery,
       syncInterval: syncInterval,
       actionsPerSync: actionsPerSync,
@@ -391,21 +401,20 @@ class PriceNotifier extends _$PriceNotifier {
   }
 
   Timer? fetchFxTimer;
-  void setAutoFetchFx(bool autoGetFx, String api) async {
+  void setAutoFetchFx(bool autoGetFx, String api, [String currency = "usd"]) async {
+    fetchFxTimer?.cancel();
+    fetchFxTimer = null;
     if (autoGetFx) {
-      await fetch(api);
+      await fetch(api, currency);
       fetchFxTimer = Timer.periodic(Duration(minutes: 1), (_) async {
-        await fetch(api);
+        await fetch(api, currency);
       });
-    } else {
-      fetchFxTimer?.cancel();
-      fetchFxTimer = null;
     }
   }
 
-  Future<double?> fetch(String api) async {
+  Future<double?> fetch(String api, [String currency = "usd"]) async {
     try {
-      final p = await getCoingeckoPrice(api: api);
+      final p = await getCoingeckoPrice(api: api, currency: currency);
       setPrice(p);
       return p;
     } catch (_) {
@@ -425,12 +434,14 @@ sealed class AppSettings with _$AppSettings {
     required String syncInterval, // in blocks
     required String actionsPerSync,
     required bool useTor,
+    required String proxy,
     required String coingecko,
     required bool recovery,
     required bool needPin,
     required DateTime pinUnlockedAt,
     required bool offline,
     required bool getFx,
+    required String fxCurrency,
     required QRSettings qrSettings,
     required bool vault,
     required bool expertMode,
