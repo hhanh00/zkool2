@@ -1,4 +1,5 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_passkey_service/pigeons/messages.g.dart' show PasskeyException;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -91,6 +92,8 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         c = await c.setUseTor(useTor: settings.useTor);
         await prefs.setBool("vault", settings.vault);
         await prefs.setBool("expert_mode", settings.expertMode);
+        await prefs.setString("palette_name", settings.paletteName);
+        await prefs.setBool("dark_mode", settings.darkMode);
         coinContext.set(coin: c);
         ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
         ref.invalidate(appSettingsProvider);
@@ -310,6 +313,38 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right),),),
                   ]),
                 Gap(16),
+                Divider(),
+                Gap(8),
+                Text("Theme", style: t.titleMedium),
+                Gap(8),
+                FormBuilderSwitch(
+                  name: "dark_mode",
+                  title: Text("Dark Mode"),
+                  initialValue: settings.darkMode,
+                  onChanged: onDarkModeChanged,
+                ),
+                Gap(8),
+                Text("Color Scheme", style: t.bodyLarge),
+                Gap(4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: FlexScheme.values.map((s) {
+                    final cs = FlexColorScheme.light(scheme: s).colorScheme!;
+                    final selected = settings.paletteName == s.name;
+                    return ElevatedButton(
+                      onPressed: () => onSchemeChanged(s.name),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: selected ? Colors.white : cs.onPrimary,
+                        backgroundColor: cs.primary,
+                        side: selected ? BorderSide(color: cs.onPrimary, width: 2) : null,
+                        elevation: selected ? 4 : 0,
+                      ),
+                      child: Text(s.name),
+                    );
+                  }).toList(),
+                ),
+                Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),
                 GestureDetector(
@@ -396,6 +431,21 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     if (value == null) return;
     setState(() {
       settings = settings.copyWith(useTor: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  onDarkModeChanged(bool? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(darkMode: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  onSchemeChanged(String name) {
+    setState(() {
+      settings = settings.copyWith(paletteName: name);
       widget.onChanged(settings);
     });
   }
