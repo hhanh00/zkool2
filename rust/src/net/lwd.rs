@@ -200,7 +200,8 @@ pub async fn query_lwd_list() -> Result<Vec<LWDInfo>> {
     for item in servers {
         let hostname = item["hostname"].as_str().unwrap_or_default();
         let port = item["port"].as_u64().unwrap_or(9067);
-        let url = format!("{}:{}", hostname, port);
+        let scheme = if hostname.ends_with(".onion") { "http" } else { "https" };
+        let url = format!("{}://{}:{}", scheme, hostname, port);
         let is_tor = hostname.ends_with(".onion");
         let height = item["height"].as_u64().unwrap_or(0) as u32;
         let status = if item["online"].as_bool().unwrap_or(false) {
