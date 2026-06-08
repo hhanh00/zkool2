@@ -64,4 +64,4 @@ jobs:
 
           echo "Release body lines: $(wc -l < /tmp/release-body.md)"
 
-          gh release edit "$TAG" --notes-file /tmp/release-body.md
+          gh release edit "$TAG" --notes-file /tmp/release-body.md --prerelease
