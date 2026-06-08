@@ -133,15 +133,20 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
               });
               return Material(
                 key: ValueKey(account.id),
-                child: GestureDetector(
-                  child: AccountCard(
-                    leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
-                    name: account.name,
-                    balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
-                    fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
-                    height: SmallProgressWidget(account, style: tt.labelSmall),
-                  ),
-                  onTap: () => onOpen(context, account),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      child: AccountCard(
+                        leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                        name: account.name,
+                        balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
+                        fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
+                        height: SmallProgressWidget(account, style: tt.labelSmall),
+                      ),
+                      onTap: () => onOpen(context, account),
+                    ),
+                    const Divider(height: 1, indent: 72),
+                  ],
                 ),
               );
             },
