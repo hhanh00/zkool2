@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.0) (2026-06-09)
+
+
+### Features
+
+* add multi-currency support ([#1030](https://github.com/hhanh00/zkool2/issues/1030)) ([f119172](https://github.com/hhanh00/zkool2/commit/f119172f4e64facf14460674e895a31044771c1a))
+
 ## [6.17.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.4...zkool-v6.17.7) (2026-06-09)
 
 
