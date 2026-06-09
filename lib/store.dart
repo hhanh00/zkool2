@@ -383,6 +383,16 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
           pinUnlockedAt: DateTime.now(),
         ));
   }
+
+  Future<void> setTheme(String paletteName, bool darkMode) async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setString("palette_name", paletteName);
+    await prefs.setBool("dark_mode", darkMode);
+    state = state.whenData((s) => s.copyWith(
+          paletteName: paletteName,
+          darkMode: darkMode,
+        ));
+  }
 }
 
 @Riverpod(keepAlive: true)

@@ -940,8 +940,8 @@ class SettingsThemePage extends ConsumerStatefulWidget {
 }
 
 class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with RouteAware {
-  late String _paletteName;
-  late bool _darkMode;
+  String? _paletteName;
+  bool? _darkMode;
 
   @override
   void didChangeDependencies() {
@@ -955,7 +955,7 @@ class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with Rout
   @override
   void didPop() {
     super.didPop();
-    widget.onClose((_paletteName, _darkMode));
+    widget.onClose((_paletteName!, _darkMode!));
   }
 
   @override
@@ -968,8 +968,8 @@ class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with Rout
         loading: () => blank(context),
         error: (error, stack) => showError(error),
         data: (settings) {
-          _paletteName = settings.paletteName;
-          _darkMode = settings.darkMode;
+          _paletteName ??= settings.paletteName;
+          _darkMode ??= settings.darkMode;
           final scheme = FlexScheme.values.firstWhere(
             (s) => s.name == _paletteName,
             orElse: () => FlexScheme.blue,
@@ -985,9 +985,36 @@ class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with Rout
                   Gap(16),
                   SwitchListTile(
                     title: Text("Dark Mode"),
-                    value: _darkMode,
-                    onChanged: (v) => setState(() => _darkMode = v),
-                    secondary: Icon(_darkMode ? Icons.dark_mode : Icons.light_mode),
+                    value: _darkMode!,
+                    onChanged: (v) async {
+                      setState(() => _darkMode = v);
+                      await ref.read(appSettingsProvider.notifier).setTheme(_paletteName!, v);
+                    },
+                    secondary: Icon(_darkMode! ? Icons.dark_mode : Icons.light_mode),
+                  ),
+                  Gap(16),
+                  Text("Color Scheme", style: t.titleMedium),
+                  Gap(8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: FlexScheme.values.map((s) {
+                      final sc = FlexColorScheme.light(scheme: s).colorScheme!;
+                      final selected = _paletteName == s.name;
+                      return ElevatedButton(
+                        onPressed: () async {
+                          setState(() => _paletteName = s.name);
+                          await ref.read(appSettingsProvider.notifier).setTheme(s.name, _darkMode!);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: selected ? Colors.white : sc.onPrimary,
+                          backgroundColor: sc.primary,
+                          side: selected ? const BorderSide(color: Colors.white, width: 2) : null,
+                          elevation: selected ? 4 : 0,
+                        ),
+                        child: Text(s.name),
+                      );
+                    }).toList(),
                   ),
                   Gap(16),
                   Text("Color Scheme", style: t.titleMedium),
