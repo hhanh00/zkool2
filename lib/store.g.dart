@@ -505,7 +505,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'a5f94ec12952b3d679b1208165f7d559434d037d';
+    r'd1c42b6c957dc4f5fab50e908bbe919f7027525a';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -555,7 +555,7 @@ final class PriceNotifierProvider
   }
 }
 
-String _$priceNotifierHash() => r'9c6f7b369e9fef6348fa6fdda446294b8c8dac98';
+String _$priceNotifierHash() => r'eeefd55a0163e184ab50f6725b602c5e3b08043a';
 
 abstract class _$PriceNotifier extends $Notifier<double?> {
   double? build();
@@ -566,6 +566,50 @@ abstract class _$PriceNotifier extends $Notifier<double?> {
     final ref = this.ref as $Ref<double?, double?>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<double?, double?>, double?, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(SupportedCurrenciesNotifier)
+const supportedCurrenciesProvider = SupportedCurrenciesNotifierProvider._();
+
+final class SupportedCurrenciesNotifierProvider
+    extends $AsyncNotifierProvider<SupportedCurrenciesNotifier, List<String>> {
+  const SupportedCurrenciesNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'supportedCurrenciesProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$supportedCurrenciesNotifierHash();
+
+  @$internal
+  @override
+  SupportedCurrenciesNotifier create() => SupportedCurrenciesNotifier();
+}
+
+String _$supportedCurrenciesNotifierHash() =>
+    r'6f0ef88efa8e2e0b124b8880bea1e8620df43f27';
+
+abstract class _$SupportedCurrenciesNotifier
+    extends $AsyncNotifier<List<String>> {
+  FutureOr<List<String>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<List<String>>, List<String>>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<List<String>>, List<String>>,
+        AsyncValue<List<String>>,
+        Object?,
+        Object?>;
     element.handleValue(ref, created);
   }
 }

@@ -45,6 +45,13 @@ final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP 
 
 final int zatsPerZec = 100000000;
 
+/// Format a fiat amount with its currency code.
+/// Uses the locale-aware number formatter followed by the uppercased currency code.
+String formatFiat(double amount, String currency) {
+  final formatted = fiatFormatter.format(amount);
+  return '$formatted ${currency.toUpperCase()}';
+}
+
 String doubleToString(double v, {required int decimals}) {
   final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: decimals);
   return formatter.format(v);
