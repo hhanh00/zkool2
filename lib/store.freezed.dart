@@ -1345,6 +1345,7 @@ mixin _$AppSettings {
   bool get expertMode;
   String get paletteName;
   bool get darkMode;
+  String get currency;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -1388,7 +1389,9 @@ mixin _$AppSettings {
             (identical(other.paletteName, paletteName) ||
                 other.paletteName == paletteName) &&
             (identical(other.darkMode, darkMode) ||
-                other.darkMode == darkMode));
+                other.darkMode == darkMode) &&
+            (identical(other.currency, currency) ||
+                other.currency == currency));
   }
 
   @override
@@ -1413,12 +1416,13 @@ mixin _$AppSettings {
         vault,
         expertMode,
         paletteName,
-        darkMode
+        darkMode,
+        currency
       ]);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, currency: $currency)';
   }
 }
 
@@ -1448,7 +1452,8 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       bool vault,
       bool expertMode,
       String paletteName,
-      bool darkMode});
+      bool darkMode,
+      String currency});
 
   $QRSettingsCopyWith<$Res> get qrSettings;
 }
@@ -1485,6 +1490,7 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? expertMode = null,
     Object? paletteName = null,
     Object? darkMode = null,
+    Object? currency = null,
   }) {
     return _then(_self.copyWith(
       dbName: null == dbName
@@ -1567,6 +1573,10 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
           ? _self.darkMode
           : darkMode // ignore: cast_nullable_to_non_nullable
               as bool,
+      currency: null == currency
+          ? _self.currency
+          : currency // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 
@@ -1692,7 +1702,8 @@ extension AppSettingsPatterns on AppSettings {
             bool vault,
             bool expertMode,
             String paletteName,
-            bool darkMode)?
+            bool darkMode,
+            String currency)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1719,7 +1730,8 @@ extension AppSettingsPatterns on AppSettings {
             _that.vault,
             _that.expertMode,
             _that.paletteName,
-            _that.darkMode);
+            _that.darkMode,
+            _that.currency);
       case _:
         return orElse();
     }
@@ -1760,7 +1772,8 @@ extension AppSettingsPatterns on AppSettings {
             bool vault,
             bool expertMode,
             String paletteName,
-            bool darkMode)
+            bool darkMode,
+            String currency)
         $default,
   ) {
     final _that = this;
@@ -1786,7 +1799,8 @@ extension AppSettingsPatterns on AppSettings {
             _that.vault,
             _that.expertMode,
             _that.paletteName,
-            _that.darkMode);
+            _that.darkMode,
+            _that.currency);
     }
   }
 
@@ -1824,7 +1838,8 @@ extension AppSettingsPatterns on AppSettings {
             bool vault,
             bool expertMode,
             String paletteName,
-            bool darkMode)?
+            bool darkMode,
+            String currency)?
         $default,
   ) {
     final _that = this;
@@ -1850,7 +1865,8 @@ extension AppSettingsPatterns on AppSettings {
             _that.vault,
             _that.expertMode,
             _that.paletteName,
-            _that.darkMode);
+            _that.darkMode,
+            _that.currency);
       case _:
         return null;
     }
@@ -1880,7 +1896,8 @@ class _AppSettings implements AppSettings {
       required this.vault,
       required this.expertMode,
       required this.paletteName,
-      required this.darkMode});
+      required this.darkMode,
+      required this.currency});
 
   @override
   final String dbName;
@@ -1923,6 +1940,8 @@ class _AppSettings implements AppSettings {
   final String paletteName;
   @override
   final bool darkMode;
+  @override
+  final String currency;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -1967,7 +1986,9 @@ class _AppSettings implements AppSettings {
             (identical(other.paletteName, paletteName) ||
                 other.paletteName == paletteName) &&
             (identical(other.darkMode, darkMode) ||
-                other.darkMode == darkMode));
+                other.darkMode == darkMode) &&
+            (identical(other.currency, currency) ||
+                other.currency == currency));
   }
 
   @override
@@ -1992,12 +2013,13 @@ class _AppSettings implements AppSettings {
         vault,
         expertMode,
         paletteName,
-        darkMode
+        darkMode,
+        currency
       ]);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, currency: $currency)';
   }
 }
 
@@ -2029,7 +2051,8 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       bool vault,
       bool expertMode,
       String paletteName,
-      bool darkMode});
+      bool darkMode,
+      String currency});
 
   @override
   $QRSettingsCopyWith<$Res> get qrSettings;
@@ -2067,6 +2090,7 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? expertMode = null,
     Object? paletteName = null,
     Object? darkMode = null,
+    Object? currency = null,
   }) {
     return _then(_AppSettings(
       dbName: null == dbName
@@ -2149,6 +2173,10 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
           ? _self.darkMode
           : darkMode // ignore: cast_nullable_to_non_nullable
               as bool,
+      currency: null == currency
+          ? _self.currency
+          : currency // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 

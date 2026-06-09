@@ -7,6 +7,7 @@ import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/folder.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
+import 'package:zkool/pages/currency.dart';
 import 'package:zkool/pages/db.dart';
 import 'package:zkool/pages/disclaimer.dart';
 import 'package:zkool/pages/dkg.dart';
@@ -111,6 +112,10 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
               GoRoute(path: 'theme', builder: (context, state) {
                 final onClose = state.extra as void Function((String, bool));
                 return SettingsThemePage(onClose: onClose);
+              }),
+              GoRoute(path: 'currency', builder: (context, state) {
+                final onClose = state.extra as void Function(String);
+                return CurrencyPage(onClose: onClose);
               }),
             ],
             builder: (context, state) => SettingsPage()),
