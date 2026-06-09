@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_passkey_service/pigeons/messages.g.dart' show PasskeyExc
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
@@ -81,6 +84,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await putProp(key: "proxy", value: settings.proxy, c: c);
         await prefs.setBool("get_fx", settings.getFx);
         await prefs.setString("coingecko", settings.coingecko);
         await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
@@ -90,6 +94,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
+        c = c.setProxy(proxy: settings.proxy);
         await prefs.setBool("vault", settings.vault);
         await prefs.setBool("expert_mode", settings.expertMode);
         await prefs.setString("palette_name", settings.paletteName);
@@ -198,17 +203,42 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ],
                   ),
                 ),
-                if (settings.isLightNode)
-                  Showcase(
-                    key: torID,
-                    description: "Use TOR to connect to lightwallet server. Need App Restart",
-                    child: FormBuilderSwitch(
-                      name: "tor",
-                      title: Text("Use TOR"),
-                      initialValue: settings.useTor,
-                      onChanged: onChangedUseTOR,
-                    ),
+                Showcase(
+                  key: torID,
+                  description: "Route every server connection through a proxy. "
+                      "Supports socks5://, socks5h://, http:// and https://. "
+                      "Tap the Tor button to use a local Tor SOCKS5 proxy. Leave empty for a direct connection. Needs App Restart",
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: FormBuilderTextField(
+                          name: "proxy",
+                          decoration: InputDecoration(
+                            labelText: "HTTP / SOCKS5 Proxy",
+                            hintText: torProxyUrl,
+                          ),
+                          initialValue: settings.proxy,
+                          onChanged: onChangedProxy,
+                        ),
+                      ),
+                      const Gap(8),
+                      IconButton.outlined(
+                        tooltip: "Use Tor (prefill $torProxyUrl)",
+                        onPressed: onEnableTor,
+                        icon: SvgPicture.asset(
+                          "assets/tor.svg",
+                          width: 22,
+                          height: 22,
+                          colorFilter: ColorFilter.mode(
+                            Theme.of(context).colorScheme.primary,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
                 Showcase(
                   key: actionsID,
                   description: "Number actions per synchronization chunk",
@@ -396,10 +426,28 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  onChangedUseTOR(bool? value) async {
+  void onChangedProxy(String? value) async {
     if (value == null) return;
     setState(() {
-      settings = settings.copyWith(useTor: value);
+      settings = settings.copyWith(proxy: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  // On Windows the common Tor setup is the Tor Browser bundle, whose SOCKS
+  // proxy listens on 9150. Elsewhere the standalone tor daemon defaults to 9050.
+  //
+  // We use the socks5h:// scheme (not socks5://) so DNS resolution happens at
+  // the proxy. This is required for .onion server addresses to resolve and also
+  // prevents DNS leaks when routing over Tor.
+  static String get torProxyUrl =>
+      Platform.isWindows ? "socks5h://127.0.0.1:9150" : "socks5h://127.0.0.1:9050";
+
+  void onEnableTor() async {
+    final url = torProxyUrl;
+    formKey.currentState?.fields["proxy"]?.didChange(url);
+    setState(() {
+      settings = settings.copyWith(proxy: url);
       widget.onChanged(settings);
     });
   }
