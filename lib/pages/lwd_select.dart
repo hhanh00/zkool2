@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:gap/gap.dart';
 import 'package:zkool/store.dart';
+
+import '../main.dart';
 
 class LWDSelectPage extends ConsumerStatefulWidget {
   const LWDSelectPage({super.key});
@@ -126,27 +129,34 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
             children: [
               // Online/offline filter
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
                   children: [
-                    _FilterChip(
-                      label: "All",
-                      selected: _onlineFilter == null,
-                      onTap: () => setState(() => _onlineFilter = null),
-                    ),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                      label: "Online",
-                      selected: _onlineFilter == true,
-                      color: Colors.green,
-                      onTap: () => setState(() => _onlineFilter = true),
-                    ),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                      label: "Offline",
-                      selected: _onlineFilter == false,
-                      color: Colors.red,
-                      onTap: () => setState(() => _onlineFilter = false),
+                    SegmentedButton<bool?>(
+                      segments: const [
+                        ButtonSegment<bool?>(
+                          value: null,
+                          label: Text("All"),
+                        ),
+                        ButtonSegment<bool?>(
+                          value: true,
+                          label: Text("Online"),
+                          icon: Icon(Icons.circle, color: Colors.green, size: 12),
+                        ),
+                        ButtonSegment<bool?>(
+                          value: false,
+                          label: Text("Offline"),
+                          icon: Icon(Icons.circle, color: Colors.red, size: 12),
+                        ),
+                      ],
+                      selected: {_onlineFilter},
+                      onSelectionChanged: (selected) {
+                        _applyFilter(selected.first);
+                      },
+                      style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
                     const Spacer(),
                     Text("${filtered.length} servers", style: tt.bodySmall),
@@ -156,6 +166,7 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
               // Paginated DataTable
               Expanded(
                 child: PaginatedDataTable2(
+                  key: ValueKey(_onlineFilter),
                   sortColumnIndex: _sortColumnIndex,
                   sortAscending: _sortAscending,
                   headingRowColor: WidgetStateProperty.all(
@@ -203,6 +214,11 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
     );
   }
 
+  void _applyFilter(bool? filter) {
+    logger.i("_applyFilter $filter");
+    setState(() => _onlineFilter = filter);
+  }
+
   void _onSort(int columnIndex, bool ascending) {
     setState(() {
       _sortColumnIndex = columnIndex;
@@ -238,10 +254,10 @@ class _LwdDataSource extends DataTableSource {
                   color: isOnline ? Colors.green : Colors.red.shade300,
                 ),
                 if (server.isTor) ...[
-                  const SizedBox(width: 4),
+                  const Gap(4),
                   const Icon(Icons.shield, size: 14, color: Colors.purple),
                 ],
-                const SizedBox(width: 8),
+                const Gap(8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,30 +287,4 @@ class _LwdDataSource extends DataTableSource {
 
   @override
   int get selectedRowCount => 0;
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color? color;
-
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      selectedColor: color?.withValues(alpha: 0.3),
-      checkmarkColor: color,
-      side: selected && color != null ? BorderSide(color: color!) : null,
-    );
-  }
 }
