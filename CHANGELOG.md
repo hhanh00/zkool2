@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.17.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.5...zkool-v6.17.6) (2026-06-09)
+
+
+### Features
+
+* add SOCKS/HTTP proxy support with Arti Tor toggle ([#1028](https://github.com/hhanh00/zkool2/issues/1028)) ([09188cd](https://github.com/hhanh00/zkool2/commit/09188cd183f0572ef1001c7b8bde1632c17ad223))
+
+
+### Bug Fixes
+
+* add bottom safe area for edge-to-edge system navigation bar ([112fb80](https://github.com/hhanh00/zkool2/commit/112fb80297b8ebffa8411c2130a7b1e285a6a3ee))
+* make account list rows fully tappable ([#1024](https://github.com/hhanh00/zkool2/issues/1024)) ([0b78a26](https://github.com/hhanh00/zkool2/commit/0b78a260a93feb21fbe16125d7a4d954f89e134d))
+* remove duplicate color scheme section in theme settings ([9ab6a9f](https://github.com/hhanh00/zkool2/commit/9ab6a9fd58717155120205c57b917bc067153ed8))
+
 ## [6.17.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.4...zkool-v6.17.5) (2026-06-09)
 
 
