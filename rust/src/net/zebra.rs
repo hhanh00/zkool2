@@ -44,8 +44,17 @@ pub struct ZebraClient {
 }
 
 impl ZebraClient {
-    pub fn new(network: &Network, url: &str) -> Result<Self> {
-        let client = reqwest::Client::new();
+    pub fn new(network: &Network, url: &str, proxy: &str) -> Result<Self> {
+        // Route Zebra (full node) JSON-RPC through the configured proxy when set.
+        // reqwest natively supports socks5/socks5h/http/https proxy URLs.
+        let client = if proxy.is_empty() {
+            reqwest::Client::new()
+        } else {
+            reqwest::Client::builder()
+                .proxy(reqwest::Proxy::all(proxy).anyhow()?)
+                .build()
+                .anyhow()?
+        };
 
         let url = Url::parse(url).anyhow()?;
         let host = url.domain().ok_or(anyhow::anyhow!("Not domain"))?;
