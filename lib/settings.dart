@@ -1017,27 +1017,6 @@ class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with Rout
                     }).toList(),
                   ),
                   Gap(16),
-                  Text("Color Scheme", style: t.titleMedium),
-                  Gap(8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: FlexScheme.values.map((s) {
-                      final sc = FlexColorScheme.light(scheme: s).colorScheme!;
-                      final selected = _paletteName == s.name;
-                      return ElevatedButton(
-                        onPressed: () => setState(() => _paletteName = s.name),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: selected ? Colors.white : sc.onPrimary,
-                          backgroundColor: sc.primary,
-                          side: selected ? const BorderSide(color: Colors.white, width: 2) : null,
-                          elevation: selected ? 4 : 0,
-                        ),
-                        child: Text(s.name),
-                      );
-                    }).toList(),
-                  ),
-                  Gap(16),
                   // Preview
                   Text("Preview", style: t.titleMedium),
                   Gap(8),
