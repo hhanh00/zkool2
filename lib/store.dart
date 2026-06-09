@@ -327,6 +327,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final useTor = await prefs.getBool("use_tor") ?? false;
+    final proxy = (hasDb ? await getProp(key: "proxy", c: c) : null) ?? "";
     final getFx = await prefs.getBool("get_fx") ?? false;
     final coingecko = await prefs.getString("coingecko") ?? "";
     final recovery = await prefs.getBool("recovery") ?? false;
@@ -364,6 +365,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       pinUnlockedAt: DateTime.now(),
       offline: offline,
       useTor: useTor,
+      proxy: proxy,
       getFx: getFx,
       coingecko: coingecko,
       recovery: recovery,
@@ -439,6 +441,7 @@ sealed class AppSettings with _$AppSettings {
     required String syncInterval, // in blocks
     required String actionsPerSync,
     required bool useTor,
+    required String proxy,
     required String coingecko,
     required bool recovery,
     required bool needPin,

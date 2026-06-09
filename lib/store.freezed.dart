@@ -1333,6 +1333,7 @@ mixin _$AppSettings {
   String get syncInterval; // in blocks
   String get actionsPerSync;
   bool get useTor;
+  String get proxy;
   String get coingecko;
   bool get recovery;
   bool get needPin;
@@ -1369,6 +1370,7 @@ mixin _$AppSettings {
             (identical(other.actionsPerSync, actionsPerSync) ||
                 other.actionsPerSync == actionsPerSync) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.proxy, proxy) || other.proxy == proxy) &&
             (identical(other.coingecko, coingecko) ||
                 other.coingecko == coingecko) &&
             (identical(other.recovery, recovery) ||
@@ -1400,6 +1402,7 @@ mixin _$AppSettings {
         syncInterval,
         actionsPerSync,
         useTor,
+        proxy,
         coingecko,
         recovery,
         needPin,
@@ -1415,7 +1418,7 @@ mixin _$AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode)';
   }
 }
 
@@ -1434,6 +1437,7 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       String syncInterval,
       String actionsPerSync,
       bool useTor,
+      String proxy,
       String coingecko,
       bool recovery,
       bool needPin,
@@ -1469,6 +1473,7 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? syncInterval = null,
     Object? actionsPerSync = null,
     Object? useTor = null,
+    Object? proxy = null,
     Object? coingecko = null,
     Object? recovery = null,
     Object? needPin = null,
@@ -1514,6 +1519,10 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
               as bool,
+      proxy: null == proxy
+          ? _self.proxy
+          : proxy // ignore: cast_nullable_to_non_nullable
+              as String,
       coingecko: null == coingecko
           ? _self.coingecko
           : coingecko // ignore: cast_nullable_to_non_nullable
@@ -1672,6 +1681,7 @@ extension AppSettingsPatterns on AppSettings {
             String syncInterval,
             String actionsPerSync,
             bool useTor,
+            String proxy,
             String coingecko,
             bool recovery,
             bool needPin,
@@ -1698,6 +1708,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.syncInterval,
             _that.actionsPerSync,
             _that.useTor,
+            _that.proxy,
             _that.coingecko,
             _that.recovery,
             _that.needPin,
@@ -1738,6 +1749,7 @@ extension AppSettingsPatterns on AppSettings {
             String syncInterval,
             String actionsPerSync,
             bool useTor,
+            String proxy,
             String coingecko,
             bool recovery,
             bool needPin,
@@ -1763,6 +1775,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.syncInterval,
             _that.actionsPerSync,
             _that.useTor,
+            _that.proxy,
             _that.coingecko,
             _that.recovery,
             _that.needPin,
@@ -1800,6 +1813,7 @@ extension AppSettingsPatterns on AppSettings {
             String syncInterval,
             String actionsPerSync,
             bool useTor,
+            String proxy,
             String coingecko,
             bool recovery,
             bool needPin,
@@ -1825,6 +1839,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.syncInterval,
             _that.actionsPerSync,
             _that.useTor,
+            _that.proxy,
             _that.coingecko,
             _that.recovery,
             _that.needPin,
@@ -1854,6 +1869,7 @@ class _AppSettings implements AppSettings {
       required this.syncInterval,
       required this.actionsPerSync,
       required this.useTor,
+      required this.proxy,
       required this.coingecko,
       required this.recovery,
       required this.needPin,
@@ -1883,6 +1899,8 @@ class _AppSettings implements AppSettings {
   final String actionsPerSync;
   @override
   final bool useTor;
+  @override
+  final String proxy;
   @override
   final String coingecko;
   @override
@@ -1931,6 +1949,7 @@ class _AppSettings implements AppSettings {
             (identical(other.actionsPerSync, actionsPerSync) ||
                 other.actionsPerSync == actionsPerSync) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.proxy, proxy) || other.proxy == proxy) &&
             (identical(other.coingecko, coingecko) ||
                 other.coingecko == coingecko) &&
             (identical(other.recovery, recovery) ||
@@ -1962,6 +1981,7 @@ class _AppSettings implements AppSettings {
         syncInterval,
         actionsPerSync,
         useTor,
+        proxy,
         coingecko,
         recovery,
         needPin,
@@ -1977,7 +1997,7 @@ class _AppSettings implements AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, useTor: $useTor, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode)';
   }
 }
 
@@ -1998,6 +2018,7 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       String syncInterval,
       String actionsPerSync,
       bool useTor,
+      String proxy,
       String coingecko,
       bool recovery,
       bool needPin,
@@ -2034,6 +2055,7 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? syncInterval = null,
     Object? actionsPerSync = null,
     Object? useTor = null,
+    Object? proxy = null,
     Object? coingecko = null,
     Object? recovery = null,
     Object? needPin = null,
@@ -2079,6 +2101,10 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
               as bool,
+      proxy: null == proxy
+          ? _self.proxy
+          : proxy // ignore: cast_nullable_to_non_nullable
+              as String,
       coingecko: null == coingecko
           ? _self.coingecko
           : coingecko // ignore: cast_nullable_to_non_nullable
