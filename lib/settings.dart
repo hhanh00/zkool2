@@ -283,7 +283,12 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Showcase(
                   key: pinLockID,
                   description: "Ask for device pin when app opens",
-                  child: FormBuilderSwitch(name: "pin_lock", title: Text("Pin Lock"), initialValue: settings.needPin, onChanged: onPinLockChanged),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text("Pin Lock")),
+                      Switch(value: settings.needPin, onChanged: onPinLockChanged),
+                    ],
+                  ),
                 ),
                 Gap(8),
                 Showcase(
@@ -334,11 +339,11 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 ),
                 Gap(8),
                 if (settings.expertMode)
-                  FormBuilderSwitch(
-                    name: "vault",
-                    title: Text("Cloud Vault"),
-                    initialValue: settings.vault,
-                    onChanged: onChangedVault,
+                  Row(
+                    children: [
+                      Expanded(child: Text("Cloud Vault")),
+                      Switch(value: settings.vault, onChanged: onChangedVault),
+                    ],
                   ),
                 if (settings.expertMode && settings.vault)
                   Row(children: [
@@ -464,6 +469,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   onPinLockChanged(bool? value) async {
     if (value == null) return;
+    final authenticated = await onUnlock(ref);
+    if (!authenticated) return;
     setState(() {
       settings = settings.copyWith(needPin: value);
       widget.onChanged(settings);
@@ -488,6 +495,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   onChangedVault(bool? value) async {
     if (value == null) return;
+    final authenticated = await onUnlock(ref);
+    if (!authenticated) return;
     if (value) {
       // Vault is activating...
       final tt = Theme.of(context).textTheme;
@@ -541,7 +550,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             ),
           ));
 
-      bool success = false;
       try {
         if (!confirmed) return;
 
@@ -651,7 +659,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
         if (!mounted) return;
         await showMessage(context, "Vault activated");
-        success = true;
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
         return;
@@ -659,10 +666,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         logger.e("[Vault] enable: passkey error (${e.errorType}): ${e.message}");
         if (mounted) await showException(context, "Passkey error: ${e.message}");
         return;
-      } finally {
-        if (!success) {
-          formKey.currentState?.fields['vault']?.didChange(false);
-        }
       }
     }
     setState(() {
