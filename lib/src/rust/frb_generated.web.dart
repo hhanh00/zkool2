@@ -212,6 +212,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
+  ExchangeRate dco_decode_exchange_rate(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
@@ -638,6 +641,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
+
+  @protected
+  ExchangeRate sse_decode_exchange_rate(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -1084,6 +1090,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_exchange_rate(ExchangeRate self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);

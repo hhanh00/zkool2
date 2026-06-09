@@ -25,6 +25,7 @@ import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/widgets/exchange_rate.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/theme.dart';
 
@@ -228,9 +229,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           }
 
           final b = account.balance.field0;
+          final settings = ref.read(appSettingsProvider).requireValue;
+          final currency = settings.currency;
           final fiat = fullData.price?.let((p) {
             final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
-            return "\$ ${fiatFormatter.format(f)}";
+            return formatFiat(f, currency);
           });
 
           final t = Theme.of(context);
@@ -272,6 +275,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                           style: tt.displaySmall!,
                                         ),
                                         if (fiat != null) Text(fiat),
+                                        const Gap(4),
+                                        const ExchangeRateButton(),
                                       ]),
                                     ),
                                     Gap(8),
@@ -330,7 +335,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
     if (confirmed) {
       try {
-        await fillMissingTxPrices(c: c, api: settings.coingecko);
+        await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.currency);
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
       }

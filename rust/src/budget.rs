@@ -1,21 +1,30 @@
 use anyhow::{anyhow, Result};
 use serde_json::Value;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use std::time::Duration;
 
-async fn get_historical_prices_all(api: &str) -> Result<Vec<PriceQuote>> {
+fn coingecko_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent("zkool/1.0")
+        .timeout(Duration::from_secs(15))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new())
+}
+
+async fn get_historical_prices_all(currency: &str, api: &str) -> Result<Vec<PriceQuote>> {
     // 1, 90 and 365 are the max day ranges per interval
-    let mut pqs = get_historical_prices(1, api).await?;
-    pqs.extend(get_historical_prices(90, api).await?);
-    pqs.extend(get_historical_prices(365, api).await?);
+    let mut pqs = get_historical_prices(1, currency, api).await?;
+    pqs.extend(get_historical_prices(90, currency, api).await?);
+    pqs.extend(get_historical_prices(365, currency, api).await?);
     pqs.sort_by_key(|pq| pq.time);
     Ok(pqs)
 }
 
-async fn get_historical_prices(days: u32, api: &str) -> Result<Vec<PriceQuote>> {
+async fn get_historical_prices(days: u32, currency: &str, api: &str) -> Result<Vec<PriceQuote>> {
     let historical_price_url = format!(
-        "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency=usd&days={days}&x_cg_demo_api_key={api}"
+        "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
     );
-    let rep: Value = reqwest::get(&historical_price_url).await?.json().await?;
+    let rep: Value = coingecko_client().get(&historical_price_url).send().await?.json().await?;
     let prices = rep
         .pointer("/prices")
         .ok_or(anyhow!("No /prices"))?
@@ -91,11 +100,37 @@ pub async fn store_tx_prices(connection: &mut SqliteConnection, txs: &[TxUSD]) -
     Ok(())
 }
 
-pub async fn fill_missing_tx_prices(connection: &mut SqliteConnection, account: u32, api: &str) -> Result<()> {
+pub async fn fill_missing_tx_prices(
+    connection: &mut SqliteConnection,
+    account: u32,
+    currency: &str,
+    api: &str,
+) -> Result<()> {
     let mut txs = fetch_missing_tx_prices(&mut *connection, account).await?;
-    let pqs = get_historical_prices_all(api).await?;
+    let pqs = get_historical_prices_all(currency, api).await?;
     fill_historical_prices(&mut txs, &pqs).await?;
     store_tx_prices(&mut *connection, &txs).await?;
+    Ok(())
+}
+
+/// Recompute every transaction's price column for a currency change.
+/// `exchange_rate` is the multiplier: new_price = old_price * exchange_rate
+/// (e.g. when changing from USD to EUR at 0.92 EUR per 1 USD, exchange_rate = 0.92).
+/// The currency prop is updated in the same transaction.
+pub async fn update_historical_prices(
+    connection: &mut SqliteConnection,
+    currency: &str,
+    exchange_rate: f64,
+) -> Result<()> {
+    sqlx::query("UPDATE transactions SET price = price * ?1 WHERE price IS NOT NULL")
+        .bind(exchange_rate)
+        .execute(&mut *connection)
+        .await?;
+    // Upsert the currency prop
+    sqlx::query("INSERT OR REPLACE INTO props (key, value) VALUES ('currency', ?1)")
+        .bind(currency)
+        .execute(&mut *connection)
+        .await?;
     Ok(())
 }
 
