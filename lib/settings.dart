@@ -97,8 +97,9 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("expert_mode", settings.expertMode);
         await prefs.setString("palette_name", settings.paletteName);
         await prefs.setBool("dark_mode", settings.darkMode);
+        await putProp(key: "currency", value: settings.currency, c: c);
         coinContext.set(coin: c);
-        ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko);
+        ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko, settings.currency);
         ref.invalidate(appSettingsProvider);
       },
     );
@@ -316,6 +317,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 Gap(8),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onCurrency,
+                  child: Row(
+                    children: [
+                      Expanded(child: Text("Currency")),
+                      Text(settings.currency.toUpperCase()),
+                      Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+                Gap(8),
                 Showcase(
                   key: blockExplorerID,
                   description: "Block Explorer URL",
@@ -453,6 +466,15 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       final (paletteName, darkMode) = v;
       setState(() {
         settings = settings.copyWith(paletteName: paletteName, darkMode: darkMode);
+        widget.onChanged(settings);
+      });
+    });
+  }
+
+  onCurrency() async {
+    await GoRouter.of(context).push("/settings/currency", extra: (String newCurrency) {
+      setState(() {
+        settings = settings.copyWith(currency: newCurrency);
         widget.onChanged(settings);
       });
     });

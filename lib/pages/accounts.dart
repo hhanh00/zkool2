@@ -16,6 +16,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/editable_list.dart';
+import 'package:zkool/widgets/exchange_rate.dart';
 import 'package:zkool/widgets/theme.dart';
 
 final heightID = GlobalKey();
@@ -65,7 +66,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
       currentHeight.setHeight(height);
       if (fetchPrice) {
         final currentPrice = ref.read(priceProvider.notifier);
-        await currentPrice.fetch(settings.coingecko);
+        await currentPrice.fetch(settings.coingecko, settings.currency);
       }
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
@@ -118,7 +119,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                 ),
               ),
               const Gap(8),
-              if (pageData.price != null) ElevatedButton(onPressed: !Platform.isLinux ? onPrice : null, child: Text("Price: ${pageData.price} USD")),
+              if (pageData.price != null)
+                ExchangeRateButton(),
               const Gap(8),
               if (pageData.settings.offline) ...[
                 Text("Wallet is in offline mode", style: tt.labelSmall),
@@ -127,9 +129,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
             ],
             builder: (context, index, account, {selected, onSelectChanged}) {
               final avatar = account.avatar(selected: selected ?? false, onTap: onSelectChanged);
+              final currency = pageData.settings.currency;
               final fiat = pageData.price?.let((p) {
                 final f = account.balance.toDouble() * p / zatsPerZec.toDouble();
-                return fiatFormatter.format(f);
+                return formatFiat(f, currency);
               });
               return Material(
                 key: ValueKey(account.id),
@@ -146,7 +149,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                         leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
                         name: account.name,
                         balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
-                        fiat: fiat != null ? Text("\$$fiat", style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
+                        fiat: fiat != null ? Text(fiat, style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
                         height: SmallProgressWidget(account, style: tt.labelSmall),
                       ),
                       onTap: () => onOpen(context, account),

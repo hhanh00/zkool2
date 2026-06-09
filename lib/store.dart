@@ -349,12 +349,13 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       delay: int.parse(qrDelay),
       repair: int.parse(qrRepair),
     );
-    final price = ref.watch(priceProvider.notifier);
-    price.setAutoFetchFx(getFx, coingecko);
     final vault = await prefs.getBool("vault") ?? false;
     final expertMode = await prefs.getBool("expert_mode") ?? false;
     final paletteName = await prefs.getString("palette_name") ?? 'blue';
     final darkMode = await prefs.getBool("dark_mode") ?? true;
+    final currency = (hasDb ? await getProp(key: "currency", c: c) : null) ?? "usd";
+    final price = ref.watch(priceProvider.notifier);
+    price.setAutoFetchFx(getFx, coingecko, currency);
 
     return AppSettings(
       dbName: dbName,
@@ -377,6 +378,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       expertMode: expertMode,
       paletteName: paletteName,
       darkMode: darkMode,
+      currency: currency,
     );
   }
 
@@ -407,11 +409,16 @@ class PriceNotifier extends _$PriceNotifier {
   }
 
   Timer? fetchFxTimer;
-  void setAutoFetchFx(bool autoGetFx, String api) async {
+  String _lastApi = "";
+  String _lastCurrency = "usd";
+
+  void setAutoFetchFx(bool autoGetFx, String api, String currency) async {
+    _lastApi = api;
+    _lastCurrency = currency;
     if (autoGetFx) {
-      await fetch(api);
+      await fetch(api, currency);
       fetchFxTimer = Timer.periodic(Duration(minutes: 1), (_) async {
-        await fetch(api);
+        await fetch(_lastApi, _lastCurrency);
       });
     } else {
       fetchFxTimer?.cancel();
@@ -419,14 +426,23 @@ class PriceNotifier extends _$PriceNotifier {
     }
   }
 
-  Future<double?> fetch(String api) async {
+  Future<double?> fetch(String api, String currency) async {
     try {
-      final p = await getCoingeckoPrice(api: api);
+      final p = await getCoingeckoPrice(api: api, currency: currency);
       setPrice(p);
       return p;
     } catch (_) {
       return null;
     }
+  }
+}
+
+@Riverpod(keepAlive: true)
+class SupportedCurrenciesNotifier extends _$SupportedCurrenciesNotifier {
+  @override
+  Future<List<String>> build() async {
+    final settings = await ref.watch(appSettingsProvider.future);
+    return await getSupportedVsCurrencies(api: settings.coingecko);
   }
 }
 
@@ -453,6 +469,7 @@ sealed class AppSettings with _$AppSettings {
     required bool expertMode,
     required String paletteName,
     required bool darkMode,
+    required String currency,
   }) = _AppSettings;
 }
 
