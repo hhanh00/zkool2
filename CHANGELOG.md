@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.17.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.4...zkool-v6.17.5) (2026-06-09)
+
+
+### Bug Fixes
+
+* apply theme changes immediately in settings page ([c68e5b9](https://github.com/hhanh00/zkool2/commit/c68e5b9fbe466adbd79b363bd1db0b84bb6977e1))
+
 ## [6.17.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.3...zkool-v6.17.4) (2026-06-08)
 
 
