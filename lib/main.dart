@@ -53,6 +53,12 @@ Future<void> main() async {
               return MaterialApp.router(
                 key: appKey,
                 routerConfig: r,
+                builder: (context, child) => SafeArea(
+                  top: false,
+                  left: false,
+                  right: false,
+                  child: child!,
+                ),
                 themeMode: settings?.darkMode == true ? ThemeMode.dark : ThemeMode.light,
                 theme: theme,
                 darkTheme: darkTheme,
