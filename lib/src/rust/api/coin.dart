@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'coin.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `network`, `try_open`
+// These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `connect_over_proxy`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `http_connect_tunnel`, `network`, `open_proxied_stream`, `try_open`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 Future<void> initDatadir({required String directory}) =>
@@ -26,6 +26,7 @@ sealed class Coin with _$Coin {
     required String url,
     required int serverType,
     required bool useTor,
+    required String proxy,
   }) = _Coin;
   Future<void> getName() => RustLib.instance.api.crateApiCoinCoinGetName(
         that: this,
@@ -43,6 +44,9 @@ sealed class Coin with _$Coin {
   Coin setLwd({required int serverType, required String url}) =>
       RustLib.instance.api
           .crateApiCoinCoinSetLwd(that: this, serverType: serverType, url: url);
+
+  Coin setProxy({required String proxy}) =>
+      RustLib.instance.api.crateApiCoinCoinSetProxy(that: this, proxy: proxy);
 
   Future<Coin> setUseTor({required bool useTor}) => RustLib.instance.api
       .crateApiCoinCoinSetUseTor(that: this, useTor: useTor);

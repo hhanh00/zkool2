@@ -20,6 +20,7 @@ mixin _$Coin {
   String get url;
   int get serverType;
   bool get useTor;
+  String get proxy;
 
   /// Create a copy of Coin
   /// with the given fields replaced by the non-null parameter values.
@@ -40,16 +41,17 @@ mixin _$Coin {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.serverType, serverType) ||
                 other.serverType == serverType) &&
-            (identical(other.useTor, useTor) || other.useTor == useTor));
+            (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.proxy, proxy) || other.proxy == proxy));
   }
 
   @override
   int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor);
+      runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
 
   @override
   String toString() {
-    return 'Coin(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor)';
+    return 'Coin(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor, proxy: $proxy)';
   }
 }
 
@@ -64,7 +66,8 @@ abstract mixin class $CoinCopyWith<$Res> {
       String dbFilepath,
       String url,
       int serverType,
-      bool useTor});
+      bool useTor,
+      String proxy});
 }
 
 /// @nodoc
@@ -85,6 +88,7 @@ class _$CoinCopyWithImpl<$Res> implements $CoinCopyWith<$Res> {
     Object? url = null,
     Object? serverType = null,
     Object? useTor = null,
+    Object? proxy = null,
   }) {
     return _then(_self.copyWith(
       coin: null == coin
@@ -111,6 +115,10 @@ class _$CoinCopyWithImpl<$Res> implements $CoinCopyWith<$Res> {
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
               as bool,
+      proxy: null == proxy
+          ? _self.proxy
+          : proxy // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -207,7 +215,7 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor)?
+            int serverType, bool useTor, String proxy)?
         raw,
     required TResult orElse(),
   }) {
@@ -215,7 +223,7 @@ extension CoinPatterns on Coin {
     switch (_that) {
       case _Coin() when raw != null:
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor);
+            _that.serverType, _that.useTor, _that.proxy);
       case _:
         return orElse();
     }
@@ -237,14 +245,14 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(int coin, int account, String dbFilepath,
-            String url, int serverType, bool useTor)
+            String url, int serverType, bool useTor, String proxy)
         raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin():
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor);
+            _that.serverType, _that.useTor, _that.proxy);
     }
   }
 
@@ -263,14 +271,14 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor)?
+            int serverType, bool useTor, String proxy)?
         raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin() when raw != null:
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor);
+            _that.serverType, _that.useTor, _that.proxy);
       case _:
         return null;
     }
@@ -286,7 +294,8 @@ class _Coin extends Coin {
       required this.dbFilepath,
       required this.url,
       required this.serverType,
-      required this.useTor})
+      required this.useTor,
+      required this.proxy})
       : super._();
 
   @override
@@ -301,6 +310,8 @@ class _Coin extends Coin {
   final int serverType;
   @override
   final bool useTor;
+  @override
+  final String proxy;
 
   /// Create a copy of Coin
   /// with the given fields replaced by the non-null parameter values.
@@ -322,16 +333,17 @@ class _Coin extends Coin {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.serverType, serverType) ||
                 other.serverType == serverType) &&
-            (identical(other.useTor, useTor) || other.useTor == useTor));
+            (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.proxy, proxy) || other.proxy == proxy));
   }
 
   @override
   int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor);
+      runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
 
   @override
   String toString() {
-    return 'Coin.raw(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor)';
+    return 'Coin.raw(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor, proxy: $proxy)';
   }
 }
 
@@ -347,7 +359,8 @@ abstract mixin class _$CoinCopyWith<$Res> implements $CoinCopyWith<$Res> {
       String dbFilepath,
       String url,
       int serverType,
-      bool useTor});
+      bool useTor,
+      String proxy});
 }
 
 /// @nodoc
@@ -368,6 +381,7 @@ class __$CoinCopyWithImpl<$Res> implements _$CoinCopyWith<$Res> {
     Object? url = null,
     Object? serverType = null,
     Object? useTor = null,
+    Object? proxy = null,
   }) {
     return _then(_Coin(
       coin: null == coin
@@ -394,6 +408,10 @@ class __$CoinCopyWithImpl<$Res> implements _$CoinCopyWith<$Res> {
           ? _self.useTor
           : useTor // ignore: cast_nullable_to_non_nullable
               as bool,
+      proxy: null == proxy
+          ? _self.proxy
+          : proxy // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }

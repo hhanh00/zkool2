@@ -5,6 +5,7 @@ import 'package:flutter_passkey_service/pigeons/messages.g.dart' show PasskeyExc
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
@@ -81,6 +82,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
         await prefs.setBool("use_tor", settings.useTor);
+        await putProp(key: "proxy", value: settings.proxy, c: c);
         await prefs.setBool("get_fx", settings.getFx);
         await prefs.setString("coingecko", settings.coingecko);
         await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
@@ -90,6 +92,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
         c = await c.setUseTor(useTor: settings.useTor);
+        c = c.setProxy(proxy: settings.proxy);
         await prefs.setBool("vault", settings.vault);
         await prefs.setBool("expert_mode", settings.expertMode);
         await prefs.setString("palette_name", settings.paletteName);
@@ -198,17 +201,46 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ],
                   ),
                 ),
-                if (settings.isLightNode)
-                  Showcase(
-                    key: torID,
-                    description: "Use TOR to connect to lightwallet server. Need App Restart",
-                    child: FormBuilderSwitch(
-                      name: "tor",
-                      title: Text("Use TOR"),
-                      initialValue: settings.useTor,
-                      onChanged: onChangedUseTOR,
+                Row(
+                  children: [
+                    IconButton.outlined(
+                      tooltip: settings.useTor
+                          ? "Disable Arti Tor"
+                          : "Enable Arti Tor (embedded Tor client)",
+                      onPressed: onToggleTor,
+                      icon: SvgPicture.asset(
+                        "assets/tor.svg",
+                        width: 22,
+                        height: 22,
+                        colorFilter: ColorFilter.mode(
+                          settings.useTor ? Colors.green : Theme.of(context).colorScheme.primary,
+                          BlendMode.srcIn,
+                        ),
+                      ),
                     ),
-                  ),
+                    const Gap(4),
+                    Text(settings.useTor ? "Arti Tor enabled" : "Arti Tor disabled"),
+                    const Gap(24),
+                    Expanded(
+                      child: Showcase(
+                        key: torID,
+                        description: "Route connections through an external proxy. "
+                            "Supports socks5://, socks5h://, http:// and https://. "
+                            "Disabled when Arti Tor is enabled.",
+                        child: FormBuilderTextField(
+                          name: "proxy",
+                          decoration: const InputDecoration(
+                            labelText: "HTTP / SOCKS5 Proxy",
+                            hintText: "socks5h://127.0.0.1:9050",
+                          ),
+                          initialValue: settings.proxy,
+                          enabled: !settings.useTor,
+                          onChanged: onChangedProxy,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 Showcase(
                   key: actionsID,
                   description: "Number actions per synchronization chunk",
@@ -396,10 +428,17 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  onChangedUseTOR(bool? value) async {
+  void onChangedProxy(String? value) async {
     if (value == null) return;
     setState(() {
-      settings = settings.copyWith(useTor: value);
+      settings = settings.copyWith(proxy: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  void onToggleTor() async {
+    setState(() {
+      settings = settings.copyWith(useTor: !settings.useTor);
       widget.onChanged(settings);
     });
   }

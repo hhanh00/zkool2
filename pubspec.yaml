@@ -41,6 +41,7 @@ dependencies:
   toastification: ^3.0.2
 
   showcaseview: ^4.0.1
+  flutter_svg: ^2.0.10+1
 
   fixed: ^5.3.3
   decimal: ^3.2.1
@@ -97,3 +98,4 @@ flutter:
 
   assets:
     - misc/icon.png
+    - assets/tor.svg

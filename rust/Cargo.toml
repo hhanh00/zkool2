@@ -43,7 +43,8 @@ arti-client = {version = "0.31", features = ["tokio", "native-tls", "onion-servi
 httparse = "1.10.1"
 hyper-util = {version = "0.1", features = ["tokio"]}
 rayon = "1.10"
-reqwest = {version = "0.12", features = ["json", "rustls-tls"]}
+reqwest = {version = "0.12", features = ["json", "rustls-tls", "socks"]}
+tokio-socks = "0.5.2"
 tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
 tower = "0.5"
 
