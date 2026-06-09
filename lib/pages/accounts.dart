@@ -136,6 +136,12 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                 child: Column(
                   children: [
                     GestureDetector(
+                      // Opaque so the WHOLE card (padding + gaps, not just the
+                      // text glyphs) is tappable. With the default
+                      // deferToChild behavior, taps that land on the empty
+                      // space between the avatar and the text fall through and
+                      // onOpen is never called.
+                      behavior: HitTestBehavior.opaque,
                       child: AccountCard(
                         leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
                         name: account.name,
