@@ -206,9 +206,11 @@ class AddressesPage extends ConsumerStatefulWidget {
 
 class _AddressesPageState extends ConsumerState<AddressesPage> {
   int _usageFilter = 0; // 0=all, 1=used, 2=unused
+  int _scopeFilter = 0; // 0=all, 1=external, 2=change
   late Set<int> _selectedPools;
 
   static const _poolNames = {0: "Transparent", 1: "Sapling", 2: "Orchard"};
+  static const _poolDescs = {0: "Transparent", 1: "young tree", 2: "tree"};
   static const _poolBits = {0: 1, 1: 2, 2: 4};
 
   @override
@@ -220,20 +222,33 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
     if (widget.availablePools & 4 != 0) _selectedPools.add(2);
   }
 
-  bool _isPoolAvailable(int pool) => widget.availablePools & _poolBits[pool]! != 0;
+  static const _poolIcons = {0: Icons.visibility, 1: Icons.eco, 2: Icons.park};
 
-  void _togglePool(int pool) {
-    setState(() {
-      if (_selectedPools.contains(pool)) {
-        if (_selectedPools.length > 1) _selectedPools.remove(pool);
-      } else {
-        _selectedPools.add(pool);
-      }
-    });
+  Widget _poolIcon(int pool, double size) {
+    final icon = _poolIcons[pool] ?? Icons.help_outline;
+    Color color;
+    switch (pool) {
+      case 0: color = Colors.red; break;
+      case 1: color = Colors.orange; break;
+      case 2: color = Colors.green; break;
+      default: color = Colors.grey;
+    }
+    return Icon(icon, size: size, color: color);
   }
+
+  ButtonStyle get _segmentedStyle => SegmentedButton.styleFrom(
+    backgroundColor: Colors.grey[200],
+    foregroundColor: Colors.red,
+    selectedForegroundColor: Colors.white,
+    selectedBackgroundColor: Colors.green,
+  );
 
   List<TAddressTxCount> _filtered() => widget.txCounts.where((tx) {
     if (!_selectedPools.contains(tx.pool)) return false;
+    switch (_scopeFilter) {
+      case 1: if (tx.scope != 0) return false;
+      case 2: if (tx.scope != 1) return false;
+    }
     switch (_usageFilter) {
       case 1: return tx.txCount > 0;
       case 2: return tx.txCount == 0;
@@ -260,28 +275,51 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
               children: [
                 Row(
                   children: [
-                    Text("Show: ", style: TextStyle(fontWeight: FontWeight.w500)),
-                    SizedBox(width: 4),
-                    ChoiceChip(label: Text("All"), selected: _usageFilter == 0, onSelected: (_) => setState(() => _usageFilter = 0)),
-                    SizedBox(width: 4),
-                    ChoiceChip(label: Text("Used"), selected: _usageFilter == 1, onSelected: (_) => setState(() => _usageFilter = 1)),
-                    SizedBox(width: 4),
-                    ChoiceChip(label: Text("Unused"), selected: _usageFilter == 2, onSelected: (_) => setState(() => _usageFilter = 2)),
+                    SizedBox(width: 60, child: Text("Show", style: TextStyle(fontWeight: FontWeight.w500))),
+                    SegmentedButton<int>(
+                      style: _segmentedStyle,
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: 0, label: Text("All")),
+                        ButtonSegment(value: 1, label: Text("Used")),
+                        ButtonSegment(value: 2, label: Text("Unused")),
+                      ],
+                      selected: {_usageFilter},
+                      onSelectionChanged: (s) => setState(() => _usageFilter = s.first),
+                    ),
                   ],
                 ),
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    Text("Pools: ", style: TextStyle(fontWeight: FontWeight.w500)),
-                    for (final e in _poolNames.entries)
-                      Padding(
-                        padding: EdgeInsets.only(left: 4),
-                        child: FilterChip(
-                          label: Text(e.value),
-                          selected: _selectedPools.contains(e.key),
-                          onSelected: _isPoolAvailable(e.key) ? (_) => _togglePool(e.key) : null,
-                        ),
-                      ),
+                    SizedBox(width: 60, child: Text("Scope", style: TextStyle(fontWeight: FontWeight.w500))),
+                    SegmentedButton<int>(
+                      style: _segmentedStyle,
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: 0, label: Text("All")),
+                        ButtonSegment(value: 1, label: Text("External")),
+                        ButtonSegment(value: 2, label: Text("Change")),
+                      ],
+                      selected: {_scopeFilter},
+                      onSelectionChanged: (s) => setState(() => _scopeFilter = s.first),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6),
+                Row(
+                  children: [
+                    SizedBox(width: 60, child: Text("Pools", style: TextStyle(fontWeight: FontWeight.w500))),
+                    PoolSelect(
+                      enabled: widget.availablePools,
+                      initialValue: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
+                      onChanged: (v) => setState(() {
+                        _selectedPools = {};
+                        if (v & 1 != 0) _selectedPools.add(0);
+                        if (v & 2 != 0) _selectedPools.add(1);
+                        if (v & 4 != 0) _selectedPools.add(2);
+                      }),
+                    ),
                   ],
                 ),
               ],
@@ -292,13 +330,26 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
               itemCount: filtered.length,
               itemBuilder: (context, index) {
                 final tx = filtered[index];
-                final scope = tx.scope == 0 ? "External" : "Change";
-                final pool = _poolNames[tx.pool] ?? "Unknown";
                 final lastUsed = tx.time > 0 ? timeToString(tx.time) : "Never";
+                final trimmed = tx.address.length > 20
+                    ? '${tx.address.substring(0, 10)}...${tx.address.substring(tx.address.length - 8)}'
+                    : tx.address;
                 return ListTile(
-                  title: CopyableText(tx.address),
-                  subtitle: Text("$pool · $scope · Index ${tx.dindex} · ${tx.txCount} txs · $lastUsed"),
+                  leading: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _poolIcon(tx.pool, 20),
+                      SizedBox(width: 4),
+                      Icon(tx.scope == 0 ? Icons.call_made : Icons.sync, size: 16, color: Colors.grey[600]),
+                    ],
+                  ),
+                  title: Text(trimmed, style: TextStyle(fontFamily: "monospace")),
+                  subtitle: Text(
+                    "${_poolDescs[tx.pool] ?? "?"} · ${tx.scope == 0 ? "External" : "Change"} · Idx ${tx.dindex} · ${tx.txCount} txs${tx.time > 0 ? " · $lastUsed" : ""}",
+                    style: TextStyle(fontSize: 13),
+                  ),
                   trailing: Text(zatToString(tx.amount)),
+                  onTap: () => copyToClipboard(tx.address),
                 );
               },
             ),
