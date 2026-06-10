@@ -25,6 +25,7 @@ import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/pages/lwd_select.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
@@ -73,6 +74,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
             return AddressesPage(
               txCounts: extra['txCounts'] as List<TAddressTxCount>,
               availablePools: extra['availablePools'] as int,
+              c: extra['c'] as Coin,
             );
           },
         ),
