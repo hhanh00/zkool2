@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.18.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.2...zkool-v6.18.3) (2026-06-10)
+
+
+### Bug Fixes
+
+* reorganize new account page with advanced options toggle ([12558ab](https://github.com/hhanh00/zkool2/commit/12558ab2fa38f35c5c7514cffb3aa87b9b498c81))
+* show empty state with help message when no accounts exist ([b036722](https://github.com/hhanh00/zkool2/commit/b0367221c1a715e15bfca89243571bb331dbab55))
+* style new account page with cards, icons, and flair text ([701fe53](https://github.com/hhanh00/zkool2/commit/701fe53794b385646f1fb7f4ffd0d3b1bcb7f6c4))
+
 ## [6.18.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.1...zkool-v6.18.2) (2026-06-10)
 
 
