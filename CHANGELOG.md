@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.0...zkool-v6.18.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* add Market Price menu item to account page menu ([7b20b1b](https://github.com/hhanh00/zkool2/commit/7b20b1b8abbfe96af1c1ce816808c657fed0a9d3))
+
 ## [6.18.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.0) (2026-06-09)
 
 
