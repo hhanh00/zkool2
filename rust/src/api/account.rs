@@ -666,6 +666,7 @@ pub struct TxNote {
     pub tx: u32,
     pub scope: u8,
     pub diversifier: Option<Vec<u8>>,
+    pub diversifier_index: Option<i64>,
     pub value: u64,
     pub locked: bool,
     pub memo: Option<String>,

@@ -244,6 +244,13 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await;
 
+    // Migration: add diversifier_index to notes for per-address shielded tx counts
+    let _ = sqlx::query(
+        "ALTER TABLE notes ADD COLUMN diversifier_index INTEGER",
+    )
+    .execute(&mut *connection)
+    .await;
+
     // Migration: add asset_name to assets for human-readable naming
     let _ = sqlx::query(
         "ALTER TABLE assets ADD COLUMN asset_name TEXT",
@@ -528,6 +535,132 @@ pub async fn migrate_sapling_addresses(
             .execute(&mut *connection)
             .await?;
     }
+    Ok(())
+}
+
+/// Resolve a Sapling diversifier index from raw diversifier bytes and the DFVK.
+/// Returns None if the diversifier was not derived from this viewing key.
+pub fn resolve_sapling_diversifier_index(
+    dfvk: &DiversifiableFullViewingKey,
+    scope: u8,
+    diversifier: &[u8],
+) -> Option<i64> {
+    let d = sapling_crypto::keys::Diversifier(diversifier.try_into().ok()?);
+    let address = if scope == 0 {
+        dfvk.diversified_address(d)?
+    } else {
+        dfvk.diversified_change_address(d)?
+    };
+    dfvk.decrypt_diversifier(&address)
+        .and_then(|(di, _)| di.try_into().ok())
+        .map(|d: u64| d as i64)
+}
+
+/// Resolve an Orchard diversifier index from raw diversifier bytes and the FVK.
+/// Returns None if the diversifier was not derived from this viewing key.
+pub fn resolve_orchard_diversifier_index(
+    fvk: &FullViewingKey,
+    scope: u8,
+    diversifier: &[u8],
+) -> Option<i64> {
+    let d = orchard::keys::Diversifier::from_bytes(diversifier.try_into().ok()?);
+    let scope = if scope == 0 {
+        orchard::keys::Scope::External
+    } else {
+        orchard::keys::Scope::Internal
+    };
+    let address = fvk.address(d, scope);
+    fvk.to_ivk(scope)
+        .diversifier_index(&address)
+        .and_then(|di| di.try_into().ok())
+        .map(|d: u64| d as i64)
+}
+
+pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Result<()> {
+    // Skip if backfill was already completed
+    if get_prop(connection, "backfilled_diversifier_index")
+        .await?
+        .is_some()
+    {
+        return Ok(());
+    }
+
+    // Check if any notes need backfilling
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM notes WHERE pool IN (1, 2) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
+    )
+    .fetch_one(&mut *connection)
+    .await?;
+
+    if count.0 == 0 {
+        // Nothing to backfill, mark as done
+        put_prop(connection, "backfilled_diversifier_index", "1").await?;
+        return Ok(());
+    }
+
+    info!("Backfilling diversifier_index for {} notes", count.0);
+
+    // Fetch distinct accounts with unbackfilled notes
+    let accounts: Vec<(u32,)> = sqlx::query_as(
+        "SELECT DISTINCT account FROM notes WHERE pool IN (1, 2) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
+    )
+    .fetch_all(&mut *connection)
+    .await?;
+
+    for (account,) in accounts {
+        // Load Sapling DFVK for this account
+        let sapling_dfvk: Option<DiversifiableFullViewingKey> = sqlx::query_as(
+            "SELECT xvk FROM sapling_accounts WHERE account = ?",
+        )
+        .bind(account)
+        .fetch_optional(&mut *connection)
+        .await?
+        .map(|(xvk,): (Vec<u8>,)| {
+            DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()
+        });
+
+        // Load Orchard FVK for this account
+        let orchard_fvk: Option<FullViewingKey> = sqlx::query_as(
+            "SELECT xvk FROM orchard_accounts WHERE account = ?",
+        )
+        .bind(account)
+        .fetch_optional(&mut *connection)
+        .await?
+        .map(|(xvk,): (Vec<u8>,)| {
+            FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()
+        });
+
+        // Fetch unbackfilled notes for this account
+        let notes: Vec<(u32, u8, u8, Vec<u8>)> = sqlx::query_as(
+            "SELECT id_note, pool, scope, diversifier FROM notes WHERE account = ? AND pool IN (1, 2) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
+        )
+        .bind(account)
+        .fetch_all(&mut *connection)
+        .await?;
+
+        for (id_note, pool, scope, diversifier) in notes {
+            let di: Option<i64> = match pool {
+                1 => sapling_dfvk
+                    .as_ref()
+                    .and_then(|dfvk| resolve_sapling_diversifier_index(dfvk, scope, &diversifier)),
+                2 => orchard_fvk
+                    .as_ref()
+                    .and_then(|fvk| resolve_orchard_diversifier_index(fvk, scope, &diversifier)),
+                _ => None,
+            };
+
+            if let Some(di) = di {
+                sqlx::query("UPDATE notes SET diversifier_index = ? WHERE id_note = ?")
+                    .bind(di)
+                    .bind(id_note)
+                    .execute(&mut *connection)
+                    .await?;
+            }
+        }
+    }
+
+    info!("Backfill diversifier_index complete");
+    put_prop(connection, "backfilled_diversifier_index", "1").await?;
     Ok(())
 }
 
@@ -1345,7 +1478,7 @@ pub async fn get_account_hw(connection: &mut SqliteConnection, account: u32) -> 
 
 pub async fn get_notes(connection: &mut SqliteConnection, account: u32) -> Result<Vec<TxNote>> {
     let notes = sqlx::query(
-        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.diversifier_index, n.value, n.locked,
         m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
         FROM notes n LEFT JOIN spends s
 	    ON n.id_note = s.id_note
@@ -1369,7 +1502,7 @@ pub async fn get_notes_txid(
     // Return all notes for a given transaction
     // including the ones that may be spent
     let notes = sqlx::query(
-        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.value, n.locked,
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.diversifier_index, n.value, n.locked,
         m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
        FROM notes n
        JOIN transactions t ON n.tx = t.id_tx
@@ -1394,12 +1527,13 @@ fn row_to_note(row: SqliteRow) -> TxNote {
     let tx: u32 = row.get(3);
     let scope: u8 = row.get(4);
     let diversifier: Option<Vec<u8>> = row.get(5);
-    let value: u64 = row.get(6);
-    let locked: bool = row.get(7);
-    let memo: Option<String> = row.get(8);
-    let id_asset: Option<i64> = row.get(9);
-    let asset_name: Option<String> = row.get(10);
-    let asset_desc_hash: Option<Vec<u8>> = row.get(11);
+    let diversifier_index: Option<i64> = row.get(6);
+    let value: u64 = row.get(7);
+    let locked: bool = row.get(8);
+    let memo: Option<String> = row.get(9);
+    let id_asset: Option<i64> = row.get(10);
+    let asset_name: Option<String> = row.get(11);
+    let asset_desc_hash: Option<Vec<u8>> = row.get(12);
 
     TxNote {
         id: id_note,
@@ -1408,6 +1542,7 @@ fn row_to_note(row: SqliteRow) -> TxNote {
         tx,
         scope,
         diversifier,
+        diversifier_index,
         value,
         locked,
         id_asset: id_asset.map(|v| v as u32),

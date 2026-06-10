@@ -2,6 +2,7 @@ use anyhow::{Context as _, Result};
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::channel;
 use tokio_stream::StreamExt;
@@ -49,6 +50,30 @@ pub struct NoteExtended {
     pub id: u32,
     pub address: Vec<u8>,
     pub memo: Vec<u8>,
+}
+
+/// Pre-derived Sapling account keys — loaded once before sync.
+pub struct SaplingAccountKeys {
+    pub dfvk: sapling_crypto::zip32::DiversifiableFullViewingKey,
+    pub external_ivk: sapling_crypto::keys::SaplingIvk,
+    pub internal_ivk: sapling_crypto::keys::SaplingIvk,
+    pub external_nk: sapling_crypto::keys::NullifierDerivingKey,
+    pub internal_nk: sapling_crypto::keys::NullifierDerivingKey,
+}
+
+/// Pre-derived Orchard account keys — loaded once before sync.
+pub struct OrchardAccountKeys {
+    pub fvk: orchard::keys::FullViewingKey,
+    pub external_ivk: orchard::keys::IncomingViewingKey,
+    pub internal_ivk: orchard::keys::IncomingViewingKey,
+    // Orchard NK = FullViewingKey (see warp/sync/shielded/orchard.rs line 27)
+}
+
+/// Cache of all per-account key material needed during shielded sync.
+/// Preloaded once and shared via Arc between the db_writer and warp_sync tasks.
+pub struct AccountKeyCache {
+    pub sapling: HashMap<u32, SaplingAccountKeys>,
+    pub orchard: HashMap<u32, OrchardAccountKeys>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -533,6 +558,83 @@ pub async fn get_tree_state(
     Ok((sapling, orchard))
 }
 
+/// Preload all Sapling and Orchard account keys from the database.
+/// All key derivations happen exactly once, before any sync work starts.
+pub async fn preload_account_key_cache(
+    connection: &mut SqliteConnection,
+) -> Result<AccountKeyCache> {
+    let mut sapling = HashMap::new();
+    let sapling_rows: Vec<(u32, Vec<u8>)> =
+        sqlx::query_as("SELECT account, xvk FROM sapling_accounts")
+            .fetch_all(&mut *connection)
+            .await?;
+
+    for (account, xvk) in sapling_rows {
+        let dfvk = sapling_crypto::zip32::DiversifiableFullViewingKey::from_bytes(
+            &xvk.try_into().unwrap(),
+        )
+        .unwrap();
+        let external_ivk = dfvk.fvk().vk.ivk();
+        let internal_ivk = dfvk.to_internal_fvk().vk.ivk();
+        let external_nk = dfvk.fvk().vk.nk;
+        let internal_nk = dfvk.to_internal_fvk().vk.nk;
+        sapling.insert(
+            account,
+            SaplingAccountKeys {
+                dfvk,
+                external_ivk,
+                internal_ivk,
+                external_nk,
+                internal_nk,
+            },
+        );
+    }
+
+    let mut orchard = HashMap::new();
+    let orchard_rows: Vec<(u32, Vec<u8>)> =
+        sqlx::query_as("SELECT account, xvk FROM orchard_accounts")
+            .fetch_all(&mut *connection)
+            .await?;
+
+    for (account, xvk) in orchard_rows {
+        let fvk = orchard::keys::FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+        let external_ivk = fvk.to_ivk(orchard::keys::Scope::External);
+        let internal_ivk = fvk.to_ivk(orchard::keys::Scope::Internal);
+        orchard.insert(
+            account,
+            OrchardAccountKeys {
+                fvk,
+                external_ivk,
+                internal_ivk,
+            },
+        );
+    }
+
+    Ok(AccountKeyCache { sapling, orchard })
+}
+
+/// Resolve the diversifier index from a note's raw diversifier bytes.
+/// Pure computation — no DB access, uses the preloaded key cache.
+fn resolve_diversifier_index(
+    cache: &AccountKeyCache,
+    account: u32,
+    pool: u8,
+    scope: u8,
+    diversifier: &[u8],
+) -> Option<i64> {
+    match pool {
+        1 => cache
+            .sapling
+            .get(&account)
+            .and_then(|keys| crate::db::resolve_sapling_diversifier_index(&keys.dfvk, scope, diversifier)),
+        2 => cache
+            .orchard
+            .get(&account)
+            .and_then(|keys| crate::db::resolve_orchard_diversifier_index(&keys.fvk, scope, diversifier)),
+        _ => None,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn shielded_sync(
     network: &Network,
@@ -567,6 +669,11 @@ pub async fn shielded_sync(
         let heights_without_time = get_heights_without_time(&mut connection, start, end).await?;
 
         let mut writer_connection = pool.acquire().await?;
+
+        // Preload all account keys ONCE before sync starts.
+        // Key derivations happen once upfront — no per-note DB queries in the hot path.
+        let key_cache = Arc::new(preload_account_key_cache(&mut writer_connection).await?);
+
         let network = *network;
         let mut messages = vec![];
         let db_writer_task = tokio::spawn(async move {
@@ -578,7 +685,7 @@ pub async fn shielded_sync(
                     let mut new_messages = vec![];
                     mem::swap(&mut new_messages, &mut messages);
                     for msg in new_messages {
-                        match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
+                        match handle_message(&network, &mut db_tx, msg, &tx_progress, &key_cache).await {
                             Ok(_) => {}
                             Err(e) => {
                                 info!("ERROR HANDLING MESSAGE: {:?}", e);
@@ -595,7 +702,7 @@ pub async fn shielded_sync(
 
             let mut db_tx = writer_connection.begin().await.unwrap();
             for msg in messages {
-                match handle_message(&network, &mut db_tx, msg, &tx_progress).await {
+                match handle_message(&network, &mut db_tx, msg, &tx_progress, &key_cache).await {
                     Ok(_) => {}
                     Err(e) => {
                         info!("ERROR HANDLING MESSAGE: {:?}", e);
@@ -647,6 +754,7 @@ async fn handle_message(
     db_tx: &mut sqlx::Transaction<'_, Sqlite>,
     msg: WarpSyncMessage,
     tx_progress: &Sender<SyncProgress>,
+    key_cache: &AccountKeyCache,
 ) -> Result<()> {
     tracing::info!(target: "warp", "Warp Message: {msg:?}");
     match msg {
@@ -700,10 +808,20 @@ async fn handle_message(
             // For vanilla ZEC notes, asset_base is empty and id_asset
             // resolves to NULL.
             tracing::info!("note asset base {}", hex::encode(&note.asset_base));
+
+            // Resolve diversifier_index from the preloaded key cache
+            let diversifier_index = resolve_diversifier_index(
+                key_cache,
+                note.account,
+                note.pool,
+                note.scope,
+                &note.diversifier,
+            );
+
             let r = sqlx::query
                     ("INSERT INTO notes
-                        (account, height, pool, scope, tx, nullifier, value, cmx, position, diversifier, rcm, rho, id_asset)
-                        SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ?, a.id_asset
+                        (account, height, pool, scope, tx, nullifier, value, cmx, position, diversifier, rcm, rho, id_asset, diversifier_index)
+                        SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ?, a.id_asset, ?
                         FROM transactions t
                         LEFT JOIN assets a ON a.asset_base = ?
                         WHERE t.account = ? AND t.txid = ?")
@@ -718,6 +836,7 @@ async fn handle_message(
                     .bind(&note.rcm)
                     .bind(&note.rho)
                     .bind(&note.asset_base)
+                    .bind(diversifier_index)
                     .bind(note.account)
                     .bind(&note.txid)
                     .execute(&mut **db_tx).await?;

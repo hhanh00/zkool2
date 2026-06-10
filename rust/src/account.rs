@@ -1046,6 +1046,7 @@ pub async fn get_tx_details(
             tx,
             scope,
             diversifier,
+            diversifier_index: None,
             value,
             locked,
             memo,
