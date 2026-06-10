@@ -29,7 +29,8 @@ mixin _$PcztPackage {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $PcztPackageCopyWith<PcztPackage> get copyWith => _$PcztPackageCopyWithImpl<PcztPackage>(this as PcztPackage, _$identity);
+  $PcztPackageCopyWith<PcztPackage> get copyWith =>
+      _$PcztPackageCopyWithImpl<PcztPackage>(this as PcztPackage, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -38,14 +39,20 @@ mixin _$PcztPackage {
             other is PcztPackage &&
             const DeepCollectionEquality().equals(other.pczt, pczt) &&
             const DeepCollectionEquality().equals(other.nSpends, nSpends) &&
-            const DeepCollectionEquality().equals(other.saplingIndices, saplingIndices) &&
-            const DeepCollectionEquality().equals(other.orchardIndices, orchardIndices) &&
-            const DeepCollectionEquality().equals(other.orchardSplitSpendIndices, orchardSplitSpendIndices) &&
+            const DeepCollectionEquality()
+                .equals(other.saplingIndices, saplingIndices) &&
+            const DeepCollectionEquality()
+                .equals(other.orchardIndices, orchardIndices) &&
+            const DeepCollectionEquality().equals(
+                other.orchardSplitSpendIndices, orchardSplitSpendIndices) &&
             (identical(other.canSign, canSign) || other.canSign == canSign) &&
-            (identical(other.canBroadcast, canBroadcast) || other.canBroadcast == canBroadcast) &&
+            (identical(other.canBroadcast, canBroadcast) ||
+                other.canBroadcast == canBroadcast) &&
             (identical(other.price, price) || other.price == price) &&
-            (identical(other.category, category) || other.category == category) &&
-            (identical(other.isIssuance, isIssuance) || other.isIssuance == isIssuance));
+            (identical(other.category, category) ||
+                other.category == category) &&
+            (identical(other.isIssuance, isIssuance) ||
+                other.isIssuance == isIssuance));
   }
 
   @override
@@ -70,7 +77,9 @@ mixin _$PcztPackage {
 
 /// @nodoc
 abstract mixin class $PcztPackageCopyWith<$Res> {
-  factory $PcztPackageCopyWith(PcztPackage value, $Res Function(PcztPackage) _then) = _$PcztPackageCopyWithImpl;
+  factory $PcztPackageCopyWith(
+          PcztPackage value, $Res Function(PcztPackage) _then) =
+      _$PcztPackageCopyWithImpl;
   @useResult
   $Res call(
       {Uint8List pczt,
@@ -244,16 +253,34 @@ extension PcztPackagePatterns on PcztPackage {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(Uint8List pczt, UsizeArray3 nSpends, Uint64List saplingIndices, Uint64List orchardIndices, Uint64List orchardSplitSpendIndices,
-            bool canSign, bool canBroadcast, double? price, int? category, bool isIssuance)?
+    TResult Function(
+            Uint8List pczt,
+            UsizeArray3 nSpends,
+            Uint64List saplingIndices,
+            Uint64List orchardIndices,
+            Uint64List orchardSplitSpendIndices,
+            bool canSign,
+            bool canBroadcast,
+            double? price,
+            int? category,
+            bool isIssuance)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _PcztPackage() when $default != null:
-        return $default(_that.pczt, _that.nSpends, _that.saplingIndices, _that.orchardIndices, _that.orchardSplitSpendIndices, _that.canSign,
-            _that.canBroadcast, _that.price, _that.category, _that.isIssuance);
+        return $default(
+            _that.pczt,
+            _that.nSpends,
+            _that.saplingIndices,
+            _that.orchardIndices,
+            _that.orchardSplitSpendIndices,
+            _that.canSign,
+            _that.canBroadcast,
+            _that.price,
+            _that.category,
+            _that.isIssuance);
       case _:
         return orElse();
     }
@@ -274,15 +301,33 @@ extension PcztPackagePatterns on PcztPackage {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(Uint8List pczt, UsizeArray3 nSpends, Uint64List saplingIndices, Uint64List orchardIndices, Uint64List orchardSplitSpendIndices,
-            bool canSign, bool canBroadcast, double? price, int? category, bool isIssuance)
+    TResult Function(
+            Uint8List pczt,
+            UsizeArray3 nSpends,
+            Uint64List saplingIndices,
+            Uint64List orchardIndices,
+            Uint64List orchardSplitSpendIndices,
+            bool canSign,
+            bool canBroadcast,
+            double? price,
+            int? category,
+            bool isIssuance)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _PcztPackage():
-        return $default(_that.pczt, _that.nSpends, _that.saplingIndices, _that.orchardIndices, _that.orchardSplitSpendIndices, _that.canSign,
-            _that.canBroadcast, _that.price, _that.category, _that.isIssuance);
+        return $default(
+            _that.pczt,
+            _that.nSpends,
+            _that.saplingIndices,
+            _that.orchardIndices,
+            _that.orchardSplitSpendIndices,
+            _that.canSign,
+            _that.canBroadcast,
+            _that.price,
+            _that.category,
+            _that.isIssuance);
     }
   }
 
@@ -300,15 +345,33 @@ extension PcztPackagePatterns on PcztPackage {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(Uint8List pczt, UsizeArray3 nSpends, Uint64List saplingIndices, Uint64List orchardIndices, Uint64List orchardSplitSpendIndices,
-            bool canSign, bool canBroadcast, double? price, int? category, bool isIssuance)?
+    TResult? Function(
+            Uint8List pczt,
+            UsizeArray3 nSpends,
+            Uint64List saplingIndices,
+            Uint64List orchardIndices,
+            Uint64List orchardSplitSpendIndices,
+            bool canSign,
+            bool canBroadcast,
+            double? price,
+            int? category,
+            bool isIssuance)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _PcztPackage() when $default != null:
-        return $default(_that.pczt, _that.nSpends, _that.saplingIndices, _that.orchardIndices, _that.orchardSplitSpendIndices, _that.canSign,
-            _that.canBroadcast, _that.price, _that.category, _that.isIssuance);
+        return $default(
+            _that.pczt,
+            _that.nSpends,
+            _that.saplingIndices,
+            _that.orchardIndices,
+            _that.orchardSplitSpendIndices,
+            _that.canSign,
+            _that.canBroadcast,
+            _that.price,
+            _that.category,
+            _that.isIssuance);
       case _:
         return null;
     }
@@ -356,7 +419,8 @@ class _PcztPackage implements PcztPackage {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$PcztPackageCopyWith<_PcztPackage> get copyWith => __$PcztPackageCopyWithImpl<_PcztPackage>(this, _$identity);
+  _$PcztPackageCopyWith<_PcztPackage> get copyWith =>
+      __$PcztPackageCopyWithImpl<_PcztPackage>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -365,14 +429,20 @@ class _PcztPackage implements PcztPackage {
             other is _PcztPackage &&
             const DeepCollectionEquality().equals(other.pczt, pczt) &&
             const DeepCollectionEquality().equals(other.nSpends, nSpends) &&
-            const DeepCollectionEquality().equals(other.saplingIndices, saplingIndices) &&
-            const DeepCollectionEquality().equals(other.orchardIndices, orchardIndices) &&
-            const DeepCollectionEquality().equals(other.orchardSplitSpendIndices, orchardSplitSpendIndices) &&
+            const DeepCollectionEquality()
+                .equals(other.saplingIndices, saplingIndices) &&
+            const DeepCollectionEquality()
+                .equals(other.orchardIndices, orchardIndices) &&
+            const DeepCollectionEquality().equals(
+                other.orchardSplitSpendIndices, orchardSplitSpendIndices) &&
             (identical(other.canSign, canSign) || other.canSign == canSign) &&
-            (identical(other.canBroadcast, canBroadcast) || other.canBroadcast == canBroadcast) &&
+            (identical(other.canBroadcast, canBroadcast) ||
+                other.canBroadcast == canBroadcast) &&
             (identical(other.price, price) || other.price == price) &&
-            (identical(other.category, category) || other.category == category) &&
-            (identical(other.isIssuance, isIssuance) || other.isIssuance == isIssuance));
+            (identical(other.category, category) ||
+                other.category == category) &&
+            (identical(other.isIssuance, isIssuance) ||
+                other.isIssuance == isIssuance));
   }
 
   @override
@@ -396,8 +466,11 @@ class _PcztPackage implements PcztPackage {
 }
 
 /// @nodoc
-abstract mixin class _$PcztPackageCopyWith<$Res> implements $PcztPackageCopyWith<$Res> {
-  factory _$PcztPackageCopyWith(_PcztPackage value, $Res Function(_PcztPackage) _then) = __$PcztPackageCopyWithImpl;
+abstract mixin class _$PcztPackageCopyWith<$Res>
+    implements $PcztPackageCopyWith<$Res> {
+  factory _$PcztPackageCopyWith(
+          _PcztPackage value, $Res Function(_PcztPackage) _then) =
+      __$PcztPackageCopyWithImpl;
   @override
   @useResult
   $Res call(
@@ -487,11 +560,15 @@ mixin _$SigningEvent {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningEvent && const DeepCollectionEquality().equals(other.field0, field0));
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningEvent &&
+            const DeepCollectionEquality().equals(other.field0, field0));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
 
   @override
   String toString() {
@@ -687,12 +764,16 @@ class SigningEvent_Progress extends SigningEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $SigningEvent_ProgressCopyWith<SigningEvent_Progress> get copyWith => _$SigningEvent_ProgressCopyWithImpl<SigningEvent_Progress>(this, _$identity);
+  $SigningEvent_ProgressCopyWith<SigningEvent_Progress> get copyWith =>
+      _$SigningEvent_ProgressCopyWithImpl<SigningEvent_Progress>(
+          this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is SigningEvent_Progress && (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType &&
+            other is SigningEvent_Progress &&
+            (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -705,14 +786,18 @@ class SigningEvent_Progress extends SigningEvent {
 }
 
 /// @nodoc
-abstract mixin class $SigningEvent_ProgressCopyWith<$Res> implements $SigningEventCopyWith<$Res> {
-  factory $SigningEvent_ProgressCopyWith(SigningEvent_Progress value, $Res Function(SigningEvent_Progress) _then) = _$SigningEvent_ProgressCopyWithImpl;
+abstract mixin class $SigningEvent_ProgressCopyWith<$Res>
+    implements $SigningEventCopyWith<$Res> {
+  factory $SigningEvent_ProgressCopyWith(SigningEvent_Progress value,
+          $Res Function(SigningEvent_Progress) _then) =
+      _$SigningEvent_ProgressCopyWithImpl;
   @useResult
   $Res call({String field0});
 }
 
 /// @nodoc
-class _$SigningEvent_ProgressCopyWithImpl<$Res> implements $SigningEvent_ProgressCopyWith<$Res> {
+class _$SigningEvent_ProgressCopyWithImpl<$Res>
+    implements $SigningEvent_ProgressCopyWith<$Res> {
   _$SigningEvent_ProgressCopyWithImpl(this._self, this._then);
 
   final SigningEvent_Progress _self;
@@ -745,12 +830,15 @@ class SigningEvent_Result extends SigningEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $SigningEvent_ResultCopyWith<SigningEvent_Result> get copyWith => _$SigningEvent_ResultCopyWithImpl<SigningEvent_Result>(this, _$identity);
+  $SigningEvent_ResultCopyWith<SigningEvent_Result> get copyWith =>
+      _$SigningEvent_ResultCopyWithImpl<SigningEvent_Result>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is SigningEvent_Result && (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType &&
+            other is SigningEvent_Result &&
+            (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -763,8 +851,11 @@ class SigningEvent_Result extends SigningEvent {
 }
 
 /// @nodoc
-abstract mixin class $SigningEvent_ResultCopyWith<$Res> implements $SigningEventCopyWith<$Res> {
-  factory $SigningEvent_ResultCopyWith(SigningEvent_Result value, $Res Function(SigningEvent_Result) _then) = _$SigningEvent_ResultCopyWithImpl;
+abstract mixin class $SigningEvent_ResultCopyWith<$Res>
+    implements $SigningEventCopyWith<$Res> {
+  factory $SigningEvent_ResultCopyWith(
+          SigningEvent_Result value, $Res Function(SigningEvent_Result) _then) =
+      _$SigningEvent_ResultCopyWithImpl;
   @useResult
   $Res call({PcztPackage field0});
 
@@ -772,7 +863,8 @@ abstract mixin class $SigningEvent_ResultCopyWith<$Res> implements $SigningEvent
 }
 
 /// @nodoc
-class _$SigningEvent_ResultCopyWithImpl<$Res> implements $SigningEvent_ResultCopyWith<$Res> {
+class _$SigningEvent_ResultCopyWithImpl<$Res>
+    implements $SigningEvent_ResultCopyWith<$Res> {
   _$SigningEvent_ResultCopyWithImpl(this._self, this._then);
 
   final SigningEvent_Result _self;

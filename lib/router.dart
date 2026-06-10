@@ -67,8 +67,14 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
           builder: (context, state) => ReceivePage(),
         ),
         GoRoute(
-          path: '/transparent_addresses',
-          builder: (context, state) => TransparentAddressesPage(txCounts: state.extra as List<TAddressTxCount>),
+          path: '/addresses',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>;
+            return AddressesPage(
+              txCounts: extra['txCounts'] as List<TAddressTxCount>,
+              availablePools: extra['availablePools'] as int,
+            );
+          },
         ),
         GoRoute(
           path: '/send',

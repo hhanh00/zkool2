@@ -1651,7 +1651,115 @@ pub async fn fetch_transparent_address_tx_count(
         let tx_count: u32 = row.get(4);
         let time: u32 = row.get(5);
         TAddressTxCount {
+            pool: 0,
             address,
+            scope,
+            dindex,
+            amount,
+            tx_count,
+            time,
+        }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+
+    Ok(rows)
+}
+
+/// Raw tx stats for a transparent address slot, keyed by (scope, dindex).
+pub struct TransparentSlotStats {
+    pub scope: u8,
+    pub dindex: u32,
+    pub amount: u64,
+    pub tx_count: u32,
+    pub time: u32,
+}
+
+/// Batch query: tx stats for ALL transparent address slots for an account.
+/// Returns rows keyed by (scope, dindex), including zero-tx slots (LEFT JOIN).
+pub async fn fetch_transparent_slot_stats(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<TransparentSlotStats>> {
+    let rows = sqlx::query(
+        "WITH n AS (
+        SELECT tx, value, taddress FROM notes WHERE pool = 0 AND account = ?1
+        UNION ALL
+        SELECT s.tx, s.value, n2.taddress FROM spends s
+        JOIN notes n2 ON s.id_note = n2.id_note AND s.account = n2.account
+        WHERE s.pool = 0 AND n2.account = ?1)
+        SELECT ta.scope, ta.dindex,
+               COALESCE(SUM(n.value), 0), COUNT(n.tx), COALESCE(MAX(t.time), 0)
+        FROM transparent_address_accounts ta
+        LEFT JOIN n ON ta.id_taddress = n.taddress
+        LEFT JOIN transactions t ON t.id_tx = n.tx AND t.account = ?1
+        WHERE ta.account = ?1
+        GROUP BY ta.scope, ta.dindex
+        ORDER BY ta.scope, ta.dindex",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let scope: u8 = row.get::<i64, _>(0) as u8;
+        let dindex: u32 = row.get::<i64, _>(1) as u32;
+        let amount: u64 = row.get::<i64, _>(2) as u64;
+        let tx_count: u32 = row.get(3);
+        let time: u32 = row.get::<Option<u32>, _>(4).unwrap_or(0);
+        TransparentSlotStats {
+            scope,
+            dindex,
+            amount,
+            tx_count,
+            time,
+        }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+
+    Ok(rows)
+}
+
+/// Raw tx stats for a shielded address slot, keyed by (pool, scope, dindex).
+pub struct ShieldedSlotStats {
+    pub pool: u8,
+    pub scope: u8,
+    pub dindex: u32,
+    pub amount: u64,
+    pub tx_count: u32,
+    pub time: u32,
+}
+
+/// Batch query: tx stats for ALL shielded address slots (Sapling + Orchard).
+/// Groups notes+spends by (pool, scope, diversifier_index).
+pub async fn fetch_shielded_slot_stats(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<ShieldedSlotStats>> {
+    let rows = sqlx::query(
+        "SELECT sub.pool, sub.scope, sub.diversifier_index,
+                SUM(sub.value), COUNT(sub.tx), COALESCE(MAX(t.time), 0)
+        FROM (
+            SELECT pool, scope, diversifier_index, tx, value
+            FROM notes WHERE account = ?1 AND pool IN (1, 2)
+            UNION ALL
+            SELECT n.pool, n.scope, n.diversifier_index, s.tx, s.value
+            FROM spends s
+            JOIN notes n ON s.id_note = n.id_note AND s.account = n.account
+            WHERE s.pool IN (1, 2) AND n.account = ?1
+        ) sub
+        JOIN transactions t ON t.id_tx = sub.tx AND t.account = ?1
+        GROUP BY sub.pool, sub.scope, sub.diversifier_index
+        ORDER BY sub.pool, sub.scope, sub.diversifier_index",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let pool: u8 = row.get::<i64, _>(0) as u8;
+        let scope: u8 = row.get::<i64, _>(1) as u8;
+        let dindex: u32 = row.get::<i64, _>(2) as u32;
+        let amount: u64 = row.get::<i64, _>(3) as u64;
+        let tx_count: u32 = row.get(4);
+        let time: u32 = row.get::<Option<u32>, _>(5).unwrap_or(0);
+        ShieldedSlotStats {
+            pool,
             scope,
             dindex,
             amount,

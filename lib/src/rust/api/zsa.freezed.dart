@@ -27,7 +27,8 @@ mixin _$ZsaHolding {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $ZsaHoldingCopyWith<ZsaHolding> get copyWith => _$ZsaHoldingCopyWithImpl<ZsaHolding>(this as ZsaHolding, _$identity);
+  $ZsaHoldingCopyWith<ZsaHolding> get copyWith =>
+      _$ZsaHoldingCopyWithImpl<ZsaHolding>(this as ZsaHolding, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -35,18 +36,30 @@ mixin _$ZsaHolding {
         (other.runtimeType == runtimeType &&
             other is ZsaHolding &&
             (identical(other.idAsset, idAsset) || other.idAsset == idAsset) &&
-            const DeepCollectionEquality().equals(other.assetDescHash, assetDescHash) &&
-            (identical(other.assetName, assetName) || other.assetName == assetName) &&
+            const DeepCollectionEquality()
+                .equals(other.assetDescHash, assetDescHash) &&
+            (identical(other.assetName, assetName) ||
+                other.assetName == assetName) &&
             const DeepCollectionEquality().equals(other.ik, ik) &&
             const DeepCollectionEquality().equals(other.assetBase, assetBase) &&
-            (identical(other.finalized, finalized) || other.finalized == finalized) &&
-            (identical(other.firstSeenHeight, firstSeenHeight) || other.firstSeenHeight == firstSeenHeight) &&
+            (identical(other.finalized, finalized) ||
+                other.finalized == finalized) &&
+            (identical(other.firstSeenHeight, firstSeenHeight) ||
+                other.firstSeenHeight == firstSeenHeight) &&
             (identical(other.balance, balance) || other.balance == balance));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, idAsset, const DeepCollectionEquality().hash(assetDescHash), assetName, const DeepCollectionEquality().hash(ik),
-      const DeepCollectionEquality().hash(assetBase), finalized, firstSeenHeight, balance);
+  int get hashCode => Object.hash(
+      runtimeType,
+      idAsset,
+      const DeepCollectionEquality().hash(assetDescHash),
+      assetName,
+      const DeepCollectionEquality().hash(ik),
+      const DeepCollectionEquality().hash(assetBase),
+      finalized,
+      firstSeenHeight,
+      balance);
 
   @override
   String toString() {
@@ -56,7 +69,9 @@ mixin _$ZsaHolding {
 
 /// @nodoc
 abstract mixin class $ZsaHoldingCopyWith<$Res> {
-  factory $ZsaHoldingCopyWith(ZsaHolding value, $Res Function(ZsaHolding) _then) = _$ZsaHoldingCopyWithImpl;
+  factory $ZsaHoldingCopyWith(
+          ZsaHolding value, $Res Function(ZsaHolding) _then) =
+      _$ZsaHoldingCopyWithImpl;
   @useResult
   $Res call(
       {PlatformInt64 idAsset,
@@ -218,7 +233,14 @@ extension ZsaHoldingPatterns on ZsaHolding {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(PlatformInt64 idAsset, Uint8List assetDescHash, String assetName, Uint8List ik, Uint8List assetBase, bool finalized, int firstSeenHeight,
+    TResult Function(
+            PlatformInt64 idAsset,
+            Uint8List assetDescHash,
+            String assetName,
+            Uint8List ik,
+            Uint8List assetBase,
+            bool finalized,
+            int firstSeenHeight,
             BigInt balance)?
         $default, {
     required TResult orElse(),
@@ -226,7 +248,15 @@ extension ZsaHoldingPatterns on ZsaHolding {
     final _that = this;
     switch (_that) {
       case _ZsaHolding() when $default != null:
-        return $default(_that.idAsset, _that.assetDescHash, _that.assetName, _that.ik, _that.assetBase, _that.finalized, _that.firstSeenHeight, _that.balance);
+        return $default(
+            _that.idAsset,
+            _that.assetDescHash,
+            _that.assetName,
+            _that.ik,
+            _that.assetBase,
+            _that.finalized,
+            _that.firstSeenHeight,
+            _that.balance);
       case _:
         return orElse();
     }
@@ -247,14 +277,29 @@ extension ZsaHoldingPatterns on ZsaHolding {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(PlatformInt64 idAsset, Uint8List assetDescHash, String assetName, Uint8List ik, Uint8List assetBase, bool finalized, int firstSeenHeight,
+    TResult Function(
+            PlatformInt64 idAsset,
+            Uint8List assetDescHash,
+            String assetName,
+            Uint8List ik,
+            Uint8List assetBase,
+            bool finalized,
+            int firstSeenHeight,
             BigInt balance)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _ZsaHolding():
-        return $default(_that.idAsset, _that.assetDescHash, _that.assetName, _that.ik, _that.assetBase, _that.finalized, _that.firstSeenHeight, _that.balance);
+        return $default(
+            _that.idAsset,
+            _that.assetDescHash,
+            _that.assetName,
+            _that.ik,
+            _that.assetBase,
+            _that.finalized,
+            _that.firstSeenHeight,
+            _that.balance);
     }
   }
 
@@ -272,14 +317,29 @@ extension ZsaHoldingPatterns on ZsaHolding {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(PlatformInt64 idAsset, Uint8List assetDescHash, String assetName, Uint8List ik, Uint8List assetBase, bool finalized, int firstSeenHeight,
+    TResult? Function(
+            PlatformInt64 idAsset,
+            Uint8List assetDescHash,
+            String assetName,
+            Uint8List ik,
+            Uint8List assetBase,
+            bool finalized,
+            int firstSeenHeight,
             BigInt balance)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _ZsaHolding() when $default != null:
-        return $default(_that.idAsset, _that.assetDescHash, _that.assetName, _that.ik, _that.assetBase, _that.finalized, _that.firstSeenHeight, _that.balance);
+        return $default(
+            _that.idAsset,
+            _that.assetDescHash,
+            _that.assetName,
+            _that.ik,
+            _that.assetBase,
+            _that.finalized,
+            _that.firstSeenHeight,
+            _that.balance);
       case _:
         return null;
     }
@@ -321,7 +381,8 @@ class _ZsaHolding implements ZsaHolding {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$ZsaHoldingCopyWith<_ZsaHolding> get copyWith => __$ZsaHoldingCopyWithImpl<_ZsaHolding>(this, _$identity);
+  _$ZsaHoldingCopyWith<_ZsaHolding> get copyWith =>
+      __$ZsaHoldingCopyWithImpl<_ZsaHolding>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -329,18 +390,30 @@ class _ZsaHolding implements ZsaHolding {
         (other.runtimeType == runtimeType &&
             other is _ZsaHolding &&
             (identical(other.idAsset, idAsset) || other.idAsset == idAsset) &&
-            const DeepCollectionEquality().equals(other.assetDescHash, assetDescHash) &&
-            (identical(other.assetName, assetName) || other.assetName == assetName) &&
+            const DeepCollectionEquality()
+                .equals(other.assetDescHash, assetDescHash) &&
+            (identical(other.assetName, assetName) ||
+                other.assetName == assetName) &&
             const DeepCollectionEquality().equals(other.ik, ik) &&
             const DeepCollectionEquality().equals(other.assetBase, assetBase) &&
-            (identical(other.finalized, finalized) || other.finalized == finalized) &&
-            (identical(other.firstSeenHeight, firstSeenHeight) || other.firstSeenHeight == firstSeenHeight) &&
+            (identical(other.finalized, finalized) ||
+                other.finalized == finalized) &&
+            (identical(other.firstSeenHeight, firstSeenHeight) ||
+                other.firstSeenHeight == firstSeenHeight) &&
             (identical(other.balance, balance) || other.balance == balance));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, idAsset, const DeepCollectionEquality().hash(assetDescHash), assetName, const DeepCollectionEquality().hash(ik),
-      const DeepCollectionEquality().hash(assetBase), finalized, firstSeenHeight, balance);
+  int get hashCode => Object.hash(
+      runtimeType,
+      idAsset,
+      const DeepCollectionEquality().hash(assetDescHash),
+      assetName,
+      const DeepCollectionEquality().hash(ik),
+      const DeepCollectionEquality().hash(assetBase),
+      finalized,
+      firstSeenHeight,
+      balance);
 
   @override
   String toString() {
@@ -349,8 +422,11 @@ class _ZsaHolding implements ZsaHolding {
 }
 
 /// @nodoc
-abstract mixin class _$ZsaHoldingCopyWith<$Res> implements $ZsaHoldingCopyWith<$Res> {
-  factory _$ZsaHoldingCopyWith(_ZsaHolding value, $Res Function(_ZsaHolding) _then) = __$ZsaHoldingCopyWithImpl;
+abstract mixin class _$ZsaHoldingCopyWith<$Res>
+    implements $ZsaHoldingCopyWith<$Res> {
+  factory _$ZsaHoldingCopyWith(
+          _ZsaHolding value, $Res Function(_ZsaHolding) _then) =
+      __$ZsaHoldingCopyWithImpl;
   @override
   @useResult
   $Res call(
