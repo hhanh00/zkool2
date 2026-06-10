@@ -264,7 +264,6 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
   );
 
   List<TAddressTxCount> _filtered() => _txCounts.where((tx) {
-    if (!_selectedPools.contains(tx.pool)) return false;
     switch (_scopeFilter) {
       case 1: if (tx.scope != 0) return false;
       case 2: if (tx.scope != 1) return false;

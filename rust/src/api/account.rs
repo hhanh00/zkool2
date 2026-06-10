@@ -513,36 +513,45 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool, pool_filter: u8) 
         let s_st = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
         let o_st = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
 
-        // Derive addresses for all enabled pools (not gated by pool_mask — which only tells us which have data)
+        // Derive addresses for all enabled pools
+        let mut t_addr_raw: Option<TransparentAddress> = None;
         let t_str = if selected.has_pool(0) {
-            derive_t_str(&tkeys, &network, &mut connection, c.account, scope, d).await?
+            if let Some(tvk) = &tkeys.xvk {
+                let (_, taddr) = crate::account::derive_transparent_address(tvk, scope as u32, d, false)?;
+                t_addr_raw = Some(taddr);
+                Some(taddr.encode(&network))
+            } else {
+                let stored: Option<String> = sqlx::query(
+                    "SELECT address FROM transparent_address_accounts WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
+                )
+                .bind(c.account).bind(scope).bind(d)
+                .map(|row: SqliteRow| row.get(0))
+                .fetch_optional(&mut *connection).await?;
+                t_addr_raw = stored.as_ref().and_then(|a| TransparentAddress::decode(&network, a).ok());
+                stored
+            }
         } else { None };
 
+        let mut s_addr_raw: Option<sapling_crypto::PaymentAddress> = None;
         let s_str = if s_enabled {
             let dfvk = skeys.xvk.as_ref().unwrap();
-            (if scope == 0 { dfvk.address((d as u64).into()) }
-             else { internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64)) })
-            .map(|pa| pa.encode(&network))
+            s_addr_raw = if scope == 0 { dfvk.address((d as u64).into()) }
+                         else { internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64)) };
+            s_addr_raw.as_ref().map(|pa| pa.encode(&network))
         } else { None };
 
+        let mut o_addr_raw: Option<orchard::Address> = None;
         let o_str = if selected.has_pool(2) {
-            okeys.xvk.as_ref().map(|fvk| {
+            if let Some(fvk) = &okeys.xvk {
                 let s = if scope == 0 { orchard::keys::Scope::External } else { orchard::keys::Scope::Internal };
-                UnifiedAddress::from_receivers(Some(fvk.address_at(d as u64, s)), None, None).unwrap().encode(&network)
-            })
+                let addr = fvk.address_at(d as u64, s);
+                o_addr_raw = Some(addr);
+                Some(UnifiedAddress::from_receivers(Some(addr), None, None).unwrap().encode(&network))
+            } else { None }
         } else { None };
 
         if aggregate {
-            let t_addr = t_str.as_ref().and_then(|a| TransparentAddress::decode(&network, a).ok());
-            let s_addr = s_str.as_ref().and_then(|a| PaymentAddress::decode(&network, a).ok());
-            let o_addr = o_str.as_ref().and_then(|a| {
-                let (_, ua) = zcash_address::unified::Address::decode(a).ok()?;
-                ua.items().iter().find_map(|r| match r {
-                    zcash_address::unified::Receiver::Orchard(data) => orchard::Address::from_raw_address_bytes(&data).into_option(),
-                    _ => None,
-                })
-            });
-            if let Some(ua) = UnifiedAddress::from_receivers(o_addr, s_addr, t_addr) {
+            if let Some(ua) = UnifiedAddress::from_receivers(o_addr_raw, s_addr_raw, t_addr_raw) {
                 results.push(TAddressTxCount {
                     pool: 0, address: ua.encode(&network), scope, dindex: d,
                     amount: t_st.0.wrapping_add(s_st.0).wrapping_add(o_st.0),
@@ -565,28 +574,6 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool, pool_filter: u8) 
 
     results.sort_by(|a, b| a.scope.cmp(&b.scope).then(a.dindex.cmp(&b.dindex)).then(a.pool.cmp(&b.pool)));
     Ok(results)
-}
-
-/// Derive or look up a transparent address string for a given (scope, dindex).
-async fn derive_t_str(
-    tkeys: &crate::db::TransparentKeys,
-    network: &crate::api::coin::Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-    scope: u8,
-    d: u32,
-) -> Result<Option<String>> {
-    if let Some(tvk) = &tkeys.xvk {
-        let (_, taddr) = crate::account::derive_transparent_address(tvk, scope as u32, d, false)?;
-        Ok(Some(taddr.encode(network)))
-    } else {
-        Ok(sqlx::query(
-            "SELECT address FROM transparent_address_accounts WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
-        )
-        .bind(account).bind(scope).bind(d)
-        .map(|row: SqliteRow| row.get(0))
-        .fetch_optional(&mut *connection).await?)
-    }
 }
 
 #[cfg_attr(feature = "flutter", frb)]
