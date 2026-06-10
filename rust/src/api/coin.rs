@@ -17,7 +17,7 @@ use tower::service_fn;
 use zcash_protocol::consensus::BlockHeight;
 use zcash_protocol::local_consensus::LocalNetwork;
 
-use crate::db::{create_schema, migrate_sapling_addresses, put_prop};
+use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addresses, put_prop};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::net::zebra::ZebraClient;
 use crate::{Client, IntoAnyhow};
@@ -63,6 +63,7 @@ impl Coin {
         let account = account.parse::<u32>()?;
 
         migrate_sapling_addresses(&network, &mut connection).await?;
+        backfill_diversifier_index(&mut connection).await?;
 
         Ok(Coin {
             coin,

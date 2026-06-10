@@ -575,6 +575,7 @@ impl Transaction {
                 tx: r.get(3),
                 scope: r.get(4),
                 diversifier: r.get(5),
+                diversifier_index: None,
                 value: r.get(6),
                 locked: r.get(7),
                 memo: r.get(8),
