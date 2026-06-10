@@ -270,7 +270,11 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     // Wait for getCurrentAccountProvider (what the page watches) to complete
     await ref.read(getCurrentAccountProvider.future);
     if (!context.mounted) return;
-    await GoRouter.of(context).push('/account', extra: account);
+    if (GoRouter.of(context).canPop()) {
+      GoRouter.of(context).pop();
+    } else {
+      GoRouter.of(context).go('/');
+    }
   }
 
   void onReorder(int oldIndex, int newIndex) async {

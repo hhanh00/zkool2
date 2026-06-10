@@ -44,13 +44,11 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
       routes: [
         GoRoute(
           path: '/',
+          builder: (context, state) => AccountViewPage(),
+        ),
+        GoRoute(
+          path: '/accounts',
           builder: (context, state) => AccountListPage(),
-          routes: [
-            GoRoute(
-              path: 'account',
-              builder: (context, state) => AccountViewPage(),
-            ),
-          ],
         ),
         GoRoute(
           path: '/account/edit',

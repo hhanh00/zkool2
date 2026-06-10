@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -33,11 +34,12 @@ class SplashPageState extends ConsumerState<SplashPage> {
         if (!openDatabaseSuccess!)
           GoRouter.of(context).go('/database_manager');
         else {
-          final selectedAccount = await ref.read(selectedAccountProvider.future);
-          if (selectedAccount != null) {
-            GoRouter.of(context).go("/account", extra: selectedAccount);
-          } else
+          final account = await ref.read(selectedAccountProvider.future);
+          if (account != null) {
             GoRouter.of(context).go("/");
+          } else {
+            GoRouter.of(context).go("/accounts");
+          }
         }
       });
     }
@@ -80,6 +82,11 @@ class SplashPageState extends ConsumerState<SplashPage> {
     final hasDb = ref.read(hasDbProvider.notifier);
     hasDb.setHasDb();
     ref.invalidate(appSettingsProvider);
+    // Restore persisted account ID from the Rust DB
+    final savedIdStr = await getProp(key: "selected_account", c: c);
+    final savedId = int.tryParse(savedIdStr ?? "") ?? 0;
+    ref.read(selectedAccountIdProvider.notifier).set(savedId);
+    ref.invalidate(selectedAccountProvider);
     final account = await ref.read(selectedAccountProvider.future);
     if (account != null) c = await c.setAccount(account: account.id);
 
@@ -88,7 +95,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
       // initialize the Vault via provider
       await ref.read(vaultProvider.future);
     }
-    logger.i("LWD ${settings.lwd}");
+    logger.i("LWD ${settings.lwd}, account ${account?.id}");
     c = c.setLwd(
       serverType: settings.isLightNode ? 0 : 1,
       url: settings.lwd,

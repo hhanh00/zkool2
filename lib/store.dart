@@ -38,13 +38,14 @@ class HasDb extends _$HasDb {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SelectedAccountId extends _$SelectedAccountId {
   @override
   int build() => 0;
 
-  void set(int account) {
+  Future<void> set(int account) async {
     state = account;
+    await putProp(key: "selected_account", value: account.toString(), c: coinContext.coin);
   }
 }
 
@@ -229,7 +230,7 @@ Future<Account?> selectedAccount(Ref ref) async {
   final accountId = ref.watch(selectedAccountIdProvider);
   if (accountId == 0) return null;
   final accounts = await ref.watch(getAccountsProvider.future);
-  final acc = accounts.firstWhere((a) => a.id == accountId);
+  final acc = accounts.firstWhereOrNull((a) => a.id == accountId);
   return acc;
 }
 
@@ -956,8 +957,10 @@ sealed class AccountPageData with _$AccountPageData {
 @riverpod
 Future<AccountPageData> accountPageData(Ref ref) async {
   final basicData = await ref.watch(basicAccountDataProvider.future);
-  final accountId = basicData.currentAccount?.account.id ?? 0;
-  final syncState = await ref.watch(syncStateAccountProvider(accountId).future);
+  final accountId = basicData.currentAccount?.account.id;
+  final syncState = accountId != null
+      ? await ref.watch(syncStateAccountProvider(accountId).future)
+      : null;
 
   return AccountPageData(
     allAccounts: basicData.allAccounts,
