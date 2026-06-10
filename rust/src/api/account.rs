@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
@@ -6,7 +7,7 @@ use bip39::Mnemonic;
 use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
-use sapling_crypto::PaymentAddress;
+use sapling_crypto::{zip32::sapling_derive_internal_fvk, PaymentAddress};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
 use tracing::info;
 use zcash_address::unified::{Container, Encoding};
@@ -326,6 +327,7 @@ pub struct Tx {
 }
 
 pub struct TAddressTxCount {
+    pub pool: u8,
     pub address: String,
     pub scope: u8,
     pub dindex: u32,
@@ -411,6 +413,168 @@ pub async fn lock_note(id: u32, locked: bool, c: &Coin) -> Result<()> {
 pub async fn fetch_transparent_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
     let mut connection = c.get_connection().await?;
     crate::db::fetch_transparent_address_tx_count(&mut connection, c.account).await
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn fetch_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
+    let mut connection = c.get_connection().await?;
+    let network = c.network();
+
+    let dindex = get_account_dindex(&mut connection, c.account).await?;
+    let pools = crate::db::select_account_transparent(&mut connection, c.account, dindex)
+        .await
+        .map(|t| if t.xvk.is_some() || t.address.is_some() { 1u8 } else { 0u8 })
+        .unwrap_or(0)
+        | crate::db::select_account_sapling(&network, &mut connection, c.account)
+            .await
+            .map(|s| if s.xvk.is_some() { 2u8 } else { 0u8 })
+            .unwrap_or(0)
+        | crate::db::select_account_orchard(&mut connection, c.account)
+            .await
+            .map(|o| if o.xvk.is_some() { 4u8 } else { 0u8 })
+            .unwrap_or(0);
+
+    // Load viewing keys
+    let tkeys = crate::db::select_account_transparent(&mut connection, c.account, dindex).await?;
+    let skeys = crate::db::select_account_sapling(&network, &mut connection, c.account).await?;
+    let okeys = crate::db::select_account_orchard(&mut connection, c.account).await?;
+
+    // Batch query: all tx stats
+    let transparent_stats = crate::db::fetch_transparent_slot_stats(&mut connection, c.account).await?;
+    let shielded_stats = crate::db::fetch_shielded_slot_stats(&mut connection, c.account).await?;
+
+    // Build lookup maps: (scope, dindex) -> stats for transparent; (pool, scope, dindex) -> stats for shielded
+    let t_stats: HashMap<(u8, u32), (u64, u32, u32)> = transparent_stats
+        .iter()
+        .map(|s| ((s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
+        .collect();
+    let s_stats: HashMap<(u8, u8, u32), (u64, u32, u32)> = shielded_stats
+        .iter()
+        .map(|s| ((s.pool, s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
+        .collect();
+
+    let mut results = Vec::new();
+
+    // Pre-compute internal Sapling IVK for scope=1 derivation
+    let internal_sap_ivk: Option<sapling_crypto::zip32::IncomingViewingKey> = skeys.xvk.as_ref().and_then(|dfvk| {
+        // Extract DK from the raw DFVK bytes
+        let dfvk_bytes = dfvk.to_bytes();
+        let dk_bytes: [u8; 32] = dfvk_bytes[96..128].try_into().ok()?;
+        let dk = sapling_crypto::zip32::DiversifierKey::from_bytes(dk_bytes);
+        let (int_fvk, int_dk) = sapling_derive_internal_fvk(dfvk.fvk(), &dk);
+        let mut ivk_bytes = [0u8; 64];
+        ivk_bytes[..32].copy_from_slice(int_dk.as_bytes());
+        ivk_bytes[32..].copy_from_slice(&int_fvk.vk.ivk().to_repr());
+        sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk_bytes).into_option()
+    });
+
+    for scope in [0u8, 1u8] {
+        for d in 0..=dindex {
+            // --- Sapling gate check ---
+            let s_addr: Option<sapling_crypto::PaymentAddress> = if pools & 2 != 0 {
+                let dfvk = match &skeys.xvk {
+                    Some(dfvk) => dfvk,
+                    None => continue,
+                };
+                let pa = if scope == 0 {
+                    dfvk.address((d as u64).into())
+                } else {
+                    internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64))
+                };
+                match pa {
+                    Some(pa) => Some(pa),
+                    None => continue, // invalid diversifier — skip entire index
+                }
+            } else {
+                None
+            };
+
+            // --- Transparent ---
+            if pools & 1 != 0 {
+                let address = if let Some(tvk) = &tkeys.xvk {
+                    // Derive from xpub
+                    let (_, taddr) = crate::account::derive_transparent_address(tvk, scope as u32, d, false)?;
+                    taddr.encode(&network)
+                } else {
+                    // Watch-only: look up stored address
+                    let addr: Option<String> = sqlx::query(
+                        "SELECT address FROM transparent_address_accounts WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
+                    )
+                    .bind(c.account)
+                    .bind(scope)
+                    .bind(d)
+                    .map(|row: SqliteRow| row.get(0))
+                    .fetch_optional(&mut *connection)
+                    .await?;
+                    match addr {
+                        Some(a) => a,
+                        None => continue,
+                    }
+                };
+                let stats = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
+                results.push(TAddressTxCount {
+                    pool: 0,
+                    address,
+                    scope,
+                    dindex: d,
+                    amount: stats.0,
+                    tx_count: stats.1,
+                    time: stats.2,
+                });
+            }
+
+            // --- Sapling ---
+            if let Some(pa) = s_addr {
+                let address = pa.encode(&network);
+                let stats = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
+                results.push(TAddressTxCount {
+                    pool: 1,
+                    address,
+                    scope,
+                    dindex: d,
+                    amount: stats.0,
+                    tx_count: stats.1,
+                    time: stats.2,
+                });
+            }
+
+            // --- Orchard ---
+            if pools & 4 != 0 {
+                let fvk = match &okeys.xvk {
+                    Some(fvk) => fvk,
+                    None => continue,
+                };
+                let orchard_scope = if scope == 0 {
+                    orchard::keys::Scope::External
+                } else {
+                    orchard::keys::Scope::Internal
+                };
+                let addr = fvk.address_at(d as u64, orchard_scope);
+                let address = UnifiedAddress::from_receivers(Some(addr), None, None)
+                    .unwrap()
+                    .encode(&network);
+                let stats = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
+                results.push(TAddressTxCount {
+                    pool: 2,
+                    address,
+                    scope,
+                    dindex: d,
+                    amount: stats.0,
+                    tx_count: stats.1,
+                    time: stats.2,
+                });
+            }
+        }
+    }
+
+    results.sort_by(|a, b| {
+        a.scope
+            .cmp(&b.scope)
+            .then(a.dindex.cmp(&b.dindex))
+            .then(a.pool.cmp(&b.pool))
+    });
+
+    Ok(results)
 }
 
 #[cfg_attr(feature = "flutter", frb)]

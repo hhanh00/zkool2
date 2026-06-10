@@ -59,8 +59,8 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
         title: Text("Receive Funds"),
         actions: [
           IconButton(
-            tooltip: "View Transparent Addresses",
-            onPressed: onViewTransparentAddresses,
+            tooltip: "View All Addresses",
+            onPressed: onViewAddresses,
             icon: Icon(Icons.visibility),
           ),
           IconButton(
@@ -179,10 +179,14 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
     GoRouter.of(context).push("/qr", extra: {"title": title, "text": text});
   }
 
-  void onViewTransparentAddresses() async {
-    final txCounts = await fetchTransparentAddressTxCount(c: c);
+  void onViewAddresses() async {
+    final txCounts = await fetchAddressTxCount(c: c);
+    final availablePools = await getAccountPools(account: c.account, c: c);
     if (!mounted) return;
-    await GoRouter.of(context).push("/transparent_addresses", extra: txCounts);
+    await GoRouter.of(context).push("/addresses", extra: {
+      'txCounts': txCounts,
+      'availablePools': availablePools,
+    });
   }
 
   void onSweep() async {
@@ -190,29 +194,116 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   }
 }
 
-class TransparentAddressesPage extends ConsumerWidget {
+class AddressesPage extends ConsumerStatefulWidget {
   final List<TAddressTxCount> txCounts;
+  final int availablePools;
 
-  const TransparentAddressesPage({super.key, required this.txCounts});
+  const AddressesPage({super.key, required this.txCounts, required this.availablePools});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AddressesPage> createState() => _AddressesPageState();
+}
+
+class _AddressesPageState extends ConsumerState<AddressesPage> {
+  int _usageFilter = 0; // 0=all, 1=used, 2=unused
+  late Set<int> _selectedPools;
+
+  static const _poolNames = {0: "Transparent", 1: "Sapling", 2: "Orchard"};
+  static const _poolBits = {0: 1, 1: 2, 2: 4};
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPools = {};
+    if (widget.availablePools & 1 != 0) _selectedPools.add(0);
+    if (widget.availablePools & 2 != 0) _selectedPools.add(1);
+    if (widget.availablePools & 4 != 0) _selectedPools.add(2);
+  }
+
+  bool _isPoolAvailable(int pool) => widget.availablePools & _poolBits[pool]! != 0;
+
+  void _togglePool(int pool) {
+    setState(() {
+      if (_selectedPools.contains(pool)) {
+        if (_selectedPools.length > 1) _selectedPools.remove(pool);
+      } else {
+        _selectedPools.add(pool);
+      }
+    });
+  }
+
+  List<TAddressTxCount> _filtered() => widget.txCounts.where((tx) {
+    if (!_selectedPools.contains(tx.pool)) return false;
+    switch (_usageFilter) {
+      case 1: return tx.txCount > 0;
+      case 2: return tx.txCount == 0;
+      default: return true;
+    }
+  }).toList();
+
+  @override
+  Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
+    final filtered = _filtered();
+
     return Scaffold(
-      appBar: AppBar(title: Text("Transparent Addresses")),
-      body: ListView.builder(
-        itemCount: txCounts.length,
-        itemBuilder: (context, index) {
-          final txCount = txCounts[index];
-          final scope = txCount.scope == 0 ? "External" : "Change";
-          return ListTile(
-            title: CopyableText(txCount.address),
-            subtitle: Text("Scope: $scope, Index: ${txCount.dindex}, Tx Count: ${txCount.txCount}, Last Used: ${timeToString(txCount.time)}"),
-            trailing: Text(zatToString(txCount.amount)),
-          );
-        },
+      appBar: AppBar(title: Text("Addresses")),
+      body: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text("Show: ", style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(width: 4),
+                    ChoiceChip(label: Text("All"), selected: _usageFilter == 0, onSelected: (_) => setState(() => _usageFilter = 0)),
+                    SizedBox(width: 4),
+                    ChoiceChip(label: Text("Used"), selected: _usageFilter == 1, onSelected: (_) => setState(() => _usageFilter = 1)),
+                    SizedBox(width: 4),
+                    ChoiceChip(label: Text("Unused"), selected: _usageFilter == 2, onSelected: (_) => setState(() => _usageFilter = 2)),
+                  ],
+                ),
+                SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text("Pools: ", style: TextStyle(fontWeight: FontWeight.w500)),
+                    for (final e in _poolNames.entries)
+                      Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: FilterChip(
+                          label: Text(e.value),
+                          selected: _selectedPools.contains(e.key),
+                          onSelected: _isPoolAvailable(e.key) ? (_) => _togglePool(e.key) : null,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filtered.length,
+              itemBuilder: (context, index) {
+                final tx = filtered[index];
+                final scope = tx.scope == 0 ? "External" : "Change";
+                final pool = _poolNames[tx.pool] ?? "Unknown";
+                final lastUsed = tx.time > 0 ? timeToString(tx.time) : "Never";
+                return ListTile(
+                  title: CopyableText(tx.address),
+                  subtitle: Text("$pool · $scope · Index ${tx.dindex} · ${tx.txCount} txs · $lastUsed"),
+                  trailing: Text(zatToString(tx.amount)),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
