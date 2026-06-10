@@ -1,6 +1,6 @@
 # Changelog
 
-## [6.19.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.4...zkool-v6.19.0) (2026-06-10)
+## [6.18.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.4...zkool-v6.18.5) (2026-06-11)
 
 
 ### Features
