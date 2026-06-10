@@ -48,6 +48,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   var isSeed = false;
   var ledger = false;
   var isFvk = false;
+  var _showAdvanced = false;
   Uint8List? iconBytes;
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -140,15 +141,6 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                   ),
                 ),
                 Gap(16),
-                if (!ledger) Showcase(
-                  key: internalID,
-                  description: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
-                  child: FormBuilderSwitch(
-                    name: "useInternal",
-                    title: const Text("Use Internal Change"),
-                  ),
-                ),
-                Gap(16),
                 Showcase(
                   key: restoreID,
                   description: "Check if you want to restore an existing account",
@@ -159,14 +151,6 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                     onChanged: (v) => setState(() => restore = v ?? false),
                   ),
                 ),
-                Gap(16),
-                if (restore)
-                  FormBuilderSwitch(
-                    name: "ledger",
-                    title: const Text("H/W Ledger"),
-                    initialValue: ledger,
-                    onChanged: (v) => setState(() => ledger = v ?? false),
-                  ),
                 Gap(16),
                 if (restore)
                   Row(
@@ -199,34 +183,6 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                     ],
                   ),
                 Gap(16),
-                if (restore && isSeed && !ledger)
-                  Showcase(
-                    key: passphraseID,
-                    description: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
-                    child: FormBuilderTextField(
-                      name: "passphrase",
-                      decoration: const InputDecoration(
-                        labelText: "Extra Passphrase (optional)",
-                      ),
-                    ),
-                  ),
-                Gap(16),
-                if (restore && (isSeed || ledger))
-                  Showcase(
-                    key: accountIndexID,
-                    description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
-                    child: FormBuilderTextField(
-                      name: "aindex",
-                      decoration: const InputDecoration(
-                        labelText: "Account Index",
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                    ),
-                  ),
-                Gap(16),
                 if (restore)
                   Showcase(
                     key: birthID,
@@ -242,26 +198,83 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                       ],
                     ),
                   ),
-                if (restore && keyPools != 0)
-                  Showcase(
-                    key: accountPoolsID,
-                    description: "Pools this account can receive funds",
-                    child: InputDecorator(
-                      decoration: InputDecoration(labelText: "Pools"),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: FormBuilderField<int>(
-                          name: "pools",
-                          initialValue: keyPools,
-                          builder: (field) => PoolSelect(
-                            enabled: keyPools,
-                            initialValue: field.value!,
-                            onChanged: (v) => field.didChange(v),
+                Gap(16),
+                FormBuilderSwitch(
+                  name: "advanced",
+                  title: const Text("Advanced Options"),
+                  initialValue: _showAdvanced,
+                  onChanged: (v) => setState(() => _showAdvanced = v ?? false),
+                ),
+                if (_showAdvanced) ...[
+                  Gap(16),
+                  if (!ledger && (isSeed || key.isEmpty))
+                    Showcase(
+                      key: internalID,
+                      description: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
+                      child: FormBuilderSwitch(
+                        name: "useInternal",
+                        title: const Text("Use Internal Change"),
+                      ),
+                    ),
+                  if (restore) ...[
+                    Gap(16),
+                    if (isSeed && !ledger)
+                      Showcase(
+                        key: passphraseID,
+                        description: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
+                        child: FormBuilderTextField(
+                          name: "passphrase",
+                          decoration: const InputDecoration(
+                            labelText: "Extra Passphrase (optional)",
                           ),
                         ),
                       ),
+                    Gap(16),
+                    if (isSeed || ledger)
+                      Showcase(
+                        key: accountIndexID,
+                        description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
+                        child: FormBuilderTextField(
+                          name: "aindex",
+                          decoration: const InputDecoration(
+                            labelText: "Account Index",
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                        ),
+                      ),
+                    Gap(16),
+                    if (keyPools != 0)
+                      Showcase(
+                        key: accountPoolsID,
+                        description: "Pools this account can receive funds",
+                        child: InputDecorator(
+                          decoration: InputDecoration(labelText: "Pools"),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: FormBuilderField<int>(
+                              name: "pools",
+                              initialValue: keyPools,
+                              builder: (field) => PoolSelect(
+                                enabled: keyPools,
+                                initialValue: field.value!,
+                                onChanged: (v) => field.didChange(v),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Gap(16),
+                    FormBuilderSwitch(
+                      name: "ledger",
+                      title: const Text("H/W Ledger"),
+                      initialValue: ledger,
+                      onChanged: (v) => setState(() => ledger = v ?? false),
                     ),
-                  ),
+                  ],
+                ],
               ],
             ),
           ),
