@@ -181,8 +181,9 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   }
 
   void onViewAddresses() async {
-    final txCounts = await fetchAddressTxCount(c: c, aggregate: false);
     final availablePools = await getAccountPools(account: c.account, c: c);
+    final poolFilter = availablePools; // default: all available
+    final txCounts = await fetchAddressTxCount(c: c, aggregate: false, poolFilter: poolFilter);
     if (!mounted) return;
     await GoRouter.of(context).push("/addresses", extra: {
       'txCounts': txCounts,
@@ -226,10 +227,25 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
     if (widget.availablePools & 4 != 0) _selectedPools.add(2);
   }
 
-  Future<void> _toggleAggregate(bool v) async {
-    setState(() => _aggregate = v);
-    final txCounts = await fetchAddressTxCount(c: widget.c, aggregate: v);
+  Future<void> _refetch() async {
+    final mask = _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!);
+    final txCounts = await fetchAddressTxCount(c: widget.c, aggregate: _aggregate, poolFilter: mask);
     if (mounted) setState(() => _txCounts = txCounts);
+  }
+
+  void _onPoolsChanged(int v) {
+    final newPools = <int>{};
+    if (v & 1 != 0) newPools.add(0);
+    if (v & 2 != 0) newPools.add(1);
+    if (v & 4 != 0) newPools.add(2);
+    if (newPools.isEmpty) return;
+    setState(() => _selectedPools = newPools);
+    _refetch();
+  }
+
+  void _onToggleUA(Set<bool> s) {
+    setState(() => _aggregate = s.first);
+    _refetch();
   }
 
   static const _poolIcons = {0: Icons.visibility, 1: Icons.eco, 2: Icons.park};
@@ -279,6 +295,17 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
               children: [
                 Row(
                   children: [
+                    SizedBox(width: 56, child: Text("Pools", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+                    PoolSelect(
+                      enabled: widget.availablePools,
+                      initialValue: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
+                      onChanged: _onPoolsChanged,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6),
+                Row(
+                  children: [
                     SizedBox(width: 56, child: Text("UA", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
                     SegmentedButton<bool>(
                       style: _segmentedStyle,
@@ -288,7 +315,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
                         ButtonSegment(value: true, label: Text("On")),
                       ],
                       selected: {_aggregate},
-                      onSelectionChanged: (s) => _toggleAggregate(s.first),
+                      onSelectionChanged: _selectedPools.length > 1 ? _onToggleUA : null,
                     ),
                   ],
                 ),
@@ -326,24 +353,6 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
                     ),
                   ],
                 ),
-                if (!_aggregate) ...[
-                  SizedBox(height: 6),
-                  Row(
-                    children: [
-                      SizedBox(width: 56, child: Text("Pools", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-                      PoolSelect(
-                        enabled: widget.availablePools,
-                        initialValue: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
-                        onChanged: (v) => setState(() {
-                        _selectedPools = {};
-                        if (v & 1 != 0) _selectedPools.add(0);
-                        if (v & 2 != 0) _selectedPools.add(1);
-                        if (v & 4 != 0) _selectedPools.add(2);
-                      }),
-                    ),
-                  ],
-                ),
-                ],
               ],
             ),
           ),
