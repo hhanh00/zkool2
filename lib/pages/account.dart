@@ -172,6 +172,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   if (account != null) {
                     GoRouter.of(context).push("/account/edit", extra: [account]);
                   }
+                case "market_price":
+                  GoRouter.of(context).push("/market");
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "charts":
@@ -194,6 +196,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               const PopupMenuItem<String>(
                 value: "backup",
                 child: Text("Backup"),
+              ),
+              const PopupMenuItem<String>(
+                value: "market_price",
+                child: Text("Market Price"),
               ),
               const PopupMenuItem<String>(
                 value: "update_fx",
