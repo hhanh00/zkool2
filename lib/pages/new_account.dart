@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -17,22 +17,6 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
-
-
-final dkgID = GlobalKey();
-final importID = GlobalKey();
-final saveID = GlobalKey();
-final iconID = GlobalKey();
-final nameID = GlobalKey();
-final internalID = GlobalKey();
-final restoreID = GlobalKey();
-
-final keyID = GlobalKey();
-final generateID = GlobalKey();
-final passphraseID = GlobalKey();
-final accountIndexID = GlobalKey();
-final birthID = GlobalKey();
-final accountPoolsID = GlobalKey();
 
 class NewAccountPage extends ConsumerStatefulWidget {
   const NewAccountPage({super.key});
@@ -53,22 +37,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   Uint8List? iconBytes;
   final formKey = GlobalKey<FormBuilderState>();
 
-  void tutorial() async {
-    tutorialHelper(
-      context,
-      "tutNew0",
-      [nameID, iconID, internalID, restoreID, dkgID, importID, saveID],
-    );
-    if (restore) tutorialHelper(context, "tutNew1", [keyID, generateID, birthID, accountPoolsID]);
-    if (restore && isSeed) tutorialHelper(context, "tutNew2", [passphraseID, accountIndexID]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
-
-    Future(tutorial);
 
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
@@ -79,26 +51,16 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       appBar: AppBar(
         title: const Text("New Account"),
         actions: [
-          Showcase(
-            key: dkgID,
-            description: "Start Distributed Key Generation",
-            child: IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
+          IconButton(onPressed: onFrost, tooltip: "Start Distributed Key Generation", icon: Icon(Icons.group)),
+          IconButton(
+            onPressed: onImport,
+            tooltip: "Import an account from file",
+            icon: Icon(Icons.file_open),
           ),
-          Showcase(
-            key: importID,
-            description: "Import an account from file",
-            child: IconButton(
-              onPressed: onImport,
-              icon: Icon(Icons.file_open),
-            ),
-          ),
-          Showcase(
-            key: saveID,
-            description: "Save",
-            child: IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: onSave,
-            ),
+          IconButton(
+            icon: const Icon(Icons.save),
+            tooltip: "Save",
+            onPressed: onSave,
           ),
         ],
       ),
@@ -114,8 +76,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                   "Create a new wallet or restore an existing one",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                  ),
+                        color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
+                      ),
                 ),
                 Gap(20),
                 Card(
@@ -125,9 +87,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                       children: [
                         Stack(
                           children: [
-                            Showcase(
-                              key: iconID,
-                              description: "Upload a icon",
+                            Tooltip(
+                              message: "Upload a icon",
                               child: CircleAvatar(
                                 radius: 60,
                                 backgroundImage: ib != null ? Image.memory(ib).image : null,
@@ -145,9 +106,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                           ],
                         ),
                         Gap(16),
-                        Showcase(
-                          key: nameID,
-                          description: "Enter a name that identifies this account",
+                        Tooltip(
+                          message: "Enter a name that identifies this account",
                           child: FormBuilderTextField(
                             name: "name",
                             decoration: const InputDecoration(
@@ -169,9 +129,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Showcase(
-                          key: restoreID,
-                          description: "Check if you want to restore an existing account",
+                        Tooltip(
+                          message: "Check if you want to restore an existing account",
                           child: FormBuilderSwitch(
                             name: "restore",
                             title: Row(
@@ -190,16 +149,15 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                           Text(
                             "Enter your seed phrase, private key, or viewing key to restore",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
-                            ),
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                                ),
                           ),
                           Gap(12),
                           Row(
                             children: [
                               Expanded(
-                                child: Showcase(
-                                  key: keyID,
-                                  description:
+                                child: Tooltip(
+                                  message:
                                       "Seed phrase (12, 18, 21, 24 words), a Sapling secret key, a viewing key, a unified viewing key, a xpub/xprv transparent key or a BIP-38 key (starting with K or L)",
                                   child: FormBuilderTextField(
                                     name: "key",
@@ -214,9 +172,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                 ),
                               ),
                               Gap(8),
-                              Showcase(
-                                key: generateID,
-                                description: "Generate a new Seed Phrase",
+                              Tooltip(
+                                message: "Generate a new Seed Phrase",
                                 child: IconButton.outlined(
                                   onPressed: onGenerate,
                                   icon: Icon(Icons.refresh),
@@ -225,9 +182,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                             ],
                           ),
                           Gap(12),
-                          Showcase(
-                            key: birthID,
-                            description: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height",
+                          Tooltip(
+                            message: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height",
                             child: FormBuilderTextField(
                               name: "birth",
                               decoration: const InputDecoration(
@@ -269,14 +225,13 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                           Text(
                             "Extra derivation and pool settings",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
-                            ),
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                                ),
                           ),
                           Gap(12),
                           if (!ledger && (isSeed || key.isEmpty))
-                            Showcase(
-                              key: internalID,
-                              description: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
+                            Tooltip(
+                              message: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                               child: FormBuilderSwitch(
                                 name: "useInternal",
                                 title: const Text("Use Internal Change"),
@@ -285,9 +240,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                           if (restore) ...[
                             Gap(12),
                             if (isSeed && !ledger)
-                              Showcase(
-                                key: passphraseID,
-                                description: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
+                              Tooltip(
+                                message: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
                                 child: FormBuilderTextField(
                                   name: "passphrase",
                                   decoration: const InputDecoration(
@@ -298,9 +252,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                               ),
                             Gap(12),
                             if (isSeed || ledger)
-                              Showcase(
-                                key: accountIndexID,
-                                description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
+                              Tooltip(
+                                message: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
                                 child: FormBuilderTextField(
                                   name: "aindex",
                                   decoration: const InputDecoration(
@@ -315,9 +268,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                               ),
                             Gap(12),
                             if (keyPools != 0)
-                              Showcase(
-                                key: accountPoolsID,
-                                description: "Pools this account can receive funds",
+                              Tooltip(
+                                message: "Pools this account can receive funds",
                                 child: InputDecorator(
                                   decoration: InputDecoration(labelText: "Pools"),
                                   child: Align(
@@ -403,22 +355,21 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         if (ledger) message += "\nConfirm on your Ledger device";
         dialog = await showMessage(context, message, dismissable: false);
         final account = await newAccount(
-          na: NewAccount(
-            icon: icon,
-            name: name ?? "",
-            restore: r,
-            key: key,
-            passphrase: passphrase,
-            aindex: int.parse(aindex ?? "0"),
-            birth: bh,
-            folder: "",
-            pools: pools,
-            useInternal: useInternal ?? false,
-            internal: false,
-            ledger: ledger,
-          ),
-          c: c
-        );
+            na: NewAccount(
+              icon: icon,
+              name: name ?? "",
+              restore: r,
+              key: key,
+              passphrase: passphrase,
+              aindex: int.parse(aindex ?? "0"),
+              birth: bh,
+              folder: "",
+              pools: pools,
+              useInternal: useInternal ?? false,
+              internal: false,
+              ledger: ledger,
+            ),
+            c: c);
         dialog.dismiss();
         dialog = null;
         final settings = ref.read(appSettingsProvider).requireValue;
@@ -437,12 +388,12 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         final seed = await getAccountSeed(account: account, c: c);
         if (seed != null && settings.vault) {
           await ref.read(vaultProvider.notifier).storeAccount(
-            name: name ?? "",
-            seed: seed.mnemonic,
-            aindex: int.parse(aindex ?? "0"),
-            useInternal: useInternal ?? false,
-            birthHeight: bh,
-          );
+                name: name ?? "",
+                seed: seed.mnemonic,
+                aindex: int.parse(aindex ?? "0"),
+                useInternal: useInternal ?? false,
+                birthHeight: bh,
+              );
         }
         if (mounted && key.isEmpty && seed != null) {
           await showSeed(context, seed.mnemonic);

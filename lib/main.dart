@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
@@ -33,40 +33,33 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       child: ToastificationWrapper(
-        child: ShowCaseWidget(
-          globalTooltipActions: [
-            const TooltipActionButton(type: TooltipDefaultActionType.skip, textStyle: TextStyle(color: Colors.red), backgroundColor: Colors.transparent),
-            const TooltipActionButton(type: TooltipDefaultActionType.next, backgroundColor: Colors.transparent),
-          ],
-          builder: (context) {
-            return Consumer(builder: (context, ref, _) {
-              final settings = ref.watch(appSettingsProvider).value;
-              final scheme = settings?.let((s) {
+        child: Consumer(builder: (context, ref, _) {
+          final settings = ref.watch(appSettingsProvider).value;
+          final scheme = settings?.let((s) {
                 try {
                   return FlexScheme.values.byName(s.paletteName);
                 } catch (_) {
                   return FlexScheme.blue;
                 }
-              }) ?? FlexScheme.blue;
-              final theme = FlexThemeData.light(scheme: scheme).copyWith(useMaterial3: true);
-              final darkTheme = FlexThemeData.dark(scheme: scheme).copyWith(useMaterial3: true);
-              return MaterialApp.router(
-                key: appKey,
-                routerConfig: r,
-                builder: (context, child) => SafeArea(
-                  top: false,
-                  left: false,
-                  right: false,
-                  child: child!,
-                ),
-                themeMode: settings?.darkMode == true ? ThemeMode.dark : ThemeMode.light,
-                theme: theme,
-                darkTheme: darkTheme,
-                debugShowCheckedModeBanner: false,
-              );
-            });
-          },
-        ),
+              }) ??
+              FlexScheme.blue;
+          final theme = FlexThemeData.light(scheme: scheme).copyWith(useMaterial3: true);
+          final darkTheme = FlexThemeData.dark(scheme: scheme).copyWith(useMaterial3: true);
+          return MaterialApp.router(
+            key: appKey,
+            routerConfig: r,
+            builder: (context, child) => SafeArea(
+              top: false,
+              left: false,
+              right: false,
+              child: child!,
+            ),
+            themeMode: settings?.darkMode == true ? ThemeMode.dark : ThemeMode.light,
+            theme: theme,
+            darkTheme: darkTheme,
+            debugShowCheckedModeBanner: false,
+          );
+        }),
       ),
     ),
   );

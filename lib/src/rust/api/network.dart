@@ -12,35 +12,24 @@ part 'network.freezed.dart';
 // These functions are ignored because they are not marked as `pub`: `coingecko_client`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
-Future<void> initDatadir({required String directory}) =>
-    RustLib.instance.api.crateApiNetworkInitDatadir(directory: directory);
+Future<void> initDatadir({required String directory}) => RustLib.instance.api.crateApiNetworkInitDatadir(directory: directory);
 
-Future<int> getCurrentHeight({required Coin c}) =>
-    RustLib.instance.api.crateApiNetworkGetCurrentHeight(c: c);
+Future<int> getCurrentHeight({required Coin c}) => RustLib.instance.api.crateApiNetworkGetCurrentHeight(c: c);
 
-Future<double> getCoingeckoPrice(
-        {required String api, required String currency}) =>
-    RustLib.instance.api
-        .crateApiNetworkGetCoingeckoPrice(api: api, currency: currency);
+Future<double> getCoingeckoPrice({required String api, required String currency}) =>
+    RustLib.instance.api.crateApiNetworkGetCoingeckoPrice(api: api, currency: currency);
 
-Future<List<String>> getSupportedVsCurrencies({required String api}) =>
-    RustLib.instance.api.crateApiNetworkGetSupportedVsCurrencies(api: api);
+Future<List<String>> getSupportedVsCurrencies({required String api}) => RustLib.instance.api.crateApiNetworkGetSupportedVsCurrencies(api: api);
 
 /// Returns the ZEC price in both `from_currency` and `to_currency`.
 /// The exchange rate from `from_currency` to `to_currency` can be computed as
 /// `to_price / from_price`.
-Future<ExchangeRate> getExchangeRate(
-        {required String api,
-        required String fromCurrency,
-        required String toCurrency}) =>
-    RustLib.instance.api.crateApiNetworkGetExchangeRate(
-        api: api, fromCurrency: fromCurrency, toCurrency: toCurrency);
+Future<ExchangeRate> getExchangeRate({required String api, required String fromCurrency, required String toCurrency}) =>
+    RustLib.instance.api.crateApiNetworkGetExchangeRate(api: api, fromCurrency: fromCurrency, toCurrency: toCurrency);
 
-Future<String> getNetworkName({required Coin c}) =>
-    RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);
+Future<String> getNetworkName({required Coin c}) => RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);
 
-Future<List<LWDInfo>> queryLwdList() =>
-    RustLib.instance.api.crateApiNetworkQueryLwdList();
+Future<List<LWDInfo>> queryLwdList() => RustLib.instance.api.crateApiNetworkQueryLwdList();
 
 @freezed
 sealed class ExchangeRate with _$ExchangeRate {

@@ -27,24 +27,18 @@ Stream<SyncProgress> synchronize(
         fast: fast,
         c: c);
 
-Future<PoolBalance> balance({required Coin c}) =>
-    RustLib.instance.api.crateApiSyncBalance(c: c);
+Future<PoolBalance> balance({required Coin c}) => RustLib.instance.api.crateApiSyncBalance(c: c);
 
 Future<void> cancelSync() => RustLib.instance.api.crateApiSyncCancelSync();
 
-Future<void> rewindSync(
-        {required int height, required int account, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiSyncRewindSync(height: height, account: account, c: c);
+Future<void> rewindSync({required int height, required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiSyncRewindSync(height: height, account: account, c: c);
 
-Future<SyncHeight> getDbHeight({required Coin c}) =>
-    RustLib.instance.api.crateApiSyncGetDbHeight(c: c);
+Future<SyncHeight> getDbHeight({required Coin c}) => RustLib.instance.api.crateApiSyncGetDbHeight(c: c);
 
-Future<void> fetchTxDetails({required int account, required Coin c}) =>
-    RustLib.instance.api.crateApiSyncFetchTxDetails(account: account, c: c);
+Future<void> fetchTxDetails({required int account, required Coin c}) => RustLib.instance.api.crateApiSyncFetchTxDetails(account: account, c: c);
 
-Future<void> cacheBlockTime({required int height, required Coin c}) =>
-    RustLib.instance.api.crateApiSyncCacheBlockTime(height: height, c: c);
+Future<void> cacheBlockTime({required int height, required Coin c}) => RustLib.instance.api.crateApiSyncCacheBlockTime(height: height, c: c);
 
 class PoolBalance {
   final Uint64List field0;
@@ -57,11 +51,7 @@ class PoolBalance {
   int get hashCode => field0.hashCode;
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PoolBalance &&
-          runtimeType == other.runtimeType &&
-          field0 == other.field0;
+  bool operator ==(Object other) => identical(this, other) || other is PoolBalance && runtimeType == other.runtimeType && field0 == other.field0;
 }
 
 class SyncProgress {
@@ -78,9 +68,5 @@ class SyncProgress {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SyncProgress &&
-          runtimeType == other.runtimeType &&
-          height == other.height &&
-          time == other.time;
+      identical(this, other) || other is SyncProgress && runtimeType == other.runtimeType && height == other.height && time == other.time;
 }

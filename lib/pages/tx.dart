@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -17,10 +17,6 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
-
-final cancelID = GlobalKey();
-final sendID4 = GlobalKey();
-final txID = GlobalKey();
 
 class TxPage extends ConsumerStatefulWidget {
   final PcztPackage pczt;
@@ -55,13 +51,6 @@ class TxPageState extends ConsumerState<TxPage> {
     });
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "tutSend3", [cancelID, sendID4]);
-    if (txId != null) {
-      tutorialHelper(context, "tutSend4", [txID]);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
@@ -69,8 +58,6 @@ class TxPageState extends ConsumerState<TxPage> {
 
     if (account == null) return blank(context);
     final t = Theme.of(context).textTheme;
-
-    Future(tutorial);
 
     final canSend = (txPlan.canSign || account!.hw != 0) && canBroadcast;
     final hasFrost = details!.frostParams != null;
@@ -80,23 +67,16 @@ class TxPageState extends ConsumerState<TxPage> {
         title: Text("Transaction"),
         actions: [
           if (hasFrost) IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
-          Showcase(
-            key: cancelID,
-            description: "Cancel, do NOT send",
-            child: IconButton(onPressed: onCancel, icon: Icon(Icons.cancel)),
-          ),
-          Showcase(
-            key: sendID4,
-            description: "Confirm, broadcast transaction",
-            child: IconButton(
-              onPressed: _sending ? null : (canSend ? onSend : onSave),
-              icon: Icon(
-                canSend
-                    ? Icons.send
-                    : txPlan.canSign
-                        ? Icons.draw
-                        : Icons.save,
-              ),
+          IconButton(onPressed: onCancel, tooltip: "Cancel, do NOT send", icon: Icon(Icons.cancel)),
+          IconButton(
+            onPressed: _sending ? null : (canSend ? onSend : onSave),
+            tooltip: "Confirm, broadcast transaction",
+            icon: Icon(
+              canSend
+                  ? Icons.send
+                  : txPlan.canSign
+                      ? Icons.draw
+                      : Icons.save,
             ),
           ),
         ],
@@ -112,9 +92,8 @@ class TxPageState extends ConsumerState<TxPage> {
                   Text("Fee: ${zatToString(txPlan.fee)}"),
                   Gap(8),
                   if (txId != null)
-                    Showcase(
-                      key: txID,
-                      description: "Transaction ID",
+                    Tooltip(
+                      message: "Transaction ID",
                       child: CopyableText("Transaction ID: ${txId!}"),
                     ),
                 ],
@@ -262,9 +241,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           leading: Text("Input ${index + 1}"),
           trailing: input.amount != null
               ? (isZsa
-                  ? Text(input.amount.toString(),
-                      style: TextStyle(
-                          color: Colors.purple, fontWeight: FontWeight.bold))
+                  ? Text(input.amount.toString(), style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold))
                   : zatToText(input.amount!, selectable: true))
               : null,
           subtitle: Text([
@@ -280,9 +257,7 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
           leading: Text("Output ${index2 + 1}"),
           title: Text("Address: ${output.address}"),
           trailing: isZsa
-              ? Text(output.amount.toString(),
-                  style: TextStyle(
-                      color: Colors.purple, fontWeight: FontWeight.bold))
+              ? Text(output.amount.toString(), style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold))
               : zatToText(output.amount, selectable: true),
           subtitle: Text([
             "Pool: ${poolToString(output.pool)}",

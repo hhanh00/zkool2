@@ -107,14 +107,18 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
             path: '/settings',
             routes: [
               GoRoute(path: 'qr', builder: (context, state) => SettingsQRPage(onClose: state.extra as VoidFunction<QRSettings>)),
-              GoRoute(path: 'theme', builder: (context, state) {
-                final onClose = state.extra as void Function((String, bool));
-                return SettingsThemePage(onClose: onClose);
-              }),
-              GoRoute(path: 'currency', builder: (context, state) {
-                final onClose = state.extra as void Function(String);
-                return CurrencyPage(onClose: onClose);
-              }),
+              GoRoute(
+                  path: 'theme',
+                  builder: (context, state) {
+                    final onClose = state.extra as void Function((String, bool));
+                    return SettingsThemePage(onClose: onClose);
+                  }),
+              GoRoute(
+                  path: 'currency',
+                  builder: (context, state) {
+                    final onClose = state.extra as void Function(String);
+                    return CurrencyPage(onClose: onClose);
+                  }),
             ],
             builder: (context, state) => SettingsPage()),
         GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),

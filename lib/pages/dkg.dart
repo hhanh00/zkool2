@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
@@ -17,12 +17,6 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
-
-final nameID3 = GlobalKey();
-final participantID = GlobalKey();
-final pID = GlobalKey();
-final thresholdID = GlobalKey();
-final fundingID = GlobalKey();
 
 Widget buildDKGPage(
   BuildContext context,
@@ -85,20 +79,10 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
     });
   }
 
-  void tutorial() async {
-    tutorialHelper(
-      context,
-      "dkg",
-      [nameID3, participantID, pID, thresholdID, fundingID],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
-
-    Future(tutorial);
 
     return Scaffold(
       appBar: AppBar(
@@ -117,18 +101,16 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
             key: formKey,
             child: Column(
               children: [
-                Showcase(
-                  key: nameID3,
-                  description: "The name of the multisig account, once created. It can be changed later in the Edit Page",
+                Tooltip(
+                  message: "The name of the multisig account, once created. It can be changed later in the Edit Page",
                   child: FormBuilderTextField(
                     name: "name",
                     decoration: const InputDecoration(labelText: "Name"),
                     validator: FormBuilderValidators.required(),
                   ),
                 ),
-                Showcase(
-                  key: participantID,
-                  description: "Number of signers",
+                Tooltip(
+                  message: "Number of signers",
                   child: FormBuilderDropdown(
                     name: "participants",
                     decoration: const InputDecoration(
@@ -144,9 +126,8 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     ),
                   ),
                 ),
-                Showcase(
-                  key: pID,
-                  description: "Every participant should choose a different slot ID",
+                Tooltip(
+                  message: "Every participant should choose a different slot ID",
                   child: FormBuilderDropdown(
                     name: "id",
                     decoration: const InputDecoration(
@@ -162,9 +143,8 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     ),
                   ),
                 ),
-                Showcase(
-                  key: thresholdID,
-                  description: "Minimum number of signers",
+                Tooltip(
+                  message: "Minimum number of signers",
                   child: FormBuilderDropdown(
                     name: "threshold",
                     decoration: const InputDecoration(
@@ -185,9 +165,8 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     },
                   ),
                 ),
-                Showcase(
-                  key: fundingID,
-                  description: "DKG uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                Tooltip(
+                  message: "DKG uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
                   child: FormBuilderDropdown(
                     name: "account",
                     decoration: const InputDecoration(

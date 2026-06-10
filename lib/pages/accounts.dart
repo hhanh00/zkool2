@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
@@ -18,13 +18,6 @@ import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/editable_list.dart';
 import 'package:zkool/widgets/exchange_rate.dart';
 import 'package:zkool/widgets/theme.dart';
-
-final heightID = GlobalKey();
-final settingsID = GlobalKey();
-final syncID = GlobalKey();
-
-final accountListID = GlobalKey();
-final avatarID = GlobalKey();
 
 class AccountListPage extends ConsumerStatefulWidget {
   const AccountListPage({super.key});
@@ -73,19 +66,9 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     }
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "tutMain0", [newAccountId, settingsID, syncID, heightID]);
-
-    final accounts = await ref.read(getAccountsProvider.future);
-    if (!mounted) return;
-    if (accounts.isNotEmpty) tutorialHelper(context, "tutMain1", [accountListID, avatarID]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
-
-    Future(tutorial);
 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
@@ -127,25 +110,19 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
           );
         }
 
-        return Showcase(
-          key: accountListID,
-          description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
+        return Tooltip(
+          message: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
           child: EditableList<Account>(
             key: listKey,
             items: accountList,
             headerBuilder: (context) => [
-              Showcase(
-                key: heightID,
-                description: "Current Block Height. Refreshed automatically every 15 seconds. Tap to update manually",
-                child: ElevatedButton(
-                  onPressed: () => Future(() => refreshHeight(true)),
-                  onLongPress: () => Future(() => refreshHeight(false)),
-                  child: Text("Height: $h"),
-                ),
+              ElevatedButton(
+                onPressed: () => Future(() => refreshHeight(true)),
+                onLongPress: () => Future(() => refreshHeight(false)),
+                child: Text("Height: $h"),
               ),
               const Gap(8),
-              if (pageData.price != null)
-                ExchangeRateButton(),
+              if (pageData.price != null) ExchangeRateButton(),
               const Gap(8),
               if (pageData.settings.offline) ...[
                 Text("Wallet is in offline mode", style: tt.labelSmall),
@@ -171,7 +148,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                       // onOpen is never called.
                       behavior: HitTestBehavior.opaque,
                       child: AccountCard(
-                        leading: account.id == 1 ? Showcase(key: avatarID, description: "Tap to select for edit/delete", child: avatar) : avatar,
+                        leading: account.id == 1 ? Tooltip(message: "Tap to select for edit/delete", child: avatar) : avatar,
                         name: account.name,
                         balance: zatToText(account.balance, selectable: false, style: tt.titleLarge!.copyWith(fontWeight: FontWeight.w700)),
                         fiat: fiat != null ? Text(fiat, style: tt.titleSmall!.copyWith(color: Colors.green)) : null,
@@ -199,12 +176,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
             isEqual: (a, b) => a.id == b.id,
             onReorder: onReorder,
             buttons: [
-              Showcase(key: settingsID, description: "Open Settings", child: IconButton(onPressed: onSettings, icon: Icon(Icons.settings))),
-              Showcase(
-                key: syncID,
-                description: "Synchronize all enabled accounts or the accounts currently selected",
-                child: IconButton(onPressed: onSync, icon: Icon(Icons.sync)),
-              ),
+              IconButton(onPressed: onSettings, tooltip: "Open Settings", icon: Icon(Icons.settings)),
+              IconButton(onPressed: onSync, tooltip: "Synchronize all enabled accounts or the accounts currently selected", icon: Icon(Icons.sync)),
               PopupMenuButton<String>(
                 onSelected: (String result) {
                   switch (result) {

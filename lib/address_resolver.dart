@@ -23,9 +23,9 @@ Future<String?> resolveAccountName(
   if (name.isEmpty) return null;
 
   final account = accounts.cast<Account?>().firstWhere(
-    (a) => a!.name.toLowerCase() == name,
-    orElse: () => null,
-  );
+        (a) => a!.name.toLowerCase() == name,
+        orElse: () => null,
+      );
 
   if (account == null) return null;
 
@@ -36,8 +36,5 @@ Future<String?> resolveAccountName(
   );
 
   // Return the best available address
-  return addresses.ua ??
-      addresses.oaddr ??
-      addresses.saddr ??
-      addresses.taddr;
+  return addresses.ua ?? addresses.oaddr ?? addresses.saddr ?? addresses.taddr;
 }
