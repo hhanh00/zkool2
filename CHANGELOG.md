@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.3...zkool-v6.18.4) (2026-06-10)
+
+
+### Bug Fixes
+
+* remove showcaseview and replace with Flutter Tooltip widgets ([b3cd414](https://github.com/hhanh00/zkool2/commit/b3cd414e059acbc9043c6f1b6931e08371570394))
+
 ## [6.18.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.2...zkool-v6.18.3) (2026-06-10)
 
 
