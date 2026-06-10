@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.18.4-rc2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.4-rc1...zkool-v6.18.4-rc2) (2026-06-10)
+
+
+### Features
+
+* pool filter drives address derivation, UA disabled for single pool ([d35cb42](https://github.com/hhanh00/zkool2/commit/d35cb42a329b4de914a064bbd1360ce29b2bc6f9))
+
+
+### Bug Fixes
+
+* pool filter server-side, aggregate UA rows bypass Dart pool filter ([7fa1b3f](https://github.com/hhanh00/zkool2/commit/7fa1b3f3703401e4e81095e2540bf8e89e1f478c))
+
 ## [6.18.4-rc1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.4...zkool-v6.18.4-rc1) (2026-06-10)
 
 
