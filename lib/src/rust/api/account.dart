@@ -12,7 +12,7 @@ import 'pay.dart';
 part 'account.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `derive_t_str`, `get_ledger`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SlotEntry`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SlotMask`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<int> getAccountPools({required int account, required Coin c}) =>
@@ -101,9 +101,9 @@ Future<List<TAddressTxCount>> fetchTransparentAddressTxCount(
     RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount(c: c);
 
 Future<List<TAddressTxCount>> fetchAddressTxCount(
-        {required Coin c, required bool aggregate}) =>
-    RustLib.instance.api
-        .crateApiAccountFetchAddressTxCount(c: c, aggregate: aggregate);
+        {required Coin c, required bool aggregate, required int poolFilter}) =>
+    RustLib.instance.api.crateApiAccountFetchAddressTxCount(
+        c: c, aggregate: aggregate, poolFilter: poolFilter);
 
 Future<Uint8List> exportAccount(
         {required int id, required String passphrase, required Coin c}) =>

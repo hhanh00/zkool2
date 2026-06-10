@@ -422,7 +422,7 @@ pub async fn fetch_transparent_address_tx_count(c: &Coin) -> Result<Vec<TAddress
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAddressTxCount>> {
+pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool, pool_filter: u8) -> Result<Vec<TAddressTxCount>> {
     let mut connection = c.get_connection().await?;
     let network = c.network();
 
@@ -439,6 +439,9 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAd
             .await
             .map(|o| if o.xvk.is_some() { 4u8 } else { 0u8 })
             .unwrap_or(0);
+
+    // Only derive addresses for pools that are both selected and enabled
+    let selected = PoolMask(pool_filter).intersect(&PoolMask(enabled_pools));
 
     let tkeys = crate::db::select_account_transparent(&mut connection, c.account, dindex).await?;
     let skeys = crate::db::select_account_sapling(&network, &mut connection, c.account).await?;
@@ -460,7 +463,6 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAd
 
     // pool_mask: which pools have data at each (scope, dindex)
     use crate::pay::pool::PoolMask;
-    let enabled = PoolMask(enabled_pools);
     let mut pool_masks: HashMap<(u8, u32), SlotMask> = HashMap::new();
     for s in &transparent_stats {
         pool_masks.entry((s.scope, s.dindex))
@@ -495,7 +497,7 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAd
 
     for &(scope, d) in &indices {
         // Sapling gate
-        let s_enabled = enabled.has_pool(1);
+        let s_enabled = selected.has_pool(1);
         if s_enabled {
             let dfvk = match &skeys.xvk { Some(k) => k, None => continue };
             let ok = if scope == 0 {
@@ -506,15 +508,13 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAd
             if !ok { continue; }
         }
 
-        let slot_mask = pool_masks.get(&(scope, d)).map(|s| s.mask).unwrap_or(PoolMask::empty());
-
         // Per-pool stats
         let t_st = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
         let s_st = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
         let o_st = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
 
         // Derive addresses for all enabled pools (not gated by pool_mask — which only tells us which have data)
-        let t_str = if enabled.has_pool(0) {
+        let t_str = if selected.has_pool(0) {
             derive_t_str(&tkeys, &network, &mut connection, c.account, scope, d).await?
         } else { None };
 
@@ -525,7 +525,7 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAd
             .map(|pa| pa.encode(&network))
         } else { None };
 
-        let o_str = if enabled.has_pool(2) {
+        let o_str = if selected.has_pool(2) {
             okeys.xvk.as_ref().map(|fvk| {
                 let s = if scope == 0 { orchard::keys::Scope::External } else { orchard::keys::Scope::Internal };
                 UnifiedAddress::from_receivers(Some(fvk.address_at(d as u64, s)), None, None).unwrap().encode(&network)
