@@ -227,7 +227,7 @@ abstract class RustLibApi extends BaseApi {
       {required PcztPackage package});
 
   Future<List<TAddressTxCount>> crateApiAccountFetchAddressTxCount(
-      {required Coin c});
+      {required Coin c, required bool aggregate});
 
   Future<List<(int, double)>> crateApiTransactionFetchAmounts(
       {int? from, int? to, required int category, required Coin c});
@@ -1710,12 +1710,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<List<TAddressTxCount>> crateApiAccountFetchAddressTxCount(
-      {required Coin c}) {
+      {required Coin c, required bool aggregate}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_coin(c, serializer);
+          sse_encode_bool(aggregate, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 40, port: port_);
         },
@@ -1724,7 +1725,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiAccountFetchAddressTxCountConstMeta,
-        argValues: [c],
+        argValues: [c, aggregate],
         apiImpl: this,
       ),
     );
@@ -1733,7 +1734,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAccountFetchAddressTxCountConstMeta =>
       const TaskConstMeta(
         debugName: "fetch_address_tx_count",
-        argNames: ["c"],
+        argNames: ["c", "aggregate"],
       );
 
   @override

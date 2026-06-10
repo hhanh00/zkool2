@@ -23,6 +23,10 @@ impl PoolMask {
         Self(1 << pool)
     }
 
+    pub fn has_pool(&self, pool: u8) -> bool {
+        self.0 & (1 << pool) != 0
+    }
+
     // Return the best pool available in the mask
     // or None if no pools are available
     pub fn to_best_pool(&self) -> Option<u8> {

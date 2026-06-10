@@ -11,7 +11,8 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'pay.dart';
 part 'account.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `get_ledger`
+// These functions are ignored because they are not marked as `pub`: `derive_t_str`, `get_ledger`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SlotEntry`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<int> getAccountPools({required int account, required Coin c}) =>
@@ -99,8 +100,10 @@ Future<List<TAddressTxCount>> fetchTransparentAddressTxCount(
         {required Coin c}) =>
     RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount(c: c);
 
-Future<List<TAddressTxCount>> fetchAddressTxCount({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountFetchAddressTxCount(c: c);
+Future<List<TAddressTxCount>> fetchAddressTxCount(
+        {required Coin c, required bool aggregate}) =>
+    RustLib.instance.api
+        .crateApiAccountFetchAddressTxCount(c: c, aggregate: aggregate);
 
 Future<Uint8List> exportAccount(
         {required int id, required String passphrase, required Coin c}) =>

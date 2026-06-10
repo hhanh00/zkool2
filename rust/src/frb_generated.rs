@@ -1748,11 +1748,14 @@ fn wire__crate__api__account__fetch_address_tx_count_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_aggregate = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::fetch_address_tx_count(&api_c).await?;
+                        let output_ok =
+                            crate::api::account::fetch_address_tx_count(&api_c, api_aggregate)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
