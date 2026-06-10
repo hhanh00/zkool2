@@ -336,6 +336,12 @@ pub struct TAddressTxCount {
     pub time: u32,
 }
 
+/// Intermediate: which pools have data at a given (scope, dindex).
+/// Stats are looked up per-pool in Pass 2; combined only when aggregating.
+struct SlotMask {
+    mask: crate::pay::pool::PoolMask,
+}
+
 pub async fn remove_account(account_id: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::delete_account(&mut connection, account_id).await?;
@@ -416,12 +422,12 @@ pub async fn fetch_transparent_address_tx_count(c: &Coin) -> Result<Vec<TAddress
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
+pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool) -> Result<Vec<TAddressTxCount>> {
     let mut connection = c.get_connection().await?;
     let network = c.network();
 
     let dindex = get_account_dindex(&mut connection, c.account).await?;
-    let pools = crate::db::select_account_transparent(&mut connection, c.account, dindex)
+    let enabled_pools = crate::db::select_account_transparent(&mut connection, c.account, dindex)
         .await
         .map(|t| if t.xvk.is_some() || t.address.is_some() { 1u8 } else { 0u8 })
         .unwrap_or(0)
@@ -434,16 +440,15 @@ pub async fn fetch_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
             .map(|o| if o.xvk.is_some() { 4u8 } else { 0u8 })
             .unwrap_or(0);
 
-    // Load viewing keys
     let tkeys = crate::db::select_account_transparent(&mut connection, c.account, dindex).await?;
     let skeys = crate::db::select_account_sapling(&network, &mut connection, c.account).await?;
     let okeys = crate::db::select_account_orchard(&mut connection, c.account).await?;
 
-    // Batch query: all tx stats
+    // === Pass 1: collect pool_mask per (scope, dindex) ===
     let transparent_stats = crate::db::fetch_transparent_slot_stats(&mut connection, c.account).await?;
     let shielded_stats = crate::db::fetch_shielded_slot_stats(&mut connection, c.account).await?;
 
-    // Build lookup maps: (scope, dindex) -> stats for transparent; (pool, scope, dindex) -> stats for shielded
+    // Per-pool stats lookups (kept separate, not merged)
     let t_stats: HashMap<(u8, u32), (u64, u32, u32)> = transparent_stats
         .iter()
         .map(|s| ((s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
@@ -453,11 +458,24 @@ pub async fn fetch_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
         .map(|s| ((s.pool, s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
         .collect();
 
-    let mut results = Vec::new();
+    // pool_mask: which pools have data at each (scope, dindex)
+    use crate::pay::pool::PoolMask;
+    let enabled = PoolMask(enabled_pools);
+    let mut pool_masks: HashMap<(u8, u32), SlotMask> = HashMap::new();
+    for s in &transparent_stats {
+        pool_masks.entry((s.scope, s.dindex))
+            .and_modify(|e| { e.mask = e.mask.union(&PoolMask::from_pool(0)); })
+            .or_insert(SlotMask { mask: PoolMask::from_pool(0) });
+    }
+    for s in &shielded_stats {
+        let bit = PoolMask::from_pool(s.pool);
+        pool_masks.entry((s.scope, s.dindex))
+            .and_modify(|e| { e.mask = e.mask.union(&bit); })
+            .or_insert(SlotMask { mask: bit });
+    }
 
-    // Pre-compute internal Sapling IVK for scope=1 derivation
+    // Pre-compute internal Sapling IVK
     let internal_sap_ivk: Option<sapling_crypto::zip32::IncomingViewingKey> = skeys.xvk.as_ref().and_then(|dfvk| {
-        // Extract DK from the raw DFVK bytes
         let dfvk_bytes = dfvk.to_bytes();
         let dk_bytes: [u8; 32] = dfvk_bytes[96..128].try_into().ok()?;
         let dk = sapling_crypto::zip32::DiversifierKey::from_bytes(dk_bytes);
@@ -468,113 +486,107 @@ pub async fn fetch_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
         sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk_bytes).into_option()
     });
 
-    for scope in [0u8, 1u8] {
-        for d in 0..=dindex {
-            // --- Sapling gate check ---
-            let s_addr: Option<sapling_crypto::PaymentAddress> = if pools & 2 != 0 {
-                let dfvk = match &skeys.xvk {
-                    Some(dfvk) => dfvk,
-                    None => continue,
-                };
-                let pa = if scope == 0 {
-                    dfvk.address((d as u64).into())
-                } else {
-                    internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64))
-                };
-                match pa {
-                    Some(pa) => Some(pa),
-                    None => continue, // invalid diversifier — skip entire index
-                }
+    // === Pass 2: derive addresses, look up per-pool stats, produce rows ===
+    let mut indices: Vec<(u8, u32)> = pool_masks.keys().copied().collect();
+    for scope in [0u8, 1u8] { for d in 0..=dindex { indices.push((scope, d)); } }
+    indices.sort(); indices.dedup();
+
+    let mut results = Vec::new();
+
+    for &(scope, d) in &indices {
+        // Sapling gate
+        let s_enabled = enabled.has_pool(1);
+        if s_enabled {
+            let dfvk = match &skeys.xvk { Some(k) => k, None => continue };
+            let ok = if scope == 0 {
+                dfvk.address((d as u64).into()).is_some()
             } else {
-                None
+                internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64)).is_some()
             };
+            if !ok { continue; }
+        }
 
-            // --- Transparent ---
-            if pools & 1 != 0 {
-                let address = if let Some(tvk) = &tkeys.xvk {
-                    // Derive from xpub
-                    let (_, taddr) = crate::account::derive_transparent_address(tvk, scope as u32, d, false)?;
-                    taddr.encode(&network)
-                } else {
-                    // Watch-only: look up stored address
-                    let addr: Option<String> = sqlx::query(
-                        "SELECT address FROM transparent_address_accounts WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
-                    )
-                    .bind(c.account)
-                    .bind(scope)
-                    .bind(d)
-                    .map(|row: SqliteRow| row.get(0))
-                    .fetch_optional(&mut *connection)
-                    .await?;
-                    match addr {
-                        Some(a) => a,
-                        None => continue,
-                    }
-                };
-                let stats = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
+        let slot_mask = pool_masks.get(&(scope, d)).map(|s| s.mask).unwrap_or(PoolMask::empty());
+
+        // Per-pool stats
+        let t_st = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
+        let s_st = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
+        let o_st = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
+
+        // Derive addresses for all enabled pools (not gated by pool_mask — which only tells us which have data)
+        let t_str = if enabled.has_pool(0) {
+            derive_t_str(&tkeys, &network, &mut connection, c.account, scope, d).await?
+        } else { None };
+
+        let s_str = if s_enabled {
+            let dfvk = skeys.xvk.as_ref().unwrap();
+            (if scope == 0 { dfvk.address((d as u64).into()) }
+             else { internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64)) })
+            .map(|pa| pa.encode(&network))
+        } else { None };
+
+        let o_str = if enabled.has_pool(2) {
+            okeys.xvk.as_ref().map(|fvk| {
+                let s = if scope == 0 { orchard::keys::Scope::External } else { orchard::keys::Scope::Internal };
+                UnifiedAddress::from_receivers(Some(fvk.address_at(d as u64, s)), None, None).unwrap().encode(&network)
+            })
+        } else { None };
+
+        if aggregate {
+            let t_addr = t_str.as_ref().and_then(|a| TransparentAddress::decode(&network, a).ok());
+            let s_addr = s_str.as_ref().and_then(|a| PaymentAddress::decode(&network, a).ok());
+            let o_addr = o_str.as_ref().and_then(|a| {
+                let (_, ua) = zcash_address::unified::Address::decode(a).ok()?;
+                ua.items().iter().find_map(|r| match r {
+                    zcash_address::unified::Receiver::Orchard(data) => orchard::Address::from_raw_address_bytes(&data).into_option(),
+                    _ => None,
+                })
+            });
+            if let Some(ua) = UnifiedAddress::from_receivers(o_addr, s_addr, t_addr) {
                 results.push(TAddressTxCount {
-                    pool: 0,
-                    address,
-                    scope,
-                    dindex: d,
-                    amount: stats.0,
-                    tx_count: stats.1,
-                    time: stats.2,
+                    pool: 0, address: ua.encode(&network), scope, dindex: d,
+                    amount: t_st.0.wrapping_add(s_st.0).wrapping_add(o_st.0),
+                    tx_count: t_st.1.wrapping_add(s_st.1).wrapping_add(o_st.1),
+                    time: t_st.2.max(s_st.2).max(o_st.2),
                 });
             }
-
-            // --- Sapling ---
-            if let Some(pa) = s_addr {
-                let address = pa.encode(&network);
-                let stats = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
-                results.push(TAddressTxCount {
-                    pool: 1,
-                    address,
-                    scope,
-                    dindex: d,
-                    amount: stats.0,
-                    tx_count: stats.1,
-                    time: stats.2,
-                });
+        } else {
+            if let Some(addr) = t_str {
+                results.push(TAddressTxCount { pool: 0, address: addr, scope, dindex: d, amount: t_st.0, tx_count: t_st.1, time: t_st.2 });
             }
-
-            // --- Orchard ---
-            if pools & 4 != 0 {
-                let fvk = match &okeys.xvk {
-                    Some(fvk) => fvk,
-                    None => continue,
-                };
-                let orchard_scope = if scope == 0 {
-                    orchard::keys::Scope::External
-                } else {
-                    orchard::keys::Scope::Internal
-                };
-                let addr = fvk.address_at(d as u64, orchard_scope);
-                let address = UnifiedAddress::from_receivers(Some(addr), None, None)
-                    .unwrap()
-                    .encode(&network);
-                let stats = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
-                results.push(TAddressTxCount {
-                    pool: 2,
-                    address,
-                    scope,
-                    dindex: d,
-                    amount: stats.0,
-                    tx_count: stats.1,
-                    time: stats.2,
-                });
+            if let Some(addr) = s_str {
+                results.push(TAddressTxCount { pool: 1, address: addr, scope, dindex: d, amount: s_st.0, tx_count: s_st.1, time: s_st.2 });
+            }
+            if let Some(addr) = o_str {
+                results.push(TAddressTxCount { pool: 2, address: addr, scope, dindex: d, amount: o_st.0, tx_count: o_st.1, time: o_st.2 });
             }
         }
     }
 
-    results.sort_by(|a, b| {
-        a.scope
-            .cmp(&b.scope)
-            .then(a.dindex.cmp(&b.dindex))
-            .then(a.pool.cmp(&b.pool))
-    });
-
+    results.sort_by(|a, b| a.scope.cmp(&b.scope).then(a.dindex.cmp(&b.dindex)).then(a.pool.cmp(&b.pool)));
     Ok(results)
+}
+
+/// Derive or look up a transparent address string for a given (scope, dindex).
+async fn derive_t_str(
+    tkeys: &crate::db::TransparentKeys,
+    network: &crate::api::coin::Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    scope: u8,
+    d: u32,
+) -> Result<Option<String>> {
+    if let Some(tvk) = &tkeys.xvk {
+        let (_, taddr) = crate::account::derive_transparent_address(tvk, scope as u32, d, false)?;
+        Ok(Some(taddr.encode(network)))
+    } else {
+        Ok(sqlx::query(
+            "SELECT address FROM transparent_address_accounts WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
+        )
+        .bind(account).bind(scope).bind(d)
+        .map(|row: SqliteRow| row.get(0))
+        .fetch_optional(&mut *connection).await?)
+    }
 }
 
 #[cfg_attr(feature = "flutter", frb)]
