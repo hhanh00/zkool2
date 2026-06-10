@@ -76,24 +76,25 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
       appBar: AppBar(
         title: const Text("Select Lightwalletd Server"),
       ),
-      body: Builder(builder: (context) {
-        if (_loading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (_error != null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                "Failed to load server list: $_error",
-                style: tt.bodyLarge,
-                textAlign: TextAlign.center,
+      body: Builder(
+        builder: (context) {
+          if (_loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (_error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  "Failed to load server list: $_error",
+                  style: tt.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        final servers = _servers!;
+          final servers = _servers!;
           if (servers.isEmpty) {
             return Center(
               child: Text("No servers available", style: tt.bodyLarge),
@@ -263,8 +264,7 @@ class _LwdDataSource extends DataTableSource {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(server.url, overflow: TextOverflow.ellipsis),
-                      if (isOnline && server.version.isNotEmpty)
-                        Text(server.version, style: tt.bodySmall),
+                      if (isOnline && server.version.isNotEmpty) Text(server.version, style: tt.bodySmall),
                     ],
                   ),
                 ),

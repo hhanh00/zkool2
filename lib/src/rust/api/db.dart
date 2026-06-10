@@ -7,23 +7,11 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<void> changeDbPassword(
-        {required String dbFilepath,
-        required String tmpDir,
-        required String oldPassword,
-        required String newPassword}) =>
-    RustLib.instance.api.crateApiDbChangeDbPassword(
-        dbFilepath: dbFilepath,
-        tmpDir: tmpDir,
-        oldPassword: oldPassword,
-        newPassword: newPassword);
+Future<void> changeDbPassword({required String dbFilepath, required String tmpDir, required String oldPassword, required String newPassword}) =>
+    RustLib.instance.api.crateApiDbChangeDbPassword(dbFilepath: dbFilepath, tmpDir: tmpDir, oldPassword: oldPassword, newPassword: newPassword);
 
-Future<String?> getProp({required String key, required Coin c}) =>
-    RustLib.instance.api.crateApiDbGetProp(key: key, c: c);
+Future<String?> getProp({required String key, required Coin c}) => RustLib.instance.api.crateApiDbGetProp(key: key, c: c);
 
-Future<void> putProp(
-        {required String key, required String value, required Coin c}) =>
-    RustLib.instance.api.crateApiDbPutProp(key: key, value: value, c: c);
+Future<void> putProp({required String key, required String value, required Coin c}) => RustLib.instance.api.crateApiDbPutProp(key: key, value: value, c: c);
 
-Future<List<String>> listDbNames({required String dir}) =>
-    RustLib.instance.api.crateApiDbListDbNames(dir: dir);
+Future<List<String>> listDbNames({required String dir}) => RustLib.instance.api.crateApiDbListDbNames(dir: dir);

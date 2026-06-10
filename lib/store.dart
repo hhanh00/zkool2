@@ -958,9 +958,7 @@ sealed class AccountPageData with _$AccountPageData {
 Future<AccountPageData> accountPageData(Ref ref) async {
   final basicData = await ref.watch(basicAccountDataProvider.future);
   final accountId = basicData.currentAccount?.account.id;
-  final syncState = accountId != null
-      ? await ref.watch(syncStateAccountProvider(accountId).future)
-      : null;
+  final syncState = accountId != null ? await ref.watch(syncStateAccountProvider(accountId).future) : null;
 
   return AccountPageData(
     allAccounts: basicData.allAccounts,

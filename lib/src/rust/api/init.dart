@@ -13,8 +13,7 @@ part 'init.freezed.dart';
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbLogger`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `on_event`
 
-Stream<LogMessage> setLogStream() =>
-    RustLib.instance.api.crateApiInitSetLogStream();
+Stream<LogMessage> setLogStream() => RustLib.instance.api.crateApiInitSetLogStream();
 
 @freezed
 sealed class LogMessage with _$LogMessage {

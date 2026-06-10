@@ -16,8 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$Error {
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is Error);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is Error);
   }
 
   @override
@@ -266,8 +265,7 @@ class Error_InvalidPoolMask extends Error {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is Error_InvalidPoolMask);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is Error_InvalidPoolMask);
   }
 
   @override
@@ -290,16 +288,12 @@ class Error_NotEnoughFunds extends Error {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $Error_NotEnoughFundsCopyWith<Error_NotEnoughFunds> get copyWith =>
-      _$Error_NotEnoughFundsCopyWithImpl<Error_NotEnoughFunds>(
-          this, _$identity);
+  $Error_NotEnoughFundsCopyWith<Error_NotEnoughFunds> get copyWith => _$Error_NotEnoughFundsCopyWithImpl<Error_NotEnoughFunds>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is Error_NotEnoughFunds &&
-            (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType && other is Error_NotEnoughFunds && (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -312,18 +306,14 @@ class Error_NotEnoughFunds extends Error {
 }
 
 /// @nodoc
-abstract mixin class $Error_NotEnoughFundsCopyWith<$Res>
-    implements $ErrorCopyWith<$Res> {
-  factory $Error_NotEnoughFundsCopyWith(Error_NotEnoughFunds value,
-          $Res Function(Error_NotEnoughFunds) _then) =
-      _$Error_NotEnoughFundsCopyWithImpl;
+abstract mixin class $Error_NotEnoughFundsCopyWith<$Res> implements $ErrorCopyWith<$Res> {
+  factory $Error_NotEnoughFundsCopyWith(Error_NotEnoughFunds value, $Res Function(Error_NotEnoughFunds) _then) = _$Error_NotEnoughFundsCopyWithImpl;
   @useResult
   $Res call({String field0});
 }
 
 /// @nodoc
-class _$Error_NotEnoughFundsCopyWithImpl<$Res>
-    implements $Error_NotEnoughFundsCopyWith<$Res> {
+class _$Error_NotEnoughFundsCopyWithImpl<$Res> implements $Error_NotEnoughFundsCopyWith<$Res> {
   _$Error_NotEnoughFundsCopyWithImpl(this._self, this._then);
 
   final Error_NotEnoughFunds _self;
@@ -351,8 +341,7 @@ class Error_NoSigningKey extends Error {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is Error_NoSigningKey);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is Error_NoSigningKey);
   }
 
   @override
@@ -375,15 +364,11 @@ class Error_Sqlx extends Error {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $Error_SqlxCopyWith<Error_Sqlx> get copyWith =>
-      _$Error_SqlxCopyWithImpl<Error_Sqlx>(this, _$identity);
+  $Error_SqlxCopyWith<Error_Sqlx> get copyWith => _$Error_SqlxCopyWithImpl<Error_Sqlx>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is Error_Sqlx &&
-            (identical(other.field0, field0) || other.field0 == field0));
+    return identical(this, other) || (other.runtimeType == runtimeType && other is Error_Sqlx && (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -397,9 +382,7 @@ class Error_Sqlx extends Error {
 
 /// @nodoc
 abstract mixin class $Error_SqlxCopyWith<$Res> implements $ErrorCopyWith<$Res> {
-  factory $Error_SqlxCopyWith(
-          Error_Sqlx value, $Res Function(Error_Sqlx) _then) =
-      _$Error_SqlxCopyWithImpl;
+  factory $Error_SqlxCopyWith(Error_Sqlx value, $Res Function(Error_Sqlx) _then) = _$Error_SqlxCopyWithImpl;
   @useResult
   $Res call({Error field0});
 
@@ -449,15 +432,11 @@ class Error_Other extends Error {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $Error_OtherCopyWith<Error_Other> get copyWith =>
-      _$Error_OtherCopyWithImpl<Error_Other>(this, _$identity);
+  $Error_OtherCopyWith<Error_Other> get copyWith => _$Error_OtherCopyWithImpl<Error_Other>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is Error_Other &&
-            (identical(other.field0, field0) || other.field0 == field0));
+    return identical(this, other) || (other.runtimeType == runtimeType && other is Error_Other && (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -470,11 +449,8 @@ class Error_Other extends Error {
 }
 
 /// @nodoc
-abstract mixin class $Error_OtherCopyWith<$Res>
-    implements $ErrorCopyWith<$Res> {
-  factory $Error_OtherCopyWith(
-          Error_Other value, $Res Function(Error_Other) _then) =
-      _$Error_OtherCopyWithImpl;
+abstract mixin class $Error_OtherCopyWith<$Res> implements $ErrorCopyWith<$Res> {
+  factory $Error_OtherCopyWith(Error_Other value, $Res Function(Error_Other) _then) = _$Error_OtherCopyWithImpl;
   @useResult
   $Res call({Error field0});
 

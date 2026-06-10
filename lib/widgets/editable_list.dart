@@ -3,9 +3,6 @@ import 'dart:async';
 import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:showcaseview/showcaseview.dart';
-
-final newAccountId = GlobalKey();
 
 class EditableList<T extends Object> extends StatefulWidget {
   final String title;
@@ -71,42 +68,48 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
     final anySelected = selected.any(identity);
 
     return Scaffold(
-        appBar: AppBar(
-          centerTitle: false,
-          title: Text(widget.title),
-          actions: [
-            if (!anySelected)
-              Showcase(key: newAccountId, description: "Create new account",
-                child: IconButton(onPressed: onNew, icon: Icon(Icons.add)),),
-            if (anySelected)
-              IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
-            if (anySelected)
-              IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
-            ...?widget.buttons,
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(children: [
-          ...?widget.headerBuilder?.call(context),
-          Expanded(child: AnimatedReorderableListView<T>(
-          buildDefaultDragHandles: false,
-          items: items,
-          itemBuilder: (context, index) =>
-              widget.builder(context, index, items[index],
+      appBar: AppBar(
+        centerTitle: false,
+        title: Text(widget.title),
+        actions: [
+          if (!anySelected) IconButton(onPressed: onNew, tooltip: "Create new account", icon: Icon(Icons.add)),
+          if (anySelected) IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
+          if (anySelected) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
+          ...?widget.buttons,
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            ...?widget.headerBuilder?.call(context),
+            Expanded(
+              child: AnimatedReorderableListView<T>(
+                buildDefaultDragHandles: false,
+                items: items,
+                itemBuilder: (context, index) => widget.builder(
+                  context,
+                  index,
+                  items[index],
                   selected: selected[index],
                   onSelectChanged: (value) => setState(() {
-                        selected[index] = value ?? false;
-                      }),),
-          isSameItem: (T a, T b) => widget.isEqual(a, b),
-          onReorder: (int oldIndex, int newIndex) {
-            widget.onReorder?.call(oldIndex, newIndex);
-            setState(() {
-              final T v = items.removeAt(oldIndex);
-              items.insert(newIndex, v);
-            });
-          },
-        ),),],),),);
+                    selected[index] = value ?? false;
+                  }),
+                ),
+                isSameItem: (T a, T b) => widget.isEqual(a, b),
+                onReorder: (int oldIndex, int newIndex) {
+                  widget.onReorder?.call(oldIndex, newIndex);
+                  setState(() {
+                    final T v = items.removeAt(oldIndex);
+                    items.insert(newIndex, v);
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   onNew() => widget.createBuilder(context);

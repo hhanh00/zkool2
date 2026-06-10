@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
@@ -17,9 +17,6 @@ import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
-
-final coordinatorID = GlobalKey();
-final fundingID2 = GlobalKey();
 
 class FrostPage1 extends ConsumerStatefulWidget {
   final PcztPackage pczt;
@@ -77,10 +74,6 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
     super.initState();
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "frost", [coordinatorID, fundingID2]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
@@ -110,8 +103,6 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
           });
         }
 
-        Future(tutorial);
-
         return Scaffold(
           appBar: AppBar(title: const Text("Frost Multi Party Signature")),
           body: FormBuilder(
@@ -124,9 +115,8 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Showcase(
-                    key: coordinatorID,
-                    description: "Participant ID who is coordinating the multisignature",
+                  child: Tooltip(
+                    message: "Participant ID who is coordinating the multisignature",
                     child: FormBuilderDropdown(
                       name: "coordinator",
                       decoration: const InputDecoration(
@@ -145,9 +135,8 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Showcase(
-                    key: fundingID2,
-                    description: "Multisig uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                  child: Tooltip(
+                    message: "Multisig uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
                     child: FormBuilderDropdown(
                       name: "account",
                       decoration: const InputDecoration(

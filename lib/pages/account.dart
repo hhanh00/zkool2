@@ -13,7 +13,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:searchable_listview/searchable_listview.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/zsa.dart';
@@ -37,11 +37,6 @@ class AccountViewPage extends ConsumerStatefulWidget {
 }
 
 class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTickerProviderStateMixin {
-  final logID = GlobalKey(debugLabel: "logID");
-  final sync1ID = GlobalKey(debugLabel: "sync1ID");
-  final receiveID = GlobalKey(debugLabel: "receiveID");
-  final sendID = GlobalKey(debugLabel: "sendID");
-  final balID = GlobalKey(debugLabel: "balID");
   late final tabController = TabController(length: 4, vsync: this);
 
   final List<String> tabNames = ["Transactions", "Memos", "Notes", "ZSA Holdings"];
@@ -123,10 +118,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     }
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "tutAccount0", [balID, logID, sync1ID, receiveID, sendID]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
@@ -146,30 +137,27 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
         final fullDataAV = ref.watch(fullAccountPageDataProvider);
 
-        Future(tutorial);
-
         return Scaffold(
           appBar: AppBar(
             title: Text(fullDataAV.value?.currentAccount?.account.name ?? "Loading"),
             actions: [
-              Showcase(
-                key: sync1ID,
-                description: "Synchronize only this account",
+              Tooltip(
+                message: "Synchronize only this account",
                 child: IconButton(
                   tooltip: "Sync this account",
                   onPressed: fullDataAV.value?.currentAccount != null ? () => onSync(fullDataAV.value!.currentAccount!) : null,
                   icon: Icon(Icons.sync),
                 ),
               ),
-              Showcase(
-                key: receiveID,
-                description: "Show the account receiving addresses",
-                child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),
+              IconButton(
+                tooltip: "Show the account receiving addresses",
+                onPressed: onReceive,
+                icon: Icon(Icons.download),
               ),
-              Showcase(
-                key: sendID,
-                description: "Send funds to one or many addresses",
-                child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
+              IconButton(
+                tooltip: "Send funds to one or many addresses",
+                onPressed: onSend,
+                icon: Icon(Icons.send),
               ),
               PopupMenuButton<String>(
                 onSelected: (String result) async {
@@ -276,45 +264,43 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                             slivers: [
                               PinnedHeaderSliver(
                                 child: Container(
-                                  color: Theme.of(context).colorScheme.surface,
-                                  child: Column(
-                                    children: [
+                                    color: Theme.of(context).colorScheme.surface,
+                                    child: Column(children: [
                                       if (syncing) ...[
                                         HeroProgressWidget(account.account),
                                         Gap(8),
                                       ],
                                       DisplayPanel(
-                                          child: Column(children: [
-                                        Showcase(
-                                          key: balID,
-                                          description: "Balance across all pools",
-                                          child: Column(children: [
-                                            zatToText(
-                                              b[0] + b[1] + b[2],
-                                              selectable: true,
-                                              style: tt.displaySmall!,
-                                            ),
-                                          ]),
-                                        ),
-                                        if (fiat != null) Text(fiat),
-                                        const Gap(4),
-                                        const ExchangeRateButton(),
-                                        Gap(8),
-                                        BalanceWidget(account.balance, showcase: true),
-                                      ]),
-                                    ),
-                                    Gap(8),
-                                    if (unconfirmedAmount != null) ...[
-                                      zatToText(
-                                        BigInt.from(unconfirmedAmount),
-                                        prefix: "Unconfirmed: ",
-                                        colored: true,
-                                        selectable: true,
-                                        style: tt.bodyLarge,
+                                        child: Column(children: [
+                                          Tooltip(
+                                            message: "Balance across all pools",
+                                            child: Column(children: [
+                                              zatToText(
+                                                b[0] + b[1] + b[2],
+                                                selectable: true,
+                                                style: tt.displaySmall!,
+                                              ),
+                                            ]),
+                                          ),
+                                          if (fiat != null) Text(fiat),
+                                          const Gap(4),
+                                          const ExchangeRateButton(),
+                                          Gap(8),
+                                          BalanceWidget(account.balance),
+                                        ]),
                                       ),
                                       Gap(8),
-                                    ],
-                                  ])),
+                                      if (unconfirmedAmount != null) ...[
+                                        zatToText(
+                                          BigInt.from(unconfirmedAmount),
+                                          prefix: "Unconfirmed: ",
+                                          colored: true,
+                                          selectable: true,
+                                          style: tt.bodyLarge,
+                                        ),
+                                        Gap(8),
+                                      ],
+                                    ])),
                               ),
                               ...showTxHistory(context, account.transactions),
                             ],
@@ -454,16 +440,6 @@ class AccountEditPage extends ConsumerStatefulWidget {
 }
 
 class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAware {
-  final nameID2 = GlobalKey(debugLabel: "nameID2");
-  final iconID2 = GlobalKey(debugLabel: "iconID2");
-  final birthID2 = GlobalKey(debugLabel: "birthID2");
-  final enableID = GlobalKey(debugLabel: "enableID");
-  final hideID2 = GlobalKey(debugLabel: "hideID2");
-  final exportID = GlobalKey(debugLabel: "exportID");
-  final rewindID = GlobalKey(debugLabel: "rewindID");
-  final resetID = GlobalKey(debugLabel: "resetID");
-  final folderID = GlobalKey(debugLabel: "folderID");
-
   late final c = coinContext.coin;
   late List<Account> accounts = widget.accounts;
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
@@ -499,17 +475,12 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     super.didUpdateWidget(oldWidget);
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "tutEdit0", [nameID2, iconID2, birthID2, enableID, hideID2, folderID, exportID, rewindID, resetID]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
     if (folders == null) return SizedBox.expand();
-    Future(tutorial);
 
     final account = accounts.length == 1 ? accounts.first : null;
     final folder = accounts.first.folder;
@@ -525,21 +496,21 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         title: Text('Account Edit'),
         actions: [
           if (account != null) ...[
-            Showcase(
-              key: exportID,
-              description: "Export an encrypted file of this account",
-              child: IconButton(tooltip: "Export Account", onPressed: onExport, icon: Icon(Icons.save)),
+            IconButton(
+              tooltip: "Export an encrypted file of this account",
+              onPressed: onExport,
+              icon: Icon(Icons.save),
             ),
-            Showcase(
-              key: rewindID,
-              description: "Rewind back a few blocks",
-              child: IconButton(tooltip: "Rewind to previous checkpoint", onPressed: onRewind, icon: Icon(Icons.fast_rewind)),
+            IconButton(
+              tooltip: "Rewind back a few blocks",
+              onPressed: onRewind,
+              icon: Icon(Icons.fast_rewind),
             ),
           ],
-          Showcase(
-            key: resetID,
-            description: "Clear and reset account to birth height",
-            child: IconButton(tooltip: "Clear Sync Data", onPressed: onReset, icon: Icon(Icons.delete_sweep)),
+          IconButton(
+            tooltip: "Clear and reset account to birth height",
+            onPressed: onReset,
+            icon: Icon(Icons.delete_sweep),
           ),
         ],
       ),
@@ -552,9 +523,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
               Row(
                 children: [
                   Expanded(
-                    child: Showcase(
-                      key: nameID2,
-                      description: "Edit Name of the account",
+                    child: Tooltip(
+                      message: "Edit Name of the account",
                       child: FormBuilderTextField(
                         name: 'name',
                         decoration: InputDecoration(labelText: 'Name'),
@@ -564,12 +534,11 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                       ),
                     ),
                   ),
-                  if (account != null) Showcase(key: iconID2, description: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon())),
+                  if (account != null) Tooltip(message: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon())),
                 ],
               ),
-              Showcase(
-                key: birthID2,
-                description: "Edit Height at the creation of the account",
+              Tooltip(
+                message: "Edit Height at the creation of the account",
                 child: FormBuilderTextField(
                   name: 'birth',
                   decoration: InputDecoration(labelText: 'Birth Height'),
@@ -580,9 +549,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                   onChanged: (account != null) ? onEditBirth : null,
                 ),
               ),
-              Showcase(
-                key: enableID,
-                description: "Enable or disable. Only enabled accounts participate in the global sync",
+              Tooltip(
+                message: "Enable or disable. Only enabled accounts participate in the global sync",
                 child: FormBuilderCheckbox(
                   name: "enabled",
                   title: Text("Enabled"),
@@ -591,9 +559,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                   onChanged: onEditEnabled,
                 ),
               ),
-              Showcase(
-                key: hideID2,
-                description: "Hide this account from the account list",
+              Tooltip(
+                message: "Hide this account from the account list",
                 child: FormBuilderCheckbox(
                   name: "hidden",
                   title: Text("Hidden"),
@@ -602,9 +569,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                   onChanged: onEditHidden,
                 ),
               ),
-              Showcase(
-                key: folderID,
-                description: "Assign Account to Folder",
+              Tooltip(
+                message: "Assign Account to Folder",
                 child: FormBuilderDropdown<int>(
                   name: "folder",
                   initialValue: accounts.every((a) => a.folder.id == folder.id) ? folder.id : null,
@@ -827,9 +793,8 @@ extension AccountExtension on Account {
 
 class BalanceWidget extends StatelessWidget {
   final PoolBalance balance;
-  final bool showcase;
   final void Function(int)? onPoolSelected;
-  const BalanceWidget(this.balance, {super.key, this.showcase = false, this.onPoolSelected});
+  const BalanceWidget(this.balance, {super.key, this.onPoolSelected});
 
   @override
   Widget build(BuildContext context) {

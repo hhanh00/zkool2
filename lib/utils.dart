@@ -23,8 +23,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:local_auth/local_auth.dart';
 import 'package:password_strength_checker/password_strength_checker.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -375,38 +374,6 @@ Future<T?> inputData<T>(
   return null;
 }
 
-Future<void> resetTutorial(BuildContext context) async {
-  final prefs = SharedPreferencesAsync();
-  await prefs.remove("tutMain0");
-  await prefs.remove("tutMain1");
-  await prefs.remove("tutNew0");
-  await prefs.remove("tutNew1");
-  await prefs.remove("tutNew2");
-  await prefs.remove("tutEdit0");
-  await prefs.remove("tutAccount0");
-  await prefs.remove("tutAccount1");
-  await prefs.remove("tutReceive0");
-  await prefs.remove("tutSend0");
-  await prefs.remove("tutSend1");
-  await prefs.remove("tutSend2");
-  await prefs.remove("tutSend3");
-  await prefs.remove("tutSend4");
-  await prefs.remove("tutSettings0");
-}
-
-void tutorialHelper(BuildContext context, String id, List<GlobalKey<State<StatefulWidget>>> ids) async {
-  final prefs = SharedPreferencesAsync();
-  final tutNew = await prefs.getBool(id) ?? true;
-  if (tutNew) {
-    if (!context.mounted) return;
-    final scw = ShowCaseWidget.of(context);
-    if (scw.isShowCaseCompleted) {
-      scw.startShowCase(ids);
-      await prefs.setBool(id, false);
-    }
-  }
-}
-
 Future<bool> authenticate({String? reason}) async {
   final LocalAuthentication auth = LocalAuthentication();
   try {
@@ -442,14 +409,6 @@ Future<bool> authenticate({String? reason}) async {
     return true; // Assume authentication is successful
   }
 }
-
-Widget maybeShowcase(bool condition, {required GlobalKey key, required String description, required Widget child}) => condition
-    ? Showcase(
-        key: key,
-        description: description,
-        child: child,
-      )
-    : child;
 
 void copyToClipboard(String text) {
   Clipboard.setData(ClipboardData(text: text));
@@ -612,4 +571,3 @@ Future<Uint8List> authenticatePasskey() async {
   logger.i('[Passkey] authenticatePasskey: salt=$_prfSalt, prf=${hex.encode(prfBytes.sublist(0, 4))}...');
   return prfBytes;
 }
-

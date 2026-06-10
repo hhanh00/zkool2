@@ -64,10 +64,10 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
         error: (error, stack) => showError(error),
         data: (txDetails) => SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
+                padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
                 child: Column(
-          children: show(txDetails),
-        ))),
+                  children: show(txDetails),
+                ))),
       ),
     );
   }
@@ -138,9 +138,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
           ListTile(title: Text("Asset"), subtitle: CopyableText(n.assetDisplay)),
           ListTile(
             title: Text("Value"),
-            subtitle: n.idAsset != null
-                ? Text(n.value.toString())
-                : zatToText(n.value, selectable: true),
+            subtitle: n.idAsset != null ? Text(n.value.toString()) : zatToText(n.value, selectable: true),
           ),
           Divider(),
         ],
@@ -152,9 +150,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
           ListTile(title: Text("Asset"), subtitle: CopyableText(n.assetDisplay)),
           ListTile(
             title: Text("Value"),
-            subtitle: n.idAsset != null
-                ? Text(n.value.toString())
-                : zatToText(n.value, selectable: true),
+            subtitle: n.idAsset != null ? Text(n.value.toString()) : zatToText(n.value, selectable: true),
           ),
           Divider(),
         ],
