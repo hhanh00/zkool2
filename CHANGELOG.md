@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.18.4-rc1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.4...zkool-v6.18.4-rc1) (2026-06-10)
+
+
+### Features
+
+* add diversifier_index column to notes table ([e98f3c7](https://github.com/hhanh00/zkool2/commit/e98f3c7b86e02a4f5adddff726917477c36f97f9))
+* AddressesPage with derivation-driven loop, segmented filters, scope filter, icons ([693c49a](https://github.com/hhanh00/zkool2/commit/693c49aa872ba40a9fee3d715bfc168a3e62dec6))
+* derivation-driven address tx counts with pool and usage filters ([93c6cc8](https://github.com/hhanh00/zkool2/commit/93c6cc80552e1b2b1b03e7b620d4c14d65f35a72))
+
+
+### Bug Fixes
+
+* derivation-driven address tx counts with PoolMask, aggregate UA, and filters ([4429ef6](https://github.com/hhanh00/zkool2/commit/4429ef65c7870af38d0d0487e589ad3074071f83))
+
 ## [6.18.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.3...zkool-v6.18.4) (2026-06-10)
 
 
