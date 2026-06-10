@@ -18,6 +18,7 @@ import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
 
+
 final dkgID = GlobalKey();
 final importID = GlobalKey();
 final saveID = GlobalKey();
@@ -102,179 +103,257 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: SingleChildScrollView(
           child: FormBuilder(
             key: formKey,
             child: Column(
               children: [
-                Stack(
-                  children: [
-                    Showcase(
-                      key: iconID,
-                      description: "Upload a icon",
-                      child: CircleAvatar(
-                        radius: 60,
-                        backgroundImage: ib != null ? Image.memory(ib).image : null,
-                        child: ib == null ? Text(initials(name)) : null,
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: IconButton.filled(
-                        onPressed: onEdit,
-                        icon: Icon(Icons.edit),
-                      ),
-                    ),
-                  ],
-                ),
-                Gap(16),
-                Showcase(
-                  key: nameID,
-                  description: "Enter a name that identifies this account",
-                  child: FormBuilderTextField(
-                    name: "name",
-                    decoration: const InputDecoration(labelText: "Account Name"),
-                    initialValue: name,
-                    onChanged: (v) => setState(() => name = v!),
+                Gap(12),
+                Text(
+                  "Create a new wallet or restore an existing one",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                   ),
                 ),
-                Gap(16),
-                Showcase(
-                  key: restoreID,
-                  description: "Check if you want to restore an existing account",
-                  child: FormBuilderSwitch(
-                    name: "restore",
-                    title: const Text("Restore Account?"),
-                    initialValue: restore,
-                    onChanged: (v) => setState(() => restore = v ?? false),
-                  ),
-                ),
-                Gap(16),
-                if (restore)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Showcase(
-                          key: keyID,
-                          description:
-                              "Seed phrase (12, 18, 21, 24 words), a Sapling secret key, a viewing key, a unified viewing key, a xpub/xprv transparent key or a BIP-38 key (starting with K or L)",
-                          child: FormBuilderTextField(
-                            name: "key",
-                            decoration: const InputDecoration(
-                              labelText: "Key (Seed Phrase, Private Key, or Viewing Key)",
+                Gap(20),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            Showcase(
+                              key: iconID,
+                              description: "Upload a icon",
+                              child: CircleAvatar(
+                                radius: 60,
+                                backgroundImage: ib != null ? Image.memory(ib).image : null,
+                                child: ib == null ? Text(initials(name)) : null,
+                              ),
                             ),
-                            validator: (s) => validKey(s, restore: restore && !ledger, c: c),
-                            initialValue: key,
-                            onChanged: (v) => setState(() => key = v!),
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: IconButton.filled(
+                                onPressed: onEdit,
+                                icon: Icon(Icons.edit),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Gap(16),
+                        Showcase(
+                          key: nameID,
+                          description: "Enter a name that identifies this account",
+                          child: FormBuilderTextField(
+                            name: "name",
+                            decoration: const InputDecoration(
+                              labelText: "Account Name",
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                            initialValue: name,
+                            onChanged: (v) => setState(() => name = v!),
                           ),
                         ),
-                      ),
-                      Gap(8),
-                      Showcase(
-                        key: generateID,
-                        description: "Generate a new Seed Phrase",
-                        child: IconButton.outlined(
-                          onPressed: onGenerate,
-                          icon: Icon(Icons.refresh),
-                        ),
-                      ),
-                    ],
-                  ),
-                Gap(16),
-                if (restore)
-                  Showcase(
-                    key: birthID,
-                    description: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height",
-                    child: FormBuilderTextField(
-                      name: "birth",
-                      decoration: const InputDecoration(
-                        labelText: "Birth Height",
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
                       ],
                     ),
                   ),
-                Gap(16),
-                FormBuilderSwitch(
-                  name: "advanced",
-                  title: const Text("Advanced Options"),
-                  initialValue: _showAdvanced,
-                  onChanged: (v) => setState(() => _showAdvanced = v ?? false),
                 ),
-                if (_showAdvanced) ...[
-                  Gap(16),
-                  if (!ledger && (isSeed || key.isEmpty))
-                    Showcase(
-                      key: internalID,
-                      description: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
-                      child: FormBuilderSwitch(
-                        name: "useInternal",
-                        title: const Text("Use Internal Change"),
-                      ),
-                    ),
-                  if (restore) ...[
-                    Gap(16),
-                    if (isSeed && !ledger)
-                      Showcase(
-                        key: passphraseID,
-                        description: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
-                        child: FormBuilderTextField(
-                          name: "passphrase",
-                          decoration: const InputDecoration(
-                            labelText: "Extra Passphrase (optional)",
+                Gap(12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Showcase(
+                          key: restoreID,
+                          description: "Check if you want to restore an existing account",
+                          child: FormBuilderSwitch(
+                            name: "restore",
+                            title: Row(
+                              children: [
+                                Icon(Icons.restore, size: 20),
+                                Gap(8),
+                                const Text("Restore Account?"),
+                              ],
+                            ),
+                            initialValue: restore,
+                            onChanged: (v) => setState(() => restore = v ?? false),
                           ),
                         ),
-                      ),
-                    Gap(16),
-                    if (isSeed || ledger)
-                      Showcase(
-                        key: accountIndexID,
-                        description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
-                        child: FormBuilderTextField(
-                          name: "aindex",
-                          decoration: const InputDecoration(
-                            labelText: "Account Index",
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ),
-                    Gap(16),
-                    if (keyPools != 0)
-                      Showcase(
-                        key: accountPoolsID,
-                        description: "Pools this account can receive funds",
-                        child: InputDecorator(
-                          decoration: InputDecoration(labelText: "Pools"),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: FormBuilderField<int>(
-                              name: "pools",
-                              initialValue: keyPools,
-                              builder: (field) => PoolSelect(
-                                enabled: keyPools,
-                                initialValue: field.value!,
-                                onChanged: (v) => field.didChange(v),
-                              ),
+                        if (restore) ...[
+                          Gap(8),
+                          Text(
+                            "Enter your seed phrase, private key, or viewing key to restore",
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
                             ),
                           ),
-                        ),
-                      ),
-                    Gap(16),
-                    FormBuilderSwitch(
-                      name: "ledger",
-                      title: const Text("H/W Ledger"),
-                      initialValue: ledger,
-                      onChanged: (v) => setState(() => ledger = v ?? false),
+                          Gap(12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Showcase(
+                                  key: keyID,
+                                  description:
+                                      "Seed phrase (12, 18, 21, 24 words), a Sapling secret key, a viewing key, a unified viewing key, a xpub/xprv transparent key or a BIP-38 key (starting with K or L)",
+                                  child: FormBuilderTextField(
+                                    name: "key",
+                                    decoration: const InputDecoration(
+                                      labelText: "Key (Seed Phrase, Private Key, or Viewing Key)",
+                                      prefixIcon: Icon(Icons.key),
+                                    ),
+                                    validator: (s) => validKey(s, restore: restore && !ledger, c: c),
+                                    initialValue: key,
+                                    onChanged: (v) => setState(() => key = v!),
+                                  ),
+                                ),
+                              ),
+                              Gap(8),
+                              Showcase(
+                                key: generateID,
+                                description: "Generate a new Seed Phrase",
+                                child: IconButton.outlined(
+                                  onPressed: onGenerate,
+                                  icon: Icon(Icons.refresh),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Gap(12),
+                          Showcase(
+                            key: birthID,
+                            description: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height",
+                            child: FormBuilderTextField(
+                              name: "birth",
+                              decoration: const InputDecoration(
+                                labelText: "Birth Height",
+                                prefixIcon: Icon(Icons.height),
+                              ),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                ],
+                  ),
+                ),
+                Gap(12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FormBuilderSwitch(
+                          name: "advanced",
+                          title: Row(
+                            children: [
+                              Icon(Icons.tune, size: 20),
+                              Gap(8),
+                              const Text("Advanced Options"),
+                            ],
+                          ),
+                          initialValue: _showAdvanced,
+                          onChanged: (v) => setState(() => _showAdvanced = v ?? false),
+                        ),
+                        if (_showAdvanced) ...[
+                          Gap(8),
+                          Text(
+                            "Extra derivation and pool settings",
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                            ),
+                          ),
+                          Gap(12),
+                          if (!ledger && (isSeed || key.isEmpty))
+                            Showcase(
+                              key: internalID,
+                              description: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
+                              child: FormBuilderSwitch(
+                                name: "useInternal",
+                                title: const Text("Use Internal Change"),
+                              ),
+                            ),
+                          if (restore) ...[
+                            Gap(12),
+                            if (isSeed && !ledger)
+                              Showcase(
+                                key: passphraseID,
+                                description: "An optional extra word/phrase added to the seed phrase (like in Trezor)",
+                                child: FormBuilderTextField(
+                                  name: "passphrase",
+                                  decoration: const InputDecoration(
+                                    labelText: "Extra Passphrase (optional)",
+                                    prefixIcon: Icon(Icons.lock_outline),
+                                  ),
+                                ),
+                              ),
+                            Gap(12),
+                            if (isSeed || ledger)
+                              Showcase(
+                                key: accountIndexID,
+                                description: "The derivation account index. Usually 0, but could be 1, 2, etc if you have additional accounts under the same seed",
+                                child: FormBuilderTextField(
+                                  name: "aindex",
+                                  decoration: const InputDecoration(
+                                    labelText: "Account Index",
+                                    prefixIcon: Icon(Icons.tag),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                ),
+                              ),
+                            Gap(12),
+                            if (keyPools != 0)
+                              Showcase(
+                                key: accountPoolsID,
+                                description: "Pools this account can receive funds",
+                                child: InputDecorator(
+                                  decoration: InputDecoration(labelText: "Pools"),
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: FormBuilderField<int>(
+                                      name: "pools",
+                                      initialValue: keyPools,
+                                      builder: (field) => PoolSelect(
+                                        enabled: keyPools,
+                                        initialValue: field.value!,
+                                        onChanged: (v) => field.didChange(v),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            Gap(12),
+                            FormBuilderSwitch(
+                              name: "ledger",
+                              title: Row(
+                                children: [
+                                  Icon(Icons.usb, size: 20),
+                                  Gap(8),
+                                  const Text("H/W Ledger"),
+                                ],
+                              ),
+                              initialValue: ledger,
+                              onChanged: (v) => setState(() => ledger = v ?? false),
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                Gap(16),
               ],
             ),
           ),
