@@ -102,6 +102,31 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
         final currentHeight = ref.watch(currentHeightProvider);
         final h = currentHeight != null ? currentHeight.toString() : 'N/A';
 
+        final visibleAccounts = pageData.accounts.where((a) => !a.internal).toList();
+        if (visibleAccounts.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined, size: 64, color: tt.bodySmall?.color),
+                  const Gap(16),
+                  Text("No accounts yet", style: tt.titleLarge),
+                  const Gap(8),
+                  Text("Tap the + button to create your first account", style: tt.bodyMedium),
+                  const Gap(24),
+                  ElevatedButton.icon(
+                    onPressed: () => GoRouter.of(context).push("/account/new"),
+                    icon: const Icon(Icons.add),
+                    label: const Text("New Account"),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return Showcase(
           key: accountListID,
           description: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
