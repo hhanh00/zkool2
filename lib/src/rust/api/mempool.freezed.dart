@@ -18,11 +18,15 @@ mixin _$MempoolMsg {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType && other is MempoolMsg && const DeepCollectionEquality().equals(other.field0, field0));
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is MempoolMsg &&
+            const DeepCollectionEquality().equals(other.field0, field0));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
 
   @override
   String toString() {
@@ -218,12 +222,16 @@ class MempoolMsg_BlockHeight extends MempoolMsg {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MempoolMsg_BlockHeightCopyWith<MempoolMsg_BlockHeight> get copyWith => _$MempoolMsg_BlockHeightCopyWithImpl<MempoolMsg_BlockHeight>(this, _$identity);
+  $MempoolMsg_BlockHeightCopyWith<MempoolMsg_BlockHeight> get copyWith =>
+      _$MempoolMsg_BlockHeightCopyWithImpl<MempoolMsg_BlockHeight>(
+          this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is MempoolMsg_BlockHeight && (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType &&
+            other is MempoolMsg_BlockHeight &&
+            (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -236,14 +244,18 @@ class MempoolMsg_BlockHeight extends MempoolMsg {
 }
 
 /// @nodoc
-abstract mixin class $MempoolMsg_BlockHeightCopyWith<$Res> implements $MempoolMsgCopyWith<$Res> {
-  factory $MempoolMsg_BlockHeightCopyWith(MempoolMsg_BlockHeight value, $Res Function(MempoolMsg_BlockHeight) _then) = _$MempoolMsg_BlockHeightCopyWithImpl;
+abstract mixin class $MempoolMsg_BlockHeightCopyWith<$Res>
+    implements $MempoolMsgCopyWith<$Res> {
+  factory $MempoolMsg_BlockHeightCopyWith(MempoolMsg_BlockHeight value,
+          $Res Function(MempoolMsg_BlockHeight) _then) =
+      _$MempoolMsg_BlockHeightCopyWithImpl;
   @useResult
   $Res call({int field0});
 }
 
 /// @nodoc
-class _$MempoolMsg_BlockHeightCopyWithImpl<$Res> implements $MempoolMsg_BlockHeightCopyWith<$Res> {
+class _$MempoolMsg_BlockHeightCopyWithImpl<$Res>
+    implements $MempoolMsg_BlockHeightCopyWith<$Res> {
   _$MempoolMsg_BlockHeightCopyWithImpl(this._self, this._then);
 
   final MempoolMsg_BlockHeight _self;
@@ -276,12 +288,15 @@ class MempoolMsg_TxId extends MempoolMsg {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MempoolMsg_TxIdCopyWith<MempoolMsg_TxId> get copyWith => _$MempoolMsg_TxIdCopyWithImpl<MempoolMsg_TxId>(this, _$identity);
+  $MempoolMsg_TxIdCopyWith<MempoolMsg_TxId> get copyWith =>
+      _$MempoolMsg_TxIdCopyWithImpl<MempoolMsg_TxId>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is MempoolMsg_TxId && (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType &&
+            other is MempoolMsg_TxId &&
+            (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -294,14 +309,18 @@ class MempoolMsg_TxId extends MempoolMsg {
 }
 
 /// @nodoc
-abstract mixin class $MempoolMsg_TxIdCopyWith<$Res> implements $MempoolMsgCopyWith<$Res> {
-  factory $MempoolMsg_TxIdCopyWith(MempoolMsg_TxId value, $Res Function(MempoolMsg_TxId) _then) = _$MempoolMsg_TxIdCopyWithImpl;
+abstract mixin class $MempoolMsg_TxIdCopyWith<$Res>
+    implements $MempoolMsgCopyWith<$Res> {
+  factory $MempoolMsg_TxIdCopyWith(
+          MempoolMsg_TxId value, $Res Function(MempoolMsg_TxId) _then) =
+      _$MempoolMsg_TxIdCopyWithImpl;
   @useResult
   $Res call({MempoolTx field0});
 }
 
 /// @nodoc
-class _$MempoolMsg_TxIdCopyWithImpl<$Res> implements $MempoolMsg_TxIdCopyWith<$Res> {
+class _$MempoolMsg_TxIdCopyWithImpl<$Res>
+    implements $MempoolMsg_TxIdCopyWith<$Res> {
   _$MempoolMsg_TxIdCopyWithImpl(this._self, this._then);
 
   final MempoolMsg_TxId _self;
