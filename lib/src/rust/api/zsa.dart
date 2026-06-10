@@ -11,17 +11,12 @@ part 'zsa.freezed.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `from`
 
-Future<List<ZsaHolding>> listZsaHoldings({required Coin c}) =>
-    RustLib.instance.api.crateApiZsaListZsaHoldings(c: c);
+Future<List<ZsaHolding>> listZsaHoldings({required Coin c}) => RustLib.instance.api.crateApiZsaListZsaHoldings(c: c);
 
 /// Set or update the human-readable name for a ZSA asset.
 /// Pass an empty string to clear the name (reverting to the hex fallback display).
-Future<void> setAssetName(
-        {required PlatformInt64 idAsset,
-        required String name,
-        required Coin c}) =>
-    RustLib.instance.api
-        .crateApiZsaSetAssetName(idAsset: idAsset, name: name, c: c);
+Future<void> setAssetName({required PlatformInt64 idAsset, required String name, required Coin c}) =>
+    RustLib.instance.api.crateApiZsaSetAssetName(idAsset: idAsset, name: name, c: c);
 
 /// A ZSA token holding representing a balance of a specific asset.
 @freezed

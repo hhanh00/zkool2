@@ -17,7 +17,8 @@ class MarketPriceState extends State<MarketPrice> {
       appBar: AppBar(title: Text("Market Price", style: t.titleLarge)),
       body: Center(
         child: InAppWebView(
-          initialData: InAppWebViewInitialData(data: r"""
+          initialData: InAppWebViewInitialData(
+            data: r"""
           <html>
             <head>
               <meta name='viewport' content='width=device-width, initial-scale=1.0'>
@@ -43,7 +44,8 @@ class MarketPriceState extends State<MarketPrice> {
               "autosize": true
             }
             </script>
-          </body>""",),
+          </body>""",
+          ),
         ),
       ),
     );

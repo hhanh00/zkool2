@@ -11,8 +11,7 @@ part 'coin.freezed.dart';
 // These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `connect_over_proxy`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `http_connect_tunnel`, `network`, `open_proxied_stream`, `try_open`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
-Future<void> initDatadir({required String directory}) =>
-    RustLib.instance.api.crateApiCoinInitDatadir(directory: directory);
+Future<void> initDatadir({required String directory}) => RustLib.instance.api.crateApiCoinInitDatadir(directory: directory);
 
 Future<void> getTorClient() => RustLib.instance.api.crateApiCoinGetTorClient();
 
@@ -35,19 +34,13 @@ sealed class Coin with _$Coin {
   factory Coin() => RustLib.instance.api.crateApiCoinCoinNew();
 
   Future<Coin> openDatabase({required String dbFilepath, String? password}) =>
-      RustLib.instance.api.crateApiCoinCoinOpenDatabase(
-          that: this, dbFilepath: dbFilepath, password: password);
+      RustLib.instance.api.crateApiCoinCoinOpenDatabase(that: this, dbFilepath: dbFilepath, password: password);
 
-  Future<Coin> setAccount({required int account}) => RustLib.instance.api
-      .crateApiCoinCoinSetAccount(that: this, account: account);
+  Future<Coin> setAccount({required int account}) => RustLib.instance.api.crateApiCoinCoinSetAccount(that: this, account: account);
 
-  Coin setLwd({required int serverType, required String url}) =>
-      RustLib.instance.api
-          .crateApiCoinCoinSetLwd(that: this, serverType: serverType, url: url);
+  Coin setLwd({required int serverType, required String url}) => RustLib.instance.api.crateApiCoinCoinSetLwd(that: this, serverType: serverType, url: url);
 
-  Coin setProxy({required String proxy}) =>
-      RustLib.instance.api.crateApiCoinCoinSetProxy(that: this, proxy: proxy);
+  Coin setProxy({required String proxy}) => RustLib.instance.api.crateApiCoinCoinSetProxy(that: this, proxy: proxy);
 
-  Future<Coin> setUseTor({required bool useTor}) => RustLib.instance.api
-      .crateApiCoinCoinSetUseTor(that: this, useTor: useTor);
+  Future<Coin> setUseTor({required bool useTor}) => RustLib.instance.api.crateApiCoinCoinSetUseTor(that: this, useTor: useTor);
 }

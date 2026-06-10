@@ -46,11 +46,14 @@ class FolderPageState extends ConsumerState<FolderPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text("Folders"), actions: [
-        IconButton(onPressed: onNew, icon: Icon(Icons.add)),
-        if (hasSingleSelection) IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
-        if (hasSelection) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
-      ],),
+      appBar: AppBar(
+        title: Text("Folders"),
+        actions: [
+          IconButton(onPressed: onNew, icon: Icon(Icons.add)),
+          if (hasSingleSelection) IconButton(onPressed: onEdit, icon: Icon(Icons.edit)),
+          if (hasSelection) IconButton(onPressed: onDelete, icon: Icon(Icons.delete)),
+        ],
+      ),
       body: ListView.builder(
         itemBuilder: (BuildContext context, int index) {
           final f = folders[index];

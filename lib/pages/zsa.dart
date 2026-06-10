@@ -147,9 +147,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                   itemBuilder: (context, index) {
                     final h = zsas[index];
 
-                    final displayName = h.assetName.isNotEmpty
-                        ? h.assetName
-                        : hex.encode(h.assetDescHash.sublist(0, 4));
+                    final displayName = h.assetName.isNotEmpty ? h.assetName : hex.encode(h.assetDescHash.sublist(0, 4));
 
                     final isEditing = _editingIndex == index;
 
@@ -182,9 +180,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                                       isDense: true,
                                       contentPadding: const EdgeInsets.symmetric(vertical: 4),
                                       border: const OutlineInputBorder(),
-                                      hintText: h.assetName.isEmpty
-                                          ? hex.encode(h.assetDescHash.sublist(0, 4))
-                                          : null,
+                                      hintText: h.assetName.isEmpty ? hex.encode(h.assetDescHash.sublist(0, 4)) : null,
                                     ),
                                     style: tt.titleMedium,
                                   )

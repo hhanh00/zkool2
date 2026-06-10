@@ -10,7 +10,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
@@ -31,15 +31,6 @@ import 'package:zkool/widgets/scanner.dart';
 
 /// The native ZEC asset base (32 zero bytes).
 final zecBase = Uint8List(32);
-
-final addressID = GlobalKey();
-final scanID = GlobalKey();
-final amountID = GlobalKey();
-final openTxID = GlobalKey();
-final addTxID = GlobalKey();
-final clearID = GlobalKey();
-final sendID2 = GlobalKey();
-final categoryID = GlobalKey();
 
 class SendPage extends ConsumerStatefulWidget {
   const SendPage({super.key});
@@ -68,10 +59,6 @@ class SendPageState extends ConsumerState<SendPage> {
   List<Account> _accountSuggestions = [];
   var _recipientPaysFee = false;
 
-  void tutorial() async {
-    tutorialHelper(context, "tutSend0", [addressID, scanID, amountID, openTxID, addTxID, sendID2]);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -99,7 +86,6 @@ class SendPageState extends ConsumerState<SendPage> {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    Future(tutorial);
     final c = coinContext.coin;
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
@@ -131,22 +117,10 @@ class SendPageState extends ConsumerState<SendPage> {
       appBar: AppBar(
         title: Text("Recipient"),
         actions: [
-          Showcase(
-            key: openTxID,
-            description: "Load an unsigned transaction",
-            child: IconButton(tooltip: "Load Tx", onPressed: onLoad, icon: Icon(Icons.file_open)),
-          ),
-          Showcase(key: clearID, description: "Clear Form Inputs", child: IconButton(tooltip: "Clear", onPressed: onClear, icon: Icon(Icons.clear))),
-          Showcase(
-            key: addTxID,
-            description: "Queue this recipient to create a multi send",
-            child: IconButton(tooltip: "Add to Multi Tx", onPressed: onAdd, icon: Icon(Icons.add)),
-          ),
-          Showcase(
-            key: sendID2,
-            description: "Send transaction (including queued recipients)",
-            child: IconButton(tooltip: "Send (Next Step)", onPressed: onSend, icon: Icon(Icons.send)),
-          ),
+          IconButton(tooltip: "Load an unsigned transaction", onPressed: onLoad, icon: Icon(Icons.file_open)),
+          IconButton(tooltip: "Clear Form Inputs", onPressed: onClear, icon: Icon(Icons.clear)),
+          IconButton(tooltip: "Queue this recipient to create a multi send", onPressed: onAdd, icon: Icon(Icons.add)),
+          IconButton(tooltip: "Send transaction (including queued recipients)", onPressed: onSend, icon: Icon(Icons.send)),
         ],
       ),
       body: SingleChildScrollView(
@@ -177,9 +151,8 @@ class SendPageState extends ConsumerState<SendPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: Showcase(
-                        key: addressID,
-                        description: "Receiver Address (Transparent, Sapling or UA)",
+                      child: Tooltip(
+                        message: "Receiver Address (Transparent, Sapling or UA)",
                         child: Focus(
                           canRequestFocus: false,
                           onFocusChange: (v) => {
@@ -199,11 +172,7 @@ class SendPageState extends ConsumerState<SendPage> {
                         ),
                       ),
                     ),
-                    Showcase(
-                      key: scanID,
-                      description: "Open the QR Scanner",
-                      child: IconButton(tooltip: "Scan", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),
-                    ),
+                    IconButton(tooltip: "Open the QR Scanner", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),
                   ],
                 ),
                 if (_accountSuggestions.isNotEmpty)
@@ -262,9 +231,7 @@ class SendPageState extends ConsumerState<SendPage> {
                   onChanged: (v) => setState(() => amount = v),
                   onMax: selectedAssetBase.every((b) => b == 0) ? onMax : null,
                   showFx: selectedAssetBase.every((b) => b == 0),
-                  label: selectedAssetName != null
-                      ? "Amount in $selectedAssetName"
-                      : "Amount in ZEC",
+                  label: selectedAssetName != null ? "Amount in $selectedAssetName" : "Amount in ZEC",
                 ),
                 Visibility(
                   visible: supportsMemo,
@@ -365,7 +332,9 @@ class SendPageState extends ConsumerState<SendPage> {
         smartTransparent: false,
       );
       final pczt = await prepare(
-        recipients: [Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero), assetBase: zecBase)],
+        recipients: [
+          Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero), assetBase: zecBase)
+        ],
         options: options,
         c: c,
       );
@@ -437,9 +406,7 @@ class SendPageState extends ConsumerState<SendPage> {
       final query = v.substring(1).toLowerCase();
       final accounts = ref.read(getAccountsProvider).requireValue;
       setState(() {
-        _accountSuggestions = query.isEmpty
-            ? accounts.toList()
-            : accounts.where((a) => a.name.toLowerCase().contains(query)).toList();
+        _accountSuggestions = query.isEmpty ? accounts.toList() : accounts.where((a) => a.name.toLowerCase().contains(query)).toList();
       });
     } else {
       setState(() => _accountSuggestions = []);
@@ -557,10 +524,6 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 }
 
-final sourceID = GlobalKey();
-final feeSourceID = GlobalKey();
-final sendID3 = GlobalKey();
-
 class Send2Page extends ConsumerStatefulWidget {
   final List<Recipient> recipients;
   final bool recipientPaysFee;
@@ -581,10 +544,6 @@ class Send2PageState extends ConsumerState<Send2Page> {
   AccountData? account;
   List<Category>? categories;
   final formKey = GlobalKey<FormBuilderState>();
-
-  void tutorial() async {
-    tutorialHelper(context, "tutSend2", [sourceID, feeSourceID, sendID3]);
-  }
 
   @override
   void initState() {
@@ -610,8 +569,6 @@ class Send2PageState extends ConsumerState<Send2Page> {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    Future(tutorial);
-
     final categoryItems = [
       DropdownMenuItem(value: null, child: Text("Unknown")),
       ...categories!.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
@@ -621,11 +578,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       appBar: AppBar(
         title: Text("Extra Options"),
         actions: [
-          Showcase(
-            key: sendID3,
-            description: "Send (Summary and Confirmation)",
-            child: IconButton(tooltip: "Send (Compute Tx)", onPressed: onSend, icon: Icon(Icons.send)),
-          ),
+          IconButton(tooltip: "Send (Summary and Confirmation)", onPressed: onSend, icon: Icon(Icons.send)),
         ],
       ),
       body: SingleChildScrollView(
@@ -636,9 +589,8 @@ class Send2PageState extends ConsumerState<Send2Page> {
             child: Column(
               children: [
                 if (!hasTex)
-                  Showcase(
-                    key: sourceID,
-                    description: "Pools to take funds from. Uncheck any pool you do not want to use",
+                  Tooltip(
+                    message: "Pools to take funds from. Uncheck any pool you do not want to use",
                     child: InputDecorator(
                       decoration: InputDecoration(labelText: "Source Pools"),
                       child: Align(
@@ -646,15 +598,13 @@ class Send2PageState extends ConsumerState<Send2Page> {
                         child: FormBuilderField<int>(
                           name: "source pools",
                           initialValue: account!.pool,
-                          builder: (field) =>
-                              PoolSelect(enabled: account!.pool, initialValue: field.value!, onChanged: (v) => field.didChange(v)),
+                          builder: (field) => PoolSelect(enabled: account!.pool, initialValue: field.value!, onChanged: (v) => field.didChange(v)),
                         ),
                       ),
                     ),
                   ),
-                Showcase(
-                  key: feeSourceID,
-                  description: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
+                Tooltip(
+                  message: "Who pays the fees. Usually, the sender pays the transaction fees. Check if you want the recipient instead",
                   child: FormBuilderSwitch(
                     name: "recipientPaysFee",
                     title: Text("Recipient Pays Fee"),
@@ -662,9 +612,8 @@ class Send2PageState extends ConsumerState<Send2Page> {
                     onChanged: (v) => setState(() => recipientPaysFee = v!),
                   ),
                 ),
-                Showcase(
-                  key: categoryID,
-                  description: "Spending or Income Category (for Budgetting)",
+                Tooltip(
+                  message: "Spending or Income Category (for Budgetting)",
                   child: FormBuilderDropdown(
                     name: "category",
                     decoration: InputDecoration(label: Text("Category")),

@@ -49,8 +49,7 @@ abstract class _$HasDb extends $Notifier<bool> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<bool, bool>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<bool, bool>, bool, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<bool, bool>, bool, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -58,8 +57,7 @@ abstract class _$HasDb extends $Notifier<bool> {
 @ProviderFor(SelectedAccountId)
 const selectedAccountIdProvider = SelectedAccountIdProvider._();
 
-final class SelectedAccountIdProvider
-    extends $NotifierProvider<SelectedAccountId, int> {
+final class SelectedAccountIdProvider extends $NotifierProvider<SelectedAccountId, int> {
   const SelectedAccountIdProvider._()
       : super(
           from: null,
@@ -96,8 +94,7 @@ abstract class _$SelectedAccountId extends $Notifier<int> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<int, int>;
-    final element = ref.element
-        as $ClassProviderElement<AnyNotifier<int, int>, int, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<int, int>, int, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -105,10 +102,8 @@ abstract class _$SelectedAccountId extends $Notifier<int> {
 @ProviderFor(SyncStateAccount)
 const syncStateAccountProvider = SyncStateAccountFamily._();
 
-final class SyncStateAccountProvider
-    extends $AsyncNotifierProvider<SyncStateAccount, SyncProgressAccount> {
-  const SyncStateAccountProvider._(
-      {required SyncStateAccountFamily super.from, required int super.argument})
+final class SyncStateAccountProvider extends $AsyncNotifierProvider<SyncStateAccount, SyncProgressAccount> {
+  const SyncStateAccountProvider._({required SyncStateAccountFamily super.from, required int super.argument})
       : super(
           retry: null,
           name: r'syncStateAccountProvider',
@@ -145,9 +140,7 @@ final class SyncStateAccountProvider
 String _$syncStateAccountHash() => r'cb3d58d81b59192492c0aab60de138055b823f7f';
 
 final class SyncStateAccountFamily extends $Family
-    with
-        $ClassFamilyOverride<SyncStateAccount, AsyncValue<SyncProgressAccount>,
-            SyncProgressAccount, FutureOr<SyncProgressAccount>, int> {
+    with $ClassFamilyOverride<SyncStateAccount, AsyncValue<SyncProgressAccount>, SyncProgressAccount, FutureOr<SyncProgressAccount>, int> {
   const SyncStateAccountFamily._()
       : super(
           retry: null,
@@ -179,13 +172,9 @@ abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
     final created = build(
       _$args,
     );
-    final ref =
-        this.ref as $Ref<AsyncValue<SyncProgressAccount>, SyncProgressAccount>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<SyncProgressAccount>, SyncProgressAccount>,
-        AsyncValue<SyncProgressAccount>,
-        Object?,
-        Object?>;
+    final ref = this.ref as $Ref<AsyncValue<SyncProgressAccount>, SyncProgressAccount>;
+    final element = ref.element
+        as $ClassProviderElement<AnyNotifier<AsyncValue<SyncProgressAccount>, SyncProgressAccount>, AsyncValue<SyncProgressAccount>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -193,8 +182,7 @@ abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
 @ProviderFor(selectedAccount)
 const selectedAccountProvider = SelectedAccountProvider._();
 
-final class SelectedAccountProvider extends $FunctionalProvider<
-        AsyncValue<Account?>, Account?, FutureOr<Account?>>
+final class SelectedAccountProvider extends $FunctionalProvider<AsyncValue<Account?>, Account?, FutureOr<Account?>>
     with $FutureModifier<Account?>, $FutureProvider<Account?> {
   const SelectedAccountProvider._()
       : super(
@@ -212,8 +200,7 @@ final class SelectedAccountProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<Account?> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<Account?> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<Account?> create(Ref ref) {
@@ -226,8 +213,7 @@ String _$selectedAccountHash() => r'749b6e2d1f8d9a677d054da6da362642a8a4198d';
 @ProviderFor(SelectedFolder)
 const selectedFolderProvider = SelectedFolderProvider._();
 
-final class SelectedFolderProvider
-    extends $NotifierProvider<SelectedFolder, Folder?> {
+final class SelectedFolderProvider extends $NotifierProvider<SelectedFolder, Folder?> {
   const SelectedFolderProvider._()
       : super(
           from: null,
@@ -264,8 +250,7 @@ abstract class _$SelectedFolder extends $Notifier<Folder?> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<Folder?, Folder?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<Folder?, Folder?>, Folder?, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<Folder?, Folder?>, Folder?, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -273,8 +258,7 @@ abstract class _$SelectedFolder extends $Notifier<Folder?> {
 @ProviderFor(getAccounts)
 const getAccountsProvider = GetAccountsProvider._();
 
-final class GetAccountsProvider extends $FunctionalProvider<
-        AsyncValue<List<Account>>, List<Account>, FutureOr<List<Account>>>
+final class GetAccountsProvider extends $FunctionalProvider<AsyncValue<List<Account>>, List<Account>, FutureOr<List<Account>>>
     with $FutureModifier<List<Account>>, $FutureProvider<List<Account>> {
   const GetAccountsProvider._()
       : super(
@@ -292,9 +276,7 @@ final class GetAccountsProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<List<Account>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<List<Account>> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<List<Account>> create(Ref ref) {
@@ -307,8 +289,7 @@ String _$getAccountsHash() => r'4628dce465555f59311a5f3232bb00fbfb6e428c';
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
 
-final class GetFoldersProvider extends $FunctionalProvider<
-        AsyncValue<List<Folder>>, List<Folder>, FutureOr<List<Folder>>>
+final class GetFoldersProvider extends $FunctionalProvider<AsyncValue<List<Folder>>, List<Folder>, FutureOr<List<Folder>>>
     with $FutureModifier<List<Folder>>, $FutureProvider<List<Folder>> {
   const GetFoldersProvider._()
       : super(
@@ -326,9 +307,7 @@ final class GetFoldersProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<List<Folder>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<List<Folder>> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<List<Folder>> create(Ref ref) {
@@ -341,8 +320,7 @@ String _$getFoldersHash() => r'2458237b23db05d19a7b49856e9987542680249e';
 @ProviderFor(getCategories)
 const getCategoriesProvider = GetCategoriesProvider._();
 
-final class GetCategoriesProvider extends $FunctionalProvider<
-        AsyncValue<List<Category>>, List<Category>, FutureOr<List<Category>>>
+final class GetCategoriesProvider extends $FunctionalProvider<AsyncValue<List<Category>>, List<Category>, FutureOr<List<Category>>>
     with $FutureModifier<List<Category>>, $FutureProvider<List<Category>> {
   const GetCategoriesProvider._()
       : super(
@@ -360,9 +338,7 @@ final class GetCategoriesProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<List<Category>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<List<Category>> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<List<Category>> create(Ref ref) {
@@ -375,11 +351,9 @@ String _$getCategoriesHash() => r'b936c571d89ff2ede483f5239881ba90219af321';
 @ProviderFor(account)
 const accountProvider = AccountFamily._();
 
-final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
-        AccountData, FutureOr<AccountData>>
+final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>, AccountData, FutureOr<AccountData>>
     with $FutureModifier<AccountData>, $FutureProvider<AccountData> {
-  const AccountProvider._(
-      {required AccountFamily super.from, required int super.argument})
+  const AccountProvider._({required AccountFamily super.from, required int super.argument})
       : super(
           retry: null,
           name: r'accountProvider',
@@ -400,9 +374,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
 
   @$internal
   @override
-  $FutureProviderElement<AccountData> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<AccountData> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<AccountData> create(Ref ref) {
@@ -426,8 +398,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
 
 String _$accountHash() => r'25f96180687d929a226176253f8fc71fb74a5964';
 
-final class AccountFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
+final class AccountFamily extends $Family with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
   const AccountFamily._()
       : super(
           retry: null,
@@ -449,8 +420,7 @@ final class AccountFamily extends $Family
 @ProviderFor(getCurrentAccount)
 const getCurrentAccountProvider = GetCurrentAccountProvider._();
 
-final class GetCurrentAccountProvider extends $FunctionalProvider<
-        AsyncValue<AccountData?>, AccountData?, FutureOr<AccountData?>>
+final class GetCurrentAccountProvider extends $FunctionalProvider<AsyncValue<AccountData?>, AccountData?, FutureOr<AccountData?>>
     with $FutureModifier<AccountData?>, $FutureProvider<AccountData?> {
   const GetCurrentAccountProvider._()
       : super(
@@ -468,9 +438,7 @@ final class GetCurrentAccountProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<AccountData?> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<AccountData?> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<AccountData?> create(Ref ref) {
@@ -483,8 +451,7 @@ String _$getCurrentAccountHash() => r'fb9e03f8c767fe77e0f33e71495c3bf0c167c7a1';
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
 
-final class AppSettingsNotifierProvider
-    extends $AsyncNotifierProvider<AppSettingsNotifier, AppSettings> {
+final class AppSettingsNotifierProvider extends $AsyncNotifierProvider<AppSettingsNotifier, AppSettings> {
   const AppSettingsNotifierProvider._()
       : super(
           from: null,
@@ -504,8 +471,7 @@ final class AppSettingsNotifierProvider
   AppSettingsNotifier create() => AppSettingsNotifier();
 }
 
-String _$appSettingsNotifierHash() =>
-    r'd1c42b6c957dc4f5fab50e908bbe919f7027525a';
+String _$appSettingsNotifierHash() => r'd1c42b6c957dc4f5fab50e908bbe919f7027525a';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -514,11 +480,7 @@ abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<AsyncValue<AppSettings>, AppSettings>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<AppSettings>, AppSettings>,
-        AsyncValue<AppSettings>,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<AsyncValue<AppSettings>, AppSettings>, AsyncValue<AppSettings>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -526,8 +488,7 @@ abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
 @ProviderFor(PriceNotifier)
 const priceProvider = PriceNotifierProvider._();
 
-final class PriceNotifierProvider
-    extends $NotifierProvider<PriceNotifier, double?> {
+final class PriceNotifierProvider extends $NotifierProvider<PriceNotifier, double?> {
   const PriceNotifierProvider._()
       : super(
           from: null,
@@ -564,8 +525,7 @@ abstract class _$PriceNotifier extends $Notifier<double?> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<double?, double?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<double?, double?>, double?, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<double?, double?>, double?, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -573,8 +533,7 @@ abstract class _$PriceNotifier extends $Notifier<double?> {
 @ProviderFor(SupportedCurrenciesNotifier)
 const supportedCurrenciesProvider = SupportedCurrenciesNotifierProvider._();
 
-final class SupportedCurrenciesNotifierProvider
-    extends $AsyncNotifierProvider<SupportedCurrenciesNotifier, List<String>> {
+final class SupportedCurrenciesNotifierProvider extends $AsyncNotifierProvider<SupportedCurrenciesNotifier, List<String>> {
   const SupportedCurrenciesNotifierProvider._()
       : super(
           from: null,
@@ -594,22 +553,16 @@ final class SupportedCurrenciesNotifierProvider
   SupportedCurrenciesNotifier create() => SupportedCurrenciesNotifier();
 }
 
-String _$supportedCurrenciesNotifierHash() =>
-    r'6f0ef88efa8e2e0b124b8880bea1e8620df43f27';
+String _$supportedCurrenciesNotifierHash() => r'6f0ef88efa8e2e0b124b8880bea1e8620df43f27';
 
-abstract class _$SupportedCurrenciesNotifier
-    extends $AsyncNotifier<List<String>> {
+abstract class _$SupportedCurrenciesNotifier extends $AsyncNotifier<List<String>> {
   FutureOr<List<String>> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<AsyncValue<List<String>>, List<String>>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<List<String>>, List<String>>,
-        AsyncValue<List<String>>,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<AsyncValue<List<String>>, List<String>>, AsyncValue<List<String>>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -617,8 +570,7 @@ abstract class _$SupportedCurrenciesNotifier
 @ProviderFor(LogNotifier)
 const logProvider = LogNotifierProvider._();
 
-final class LogNotifierProvider
-    extends $NotifierProvider<LogNotifier, List<String>> {
+final class LogNotifierProvider extends $NotifierProvider<LogNotifier, List<String>> {
   const LogNotifierProvider._()
       : super(
           from: null,
@@ -655,11 +607,7 @@ abstract class _$LogNotifier extends $Notifier<List<String>> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<List<String>, List<String>>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<List<String>, List<String>>,
-        List<String>,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<List<String>, List<String>>, List<String>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -667,8 +615,7 @@ abstract class _$LogNotifier extends $Notifier<List<String>> {
 @ProviderFor(CurrentHeightNotifier)
 const currentHeightProvider = CurrentHeightNotifierProvider._();
 
-final class CurrentHeightNotifierProvider
-    extends $NotifierProvider<CurrentHeightNotifier, int?> {
+final class CurrentHeightNotifierProvider extends $NotifierProvider<CurrentHeightNotifier, int?> {
   const CurrentHeightNotifierProvider._()
       : super(
           from: null,
@@ -696,8 +643,7 @@ final class CurrentHeightNotifierProvider
   }
 }
 
-String _$currentHeightNotifierHash() =>
-    r'16daa9bce5d88e0c013ac53051b9c0479659ff6d';
+String _$currentHeightNotifierHash() => r'16daa9bce5d88e0c013ac53051b9c0479659ff6d';
 
 abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
   int? build();
@@ -706,8 +652,7 @@ abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<int?, int?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<int?, int?>, int?, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<int?, int?>, int?, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -715,8 +660,7 @@ abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
 @ProviderFor(MempoolNotifier)
 const mempoolProvider = MempoolNotifierProvider._();
 
-final class MempoolNotifierProvider
-    extends $NotifierProvider<MempoolNotifier, MempoolState> {
+final class MempoolNotifierProvider extends $NotifierProvider<MempoolNotifier, MempoolState> {
   const MempoolNotifierProvider._()
       : super(
           from: null,
@@ -753,11 +697,7 @@ abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<MempoolState, MempoolState>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<MempoolState, MempoolState>,
-        MempoolState,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<MempoolState, MempoolState>, MempoolState, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -765,8 +705,7 @@ abstract class _$MempoolNotifier extends $Notifier<MempoolState> {
 @ProviderFor(SynchronizerNotifier)
 const synchronizerProvider = SynchronizerNotifierProvider._();
 
-final class SynchronizerNotifierProvider
-    extends $NotifierProvider<SynchronizerNotifier, SyncState> {
+final class SynchronizerNotifierProvider extends $NotifierProvider<SynchronizerNotifier, SyncState> {
   const SynchronizerNotifierProvider._()
       : super(
           from: null,
@@ -794,8 +733,7 @@ final class SynchronizerNotifierProvider
   }
 }
 
-String _$synchronizerNotifierHash() =>
-    r'558e7832444bfa102f87a85a6b00bccda2323e01';
+String _$synchronizerNotifierHash() => r'558e7832444bfa102f87a85a6b00bccda2323e01';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -804,8 +742,7 @@ abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<SyncState, SyncState>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<SyncState, SyncState>, SyncState, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<SyncState, SyncState>, SyncState, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -813,8 +750,7 @@ abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
 @ProviderFor(TransparentScan)
 const transparentScanProvider = TransparentScanProvider._();
 
-final class TransparentScanProvider
-    extends $NotifierProvider<TransparentScan, String> {
+final class TransparentScanProvider extends $NotifierProvider<TransparentScan, String> {
   const TransparentScanProvider._()
       : super(
           from: null,
@@ -851,8 +787,7 @@ abstract class _$TransparentScan extends $Notifier<String> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<String, String>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<String, String>, String, Object?, Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<String, String>, String, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -860,10 +795,8 @@ abstract class _$TransparentScan extends $Notifier<String> {
 @ProviderFor(GetTxDetails)
 const getTxDetailsProvider = GetTxDetailsFamily._();
 
-final class GetTxDetailsProvider
-    extends $AsyncNotifierProvider<GetTxDetails, TxAccount> {
-  const GetTxDetailsProvider._(
-      {required GetTxDetailsFamily super.from, required int super.argument})
+final class GetTxDetailsProvider extends $AsyncNotifierProvider<GetTxDetails, TxAccount> {
+  const GetTxDetailsProvider._({required GetTxDetailsFamily super.from, required int super.argument})
       : super(
           retry: null,
           name: r'getTxDetailsProvider',
@@ -899,10 +832,7 @@ final class GetTxDetailsProvider
 
 String _$getTxDetailsHash() => r'67175e914e53d2de8944db85e0f9225374cba276';
 
-final class GetTxDetailsFamily extends $Family
-    with
-        $ClassFamilyOverride<GetTxDetails, AsyncValue<TxAccount>, TxAccount,
-            FutureOr<TxAccount>, int> {
+final class GetTxDetailsFamily extends $Family with $ClassFamilyOverride<GetTxDetails, AsyncValue<TxAccount>, TxAccount, FutureOr<TxAccount>, int> {
   const GetTxDetailsFamily._()
       : super(
           retry: null,
@@ -935,11 +865,7 @@ abstract class _$GetTxDetails extends $AsyncNotifier<TxAccount> {
       _$args,
     );
     final ref = this.ref as $Ref<AsyncValue<TxAccount>, TxAccount>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<TxAccount>, TxAccount>,
-        AsyncValue<TxAccount>,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<AsyncValue<TxAccount>, TxAccount>, AsyncValue<TxAccount>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -976,11 +902,7 @@ abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<AsyncValue<bool>, bool>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<bool>, bool>,
-        AsyncValue<bool>,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<AsyncValue<bool>, bool>, AsyncValue<bool>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -988,10 +910,7 @@ abstract class _$Lifecycle extends $AsyncNotifier<bool> {
 @ProviderFor(accountsPageData)
 const accountsPageDataProvider = AccountsPageDataProvider._();
 
-final class AccountsPageDataProvider extends $FunctionalProvider<
-        AsyncValue<AccountsPageData>,
-        AccountsPageData,
-        FutureOr<AccountsPageData>>
+final class AccountsPageDataProvider extends $FunctionalProvider<AsyncValue<AccountsPageData>, AccountsPageData, FutureOr<AccountsPageData>>
     with $FutureModifier<AccountsPageData>, $FutureProvider<AccountsPageData> {
   const AccountsPageDataProvider._()
       : super(
@@ -1009,9 +928,7 @@ final class AccountsPageDataProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<AccountsPageData> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<AccountsPageData> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<AccountsPageData> create(Ref ref) {
@@ -1024,10 +941,7 @@ String _$accountsPageDataHash() => r'e37b6e048a3a3938c9c2b03ae41328036271956d';
 @ProviderFor(basicAccountData)
 const basicAccountDataProvider = BasicAccountDataProvider._();
 
-final class BasicAccountDataProvider extends $FunctionalProvider<
-        AsyncValue<BasicAccountData>,
-        BasicAccountData,
-        FutureOr<BasicAccountData>>
+final class BasicAccountDataProvider extends $FunctionalProvider<AsyncValue<BasicAccountData>, BasicAccountData, FutureOr<BasicAccountData>>
     with $FutureModifier<BasicAccountData>, $FutureProvider<BasicAccountData> {
   const BasicAccountDataProvider._()
       : super(
@@ -1045,9 +959,7 @@ final class BasicAccountDataProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<BasicAccountData> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<BasicAccountData> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<BasicAccountData> create(Ref ref) {
@@ -1060,8 +972,7 @@ String _$basicAccountDataHash() => r'5f755167b7edd069b07888af935e53d49e425a16';
 @ProviderFor(accountPageData)
 const accountPageDataProvider = AccountPageDataProvider._();
 
-final class AccountPageDataProvider extends $FunctionalProvider<
-        AsyncValue<AccountPageData>, AccountPageData, FutureOr<AccountPageData>>
+final class AccountPageDataProvider extends $FunctionalProvider<AsyncValue<AccountPageData>, AccountPageData, FutureOr<AccountPageData>>
     with $FutureModifier<AccountPageData>, $FutureProvider<AccountPageData> {
   const AccountPageDataProvider._()
       : super(
@@ -1079,9 +990,7 @@ final class AccountPageDataProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<AccountPageData> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<AccountPageData> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<AccountPageData> create(Ref ref) {
@@ -1094,13 +1003,8 @@ String _$accountPageDataHash() => r'1b27ca25c3ccb2705f247b0ca97780de0df30679';
 @ProviderFor(fullAccountPageData)
 const fullAccountPageDataProvider = FullAccountPageDataProvider._();
 
-final class FullAccountPageDataProvider extends $FunctionalProvider<
-        AsyncValue<FullAccountPageData>,
-        FullAccountPageData,
-        FutureOr<FullAccountPageData>>
-    with
-        $FutureModifier<FullAccountPageData>,
-        $FutureProvider<FullAccountPageData> {
+final class FullAccountPageDataProvider extends $FunctionalProvider<AsyncValue<FullAccountPageData>, FullAccountPageData, FutureOr<FullAccountPageData>>
+    with $FutureModifier<FullAccountPageData>, $FutureProvider<FullAccountPageData> {
   const FullAccountPageDataProvider._()
       : super(
           from: null,
@@ -1117,9 +1021,7 @@ final class FullAccountPageDataProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<FullAccountPageData> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<FullAccountPageData> $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
 
   @override
   FutureOr<FullAccountPageData> create(Ref ref) {
@@ -1127,14 +1029,12 @@ final class FullAccountPageDataProvider extends $FunctionalProvider<
   }
 }
 
-String _$fullAccountPageDataHash() =>
-    r'742c766717c6b4f146d1f6fa7c6a5aa2512fa0b6';
+String _$fullAccountPageDataHash() => r'742c766717c6b4f146d1f6fa7c6a5aa2512fa0b6';
 
 @ProviderFor(VaultNotifier)
 const vaultProvider = VaultNotifierProvider._();
 
-final class VaultNotifierProvider
-    extends $AsyncNotifierProvider<VaultNotifier, Vault> {
+final class VaultNotifierProvider extends $AsyncNotifierProvider<VaultNotifier, Vault> {
   const VaultNotifierProvider._()
       : super(
           from: null,
@@ -1163,11 +1063,7 @@ abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
   void runBuild() {
     final created = build();
     final ref = this.ref as $Ref<AsyncValue<Vault>, Vault>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<Vault>, Vault>,
-        AsyncValue<Vault>,
-        Object?,
-        Object?>;
+    final element = ref.element as $ClassProviderElement<AnyNotifier<AsyncValue<Vault>, Vault>, AsyncValue<Vault>, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }

@@ -36,10 +36,4 @@ Future<Uint8List> issueAsset(
         required int idAccount,
         required Coin c}) =>
     RustLib.instance.api.crateApiIssuanceIssueAsset(
-        assetName: assetName,
-        amount: amount,
-        firstIssuance: firstIssuance,
-        finalize: finalize,
-        descHash: descHash,
-        idAccount: idAccount,
-        c: c);
+        assetName: assetName, amount: amount, firstIssuance: firstIssuance, finalize: finalize, descHash: descHash, idAccount: idAccount, c: c);

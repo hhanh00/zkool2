@@ -80,10 +80,10 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
                       context,
                       gapLimit,
                       onComplete: () {
-                      ref.invalidate(accountProvider);
-                      ref.invalidate(getAccountsProvider);
-                      showSnackbar("Scan Completed");
-                    },
+                        ref.invalidate(accountProvider);
+                        ref.invalidate(getAccountsProvider);
+                        showSnackbar("Scan Completed");
+                      },
                     );
                   }
                 },

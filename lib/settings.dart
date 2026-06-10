@@ -12,7 +12,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
@@ -22,20 +22,6 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
-
-final logID = GlobalKey();
-final lightnodeID = GlobalKey();
-final lwdID = GlobalKey();
-final torID = GlobalKey();
-final coingeckoID = GlobalKey();
-final actionsID = GlobalKey();
-final autosyncID = GlobalKey();
-final cancelID = GlobalKey();
-final fxID = GlobalKey();
-final pinLockID = GlobalKey();
-final offlineID = GlobalKey();
-final useQRID = GlobalKey();
-final blockExplorerID = GlobalKey();
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -134,28 +120,20 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "tutSettings0",
-        [logID, lightnodeID, lwdID, torID, coingeckoID, actionsID, autosyncID, cancelID, pinLockID, offlineID, fxID, useQRID, blockExplorerID]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    Future(tutorial);
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Settings"),
         actions: [
-          Showcase(
-            key: logID,
-            description: "Open the App Log",
+          Tooltip(
+            message: "Open the App Log",
             child: IconButton(tooltip: "View Log", onPressed: () => onOpenLog(context), icon: Icon(Icons.description)),
           ),
           IconButton(tooltip: "Lock", onPressed: () => lockApp(ref), icon: Icon(Icons.lock)),
           IconButton(tooltip: "Theme", onPressed: onTheme, icon: Icon(Icons.palette)),
-          IconButton(tooltip: "Show Tutorials again", onPressed: () => resetTutorial(context), icon: Icon(Icons.school)),
           IconButton(tooltip: "Database Manager", onPressed: onDatabaseManager, icon: Icon(Icons.folder)),
         ],
       ),
@@ -166,9 +144,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             child: Column(
               children: [
-                Showcase(
-                  key: lightnodeID,
-                  description: "Whether the server is a light node or not",
+                Tooltip(
+                  message: "Whether the server is a light node or not",
                   child: FormBuilderSwitch(
                     name: "light",
                     title: Text("Light Node"),
@@ -176,9 +153,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     onChanged: onChangedIsLightNode,
                   ),
                 ),
-                Showcase(
-                  key: lwdID,
-                  description: "Node server to connect to",
+                Tooltip(
+                  message: "Node server to connect to",
                   child: Row(
                     children: [
                       Expanded(
@@ -205,9 +181,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Row(
                   children: [
                     IconButton.outlined(
-                      tooltip: settings.useTor
-                          ? "Disable Arti Tor"
-                          : "Enable Arti Tor (embedded Tor client)",
+                      tooltip: settings.useTor ? "Disable Arti Tor" : "Enable Arti Tor (embedded Tor client)",
                       onPressed: onToggleTor,
                       icon: SvgPicture.asset(
                         "assets/tor.svg",
@@ -223,9 +197,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     Text(settings.useTor ? "Arti Tor enabled" : "Arti Tor disabled"),
                     const Gap(24),
                     Expanded(
-                      child: Showcase(
-                        key: torID,
-                        description: "Route connections through an external proxy. "
+                      child: Tooltip(
+                        message: "Route connections through an external proxy. "
                             "Supports socks5://, socks5h://, http:// and https://. "
                             "Disabled when Arti Tor is enabled.",
                         child: FormBuilderTextField(
@@ -242,9 +215,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ),
                   ],
                 ),
-                Showcase(
-                  key: actionsID,
-                  description: "Number actions per synchronization chunk",
+                Tooltip(
+                  message: "Number actions per synchronization chunk",
                   child: FormBuilderTextField(
                     name: "actions_per_sync",
                     decoration: const InputDecoration(labelText: "Actions per Sync"),
@@ -259,9 +231,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Row(
                   children: [
                     Expanded(
-                      child: Showcase(
-                        key: autosyncID,
-                        description: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
+                      child: Tooltip(
+                        message: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
                         child: FormBuilderTextField(
                           name: "autosync",
                           decoration: const InputDecoration(labelText: "AutoSync Interval"),
@@ -273,17 +244,16 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                         ),
                       ),
                     ),
-                    Showcase(
-                      key: cancelID,
-                      description: "This will cancel the current sync and disable AutoSync",
-                      child: IconButton(tooltip: "Cancel Sync", onPressed: onCancelSync, icon: Icon(Icons.cancel)),
+                    IconButton(
+                      tooltip: "This will cancel the current sync and disable AutoSync",
+                      onPressed: onCancelSync,
+                      icon: Icon(Icons.cancel),
                     ),
                   ],
                 ),
                 Gap(8),
-                Showcase(
-                  key: pinLockID,
-                  description: "Ask for device pin when app opens",
+                Tooltip(
+                  message: "Ask for device pin when app opens",
                   child: Row(
                     children: [
                       Expanded(child: Text("Pin Lock")),
@@ -292,21 +262,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 Gap(8),
-                Showcase(
-                  key: offlineID,
-                  description: "Toggle offline mode",
+                Tooltip(
+                  message: "Toggle offline mode",
                   child: FormBuilderSwitch(name: "offline", title: Text("Offline"), initialValue: settings.offline, onChanged: onOfflineChanged),
                 ),
                 Gap(8),
-                Showcase(
-                  key: fxID,
-                  description: "Toggle auto update of market price",
+                Tooltip(
+                  message: "Toggle auto update of market price",
                   child: FormBuilderSwitch(name: "fx", title: Text("Auto Fetch Market Price"), initialValue: settings.getFx, onChanged: onGetFxChanged),
                 ),
                 Gap(8),
-                Showcase(
-                  key: coingeckoID,
-                  description: "CoinGecko API Key. Register for an account on their website",
+                Tooltip(
+                  message: "CoinGecko API Key. Register for an account on their website",
                   child: FormBuilderTextField(
                     name: "coingecko",
                     decoration: InputDecoration(
@@ -329,9 +296,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 Gap(8),
-                Showcase(
-                  key: blockExplorerID,
-                  description: "Block Explorer URL",
+                Tooltip(
+                  message: "Block Explorer URL",
                   child: FormBuilderTextField(
                     name: "block_explorer",
                     decoration: InputDecoration(
@@ -342,9 +308,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 Gap(8),
-                Showcase(
-                  key: useQRID,
-                  description: "Use QR Codes for file transmission between devices",
+                Tooltip(
+                  message: "Use QR Codes for file transmission between devices",
                   child: Row(children: [
                     Expanded(child: Text("File Transmission via QR Codes")),
                     SizedBox(width: 40, child: IconButton(onPressed: onQR, icon: Icon(Icons.chevron_right)))
@@ -361,7 +326,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 if (settings.expertMode && settings.vault)
                   Row(children: [
                     Expanded(child: Text("Recover Accounts from Vault")),
-                    SizedBox(width: 40, child: IconButton(onPressed: onVaultRecover, icon: Icon(Icons.chevron_right),),),
+                    SizedBox(
+                      width: 40,
+                      child: IconButton(
+                        onPressed: onVaultRecover,
+                        icon: Icon(Icons.chevron_right),
+                      ),
+                    ),
                   ]),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
@@ -882,93 +853,93 @@ class SettingsQRPageState extends ConsumerState<SettingsQRPage> with RouteAware 
         data: (settings) {
           final qrSettings = settings.qrSettings;
           return SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
-          child: FormBuilder(
-            key: formKey,
-            child: Column(
-              children: [
-                Card(
-                  elevation: 1,
-                  margin: EdgeInsets.all(8),
-                  child: Padding(
-                    padding: EdgeInsetsGeometry.all(8),
-                    child: Column(
-                      children: [
-                        Text("QR Codes", style: t.titleMedium),
-                        Gap(16),
-                        FormBuilderSwitch(name: "enabled", initialValue: qrSettings.enabled, title: Text("Enabled")),
-                        Gap(8),
-                        FormBuilderSlider(
-                          name: "size",
-                          decoration: InputDecoration(
-                            label: Text("QR Code Size"),
-                          ),
-                          initialValue: qrSettings.size,
-                          min: 10,
-                          max: 40,
-                          divisions: 30,
-                        ),
-                        Gap(16),
-                        FormBuilderSlider(
-                          name: "ecLevel",
-                          decoration: InputDecoration(
-                            label: Text("Error Correction Level"),
-                            helper: Text(
-                              "higher ECL is more robust but takes more space",
+            child: Padding(
+              padding: EdgeInsetsGeometry.symmetric(horizontal: 8),
+              child: FormBuilder(
+                key: formKey,
+                child: Column(
+                  children: [
+                    Card(
+                      elevation: 1,
+                      margin: EdgeInsets.all(8),
+                      child: Padding(
+                        padding: EdgeInsetsGeometry.all(8),
+                        child: Column(
+                          children: [
+                            Text("QR Codes", style: t.titleMedium),
+                            Gap(16),
+                            FormBuilderSwitch(name: "enabled", initialValue: qrSettings.enabled, title: Text("Enabled")),
+                            Gap(8),
+                            FormBuilderSlider(
+                              name: "size",
+                              decoration: InputDecoration(
+                                label: Text("QR Code Size"),
+                              ),
+                              initialValue: qrSettings.size,
+                              min: 10,
+                              max: 40,
+                              divisions: 30,
                             ),
-                          ),
-                          initialValue: qrSettings.ecLevel.toDouble(),
-                          min: 0,
-                          max: 3,
-                          divisions: 3,
-                        ),
-                        Gap(16),
-                        FormBuilderTextField(
-                          name: "delay",
-                          decoration: InputDecoration(
-                            label: Text("Duration between QR codes (ms)"),
-                          ),
-                          initialValue: qrSettings.delay.toString(),
-                          validator: FormBuilderValidators.integer(),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                            Gap(16),
+                            FormBuilderSlider(
+                              name: "ecLevel",
+                              decoration: InputDecoration(
+                                label: Text("Error Correction Level"),
+                                helper: Text(
+                                  "higher ECL is more robust but takes more space",
+                                ),
+                              ),
+                              initialValue: qrSettings.ecLevel.toDouble(),
+                              min: 0,
+                              max: 3,
+                              divisions: 3,
+                            ),
+                            Gap(16),
+                            FormBuilderTextField(
+                              name: "delay",
+                              decoration: InputDecoration(
+                                label: Text("Duration between QR codes (ms)"),
+                              ),
+                              initialValue: qrSettings.delay.toString(),
+                              validator: FormBuilderValidators.integer(),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                Card(
-                  elevation: 1,
-                  child: Padding(
-                    padding: EdgeInsetsGeometry.all(8),
-                    child: Column(
-                      children: [
-                        Text("Fountain Codes", style: t.titleMedium),
-                        Gap(8),
-                        FormBuilderTextField(
-                          name: "repair",
-                          decoration: InputDecoration(
-                            label: Text("Repair Packets"),
-                          ),
-                          initialValue: qrSettings.repair.toString(),
-                          validator: FormBuilderValidators.integer(),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                    Card(
+                      elevation: 1,
+                      child: Padding(
+                        padding: EdgeInsetsGeometry.all(8),
+                        child: Column(
+                          children: [
+                            Text("Fountain Codes", style: t.titleMedium),
+                            Gap(8),
+                            FormBuilderTextField(
+                              name: "repair",
+                              decoration: InputDecoration(
+                                label: Text("Repair Packets"),
+                              ),
+                              initialValue: qrSettings.repair.toString(),
+                              validator: FormBuilderValidators.integer(),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-          ),
-        );
+          );
         },
       ),
     );

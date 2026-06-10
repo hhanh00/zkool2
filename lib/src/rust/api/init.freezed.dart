@@ -22,8 +22,7 @@ mixin _$LogMessage {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $LogMessageCopyWith<LogMessage> get copyWith =>
-      _$LogMessageCopyWithImpl<LogMessage>(this as LogMessage, _$identity);
+  $LogMessageCopyWith<LogMessage> get copyWith => _$LogMessageCopyWithImpl<LogMessage>(this as LogMessage, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -46,9 +45,7 @@ mixin _$LogMessage {
 
 /// @nodoc
 abstract mixin class $LogMessageCopyWith<$Res> {
-  factory $LogMessageCopyWith(
-          LogMessage value, $Res Function(LogMessage) _then) =
-      _$LogMessageCopyWithImpl;
+  factory $LogMessageCopyWith(LogMessage value, $Res Function(LogMessage) _then) = _$LogMessageCopyWithImpl;
   @useResult
   $Res call({int level, String message, String? span});
 }
@@ -256,8 +253,7 @@ class _LogMessage implements LogMessage {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$LogMessageCopyWith<_LogMessage> get copyWith =>
-      __$LogMessageCopyWithImpl<_LogMessage>(this, _$identity);
+  _$LogMessageCopyWith<_LogMessage> get copyWith => __$LogMessageCopyWithImpl<_LogMessage>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -279,11 +275,8 @@ class _LogMessage implements LogMessage {
 }
 
 /// @nodoc
-abstract mixin class _$LogMessageCopyWith<$Res>
-    implements $LogMessageCopyWith<$Res> {
-  factory _$LogMessageCopyWith(
-          _LogMessage value, $Res Function(_LogMessage) _then) =
-      __$LogMessageCopyWithImpl;
+abstract mixin class _$LogMessageCopyWith<$Res> implements $LogMessageCopyWith<$Res> {
+  factory _$LogMessageCopyWith(_LogMessage value, $Res Function(_LogMessage) _then) = __$LogMessageCopyWithImpl;
   @override
   @useResult
   $Res call({int level, String message, String? span});

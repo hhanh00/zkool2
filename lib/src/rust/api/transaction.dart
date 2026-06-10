@@ -7,32 +7,19 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<void> fillMissingTxPrices(
-        {required String api, required String currency, required Coin c}) =>
-    RustLib.instance.api.crateApiTransactionFillMissingTxPrices(
-        api: api, currency: currency, c: c);
+Future<void> fillMissingTxPrices({required String api, required String currency, required Coin c}) =>
+    RustLib.instance.api.crateApiTransactionFillMissingTxPrices(api: api, currency: currency, c: c);
 
-Future<void> updateHistoricalPrices(
-        {required String currency,
-        required double exchangeRate,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiTransactionUpdateHistoricalPrices(
-        currency: currency, exchangeRate: exchangeRate, c: c);
+Future<void> updateHistoricalPrices({required String currency, required double exchangeRate, required Coin c}) =>
+    RustLib.instance.api.crateApiTransactionUpdateHistoricalPrices(currency: currency, exchangeRate: exchangeRate, c: c);
 
 Future<void> setTxCategory({required int id, int? category, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiTransactionSetTxCategory(id: id, category: category, c: c);
+    RustLib.instance.api.crateApiTransactionSetTxCategory(id: id, category: category, c: c);
 
-Future<void> setTxPrice({required int id, double? price, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiTransactionSetTxPrice(id: id, price: price, c: c);
+Future<void> setTxPrice({required int id, double? price, required Coin c}) => RustLib.instance.api.crateApiTransactionSetTxPrice(id: id, price: price, c: c);
 
-Future<List<(String, double, bool)>> fetchCategoryAmounts(
-        {int? from, int? to, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiTransactionFetchCategoryAmounts(from: from, to: to, c: c);
+Future<List<(String, double, bool)>> fetchCategoryAmounts({int? from, int? to, required Coin c}) =>
+    RustLib.instance.api.crateApiTransactionFetchCategoryAmounts(from: from, to: to, c: c);
 
-Future<List<(int, double)>> fetchAmounts(
-        {int? from, int? to, required int category, required Coin c}) =>
-    RustLib.instance.api.crateApiTransactionFetchAmounts(
-        from: from, to: to, category: category, c: c);
+Future<List<(int, double)>> fetchAmounts({int? from, int? to, required int category, required Coin c}) =>
+    RustLib.instance.api.crateApiTransactionFetchAmounts(from: from, to: to, category: category, c: c);

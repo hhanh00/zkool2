@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:showcaseview/showcaseview.dart';
+
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -11,11 +11,6 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/pool_select.dart';
-
-final viewID = GlobalKey();
-final sweepID = GlobalKey();
-final deriveID = GlobalKey();
-final qrID = GlobalKey();
 
 class ReceivePage extends ConsumerStatefulWidget {
   const ReceivePage({super.key});
@@ -50,17 +45,11 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
     });
   }
 
-  void tutorial() async {
-    tutorialHelper(context, "tutReceive0", [viewID, sweepID, deriveID, qrID]);
-  }
-
   @override
   Widget build(BuildContext context) {
     if (this.account == null) return blank(context);
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
-
-    Future(tutorial);
 
     final account = this.account!;
     final addresses = this.addresses!;
@@ -69,33 +58,21 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
       appBar: AppBar(
         title: Text("Receive Funds"),
         actions: [
-          Showcase(
-            key: viewID,
-            description: "View Transparent Addresses",
-            child: IconButton(
-              tooltip: "Transparent Addresses",
-              onPressed: onViewTransparentAddresses,
-              icon: Icon(Icons.visibility),
-            ),
+          IconButton(
+            tooltip: "View Transparent Addresses",
+            onPressed: onViewTransparentAddresses,
+            icon: Icon(Icons.visibility),
           ),
-          Showcase(
-            key: sweepID,
-            description:
+          IconButton(
+            tooltip:
                 "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync",
-            child: IconButton(
-              tooltip: "Sweep",
-              onPressed: onSweep,
-              icon: Icon(Icons.search),
-            ),
+            onPressed: onSweep,
+            icon: Icon(Icons.search),
           ),
-          Showcase(
-            key: deriveID,
-            description: "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds",
-            child: IconButton(
-              tooltip: "Next Set of Addresses",
-              onPressed: onGenerateAddress,
-              icon: Icon(Icons.skip_next),
-            ),
+          IconButton(
+            tooltip: "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds",
+            onPressed: onGenerateAddress,
+            icon: Icon(Icons.skip_next),
           ),
         ],
       ),
@@ -115,13 +92,10 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
                 ListTile(
                   title: Text("Unified Address"),
                   subtitle: CopyableText(addresses.ua!),
-                  trailing: Showcase(
-                    key: qrID,
-                    description: "Show address as a QR Code",
-                    child: IconButton(
-                      icon: Icon(Icons.qr_code),
-                      onPressed: () => onShowQR("Unified Address", addresses.ua!),
-                    ),
+                  trailing: IconButton(
+                    tooltip: "Show address as a QR Code",
+                    icon: Icon(Icons.qr_code),
+                    onPressed: () => onShowQR("Unified Address", addresses.ua!),
                   ),
                 ),
               ],
