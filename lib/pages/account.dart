@@ -132,189 +132,204 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    final fullDataAV = ref.watch(fullAccountPageDataProvider);
+    final selectedAccountAV = ref.watch(selectedAccountProvider);
+    return selectedAccountAV.when(
+      loading: () => blank(context),
+      error: (error, stack) => showError(error),
+      data: (selectedAccount) {
+        if (selectedAccount == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (GoRouter.of(context).state.matchedLocation == '/accounts') return;
+            GoRouter.of(context).go("/accounts");
+          });
+        }
 
-    Future(tutorial);
+        final fullDataAV = ref.watch(fullAccountPageDataProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(fullDataAV.value?.currentAccount?.account.name ?? "Loading"),
-        actions: [
-          Showcase(
-            key: sync1ID,
-            description: "Synchronize only this account",
-            child: IconButton(
-              tooltip: "Sync this account",
-              onPressed: fullDataAV.value?.currentAccount != null ? () => onSync(fullDataAV.value!.currentAccount!) : null,
-              icon: Icon(Icons.sync),
+        Future(tutorial);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(fullDataAV.value?.currentAccount?.account.name ?? "Loading"),
+            actions: [
+              Showcase(
+                key: sync1ID,
+                description: "Synchronize only this account",
+                child: IconButton(
+                  tooltip: "Sync this account",
+                  onPressed: fullDataAV.value?.currentAccount != null ? () => onSync(fullDataAV.value!.currentAccount!) : null,
+                  icon: Icon(Icons.sync),
+                ),
+              ),
+              Showcase(
+                key: receiveID,
+                description: "Show the account receiving addresses",
+                child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),
+              ),
+              Showcase(
+                key: sendID,
+                description: "Send funds to one or many addresses",
+                child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (String result) async {
+                  switch (result) {
+                    case "account_manager":
+                      GoRouter.of(context).push("/accounts");
+                    case "backup":
+                      final account = fullDataAV.value?.currentAccount?.account;
+                      if (account != null) {
+                        GoRouter.of(context).push("/viewing_keys", extra: account.id);
+                      }
+                    case "edit_account":
+                      final account = fullDataAV.value?.currentAccount?.account;
+                      if (account != null) {
+                        GoRouter.of(context).push("/account/edit", extra: [account]);
+                      }
+                    case "market_price":
+                      GoRouter.of(context).push("/market");
+                    case "update_fx":
+                      onUpdateAllTxPrices();
+                    case "charts":
+                      GoRouter.of(context).push("/chart");
+                    case "settings":
+                      GoRouter.of(context).push("/settings");
+                    default:
+                      onExport(int.parse(result));
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: "account_manager",
+                    child: Text("Account Manager"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "settings",
+                    child: Text("Settings"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "edit_account",
+                    child: Text("Edit Account"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "backup",
+                    child: Text("Backup"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "market_price",
+                    child: Text("Market Price"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "update_fx",
+                    child: Text("Fetch Tx Prices"),
+                  ),
+                  PopupMenuItem<String>(
+                    value: tabIndex(context).toString(),
+                    child: Text("Export ${tabNames[tabIndex(context)]}"),
+                  ),
+                  if (!Platform.isLinux)
+                    const PopupMenuItem<String>(
+                      value: "charts",
+                      child: Text("Charts"),
+                    ),
+                ],
+              ),
+            ],
+            bottom: TabBar(
+              controller: tabController,
+              tabs: tabNames.map((n) => Tab(text: n)).toList(),
             ),
           ),
-          Showcase(
-            key: receiveID,
-            description: "Show the account receiving addresses",
-            child: IconButton(tooltip: "Receive Funds", onPressed: onReceive, icon: Icon(Icons.download)),
-          ),
-          Showcase(
-            key: sendID,
-            description: "Send funds to one or many addresses",
-            child: IconButton(tooltip: "Send Funds", onPressed: onSend, icon: Icon(Icons.send)),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (String result) async {
-              switch (result) {
-                case "backup":
-                  final account = fullDataAV.value?.currentAccount?.account;
-                  if (account != null) {
-                    GoRouter.of(context).push("/viewing_keys", extra: account.id);
-                  }
-                case "edit_account":
-                  final account = fullDataAV.value?.currentAccount?.account;
-                  if (account != null) {
-                    GoRouter.of(context).push("/account/edit", extra: [account]);
-                  }
-                case "market_price":
-                  GoRouter.of(context).push("/market");
-                case "update_fx":
-                  onUpdateAllTxPrices();
-                case "charts":
-                  GoRouter.of(context).push("/chart");
-                case "settings":
-                  GoRouter.of(context).push("/settings");
-                default:
-                  onExport(int.parse(result));
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: "settings",
-                child: Text("Settings"),
-              ),
-              const PopupMenuItem<String>(
-                value: "edit_account",
-                child: Text("Edit Account"),
-              ),
-              const PopupMenuItem<String>(
-                value: "backup",
-                child: Text("Backup"),
-              ),
-              const PopupMenuItem<String>(
-                value: "market_price",
-                child: Text("Market Price"),
-              ),
-              const PopupMenuItem<String>(
-                value: "update_fx",
-                child: Text("Fetch Tx Prices"),
-              ),
-              PopupMenuItem<String>(
-                value: tabIndex(context).toString(),
-                child: Text("Export ${tabNames[tabIndex(context)]}"),
-              ),
-              if (!Platform.isLinux)
-                const PopupMenuItem<String>(
-                  value: "charts",
-                  child: Text("Charts"),
-                ),
-            ],
-          ),
-        ],
-        bottom: TabBar(
-          controller: tabController,
-          tabs: tabNames.map((n) => Tab(text: n)).toList(),
-        ),
-      ),
-      body: fullDataAV.when(
-        skipLoadingOnReload: true,
-        skipLoadingOnRefresh: true,
-        loading: () => blank(context),
-        error: (error, stack) => showError(error),
-        data: (fullData) {
-          final account = fullData.currentAccount;
-          if (account == null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) => GoRouter.of(context).go("/"));
-            return const SizedBox.shrink();
-          }
+          body: fullDataAV.when(
+            skipLoadingOnReload: true,
+            skipLoadingOnRefresh: true,
+            loading: () => blank(context),
+            error: (error, stack) => showError(error),
+            data: (fullData) {
+              final account = fullData.currentAccount!;
 
-          final b = account.balance.field0;
-          final settings = ref.read(appSettingsProvider).requireValue;
-          final currency = settings.currency;
-          final fiat = fullData.price?.let((p) {
-            final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
-            return formatFiat(f, currency);
-          });
+              final b = account.balance.field0;
+              final settings = ref.read(appSettingsProvider).requireValue;
+              final currency = settings.currency;
+              final fiat = fullData.price?.let((p) {
+                final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
+                return formatFiat(f, currency);
+              });
 
-          final t = Theme.of(context);
-          final tt = t.textTheme;
+              final t = Theme.of(context);
+              final tt = t.textTheme;
 
-          final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
+              final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
 
-          return Builder(
-            builder: (context) {
-              final ss = fullData.syncState;
-              if (ss == null) return const SizedBox.shrink();
+              return Builder(
+                builder: (context) {
+                  final ss = fullData.syncState;
+                  if (ss == null) return const SizedBox.shrink();
 
-              final syncing = ss.start != ss.end;
-              return Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  child: TabBarView(
-                    controller: tabController,
-                    children: [
-                      CustomScrollView(
-                        slivers: [
-                          PinnedHeaderSliver(
-                            child: Container(
-                              color: Theme.of(context).colorScheme.surface,
-                              child: Column(
-                                children: [
-                                  if (syncing) ...[
-                                    HeroProgressWidget(account.account),
-                                    Gap(8),
-                                  ],
-                                  DisplayPanel(
-                                      child: Column(children: [
-                                    Showcase(
-                                      key: balID,
-                                      description: "Balance across all pools",
-                                      child: Column(children: [
-                                        zatToText(
-                                          b[0] + b[1] + b[2],
-                                          selectable: true,
-                                          style: tt.displaySmall!,
+                  final syncing = ss.start != ss.end;
+                  return Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      child: TabBarView(
+                        controller: tabController,
+                        children: [
+                          CustomScrollView(
+                            slivers: [
+                              PinnedHeaderSliver(
+                                child: Container(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  child: Column(
+                                    children: [
+                                      if (syncing) ...[
+                                        HeroProgressWidget(account.account),
+                                        Gap(8),
+                                      ],
+                                      DisplayPanel(
+                                          child: Column(children: [
+                                        Showcase(
+                                          key: balID,
+                                          description: "Balance across all pools",
+                                          child: Column(children: [
+                                            zatToText(
+                                              b[0] + b[1] + b[2],
+                                              selectable: true,
+                                              style: tt.displaySmall!,
+                                            ),
+                                          ]),
                                         ),
                                         if (fiat != null) Text(fiat),
                                         const Gap(4),
                                         const ExchangeRateButton(),
+                                        Gap(8),
+                                        BalanceWidget(account.balance, showcase: true),
                                       ]),
                                     ),
                                     Gap(8),
-                                    BalanceWidget(account.balance, showcase: true),
+                                    if (unconfirmedAmount != null) ...[
+                                      zatToText(
+                                        BigInt.from(unconfirmedAmount),
+                                        prefix: "Unconfirmed: ",
+                                        colored: true,
+                                        selectable: true,
+                                        style: tt.bodyLarge,
+                                      ),
+                                      Gap(8),
+                                    ],
                                   ])),
-                                  Gap(8),
-                                  if (unconfirmedAmount != null) ...[
-                                    zatToText(
-                                      BigInt.from(unconfirmedAmount),
-                                      prefix: "Unconfirmed: ",
-                                      colored: true,
-                                      selectable: true,
-                                      style: tt.bodyLarge,
-                                    ),
-                                    Gap(8),
-                                  ],
-                                ],
                               ),
-                            ),
+                              ...showTxHistory(context, account.transactions),
+                            ],
                           ),
-                          ...showTxHistory(context, account.transactions),
+                          showMemos(context, account.memos),
+                          showNotes(ref, account.notes),
+                          _showZsaHoldings(context, account.zsas),
                         ],
-                      ),
-                      showMemos(context, account.memos),
-                      showNotes(ref, account.notes),
-                      _showZsaHoldings(context, account.zsas),
-                    ],
-                  ));
+                      ));
+                },
+              );
             },
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -373,9 +388,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             itemBuilder: (context, index) {
               final h = zsas[index];
 
-              final displayName = h.assetName.isNotEmpty
-                  ? h.assetName
-                  : hex.encode(h.assetDescHash.sublist(0, 4));
+              final displayName = h.assetName.isNotEmpty ? h.assetName : hex.encode(h.assetDescHash.sublist(0, 4));
 
               final isEditing = _editingIndex == index;
 
@@ -408,9 +421,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(vertical: 4),
                                 border: const OutlineInputBorder(),
-                                hintText: h.assetName.isEmpty
-                                    ? hex.encode(h.assetDescHash.sublist(0, 4))
-                                    : null,
+                                hintText: h.assetName.isEmpty ? hex.encode(h.assetDescHash.sublist(0, 4)) : null,
                               ),
                               style: tt.titleMedium,
                             )

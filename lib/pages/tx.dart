@@ -234,7 +234,7 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   void onCancel() {
-    GoRouter.of(context).go("/account");
+    GoRouter.of(context).go("/");
   }
 }
 
