@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.1...zkool-v6.18.2) (2026-06-10)
+
+
+### Features
+
+* make Account Page the home page, Account Manager from overflow menu ([#1033](https://github.com/hhanh00/zkool2/issues/1033)) ([5ba6147](https://github.com/hhanh00/zkool2/commit/5ba6147f97a79ffc6f893e64d9689e22678916a1))
+
 ## [6.18.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.0...zkool-v6.18.1) (2026-06-10)
 
 
