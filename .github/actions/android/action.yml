@@ -30,7 +30,6 @@ runs:
       env:
         RELEASE_VERSION: ${{ inputs.version }}
         CARGO_ENCODED_RUSTFLAGS: "--cfg\u001fzcash_unstable=\"nu7\""
-        RELEASE_VERSION: ${{ inputs.version }}
     - name: Move to outdir
       id: out
       shell: bash
