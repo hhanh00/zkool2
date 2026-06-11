@@ -4,6 +4,7 @@
       "release-type": "simple",
       "component": "zkool",
       "include-component-in-tag": true,
+      "prerelease": true,
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         "version.txt",
