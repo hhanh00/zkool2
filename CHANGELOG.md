@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.7-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.2...zkool-v6.18.7-rc.3) (2026-06-11)
+
+
+### Bug Fixes
+
+* remove +0 placeholder from pubspec.yaml to prevent generic updater from dropping it ([b38c896](https://github.com/hhanh00/zkool2/commit/b38c8964198d65bece414f5773c97e160dfe78dd))
+
 ## [6.18.7-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.1...zkool-v6.18.7-rc.2) (2026-06-11)
 
 
