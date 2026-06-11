@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.18.7-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.3...zkool-v6.18.7-rc.4) (2026-06-11)
+
+
+### Bug Fixes
+
+* splice build number into pubspec.yaml before flutter build ([0343b93](https://github.com/hhanh00/zkool2/commit/0343b939fab4fe8db66d99b24b46c266744e0d31))
+* support rc tags in docker semver pattern ([f9aac1a](https://github.com/hhanh00/zkool2/commit/f9aac1afd71bae9bbda51604500d7f856e5d8f1a))
+
 ## [6.18.7-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.2...zkool-v6.18.7-rc.3) (2026-06-11)
 
 
