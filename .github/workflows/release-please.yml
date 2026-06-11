@@ -26,3 +26,14 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+      - if: steps.release.outputs.pr
+        run: |
+          BRANCH="release-please--branches--main--components--zkool"
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+          BUILD=$(cat build_number.txt)
+          NEW_BUILD=$((BUILD + 1))
+          echo "$NEW_BUILD" > build_number.txt
+          git add build_number.txt
+          git commit --amend --no-edit
+          git push origin "$BRANCH" --force-with-lease
