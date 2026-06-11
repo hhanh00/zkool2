@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.18.8-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.1...zkool-v6.18.8-rc.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* correct garbled version string in pubspec.yaml ([45eaf8a](https://github.com/hhanh00/zkool2/commit/45eaf8a49421175c31bd6e86cbd80a2795b02e69))
+* remove prerelease versioning strategy to avoid rc suffix duplication ([cb9d42f](https://github.com/hhanh00/zkool2/commit/cb9d42fb2c6b013490e470fe299c0764ea38dfa0))
+
 ## [6.18.7-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc...zkool-v6.18.7-rc.1) (2026-06-11)
 
 
