@@ -29,6 +29,8 @@ jobs:
       - if: steps.release.outputs.pr
         run: |
           BRANCH="release-please--branches--main--components--zkool"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
           BUILD=$(cat build_number.txt)
