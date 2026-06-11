@@ -1,6 +1,6 @@
 # Changelog
 
-## [6.18.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.7) (2026-06-11)
+## [6.18.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.9) (2026-06-11)
 
 
 ### Features
@@ -21,6 +21,7 @@
 * add Market Price menu item to account page menu ([7b20b1b](https://github.com/hhanh00/zkool2/commit/7b20b1b8abbfe96af1c1ce816808c657fed0a9d3))
 * add versioning prerelease strategy to release-please config ([e6d468b](https://github.com/hhanh00/zkool2/commit/e6d468bd744dd1161d2e9e126c844f5c75d69a4c))
 * **ci:** wire RELEASE_VERSION env var in Android build action ([5682a49](https://github.com/hhanh00/zkool2/commit/5682a498bd0d19697fc7b092ca2106f80bb09bc3))
+* configure git user before amending release-please commit ([6c85895](https://github.com/hhanh00/zkool2/commit/6c85895d8ded6d52f724f8294056ab6e2efa3588))
 * correct garbled version string in pubspec.yaml ([45eaf8a](https://github.com/hhanh00/zkool2/commit/45eaf8a49421175c31bd6e86cbd80a2795b02e69))
 * correct release to stable patch 6.18.5 ([79d7af2](https://github.com/hhanh00/zkool2/commit/79d7af2c4f432cfc6882ba94bf5a94ca66943553))
 * correct release-please branch name for simple release type ([eaddb12](https://github.com/hhanh00/zkool2/commit/eaddb124a76d0c0d7cce6b5bd792752fefef2aaa))
@@ -36,6 +37,7 @@
 * style new account page with cards, icons, and flair text ([701fe53](https://github.com/hhanh00/zkool2/commit/701fe53794b385646f1fb7f4ffd0d3b1bcb7f6c4))
 * support rc tags in docker semver pattern ([f9aac1a](https://github.com/hhanh00/zkool2/commit/f9aac1afd71bae9bbda51604500d7f856e5d8f1a))
 * swap diversifier_index and asset_base bind order in shielded sync insert ([20f0917](https://github.com/hhanh00/zkool2/commit/20f091714faf5d12b7693af562d1b4970fad9fe9))
+* use correct release-please branch name with component suffix ([e8aacac](https://github.com/hhanh00/zkool2/commit/e8aacac6b4e1303c09b5bb339291cc2afdd5e54e))
 * use portable sed -i.bak for macOS compatibility ([f1f3131](https://github.com/hhanh00/zkool2/commit/f1f3131b4dc3fcd08393e75c1dbaa02325d379c1))
 
 ## [6.17.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.4...zkool-v6.17.7) (2026-06-09)
