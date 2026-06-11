@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc...zkool-v6.18.11-rc.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* move coroutine deprecation define to global scope ([e5abc47](https://github.com/hhanh00/zkool2/commit/e5abc472b987b49b32021c8211d72f3d8daf6e84))
+
 ## [6.18.11-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.10...zkool-v6.18.11-rc) (2026-06-11)
 
 
