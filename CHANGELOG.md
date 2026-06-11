@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.1...zkool-v6.18.11-rc.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* move nontrivial-memcall flag to global scope too ([84913a7](https://github.com/hhanh00/zkool2/commit/84913a7c0228b372ecdd75ffd815758f53b164b2))
+
 ## [6.18.11-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc...zkool-v6.18.11-rc.1) (2026-06-11)
 
 
