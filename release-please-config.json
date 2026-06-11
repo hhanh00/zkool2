@@ -1,9 +1,18 @@
 {
   "packages": {
     ".": {
-      "release-type": "dart",
+      "release-type": "simple",
       "changelog-path": "CHANGELOG.md",
-      "prerelease": true
+      "prerelease": true,
+      "versioning": "prerelease",
+      "prerelease-type": "rc",
+      "extra-files": [
+        "version.txt",
+        {
+          "type": "generic",
+          "path": "pubspec.yaml"
+        }
+      ]
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
