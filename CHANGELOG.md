@@ -1,6 +1,6 @@
 # Changelog
 
-## [6.18.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.9) (2026-06-11)
+## [6.18.10](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.10) (2026-06-12)
 
 
 ### Features
@@ -26,6 +26,7 @@
 * correct release to stable patch 6.18.5 ([79d7af2](https://github.com/hhanh00/zkool2/commit/79d7af2c4f432cfc6882ba94bf5a94ca66943553))
 * correct release-please branch name for simple release type ([eaddb12](https://github.com/hhanh00/zkool2/commit/eaddb124a76d0c0d7cce6b5bd792752fefef2aaa))
 * derivation-driven address tx counts with PoolMask, aggregate UA, and filters ([4429ef6](https://github.com/hhanh00/zkool2/commit/4429ef65c7870af38d0d0487e589ad3074071f83))
+* fetch_address_tx_count sapling gate skips T/O addresses ([0c8ff65](https://github.com/hhanh00/zkool2/commit/0c8ff6510572a7957d41700b172b27835b483995))
 * pool filter server-side, aggregate UA rows bypass Dart pool filter ([7fa1b3f](https://github.com/hhanh00/zkool2/commit/7fa1b3f3703401e4e81095e2540bf8e89e1f478c))
 * remove +0 placeholder from pubspec.yaml to prevent generic updater from dropping it ([b38c896](https://github.com/hhanh00/zkool2/commit/b38c8964198d65bece414f5773c97e160dfe78dd))
 * remove Pools label and center segment controls on Addresses page ([f1ee5c3](https://github.com/hhanh00/zkool2/commit/f1ee5c310784fa6a8c923bf6239fa991236cefa9))
