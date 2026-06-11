@@ -210,7 +210,8 @@ impl Query {
         let notes: Vec<_> = notes
             .into_iter()
             .map(|n| resolve_note(&network, &ufvk, n))
-            .collect();
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to resolve note: {e}"))?;
         Ok(notes)
     }
 
@@ -394,27 +395,51 @@ fn resolve_note(
     network: &Network,
     ufvk: &UnifiedFullViewingKey,
     n: crate::api::account::TxNote,
-) -> Note {
+) -> Result<Note, String> {
     let (address, diversifier_index) = match n.pool {
         1 => {
-            let div = n.diversifier.as_ref().unwrap().clone();
-            let d = sapling_crypto::keys::Diversifier(tiu!(div));
-            let sfvk = ufvk.sapling().unwrap();
-            let address = sfvk.diversified_address_for_scope(n.scope, d).unwrap();
-            let diversifier_index: Option<u64> = sfvk.decrypt_diversifier(&address).and_then(|d|
-                d.0.try_into().ok());
+            let div = n
+                .diversifier
+                .as_ref()
+                .ok_or_else(|| "Sapling note missing diversifier".to_string())?
+                .clone();
+            let d = sapling_crypto::keys::Diversifier(
+                div.clone()
+                    .try_into()
+                    .map_err(|_| format!("Sapling diversifier wrong length: {} bytes", div.len()))?,
+            );
+            let sfvk = ufvk
+                .sapling()
+                .ok_or_else(|| "UFVK missing sapling key".to_string())?;
+            let address = sfvk
+                .diversified_address_for_scope(n.scope, d)
+                .ok_or_else(|| "Sapling diversified address derivation failed".to_string())?;
+            let diversifier_index: Option<u64> = sfvk
+                .decrypt_diversifier(&address)
+                .and_then(|d| d.0.try_into().ok());
             (Some(address.encode(&network)), diversifier_index)
         }
         2 => {
-            let div = n.diversifier.as_ref().unwrap().clone();
-            let d = orchard::keys::Diversifier::from_bytes(tiu!(div));
-            let ofvk = ufvk.orchard().unwrap();
+            let div = n
+                .diversifier
+                .as_ref()
+                .ok_or_else(|| "Orchard note missing diversifier".to_string())?
+                .clone();
+            let d = orchard::keys::Diversifier::from_bytes(
+                div.clone()
+                    .try_into()
+                    .map_err(|_| format!("Orchard diversifier wrong length: {} bytes", div.len()))?,
+            );
+            let ofvk = ufvk
+                .orchard()
+                .ok_or_else(|| "UFVK missing orchard key".to_string())?;
             let scope = n.scope.orchard_scope();
             let ivk = ofvk.to_ivk(scope);
             let address = ofvk.address(d, scope);
-            let diversifier_index: Option<u64> = ivk.diversifier_index(&address)
-            .and_then(|d| d.try_into().ok());
-            let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+            let diversifier_index: Option<u64> =
+                ivk.diversifier_index(&address).and_then(|d| d.try_into().ok());
+            let ua = UnifiedAddress::from_receivers(Some(address), None, None)
+                .ok_or_else(|| "UnifiedAddress::from_receivers returned None".to_string())?;
             (Some(ua.encode(&network)), diversifier_index)
         }
         _ => (None, None),
@@ -426,7 +451,7 @@ fn resolve_note(
         None
     };
 
-    Note {
+    Ok(Note {
         id: n.id as i32,
         height: n.height as i32,
         pool: n.pool as i32,
@@ -439,7 +464,7 @@ fn resolve_note(
         memo: n.memo,
         id_asset: n.id_asset.map(|v| v as i32),
         asset_base,
-    }
+    })
 }
 
 #[graphql_object]
@@ -514,7 +539,8 @@ impl Transaction {
         let notes: Vec<_> = notes
             .into_iter()
             .map(|n| resolve_note(&network, &ufvk, n))
-            .collect();
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to resolve note: {e}"))?;
         Ok(notes)
     }
 
@@ -585,7 +611,8 @@ impl Transaction {
         let spends: Vec<_> = spends
             .into_iter()
             .map(|n| resolve_note(&network, &ufvk, n))
-            .collect();
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to resolve note: {e}"))?;
         Ok(spends)
     }
 }
