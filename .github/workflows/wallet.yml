@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
