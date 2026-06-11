@@ -10,7 +10,7 @@ import pytest
 from gql import Client, GraphQLRequest, gql
 from gql.transport.httpx import HTTPXAsyncTransport
 
-from utils import get_current_height, mine_blocks, wait_for_blocks
+from utils import dump_server_log, get_current_height, mine_blocks, wait_for_blocks
 
 
 @pytest.fixture(scope="session")
@@ -69,6 +69,12 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
 
     process = None
 
+    def _dump_log():
+        """Dump server log for debugging."""
+        content = dump_server_log(LOG_PATH, "SERVER LOG (tx_details)")
+        if not content:
+            print(f"(Server log empty or not found at {LOG_PATH})")
+
     try:
         # Kill any existing zkool_graphql processes
         subprocess.run(["pkill", "-9", "zkool_graphql"], stderr=subprocess.DEVNULL)
@@ -80,19 +86,20 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
 
         # Start zkool_graphql instance
         print(f"Starting zkool_graphql on port {PORT}")
+        env = os.environ.copy()
+        env["RUST_BACKTRACE"] = "full"
         process = subprocess.Popen(
             [zkool_binary, "-d", DB_PATH, "-p", str(PORT), "-l", lwd_url],
             stdout=open(LOG_PATH, "w"),
             stderr=subprocess.STDOUT,
+            env=env,
         )
         await asyncio.sleep(2)
 
         # Check if process is still running
         poll_result = process.poll()
         if poll_result is not None:
-            with open(LOG_PATH, "r") as f:
-                log_content = f.read()
-                print(f"Log content:\n{log_content}")
+            _dump_log()
             pytest.fail(f"zkool_graphql failed to start with code {poll_result}")
 
         async with gql_client_factory(GRAPHQL_URL) as client:
@@ -428,6 +435,9 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
             print("\n✅ Transaction details test passed!")
 
     finally:
+        # Dump server log for debugging (includes Rust backtrace on panic)
+        _dump_log()
+
         # Cleanup
         if process:
             process.terminate()

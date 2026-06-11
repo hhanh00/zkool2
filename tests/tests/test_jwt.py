@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from gql import Client, GraphQLRequest, gql
 from gql.transport.httpx import HTTPXAsyncTransport
 
-from utils import get_current_height, mine_blocks, wait_for_blocks
+from utils import dump_server_log, get_current_height, mine_blocks, wait_for_blocks
 
 
 def generate_jwt_keypair():
@@ -132,6 +132,12 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
 
     process = None
 
+    def _dump_log():
+        """Dump server log for debugging."""
+        content = dump_server_log(LOG_PATH, "SERVER LOG (jwt)")
+        if not content:
+            print(f"(Server log empty or not found at {LOG_PATH})")
+
     # Helper to start the server
     async def start_server(with_jwt=False):
         nonlocal process
@@ -149,10 +155,13 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             cmd.extend(["-j", JWT_KEY_PATH])
 
         print(f"Starting server with JWT={with_jwt}")
+        env = os.environ.copy()
+        env["RUST_BACKTRACE"] = "full"
         process = subprocess.Popen(
             cmd,
             stdout=open(LOG_PATH, "w"),
             stderr=subprocess.STDOUT,
+            env=env,
         )
         await asyncio.sleep(3)
 
@@ -867,6 +876,8 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             print("\n✅ JWT authentication test passed!")
 
     finally:
+        # Dump server log for debugging (includes Rust backtrace on panic)
+        _dump_log()
         # Cleanup
         if process:
             process.terminate()

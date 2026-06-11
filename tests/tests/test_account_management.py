@@ -7,6 +7,7 @@ from gql import GraphQLRequest, gql
 
 from utils import (
     cleanup_test_files,
+    dump_server_log,
     get_current_height,
     kill_existing_zkool_processes,
     mine_blocks,
@@ -31,6 +32,12 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
     GRAPHQL_URL = f"http://localhost:{PORT}/graphql"
 
     process = None
+
+    def _dump_log():
+        """Dump server log for debugging."""
+        content = dump_server_log(LOG_PATH, "SERVER LOG (account_mgmt)")
+        if not content:
+            print(f"(Server log empty or not found at {LOG_PATH})")
 
     try:
         await kill_existing_zkool_processes()
@@ -376,5 +383,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             print("\n✅ Account management test passed!")
 
     finally:
+        # Dump server log for debugging (includes Rust backtrace on panic)
+        _dump_log()
         await stop_zkool_instance(process)
         cleanup_test_files(DB_PATH, LOG_PATH)
