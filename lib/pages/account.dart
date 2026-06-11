@@ -1028,30 +1028,63 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
         title: Text('Viewing Keys'),
         actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              if (showSeed && seed != null) ...[
-                ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
-                ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
-                ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
-                Divider(),
-                Gap(8),
-              ],
-              Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
-              Gap(32),
-              if (uvk != null) CopyableText(uvk!),
-              Gap(32),
-              if (uvk != null) QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
-              Gap(8),
-              if (fingerprint != null) CopyableText(fingerprint!),
-              Gap(16),
-              Text("If the account does not include a pool, its receiver will be absent"),
-            ],
+      body: CustomScrollView(
+        slivers: [
+          if (showSeed && seed != null) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(children: [
+                  ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
+                  ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
+                  ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
+                  Divider(),
+                  Gap(8),
+                ]),
+              ),
+            ),
+          ],
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PoolSelectHeaderDelegate(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
+              ),
+            ),
           ),
-        ),
+          SliverToBoxAdapter(child: Gap(32)),
+          if (uvk != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: CopyableText(uvk!),
+              ),
+            ),
+          SliverToBoxAdapter(child: Gap(32)),
+          if (uvk != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
+              ),
+            ),
+          SliverToBoxAdapter(child: Gap(8)),
+          if (fingerprint != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: CopyableText(fingerprint!),
+              ),
+            ),
+          SliverToBoxAdapter(child: Gap(16)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text("If the account does not include a pool, its receiver will be absent"),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1080,4 +1113,28 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
       showSeed = true;
     });
   }
+}
+
+class _PoolSelectHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _PoolSelectHeaderDelegate({required this.child});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final t = Theme.of(context);
+    return Container(
+      color: t.colorScheme.surface,
+      child: child,
+    );
+  }
+
+  @override
+  double get maxExtent => 56;
+
+  @override
+  double get minExtent => 56;
+
+  @override
+  bool shouldRebuild(covariant _PoolSelectHeaderDelegate oldDelegate) => child != oldDelegate.child;
 }
