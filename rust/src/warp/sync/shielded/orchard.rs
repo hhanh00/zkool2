@@ -1,12 +1,13 @@
 use anyhow::Result;
 use orchard::{
-    keys::{FullViewingKey, IncomingViewingKey, Scope},
+    keys::{FullViewingKey, IncomingViewingKey},
     note::{AssetBase, RandomSeed, Rho},
     issuance::auth::{IssueAuthKey, IssueValidatingKey, ZSASchnorr},
     value::NoteValue,
     Address, Note,
 };
 use sqlx::SqliteConnection;
+use crate::keys::ScopeExt;
 
 use crate::{
     lwd::CompactOrchardAction,
@@ -46,11 +47,7 @@ impl ShieldedProtocol for OrchardProtocol {
                 .await?;
         let keys = vk.map(|(vk,)| {
             let vk = FullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
-            let scope = if scope == 1 {
-                Scope::Internal
-            } else {
-                Scope::External
-            };
+            let scope = scope.orchard_scope();
             let ivk = vk.to_ivk(scope);
             (ivk, vk)
         });

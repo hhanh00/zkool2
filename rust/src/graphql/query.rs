@@ -21,6 +21,7 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
 use orchard::keys::Scope;
+use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 pub struct Query {}
@@ -399,12 +400,7 @@ fn resolve_note(
             let div = n.diversifier.as_ref().unwrap().clone();
             let d = sapling_crypto::keys::Diversifier(tiu!(div));
             let sfvk = ufvk.sapling().unwrap();
-            let address = if n.scope == 0 {
-                sfvk.diversified_address(d)
-            } else {
-                sfvk.diversified_change_address(d)
-            }
-            .unwrap();
+            let address = sfvk.diversified_address_for_scope(n.scope, d).unwrap();
             let diversifier_index: Option<u64> = sfvk.decrypt_diversifier(&address).and_then(|d|
                 d.0.try_into().ok());
             (Some(address.encode(&network)), diversifier_index)
@@ -413,11 +409,7 @@ fn resolve_note(
             let div = n.diversifier.as_ref().unwrap().clone();
             let d = orchard::keys::Diversifier::from_bytes(tiu!(div));
             let ofvk = ufvk.orchard().unwrap();
-            let scope = if n.scope == 0 {
-                Scope::External
-            } else {
-                Scope::Internal
-            };
+            let scope = n.scope.orchard_scope();
             let ivk = ofvk.to_ivk(scope);
             let address = ofvk.address(d, scope);
             let diversifier_index: Option<u64> = ivk.diversifier_index(&address)

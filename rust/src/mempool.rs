@@ -3,6 +3,7 @@ use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::{keys::Scope, primitives::OrchardDomain, flavor::{OrchardVanilla, OrchardZSA}};
+use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use sapling_crypto::{
     keys::PreparedIncomingViewingKey,
     note_encryption::SaplingDomain,
@@ -258,7 +259,7 @@ pub async fn decode_raw_transaction(
                             name: name.clone(),
                             value: note.value().inner() as i64,
                             pool: 1,
-                            scope: if scope == zip32::Scope::External { 0 } else { 1 },
+                            scope: scope_to_u8(scope),
                             diversifier: Some(diversifier),
                             diversifier_index,
                             address: Some(address),
@@ -320,7 +321,7 @@ pub async fn decode_raw_transaction(
                                 name: name.clone(),
                                 value: note.value().inner() as i64,
                                 pool: 2,
-                                scope: if scope == Scope::External { 0 } else { 1 },
+                                scope: orchard_scope_to_u8(scope),
                                 diversifier: Some(diversifier),
                                 diversifier_index,
                                 address: Some(address),

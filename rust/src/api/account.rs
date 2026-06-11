@@ -8,6 +8,7 @@ use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sapling_crypto::{zip32::sapling_derive_internal_fvk, PaymentAddress};
+use crate::keys::{SaplingAddressDerivation, ScopeExt};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
 use tracing::info;
 use zcash_address::unified::{Container, Encoding};
@@ -500,11 +501,7 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool, pool_filter: u8) 
         let s_enabled = selected.has_pool(1);
         if s_enabled {
             let dfvk = match &skeys.xvk { Some(k) => k, None => continue };
-            let ok = if scope == 0 {
-                dfvk.address((d as u64).into()).is_some()
-            } else {
-                internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64)).is_some()
-            };
+            let ok = dfvk.has_sapling_address(scope, d as u64, internal_sap_ivk.as_ref());
             if !ok { continue; }
         }
 
@@ -535,15 +532,14 @@ pub async fn fetch_address_tx_count(c: &Coin, aggregate: bool, pool_filter: u8) 
         let mut s_addr_raw: Option<sapling_crypto::PaymentAddress> = None;
         let s_str = if s_enabled {
             let dfvk = skeys.xvk.as_ref().unwrap();
-            s_addr_raw = if scope == 0 { dfvk.address((d as u64).into()) }
-                         else { internal_sap_ivk.as_ref().and_then(|ivk| ivk.address_at(d as u64)) };
+            s_addr_raw = dfvk.sapling_address_at(scope, d as u64, internal_sap_ivk.as_ref());
             s_addr_raw.as_ref().map(|pa| pa.encode(&network))
         } else { None };
 
         let mut o_addr_raw: Option<orchard::Address> = None;
         let o_str = if selected.has_pool(2) {
             if let Some(fvk) = &okeys.xvk {
-                let s = if scope == 0 { orchard::keys::Scope::External } else { orchard::keys::Scope::Internal };
+                let s = scope.orchard_scope();
                 let addr = fvk.address_at(d as u64, s);
                 o_addr_raw = Some(addr);
                 Some(UnifiedAddress::from_receivers(Some(addr), None, None).unwrap().encode(&network))
