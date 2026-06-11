@@ -13,7 +13,7 @@ use crate::{
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    pay::plan::sapling_dfvk_to_fvk,
+    keys::{sapling_dfvk_to_fvk, ScopeExt},
     tiu,
 };
 use crate::{
@@ -388,11 +388,7 @@ pub async fn new_account(
 }
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
-    let scope = match scope {
-        0 => TransparentKeyScope::EXTERNAL,
-        1 => TransparentKeyScope::INTERNAL,
-        _ => unreachable!(),
-    };
+    let scope = scope.transparent_scope();
     let tsk = tsk
         .derive_secret_key(scope, NonHardenedChildIndex::from_index(dindex).unwrap())
         .unwrap()
@@ -612,11 +608,7 @@ pub async fn get_orchard_note(
     .context("retrieve oinput")?;
 
     let scope = scope.unwrap_or(0);
-    let scope = match scope {
-        1 => orchard::keys::Scope::Internal,
-        0 => orchard::keys::Scope::External,
-        _ => unreachable!(),
-    };
+    let scope = scope.orchard_scope();
     let (witness, _) = bincode::decode_from_slice::<Witness, _>(&witness, legacy()).unwrap();
     let rho = Rho::from_bytes(&rho.try_into().unwrap()).unwrap();
 
@@ -707,11 +699,7 @@ pub async fn get_account_full_address(
         let dindex: u32 = row.get(0);
         let xvk: Vec<u8> = row.get(1);
         let fvk = FullViewingKey::read(&*xvk).unwrap();
-        let scope = if scope == 1 {
-            orchard::keys::Scope::Internal
-        } else {
-            orchard::keys::Scope::External
-        };
+        let scope = scope.orchard_scope();
         fvk.address_at(dindex, scope)
     })
     .fetch_optional(connection)

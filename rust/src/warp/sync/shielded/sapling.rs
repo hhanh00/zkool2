@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqliteConnection;
-use zip32::Scope;
+use crate::keys::sapling_ivk_nk_for_scope;
 
 use crate::{
     lwd::{CompactSaplingOutput, CompactSaplingSpend},
@@ -61,15 +61,7 @@ impl ShieldedProtocol for SaplingProtocol {
                 .await?;
         let keys = vk.map(|(vk,)| {
             let vk = DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
-            let (ivk, nk) = if scope == 1 {
-                let ivk = vk.to_internal_fvk().vk.ivk();
-                let nk = vk.to_nk(Scope::Internal);
-                (ivk, nk)
-            } else {
-                let ivk = vk.fvk().vk.ivk();
-                let nk = vk.to_nk(Scope::External);
-                (ivk, nk)
-            };
+            let (ivk, nk) = sapling_ivk_nk_for_scope(scope, &vk);
             (ivk, nk)
         });
         Ok(keys)
