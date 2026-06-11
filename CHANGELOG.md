@@ -1,5 +1,43 @@
 # Changelog
 
+## [6.18.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.7) (2026-06-11)
+
+
+### Features
+
+* add diversifier_index column to notes table ([e98f3c7](https://github.com/hhanh00/zkool2/commit/e98f3c7b86e02a4f5adddff726917477c36f97f9))
+* add multi-currency support ([#1030](https://github.com/hhanh00/zkool2/issues/1030)) ([f119172](https://github.com/hhanh00/zkool2/commit/f119172f4e64facf14460674e895a31044771c1a))
+* AddressesPage with derivation-driven loop, segmented filters, scope filter, icons ([693c49a](https://github.com/hhanh00/zkool2/commit/693c49aa872ba40a9fee3d715bfc168a3e62dec6))
+* derivation-driven address tx counts with pool and usage filters ([93c6cc8](https://github.com/hhanh00/zkool2/commit/93c6cc80552e1b2b1b03e7b620d4c14d65f35a72))
+* make Account Page the home page, Account Manager from overflow menu ([#1033](https://github.com/hhanh00/zkool2/issues/1033)) ([5ba6147](https://github.com/hhanh00/zkool2/commit/5ba6147f97a79ffc6f893e64d9689e22678916a1))
+* pool filter drives address derivation, UA disabled for single pool ([d35cb42](https://github.com/hhanh00/zkool2/commit/d35cb42a329b4de914a064bbd1360ce29b2bc6f9))
+
+
+### Bug Fixes
+
+* add collapsible filter toggle to addresses page ([879b325](https://github.com/hhanh00/zkool2/commit/879b325e9d5f2f81479284cdfc723e34e3aa41ce))
+* add component and tag config for simple release type ([71894cb](https://github.com/hhanh00/zkool2/commit/71894cbdae4fd6cef80e395546b8022a8f6321eb))
+* add diversifier_index and id_asset to CREATE TABLE notes ([b63c230](https://github.com/hhanh00/zkool2/commit/b63c230bdfc9f2625730256a1ab02e04e175dda2))
+* add Market Price menu item to account page menu ([7b20b1b](https://github.com/hhanh00/zkool2/commit/7b20b1b8abbfe96af1c1ce816808c657fed0a9d3))
+* add versioning prerelease strategy to release-please config ([e6d468b](https://github.com/hhanh00/zkool2/commit/e6d468bd744dd1161d2e9e126c844f5c75d69a4c))
+* **ci:** wire RELEASE_VERSION env var in Android build action ([5682a49](https://github.com/hhanh00/zkool2/commit/5682a498bd0d19697fc7b092ca2106f80bb09bc3))
+* correct garbled version string in pubspec.yaml ([45eaf8a](https://github.com/hhanh00/zkool2/commit/45eaf8a49421175c31bd6e86cbd80a2795b02e69))
+* correct release to stable patch 6.18.5 ([79d7af2](https://github.com/hhanh00/zkool2/commit/79d7af2c4f432cfc6882ba94bf5a94ca66943553))
+* correct release-please branch name for simple release type ([eaddb12](https://github.com/hhanh00/zkool2/commit/eaddb124a76d0c0d7cce6b5bd792752fefef2aaa))
+* derivation-driven address tx counts with PoolMask, aggregate UA, and filters ([4429ef6](https://github.com/hhanh00/zkool2/commit/4429ef65c7870af38d0d0487e589ad3074071f83))
+* pool filter server-side, aggregate UA rows bypass Dart pool filter ([7fa1b3f](https://github.com/hhanh00/zkool2/commit/7fa1b3f3703401e4e81095e2540bf8e89e1f478c))
+* remove +0 placeholder from pubspec.yaml to prevent generic updater from dropping it ([b38c896](https://github.com/hhanh00/zkool2/commit/b38c8964198d65bece414f5773c97e160dfe78dd))
+* remove Pools label and center segment controls on Addresses page ([f1ee5c3](https://github.com/hhanh00/zkool2/commit/f1ee5c310784fa6a8c923bf6239fa991236cefa9))
+* remove prerelease versioning strategy to avoid rc suffix duplication ([cb9d42f](https://github.com/hhanh00/zkool2/commit/cb9d42fb2c6b013490e470fe299c0764ea38dfa0))
+* remove showcaseview and replace with Flutter Tooltip widgets ([b3cd414](https://github.com/hhanh00/zkool2/commit/b3cd414e059acbc9043c6f1b6931e08371570394))
+* reorganize new account page with advanced options toggle ([12558ab](https://github.com/hhanh00/zkool2/commit/12558ab2fa38f35c5c7514cffb3aa87b9b498c81))
+* show empty state with help message when no accounts exist ([b036722](https://github.com/hhanh00/zkool2/commit/b0367221c1a715e15bfca89243571bb331dbab55))
+* splice build number into pubspec.yaml before flutter build ([0343b93](https://github.com/hhanh00/zkool2/commit/0343b939fab4fe8db66d99b24b46c266744e0d31))
+* style new account page with cards, icons, and flair text ([701fe53](https://github.com/hhanh00/zkool2/commit/701fe53794b385646f1fb7f4ffd0d3b1bcb7f6c4))
+* support rc tags in docker semver pattern ([f9aac1a](https://github.com/hhanh00/zkool2/commit/f9aac1afd71bae9bbda51604500d7f856e5d8f1a))
+* swap diversifier_index and asset_base bind order in shielded sync insert ([20f0917](https://github.com/hhanh00/zkool2/commit/20f091714faf5d12b7693af562d1b4970fad9fe9))
+* use portable sed -i.bak for macOS compatibility ([f1f3131](https://github.com/hhanh00/zkool2/commit/f1f3131b4dc3fcd08393e75c1dbaa02325d379c1))
+
 ## [6.17.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.16.4...zkool-v6.17.7) (2026-06-09)
 
 
