@@ -26,6 +26,7 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          prerelease: true
       - if: steps.release.outputs.pr
         run: |
           BRANCH="release-please--branches--main--components--zkool"
