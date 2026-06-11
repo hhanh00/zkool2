@@ -28,7 +28,7 @@ jobs:
           manifest-file: .release-please-manifest.json
       - if: steps.release.outputs.pr
         run: |
-          BRANCH="release-please--branches--main--components--zkool"
+          BRANCH="release-please--branches--main"
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
           BUILD=$(cat build_number.txt)
