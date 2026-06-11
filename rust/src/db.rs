@@ -148,6 +148,8 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         rcm BLOB,
         rho BLOB,
         locked BOOL NOT NULL DEFAULT FALSE,
+        id_asset INTEGER,
+        diversifier_index INTEGER,
         UNIQUE(account, nullifier))",
     )
     .execute(&mut *connection)
