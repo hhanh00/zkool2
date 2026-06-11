@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.18.11-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.10...zkool-v6.18.11-rc) (2026-06-11)
+
+
+### Bug Fixes
+
+* suppress experimental coroutine deprecation error for Windows build ([109b406](https://github.com/hhanh00/zkool2/commit/109b406a989efd327c003ca07f0f4730afdce2b3))
+* suppress nontrivial-memcall warning in rive_common harfbuzz ([3be2a10](https://github.com/hhanh00/zkool2/commit/3be2a10b7dd59c8b562ab38e3e0d047e49859311))
+
 ## [6.18.10](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.10) (2026-06-12)
 
 
