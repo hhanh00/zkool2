@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.7-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc...zkool-v6.18.7-rc.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* add collapsible filter toggle to addresses page ([879b325](https://github.com/hhanh00/zkool2/commit/879b325e9d5f2f81479284cdfc723e34e3aa41ce))
+
 ## [6.18.7-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.6...zkool-v6.18.7-rc) (2026-06-11)
 
 
