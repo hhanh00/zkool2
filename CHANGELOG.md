@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.18.7-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.6...zkool-v6.18.7-rc) (2026-06-11)
+
+
+### Bug Fixes
+
+* add diversifier_index and id_asset to CREATE TABLE notes ([b63c230](https://github.com/hhanh00/zkool2/commit/b63c230bdfc9f2625730256a1ab02e04e175dda2))
+* add versioning prerelease strategy to release-please config ([e6d468b](https://github.com/hhanh00/zkool2/commit/e6d468bd744dd1161d2e9e126c844f5c75d69a4c))
+* swap diversifier_index and asset_base bind order in shielded sync insert ([20f0917](https://github.com/hhanh00/zkool2/commit/20f091714faf5d12b7693af562d1b4970fad9fe9))
+
 ## [6.18.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.5...zkool-v6.18.6) (2026-06-11)
 
 
