@@ -110,13 +110,42 @@ async def start_zkool_instance(
     if os.path.exists(db_path):
         os.remove(db_path)
 
+    # Enable Rust backtrace for diagnosing panics
+    env = os.environ.copy()
+    env["RUST_BACKTRACE"] = "full"
+
     process = subprocess.Popen(
         [zkool_binary, "-d", db_path, "-p", str(port), "-l", lwd_url],
         stdout=open(log_path, "w"),
         stderr=subprocess.STDOUT,
+        env=env,
     )
     await asyncio.sleep(2)
     return process
+
+
+def dump_server_log(log_path: str, label: str = "SERVER LOG") -> str:
+    """Read and return server log content for debugging.
+
+    Args:
+        log_path: Path to server log file
+        label: Label to print before the log
+
+    Returns:
+        Log content as string, or empty string if file doesn't exist
+    """
+    if not os.path.exists(log_path):
+        return ""
+    try:
+        with open(log_path, "r") as f:
+            content = f.read()
+    except OSError:
+        return ""
+    if content:
+        print(f"\n{'='*60}\n{label} ({log_path})\n{'='*60}")
+        print(content)
+        print(f"{'='*60}\n")
+    return content
 
 
 async def stop_zkool_instance(process: subprocess.Popen, timeout: int = 10):
