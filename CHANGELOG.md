@@ -1,5 +1,15 @@
 # Changelog
 
+## [6.18.7-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.1...zkool-v6.18.7-rc.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* add component and tag config for simple release type ([71894cb](https://github.com/hhanh00/zkool2/commit/71894cbdae4fd6cef80e395546b8022a8f6321eb))
+* correct garbled version string in pubspec.yaml ([45eaf8a](https://github.com/hhanh00/zkool2/commit/45eaf8a49421175c31bd6e86cbd80a2795b02e69))
+* correct release-please branch name for simple release type ([eaddb12](https://github.com/hhanh00/zkool2/commit/eaddb124a76d0c0d7cce6b5bd792752fefef2aaa))
+* remove prerelease versioning strategy to avoid rc suffix duplication ([cb9d42f](https://github.com/hhanh00/zkool2/commit/cb9d42fb2c6b013490e470fe299c0764ea38dfa0))
+
 ## [6.18.7-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc...zkool-v6.18.7-rc.1) (2026-06-11)
 
 
