@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.7-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.4...zkool-v6.18.7-rc.5) (2026-06-11)
+
+
+### Bug Fixes
+
+* use portable sed -i.bak for macOS compatibility ([f1f3131](https://github.com/hhanh00/zkool2/commit/f1f3131b4dc3fcd08393e75c1dbaa02325d379c1))
+
 ## [6.18.7-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.3...zkool-v6.18.7-rc.4) (2026-06-11)
 
 
