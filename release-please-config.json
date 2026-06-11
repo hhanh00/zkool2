@@ -5,9 +5,6 @@
       "component": "zkool",
       "include-component-in-tag": true,
       "changelog-path": "CHANGELOG.md",
-      "prerelease": true,
-      "versioning": "prerelease",
-      "prerelease-type": "rc",
       "extra-files": [
         "version.txt",
         {
