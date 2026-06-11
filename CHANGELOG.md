@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.5...zkool-v6.18.6) (2026-06-11)
+
+
+### Bug Fixes
+
+* remove Pools label and center segment controls on Addresses page ([f1ee5c3](https://github.com/hhanh00/zkool2/commit/f1ee5c310784fa6a8c923bf6239fa991236cefa9))
+
 ## [6.18.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.4...zkool-v6.18.5) (2026-06-11)
 
 
