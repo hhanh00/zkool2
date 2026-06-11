@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.7-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc.1...zkool-v6.18.7-rc.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* correct garbled version string in pubspec.yaml ([45eaf8a](https://github.com/hhanh00/zkool2/commit/45eaf8a49421175c31bd6e86cbd80a2795b02e69))
+
 ## [6.18.7-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.7-rc...zkool-v6.18.7-rc.1) (2026-06-11)
 
 
