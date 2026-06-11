@@ -57,7 +57,7 @@ jobs:
           SEMVER=$(sed -n 's/^version: *\([^ ]*\).*/\1/p' pubspec.yaml)
           BUILD=$(cat build_number.txt)
           RELEASE_VERSION="${SEMVER}+${BUILD}"
-          sed -i "s/^version: .*/version: ${RELEASE_VERSION}/" pubspec.yaml
+          sed -i.bak "s/^version: .*/version: ${RELEASE_VERSION}/" pubspec.yaml && rm -f pubspec.yaml.bak
           echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
       - name: Build Android
         id: build_android
