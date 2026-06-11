@@ -19,6 +19,7 @@ pub mod frost;
 pub mod graphql;
 pub mod io;
 pub mod key;
+pub mod keys;
 pub mod ledger;
 pub mod lwd;
 pub mod memo;

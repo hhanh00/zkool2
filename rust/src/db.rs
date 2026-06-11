@@ -5,6 +5,7 @@ use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
 use sapling_crypto::PaymentAddress;
+use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
@@ -546,11 +547,7 @@ pub fn resolve_sapling_diversifier_index(
     diversifier: &[u8],
 ) -> Option<i64> {
     let d = sapling_crypto::keys::Diversifier(diversifier.try_into().ok()?);
-    let address = if scope == 0 {
-        dfvk.diversified_address(d)?
-    } else {
-        dfvk.diversified_change_address(d)?
-    };
+    let address = dfvk.diversified_address_for_scope(scope, d)?;
     dfvk.decrypt_diversifier(&address)
         .and_then(|(di, _)| di.try_into().ok())
         .map(|d: u64| d as i64)
@@ -564,11 +561,7 @@ pub fn resolve_orchard_diversifier_index(
     diversifier: &[u8],
 ) -> Option<i64> {
     let d = orchard::keys::Diversifier::from_bytes(diversifier.try_into().ok()?);
-    let scope = if scope == 0 {
-        orchard::keys::Scope::External
-    } else {
-        orchard::keys::Scope::Internal
-    };
+    let scope = scope.orchard_scope();
     let address = fvk.address(d, scope);
     fvk.to_ivk(scope)
         .diversifier_index(&address)

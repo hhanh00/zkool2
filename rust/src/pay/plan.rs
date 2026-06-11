@@ -22,7 +22,7 @@ use pczt::{
 };
 use rand_core::{OsRng, RngCore};
 use ripemd::Ripemd160;
-use sapling_crypto::{keys::FullViewingKey, zip32::DiversifiableFullViewingKey, PaymentAddress};
+use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
@@ -60,6 +60,7 @@ use crate::{
         pay::PcztPackage,
     },
     db::{get_account_dindex, get_account_hw, select_account_transparent},
+    keys::{sapling_pgk_for_scope, sapling_ssk_for_scope, SaplingFullViewingKey},
     pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
@@ -653,7 +654,7 @@ pub async fn plan_transaction(
                             hex::encode(note.cmu().to_bytes())
                         );
                         let dfvk = svk.as_ref().unwrap();
-                        let fvk = sapling_dfvk_to_fvk(scope, dfvk);
+                        let fvk = dfvk.to_fvk(scope);
                         builder.add_sapling_spend::<Infallible>(fvk, note, merkle_path)?;
                         s_scope.push(scope);
                     }
@@ -1031,15 +1032,6 @@ pub async fn plan_transaction(
     Ok(pczt_package)
 }
 
-pub fn sapling_dfvk_to_fvk(scope: u32, dfvk: &DiversifiableFullViewingKey) -> FullViewingKey {
-    let fvk = if scope == 0 {
-        dfvk.fvk().clone()
-    } else {
-        dfvk.to_internal_fvk()
-    };
-    fvk
-}
-
 fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
     let text_memo = recipient
         .user_memo
@@ -1096,15 +1088,12 @@ pub async fn sign_transaction(
                 let scope =
                     u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
                 u.update_spend_with(*bundle_index, |mut u| {
-                    if scope == 0 {
-                        u.set_proof_generation_key(pgk.clone().expect("proof_generation_key"))
-                            .unwrap();
-                    } else {
-                        u.set_proof_generation_key(
-                            internal_pgk.clone().expect("internal_proof_generation_key"),
-                        )
-                        .unwrap();
-                    }
+                    u.set_proof_generation_key(sapling_pgk_for_scope(
+                        scope,
+                        pgk.clone().expect("proof_generation_key"),
+                        internal_pgk.clone().expect("internal_proof_generation_key"),
+                    ))
+                    .unwrap();
 
                     Ok(())
                 })
@@ -1190,13 +1179,7 @@ pub async fn sign_transaction(
         info!("signing sapling {index}");
         let spend = &sbundle.spends()[*bundle_index];
         let scope = u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
-        let ssk = ssk.as_ref().map(|ssk| {
-            if scope == 0 {
-                ssk.clone()
-            } else {
-                ssk.derive_internal()
-            }
-        });
+        let ssk = ssk.as_ref().map(|ssk| sapling_ssk_for_scope(scope, ssk));
         let Some(sk) = ssk.as_ref().map(|sk| &sk.expsk.ask) else {
             return Err(Error::NoSigningKey.into());
         };
