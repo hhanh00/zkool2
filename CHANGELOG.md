@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.2...zkool-v6.18.11-rc.3) (2026-06-11)
+
+
+### Bug Fixes
+
+* use -Wno-error=nontrivial-memcall instead of -Wno-nontrivial-memcall ([6785606](https://github.com/hhanh00/zkool2/commit/6785606385da4b1a58044a01f6b99d45e9207cc6))
+
 ## [6.18.11-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.1...zkool-v6.18.11-rc.2) (2026-06-11)
 
 
