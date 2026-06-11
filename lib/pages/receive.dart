@@ -292,63 +292,72 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: PoolSelect(
+                    enabled: widget.availablePools,
+                    initialValue: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
+                    onChanged: _onPoolsChanged,
+                  ),
+                ),
+                SizedBox(height: 6),
                 Row(
                   children: [
-                    SizedBox(width: 56, child: Text("Pools", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-                    PoolSelect(
-                      enabled: widget.availablePools,
-                      initialValue: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
-                      onChanged: _onPoolsChanged,
+                    SizedBox(width: 44, child: Text("UA", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+                    Expanded(
+                      child: Center(
+                        child: SegmentedButton<bool>(
+                          style: _segmentedStyle,
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: false, label: Text("Off")),
+                            ButtonSegment(value: true, label: Text("On")),
+                          ],
+                          selected: {_aggregate},
+                          onSelectionChanged: _selectedPools.length > 1 ? _onToggleUA : null,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    SizedBox(width: 56, child: Text("UA", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-                    SegmentedButton<bool>(
-                      style: _segmentedStyle,
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: false, label: Text("Off")),
-                        ButtonSegment(value: true, label: Text("On")),
-                      ],
-                      selected: {_aggregate},
-                      onSelectionChanged: _selectedPools.length > 1 ? _onToggleUA : null,
+                    SizedBox(width: 44, child: Text("Show", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+                    Expanded(
+                      child: Center(
+                        child: SegmentedButton<int>(
+                          style: _segmentedStyle,
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: 0, label: Text("All")),
+                            ButtonSegment(value: 1, label: Text("Used")),
+                            ButtonSegment(value: 2, label: Text("Unused")),
+                          ],
+                          selected: {_usageFilter},
+                          onSelectionChanged: (s) => setState(() => _usageFilter = s.first),
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    SizedBox(width: 56, child: Text("Show", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-                    SegmentedButton<int>(
-                      style: _segmentedStyle,
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: 0, label: Text("All")),
-                        ButtonSegment(value: 1, label: Text("Used")),
-                        ButtonSegment(value: 2, label: Text("Unused")),
-                      ],
-                      selected: {_usageFilter},
-                      onSelectionChanged: (s) => setState(() => _usageFilter = s.first),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 6),
-                Row(
-                  children: [
-                    SizedBox(width: 56, child: Text("Scope", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-                    SegmentedButton<int>(
-                      style: _segmentedStyle,
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: 0, label: Text("All")),
-                        ButtonSegment(value: 1, label: Text("External")),
-                        ButtonSegment(value: 2, label: Text("Change")),
-                      ],
-                      selected: {_scopeFilter},
-                      onSelectionChanged: (s) => setState(() => _scopeFilter = s.first),
+                    SizedBox(width: 44, child: Text("Scope", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+                    Expanded(
+                      child: Center(
+                        child: SegmentedButton<int>(
+                          style: _segmentedStyle,
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: 0, label: Text("All")),
+                            ButtonSegment(value: 1, label: Text("External")),
+                            ButtonSegment(value: 2, label: Text("Change")),
+                          ],
+                          selected: {_scopeFilter},
+                          onSelectionChanged: (s) => setState(() => _scopeFilter = s.first),
+                        ),
+                      ),
                     ),
                   ],
                 ),
