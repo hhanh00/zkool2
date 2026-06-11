@@ -835,8 +835,8 @@ async fn handle_message(
                     .bind(&note.diversifier)
                     .bind(&note.rcm)
                     .bind(&note.rho)
-                    .bind(&note.asset_base)
                     .bind(diversifier_index)
+                    .bind(&note.asset_base)
                     .bind(note.account)
                     .bind(&note.txid)
                     .execute(&mut **db_tx).await?;
