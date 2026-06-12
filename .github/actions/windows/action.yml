@@ -24,7 +24,7 @@ runs:
         echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
         ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
     - name: Build
-      shell: powershell
+      shell: bash
       run: |
         fastforge package --platform=windows --targets=exe,zip
     - name: Move to outdir
@@ -39,6 +39,7 @@ runs:
           mv "$f" "out/${NAME}.${ext}"
         ' sh {} \;
         ls -l out
+        test -n "$(ls -A out)" || { echo "Error: No Windows binaries produced"; exit 1; }
         echo "outdir=out" >> $GITHUB_OUTPUT
       env:
         NAME: zkool-${{ inputs.version }}
