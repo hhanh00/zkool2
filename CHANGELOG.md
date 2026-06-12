@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.12-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.12-rc.1...zkool-v6.18.12-rc.2) (2026-06-12)
+
+
+### Bug Fixes
+
+* align Switch icons with TextField prefixIcon horizontal position ([370247d](https://github.com/hhanh00/zkool2/commit/370247d51c9d2a26402618c4482e95694f7eafcc))
+
 ## [6.18.12-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.12-rc...zkool-v6.18.12-rc.1) (2026-06-12)
 
 
