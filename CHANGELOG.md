@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.5...zkool-v6.18.11-rc.6) (2026-06-12)
+
+
+### Bug Fixes
+
+* set CMP0175 to OLD for flutter_inappwebview_windows CMake 4.0 compat ([f27a0d1](https://github.com/hhanh00/zkool2/commit/f27a0d1b2cfb13a920c4fe262acd33cb52afd197))
+
 ## [6.18.11-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.4...zkool-v6.18.11-rc.5) (2026-06-12)
 
 
