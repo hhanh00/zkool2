@@ -37,10 +37,6 @@ add_definitions(-DUNICODE -D_UNICODE)
 # that doesn't call APPLY_STANDARD_SETTINGS.
 add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 
-# Suppress nontrivial-memcall in rive_common's bundled harfbuzz (Clang-cl only).
-# Must be global — rive_common has its own CMakeLists.txt.
-add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,Clang>:-Wno-error=nontrivial-memcall>)
-
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
@@ -49,7 +45,7 @@ add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,Clang>:-Wno-error=nontrivial-mem
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
   target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
-  target_compile_options(${TARGET} PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-Wno-error=nontrivial-memcall>)
+  target_compile_options(${TARGET} PRIVATE -Wno-error=nontrivial-memcall)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
