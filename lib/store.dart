@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:collection/collection.dart';
+import 'package:convert/convert.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -281,6 +282,11 @@ Future<AccountData> account(Ref ref, int id) async {
   final memos = await listMemos(c: c);
   final notes = await listNotes(c: c);
   final zsas = await listZsaHoldings(c: c);
+  zsas.sort((a, b) {
+    final nameA = a.assetName.isNotEmpty ? a.assetName : hex.encode(a.assetDescHash.sublist(0, 4));
+    final nameB = b.assetName.isNotEmpty ? b.assetName : hex.encode(b.assetDescHash.sublist(0, 4));
+    return nameA.toLowerCase().compareTo(nameB.toLowerCase());
+  });
 
   return AccountData(
     account: account,
