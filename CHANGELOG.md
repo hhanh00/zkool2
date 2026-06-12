@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.12-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11...zkool-v6.18.12-rc) (2026-06-12)
+
+
+### Bug Fixes
+
+* disable ZSA issuance button when ZSA is not available on the current network ([af563ea](https://github.com/hhanh00/zkool2/commit/af563ead7054d51191ee4fb97ab13f1f1181b302))
+
 ## [6.18.11](https://github.com/hhanh00/zkool2/compare/zkool-v6.17.7...zkool-v6.18.11) (2026-06-12)
 
 
