@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.3...zkool-v6.18.11-rc.4) (2026-06-12)
+
+
+### Bug Fixes
+
+* remove generator expression from -Wno-error=nontrivial-memcall, fail on empty build output ([c248284](https://github.com/hhanh00/zkool2/commit/c24828467b7459f11d7e2987d45d64863d0adcea))
+
 ## [6.18.11-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.2...zkool-v6.18.11-rc.3) (2026-06-11)
 
 
