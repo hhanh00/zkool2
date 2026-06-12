@@ -24,7 +24,8 @@ mixin _$SyncState {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $SyncStateCopyWith<SyncState> get copyWith => _$SyncStateCopyWithImpl<SyncState>(this as SyncState, _$identity);
+  $SyncStateCopyWith<SyncState> get copyWith =>
+      _$SyncStateCopyWithImpl<SyncState>(this as SyncState, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -39,7 +40,8 @@ mixin _$SyncState {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, start, end, height, time, const DeepCollectionEquality().hash(accounts));
+  int get hashCode => Object.hash(runtimeType, start, end, height, time,
+      const DeepCollectionEquality().hash(accounts));
 
   @override
   String toString() {
@@ -49,7 +51,8 @@ mixin _$SyncState {
 
 /// @nodoc
 abstract mixin class $SyncStateCopyWith<$Res> {
-  factory $SyncStateCopyWith(SyncState value, $Res Function(SyncState) _then) = _$SyncStateCopyWithImpl;
+  factory $SyncStateCopyWith(SyncState value, $Res Function(SyncState) _then) =
+      _$SyncStateCopyWithImpl;
   @useResult
   $Res call({int start, int end, int height, int time, List<Account> accounts});
 }
@@ -188,13 +191,16 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int start, int end, int height, int time, List<Account> accounts)? $default, {
+    TResult Function(
+            int start, int end, int height, int time, List<Account> accounts)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _SyncState() when $default != null:
-        return $default(_that.start, _that.end, _that.height, _that.time, _that.accounts);
+        return $default(
+            _that.start, _that.end, _that.height, _that.time, _that.accounts);
       case _:
         return orElse();
     }
@@ -215,12 +221,15 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int start, int end, int height, int time, List<Account> accounts) $default,
+    TResult Function(
+            int start, int end, int height, int time, List<Account> accounts)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncState():
-        return $default(_that.start, _that.end, _that.height, _that.time, _that.accounts);
+        return $default(
+            _that.start, _that.end, _that.height, _that.time, _that.accounts);
     }
   }
 
@@ -238,12 +247,15 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int start, int end, int height, int time, List<Account> accounts)? $default,
+    TResult? Function(
+            int start, int end, int height, int time, List<Account> accounts)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncState() when $default != null:
-        return $default(_that.start, _that.end, _that.height, _that.time, _that.accounts);
+        return $default(
+            _that.start, _that.end, _that.height, _that.time, _that.accounts);
       case _:
         return null;
     }
@@ -253,7 +265,13 @@ extension SyncStatePatterns on SyncState {
 /// @nodoc
 
 class _SyncState implements SyncState {
-  _SyncState({required this.start, required this.end, required this.height, required this.time, required final List<Account> accounts}) : _accounts = accounts;
+  _SyncState(
+      {required this.start,
+      required this.end,
+      required this.height,
+      required this.time,
+      required final List<Account> accounts})
+      : _accounts = accounts;
 
   @override
   final int start;
@@ -276,7 +294,8 @@ class _SyncState implements SyncState {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$SyncStateCopyWith<_SyncState> get copyWith => __$SyncStateCopyWithImpl<_SyncState>(this, _$identity);
+  _$SyncStateCopyWith<_SyncState> get copyWith =>
+      __$SyncStateCopyWithImpl<_SyncState>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -291,7 +310,8 @@ class _SyncState implements SyncState {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, start, end, height, time, const DeepCollectionEquality().hash(_accounts));
+  int get hashCode => Object.hash(runtimeType, start, end, height, time,
+      const DeepCollectionEquality().hash(_accounts));
 
   @override
   String toString() {
@@ -300,8 +320,11 @@ class _SyncState implements SyncState {
 }
 
 /// @nodoc
-abstract mixin class _$SyncStateCopyWith<$Res> implements $SyncStateCopyWith<$Res> {
-  factory _$SyncStateCopyWith(_SyncState value, $Res Function(_SyncState) _then) = __$SyncStateCopyWithImpl;
+abstract mixin class _$SyncStateCopyWith<$Res>
+    implements $SyncStateCopyWith<$Res> {
+  factory _$SyncStateCopyWith(
+          _SyncState value, $Res Function(_SyncState) _then) =
+      __$SyncStateCopyWithImpl;
   @override
   @useResult
   $Res call({int start, int end, int height, int time, List<Account> accounts});
@@ -363,7 +386,8 @@ mixin _$SyncProgressAccount {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $SyncProgressAccountCopyWith<SyncProgressAccount> get copyWith =>
-      _$SyncProgressAccountCopyWithImpl<SyncProgressAccount>(this as SyncProgressAccount, _$identity);
+      _$SyncProgressAccountCopyWithImpl<SyncProgressAccount>(
+          this as SyncProgressAccount, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -378,7 +402,8 @@ mixin _$SyncProgressAccount {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, account, start, end, height, time);
+  int get hashCode =>
+      Object.hash(runtimeType, account, start, end, height, time);
 
   @override
   String toString() {
@@ -388,7 +413,9 @@ mixin _$SyncProgressAccount {
 
 /// @nodoc
 abstract mixin class $SyncProgressAccountCopyWith<$Res> {
-  factory $SyncProgressAccountCopyWith(SyncProgressAccount value, $Res Function(SyncProgressAccount) _then) = _$SyncProgressAccountCopyWithImpl;
+  factory $SyncProgressAccountCopyWith(
+          SyncProgressAccount value, $Res Function(SyncProgressAccount) _then) =
+      _$SyncProgressAccountCopyWithImpl;
   @useResult
   $Res call({Account account, int start, int end, int height, int time});
 
@@ -396,7 +423,8 @@ abstract mixin class $SyncProgressAccountCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$SyncProgressAccountCopyWithImpl<$Res> implements $SyncProgressAccountCopyWith<$Res> {
+class _$SyncProgressAccountCopyWithImpl<$Res>
+    implements $SyncProgressAccountCopyWith<$Res> {
   _$SyncProgressAccountCopyWithImpl(this._self, this._then);
 
   final SyncProgressAccount _self;
@@ -539,13 +567,15 @@ extension SyncProgressAccountPatterns on SyncProgressAccount {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(Account account, int start, int end, int height, int time)? $default, {
+    TResult Function(Account account, int start, int end, int height, int time)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _SyncProgressAccount() when $default != null:
-        return $default(_that.account, _that.start, _that.end, _that.height, _that.time);
+        return $default(
+            _that.account, _that.start, _that.end, _that.height, _that.time);
       case _:
         return orElse();
     }
@@ -566,12 +596,14 @@ extension SyncProgressAccountPatterns on SyncProgressAccount {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(Account account, int start, int end, int height, int time) $default,
+    TResult Function(Account account, int start, int end, int height, int time)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncProgressAccount():
-        return $default(_that.account, _that.start, _that.end, _that.height, _that.time);
+        return $default(
+            _that.account, _that.start, _that.end, _that.height, _that.time);
     }
   }
 
@@ -589,12 +621,15 @@ extension SyncProgressAccountPatterns on SyncProgressAccount {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(Account account, int start, int end, int height, int time)? $default,
+    TResult? Function(
+            Account account, int start, int end, int height, int time)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncProgressAccount() when $default != null:
-        return $default(_that.account, _that.start, _that.end, _that.height, _that.time);
+        return $default(
+            _that.account, _that.start, _that.end, _that.height, _that.time);
       case _:
         return null;
     }
@@ -604,7 +639,13 @@ extension SyncProgressAccountPatterns on SyncProgressAccount {
 /// @nodoc
 
 class _SyncProgressAccount extends SyncProgressAccount {
-  _SyncProgressAccount({required this.account, required this.start, required this.end, required this.height, required this.time}) : super._();
+  _SyncProgressAccount(
+      {required this.account,
+      required this.start,
+      required this.end,
+      required this.height,
+      required this.time})
+      : super._();
 
   @override
   final Account account;
@@ -622,7 +663,9 @@ class _SyncProgressAccount extends SyncProgressAccount {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$SyncProgressAccountCopyWith<_SyncProgressAccount> get copyWith => __$SyncProgressAccountCopyWithImpl<_SyncProgressAccount>(this, _$identity);
+  _$SyncProgressAccountCopyWith<_SyncProgressAccount> get copyWith =>
+      __$SyncProgressAccountCopyWithImpl<_SyncProgressAccount>(
+          this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -637,7 +680,8 @@ class _SyncProgressAccount extends SyncProgressAccount {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, account, start, end, height, time);
+  int get hashCode =>
+      Object.hash(runtimeType, account, start, end, height, time);
 
   @override
   String toString() {
@@ -646,8 +690,11 @@ class _SyncProgressAccount extends SyncProgressAccount {
 }
 
 /// @nodoc
-abstract mixin class _$SyncProgressAccountCopyWith<$Res> implements $SyncProgressAccountCopyWith<$Res> {
-  factory _$SyncProgressAccountCopyWith(_SyncProgressAccount value, $Res Function(_SyncProgressAccount) _then) = __$SyncProgressAccountCopyWithImpl;
+abstract mixin class _$SyncProgressAccountCopyWith<$Res>
+    implements $SyncProgressAccountCopyWith<$Res> {
+  factory _$SyncProgressAccountCopyWith(_SyncProgressAccount value,
+          $Res Function(_SyncProgressAccount) _then) =
+      __$SyncProgressAccountCopyWithImpl;
   @override
   @useResult
   $Res call({Account account, int start, int end, int height, int time});
@@ -657,7 +704,8 @@ abstract mixin class _$SyncProgressAccountCopyWith<$Res> implements $SyncProgres
 }
 
 /// @nodoc
-class __$SyncProgressAccountCopyWithImpl<$Res> implements _$SyncProgressAccountCopyWith<$Res> {
+class __$SyncProgressAccountCopyWithImpl<$Res>
+    implements _$SyncProgressAccountCopyWith<$Res> {
   __$SyncProgressAccountCopyWithImpl(this._self, this._then);
 
   final _SyncProgressAccount _self;
@@ -724,7 +772,8 @@ mixin _$AccountData {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $AccountDataCopyWith<AccountData> get copyWith => _$AccountDataCopyWithImpl<AccountData>(this as AccountData, _$identity);
+  $AccountDataCopyWith<AccountData> get copyWith =>
+      _$AccountDataCopyWithImpl<AccountData>(this as AccountData, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -734,16 +783,26 @@ mixin _$AccountData {
             (identical(other.account, account) || other.account == account) &&
             (identical(other.pool, pool) || other.pool == pool) &&
             (identical(other.balance, balance) || other.balance == balance) &&
-            const DeepCollectionEquality().equals(other.transactions, transactions) &&
+            const DeepCollectionEquality()
+                .equals(other.transactions, transactions) &&
             const DeepCollectionEquality().equals(other.memos, memos) &&
             const DeepCollectionEquality().equals(other.notes, notes) &&
             const DeepCollectionEquality().equals(other.zsas, zsas) &&
-            (identical(other.frostParams, frostParams) || other.frostParams == frostParams));
+            (identical(other.frostParams, frostParams) ||
+                other.frostParams == frostParams));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, account, pool, balance, const DeepCollectionEquality().hash(transactions),
-      const DeepCollectionEquality().hash(memos), const DeepCollectionEquality().hash(notes), const DeepCollectionEquality().hash(zsas), frostParams);
+  int get hashCode => Object.hash(
+      runtimeType,
+      account,
+      pool,
+      balance,
+      const DeepCollectionEquality().hash(transactions),
+      const DeepCollectionEquality().hash(memos),
+      const DeepCollectionEquality().hash(notes),
+      const DeepCollectionEquality().hash(zsas),
+      frostParams);
 
   @override
   String toString() {
@@ -753,7 +812,9 @@ mixin _$AccountData {
 
 /// @nodoc
 abstract mixin class $AccountDataCopyWith<$Res> {
-  factory $AccountDataCopyWith(AccountData value, $Res Function(AccountData) _then) = _$AccountDataCopyWithImpl;
+  factory $AccountDataCopyWith(
+          AccountData value, $Res Function(AccountData) _then) =
+      _$AccountDataCopyWithImpl;
   @useResult
   $Res call(
       {Account account,
@@ -942,7 +1003,14 @@ extension AccountDataPatterns on AccountData {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(Account account, int pool, PoolBalance balance, List<Tx> transactions, List<Memo> memos, List<TxNote> notes, List<ZsaHolding> zsas,
+    TResult Function(
+            Account account,
+            int pool,
+            PoolBalance balance,
+            List<Tx> transactions,
+            List<Memo> memos,
+            List<TxNote> notes,
+            List<ZsaHolding> zsas,
             FrostParams? frostParams)?
         $default, {
     required TResult orElse(),
@@ -950,7 +1018,15 @@ extension AccountDataPatterns on AccountData {
     final _that = this;
     switch (_that) {
       case _AccountData() when $default != null:
-        return $default(_that.account, _that.pool, _that.balance, _that.transactions, _that.memos, _that.notes, _that.zsas, _that.frostParams);
+        return $default(
+            _that.account,
+            _that.pool,
+            _that.balance,
+            _that.transactions,
+            _that.memos,
+            _that.notes,
+            _that.zsas,
+            _that.frostParams);
       case _:
         return orElse();
     }
@@ -971,14 +1047,29 @@ extension AccountDataPatterns on AccountData {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(Account account, int pool, PoolBalance balance, List<Tx> transactions, List<Memo> memos, List<TxNote> notes, List<ZsaHolding> zsas,
+    TResult Function(
+            Account account,
+            int pool,
+            PoolBalance balance,
+            List<Tx> transactions,
+            List<Memo> memos,
+            List<TxNote> notes,
+            List<ZsaHolding> zsas,
             FrostParams? frostParams)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountData():
-        return $default(_that.account, _that.pool, _that.balance, _that.transactions, _that.memos, _that.notes, _that.zsas, _that.frostParams);
+        return $default(
+            _that.account,
+            _that.pool,
+            _that.balance,
+            _that.transactions,
+            _that.memos,
+            _that.notes,
+            _that.zsas,
+            _that.frostParams);
     }
   }
 
@@ -996,14 +1087,29 @@ extension AccountDataPatterns on AccountData {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(Account account, int pool, PoolBalance balance, List<Tx> transactions, List<Memo> memos, List<TxNote> notes, List<ZsaHolding> zsas,
+    TResult? Function(
+            Account account,
+            int pool,
+            PoolBalance balance,
+            List<Tx> transactions,
+            List<Memo> memos,
+            List<TxNote> notes,
+            List<ZsaHolding> zsas,
             FrostParams? frostParams)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountData() when $default != null:
-        return $default(_that.account, _that.pool, _that.balance, _that.transactions, _that.memos, _that.notes, _that.zsas, _that.frostParams);
+        return $default(
+            _that.account,
+            _that.pool,
+            _that.balance,
+            _that.transactions,
+            _that.memos,
+            _that.notes,
+            _that.zsas,
+            _that.frostParams);
       case _:
         return null;
     }
@@ -1073,7 +1179,8 @@ class _AccountData implements AccountData {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$AccountDataCopyWith<_AccountData> get copyWith => __$AccountDataCopyWithImpl<_AccountData>(this, _$identity);
+  _$AccountDataCopyWith<_AccountData> get copyWith =>
+      __$AccountDataCopyWithImpl<_AccountData>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -1083,16 +1190,26 @@ class _AccountData implements AccountData {
             (identical(other.account, account) || other.account == account) &&
             (identical(other.pool, pool) || other.pool == pool) &&
             (identical(other.balance, balance) || other.balance == balance) &&
-            const DeepCollectionEquality().equals(other._transactions, _transactions) &&
+            const DeepCollectionEquality()
+                .equals(other._transactions, _transactions) &&
             const DeepCollectionEquality().equals(other._memos, _memos) &&
             const DeepCollectionEquality().equals(other._notes, _notes) &&
             const DeepCollectionEquality().equals(other._zsas, _zsas) &&
-            (identical(other.frostParams, frostParams) || other.frostParams == frostParams));
+            (identical(other.frostParams, frostParams) ||
+                other.frostParams == frostParams));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, account, pool, balance, const DeepCollectionEquality().hash(_transactions),
-      const DeepCollectionEquality().hash(_memos), const DeepCollectionEquality().hash(_notes), const DeepCollectionEquality().hash(_zsas), frostParams);
+  int get hashCode => Object.hash(
+      runtimeType,
+      account,
+      pool,
+      balance,
+      const DeepCollectionEquality().hash(_transactions),
+      const DeepCollectionEquality().hash(_memos),
+      const DeepCollectionEquality().hash(_notes),
+      const DeepCollectionEquality().hash(_zsas),
+      frostParams);
 
   @override
   String toString() {
@@ -1101,8 +1218,11 @@ class _AccountData implements AccountData {
 }
 
 /// @nodoc
-abstract mixin class _$AccountDataCopyWith<$Res> implements $AccountDataCopyWith<$Res> {
-  factory _$AccountDataCopyWith(_AccountData value, $Res Function(_AccountData) _then) = __$AccountDataCopyWithImpl;
+abstract mixin class _$AccountDataCopyWith<$Res>
+    implements $AccountDataCopyWith<$Res> {
+  factory _$AccountDataCopyWith(
+          _AccountData value, $Res Function(_AccountData) _then) =
+      __$AccountDataCopyWithImpl;
   @override
   @useResult
   $Res call(
@@ -1231,7 +1351,8 @@ mixin _$AppSettings {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $AppSettingsCopyWith<AppSettings> get copyWith => _$AppSettingsCopyWithImpl<AppSettings>(this as AppSettings, _$identity);
+  $AppSettingsCopyWith<AppSettings> get copyWith =>
+      _$AppSettingsCopyWithImpl<AppSettings>(this as AppSettings, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -1240,25 +1361,37 @@ mixin _$AppSettings {
             other is AppSettings &&
             (identical(other.dbName, dbName) || other.dbName == dbName) &&
             (identical(other.net, net) || other.net == net) &&
-            (identical(other.isLightNode, isLightNode) || other.isLightNode == isLightNode) &&
+            (identical(other.isLightNode, isLightNode) ||
+                other.isLightNode == isLightNode) &&
             (identical(other.lwd, lwd) || other.lwd == lwd) &&
-            (identical(other.blockExplorer, blockExplorer) || other.blockExplorer == blockExplorer) &&
-            (identical(other.syncInterval, syncInterval) || other.syncInterval == syncInterval) &&
-            (identical(other.actionsPerSync, actionsPerSync) || other.actionsPerSync == actionsPerSync) &&
+            (identical(other.blockExplorer, blockExplorer) ||
+                other.blockExplorer == blockExplorer) &&
+            (identical(other.syncInterval, syncInterval) ||
+                other.syncInterval == syncInterval) &&
+            (identical(other.actionsPerSync, actionsPerSync) ||
+                other.actionsPerSync == actionsPerSync) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
             (identical(other.proxy, proxy) || other.proxy == proxy) &&
-            (identical(other.coingecko, coingecko) || other.coingecko == coingecko) &&
-            (identical(other.recovery, recovery) || other.recovery == recovery) &&
+            (identical(other.coingecko, coingecko) ||
+                other.coingecko == coingecko) &&
+            (identical(other.recovery, recovery) ||
+                other.recovery == recovery) &&
             (identical(other.needPin, needPin) || other.needPin == needPin) &&
-            (identical(other.pinUnlockedAt, pinUnlockedAt) || other.pinUnlockedAt == pinUnlockedAt) &&
+            (identical(other.pinUnlockedAt, pinUnlockedAt) ||
+                other.pinUnlockedAt == pinUnlockedAt) &&
             (identical(other.offline, offline) || other.offline == offline) &&
             (identical(other.getFx, getFx) || other.getFx == getFx) &&
-            (identical(other.qrSettings, qrSettings) || other.qrSettings == qrSettings) &&
+            (identical(other.qrSettings, qrSettings) ||
+                other.qrSettings == qrSettings) &&
             (identical(other.vault, vault) || other.vault == vault) &&
-            (identical(other.expertMode, expertMode) || other.expertMode == expertMode) &&
-            (identical(other.paletteName, paletteName) || other.paletteName == paletteName) &&
-            (identical(other.darkMode, darkMode) || other.darkMode == darkMode) &&
-            (identical(other.currency, currency) || other.currency == currency));
+            (identical(other.expertMode, expertMode) ||
+                other.expertMode == expertMode) &&
+            (identical(other.paletteName, paletteName) ||
+                other.paletteName == paletteName) &&
+            (identical(other.darkMode, darkMode) ||
+                other.darkMode == darkMode) &&
+            (identical(other.currency, currency) ||
+                other.currency == currency));
   }
 
   @override
@@ -1295,7 +1428,9 @@ mixin _$AppSettings {
 
 /// @nodoc
 abstract mixin class $AppSettingsCopyWith<$Res> {
-  factory $AppSettingsCopyWith(AppSettings value, $Res Function(AppSettings) _then) = _$AppSettingsCopyWithImpl;
+  factory $AppSettingsCopyWith(
+          AppSettings value, $Res Function(AppSettings) _then) =
+      _$AppSettingsCopyWithImpl;
   @useResult
   $Res call(
       {String dbName,
@@ -1813,7 +1948,8 @@ class _AppSettings implements AppSettings {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$AppSettingsCopyWith<_AppSettings> get copyWith => __$AppSettingsCopyWithImpl<_AppSettings>(this, _$identity);
+  _$AppSettingsCopyWith<_AppSettings> get copyWith =>
+      __$AppSettingsCopyWithImpl<_AppSettings>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -1822,25 +1958,37 @@ class _AppSettings implements AppSettings {
             other is _AppSettings &&
             (identical(other.dbName, dbName) || other.dbName == dbName) &&
             (identical(other.net, net) || other.net == net) &&
-            (identical(other.isLightNode, isLightNode) || other.isLightNode == isLightNode) &&
+            (identical(other.isLightNode, isLightNode) ||
+                other.isLightNode == isLightNode) &&
             (identical(other.lwd, lwd) || other.lwd == lwd) &&
-            (identical(other.blockExplorer, blockExplorer) || other.blockExplorer == blockExplorer) &&
-            (identical(other.syncInterval, syncInterval) || other.syncInterval == syncInterval) &&
-            (identical(other.actionsPerSync, actionsPerSync) || other.actionsPerSync == actionsPerSync) &&
+            (identical(other.blockExplorer, blockExplorer) ||
+                other.blockExplorer == blockExplorer) &&
+            (identical(other.syncInterval, syncInterval) ||
+                other.syncInterval == syncInterval) &&
+            (identical(other.actionsPerSync, actionsPerSync) ||
+                other.actionsPerSync == actionsPerSync) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
             (identical(other.proxy, proxy) || other.proxy == proxy) &&
-            (identical(other.coingecko, coingecko) || other.coingecko == coingecko) &&
-            (identical(other.recovery, recovery) || other.recovery == recovery) &&
+            (identical(other.coingecko, coingecko) ||
+                other.coingecko == coingecko) &&
+            (identical(other.recovery, recovery) ||
+                other.recovery == recovery) &&
             (identical(other.needPin, needPin) || other.needPin == needPin) &&
-            (identical(other.pinUnlockedAt, pinUnlockedAt) || other.pinUnlockedAt == pinUnlockedAt) &&
+            (identical(other.pinUnlockedAt, pinUnlockedAt) ||
+                other.pinUnlockedAt == pinUnlockedAt) &&
             (identical(other.offline, offline) || other.offline == offline) &&
             (identical(other.getFx, getFx) || other.getFx == getFx) &&
-            (identical(other.qrSettings, qrSettings) || other.qrSettings == qrSettings) &&
+            (identical(other.qrSettings, qrSettings) ||
+                other.qrSettings == qrSettings) &&
             (identical(other.vault, vault) || other.vault == vault) &&
-            (identical(other.expertMode, expertMode) || other.expertMode == expertMode) &&
-            (identical(other.paletteName, paletteName) || other.paletteName == paletteName) &&
-            (identical(other.darkMode, darkMode) || other.darkMode == darkMode) &&
-            (identical(other.currency, currency) || other.currency == currency));
+            (identical(other.expertMode, expertMode) ||
+                other.expertMode == expertMode) &&
+            (identical(other.paletteName, paletteName) ||
+                other.paletteName == paletteName) &&
+            (identical(other.darkMode, darkMode) ||
+                other.darkMode == darkMode) &&
+            (identical(other.currency, currency) ||
+                other.currency == currency));
   }
 
   @override
@@ -1876,8 +2024,11 @@ class _AppSettings implements AppSettings {
 }
 
 /// @nodoc
-abstract mixin class _$AppSettingsCopyWith<$Res> implements $AppSettingsCopyWith<$Res> {
-  factory _$AppSettingsCopyWith(_AppSettings value, $Res Function(_AppSettings) _then) = __$AppSettingsCopyWithImpl;
+abstract mixin class _$AppSettingsCopyWith<$Res>
+    implements $AppSettingsCopyWith<$Res> {
+  factory _$AppSettingsCopyWith(
+          _AppSettings value, $Res Function(_AppSettings) _then) =
+      __$AppSettingsCopyWithImpl;
   @override
   @useResult
   $Res call(
@@ -2050,7 +2201,9 @@ mixin _$MempoolState {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MempoolStateCopyWith<MempoolState> get copyWith => _$MempoolStateCopyWithImpl<MempoolState>(this as MempoolState, _$identity);
+  $MempoolStateCopyWith<MempoolState> get copyWith =>
+      _$MempoolStateCopyWithImpl<MempoolState>(
+          this as MempoolState, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -2058,13 +2211,18 @@ mixin _$MempoolState {
         (other.runtimeType == runtimeType &&
             other is MempoolState &&
             (identical(other.running, running) || other.running == running) &&
-            const DeepCollectionEquality().equals(other.unconfirmedFunds, unconfirmedFunds) &&
-            const DeepCollectionEquality().equals(other.unconfirmedTx, unconfirmedTx));
+            const DeepCollectionEquality()
+                .equals(other.unconfirmedFunds, unconfirmedFunds) &&
+            const DeepCollectionEquality()
+                .equals(other.unconfirmedTx, unconfirmedTx));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, running, const DeepCollectionEquality().hash(unconfirmedFunds), const DeepCollectionEquality().hash(unconfirmedTx));
+  int get hashCode => Object.hash(
+      runtimeType,
+      running,
+      const DeepCollectionEquality().hash(unconfirmedFunds),
+      const DeepCollectionEquality().hash(unconfirmedTx));
 
   @override
   String toString() {
@@ -2074,9 +2232,14 @@ mixin _$MempoolState {
 
 /// @nodoc
 abstract mixin class $MempoolStateCopyWith<$Res> {
-  factory $MempoolStateCopyWith(MempoolState value, $Res Function(MempoolState) _then) = _$MempoolStateCopyWithImpl;
+  factory $MempoolStateCopyWith(
+          MempoolState value, $Res Function(MempoolState) _then) =
+      _$MempoolStateCopyWithImpl;
   @useResult
-  $Res call({bool running, Map<int, int> unconfirmedFunds, List<(String, String, int)> unconfirmedTx});
+  $Res call(
+      {bool running,
+      Map<int, int> unconfirmedFunds,
+      List<(String, String, int)> unconfirmedTx});
 }
 
 /// @nodoc
@@ -2203,13 +2366,16 @@ extension MempoolStatePatterns on MempoolState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(bool running, Map<int, int> unconfirmedFunds, List<(String, String, int)> unconfirmedTx)? $default, {
+    TResult Function(bool running, Map<int, int> unconfirmedFunds,
+            List<(String, String, int)> unconfirmedTx)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _MempoolState() when $default != null:
-        return $default(_that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
+        return $default(
+            _that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
       case _:
         return orElse();
     }
@@ -2230,12 +2396,15 @@ extension MempoolStatePatterns on MempoolState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(bool running, Map<int, int> unconfirmedFunds, List<(String, String, int)> unconfirmedTx) $default,
+    TResult Function(bool running, Map<int, int> unconfirmedFunds,
+            List<(String, String, int)> unconfirmedTx)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _MempoolState():
-        return $default(_that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
+        return $default(
+            _that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
     }
   }
 
@@ -2253,12 +2422,15 @@ extension MempoolStatePatterns on MempoolState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(bool running, Map<int, int> unconfirmedFunds, List<(String, String, int)> unconfirmedTx)? $default,
+    TResult? Function(bool running, Map<int, int> unconfirmedFunds,
+            List<(String, String, int)> unconfirmedTx)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _MempoolState() when $default != null:
-        return $default(_that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
+        return $default(
+            _that.running, _that.unconfirmedFunds, _that.unconfirmedTx);
       case _:
         return null;
     }
@@ -2268,7 +2440,10 @@ extension MempoolStatePatterns on MempoolState {
 /// @nodoc
 
 class _MempoolState implements MempoolState {
-  _MempoolState({required this.running, required this.unconfirmedFunds, required this.unconfirmedTx});
+  _MempoolState(
+      {required this.running,
+      required this.unconfirmedFunds,
+      required this.unconfirmedTx});
 
   @override
   final bool running;
@@ -2282,7 +2457,8 @@ class _MempoolState implements MempoolState {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$MempoolStateCopyWith<_MempoolState> get copyWith => __$MempoolStateCopyWithImpl<_MempoolState>(this, _$identity);
+  _$MempoolStateCopyWith<_MempoolState> get copyWith =>
+      __$MempoolStateCopyWithImpl<_MempoolState>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -2290,13 +2466,18 @@ class _MempoolState implements MempoolState {
         (other.runtimeType == runtimeType &&
             other is _MempoolState &&
             (identical(other.running, running) || other.running == running) &&
-            const DeepCollectionEquality().equals(other.unconfirmedFunds, unconfirmedFunds) &&
-            const DeepCollectionEquality().equals(other.unconfirmedTx, unconfirmedTx));
+            const DeepCollectionEquality()
+                .equals(other.unconfirmedFunds, unconfirmedFunds) &&
+            const DeepCollectionEquality()
+                .equals(other.unconfirmedTx, unconfirmedTx));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, running, const DeepCollectionEquality().hash(unconfirmedFunds), const DeepCollectionEquality().hash(unconfirmedTx));
+  int get hashCode => Object.hash(
+      runtimeType,
+      running,
+      const DeepCollectionEquality().hash(unconfirmedFunds),
+      const DeepCollectionEquality().hash(unconfirmedTx));
 
   @override
   String toString() {
@@ -2305,15 +2486,22 @@ class _MempoolState implements MempoolState {
 }
 
 /// @nodoc
-abstract mixin class _$MempoolStateCopyWith<$Res> implements $MempoolStateCopyWith<$Res> {
-  factory _$MempoolStateCopyWith(_MempoolState value, $Res Function(_MempoolState) _then) = __$MempoolStateCopyWithImpl;
+abstract mixin class _$MempoolStateCopyWith<$Res>
+    implements $MempoolStateCopyWith<$Res> {
+  factory _$MempoolStateCopyWith(
+          _MempoolState value, $Res Function(_MempoolState) _then) =
+      __$MempoolStateCopyWithImpl;
   @override
   @useResult
-  $Res call({bool running, Map<int, int> unconfirmedFunds, List<(String, String, int)> unconfirmedTx});
+  $Res call(
+      {bool running,
+      Map<int, int> unconfirmedFunds,
+      List<(String, String, int)> unconfirmedTx});
 }
 
 /// @nodoc
-class __$MempoolStateCopyWithImpl<$Res> implements _$MempoolStateCopyWith<$Res> {
+class __$MempoolStateCopyWithImpl<$Res>
+    implements _$MempoolStateCopyWith<$Res> {
   __$MempoolStateCopyWithImpl(this._self, this._then);
 
   final _MempoolState _self;
@@ -2356,21 +2544,26 @@ mixin _$AccountsPageData {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $AccountsPageDataCopyWith<AccountsPageData> get copyWith => _$AccountsPageDataCopyWithImpl<AccountsPageData>(this as AccountsPageData, _$identity);
+  $AccountsPageDataCopyWith<AccountsPageData> get copyWith =>
+      _$AccountsPageDataCopyWithImpl<AccountsPageData>(
+          this as AccountsPageData, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is AccountsPageData &&
-            (identical(other.settings, settings) || other.settings == settings) &&
+            (identical(other.settings, settings) ||
+                other.settings == settings) &&
             const DeepCollectionEquality().equals(other.accounts, accounts) &&
             (identical(other.price, price) || other.price == price) &&
-            (identical(other.selectedFolder, selectedFolder) || other.selectedFolder == selectedFolder));
+            (identical(other.selectedFolder, selectedFolder) ||
+                other.selectedFolder == selectedFolder));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, settings, const DeepCollectionEquality().hash(accounts), price, selectedFolder);
+  int get hashCode => Object.hash(runtimeType, settings,
+      const DeepCollectionEquality().hash(accounts), price, selectedFolder);
 
   @override
   String toString() {
@@ -2380,16 +2573,23 @@ mixin _$AccountsPageData {
 
 /// @nodoc
 abstract mixin class $AccountsPageDataCopyWith<$Res> {
-  factory $AccountsPageDataCopyWith(AccountsPageData value, $Res Function(AccountsPageData) _then) = _$AccountsPageDataCopyWithImpl;
+  factory $AccountsPageDataCopyWith(
+          AccountsPageData value, $Res Function(AccountsPageData) _then) =
+      _$AccountsPageDataCopyWithImpl;
   @useResult
-  $Res call({AppSettings settings, List<Account> accounts, double? price, Folder? selectedFolder});
+  $Res call(
+      {AppSettings settings,
+      List<Account> accounts,
+      double? price,
+      Folder? selectedFolder});
 
   $AppSettingsCopyWith<$Res> get settings;
   $FolderCopyWith<$Res>? get selectedFolder;
 }
 
 /// @nodoc
-class _$AccountsPageDataCopyWithImpl<$Res> implements $AccountsPageDataCopyWith<$Res> {
+class _$AccountsPageDataCopyWithImpl<$Res>
+    implements $AccountsPageDataCopyWith<$Res> {
   _$AccountsPageDataCopyWithImpl(this._self, this._then);
 
   final AccountsPageData _self;
@@ -2541,13 +2741,16 @@ extension AccountsPageDataPatterns on AccountsPageData {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(AppSettings settings, List<Account> accounts, double? price, Folder? selectedFolder)? $default, {
+    TResult Function(AppSettings settings, List<Account> accounts,
+            double? price, Folder? selectedFolder)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _AccountsPageData() when $default != null:
-        return $default(_that.settings, _that.accounts, _that.price, _that.selectedFolder);
+        return $default(
+            _that.settings, _that.accounts, _that.price, _that.selectedFolder);
       case _:
         return orElse();
     }
@@ -2568,12 +2771,15 @@ extension AccountsPageDataPatterns on AccountsPageData {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(AppSettings settings, List<Account> accounts, double? price, Folder? selectedFolder) $default,
+    TResult Function(AppSettings settings, List<Account> accounts,
+            double? price, Folder? selectedFolder)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountsPageData():
-        return $default(_that.settings, _that.accounts, _that.price, _that.selectedFolder);
+        return $default(
+            _that.settings, _that.accounts, _that.price, _that.selectedFolder);
     }
   }
 
@@ -2591,12 +2797,15 @@ extension AccountsPageDataPatterns on AccountsPageData {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(AppSettings settings, List<Account> accounts, double? price, Folder? selectedFolder)? $default,
+    TResult? Function(AppSettings settings, List<Account> accounts,
+            double? price, Folder? selectedFolder)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountsPageData() when $default != null:
-        return $default(_that.settings, _that.accounts, _that.price, _that.selectedFolder);
+        return $default(
+            _that.settings, _that.accounts, _that.price, _that.selectedFolder);
       case _:
         return null;
     }
@@ -2606,7 +2815,11 @@ extension AccountsPageDataPatterns on AccountsPageData {
 /// @nodoc
 
 class _AccountsPageData implements AccountsPageData {
-  const _AccountsPageData({required this.settings, required final List<Account> accounts, required this.price, required this.selectedFolder})
+  const _AccountsPageData(
+      {required this.settings,
+      required final List<Account> accounts,
+      required this.price,
+      required this.selectedFolder})
       : _accounts = accounts;
 
   @override
@@ -2629,21 +2842,25 @@ class _AccountsPageData implements AccountsPageData {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$AccountsPageDataCopyWith<_AccountsPageData> get copyWith => __$AccountsPageDataCopyWithImpl<_AccountsPageData>(this, _$identity);
+  _$AccountsPageDataCopyWith<_AccountsPageData> get copyWith =>
+      __$AccountsPageDataCopyWithImpl<_AccountsPageData>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _AccountsPageData &&
-            (identical(other.settings, settings) || other.settings == settings) &&
+            (identical(other.settings, settings) ||
+                other.settings == settings) &&
             const DeepCollectionEquality().equals(other._accounts, _accounts) &&
             (identical(other.price, price) || other.price == price) &&
-            (identical(other.selectedFolder, selectedFolder) || other.selectedFolder == selectedFolder));
+            (identical(other.selectedFolder, selectedFolder) ||
+                other.selectedFolder == selectedFolder));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, settings, const DeepCollectionEquality().hash(_accounts), price, selectedFolder);
+  int get hashCode => Object.hash(runtimeType, settings,
+      const DeepCollectionEquality().hash(_accounts), price, selectedFolder);
 
   @override
   String toString() {
@@ -2652,11 +2869,18 @@ class _AccountsPageData implements AccountsPageData {
 }
 
 /// @nodoc
-abstract mixin class _$AccountsPageDataCopyWith<$Res> implements $AccountsPageDataCopyWith<$Res> {
-  factory _$AccountsPageDataCopyWith(_AccountsPageData value, $Res Function(_AccountsPageData) _then) = __$AccountsPageDataCopyWithImpl;
+abstract mixin class _$AccountsPageDataCopyWith<$Res>
+    implements $AccountsPageDataCopyWith<$Res> {
+  factory _$AccountsPageDataCopyWith(
+          _AccountsPageData value, $Res Function(_AccountsPageData) _then) =
+      __$AccountsPageDataCopyWithImpl;
   @override
   @useResult
-  $Res call({AppSettings settings, List<Account> accounts, double? price, Folder? selectedFolder});
+  $Res call(
+      {AppSettings settings,
+      List<Account> accounts,
+      double? price,
+      Folder? selectedFolder});
 
   @override
   $AppSettingsCopyWith<$Res> get settings;
@@ -2665,7 +2889,8 @@ abstract mixin class _$AccountsPageDataCopyWith<$Res> implements $AccountsPageDa
 }
 
 /// @nodoc
-class __$AccountsPageDataCopyWithImpl<$Res> implements _$AccountsPageDataCopyWith<$Res> {
+class __$AccountsPageDataCopyWithImpl<$Res>
+    implements _$AccountsPageDataCopyWith<$Res> {
   __$AccountsPageDataCopyWithImpl(this._self, this._then);
 
   final _AccountsPageData _self;
@@ -2735,19 +2960,24 @@ mixin _$BasicAccountData {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $BasicAccountDataCopyWith<BasicAccountData> get copyWith => _$BasicAccountDataCopyWithImpl<BasicAccountData>(this as BasicAccountData, _$identity);
+  $BasicAccountDataCopyWith<BasicAccountData> get copyWith =>
+      _$BasicAccountDataCopyWithImpl<BasicAccountData>(
+          this as BasicAccountData, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is BasicAccountData &&
-            const DeepCollectionEquality().equals(other.allAccounts, allAccounts) &&
-            (identical(other.currentAccount, currentAccount) || other.currentAccount == currentAccount));
+            const DeepCollectionEquality()
+                .equals(other.allAccounts, allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(allAccounts), currentAccount);
+  int get hashCode => Object.hash(runtimeType,
+      const DeepCollectionEquality().hash(allAccounts), currentAccount);
 
   @override
   String toString() {
@@ -2757,7 +2987,9 @@ mixin _$BasicAccountData {
 
 /// @nodoc
 abstract mixin class $BasicAccountDataCopyWith<$Res> {
-  factory $BasicAccountDataCopyWith(BasicAccountData value, $Res Function(BasicAccountData) _then) = _$BasicAccountDataCopyWithImpl;
+  factory $BasicAccountDataCopyWith(
+          BasicAccountData value, $Res Function(BasicAccountData) _then) =
+      _$BasicAccountDataCopyWithImpl;
   @useResult
   $Res call({List<Account> allAccounts, AccountData? currentAccount});
 
@@ -2765,7 +2997,8 @@ abstract mixin class $BasicAccountDataCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$BasicAccountDataCopyWithImpl<$Res> implements $BasicAccountDataCopyWith<$Res> {
+class _$BasicAccountDataCopyWithImpl<$Res>
+    implements $BasicAccountDataCopyWith<$Res> {
   _$BasicAccountDataCopyWithImpl(this._self, this._then);
 
   final BasicAccountData _self;
@@ -2897,7 +3130,8 @@ extension BasicAccountDataPatterns on BasicAccountData {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(List<Account> allAccounts, AccountData? currentAccount)? $default, {
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
@@ -2924,7 +3158,8 @@ extension BasicAccountDataPatterns on BasicAccountData {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(List<Account> allAccounts, AccountData? currentAccount) $default,
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -2947,7 +3182,8 @@ extension BasicAccountDataPatterns on BasicAccountData {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(List<Account> allAccounts, AccountData? currentAccount)? $default,
+    TResult? Function(List<Account> allAccounts, AccountData? currentAccount)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -2962,7 +3198,9 @@ extension BasicAccountDataPatterns on BasicAccountData {
 /// @nodoc
 
 class _BasicAccountData implements BasicAccountData {
-  const _BasicAccountData({required final List<Account> allAccounts, required this.currentAccount}) : _allAccounts = allAccounts;
+  const _BasicAccountData(
+      {required final List<Account> allAccounts, required this.currentAccount})
+      : _allAccounts = allAccounts;
 
   final List<Account> _allAccounts;
   @override
@@ -2980,19 +3218,23 @@ class _BasicAccountData implements BasicAccountData {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$BasicAccountDataCopyWith<_BasicAccountData> get copyWith => __$BasicAccountDataCopyWithImpl<_BasicAccountData>(this, _$identity);
+  _$BasicAccountDataCopyWith<_BasicAccountData> get copyWith =>
+      __$BasicAccountDataCopyWithImpl<_BasicAccountData>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _BasicAccountData &&
-            const DeepCollectionEquality().equals(other._allAccounts, _allAccounts) &&
-            (identical(other.currentAccount, currentAccount) || other.currentAccount == currentAccount));
+            const DeepCollectionEquality()
+                .equals(other._allAccounts, _allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(_allAccounts), currentAccount);
+  int get hashCode => Object.hash(runtimeType,
+      const DeepCollectionEquality().hash(_allAccounts), currentAccount);
 
   @override
   String toString() {
@@ -3001,8 +3243,11 @@ class _BasicAccountData implements BasicAccountData {
 }
 
 /// @nodoc
-abstract mixin class _$BasicAccountDataCopyWith<$Res> implements $BasicAccountDataCopyWith<$Res> {
-  factory _$BasicAccountDataCopyWith(_BasicAccountData value, $Res Function(_BasicAccountData) _then) = __$BasicAccountDataCopyWithImpl;
+abstract mixin class _$BasicAccountDataCopyWith<$Res>
+    implements $BasicAccountDataCopyWith<$Res> {
+  factory _$BasicAccountDataCopyWith(
+          _BasicAccountData value, $Res Function(_BasicAccountData) _then) =
+      __$BasicAccountDataCopyWithImpl;
   @override
   @useResult
   $Res call({List<Account> allAccounts, AccountData? currentAccount});
@@ -3012,7 +3257,8 @@ abstract mixin class _$BasicAccountDataCopyWith<$Res> implements $BasicAccountDa
 }
 
 /// @nodoc
-class __$BasicAccountDataCopyWithImpl<$Res> implements _$BasicAccountDataCopyWith<$Res> {
+class __$BasicAccountDataCopyWithImpl<$Res>
+    implements _$BasicAccountDataCopyWith<$Res> {
   __$BasicAccountDataCopyWithImpl(this._self, this._then);
 
   final _BasicAccountData _self;
@@ -3063,20 +3309,29 @@ mixin _$AccountPageData {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $AccountPageDataCopyWith<AccountPageData> get copyWith => _$AccountPageDataCopyWithImpl<AccountPageData>(this as AccountPageData, _$identity);
+  $AccountPageDataCopyWith<AccountPageData> get copyWith =>
+      _$AccountPageDataCopyWithImpl<AccountPageData>(
+          this as AccountPageData, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is AccountPageData &&
-            const DeepCollectionEquality().equals(other.allAccounts, allAccounts) &&
-            (identical(other.currentAccount, currentAccount) || other.currentAccount == currentAccount) &&
-            (identical(other.syncState, syncState) || other.syncState == syncState));
+            const DeepCollectionEquality()
+                .equals(other.allAccounts, allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(allAccounts), currentAccount, syncState);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(allAccounts),
+      currentAccount,
+      syncState);
 
   @override
   String toString() {
@@ -3086,16 +3341,22 @@ mixin _$AccountPageData {
 
 /// @nodoc
 abstract mixin class $AccountPageDataCopyWith<$Res> {
-  factory $AccountPageDataCopyWith(AccountPageData value, $Res Function(AccountPageData) _then) = _$AccountPageDataCopyWithImpl;
+  factory $AccountPageDataCopyWith(
+          AccountPageData value, $Res Function(AccountPageData) _then) =
+      _$AccountPageDataCopyWithImpl;
   @useResult
-  $Res call({List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState});
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState});
 
   $AccountDataCopyWith<$Res>? get currentAccount;
   $SyncProgressAccountCopyWith<$Res>? get syncState;
 }
 
 /// @nodoc
-class _$AccountPageDataCopyWithImpl<$Res> implements $AccountPageDataCopyWith<$Res> {
+class _$AccountPageDataCopyWithImpl<$Res>
+    implements $AccountPageDataCopyWith<$Res> {
   _$AccountPageDataCopyWithImpl(this._self, this._then);
 
   final AccountPageData _self;
@@ -3246,13 +3507,16 @@ extension AccountPageDataPatterns on AccountPageData {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState)? $default, {
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _AccountPageData() when $default != null:
-        return $default(_that.allAccounts, _that.currentAccount, _that.syncState);
+        return $default(
+            _that.allAccounts, _that.currentAccount, _that.syncState);
       case _:
         return orElse();
     }
@@ -3273,12 +3537,15 @@ extension AccountPageDataPatterns on AccountPageData {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState) $default,
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountPageData():
-        return $default(_that.allAccounts, _that.currentAccount, _that.syncState);
+        return $default(
+            _that.allAccounts, _that.currentAccount, _that.syncState);
     }
   }
 
@@ -3296,12 +3563,15 @@ extension AccountPageDataPatterns on AccountPageData {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState)? $default,
+    TResult? Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountPageData() when $default != null:
-        return $default(_that.allAccounts, _that.currentAccount, _that.syncState);
+        return $default(
+            _that.allAccounts, _that.currentAccount, _that.syncState);
       case _:
         return null;
     }
@@ -3311,7 +3581,11 @@ extension AccountPageDataPatterns on AccountPageData {
 /// @nodoc
 
 class _AccountPageData implements AccountPageData {
-  const _AccountPageData({required final List<Account> allAccounts, required this.currentAccount, required this.syncState}) : _allAccounts = allAccounts;
+  const _AccountPageData(
+      {required final List<Account> allAccounts,
+      required this.currentAccount,
+      required this.syncState})
+      : _allAccounts = allAccounts;
 
   final List<Account> _allAccounts;
   @override
@@ -3331,20 +3605,28 @@ class _AccountPageData implements AccountPageData {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$AccountPageDataCopyWith<_AccountPageData> get copyWith => __$AccountPageDataCopyWithImpl<_AccountPageData>(this, _$identity);
+  _$AccountPageDataCopyWith<_AccountPageData> get copyWith =>
+      __$AccountPageDataCopyWithImpl<_AccountPageData>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _AccountPageData &&
-            const DeepCollectionEquality().equals(other._allAccounts, _allAccounts) &&
-            (identical(other.currentAccount, currentAccount) || other.currentAccount == currentAccount) &&
-            (identical(other.syncState, syncState) || other.syncState == syncState));
+            const DeepCollectionEquality()
+                .equals(other._allAccounts, _allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(_allAccounts), currentAccount, syncState);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_allAccounts),
+      currentAccount,
+      syncState);
 
   @override
   String toString() {
@@ -3353,11 +3635,17 @@ class _AccountPageData implements AccountPageData {
 }
 
 /// @nodoc
-abstract mixin class _$AccountPageDataCopyWith<$Res> implements $AccountPageDataCopyWith<$Res> {
-  factory _$AccountPageDataCopyWith(_AccountPageData value, $Res Function(_AccountPageData) _then) = __$AccountPageDataCopyWithImpl;
+abstract mixin class _$AccountPageDataCopyWith<$Res>
+    implements $AccountPageDataCopyWith<$Res> {
+  factory _$AccountPageDataCopyWith(
+          _AccountPageData value, $Res Function(_AccountPageData) _then) =
+      __$AccountPageDataCopyWithImpl;
   @override
   @useResult
-  $Res call({List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState});
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState});
 
   @override
   $AccountDataCopyWith<$Res>? get currentAccount;
@@ -3366,7 +3654,8 @@ abstract mixin class _$AccountPageDataCopyWith<$Res> implements $AccountPageData
 }
 
 /// @nodoc
-class __$AccountPageDataCopyWithImpl<$Res> implements _$AccountPageDataCopyWith<$Res> {
+class __$AccountPageDataCopyWithImpl<$Res>
+    implements _$AccountPageDataCopyWith<$Res> {
   __$AccountPageDataCopyWithImpl(this._self, this._then);
 
   final _AccountPageData _self;
@@ -3439,22 +3728,32 @@ mixin _$FullAccountPageData {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
   $FullAccountPageDataCopyWith<FullAccountPageData> get copyWith =>
-      _$FullAccountPageDataCopyWithImpl<FullAccountPageData>(this as FullAccountPageData, _$identity);
+      _$FullAccountPageDataCopyWithImpl<FullAccountPageData>(
+          this as FullAccountPageData, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is FullAccountPageData &&
-            const DeepCollectionEquality().equals(other.allAccounts, allAccounts) &&
-            (identical(other.currentAccount, currentAccount) || other.currentAccount == currentAccount) &&
-            (identical(other.syncState, syncState) || other.syncState == syncState) &&
+            const DeepCollectionEquality()
+                .equals(other.allAccounts, allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState) &&
             (identical(other.price, price) || other.price == price) &&
             (identical(other.mempool, mempool) || other.mempool == mempool));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(allAccounts), currentAccount, syncState, price, mempool);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(allAccounts),
+      currentAccount,
+      syncState,
+      price,
+      mempool);
 
   @override
   String toString() {
@@ -3464,9 +3763,16 @@ mixin _$FullAccountPageData {
 
 /// @nodoc
 abstract mixin class $FullAccountPageDataCopyWith<$Res> {
-  factory $FullAccountPageDataCopyWith(FullAccountPageData value, $Res Function(FullAccountPageData) _then) = _$FullAccountPageDataCopyWithImpl;
+  factory $FullAccountPageDataCopyWith(
+          FullAccountPageData value, $Res Function(FullAccountPageData) _then) =
+      _$FullAccountPageDataCopyWithImpl;
   @useResult
-  $Res call({List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState, double? price, MempoolState mempool});
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState,
+      double? price,
+      MempoolState mempool});
 
   $AccountDataCopyWith<$Res>? get currentAccount;
   $SyncProgressAccountCopyWith<$Res>? get syncState;
@@ -3474,7 +3780,8 @@ abstract mixin class $FullAccountPageDataCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$FullAccountPageDataCopyWithImpl<$Res> implements $FullAccountPageDataCopyWith<$Res> {
+class _$FullAccountPageDataCopyWithImpl<$Res>
+    implements $FullAccountPageDataCopyWith<$Res> {
   _$FullAccountPageDataCopyWithImpl(this._self, this._then);
 
   final FullAccountPageData _self;
@@ -3645,13 +3952,20 @@ extension FullAccountPageDataPatterns on FullAccountPageData {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState, double? price, MempoolState mempool)? $default, {
+    TResult Function(
+            List<Account> allAccounts,
+            AccountData? currentAccount,
+            SyncProgressAccount? syncState,
+            double? price,
+            MempoolState mempool)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _FullAccountPageData() when $default != null:
-        return $default(_that.allAccounts, _that.currentAccount, _that.syncState, _that.price, _that.mempool);
+        return $default(_that.allAccounts, _that.currentAccount,
+            _that.syncState, _that.price, _that.mempool);
       case _:
         return orElse();
     }
@@ -3672,12 +3986,15 @@ extension FullAccountPageDataPatterns on FullAccountPageData {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState, double? price, MempoolState mempool) $default,
+    TResult Function(List<Account> allAccounts, AccountData? currentAccount,
+            SyncProgressAccount? syncState, double? price, MempoolState mempool)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _FullAccountPageData():
-        return $default(_that.allAccounts, _that.currentAccount, _that.syncState, _that.price, _that.mempool);
+        return $default(_that.allAccounts, _that.currentAccount,
+            _that.syncState, _that.price, _that.mempool);
     }
   }
 
@@ -3695,12 +4012,19 @@ extension FullAccountPageDataPatterns on FullAccountPageData {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState, double? price, MempoolState mempool)? $default,
+    TResult? Function(
+            List<Account> allAccounts,
+            AccountData? currentAccount,
+            SyncProgressAccount? syncState,
+            double? price,
+            MempoolState mempool)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _FullAccountPageData() when $default != null:
-        return $default(_that.allAccounts, _that.currentAccount, _that.syncState, _that.price, _that.mempool);
+        return $default(_that.allAccounts, _that.currentAccount,
+            _that.syncState, _that.price, _that.mempool);
       case _:
         return null;
     }
@@ -3711,7 +4035,11 @@ extension FullAccountPageDataPatterns on FullAccountPageData {
 
 class _FullAccountPageData implements FullAccountPageData {
   const _FullAccountPageData(
-      {required final List<Account> allAccounts, required this.currentAccount, required this.syncState, required this.price, required this.mempool})
+      {required final List<Account> allAccounts,
+      required this.currentAccount,
+      required this.syncState,
+      required this.price,
+      required this.mempool})
       : _allAccounts = allAccounts;
 
   final List<Account> _allAccounts;
@@ -3736,22 +4064,33 @@ class _FullAccountPageData implements FullAccountPageData {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$FullAccountPageDataCopyWith<_FullAccountPageData> get copyWith => __$FullAccountPageDataCopyWithImpl<_FullAccountPageData>(this, _$identity);
+  _$FullAccountPageDataCopyWith<_FullAccountPageData> get copyWith =>
+      __$FullAccountPageDataCopyWithImpl<_FullAccountPageData>(
+          this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _FullAccountPageData &&
-            const DeepCollectionEquality().equals(other._allAccounts, _allAccounts) &&
-            (identical(other.currentAccount, currentAccount) || other.currentAccount == currentAccount) &&
-            (identical(other.syncState, syncState) || other.syncState == syncState) &&
+            const DeepCollectionEquality()
+                .equals(other._allAccounts, _allAccounts) &&
+            (identical(other.currentAccount, currentAccount) ||
+                other.currentAccount == currentAccount) &&
+            (identical(other.syncState, syncState) ||
+                other.syncState == syncState) &&
             (identical(other.price, price) || other.price == price) &&
             (identical(other.mempool, mempool) || other.mempool == mempool));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(_allAccounts), currentAccount, syncState, price, mempool);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_allAccounts),
+      currentAccount,
+      syncState,
+      price,
+      mempool);
 
   @override
   String toString() {
@@ -3760,11 +4099,19 @@ class _FullAccountPageData implements FullAccountPageData {
 }
 
 /// @nodoc
-abstract mixin class _$FullAccountPageDataCopyWith<$Res> implements $FullAccountPageDataCopyWith<$Res> {
-  factory _$FullAccountPageDataCopyWith(_FullAccountPageData value, $Res Function(_FullAccountPageData) _then) = __$FullAccountPageDataCopyWithImpl;
+abstract mixin class _$FullAccountPageDataCopyWith<$Res>
+    implements $FullAccountPageDataCopyWith<$Res> {
+  factory _$FullAccountPageDataCopyWith(_FullAccountPageData value,
+          $Res Function(_FullAccountPageData) _then) =
+      __$FullAccountPageDataCopyWithImpl;
   @override
   @useResult
-  $Res call({List<Account> allAccounts, AccountData? currentAccount, SyncProgressAccount? syncState, double? price, MempoolState mempool});
+  $Res call(
+      {List<Account> allAccounts,
+      AccountData? currentAccount,
+      SyncProgressAccount? syncState,
+      double? price,
+      MempoolState mempool});
 
   @override
   $AccountDataCopyWith<$Res>? get currentAccount;
@@ -3775,7 +4122,8 @@ abstract mixin class _$FullAccountPageDataCopyWith<$Res> implements $FullAccount
 }
 
 /// @nodoc
-class __$FullAccountPageDataCopyWithImpl<$Res> implements _$FullAccountPageDataCopyWith<$Res> {
+class __$FullAccountPageDataCopyWithImpl<$Res>
+    implements _$FullAccountPageDataCopyWith<$Res> {
   __$FullAccountPageDataCopyWithImpl(this._self, this._then);
 
   final _FullAccountPageData _self;
@@ -3867,7 +4215,8 @@ mixin _$QRSettings {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $QRSettingsCopyWith<QRSettings> get copyWith => _$QRSettingsCopyWithImpl<QRSettings>(this as QRSettings, _$identity);
+  $QRSettingsCopyWith<QRSettings> get copyWith =>
+      _$QRSettingsCopyWithImpl<QRSettings>(this as QRSettings, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -3882,7 +4231,8 @@ mixin _$QRSettings {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, enabled, size, ecLevel, delay, repair);
+  int get hashCode =>
+      Object.hash(runtimeType, enabled, size, ecLevel, delay, repair);
 
   @override
   String toString() {
@@ -3892,7 +4242,9 @@ mixin _$QRSettings {
 
 /// @nodoc
 abstract mixin class $QRSettingsCopyWith<$Res> {
-  factory $QRSettingsCopyWith(QRSettings value, $Res Function(QRSettings) _then) = _$QRSettingsCopyWithImpl;
+  factory $QRSettingsCopyWith(
+          QRSettings value, $Res Function(QRSettings) _then) =
+      _$QRSettingsCopyWithImpl;
   @useResult
   $Res call({bool enabled, double size, int ecLevel, int delay, int repair});
 }
@@ -4031,13 +4383,16 @@ extension QRSettingsPatterns on QRSettings {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(bool enabled, double size, int ecLevel, int delay, int repair)? $default, {
+    TResult Function(
+            bool enabled, double size, int ecLevel, int delay, int repair)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _QRSettings() when $default != null:
-        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay, _that.repair);
+        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay,
+            _that.repair);
       case _:
         return orElse();
     }
@@ -4058,12 +4413,15 @@ extension QRSettingsPatterns on QRSettings {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(bool enabled, double size, int ecLevel, int delay, int repair) $default,
+    TResult Function(
+            bool enabled, double size, int ecLevel, int delay, int repair)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _QRSettings():
-        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay, _that.repair);
+        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay,
+            _that.repair);
     }
   }
 
@@ -4081,12 +4439,15 @@ extension QRSettingsPatterns on QRSettings {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(bool enabled, double size, int ecLevel, int delay, int repair)? $default,
+    TResult? Function(
+            bool enabled, double size, int ecLevel, int delay, int repair)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _QRSettings() when $default != null:
-        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay, _that.repair);
+        return $default(_that.enabled, _that.size, _that.ecLevel, _that.delay,
+            _that.repair);
       case _:
         return null;
     }
@@ -4096,7 +4457,12 @@ extension QRSettingsPatterns on QRSettings {
 /// @nodoc
 
 class _QRSettings implements QRSettings {
-  _QRSettings({required this.enabled, required this.size, required this.ecLevel, required this.delay, required this.repair});
+  _QRSettings(
+      {required this.enabled,
+      required this.size,
+      required this.ecLevel,
+      required this.delay,
+      required this.repair});
 
   @override
   final bool enabled;
@@ -4114,7 +4480,8 @@ class _QRSettings implements QRSettings {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$QRSettingsCopyWith<_QRSettings> get copyWith => __$QRSettingsCopyWithImpl<_QRSettings>(this, _$identity);
+  _$QRSettingsCopyWith<_QRSettings> get copyWith =>
+      __$QRSettingsCopyWithImpl<_QRSettings>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -4129,7 +4496,8 @@ class _QRSettings implements QRSettings {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, enabled, size, ecLevel, delay, repair);
+  int get hashCode =>
+      Object.hash(runtimeType, enabled, size, ecLevel, delay, repair);
 
   @override
   String toString() {
@@ -4138,8 +4506,11 @@ class _QRSettings implements QRSettings {
 }
 
 /// @nodoc
-abstract mixin class _$QRSettingsCopyWith<$Res> implements $QRSettingsCopyWith<$Res> {
-  factory _$QRSettingsCopyWith(_QRSettings value, $Res Function(_QRSettings) _then) = __$QRSettingsCopyWithImpl;
+abstract mixin class _$QRSettingsCopyWith<$Res>
+    implements $QRSettingsCopyWith<$Res> {
+  factory _$QRSettingsCopyWith(
+          _QRSettings value, $Res Function(_QRSettings) _then) =
+      __$QRSettingsCopyWithImpl;
   @override
   @useResult
   $Res call({bool enabled, double size, int ecLevel, int delay, int repair});
