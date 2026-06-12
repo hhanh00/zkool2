@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.18.11-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.6...zkool-v6.18.11-rc.7) (2026-06-12)
+
+
+### Bug Fixes
+
+* move cmake_policy(SET CMP0175 OLD) to first line of CMakeLists.txt ([255b8c1](https://github.com/hhanh00/zkool2/commit/255b8c1bbc531039a1bd3897431f60fd68ec2946))
+* set CMP0175 OLD via env var to survive plugin cmake_minimum_required ([e0ccf90](https://github.com/hhanh00/zkool2/commit/e0ccf90efcd83bdfe210995a2e40bd4654506003))
+
 ## [6.18.11-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.5...zkool-v6.18.11-rc.6) (2026-06-12)
 
 
