@@ -13,7 +13,7 @@ required-features = ["graphql"]
 
 [dependencies]
 zcash-trees = {git = "https://github.com/hhanh00/zcash-trees", rev = "94dd6546a9619f4fa49d0808d5ae6631c0aa4510"}
-flutter_rust_bridge = { version = "=2.11.1", optional = true }
+flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
 bip39 = "2.1.0"
