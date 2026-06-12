@@ -26,6 +26,7 @@ runs:
     - name: Build
       shell: powershell
       run: |
+        $env:CMAKE_POLICY_DEFAULT_CMP0175 = "OLD"
         fastforge package --platform=windows --targets=exe,zip
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - name: Move to outdir
