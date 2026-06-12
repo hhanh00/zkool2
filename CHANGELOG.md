@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.4...zkool-v6.18.11-rc.5) (2026-06-12)
+
+
+### Bug Fixes
+
+* propagate fastforge exit code so build failures fail the job ([18e1dd1](https://github.com/hhanh00/zkool2/commit/18e1dd1c9ccfa627c2760c791a90de09fca086ae))
+
 ## [6.18.11-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.3...zkool-v6.18.11-rc.4) (2026-06-12)
 
 
