@@ -9,6 +9,9 @@ set(BINARY_NAME "zkool")
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
+# CMP0175: add_custom_command(TARGET) no longer accepts DEPENDS in CMake 4.0+.
+# flutter_inappwebview_windows uses the old pattern — suppress until they update.
+cmake_policy(SET CMP0175 OLD)
 
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
