@@ -24,9 +24,10 @@ runs:
         echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
         ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
     - name: Build
-      shell: bash
+      shell: powershell
       run: |
         fastforge package --platform=windows --targets=exe,zip
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - name: Move to outdir
       id: out
       shell: bash
