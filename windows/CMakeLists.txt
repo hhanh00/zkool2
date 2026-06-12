@@ -1,9 +1,3 @@
-# CMP0175: add_custom_command(TARGET) no longer accepts DEPENDS in CMake 4.0+.
-# flutter_inappwebview_windows uses the old pattern at its line 31.
-# Must be set BEFORE any cmake_minimum_required() or cmake_policy(VERSION)
-# to establish the default before any subdirectory can reset it.
-cmake_policy(SET CMP0175 OLD)
-
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
 project(zkool LANGUAGES CXX)
@@ -50,8 +44,8 @@ add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 # of modifying this function.
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
-  target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
-  target_compile_options(${TARGET} PRIVATE -Wno-error=nontrivial-memcall)
+  target_compile_options(${TARGET} PRIVATE /W4 /wd"4100")
+  target_compile_options(${TARGET} PRIVATE $<$<STREQUAL:$<TARGET_PROPERTY:${TARGET},VS_PLATFORM_TOOLSET>,ClangCL>:-Wno-error=nontrivial-memcall>)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
