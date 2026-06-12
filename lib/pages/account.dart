@@ -48,11 +48,15 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   int? _editingIndex;
   late final TextEditingController _nameController = TextEditingController();
   late final FocusNode _focusNode = FocusNode();
+  bool _zsaAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(_onFocusChange);
+    isZsaAvailable(c: c).then((v) {
+      if (mounted) setState(() => _zsaAvailable = v);
+    });
   }
 
   @override
@@ -361,6 +365,17 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
     return CustomScrollView(
       slivers: [
+        SliverToBoxAdapter(
+          child: OverflowBar(
+            children: [
+              IconButton(
+                tooltip: _zsaAvailable ? "Issue new ZSA token" : "ZSA not available on this network",
+                onPressed: _zsaAvailable ? () => GoRouter.of(context).push("/zsa/issue") : null,
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+        ),
         if (zsas.isEmpty)
           SliverFillRemaining(
             child: Center(
