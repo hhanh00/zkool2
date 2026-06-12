@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.11-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.7...zkool-v6.18.11-rc.8) (2026-06-12)
+
+
+### Bug Fixes
+
+* guard -Wno-error=nontrivial-memcall behind VS_PLATFORM_TOOLSET check, drop /WX ([1cdd5cc](https://github.com/hhanh00/zkool2/commit/1cdd5cc5b96628529f6917afc95e285672f05263))
+
 ## [6.18.11-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11-rc.6...zkool-v6.18.11-rc.7) (2026-06-12)
 
 
