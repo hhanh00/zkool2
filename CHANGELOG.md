@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.18.12-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.12-rc...zkool-v6.18.12-rc.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* sort ZSA holdings alphabetically by display name ([43e4e13](https://github.com/hhanh00/zkool2/commit/43e4e130704a67ba0bfb8cb48109029609ac1dd3))
+
 ## [6.18.12-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11...zkool-v6.18.12-rc) (2026-06-12)
 
 
