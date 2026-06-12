@@ -3,7 +3,8 @@ use anyhow::Result;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
-use crate::api::coin::Coin;
+use crate::api::coin::{Coin, Network};
+
 use crate::db::ZsaAssetRow;
 
 /// A ZSA token holding representing a balance of a specific asset.
@@ -56,4 +57,13 @@ pub async fn set_asset_name(id_asset: i64, name: String, c: &Coin) -> Result<()>
         anyhow::bail!("No asset with id_asset={id_asset}");
     }
     Ok(())
+}
+
+/// Check whether ZSA (Zcash Shielded Assets) is available on the current network.
+/// ZSA requires NU7 consensus, which is only active on regtest networks
+/// compiled with the `zcash_unstable = "nu7"` cfg flag and whose database
+/// path contains "zsa".
+#[cfg_attr(feature = "flutter", frb)]
+pub fn is_zsa_available(c: &Coin) -> bool {
+    matches!(c.network(), Network::Regtest(config) if config.nu7.is_some())
 }
