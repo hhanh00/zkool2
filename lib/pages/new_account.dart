@@ -135,7 +135,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                             name: "restore",
                             title: Row(
                               children: [
-                                Icon(Icons.restore, size: 20),
+                                SizedBox(width: 38, child: Icon(Icons.restore, size: 20)),
                                 Gap(8),
                                 const Text("Restore Account?"),
                               ],
@@ -212,7 +212,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                           name: "advanced",
                           title: Row(
                             children: [
-                              Icon(Icons.tune, size: 20),
+                              SizedBox(width: 38, child: Icon(Icons.tune, size: 20)),
                               Gap(8),
                               const Text("Advanced Options"),
                             ],
@@ -291,7 +291,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                               name: "ledger",
                               title: Row(
                                 children: [
-                                  Icon(Icons.usb, size: 20),
+                                  SizedBox(width: 38, child: Icon(Icons.usb, size: 20)),
                                   Gap(8),
                                   const Text("H/W Ledger"),
                                 ],
