@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.19.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.4...zkool-v6.19.0-rc.5) (2026-06-13)
+
+
+### Features
+
+* add artifact attestation step to build workflow ([d0ec143](https://github.com/hhanh00/zkool2/commit/d0ec143e70f2c9f9216c03a3ebd2d62bc3f8f522))
+* add sync warning before sending transaction ([97f1dc7](https://github.com/hhanh00/zkool2/commit/97f1dc7ef42de1862938e448a4fcce854557105b))
+* sync warning on send, loop-based sync retry, misc fixes ([9966a5c](https://github.com/hhanh00/zkool2/commit/9966a5c5fff04a1cda49a4acf0fdffcfb7422e8c))
+
 ## [6.19.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.3...zkool-v6.19.0-rc.4) (2026-06-13)
 
 
