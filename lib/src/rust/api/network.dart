@@ -39,8 +39,8 @@ Future<ExchangeRate> getExchangeRate(
 Future<String> getNetworkName({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);
 
-Future<List<LWDInfo>> queryLwdList() =>
-    RustLib.instance.api.crateApiNetworkQueryLwdList();
+Future<List<LWDInfo>> queryLwdList({required int coin}) =>
+    RustLib.instance.api.crateApiNetworkQueryLwdList(coin: coin);
 
 @freezed
 sealed class ExchangeRate with _$ExchangeRate {
