@@ -360,6 +360,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final expertMode = await prefs.getBool("expert_mode") ?? false;
     final paletteName = await prefs.getString("palette_name") ?? 'blue';
     final darkMode = await prefs.getBool("dark_mode") ?? true;
+    final txTableMode = await prefs.getBool("tx_table_mode") ?? false;
     final currency = (hasDb ? await getProp(key: "currency", c: c) : null) ?? "usd";
     final price = ref.watch(priceProvider.notifier);
     price.setAutoFetchFx(getFx, coingecko, currency);
@@ -385,6 +386,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       expertMode: expertMode,
       paletteName: paletteName,
       darkMode: darkMode,
+      transactionTableMode: txTableMode,
       currency: currency,
     );
   }
@@ -402,6 +404,14 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     state = state.whenData((s) => s.copyWith(
           paletteName: paletteName,
           darkMode: darkMode,
+        ));
+  }
+
+  Future<void> setTransactionViewMode(bool tableMode) async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool("tx_table_mode", tableMode);
+    state = state.whenData((s) => s.copyWith(
+          transactionTableMode: tableMode,
         ));
   }
 }
@@ -476,6 +486,7 @@ sealed class AppSettings with _$AppSettings {
     required bool expertMode,
     required String paletteName,
     required bool darkMode,
+    required bool transactionTableMode,
     required String currency,
   }) = _AppSettings;
 }
