@@ -123,22 +123,14 @@ class TxPageState extends ConsumerState<TxPage> {
       body: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
-          "Your wallet is not fully synced with the blockchain.\n\n"
-          "Wallet height: $accountHeight\n"
-          "Chain tip: $currentHeight\n\n"
-          "Sending before syncing may cause the transaction to fail. "
-          "It is recommended to sync now.",
+          "Your wallet is ${currentHeight - accountHeight} blocks behind the chain tip.\n\n"
+          "Sending before syncing may cause the transaction to fail.",
         ),
       ),
+      btnOkText: "Sync Now",
+      btnOkOnPress: () {},
       btnCancelText: "Skip & Send",
       btnCancelOnPress: () {},
-      btnOkOnPress: () {},
-      btnOk: AnimatedButton(
-        isFixedHeight: false,
-        text: "Sync Now",
-        color: const Color(0xFF00CA71),
-        pressEvent: () {},
-      ),
       onDismissCallback: (type) {
         switch (type) {
           case DismissType.btnOk:
