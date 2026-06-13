@@ -24,9 +24,15 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   List<Category>? categoryList;
   late final c = coinContext.coin;
 
+  // Memo inline editing state
+  bool _editingMemo = false;
+  late final TextEditingController _memoController = TextEditingController();
+  late final FocusNode _memoFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
+    _memoFocusNode.addListener(_onMemoFocusChange);
     Future(() async {
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final account = await ref.read(accountProvider(selectedAccount.id).future);
@@ -39,6 +45,61 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
         this.categoryList = categoryList;
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _memoFocusNode.removeListener(_onMemoFocusChange);
+    _memoController.dispose();
+    _memoFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onMemoFocusChange() {
+    if (!_memoFocusNode.hasFocus && _editingMemo) {
+      _commitMemoEditing();
+    }
+  }
+
+  void _startMemoEditing(TxAccount txd) {
+    final firstTextMemo = txd.memos
+        .map((m) => m.memo)
+        .firstWhere((m) => m != null && m.isNotEmpty, orElse: () => null);
+    _memoController.text = txd.userMemo ?? firstTextMemo ?? '';
+    _memoController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _memoController.text.length),
+    );
+    _editingMemo = true;
+    _memoFocusNode.requestFocus();
+    setState(() {});
+  }
+
+  Future<void> _commitMemoEditing() async {
+    _editingMemo = false;
+    if (!mounted) return;
+    final txd = ref.read(getTxDetailsProvider(widget.idTx)).value;
+    if (txd == null) return;
+
+    final newText = _memoController.text.trim();
+    // Compute the effective memo before editing
+    final firstTextMemo = txd.memos
+        .map((m) => m.memo)
+        .firstWhere((m) => m != null && m.isNotEmpty, orElse: () => null);
+    final oldText = txd.userMemo ?? firstTextMemo ?? '';
+
+    setState(() {});
+
+    if (newText == oldText) return;
+
+    if (newText.isEmpty) {
+      await setUserMemo(idTx: txd.id, memo: null, c: c);
+    } else {
+      await setUserMemo(idTx: txd.id, memo: newText, c: c);
+    }
+    ref.invalidate(getTxDetailsProvider(widget.idTx));
+    if (account != null) {
+      ref.invalidate(accountProvider(account!.account.id));
+    }
   }
 
   @override
@@ -130,6 +191,34 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
         title: Text("Category"),
         subtitle: DropdownMenu(initialSelection: txd.category, onSelected: (v) => onChangeTxCategory(txd.id, v), dropdownMenuEntries: categories),
       ),
+      ListTile(
+        title: Text("Memo"),
+        subtitle: _editingMemo
+            ? TextField(
+                controller: _memoController,
+                focusNode: _memoFocusNode,
+                maxLines: null,
+                minLines: 2,
+                textInputAction: TextInputAction.newline,
+                onEditingComplete: _commitMemoEditing,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              )
+            : GestureDetector(
+                onLongPress: () => _startMemoEditing(txd),
+                child: Text(
+                  txd.userMemo ?? _firstTextMemo(txd) ?? "—",
+                  style: txd.userMemo != null && txd.userMemo!.isNotEmpty
+                      ? TextStyle(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        )
+                      : null,
+                ),
+              ),
+      ),
       Divider(),
       if (txd.spends.isNotEmpty) Text("Spent Notes", style: t.titleSmall),
       ...txd.spends.expand(
@@ -195,5 +284,12 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
   void onChangeTxCategory(int id, int? category) async {
     await setTxCategory(id: id, category: category, c: c);
+  }
+
+  String? _firstTextMemo(TxAccount txd) {
+    for (final m in txd.memos) {
+      if (m.memo != null && m.memo!.isNotEmpty) return m.memo;
+    }
+    return null;
   }
 }

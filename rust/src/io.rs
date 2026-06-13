@@ -407,6 +407,20 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     }
     io_account.transactions = transactions;
 
+    // Export user memos
+    let user_memos = sqlx::query(
+        "SELECT id_tx, user_memo FROM user_memos WHERE account = ?",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id_tx: u32 = row.get(0);
+        let user_memo: String = row.get(1);
+        IOUserMemo { id_tx, user_memo }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    io_account.user_memos = user_memos;
+
     let dkg_params =
         sqlx::query("SELECT id, n, t, seed, birth_height FROM dkg_params WHERE account = ?")
             .bind(account)
@@ -764,6 +778,21 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         }
     }
 
+    info!("Importing user memos");
+    for user_memo in io_account.user_memos.iter() {
+        if let Some(new_id_tx) = new_txs.get(&user_memo.id_tx) {
+            sqlx::query(
+                "INSERT INTO user_memos
+                (account, id_tx, user_memo) VALUES (?, ?, ?)",
+            )
+            .bind(new_id_account)
+            .bind(new_id_tx)
+            .bind(&user_memo.user_memo)
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
     info!("Importing checkpoints");
     for block in io_account.blocks.iter() {
         sqlx::query(
@@ -856,6 +885,7 @@ pub struct IOAccount {
     pub dkg_packages: Vec<DKGPackage>,
     pub categories: Vec<IOCategory>,
     pub assets: Vec<IOAsset>,
+    pub user_memos: Vec<IOUserMemo>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
@@ -960,6 +990,12 @@ pub struct IOSpend {
     pub account: u32,
     pub pool: u8,
     pub value: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+pub struct IOUserMemo {
+    pub id_tx: u32,
+    pub user_memo: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
