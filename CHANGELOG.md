@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.19.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.12-rc.2...zkool-v6.19.0-rc.2) (2026-06-13)
+
+
+### Features
+
+* offer to sync account after import/restore ([464f511](https://github.com/hhanh00/zkool2/commit/464f51181dd8beb42679bdf311795295d9e8cc46))
+
 ## [6.18.12-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.12-rc.1...zkool-v6.18.12-rc.2) (2026-06-12)
 
 
