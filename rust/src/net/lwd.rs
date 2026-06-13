@@ -186,9 +186,14 @@ impl LwdServer for GRPCClient {
     }
 }
 
-pub async fn query_lwd_list() -> Result<Vec<LWDInfo>> {
-    // Implement by querying https://hosh.zec.rocks/api/v0/zec.json?chain=main
-     let rep = reqwest::get("https://hosh.zec.rocks/api/v0/zec.json?chain=main")
+pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
+    // 0 = mainnet, 1 = testnet, 2 = regtest
+    if coin == 2 {
+        return Ok(Vec::new());
+    }
+    let chain = if coin == 1 { "test" } else { "main" };
+    let url = format!("https://hosh.zec.rocks/api/v0/zec.json?chain={chain}");
+    let rep = reqwest::get(&url)
         .await?
         .error_for_status()?
         .json::<serde_json::Value>()
