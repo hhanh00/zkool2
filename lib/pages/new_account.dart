@@ -407,7 +407,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             message: "Account imported successfully. Would you like to synchronize it now?",
           );
           if (shouldSync && mounted) {
-            unawaited(ref.read(synchronizerProvider.notifier).checkSyncNeeded(currentHeight, now: true));
+            unawaited(ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true));
           }
         }
         ref.invalidate(getAccountsProvider);
