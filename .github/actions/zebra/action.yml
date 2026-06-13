@@ -13,7 +13,7 @@ runs:
   steps:
     - name: Cache zebra
       id: cache-zebra
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ./tools/bin
@@ -38,7 +38,7 @@ runs:
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ./tools/bin
         key: ${{ runner.os }}-zebra-lwd-5.0.0

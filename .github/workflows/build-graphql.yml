@@ -19,7 +19,7 @@ jobs:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Build zkool_graphql
         run: |
           sudo apt-get update
@@ -30,7 +30,7 @@ jobs:
           RUSTFLAGS: '--cfg zcash_unstable="nu7"'
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ./target/release/zkool_graphql
           draft: true
