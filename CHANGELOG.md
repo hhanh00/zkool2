@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.19.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.3...zkool-v6.19.0-rc.4) (2026-06-13)
+
+
+### Bug Fixes
+
+* fix server ordering ([#1074](https://github.com/hhanh00/zkool2/issues/1074)) ([1ca4fbe](https://github.com/hhanh00/zkool2/commit/1ca4fbe9815fc80482d4ddfd092c1961c91727ce))
+* hide checkbox column in transaction history table ([90a2f81](https://github.com/hhanh00/zkool2/commit/90a2f8124e618cd4574e54ceb0671dc78124c551))
+* use coin type instead of hardcoded 'main' in LWD server list query ([cd0e692](https://github.com/hhanh00/zkool2/commit/cd0e69269e61c177702e4dac0d1fb815cbc5ef1f))
+
 ## [6.19.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.2...zkool-v6.19.0-rc.3) (2026-06-13)
 
 
