@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -397,6 +399,16 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         }
         if (mounted && key.isEmpty && seed != null) {
           await showSeed(context, seed.mnemonic);
+        }
+        if (mounted && r && currentHeight != null) {
+          final shouldSync = await confirmDialog(
+            context,
+            title: "Account Imported",
+            message: "Account imported successfully. Would you like to synchronize it now?",
+          );
+          if (shouldSync && mounted) {
+            unawaited(ref.read(synchronizerProvider.notifier).checkSyncNeeded(currentHeight, now: true));
+          }
         }
         ref.invalidate(getAccountsProvider);
         if (mounted) GoRouter.of(context).pop();
