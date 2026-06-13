@@ -2197,6 +2197,7 @@ mixin _$Memo {
   int get time;
   Uint8List get memoBytes;
   String? get memo;
+  bool get isUserMemo;
 
   /// Create a copy of Memo
   /// with the given fields replaced by the non-null parameter values.
@@ -2218,16 +2219,28 @@ mixin _$Memo {
             (identical(other.vout, vout) || other.vout == vout) &&
             (identical(other.time, time) || other.time == time) &&
             const DeepCollectionEquality().equals(other.memoBytes, memoBytes) &&
-            (identical(other.memo, memo) || other.memo == memo));
+            (identical(other.memo, memo) || other.memo == memo) &&
+            (identical(other.isUserMemo, isUserMemo) ||
+                other.isUserMemo == isUserMemo));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, idTx, idNote, pool, height,
-      vout, time, const DeepCollectionEquality().hash(memoBytes), memo);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      idTx,
+      idNote,
+      pool,
+      height,
+      vout,
+      time,
+      const DeepCollectionEquality().hash(memoBytes),
+      memo,
+      isUserMemo);
 
   @override
   String toString() {
-    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo)';
+    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo, isUserMemo: $isUserMemo)';
   }
 }
 
@@ -2245,7 +2258,8 @@ abstract mixin class $MemoCopyWith<$Res> {
       int vout,
       int time,
       Uint8List memoBytes,
-      String? memo});
+      String? memo,
+      bool isUserMemo});
 }
 
 /// @nodoc
@@ -2269,6 +2283,7 @@ class _$MemoCopyWithImpl<$Res> implements $MemoCopyWith<$Res> {
     Object? time = null,
     Object? memoBytes = null,
     Object? memo = freezed,
+    Object? isUserMemo = null,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -2307,6 +2322,10 @@ class _$MemoCopyWithImpl<$Res> implements $MemoCopyWith<$Res> {
           ? _self.memo
           : memo // ignore: cast_nullable_to_non_nullable
               as String?,
+      isUserMemo: null == isUserMemo
+          ? _self.isUserMemo
+          : isUserMemo // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -2402,16 +2421,34 @@ extension MemoPatterns on Memo {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int id, int idTx, int? idNote, int pool, int height,
-            int vout, int time, Uint8List memoBytes, String? memo)?
+    TResult Function(
+            int id,
+            int idTx,
+            int? idNote,
+            int pool,
+            int height,
+            int vout,
+            int time,
+            Uint8List memoBytes,
+            String? memo,
+            bool isUserMemo)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _Memo() when $default != null:
-        return $default(_that.id, _that.idTx, _that.idNote, _that.pool,
-            _that.height, _that.vout, _that.time, _that.memoBytes, _that.memo);
+        return $default(
+            _that.id,
+            _that.idTx,
+            _that.idNote,
+            _that.pool,
+            _that.height,
+            _that.vout,
+            _that.time,
+            _that.memoBytes,
+            _that.memo,
+            _that.isUserMemo);
       case _:
         return orElse();
     }
@@ -2432,15 +2469,33 @@ extension MemoPatterns on Memo {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int id, int idTx, int? idNote, int pool, int height,
-            int vout, int time, Uint8List memoBytes, String? memo)
+    TResult Function(
+            int id,
+            int idTx,
+            int? idNote,
+            int pool,
+            int height,
+            int vout,
+            int time,
+            Uint8List memoBytes,
+            String? memo,
+            bool isUserMemo)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _Memo():
-        return $default(_that.id, _that.idTx, _that.idNote, _that.pool,
-            _that.height, _that.vout, _that.time, _that.memoBytes, _that.memo);
+        return $default(
+            _that.id,
+            _that.idTx,
+            _that.idNote,
+            _that.pool,
+            _that.height,
+            _that.vout,
+            _that.time,
+            _that.memoBytes,
+            _that.memo,
+            _that.isUserMemo);
     }
   }
 
@@ -2458,15 +2513,33 @@ extension MemoPatterns on Memo {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int id, int idTx, int? idNote, int pool, int height,
-            int vout, int time, Uint8List memoBytes, String? memo)?
+    TResult? Function(
+            int id,
+            int idTx,
+            int? idNote,
+            int pool,
+            int height,
+            int vout,
+            int time,
+            Uint8List memoBytes,
+            String? memo,
+            bool isUserMemo)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _Memo() when $default != null:
-        return $default(_that.id, _that.idTx, _that.idNote, _that.pool,
-            _that.height, _that.vout, _that.time, _that.memoBytes, _that.memo);
+        return $default(
+            _that.id,
+            _that.idTx,
+            _that.idNote,
+            _that.pool,
+            _that.height,
+            _that.vout,
+            _that.time,
+            _that.memoBytes,
+            _that.memo,
+            _that.isUserMemo);
       case _:
         return null;
     }
@@ -2485,7 +2558,8 @@ class _Memo implements Memo {
       required this.vout,
       required this.time,
       required this.memoBytes,
-      this.memo});
+      this.memo,
+      required this.isUserMemo});
 
   @override
   final int id;
@@ -2505,6 +2579,8 @@ class _Memo implements Memo {
   final Uint8List memoBytes;
   @override
   final String? memo;
+  @override
+  final bool isUserMemo;
 
   /// Create a copy of Memo
   /// with the given fields replaced by the non-null parameter values.
@@ -2527,16 +2603,28 @@ class _Memo implements Memo {
             (identical(other.vout, vout) || other.vout == vout) &&
             (identical(other.time, time) || other.time == time) &&
             const DeepCollectionEquality().equals(other.memoBytes, memoBytes) &&
-            (identical(other.memo, memo) || other.memo == memo));
+            (identical(other.memo, memo) || other.memo == memo) &&
+            (identical(other.isUserMemo, isUserMemo) ||
+                other.isUserMemo == isUserMemo));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, idTx, idNote, pool, height,
-      vout, time, const DeepCollectionEquality().hash(memoBytes), memo);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      idTx,
+      idNote,
+      pool,
+      height,
+      vout,
+      time,
+      const DeepCollectionEquality().hash(memoBytes),
+      memo,
+      isUserMemo);
 
   @override
   String toString() {
-    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo)';
+    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo, isUserMemo: $isUserMemo)';
   }
 }
 
@@ -2555,7 +2643,8 @@ abstract mixin class _$MemoCopyWith<$Res> implements $MemoCopyWith<$Res> {
       int vout,
       int time,
       Uint8List memoBytes,
-      String? memo});
+      String? memo,
+      bool isUserMemo});
 }
 
 /// @nodoc
@@ -2579,6 +2668,7 @@ class __$MemoCopyWithImpl<$Res> implements _$MemoCopyWith<$Res> {
     Object? time = null,
     Object? memoBytes = null,
     Object? memo = freezed,
+    Object? isUserMemo = null,
   }) {
     return _then(_Memo(
       id: null == id
@@ -2617,6 +2707,10 @@ class __$MemoCopyWithImpl<$Res> implements _$MemoCopyWith<$Res> {
           ? _self.memo
           : memo // ignore: cast_nullable_to_non_nullable
               as String?,
+      isUserMemo: null == isUserMemo
+          ? _self.isUserMemo
+          : isUserMemo // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -3560,6 +3654,8 @@ mixin _$Tx {
   int? get assetId;
   String get assetDisplay;
   double? get price;
+  String? get memo;
+  bool get isUserMemo;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3585,7 +3681,10 @@ mixin _$Tx {
             (identical(other.assetId, assetId) || other.assetId == assetId) &&
             (identical(other.assetDisplay, assetDisplay) ||
                 other.assetDisplay == assetDisplay) &&
-            (identical(other.price, price) || other.price == price));
+            (identical(other.price, price) || other.price == price) &&
+            (identical(other.memo, memo) || other.memo == memo) &&
+            (identical(other.isUserMemo, isUserMemo) ||
+                other.isUserMemo == isUserMemo));
   }
 
   @override
@@ -3601,11 +3700,13 @@ mixin _$Tx {
       zsaValue,
       assetId,
       assetDisplay,
-      price);
+      price,
+      memo,
+      isUserMemo);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo)';
   }
 }
 
@@ -3624,7 +3725,9 @@ abstract mixin class $TxCopyWith<$Res> {
       PlatformInt64 zsaValue,
       int? assetId,
       String assetDisplay,
-      double? price});
+      double? price,
+      String? memo,
+      bool isUserMemo});
 }
 
 /// @nodoc
@@ -3650,6 +3753,8 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
     Object? assetId = freezed,
     Object? assetDisplay = null,
     Object? price = freezed,
+    Object? memo = freezed,
+    Object? isUserMemo = null,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -3696,6 +3801,14 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
           ? _self.price
           : price // ignore: cast_nullable_to_non_nullable
               as double?,
+      memo: freezed == memo
+          ? _self.memo
+          : memo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isUserMemo: null == isUserMemo
+          ? _self.isUserMemo
+          : isUserMemo // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -3802,7 +3915,9 @@ extension TxPatterns on Tx {
             PlatformInt64 zsaValue,
             int? assetId,
             String assetDisplay,
-            double? price)?
+            double? price,
+            String? memo,
+            bool isUserMemo)?
         $default, {
     required TResult orElse(),
   }) {
@@ -3820,7 +3935,9 @@ extension TxPatterns on Tx {
             _that.zsaValue,
             _that.assetId,
             _that.assetDisplay,
-            _that.price);
+            _that.price,
+            _that.memo,
+            _that.isUserMemo);
       case _:
         return orElse();
     }
@@ -3852,7 +3969,9 @@ extension TxPatterns on Tx {
             PlatformInt64 zsaValue,
             int? assetId,
             String assetDisplay,
-            double? price)
+            double? price,
+            String? memo,
+            bool isUserMemo)
         $default,
   ) {
     final _that = this;
@@ -3869,7 +3988,9 @@ extension TxPatterns on Tx {
             _that.zsaValue,
             _that.assetId,
             _that.assetDisplay,
-            _that.price);
+            _that.price,
+            _that.memo,
+            _that.isUserMemo);
     }
   }
 
@@ -3898,7 +4019,9 @@ extension TxPatterns on Tx {
             PlatformInt64 zsaValue,
             int? assetId,
             String assetDisplay,
-            double? price)?
+            double? price,
+            String? memo,
+            bool isUserMemo)?
         $default,
   ) {
     final _that = this;
@@ -3915,7 +4038,9 @@ extension TxPatterns on Tx {
             _that.zsaValue,
             _that.assetId,
             _that.assetDisplay,
-            _that.price);
+            _that.price,
+            _that.memo,
+            _that.isUserMemo);
       case _:
         return null;
     }
@@ -3936,7 +4061,9 @@ class _Tx implements Tx {
       required this.zsaValue,
       this.assetId,
       required this.assetDisplay,
-      this.price});
+      this.price,
+      this.memo,
+      required this.isUserMemo});
 
   @override
   final int id;
@@ -3960,6 +4087,10 @@ class _Tx implements Tx {
   final String assetDisplay;
   @override
   final double? price;
+  @override
+  final String? memo;
+  @override
+  final bool isUserMemo;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3986,7 +4117,10 @@ class _Tx implements Tx {
             (identical(other.assetId, assetId) || other.assetId == assetId) &&
             (identical(other.assetDisplay, assetDisplay) ||
                 other.assetDisplay == assetDisplay) &&
-            (identical(other.price, price) || other.price == price));
+            (identical(other.price, price) || other.price == price) &&
+            (identical(other.memo, memo) || other.memo == memo) &&
+            (identical(other.isUserMemo, isUserMemo) ||
+                other.isUserMemo == isUserMemo));
   }
 
   @override
@@ -4002,11 +4136,13 @@ class _Tx implements Tx {
       zsaValue,
       assetId,
       assetDisplay,
-      price);
+      price,
+      memo,
+      isUserMemo);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo)';
   }
 }
 
@@ -4026,7 +4162,9 @@ abstract mixin class _$TxCopyWith<$Res> implements $TxCopyWith<$Res> {
       PlatformInt64 zsaValue,
       int? assetId,
       String assetDisplay,
-      double? price});
+      double? price,
+      String? memo,
+      bool isUserMemo});
 }
 
 /// @nodoc
@@ -4052,6 +4190,8 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
     Object? assetId = freezed,
     Object? assetDisplay = null,
     Object? price = freezed,
+    Object? memo = freezed,
+    Object? isUserMemo = null,
   }) {
     return _then(_Tx(
       id: null == id
@@ -4098,6 +4238,14 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
           ? _self.price
           : price // ignore: cast_nullable_to_non_nullable
               as double?,
+      memo: freezed == memo
+          ? _self.memo
+          : memo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isUserMemo: null == isUserMemo
+          ? _self.isUserMemo
+          : isUserMemo // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }

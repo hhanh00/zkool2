@@ -290,6 +290,7 @@ sealed class Memo with _$Memo {
     required int time,
     required Uint8List memoBytes,
     String? memo,
+    required bool isUserMemo,
   }) = _Memo;
 }
 
@@ -405,6 +406,8 @@ sealed class Tx with _$Tx {
     int? assetId,
     required String assetDisplay,
     double? price,
+    String? memo,
+    required bool isUserMemo,
   }) = _Tx;
 }
 
@@ -420,6 +423,7 @@ class TxAccount {
   final List<TxSpend> spends;
   final List<TxOutput> outputs;
   final List<TxMemo> memos;
+  final String? userMemo;
 
   const TxAccount({
     required this.id,
@@ -433,6 +437,7 @@ class TxAccount {
     required this.spends,
     required this.outputs,
     required this.memos,
+    this.userMemo,
   });
 
   static Future<TxAccount> default_() =>
@@ -450,7 +455,8 @@ class TxAccount {
       notes.hashCode ^
       spends.hashCode ^
       outputs.hashCode ^
-      memos.hashCode;
+      memos.hashCode ^
+      userMemo.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -467,7 +473,8 @@ class TxAccount {
           notes == other.notes &&
           spends == other.spends &&
           outputs == other.outputs &&
-          memos == other.memos;
+          memos == other.memos &&
+          userMemo == other.userMemo;
 }
 
 class TxMemo {

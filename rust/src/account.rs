@@ -998,6 +998,7 @@ pub async fn get_tx_details(
             spends: vec![],
             outputs: vec![],
             memos: vec![],
+            user_memo: None,
         }
     })
     .fetch_one(&mut *connection)
@@ -1123,6 +1124,16 @@ pub async fn get_tx_details(
     tx.spends = spends;
     tx.memos = memos;
     tx.outputs = outputs;
+
+    let user_memo: Option<String> =
+        sqlx::query("SELECT user_memo FROM user_memos WHERE account = ?1 AND id_tx = ?2")
+            .bind(account)
+            .bind(id_tx)
+            .map(|row: SqliteRow| row.get(0))
+            .fetch_optional(&mut *connection)
+            .await?
+            .flatten();
+    tx.user_memo = user_memo;
 
     Ok(tx)
 }

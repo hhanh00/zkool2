@@ -321,16 +321,28 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                 SliverToBoxAdapter(
                                   child: TransactionTable(
                                     transactions: account.transactions,
-                                    memos: account.memos,
                                     currency: currency,
                                     onTap: (id) => gotoTransaction(context, id),
+                                    onMemoChanged: (txId, newMemo) async {
+                                      await setUserMemo(
+                                        idTx: txId,
+                                        memo: newMemo,
+                                        c: c,
+                                      );
+                                      ref.invalidate(accountProvider);
+                                    },
                                   ),
                                 )
                               else
                                 ...showTxHistory(context, account.transactions),
                             ],
                           ),
-                          showMemos(context, account.memos),
+                          showMemos(context, account.memos, () {
+                            final selectedAccount =
+                                ref.read(selectedAccountProvider).requireValue!;
+                            ref.invalidate(
+                                accountProvider(selectedAccount.id));
+                          }),
                           showNotes(ref, account.notes),
                           _showZsaHoldings(context, account.zsas),
                         ],
@@ -899,10 +911,16 @@ Uint8List trimTrailingZeros(Uint8List bytes) {
   return bytes.sublist(0, end);
 }
 
-Widget showMemos(BuildContext context, List<Memo> memos) {
+Widget showMemos(BuildContext context, List<Memo> memos, VoidCallback onMemoChanged) {
+  // Use a key derived from the memo list content to force rebuild when memos update,
+  // since SearchableList only reads initialList once.
+  final memoKey = memos.isEmpty
+      ? 'empty'
+      : '${memos.first.id}_${memos.last.id}_${memos.length}';
   return SearchableList(
+    key: ValueKey(memoKey),
     initialList: memos,
-    itemBuilder: (memo) => MemoWidget(memo),
+    itemBuilder: (memo) => MemoWidget(memo, onMemoChanged: onMemoChanged),
     filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
     inputDecoration: InputDecoration(
       labelText: "Search Memos",
@@ -972,29 +990,120 @@ void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async 
   ref.invalidate(accountProvider(selectedAccount.id));
 }
 
-class MemoWidget extends StatelessWidget {
+class MemoWidget extends StatefulWidget {
   final Memo memo;
-  const MemoWidget(this.memo, {super.key});
+  final void Function() onMemoChanged;
+  const MemoWidget(this.memo, {super.key, required this.onMemoChanged});
+
+  @override
+  State<MemoWidget> createState() => _MemoWidgetState();
+}
+
+class _MemoWidgetState extends State<MemoWidget> {
+  bool _editing = false;
+  late final TextEditingController _controller = TextEditingController();
+  late final FocusNode _focusNode = FocusNode();
+  late final c = coinContext.coin;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _editing) {
+      _commitEditing();
+    }
+  }
+
+  void _startEditing() {
+    // Pre-populate with the text memo (not binary)
+    _controller.text = widget.memo.memo ?? '';
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+    _editing = true;
+    _focusNode.requestFocus();
+    setState(() {});
+  }
+
+  Future<void> _commitEditing() async {
+    _editing = false;
+    if (!mounted) return;
+    final newText = _controller.text.trim();
+    final oldText = widget.memo.memo ?? '';
+    setState(() {});
+
+    if (newText == oldText) return;
+
+    if (newText.isEmpty) {
+      await setUserMemo(idTx: widget.memo.idTx, memo: null, c: c);
+    } else {
+      await setUserMemo(idTx: widget.memo.idTx, memo: newText, c: c);
+    }
+    widget.onMemoChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final cs = t.colorScheme;
-    final incoming = memo.idNote != null;
+    final incoming = widget.memo.idNote != null;
+    final memoText = widget.memo.memo;
 
     return GestureDetector(
-      onTap: () => gotoTransaction(context, memo.idTx),
+      onTap: () => gotoTransaction(context, widget.memo.idTx),
+      onLongPress: _startEditing,
       child: Padding(
-        padding: EdgeInsetsGeometry.symmetric(vertical: 4),
+        padding: const EdgeInsetsGeometry.symmetric(vertical: 4),
         child: Bubble(
           nip: incoming ? BubbleNip.leftTop : BubbleNip.rightTop,
-          color: incoming ? cs.surface : cs.secondaryContainer,
+          color: incoming ? Colors.transparent : cs.secondaryContainer,
+          borderColor: incoming ? cs.outline : Colors.transparent,
+          borderWidth: incoming ? 1 : 0,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Align(alignment: Alignment.centerRight, child: Text(timeToString(memo.time), style: t.textTheme.labelMedium)),
-              Gap(8),
-              CopyableText(memo.memo ?? hex.encode(trimTrailingZeros(memo.memoBytes))),
+              Align(alignment: Alignment.centerRight, child: Text(timeToString(widget.memo.time), style: t.textTheme.labelMedium)),
+              const Gap(8),
+              if (_editing)
+                TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  maxLines: null,
+                  minLines: 2,
+                  textInputAction: TextInputAction.newline,
+                  onEditingComplete: _commitEditing,
+                  style: widget.memo.isUserMemo
+                      ? TextStyle(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        )
+                      : null,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              else
+                CopyableText(
+                  memoText ?? hex.encode(trimTrailingZeros(widget.memo.memoBytes)),
+                  style: widget.memo.isUserMemo
+                      ? TextStyle(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        )
+                      : null,
+                ),
             ],
           ),
         ),

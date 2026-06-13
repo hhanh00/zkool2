@@ -327,6 +327,8 @@ pub struct Tx {
     pub asset_id: Option<i32>,
     pub asset_display: String,
     pub price: Option<f64>,
+    pub memo: Option<String>,
+    pub is_user_memo: bool,
 }
 
 pub struct TAddressTxCount {
@@ -346,8 +348,10 @@ pub async fn remove_account(account_id: u32, c: &Coin) -> Result<()> {
 }
 
 pub async fn list_tx_history(c: &Coin) -> Result<Vec<Tx>> {
+    tracing::info!("list_tx_history: start for account {}", c.account);
     let mut connection = c.get_connection().await?;
     let txs = crate::db::fetch_txs(&mut connection, c.account).await?;
+    tracing::info!("list_tx_history: got {} transactions", txs.len());
     Ok(txs)
 }
 
@@ -362,6 +366,7 @@ pub struct Memo {
     pub time: u32,
     pub memo_bytes: Vec<u8>,
     pub memo: Option<String>,
+    pub is_user_memo: bool,
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -806,6 +811,7 @@ pub struct TxAccount {
     pub spends: Vec<TxSpend>,
     pub outputs: Vec<TxOutput>,
     pub memos: Vec<TxMemo>,
+    pub user_memo: Option<String>,
 }
 
 #[derive(Default, Debug)]
