@@ -776,7 +776,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       final currentHeight = await getCurrentHeight(c: c);
       final h = ref.read(currentHeightProvider.notifier);
       if (h.setHeight(currentHeight)) {
-        await checkSyncNeeded(currentHeight, now: now);
+        await syncIfNeeded(currentHeight, now: now);
       }
     } on AnyhowException catch (e) {
       logger.e(e);
@@ -786,7 +786,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     }
   }
 
-  Future<void> checkSyncNeeded(int currentHeight, {required bool now}) async {
+  Future<void> syncIfNeeded(int currentHeight, {required bool now}) async {
     final settings = ref.read(appSettingsProvider).requireValue;
     List<Account> accountsToSync = [];
     final accounts = await ref.read(getAccountsProvider.future);
@@ -800,9 +800,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       }
     }
     if (accountsToSync.isNotEmpty) {
-      await startSynchronize(
-        accountsToSync,
-      );
+      await startSynchronize(accountsToSync);
     }
   }
 }

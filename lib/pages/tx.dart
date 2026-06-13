@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:convert/convert.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
@@ -110,7 +111,51 @@ class TxPageState extends ConsumerState<TxPage> {
     await GoRouter.of(context).push("/frost1", extra: widget.pczt);
   }
 
-  void onSend() async {
+  /// Shows a warning dialog when the wallet is not fully synced.
+  /// Returns `true` if the user wants to sync first, `false` to skip,
+  /// or `null` if the dialog was dismissed.
+  Future<bool?> _showSyncWarning(int currentHeight, int accountHeight) async {
+    final result = await AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.rightSlide,
+      title: "Sync Warning",
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          "Your wallet is not fully synced with the blockchain.\n\n"
+          "Wallet height: $accountHeight\n"
+          "Chain tip: $currentHeight\n\n"
+          "Sending before syncing may cause the transaction to fail. "
+          "It is recommended to sync now.",
+        ),
+      ),
+      btnCancelText: "Skip & Send",
+      btnCancelOnPress: () {},
+      btnOkOnPress: () {},
+      btnOk: AnimatedButton(
+        isFixedHeight: false,
+        text: "Sync Now",
+        color: const Color(0xFF00CA71),
+        pressEvent: () {},
+      ),
+      onDismissCallback: (type) {
+        switch (type) {
+          case DismissType.btnOk:
+            GoRouter.of(context).pop(true); // sync
+          case DismissType.btnCancel:
+            GoRouter.of(context).pop(false); // skip
+          default:
+            GoRouter.of(context).pop(null); // dismissed
+        }
+      },
+      dismissOnTouchOutside: false,
+      autoDismiss: false,
+    ).show();
+    return result as bool?;
+  }
+
+  Future<void> _confirmAndSend() async {
     setState(() => _sending = true);
     try {
       final confirmed = await confirmDialog(
@@ -185,6 +230,31 @@ class TxPageState extends ConsumerState<TxPage> {
     } on AnyhowException catch (e) {
       setState(() => _sending = false);
       if (mounted) await showException(context, e.message);
+    }
+  }
+
+  void onSend() async {
+    setState(() => _sending = true);
+    try {
+      // Check if wallet is synced before sending
+      final currentHeight = ref.read(currentHeightProvider);
+      final accountHeight = account!.height;
+      if (currentHeight != null && accountHeight < currentHeight) {
+        final syncChoice = await _showSyncWarning(currentHeight, accountHeight);
+        if (syncChoice == null) return; // user dismissed the dialog
+        if (syncChoice) {
+          // User chose to sync — await completion, then send
+          showSnackbar("Please wait for wallet to synchronize");
+          await ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true);
+          if (!mounted) return;
+        }
+      }
+
+      await _confirmAndSend();
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    } finally {
+      setState(() => _sending = false);
     }
   }
 
