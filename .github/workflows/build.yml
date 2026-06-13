@@ -32,6 +32,9 @@ jobs:
     env:
       FLUTTER_VERSION: 3.41.7
       RUSTFLAGS: '--cfg zcash_unstable="nu7"'
+    permissions:
+      id-token: write
+      attestations: write
 
     steps:
       - name: Install RUST
@@ -100,6 +103,11 @@ jobs:
         run: |
           df -h
           echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir || steps.build_windows.outputs.outdir }}" >> $GITHUB_OUTPUT
+      - name: Attest build provenance
+        if: startsWith(github.ref_name, 'zkool-v')
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ steps.collect.outputs.outdir }}/*
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v2
