@@ -147,7 +147,7 @@ class _TransactionTableState extends State<TransactionTable> {
                     // Type
                     DataCell(
                       SizedBox(
-                        width: 101,
+                        width: 116,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
