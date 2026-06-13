@@ -35,6 +35,7 @@ jobs:
     permissions:
       id-token: write
       attestations: write
+      contents: write
 
     steps:
       - name: Install RUST
