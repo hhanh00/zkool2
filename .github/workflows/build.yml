@@ -100,11 +100,93 @@ jobs:
         run: |
           df -h
           echo "outdir=${{ steps.build_android.outputs.outdir || steps.build_linux.outputs.outdir || steps.build_mac.outputs.outdir || steps.build_windows.outputs.outdir }}" >> $GITHUB_OUTPUT
-      - name: Create Release
+      - name: Upload build artifacts
         if: startsWith(github.ref_name, 'zkool-v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}-${{ matrix.arch }}
+          path: ${{ steps.collect.outputs.outdir }}/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref_name, 'zkool-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # edit release / upload assets
+      id-token: write       # sigstore OIDC for attestation
+      attestations: write   # write attestation to GitHub
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Compute version
+        id: version
+        shell: bash
+        run: |
+          NAME=$(sed -n 's/^name: *\([^ ]*\).*/\1/p' pubspec.yaml)
+          SEMVER=$(sed -n 's/^version: *\([^ ]*\).*/\1/p' pubspec.yaml)
+          BUILD=$(cat build_number.txt)
+          echo "distname=${NAME}-${SEMVER}+${BUILD}" >> $GITHUB_OUTPUT
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+      - name: Generate SHA256SUMS
+        shell: bash
+        run: |
+          cd dist
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\0' | sort -z | xargs -0 sha256sum > SHA256SUMS
+          cat SHA256SUMS
+      - name: Attest build provenance
+        id: attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: dist/SHA256SUMS
+      - name: Stage attestation bundle
+        shell: bash
+        run: cp "${{ steps.attest.outputs.bundle-path }}" "dist/${{ steps.version.outputs.distname }}.intoto.jsonl"
+      - name: Upload assets to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.collect.outputs.outdir }}/*
+          files: dist/*
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Append attestation notes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          DISTNAME: ${{ steps.version.outputs.distname }}
+        run: |
+          CHECKSUMS=$(cat dist/SHA256SUMS)
+          BODY=$(gh release view "$TAG" --repo "$REPO" --json body -q .body)
+          gh release edit "$TAG" --repo "$REPO" --notes "$(cat <<EOF
+          $BODY
+
+          ### Attestations
+
+          Each released binary carries a signed GitHub build-provenance
+          attestation. To verify a file you downloaded:
+
+          \`\`\`sh
+          # Verify against the attestations stored on GitHub (needs network):
+          gh attestation verify <file> --repo $REPO
+
+          # Or verify fully offline using the bundle attached to this release:
+          gh attestation verify <file> --bundle $DISTNAME.intoto.jsonl
+          \`\`\`
+
+          \`SHA256SUMS\` lists the digest of every artifact; check a downloaded
+          file against it to confirm integrity.
+
+          ### Checksums
+
+          \`\`\`
+          $CHECKSUMS
+          \`\`\`
+          EOF
+          )"
