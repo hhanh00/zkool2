@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.19.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.5...zkool-v6.19.0-rc.6) (2026-06-13)
+
+
+### Bug Fixes
+
+* add contents write permission for release step ([2ba346c](https://github.com/hhanh00/zkool2/commit/2ba346c3923b7cdb7db1fc76c66bb55fea7c8e09))
+
 ## [6.19.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.4...zkool-v6.19.0-rc.5) (2026-06-13)
 
 
