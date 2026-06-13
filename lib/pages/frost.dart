@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
-import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -221,13 +220,9 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     );
   }
 
-  int? currentHeight;
-
   void runFrost() async {
     try {
-      final h = await getCurrentHeight(c: c);
-      if (currentHeight != null && currentHeight == h) return;
-      currentHeight = h;
+      await ref.read(currentHeightProvider.notifier).fetch();
       final as = await ref.read(getAccountsProvider.future);
       final accounts = as.where((e) => e.enabled).toList();
       final synchronizer = ref.read(synchronizerProvider.notifier);

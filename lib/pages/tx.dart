@@ -229,7 +229,7 @@ class TxPageState extends ConsumerState<TxPage> {
     setState(() => _sending = true);
     try {
       // Check if wallet is synced before sending
-      final currentHeight = ref.read(currentHeightProvider);
+      final currentHeight = ref.read(currentHeightProvider).value;
       final accountHeight = account!.height;
       if (currentHeight != null && accountHeight < currentHeight) {
         final syncChoice = await _showSyncWarning(currentHeight, accountHeight);

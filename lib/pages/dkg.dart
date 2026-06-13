@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
-import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -323,7 +322,6 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   String message = "";
   int index = 0;
   Timer? runTimer;
-  int? currentHeight;
   bool finished = false;
 
   @override
@@ -343,9 +341,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
 
   Future<void> runDkg() async {
     try {
-      final h = await getCurrentHeight(c: c);
-      if (currentHeight != null && currentHeight == h) return;
-      currentHeight = h;
+      await ref.read(currentHeightProvider.notifier).fetch();
       final as = await ref.read(getAccountsProvider.future);
       final accounts = as.where((e) => e.enabled).toList();
       final synchronizer = ref.read(synchronizerProvider.notifier);

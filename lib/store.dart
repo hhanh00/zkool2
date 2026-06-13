@@ -504,14 +504,38 @@ class LogNotifier extends _$LogNotifier {
 }
 
 @Riverpod(keepAlive: true)
-class CurrentHeightNotifier extends _$CurrentHeightNotifier {
-  @override
-  int? build() => null;
+class CurrentHeight extends _$CurrentHeight {
+  int? _cachedHeight;
+  DateTime? _lastFetch;
+  static const _ttl = Duration(seconds: 15);
 
-  bool setHeight(int height) {
-    if (state == height) return false;
-    state = height;
-    return true;
+  @override
+  Future<int?> build() async {
+    return await _doFetch();
+  }
+
+  /// Get current height, cached up to 15s. Respects offline mode.
+  /// Set [force] to true to bypass the TTL cache.
+  Future<int?> fetch({bool force = false}) async {
+    final settings = await ref.read(appSettingsProvider.future);
+    if (settings.offline) {
+      return _cachedHeight;
+    }
+    if (!force) {
+      final now = DateTime.now();
+      if (_cachedHeight != null && _lastFetch != null &&
+          now.difference(_lastFetch!) < _ttl) {
+        return _cachedHeight;
+      }
+    }
+    return await _doFetch();
+  }
+
+  Future<int?> _doFetch() async {
+    _cachedHeight = await getCurrentHeight(c: coinContext.coin);
+    _lastFetch = DateTime.now();
+    state = AsyncData(_cachedHeight);
+    return _cachedHeight;
   }
 }
 
@@ -773,10 +797,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       return;
     }
     try {
-      final c = coinContext.coin;
-      final currentHeight = await getCurrentHeight(c: c);
-      final h = ref.read(currentHeightProvider.notifier);
-      if (h.setHeight(currentHeight)) {
+      final currentHeight = await ref.read(currentHeightProvider.notifier).fetch();
+      if (currentHeight != null) {
         await syncIfNeeded(currentHeight, now: now);
       }
     } on AnyhowException catch (e) {
