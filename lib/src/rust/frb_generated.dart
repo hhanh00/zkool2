@@ -404,7 +404,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiDbPutProp(
       {required String key, required String value, required Coin c});
 
-  Future<List<LWDInfo>> crateApiNetworkQueryLwdList();
+  Future<List<LWDInfo>> crateApiNetworkQueryLwdList({required int coin});
 
   Future<Receivers> crateApiAccountReceiversDefault();
 
@@ -3613,11 +3613,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<LWDInfo>> crateApiNetworkQueryLwdList() {
+  Future<List<LWDInfo>> crateApiNetworkQueryLwdList({required int coin}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_8(coin, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
               funcId: 108, port: port_);
         },
@@ -3626,7 +3627,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiNetworkQueryLwdListConstMeta,
-        argValues: [],
+        argValues: [coin],
         apiImpl: this,
       ),
     );
@@ -3635,7 +3636,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiNetworkQueryLwdListConstMeta =>
       const TaskConstMeta(
         debugName: "query_lwd_list",
-        argNames: [],
+        argNames: ["coin"],
       );
 
   @override
