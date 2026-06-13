@@ -5757,8 +5757,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Tx dco_decode_tx(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return Tx(
       id: dco_decode_u_32(arr[0]),
       txid: dco_decode_list_prim_u_8_strict(arr[1]),
@@ -5770,6 +5770,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       zsaValue: dco_decode_i_64(arr[7]),
       assetId: dco_decode_opt_box_autoadd_i_32(arr[8]),
       assetDisplay: dco_decode_String(arr[9]),
+      price: dco_decode_opt_box_autoadd_f_64(arr[10]),
     );
   }
 
@@ -7278,6 +7279,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_zsaValue = sse_decode_i_64(deserializer);
     var var_assetId = sse_decode_opt_box_autoadd_i_32(deserializer);
     var var_assetDisplay = sse_decode_String(deserializer);
+    var var_price = sse_decode_opt_box_autoadd_f_64(deserializer);
     return Tx(
         id: var_id,
         txid: var_txid,
@@ -7288,7 +7290,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         category: var_category,
         zsaValue: var_zsaValue,
         assetId: var_assetId,
-        assetDisplay: var_assetDisplay);
+        assetDisplay: var_assetDisplay,
+        price: var_price);
   }
 
   @protected
@@ -8667,6 +8670,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_64(self.zsaValue, serializer);
     sse_encode_opt_box_autoadd_i_32(self.assetId, serializer);
     sse_encode_String(self.assetDisplay, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.price, serializer);
   }
 
   @protected

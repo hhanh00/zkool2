@@ -6894,6 +6894,7 @@ impl SseDecode for crate::api::account::Tx {
         let mut var_zsaValue = <i64>::sse_decode(deserializer);
         let mut var_assetId = <Option<i32>>::sse_decode(deserializer);
         let mut var_assetDisplay = <String>::sse_decode(deserializer);
+        let mut var_price = <Option<f64>>::sse_decode(deserializer);
         return crate::api::account::Tx {
             id: var_id,
             txid: var_txid,
@@ -6905,6 +6906,7 @@ impl SseDecode for crate::api::account::Tx {
             zsa_value: var_zsaValue,
             asset_id: var_assetId,
             asset_display: var_assetDisplay,
+            price: var_price,
         };
     }
 }
@@ -8224,6 +8226,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Tx {
             self.zsa_value.into_into_dart().into_dart(),
             self.asset_id.into_into_dart().into_dart(),
             self.asset_display.into_into_dart().into_dart(),
+            self.price.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -9449,6 +9452,7 @@ impl SseEncode for crate::api::account::Tx {
         <i64>::sse_encode(self.zsa_value, serializer);
         <Option<i32>>::sse_encode(self.asset_id, serializer);
         <String>::sse_encode(self.asset_display, serializer);
+        <Option<f64>>::sse_encode(self.price, serializer);
     }
 }
 

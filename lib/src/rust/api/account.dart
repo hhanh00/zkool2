@@ -404,6 +404,7 @@ sealed class Tx with _$Tx {
     required PlatformInt64 zsaValue,
     int? assetId,
     required String assetDisplay,
+    double? price,
   }) = _Tx;
 }
 

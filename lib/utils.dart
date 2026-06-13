@@ -173,6 +173,25 @@ String compactBetween(DateTime from, DateTime to) {
   return parts.take(2).join('');
 }
 
+(MaterialColor, IconData, String) getTransactionType(int? tpe) {
+  switch (tpe) {
+    case 0:
+      return (Colors.grey, Icons.remove, "Self Transfer");
+    case 1:
+      return (Colors.green, Icons.arrow_upward, "Receive");
+    case 2:
+      return (Colors.red, Icons.arrow_downward, "Sent");
+    case 4:
+      return (Colors.purple, Icons.visibility, "Unshield");
+    case 8:
+      return (Colors.blue, Icons.shield, "Shield");
+    case 12:
+      return (Colors.grey, Icons.drag_handle, "T. Self Transfer");
+    default:
+      return (Colors.grey, Icons.question_mark, "Unknown");
+  }
+}
+
 String txIdToString(Uint8List txid) {
   var reversed = txid.reversed.toList();
   final txId = hex.encode(reversed);
