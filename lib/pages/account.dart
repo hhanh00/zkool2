@@ -129,6 +129,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     if (pinlock.value ?? false) return PinLock();
 
     final selectedAccountAV = ref.watch(selectedAccountProvider);
+    ref.watch(appSettingsProvider); // rebuild when settings change (e.g. list/table toggle)
     return selectedAccountAV.when(
       loading: () => blank(context),
       error: (error, stack) => showError(error),
