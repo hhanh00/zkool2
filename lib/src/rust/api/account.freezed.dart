@@ -3559,6 +3559,7 @@ mixin _$Tx {
   PlatformInt64 get zsaValue;
   int? get assetId;
   String get assetDisplay;
+  double? get price;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3583,7 +3584,8 @@ mixin _$Tx {
                 other.zsaValue == zsaValue) &&
             (identical(other.assetId, assetId) || other.assetId == assetId) &&
             (identical(other.assetDisplay, assetDisplay) ||
-                other.assetDisplay == assetDisplay));
+                other.assetDisplay == assetDisplay) &&
+            (identical(other.price, price) || other.price == price));
   }
 
   @override
@@ -3598,11 +3600,12 @@ mixin _$Tx {
       category,
       zsaValue,
       assetId,
-      assetDisplay);
+      assetDisplay,
+      price);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price)';
   }
 }
 
@@ -3620,7 +3623,8 @@ abstract mixin class $TxCopyWith<$Res> {
       String? category,
       PlatformInt64 zsaValue,
       int? assetId,
-      String assetDisplay});
+      String assetDisplay,
+      double? price});
 }
 
 /// @nodoc
@@ -3645,6 +3649,7 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
     Object? zsaValue = null,
     Object? assetId = freezed,
     Object? assetDisplay = null,
+    Object? price = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -3687,6 +3692,10 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
           ? _self.assetDisplay
           : assetDisplay // ignore: cast_nullable_to_non_nullable
               as String,
+      price: freezed == price
+          ? _self.price
+          : price // ignore: cast_nullable_to_non_nullable
+              as double?,
     ));
   }
 }
@@ -3792,7 +3801,8 @@ extension TxPatterns on Tx {
             String? category,
             PlatformInt64 zsaValue,
             int? assetId,
-            String assetDisplay)?
+            String assetDisplay,
+            double? price)?
         $default, {
     required TResult orElse(),
   }) {
@@ -3809,7 +3819,8 @@ extension TxPatterns on Tx {
             _that.category,
             _that.zsaValue,
             _that.assetId,
-            _that.assetDisplay);
+            _that.assetDisplay,
+            _that.price);
       case _:
         return orElse();
     }
@@ -3840,7 +3851,8 @@ extension TxPatterns on Tx {
             String? category,
             PlatformInt64 zsaValue,
             int? assetId,
-            String assetDisplay)
+            String assetDisplay,
+            double? price)
         $default,
   ) {
     final _that = this;
@@ -3856,7 +3868,8 @@ extension TxPatterns on Tx {
             _that.category,
             _that.zsaValue,
             _that.assetId,
-            _that.assetDisplay);
+            _that.assetDisplay,
+            _that.price);
     }
   }
 
@@ -3884,7 +3897,8 @@ extension TxPatterns on Tx {
             String? category,
             PlatformInt64 zsaValue,
             int? assetId,
-            String assetDisplay)?
+            String assetDisplay,
+            double? price)?
         $default,
   ) {
     final _that = this;
@@ -3900,7 +3914,8 @@ extension TxPatterns on Tx {
             _that.category,
             _that.zsaValue,
             _that.assetId,
-            _that.assetDisplay);
+            _that.assetDisplay,
+            _that.price);
       case _:
         return null;
     }
@@ -3920,7 +3935,8 @@ class _Tx implements Tx {
       this.category,
       required this.zsaValue,
       this.assetId,
-      required this.assetDisplay});
+      required this.assetDisplay,
+      this.price});
 
   @override
   final int id;
@@ -3942,6 +3958,8 @@ class _Tx implements Tx {
   final int? assetId;
   @override
   final String assetDisplay;
+  @override
+  final double? price;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3967,7 +3985,8 @@ class _Tx implements Tx {
                 other.zsaValue == zsaValue) &&
             (identical(other.assetId, assetId) || other.assetId == assetId) &&
             (identical(other.assetDisplay, assetDisplay) ||
-                other.assetDisplay == assetDisplay));
+                other.assetDisplay == assetDisplay) &&
+            (identical(other.price, price) || other.price == price));
   }
 
   @override
@@ -3982,11 +4001,12 @@ class _Tx implements Tx {
       category,
       zsaValue,
       assetId,
-      assetDisplay);
+      assetDisplay,
+      price);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price)';
   }
 }
 
@@ -4005,7 +4025,8 @@ abstract mixin class _$TxCopyWith<$Res> implements $TxCopyWith<$Res> {
       String? category,
       PlatformInt64 zsaValue,
       int? assetId,
-      String assetDisplay});
+      String assetDisplay,
+      double? price});
 }
 
 /// @nodoc
@@ -4030,6 +4051,7 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
     Object? zsaValue = null,
     Object? assetId = freezed,
     Object? assetDisplay = null,
+    Object? price = freezed,
   }) {
     return _then(_Tx(
       id: null == id
@@ -4072,6 +4094,10 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
           ? _self.assetDisplay
           : assetDisplay // ignore: cast_nullable_to_non_nullable
               as String,
+      price: freezed == price
+          ? _self.price
+          : price // ignore: cast_nullable_to_non_nullable
+              as double?,
     ));
   }
 }

@@ -28,6 +28,7 @@ import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/exchange_rate.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/theme.dart';
+import 'package:zkool/widgets/transaction_table.dart';
 
 class AccountViewPage extends ConsumerStatefulWidget {
   const AccountViewPage({super.key});
@@ -182,6 +183,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                       GoRouter.of(context).push("/market");
                     case "update_fx":
                       onUpdateAllTxPrices();
+                    case "toggle_tx_view":
+                      ref.read(appSettingsProvider.notifier)
+                          .setTransactionViewMode(
+                              !(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
                     case "charts":
                       GoRouter.of(context).push("/chart");
                     case "settings":
@@ -218,6 +223,12 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   PopupMenuItem<String>(
                     value: tabIndex(context).toString(),
                     child: Text("Export ${tabNames[tabIndex(context)]}"),
+                  ),
+                  PopupMenuItem<String>(
+                    value: "toggle_tx_view",
+                    child: Text((ref.read(appSettingsProvider).value?.transactionTableMode ?? false)
+                        ? "View: List"
+                        : "View: Table"),
                   ),
                   if (!Platform.isLinux)
                     const PopupMenuItem<String>(
@@ -306,7 +317,17 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                       ],
                                     ])),
                               ),
-                              ...showTxHistory(context, account.transactions),
+                              if (settings.transactionTableMode)
+                                SliverToBoxAdapter(
+                                  child: TransactionTable(
+                                    transactions: account.transactions,
+                                    memos: account.memos,
+                                    currency: currency,
+                                    onTap: (id) => gotoTransaction(context, id),
+                                  ),
+                                )
+                              else
+                                ...showTxHistory(context, account.transactions),
                             ],
                           ),
                           showMemos(context, account.memos),
@@ -864,25 +885,6 @@ List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
       itemExtent: 64,
     ),
   ];
-}
-
-(MaterialColor, IconData, String) getTransactionType(int? tpe) {
-  switch (tpe) {
-    case 0:
-      return (Colors.grey, Icons.remove, "Self Transfer");
-    case 1:
-      return (Colors.green, Icons.arrow_upward, "Receive");
-    case 2:
-      return (Colors.red, Icons.arrow_downward, "Sent");
-    case 4:
-      return (Colors.purple, Icons.visibility, "Unshield");
-    case 8:
-      return (Colors.blue, Icons.shield, "Shield");
-    case 12:
-      return (Colors.grey, Icons.drag_handle, "T. Self Transfer");
-    default:
-      return (Colors.grey, Icons.question_mark, "Unknown");
-  }
 }
 
 void gotoTransaction(BuildContext context, int idTx) async {
