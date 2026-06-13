@@ -228,6 +228,17 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     sqlx::query(
+        "CREATE TABLE IF NOT EXISTS user_memos(
+        account INTEGER NOT NULL,
+        id_tx INTEGER NOT NULL,
+        user_memo TEXT NOT NULL,
+        UNIQUE(account, id_tx))",
+    )
+    .execute(&mut *connection)
+    .await?;
+    tracing::info!("create_schema: user_memos table ready");
+
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS assets(
         id_asset INTEGER PRIMARY KEY,
         asset_desc_hash BLOB NOT NULL,
@@ -1347,14 +1358,18 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
     // union notes and spends, then sum value by tx into v to get tx value
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
+    tracing::info!("fetch_txs: starting for account {}", account);
     let transactions = sqlx::query(
-        "SELECT id_tx, txid, height, time, value, tpe, c.name, t.zsa_value, t.price, t.asset_id,
-            a.asset_name, a.asset_desc_hash
+        "SELECT t.id_tx, t.txid, t.height, t.time, t.value, t.tpe, c.name, t.zsa_value, t.price, t.asset_id,
+            a.asset_name, a.asset_desc_hash,
+            um.user_memo as memo,
+            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo
             FROM transactions t
             LEFT JOIN categories c ON c.id_category = t.category
             LEFT JOIN assets a ON t.asset_id = a.id_asset
-            WHERE account = ?
-            ORDER BY height DESC",
+            LEFT JOIN user_memos um ON um.id_tx = t.id_tx AND um.account = t.account
+            WHERE t.account = ?
+            ORDER BY t.height DESC",
     )
     .bind(account)
     .map(|row: SqliteRow| {
@@ -1370,6 +1385,8 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
         let asset_id: Option<i32> = row.get(9);
         let asset_name: Option<String> = row.get(10);
         let asset_desc_hash: Option<Vec<u8>> = row.get(11);
+        let memo: Option<String> = row.get(12);
+        let is_user_memo: bool = row.get(13);
         Tx {
             id,
             txid,
@@ -1386,18 +1403,34 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
                 asset_desc_hash,
             ),
             price,
+            memo,
+            is_user_memo,
         }
     })
     .fetch_all(&mut *connection)
     .await?;
+    tracing::info!("fetch_txs: completed with {} txs", transactions.len());
     Ok(transactions)
 }
 
 pub async fn get_memos(pool: &mut SqliteConnection, account: u32) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
-        "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
-        FROM memos m JOIN transactions t ON m.tx = t.id_tx
-        WHERE m.account = ? ORDER BY m.height DESC",
+        "SELECT COALESCE(m.id_memo, 0) as id_memo,
+            t.height,
+            t.id_tx as tx,
+            COALESCE(m.pool, 0) as pool,
+            COALESCE(m.vout, 0) as vout,
+            COALESCE(m.note, CASE WHEN t.value + t.fee >= 0 THEN 0 ELSE NULL END) as note,
+            t.time,
+            COALESCE(NULLIF(um.user_memo, ''), m.memo_text) as memo_text,
+            COALESCE(m.memo_bytes, X'') as memo_bytes,
+            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo
+        FROM transactions t
+        LEFT JOIN memos m ON m.tx = t.id_tx AND m.account = t.account
+        LEFT JOIN user_memos um ON um.id_tx = t.id_tx AND um.account = t.account
+        WHERE t.account = ?
+          AND (m.id_memo IS NOT NULL OR (um.user_memo IS NOT NULL AND um.user_memo != ''))
+        ORDER BY t.height DESC",
     )
     .bind(account)
     .map(row_to_memo)
@@ -1413,9 +1446,20 @@ pub async fn get_memos_txid(
     txid: &[u8],
 ) -> Result<Vec<Memo>> {
     let memos = sqlx::query(
-        "SELECT id_memo, m.height, tx, pool, vout, note, t.time, memo_text, memo_bytes
-        FROM memos m JOIN transactions t ON m.tx = t.id_tx
-        WHERE m.account = ?1 AND t.txid = ?2",
+        "SELECT COALESCE(m.id_memo, 0) as id_memo,
+            t.height,
+            t.id_tx as tx,
+            COALESCE(m.pool, 0) as pool,
+            COALESCE(m.vout, 0) as vout,
+            COALESCE(m.note, CASE WHEN t.value + t.fee >= 0 THEN 0 ELSE NULL END) as note,
+            t.time,
+            COALESCE(NULLIF(um.user_memo, ''), m.memo_text) as memo_text,
+            COALESCE(m.memo_bytes, X'') as memo_bytes,
+            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo
+        FROM transactions t
+        LEFT JOIN memos m ON m.tx = t.id_tx AND m.account = t.account
+        LEFT JOIN user_memos um ON um.id_tx = t.id_tx AND um.account = t.account
+        WHERE t.account = ?1 AND t.txid = ?2",
     )
     .bind(account)
     .bind(txid)
@@ -1436,6 +1480,7 @@ fn row_to_memo(row: SqliteRow) -> Memo {
     let time: u32 = row.get(6);
     let memo_text: Option<String> = row.get(7);
     let memo_bytes: Vec<u8> = row.get(8);
+    let is_user_memo: bool = row.get(9);
     Memo {
         id,
         id_tx: tx,
@@ -1446,6 +1491,7 @@ fn row_to_memo(row: SqliteRow) -> Memo {
         time,
         memo: memo_text,
         memo_bytes,
+        is_user_memo,
     }
 }
 
@@ -1829,6 +1875,35 @@ pub async fn store_pending_tx(
     .bind(category)
     .execute(connection)
     .await?;
+    Ok(())
+}
+
+pub async fn set_user_memo(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id_tx: u32,
+    memo: Option<String>,
+) -> Result<()> {
+    match memo {
+        Some(memo) if !memo.is_empty() => {
+            sqlx::query(
+                "INSERT INTO user_memos(account, id_tx, user_memo) VALUES (?1, ?2, ?3)
+                ON CONFLICT(account, id_tx) DO UPDATE SET user_memo = excluded.user_memo",
+            )
+            .bind(account)
+            .bind(id_tx)
+            .bind(&memo)
+            .execute(&mut *connection)
+            .await?;
+        }
+        _ => {
+            sqlx::query("DELETE FROM user_memos WHERE account = ?1 AND id_tx = ?2")
+                .bind(account)
+                .bind(id_tx)
+                .execute(&mut *connection)
+                .await?;
+        }
+    }
     Ok(())
 }
 
