@@ -664,12 +664,12 @@ abstract class _$LogNotifier extends $Notifier<List<String>> {
   }
 }
 
-@ProviderFor(CurrentHeightNotifier)
-const currentHeightProvider = CurrentHeightNotifierProvider._();
+@ProviderFor(CurrentHeight)
+const currentHeightProvider = CurrentHeightProvider._();
 
-final class CurrentHeightNotifierProvider
-    extends $NotifierProvider<CurrentHeightNotifier, int?> {
-  const CurrentHeightNotifierProvider._()
+final class CurrentHeightProvider
+    extends $AsyncNotifierProvider<CurrentHeight, int?> {
+  const CurrentHeightProvider._()
       : super(
           from: null,
           argument: null,
@@ -681,33 +681,27 @@ final class CurrentHeightNotifierProvider
         );
 
   @override
-  String debugGetCreateSourceHash() => _$currentHeightNotifierHash();
+  String debugGetCreateSourceHash() => _$currentHeightHash();
 
   @$internal
   @override
-  CurrentHeightNotifier create() => CurrentHeightNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int? value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int?>(value),
-    );
-  }
+  CurrentHeight create() => CurrentHeight();
 }
 
-String _$currentHeightNotifierHash() =>
-    r'16daa9bce5d88e0c013ac53051b9c0479659ff6d';
+String _$currentHeightHash() => r'83f6fa7bfb3bee9f854fdc8c7ecc96c04075c8be';
 
-abstract class _$CurrentHeightNotifier extends $Notifier<int?> {
-  int? build();
+abstract class _$CurrentHeight extends $AsyncNotifier<int?> {
+  FutureOr<int?> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<int?, int?>;
+    final ref = this.ref as $Ref<AsyncValue<int?>, int?>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<int?, int?>, int?, Object?, Object?>;
+        AnyNotifier<AsyncValue<int?>, int?>,
+        AsyncValue<int?>,
+        Object?,
+        Object?>;
     element.handleValue(ref, created);
   }
 }
@@ -795,7 +789,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'558e7832444bfa102f87a85a6b00bccda2323e01';
+    r'58835d89675b8357fa32cc1dfcbf65be0b49d147';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
