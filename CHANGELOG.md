@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.19.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0...zkool-v6.19.1-rc) (2026-06-13)
+
+
+### Bug Fixes
+
+* TTL-cache getCurrentHeight in async provider with offline check ([#1083](https://github.com/hhanh00/zkool2/issues/1083)) ([ee75a1a](https://github.com/hhanh00/zkool2/commit/ee75a1a322fa4526d05565f2d06af48ce7a7307b))
+
 ## [6.19.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11...zkool-v6.19.0) (2026-06-13)
 
 
