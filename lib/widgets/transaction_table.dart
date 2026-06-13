@@ -108,6 +108,7 @@ class _TransactionTableState extends State<TransactionTable> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: constraints.maxWidth),
             child: DataTable(
+              showCheckboxColumn: false,
               sortColumnIndex: _sortColumnIndex,
               sortAscending: _sortAscending,
               headingTextStyle:
@@ -233,7 +234,8 @@ class _TransactionTableState extends State<TransactionTable> {
                           : GestureDetector(
                               onLongPress: () => _startEditing(tx),
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(minWidth: 60),
+                                constraints:
+                                    const BoxConstraints(minWidth: 60),
                                 child: Text(
                                   _truncateMemo(tx.memo),
                                   maxLines: 2,
