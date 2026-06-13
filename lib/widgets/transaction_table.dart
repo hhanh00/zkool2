@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -111,8 +109,7 @@ class _TransactionTableState extends State<TransactionTable> {
               showCheckboxColumn: false,
               sortColumnIndex: _sortColumnIndex,
               sortAscending: _sortAscending,
-              headingTextStyle:
-                  t.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+              headingTextStyle: t.labelSmall?.copyWith(fontWeight: FontWeight.bold),
               dataTextStyle: cellStyle,
               columnSpacing: 16,
               horizontalMargin: 12,
@@ -148,62 +145,77 @@ class _TransactionTableState extends State<TransactionTable> {
                   onSelectChanged: (_) => widget.onTap(tx.id),
                   cells: [
                     // Type
-                    DataCell(SizedBox(
-                      width: 101,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(icon, color: color, size: 16),
-                          const SizedBox(width: 6),
-                          Text(label),
-                        ],
-                      ),
-                    )),
-                    // Date
-                    DataCell(SizedBox(
-                      width: 120,
-                      child: Text(timeToString(tx.time)),
-                    )),
-                    // Amount (ZEC)
-                    DataCell(SizedBox(
-                      width: 88,
-                      child: Text(
-                        zatToShortString(BigInt.from(tx.value)),
-                        style: TextStyle(
-                          color: _amountColor(tx.value),
-                          fontWeight: FontWeight.w500,
+                    DataCell(
+                      SizedBox(
+                        width: 101,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, color: color, size: 16),
+                            const SizedBox(width: 6),
+                            Text(label),
+                          ],
                         ),
                       ),
-                    )),
-                    // Fiat Amount
-                    DataCell(SizedBox(
-                      width: 96,
-                      child: Text(_formatFiatAmount(tx)),
-                    )),
-                    // Price
-                    DataCell(SizedBox(
-                      width: 72,
-                      child: Text(_formatPrice(tx)),
-                    )),
-                    // TxID
-                    DataCell(SizedBox(
-                      width: 130,
-                      child: Text(
-                        _shortTxid(tx.txid),
-                        style:
-                            const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                    ),
+                    // Date
+                    DataCell(
+                      SizedBox(
+                        width: 120,
+                        child: Text(timeToString(tx.time)),
                       ),
-                    )),
+                    ),
+                    // Amount (ZEC)
+                    DataCell(
+                      SizedBox(
+                        width: 88,
+                        child: Text(
+                          zatToShortString(BigInt.from(tx.value)),
+                          style: TextStyle(
+                            color: _amountColor(tx.value),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Fiat Amount
+                    DataCell(
+                      SizedBox(
+                        width: 96,
+                        child: Text(_formatFiatAmount(tx)),
+                      ),
+                    ),
+                    // Price
+                    DataCell(
+                      SizedBox(
+                        width: 72,
+                        child: Text(_formatPrice(tx)),
+                      ),
+                    ),
+                    // TxID
+                    DataCell(
+                      SizedBox(
+                        width: 130,
+                        child: Text(
+                          _shortTxid(tx.txid),
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                        ),
+                      ),
+                    ),
                     // Height
-                    DataCell(SizedBox(
-                      width: 60,
-                      child: Text(tx.height.toString()),
-                    )),
+                    DataCell(
+                      SizedBox(
+                        width: 60,
+                        child: Text(tx.height.toString()),
+                      ),
+                    ),
                     // Category
-                    DataCell(SizedBox(
-                      width: 76,
-                      child: Text(tx.category ?? "—"),
-                    )),
+                    DataCell(
+                      SizedBox(
+                        width: 76,
+                        child: Text(tx.category ?? "—"),
+                      ),
+                    ),
                     // Memo — editable inline with color distinction
                     DataCell(
                       _editingTxId == tx.id
@@ -217,9 +229,7 @@ class _TransactionTableState extends State<TransactionTable> {
                                 textInputAction: TextInputAction.newline,
                                 onEditingComplete: _commitEditing,
                                 style: cellStyle?.copyWith(
-                                  color: tx.isUserMemo
-                                      ? Colors.orange
-                                      : null,
+                                  color: tx.isUserMemo ? Colors.orange : null,
                                 ),
                                 decoration: const InputDecoration(
                                   isDense: true,
@@ -234,8 +244,7 @@ class _TransactionTableState extends State<TransactionTable> {
                           : GestureDetector(
                               onLongPress: () => _startEditing(tx),
                               child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(minWidth: 60),
+                                constraints: const BoxConstraints(minWidth: 60),
                                 child: Text(
                                   _truncateMemo(tx.memo),
                                   maxLines: 2,
@@ -251,18 +260,20 @@ class _TransactionTableState extends State<TransactionTable> {
                             ),
                     ),
                     // Asset
-                    DataCell(SizedBox(
-                      width: 56,
-                      child: Text(
-                        isZsa ? tx.assetDisplay : "ZEC",
-                        style: isZsa
-                            ? const TextStyle(
-                                color: Colors.purple,
-                                fontWeight: FontWeight.w500,
-                              )
-                            : null,
+                    DataCell(
+                      SizedBox(
+                        width: 56,
+                        child: Text(
+                          isZsa ? tx.assetDisplay : "ZEC",
+                          style: isZsa
+                              ? const TextStyle(
+                                  color: Colors.purple,
+                                  fontWeight: FontWeight.w500,
+                                )
+                              : null,
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 );
               }).toList(),
