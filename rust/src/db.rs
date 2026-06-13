@@ -1348,7 +1348,7 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
     let transactions = sqlx::query(
-        "SELECT id_tx, txid, height, time, value, tpe, c.name, t.zsa_value, t.asset_id,
+        "SELECT id_tx, txid, height, time, value, tpe, c.name, t.zsa_value, t.price, t.asset_id,
             a.asset_name, a.asset_desc_hash
             FROM transactions t
             LEFT JOIN categories c ON c.id_category = t.category
@@ -1366,9 +1366,10 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
         let tpe: Option<u8> = row.get(5);
         let category: Option<String> = row.get(6);
         let zsa_value: i64 = row.get(7);
-        let asset_id: Option<i32> = row.get(8);
-        let asset_name: Option<String> = row.get(9);
-        let asset_desc_hash: Option<Vec<u8>> = row.get(10);
+        let price: Option<f64> = row.get(8);
+        let asset_id: Option<i32> = row.get(9);
+        let asset_name: Option<String> = row.get(10);
+        let asset_desc_hash: Option<Vec<u8>> = row.get(11);
         Tx {
             id,
             txid,
@@ -1384,6 +1385,7 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
                 asset_name,
                 asset_desc_hash,
             ),
+            price,
         }
     })
     .fetch_all(&mut *connection)

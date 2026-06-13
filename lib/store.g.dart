@@ -424,7 +424,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'25f96180687d929a226176253f8fc71fb74a5964';
+String _$accountHash() => r'b5b61dba595b61fd82e1ba3777a9084c1c546457';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -505,7 +505,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'd1c42b6c957dc4f5fab50e908bbe919f7027525a';
+    r'2a568af1802c350c911ddb762acc5f61f24760f8';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
