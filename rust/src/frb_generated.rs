@@ -41,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 214955081;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 162684712;
 
 // Section: executor
 
@@ -4893,6 +4893,46 @@ fn wire__crate__api__transaction__set_tx_price_impl(
         },
     )
 }
+fn wire__crate__api__transaction__set_user_memo_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_user_memo",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id_tx = <u32>::sse_decode(&mut deserializer);
+            let api_memo = <Option<String>>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::transaction::set_user_memo(api_id_tx, api_memo, &api_c)
+                                .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__account__show_ledger_sapling_address_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -6357,6 +6397,7 @@ impl SseDecode for crate::api::account::Memo {
         let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_memoBytes = <Vec<u8>>::sse_decode(deserializer);
         let mut var_memo = <Option<String>>::sse_decode(deserializer);
+        let mut var_isUserMemo = <bool>::sse_decode(deserializer);
         return crate::api::account::Memo {
             id: var_id,
             id_tx: var_idTx,
@@ -6367,6 +6408,7 @@ impl SseDecode for crate::api::account::Memo {
             time: var_time,
             memo_bytes: var_memoBytes,
             memo: var_memo,
+            is_user_memo: var_isUserMemo,
         };
     }
 }
@@ -6895,6 +6937,8 @@ impl SseDecode for crate::api::account::Tx {
         let mut var_assetId = <Option<i32>>::sse_decode(deserializer);
         let mut var_assetDisplay = <String>::sse_decode(deserializer);
         let mut var_price = <Option<f64>>::sse_decode(deserializer);
+        let mut var_memo = <Option<String>>::sse_decode(deserializer);
+        let mut var_isUserMemo = <bool>::sse_decode(deserializer);
         return crate::api::account::Tx {
             id: var_id,
             txid: var_txid,
@@ -6907,6 +6951,8 @@ impl SseDecode for crate::api::account::Tx {
             asset_id: var_assetId,
             asset_display: var_assetDisplay,
             price: var_price,
+            memo: var_memo,
+            is_user_memo: var_isUserMemo,
         };
     }
 }
@@ -6925,6 +6971,7 @@ impl SseDecode for crate::api::account::TxAccount {
         let mut var_spends = <Vec<crate::api::account::TxSpend>>::sse_decode(deserializer);
         let mut var_outputs = <Vec<crate::api::account::TxOutput>>::sse_decode(deserializer);
         let mut var_memos = <Vec<crate::api::account::TxMemo>>::sse_decode(deserializer);
+        let mut var_userMemo = <Option<String>>::sse_decode(deserializer);
         return crate::api::account::TxAccount {
             id: var_id,
             account: var_account,
@@ -6937,6 +6984,7 @@ impl SseDecode for crate::api::account::TxAccount {
             spends: var_spends,
             outputs: var_outputs,
             memos: var_memos,
+            user_memo: var_userMemo,
         };
     }
 }
@@ -7354,38 +7402,39 @@ fn pde_ffi_dispatcher_primary_impl(
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
         124 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
-        125 => wire__crate__api__account__show_ledger_sapling_address_impl(
+        125 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
+        126 => wire__crate__api__account__show_ledger_sapling_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        126 => wire__crate__api__account__show_ledger_transparent_address_impl(
+        127 => wire__crate__api__account__show_ledger_transparent_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        127 => wire__crate__api__account__sign_ledger_transaction_impl(
+        128 => wire__crate__api__account__sign_ledger_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        128 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        129 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        132 => {
+        129 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        130 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        131 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        133 => {
             wire__crate__api__account__tx_account_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        133 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
-        135 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
-        136 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
-        138 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        140 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__transaction__update_historical_prices_impl(
+        134 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
+        139 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__transaction__update_historical_prices_impl(
             port,
             ptr,
             rust_vec_len,
@@ -7419,8 +7468,8 @@ fn pde_ffi_dispatcher_sync_impl(
         104 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
         110 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
         122 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        131 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        132 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        138 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -7772,6 +7821,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Memo {
             self.time.into_into_dart().into_dart(),
             self.memo_bytes.into_into_dart().into_dart(),
             self.memo.into_into_dart().into_dart(),
+            self.is_user_memo.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8227,6 +8277,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Tx {
             self.asset_id.into_into_dart().into_dart(),
             self.asset_display.into_into_dart().into_dart(),
             self.price.into_into_dart().into_dart(),
+            self.memo.into_into_dart().into_dart(),
+            self.is_user_memo.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -8252,6 +8304,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TxAccount {
             self.spends.into_into_dart().into_dart(),
             self.outputs.into_into_dart().into_dart(),
             self.memos.into_into_dart().into_dart(),
+            self.user_memo.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -9050,6 +9103,7 @@ impl SseEncode for crate::api::account::Memo {
         <u32>::sse_encode(self.time, serializer);
         <Vec<u8>>::sse_encode(self.memo_bytes, serializer);
         <Option<String>>::sse_encode(self.memo, serializer);
+        <bool>::sse_encode(self.is_user_memo, serializer);
     }
 }
 
@@ -9453,6 +9507,8 @@ impl SseEncode for crate::api::account::Tx {
         <Option<i32>>::sse_encode(self.asset_id, serializer);
         <String>::sse_encode(self.asset_display, serializer);
         <Option<f64>>::sse_encode(self.price, serializer);
+        <Option<String>>::sse_encode(self.memo, serializer);
+        <bool>::sse_encode(self.is_user_memo, serializer);
     }
 }
 
@@ -9470,6 +9526,7 @@ impl SseEncode for crate::api::account::TxAccount {
         <Vec<crate::api::account::TxSpend>>::sse_encode(self.spends, serializer);
         <Vec<crate::api::account::TxOutput>>::sse_encode(self.outputs, serializer);
         <Vec<crate::api::account::TxMemo>>::sse_encode(self.memos, serializer);
+        <Option<String>>::sse_encode(self.user_memo, serializer);
     }
 }
 

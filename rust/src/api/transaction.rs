@@ -19,6 +19,13 @@ pub async fn update_historical_prices(currency: String, exchange_rate: f64, c: &
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn set_user_memo(id_tx: u32, memo: Option<String>, c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    crate::db::set_user_memo(&mut connection, c.account, id_tx, memo).await?;
+    Ok(())
+}
+
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn set_tx_category(id: u32, category: Option<u32>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::set_tx_category(&mut connection, id, category).await?;
