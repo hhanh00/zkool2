@@ -326,6 +326,7 @@ pub struct Tx {
     pub zsa_value: i64,
     pub asset_id: Option<i32>,
     pub asset_display: String,
+    pub price: Option<f64>,
 }
 
 pub struct TAddressTxCount {
