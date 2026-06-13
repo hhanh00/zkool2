@@ -94,8 +94,8 @@ pub async fn get_network_name(c: &Coin) -> String {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn query_lwd_list() -> Result<Vec<LWDInfo>> {
-    crate::net::lwd::query_lwd_list().await
+pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
+    crate::net::lwd::query_lwd_list(coin).await
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
