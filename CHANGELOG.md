@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.19.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0-rc.2...zkool-v6.19.0-rc.3) (2026-06-13)
+
+
+### Features
+
+* add editable user memos overlay ([0d03d4b](https://github.com/hhanh00/zkool2/commit/0d03d4b8d2a64bf5e0b9dca62262cbdfc0217d34))
+* add table view for transaction history ([d109627](https://github.com/hhanh00/zkool2/commit/d109627af430d5c01b059e8eb813270c611b7ec2))
+
 ## [6.19.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.12-rc.2...zkool-v6.19.0-rc.2) (2026-06-13)
 
 
