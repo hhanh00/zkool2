@@ -325,7 +325,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
 
   void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
-      final currentHeight = ref.read(currentHeightProvider);
+      final currentHeight = ref.read(currentHeightProvider).value;
 
       // Handle the save logic here
       final formData = formKey.currentState?.value;

@@ -11,7 +11,6 @@ import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -51,13 +50,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   }
 
   void refreshHeight(bool fetchPrice) async {
-    final settings = ref.read(appSettingsProvider).requireValue;
-    if (settings.offline) return;
     try {
-      final height = await getCurrentHeight(c: coinContext.coin);
-      final currentHeight = ref.read(currentHeightProvider.notifier);
-      currentHeight.setHeight(height);
+      await ref.read(currentHeightProvider.notifier).fetch(force: true);
       if (fetchPrice) {
+        final settings = ref.read(appSettingsProvider).requireValue;
         final currentPrice = ref.read(priceProvider.notifier);
         await currentPrice.fetch(settings.coingecko, settings.currency);
       }
@@ -82,7 +78,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
         final accountList =
             pageData.accounts.where((a) => !a.internal && (includeHidden || !a.hidden) && a.folder.id == (pageData.selectedFolder?.id ?? 0)).toList();
 
-        final currentHeight = ref.watch(currentHeightProvider);
+        final currentHeight = ref.watch(currentHeightProvider).value;
         final h = currentHeight != null ? currentHeight.toString() : 'N/A';
 
         final visibleAccounts = pageData.accounts.where((a) => !a.internal).toList();

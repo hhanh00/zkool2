@@ -931,7 +931,7 @@ Widget showMemos(BuildContext context, List<Memo> memos, VoidCallback onMemoChan
 
 Widget showNotes(WidgetRef ref, List<TxNote> notes) {
   final t = Theme.of(navigatorKey.currentContext!);
-  final currentHeight = ref.read(currentHeightProvider);
+  final currentHeight = ref.read(currentHeightProvider).value;
   return ListView.builder(
     itemCount: notes.length + 1,
     itemBuilder: (context, index) {
