@@ -626,7 +626,6 @@ void runLogListener() async {
 @Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
   bool syncInProgress = false;
-  Timer? retrySyncTimer;
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   int retryCount = 0;
 
@@ -670,98 +669,100 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   }
 
   Future<void> startSynchronize(List<Account> accounts) async {
-    if (syncInProgress) {
-      return;
-    }
+    if (syncInProgress) return;
 
     final c = coinContext.coin;
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
 
+    syncInProgress = true;
+    retryCount = 0;
     final completer = Completer<void>();
-    try {
-      logger.i("Starting Synchronization");
-      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) showSnackbar("Starting Synchronization");
-      syncInProgress = true;
-      retrySyncTimer?.cancel();
-      retrySyncTimer = null;
-      final currentHeight = await getCurrentHeight(c: c);
 
-      begin(accounts, currentHeight);
+    while (true) {
+      try {
+        logger.i("Starting Synchronization");
+        if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+          showSnackbar("Starting Synchronization");
+        }
+        final currentHeight = await getCurrentHeight(c: c);
 
-      final progress = synchronize(
-        accounts: accounts.map((a) => a.id).toList(),
-        currentHeight: currentHeight,
-        actionsPerSync: int.parse(settings.actionsPerSync),
-        transparentLimit: 100, // scan the last 100 known transparent addresses
-        checkpointAge: 500_000, // a year worth of checkpoints in case we have to rewind for voting
-        fast: true,
-        c: c,
-      ); // trim checkpoints older than 200 blocks
-      await syncProgressSubscription?.cancel();
-      syncProgressSubscription = progress.listen(
-        (p) {
-          retryCount = 0;
-          update(p.height, p.time);
-        },
-        onError: (e) {
-          retry(accounts, e);
-        },
-        onDone: () {
-          end();
-          syncInProgress = false;
-          syncProgressSubscription?.cancel();
-          syncProgressSubscription = null;
-          Timer.run(() async {
-            ref.invalidate(getAccountsProvider);
+        begin(accounts, currentHeight);
+
+        final progress = synchronize(
+          accounts: accounts.map((a) => a.id).toList(),
+          currentHeight: currentHeight,
+          actionsPerSync: int.parse(settings.actionsPerSync),
+          transparentLimit: 100,
+          checkpointAge: 500_000,
+          fast: true,
+          c: c,
+        );
+        await syncProgressSubscription?.cancel();
+
+        final done = Completer<void>();
+        syncProgressSubscription = progress.listen(
+          (p) {
+            retryCount = 0;
+            update(p.height, p.time);
+          },
+          onError: (e) {
+            done.completeError(e is AnyhowException ? e : AnyhowException(e.toString()));
+          },
+          onDone: () {
+            done.complete();
+          },
+          cancelOnError: true,
+        );
+
+        await done.future;
+
+        // Sync completed successfully
+        end();
+        syncInProgress = false;
+        syncProgressSubscription?.cancel();
+        syncProgressSubscription = null;
+        ref.invalidate(getAccountsProvider);
+        ref.invalidate(accountProvider);
+        if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+          showSnackbar("Synchronization Completed");
+        }
+        logger.i("Synchronization Completed");
+        // Fetch tx details in the background for all accounts
+        unawaited(Future(() async {
+          try {
+            for (final account in accounts) {
+              await fetchTxDetails(account: account.id, c: c);
+            }
             ref.invalidate(accountProvider);
-            if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) showSnackbar("Synchronization Completed");
-            logger.i("Synchronization Completed");
-            // Fetch tx details in the background for all accounts
-            unawaited(Future(() async {
-              try {
-                for (final account in accounts) {
-                  await fetchTxDetails(account: account.id, c: c);
-                }
-                ref.invalidate(accountProvider);
-              } on AnyhowException catch (e) {
-                logger.e("Error fetching tx details: $e");
-              }
-            }));
-            completer.complete();
-          });
-        },
-      );
-    } on AnyhowException catch (e) {
-      retry(accounts, e);
+          } on AnyhowException catch (e) {
+            logger.e("Error fetching tx details: $e");
+          }
+        }));
+
+        completer.complete();
+        return completer.future;
+      } on AnyhowException catch (e) {
+        retryCount++;
+        final maxDelay = pow(2, min(retryCount, 10)).toInt();
+        final delay = 30 + Random().nextInt(maxDelay);
+        logger.e("Sync error: $e\n\nRetrying in $delay seconds (attempt $retryCount)");
+
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          await ErrorDialog.show(
+            context,
+            error: e,
+            customMessage: "Sync error (attempt $retryCount of ~10). Retrying in $delay seconds...",
+          );
+        }
+
+        await Future.delayed(Duration(seconds: delay));
+      }
+      finally {
+        syncInProgress = false;
+      }
     }
-    return completer.future;
-  }
-
-  void retry(List<Account> accounts, AnyhowException e) {
-    syncInProgress = false;
-    retryCount++;
-    final maxDelay = pow(2, min(retryCount, 10)).toInt(); // up to 1024s = 17min
-    final delay = 30 + Random().nextInt(maxDelay); // randomize delay
-    final message = "Sync error: $e\n\nRetrying in $delay seconds (attempt $retryCount)";
-    logger.e(message);
-
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      ErrorDialog.show(
-        context,
-        error: e,
-        customMessage: "Sync error (attempt $retryCount of ~10). Retrying in $delay seconds...",
-      );
-    }
-
-    retrySyncTimer?.cancel();
-    retrySyncTimer = Timer(Duration(seconds: delay), () async {
-      await startSynchronize(
-        accounts,
-      );
-      retryCount = 0;
-    });
   }
 
   void autoSync({bool now = false}) async {
