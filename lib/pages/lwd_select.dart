@@ -16,9 +16,9 @@ class LWDSelectPage extends ConsumerStatefulWidget {
 }
 
 class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
-  int _sortColumnIndex = 0;
-  bool _sortAscending = true;
-  bool? _onlineFilter; // null = all, true = online, false = offline
+  int _sortColumnIndex = 3; // Uptime
+  bool _sortAscending = false; // descending
+  bool? _onlineFilter = true; // null = all, true = online, false = offline
 
   List<LWDInfo>? _servers;
   bool _loading = true;
