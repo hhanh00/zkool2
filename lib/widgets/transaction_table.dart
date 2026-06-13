@@ -7,16 +7,16 @@ import 'package:zkool/utils.dart';
 
 class TransactionTable extends StatefulWidget {
   final List<Tx> transactions;
-  final List<Memo> memos;
   final String currency;
   final void Function(int id) onTap;
+  final Future<void> Function(int txId, String? newMemo) onMemoChanged;
 
   const TransactionTable({
     super.key,
     required this.transactions,
-    required this.memos,
     required this.currency,
     required this.onTap,
+    required this.onMemoChanged,
   });
 
   @override
@@ -33,18 +33,70 @@ class _TransactionTableState extends State<TransactionTable> {
   static const _colAmount = 2;
   static const _colHeight = 6;
 
+  // Inline editing state
+  int? _editingTxId;
+  late final TextEditingController _memoController = TextEditingController();
+  late final FocusNode _memoFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _memoFocusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _memoFocusNode.removeListener(_onFocusChange);
+    _memoController.dispose();
+    _memoFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_memoFocusNode.hasFocus && _editingTxId != null) {
+      _commitEditing();
+    }
+  }
+
+  void _startEditing(Tx tx) {
+    if (_editingTxId != null && _editingTxId != tx.id) {
+      _commitEditing(); // save then switch
+    }
+    _editingTxId = tx.id;
+    _memoController.text = tx.memo ?? '';
+    _memoController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _memoController.text.length),
+    );
+    _memoFocusNode.requestFocus();
+    setState(() {});
+  }
+
+  Future<void> _commitEditing() async {
+    final id = _editingTxId;
+    if (id == null) return;
+
+    final newText = _memoController.text.trim();
+    _editingTxId = null;
+    if (mounted) setState(() {});
+
+    // Find the original Tx to compare
+    final tx = widget.transactions.firstWhere((t) => t.id == id);
+    final oldText = tx.memo ?? '';
+    if (newText == oldText) return; // no change
+
+    if (newText.isEmpty) {
+      // Clear user memo → revert to original
+      await widget.onMemoChanged(id, null);
+    } else {
+      await widget.onMemoChanged(id, newText);
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final cellStyle = t.bodySmall?.copyWith(fontSize: 12);
-
-    // Group memos by transaction id for quick lookup
-    final memosByTx = <int, String?>{};
-    for (final memo in widget.memos) {
-      if (memo.memo != null && memo.memo!.isNotEmpty) {
-        memosByTx.putIfAbsent(memo.idTx, () => memo.memo);
-      }
-    }
 
     final sorted = List<Tx>.from(widget.transactions);
     _sortTransactions(sorted);
@@ -151,12 +203,51 @@ class _TransactionTableState extends State<TransactionTable> {
                       width: 76,
                       child: Text(tx.category ?? "—"),
                     )),
-                    // Memo — no width constraint, fills remaining space
-                    DataCell(Text(
-                      _truncateMemo(memosByTx[tx.id]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )),
+                    // Memo — editable inline with color distinction
+                    DataCell(
+                      _editingTxId == tx.id
+                          ? SizedBox(
+                              width: 200,
+                              child: TextField(
+                                controller: _memoController,
+                                focusNode: _memoFocusNode,
+                                maxLines: null,
+                                minLines: 1,
+                                textInputAction: TextInputAction.newline,
+                                onEditingComplete: _commitEditing,
+                                style: cellStyle?.copyWith(
+                                  color: tx.isUserMemo
+                                      ? Colors.orange
+                                      : null,
+                                ),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 4,
+                                  ),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            )
+                          : GestureDetector(
+                              onLongPress: () => _startEditing(tx),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(minWidth: 60),
+                                child: Text(
+                                  _truncateMemo(tx.memo),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tx.isUserMemo
+                                      ? TextStyle(
+                                          color: Colors.orange.shade700,
+                                          fontWeight: FontWeight.w500,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ),
+                    ),
                     // Asset
                     DataCell(SizedBox(
                       width: 56,
