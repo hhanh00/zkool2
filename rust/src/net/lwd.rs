@@ -187,8 +187,8 @@ impl LwdServer for GRPCClient {
 }
 
 pub async fn query_lwd_list() -> Result<Vec<LWDInfo>> {
-    // Implement by querying https://hosh.zec.rocks/api/v0/zec.json
-     let rep = reqwest::get("https://hosh.zec.rocks/api/v0/zec.json")
+    // Implement by querying https://hosh.zec.rocks/api/v0/zec.json?chain=main
+     let rep = reqwest::get("https://hosh.zec.rocks/api/v0/zec.json?chain=main")
         .await?
         .error_for_status()?
         .json::<serde_json::Value>()
