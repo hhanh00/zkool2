@@ -16,7 +16,7 @@ jobs:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup regtest
         uses: hhanh00/zkool2/.github/actions/zebra@main
         with:
