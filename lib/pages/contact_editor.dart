@@ -13,6 +13,7 @@ import 'package:zkool/src/rust/api/openalias.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/widgets/contact_picker.dart';
 import 'package:zkool/widgets/scanner.dart';
 
 class ContactEditPage extends ConsumerStatefulWidget {
@@ -29,6 +30,7 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
   late var c = coinContext.coin;
   var _addresses = <String>[''];
 
+
   bool get isEditing => widget.contact != null;
 
   @override
@@ -43,6 +45,11 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        // If form is unchanged, just pop without confirmation
+        if (_isFormClean()) {
+          GoRouter.of(context).pop();
+          return;
+        }
         onSaveAndPop();
       },
       child: Scaffold(
@@ -50,6 +57,7 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
         title: Text(isEditing ? "Edit Contact" : "New Contact"),
         actions: [
           IconButton(onPressed: onImport, tooltip: "Import from vCard", icon: Icon(Icons.download)),
+          IconButton(onPressed: onImportFromContacts, tooltip: "Import from Contacts", icon: Icon(Icons.contacts)),
           IconButton(onPressed: onExport, tooltip: "Export as vCard", icon: Icon(Icons.upload_file)),
           if (isEditing) IconButton(onPressed: onDelete, tooltip: "Delete contact", icon: Icon(Icons.delete)),
         ],
@@ -181,6 +189,8 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
     return widgets;
   }
 
+  bool _isFormClean() => !(_formKey.currentState?.isDirty ?? false);
+
   void onScanAddress(int index) async {
     final scanned = await showScanner(context, validator: validAddress);
     if (scanned != null) {
@@ -231,6 +241,40 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
     }
   }
 
+  void onImportFromContacts() async {
+    final candidates = await showContactPicker(context, multiSelect: false);
+    if (candidates == null || candidates.isEmpty) return;
+
+    final candidate = candidates.first;
+    setState(() {
+      final form = _formKey.currentState!;
+      form.fields['name']!.didChange(candidate.name);
+
+      if (candidate.notes.isNotEmpty) {
+        form.fields['notes']!.didChange(candidate.notes);
+      }
+
+      // Fill empty address slots first, then append remaining
+      final newAddresses = List<String>.from(_addresses);
+      for (final addr in candidate.addresses) {
+        final emptyIndex = newAddresses.indexWhere((a) => a.isEmpty);
+        if (emptyIndex != -1) {
+          newAddresses[emptyIndex] = addr;
+        } else {
+          newAddresses.add(addr);
+        }
+      }
+      _addresses = newAddresses;
+    });
+
+    // Wait for widgets to rebuild before updating form fields
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (var i = 0; i < _addresses.length; i++) {
+        _formKey.currentState?.fields['address_$i']?.didChange(_addresses[i]);
+      }
+    });
+  }
+
   void onSave() async {
     if (!_formKey.currentState!.saveAndValidate()) return;
 
@@ -266,10 +310,10 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
   }
 
   void onSaveAndPop() async {
-    if (!_formKey.currentState!.saveAndValidate()) return; // validation errors shown, block pop
-
-    final values = _formKey.currentState!.value;
-    final name = (values['name'] as String).trim();
+    final form = _formKey.currentState!;
+    form.save();
+    final values = form.value;
+    final name = (values['name'] as String?)?.trim() ?? '';
     final notes = (values['notes'] as String?)?.trim() ?? '';
     final addresses = <String>[];
     for (final key in values.keys) {
@@ -278,6 +322,15 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
         if (addr.isNotEmpty) addresses.add(addr);
       }
     }
+
+    // Empty form: just pop without saving
+    if (name.isEmpty && addresses.isEmpty) {
+      if (mounted) GoRouter.of(context).pop();
+      return;
+    }
+
+    // Validate; if invalid, block pop
+    if (!form.validate()) return;
 
     if (isEditing) {
       await updateContact(id: widget.contact!.id, name: name, addresses: addresses, notes: notes, c: c);
