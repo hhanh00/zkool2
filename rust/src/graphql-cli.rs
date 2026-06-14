@@ -38,6 +38,10 @@ pub struct Config {
     pub port: Option<u16>,
     #[clap(short, long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false)]
     pub no_mempool: Option<bool>,
+    /// Use zebrad/zcashd JSON-RPC backend instead of lightwalletd gRPC.
+    /// When set, the --lwd-url should point to the zebra RPC endpoint.
+    #[clap(short = 'Z', long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false)]
+    pub zebra: Option<bool>,
     // Note: Once set in a config file, jwt_public_key_file
     // cannot be unset by a later config source because
     // None means skip
@@ -67,12 +71,14 @@ async fn main() -> Result<()> {
         port,
         jwt_public_key_file,
         no_mempool,
+        zebra,
         ..
     } = config;
     let db_path = db_path.unwrap_or("zkool.db".to_string());
     let lwd_url = lwd_url.unwrap_or("https://zec.rocks".to_string());
     let port = port.unwrap_or(8000);
     let no_mempool = no_mempool.unwrap_or_default();
+    let zebra = zebra.unwrap_or_default();
 
     let decoding_key = jwt_public_key_file
         .map(|path| {
@@ -91,11 +97,12 @@ async fn main() -> Result<()> {
     // convert key format: openssl pkcs8 -topk8 -nocrypt -in private.pem -out private_p8.pem
     // issue jwt: jwt encode --secret @private_p8.pem --alg ES256 --exp=<epoch secs> --sub=<account id> '{"write": true}'
 
-    tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port}");
+    let server_type: u8 = if zebra { 1 } else { 0 };
+    tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port} zebra {zebra}");
     let coin = Coin::new()
         .open_database(db_path, None)
         .await?
-        .set_lwd(0, lwd_url)?;
+        .set_lwd(server_type, lwd_url)?;
 
     let context = Context::new(coin);
     if !no_mempool {
