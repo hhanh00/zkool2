@@ -342,10 +342,34 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                       ],
                                     ])),
                               ),
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  child: TextField(
+                                    controller: _txSearchController,
+                                    decoration: const InputDecoration(
+                                      labelText: "Search transactions (memo, contact)",
+                                      fillColor: Colors.white,
+                                      prefixIcon: Icon(Icons.search),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Center(
+                                    child: Text(
+                                      "Transaction History (${_filterTx(account.transactions).length} txs)",
+                                      style: Theme.of(context).textTheme.bodyLarge,
+                                    ),
+                                  ),
+                                ),
+                              ),
                               if (settings.transactionTableMode)
                                 SliverToBoxAdapter(
                                   child: TransactionTable(
-                                    transactions: account.transactions,
+                                    transactions: _filterTx(account.transactions),
                                     currency: currency,
                                     onTap: (id) => gotoTransaction(context, id),
                                     onMemoChanged: (txId, newMemo) async {
@@ -365,7 +389,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                     child: showTxHistory(
                                       context,
                                       _filterTx(account.transactions),
-                                      _txSearchController,
                                     ),
                                   ),
                                 ),
@@ -893,57 +916,30 @@ class BalanceWidget extends StatelessWidget {
   }
 }
 
-Widget showTxHistory(BuildContext context, List<Tx> transactions, TextEditingController searchController) {
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: TextField(
-          controller: searchController,
-          decoration: const InputDecoration(
-            labelText: "Search transactions (memo, contact)",
-            fillColor: Colors.white,
-            prefixIcon: Icon(Icons.search),
-          ),
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Center(
-          child: Text(
-            "Transaction History (${transactions.length} txs)",
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ),
-      ),
-      Expanded(
-        child: ListView.builder(
-          itemExtent: 65,
-          itemCount: transactions.length,
-          itemBuilder: (context, index) {
-            final tx = transactions[index];
-            final (color, icon, label) = getTransactionType(tx.tpe);
-            final tile = TransactionTile(
-              icon: icon,
-              color: color,
-              label: label,
-              amount: BigInt.from(tx.value),
-              date: tx.time,
-              id: tx.id,
-              onTap: () => gotoTransaction(context, tx.id),
-              zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
-              zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
-              contactName: tx.contactName,
-            );
-            return Column(children: [
-              SizedBox(height: 64, child: tile),
-              const Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
-            ]);
-          },
-        ),
-      ),
-    ],
+Widget showTxHistory(BuildContext context, List<Tx> transactions) {
+  return ListView.builder(
+    itemExtent: 65,
+    itemCount: transactions.length,
+    itemBuilder: (context, index) {
+      final tx = transactions[index];
+      final (color, icon, label) = getTransactionType(tx.tpe);
+      final tile = TransactionTile(
+        icon: icon,
+        color: color,
+        label: label,
+        amount: BigInt.from(tx.value),
+        date: tx.time,
+        id: tx.id,
+        onTap: () => gotoTransaction(context, tx.id),
+        zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
+        zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
+        contactName: tx.contactName,
+      );
+      return Column(children: [
+        SizedBox(height: 64, child: tile),
+        const Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
+      ]);
+    },
   );
 }
 
