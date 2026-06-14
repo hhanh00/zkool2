@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
+import 'package:zkool/pages/contact_editor.dart';
+import 'package:zkool/pages/contacts.dart';
 import 'package:zkool/pages/folder.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
@@ -26,6 +28,7 @@ import 'package:zkool/pages/lwd_select.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
+import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
@@ -106,6 +109,8 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
         GoRoute(path: '/folders', builder: (context, state) => FolderPage()),
         GoRoute(path: '/categories', builder: (context, state) => CategoryPage()),
+        GoRoute(path: '/contacts', builder: (context, state) => ContactListPage()),
+        GoRoute(path: '/contact/edit', builder: (context, state) => ContactEditPage(contact: state.extra as Contact?)),
         GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
         GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2()),
         GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),

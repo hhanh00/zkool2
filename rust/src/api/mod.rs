@@ -1,5 +1,6 @@
 pub mod coin;
 pub mod account;
+pub mod contacts;
 pub mod db;
 pub mod frost;
 pub mod init;

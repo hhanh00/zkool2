@@ -372,6 +372,120 @@ final class GetCategoriesProvider extends $FunctionalProvider<
 
 String _$getCategoriesHash() => r'b936c571d89ff2ede483f5239881ba90219af321';
 
+@ProviderFor(getContacts)
+const getContactsProvider = GetContactsProvider._();
+
+final class GetContactsProvider extends $FunctionalProvider<
+        AsyncValue<List<Contact>>, List<Contact>, FutureOr<List<Contact>>>
+    with $FutureModifier<List<Contact>>, $FutureProvider<List<Contact>> {
+  const GetContactsProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'getContactsProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$getContactsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Contact>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Contact>> create(Ref ref) {
+    return getContacts(ref);
+  }
+}
+
+String _$getContactsHash() => r'e751c15648be7db79565969c43b1be3a0ac566de';
+
+@ProviderFor(contactsForAddress)
+const contactsForAddressProvider = ContactsForAddressFamily._();
+
+final class ContactsForAddressProvider extends $FunctionalProvider<
+        AsyncValue<List<ContactMatch>>,
+        List<ContactMatch>,
+        FutureOr<List<ContactMatch>>>
+    with
+        $FutureModifier<List<ContactMatch>>,
+        $FutureProvider<List<ContactMatch>> {
+  const ContactsForAddressProvider._(
+      {required ContactsForAddressFamily super.from,
+      required String super.argument})
+      : super(
+          retry: null,
+          name: r'contactsForAddressProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$contactsForAddressHash();
+
+  @override
+  String toString() {
+    return r'contactsForAddressProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<ContactMatch>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<ContactMatch>> create(Ref ref) {
+    final argument = this.argument as String;
+    return contactsForAddress(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ContactsForAddressProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$contactsForAddressHash() =>
+    r'3154c6f4ddf9d4e141da6f70d5a086d79afdc348';
+
+final class ContactsForAddressFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<ContactMatch>>, String> {
+  const ContactsForAddressFamily._()
+      : super(
+          retry: null,
+          name: r'contactsForAddressProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  ContactsForAddressProvider call(
+    String address,
+  ) =>
+      ContactsForAddressProvider._(argument: address, from: this);
+
+  @override
+  String toString() => r'contactsForAddressProvider';
+}
+
 @ProviderFor(account)
 const accountProvider = AccountFamily._();
 

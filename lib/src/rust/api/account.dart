@@ -408,6 +408,7 @@ sealed class Tx with _$Tx {
     double? price,
     String? memo,
     required bool isUserMemo,
+    String? contactName,
   }) = _Tx;
 }
 
@@ -580,6 +581,7 @@ class TxOutput {
   final int height;
   final BigInt value;
   final String address;
+  final String? contactName;
 
   const TxOutput({
     required this.id,
@@ -587,6 +589,7 @@ class TxOutput {
     required this.height,
     required this.value,
     required this.address,
+    this.contactName,
   });
 
   static Future<TxOutput> default_() =>
@@ -598,7 +601,8 @@ class TxOutput {
       pool.hashCode ^
       height.hashCode ^
       value.hashCode ^
-      address.hashCode;
+      address.hashCode ^
+      contactName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -609,7 +613,8 @@ class TxOutput {
           pool == other.pool &&
           height == other.height &&
           value == other.value &&
-          address == other.address;
+          address == other.address &&
+          contactName == other.contactName;
 }
 
 class TxSpend {
