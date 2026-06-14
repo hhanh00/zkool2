@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.20.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.1...zkool-v6.20.0-rc.2) (2026-06-14)
+
+
+### Bug Fixes
+
+* fall back to Google DNS when system resolver config is unavailable ([e6aa896](https://github.com/hhanh00/zkool2/commit/e6aa89649ab1a976469a7dacfa066ec13bbdb1f3))
+
 ## [6.20.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc...zkool-v6.20.0-rc.1) (2026-06-14)
 
 
