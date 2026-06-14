@@ -8,18 +8,20 @@ import '../pay.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `status_to_string`
+
 /// Resolve an OpenAlias name and return Zcash [`Recipient`]s valid for
 /// the wallet's network.
 ///
 /// Performs DNS TXT lookup, parses OA1 records, filters for Zcash
 /// addresses, and validates them against the wallet's network type.
-Future<List<Recipient>> resolveOpenalias(
+Future<OpenAliasResolution> resolveOpenalias(
         {required String alias, required Coin c}) =>
     RustLib.instance.api.crateApiOpenaliasResolveOpenalias(alias: alias, c: c);
 
 /// Resolve an OpenAlias name and return ALL cryptocurrency addresses
 /// found (not just Zcash) as [`Recipient`]s.
-Future<List<Recipient>> resolveOpenaliasAll({required String alias}) =>
+Future<OpenAliasResolution> resolveOpenaliasAll({required String alias}) =>
     RustLib.instance.api.crateApiOpenaliasResolveOpenaliasAll(alias: alias);
 
 /// Validate whether a string looks like a valid OpenAlias name format.
@@ -44,5 +46,53 @@ void tryValidateZcashAddress({required String address, required Coin c}) =>
         .crateApiOpenaliasTryValidateZcashAddress(address: address, c: c);
 
 /// Get the raw OpenAlias TXT record strings for diagnostic purposes.
-Future<List<String>> resolveOpenaliasRaw({required String alias}) =>
+Future<RawOpenAliasResolution> resolveOpenaliasRaw({required String alias}) =>
     RustLib.instance.api.crateApiOpenaliasResolveOpenaliasRaw(alias: alias);
+
+/// Result of an OpenAlias resolution, including DNSSEC verification status.
+class OpenAliasResolution {
+  final List<Recipient> recipients;
+
+  /// "verified" | "unsigned" | "bogus"
+  final String dnssecStatus;
+
+  const OpenAliasResolution({
+    required this.recipients,
+    required this.dnssecStatus,
+  });
+
+  @override
+  int get hashCode => recipients.hashCode ^ dnssecStatus.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is OpenAliasResolution &&
+          runtimeType == other.runtimeType &&
+          recipients == other.recipients &&
+          dnssecStatus == other.dnssecStatus;
+}
+
+/// Result of a raw OpenAlias resolution, including DNSSEC verification status.
+class RawOpenAliasResolution {
+  final List<String> records;
+
+  /// "verified" | "unsigned" | "bogus"
+  final String dnssecStatus;
+
+  const RawOpenAliasResolution({
+    required this.records,
+    required this.dnssecStatus,
+  });
+
+  @override
+  int get hashCode => records.hashCode ^ dnssecStatus.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RawOpenAliasResolution &&
+          runtimeType == other.runtimeType &&
+          records == other.records &&
+          dnssecStatus == other.dnssecStatus;
+}

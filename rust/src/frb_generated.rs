@@ -7069,6 +7069,18 @@ impl SseDecode for crate::api::account::NewAccount {
     }
 }
 
+impl SseDecode for crate::api::openalias::OpenAliasResolution {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_recipients = <Vec<crate::pay::Recipient>>::sse_decode(deserializer);
+        let mut var_dnssecStatus = <String>::sse_decode(deserializer);
+        return crate::api::openalias::OpenAliasResolution {
+            recipients: var_recipients,
+            dnssec_status: var_dnssecStatus,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -7274,6 +7286,18 @@ impl SseDecode for crate::api::raptor::RaptorQParams {
             version: var_version,
             ec_level: var_ecLevel,
             repair: var_repair,
+        };
+    }
+}
+
+impl SseDecode for crate::api::openalias::RawOpenAliasResolution {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_records = <Vec<String>>::sse_decode(deserializer);
+        let mut var_dnssecStatus = <String>::sse_decode(deserializer);
+        return crate::api::openalias::RawOpenAliasResolution {
+            records: var_records,
+            dnssec_status: var_dnssecStatus,
         };
     }
 }
@@ -8615,6 +8639,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::NewAccount>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::openalias::OpenAliasResolution {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.recipients.into_into_dart().into_dart(),
+            self.dnssec_status.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::openalias::OpenAliasResolution
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::openalias::OpenAliasResolution>
+    for crate::api::openalias::OpenAliasResolution
+{
+    fn into_into_dart(self) -> crate::api::openalias::OpenAliasResolution {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::pay::PaymentOptions {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -8698,6 +8743,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::raptor::RaptorQParams>
     for crate::api::raptor::RaptorQParams
 {
     fn into_into_dart(self) -> crate::api::raptor::RaptorQParams {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::openalias::RawOpenAliasResolution {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.records.into_into_dart().into_dart(),
+            self.dnssec_status.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::openalias::RawOpenAliasResolution
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::openalias::RawOpenAliasResolution>
+    for crate::api::openalias::RawOpenAliasResolution
+{
+    fn into_into_dart(self) -> crate::api::openalias::RawOpenAliasResolution {
         self
     }
 }
@@ -9869,6 +9935,14 @@ impl SseEncode for crate::api::account::NewAccount {
     }
 }
 
+impl SseEncode for crate::api::openalias::OpenAliasResolution {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::pay::Recipient>>::sse_encode(self.recipients, serializer);
+        <String>::sse_encode(self.dnssec_status, serializer);
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10038,6 +10112,14 @@ impl SseEncode for crate::api::raptor::RaptorQParams {
         <u16>::sse_encode(self.version, serializer);
         <u8>::sse_encode(self.ec_level, serializer);
         <u32>::sse_encode(self.repair, serializer);
+    }
+}
+
+impl SseEncode for crate::api::openalias::RawOpenAliasResolution {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<String>>::sse_encode(self.records, serializer);
+        <String>::sse_encode(self.dnssec_status, serializer);
     }
 }
 
