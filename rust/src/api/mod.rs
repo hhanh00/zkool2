@@ -7,6 +7,7 @@ pub mod issuance;
 pub mod key;
 pub mod mempool;
 pub mod network;
+pub mod openalias;
 pub mod pay;
 pub mod sync;
 pub mod transaction;
