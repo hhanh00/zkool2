@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/contact_picker.dart';
 
 class ContactListPage extends ConsumerStatefulWidget {
   const ContactListPage({super.key});
@@ -40,6 +41,7 @@ class ContactListPageState extends ConsumerState<ContactListPage> {
         title: Text("Contacts"),
         actions: [
           IconButton(onPressed: onImportVcard, tooltip: "Import from vCard", icon: Icon(Icons.download)),
+          IconButton(onPressed: onImportFromContacts, tooltip: "Import from Contacts", icon: Icon(Icons.contacts)),
           IconButton(onPressed: onExportVcard, tooltip: "Export as vCard", icon: Icon(Icons.upload_file)),
           IconButton(onPressed: onNew, tooltip: "New contact", icon: Icon(Icons.add)),
         ],
@@ -79,6 +81,37 @@ class ContactListPageState extends ConsumerState<ContactListPage> {
       await importContactsVcard(vcardData: data, c: c);
       await refresh();
       ref.invalidate(getContactsProvider);
+    }
+  }
+
+  void onImportFromContacts() async {
+    final candidates = await showContactPicker(context, multiSelect: true);
+    if (candidates == null || candidates.isEmpty) return;
+
+    var imported = 0;
+    for (final candidate in candidates) {
+      try {
+        await createContact(
+          name: candidate.name,
+          addresses: candidate.addresses,
+          notes: candidate.notes,
+          c: c,
+        );
+        imported++;
+      } catch (_) {
+        // Skip duplicates or other errors, continue with rest
+      }
+    }
+
+    await refresh();
+    ref.invalidate(getContactsProvider);
+
+    if (imported > 0) {
+      showMessage(
+        context,
+        "Imported $imported contact(s).",
+        title: "Contacts Imported",
+      );
     }
   }
 
