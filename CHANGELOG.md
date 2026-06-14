@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [6.20.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.5...zkool-v6.20.0-rc.6) (2026-06-14)
+
+
+### Bug Fixes
+
+* invalidate account provider cache when selecting account ([67f7605](https://github.com/hhanh00/zkool2/commit/67f7605a433b636f238462bdb98a9a0e6dab1077))
+* show tx search bar on both table and list views ([99f8441](https://github.com/hhanh00/zkool2/commit/99f84419255ed41069f1e6c8bf449e90fd91a3c2))
+
 ## [6.20.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.4...zkool-v6.20.0-rc.5) (2026-06-14)
 
 
