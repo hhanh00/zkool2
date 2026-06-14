@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.20.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc...zkool-v6.20.0-rc.1) (2026-06-14)
+
+
+### Bug Fixes
+
+* remove openalias crate dependency, inline OA1 parsing ([1fba7ec](https://github.com/hhanh00/zkool2/commit/1fba7ec351ef1aa050504cfa089da320c00511d2))
+
 ## [6.20.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.1-rc...zkool-v6.20.0-rc) (2026-06-14)
 
 
