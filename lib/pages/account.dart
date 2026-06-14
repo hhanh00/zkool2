@@ -12,6 +12,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:easy_debounce/easy_debounce.dart';
 import 'package:searchable_listview/searchable_listview.dart';
 
 import 'package:zkool/main.dart';
@@ -51,10 +52,15 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   late final FocusNode _focusNode = FocusNode();
   bool _zsaAvailable = false;
 
+  // Tx search
+  final _txSearchController = TextEditingController();
+  String _txSearchQuery = '';
+
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(_onFocusChange);
+    _txSearchController.addListener(_onTxSearchChanged);
     isZsaAvailable(c: c).then((v) {
       if (mounted) setState(() => _zsaAvailable = v);
     });
@@ -65,6 +71,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     _focusNode.removeListener(_onFocusChange);
     _nameController.dispose();
     _focusNode.dispose();
+    _txSearchController.removeListener(_onTxSearchChanged);
+    _txSearchController.dispose();
     super.dispose();
   }
 
@@ -72,6 +80,22 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     if (!_focusNode.hasFocus && _editingIndex != null) {
       _commitEditing();
     }
+  }
+
+  void _onTxSearchChanged() {
+    EasyDebounce.debounce('tx_search', const Duration(milliseconds: 300), () {
+      setState(() => _txSearchQuery = _txSearchController.text);
+    });
+  }
+
+  List<Tx> _filterTx(List<Tx> txs) {
+    final q = _txSearchQuery.toLowerCase();
+    if (q.isEmpty) return txs;
+    return txs.where((tx) {
+      if (tx.memo?.toLowerCase().contains(q) == true) return true;
+      if (tx.contactName?.toLowerCase().contains(q) == true) return true;
+      return false;
+    }).toList();
   }
 
   void _startEditing(int index, ZsaHolding holding) {
@@ -335,7 +359,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                   ),
                                 )
                               else
-                                ...showTxHistory(context, account.transactions),
+                                SliverToBoxAdapter(
+                                  child: SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.55,
+                                    child: showTxHistory(
+                                      context,
+                                      _filterTx(account.transactions),
+                                      _txSearchController,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                           showMemos(context, account.memos, () {
@@ -860,45 +893,58 @@ class BalanceWidget extends StatelessWidget {
   }
 }
 
-List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
-  final t = Theme.of(context).textTheme;
-  return [
-    SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsetsGeometry.symmetric(vertical: 16),
-        child: Center(
-            child: Text(
-          "Transaction History (${transactions.length} txs)",
-          style: t.bodyLarge,
-        )),
+Widget showTxHistory(BuildContext context, List<Tx> transactions, TextEditingController searchController) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: TextField(
+          controller: searchController,
+          decoration: const InputDecoration(
+            labelText: "Search transactions (memo, contact)",
+            fillColor: Colors.white,
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
       ),
-    ),
-    SliverFixedExtentList.builder(
-      itemCount: transactions.length,
-      itemBuilder: (context, index) {
-        final tx = transactions[index];
-        final (color, icon, label) = getTransactionType(tx.tpe);
-        final tile = TransactionTile(
-          icon: icon,
-          color: color,
-          label: label,
-          amount: BigInt.from(tx.value),
-          date: tx.time,
-          id: tx.id,
-          onTap: () => gotoTransaction(context, tx.id),
-          zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
-          zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
-          contactName: tx.contactName,
-        );
-
-        return Column(children: [
-          Expanded(child: tile),
-          Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
-        ]);
-      },
-      itemExtent: 64,
-    ),
-  ];
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Center(
+          child: Text(
+            "Transaction History (${transactions.length} txs)",
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+      ),
+      Expanded(
+        child: ListView.builder(
+          itemExtent: 65,
+          itemCount: transactions.length,
+          itemBuilder: (context, index) {
+            final tx = transactions[index];
+            final (color, icon, label) = getTransactionType(tx.tpe);
+            final tile = TransactionTile(
+              icon: icon,
+              color: color,
+              label: label,
+              amount: BigInt.from(tx.value),
+              date: tx.time,
+              id: tx.id,
+              onTap: () => gotoTransaction(context, tx.id),
+              zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
+              zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
+              contactName: tx.contactName,
+            );
+            return Column(children: [
+              SizedBox(height: 64, child: tile),
+              const Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
+            ]);
+          },
+        ),
+      ),
+    ],
+  );
 }
 
 void gotoTransaction(BuildContext context, int idTx) async {
