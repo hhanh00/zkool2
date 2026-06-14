@@ -30,6 +30,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>We need access to your camera to scan QR codes if requested.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>We need access to your contacts to import Zcash addresses.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to import QR codes if requested.</string>
 	<key>UIApplicationSceneManifest</key>
