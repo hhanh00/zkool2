@@ -147,8 +147,19 @@ impl TryFromAddress for NetCheck {
 fn resolver() -> &'static TokioAsyncResolver {
     static RESOLVER: OnceLock<TokioAsyncResolver> = OnceLock::new();
     RESOLVER.get_or_init(|| {
-        TokioAsyncResolver::tokio_from_system_conf()
-            .expect("failed to create DNS resolver")
+        // Try system config first (reads /etc/resolv.conf on Unix).
+        // On Android the resolv.conf file may not exist, so fall back
+        // to a built-in resolver config using Google's public DNS.
+        TokioAsyncResolver::tokio_from_system_conf().unwrap_or_else(|e| {
+            info!(
+                "Failed to create DNS resolver from system config ({e}); \
+                 falling back to Google public DNS"
+            );
+            TokioAsyncResolver::tokio(
+                hickory_resolver::config::ResolverConfig::google(),
+                hickory_resolver::config::ResolverOpts::default(),
+            )
+        })
     })
 }
 
