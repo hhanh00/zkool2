@@ -33,6 +33,7 @@ dependencies:
 
   path_provider: ^2.1.5
   file_picker: ^10.3.8
+  flutter_contacts: ^2.2.1
 
   collection: ^1.19.1
   image_picker: ^1.1.2
