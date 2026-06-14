@@ -8,6 +8,7 @@
 
 import 'api/account.dart';
 import 'api/coin.dart';
+import 'api/contacts.dart';
 import 'api/db.dart';
 import 'api/frost.dart';
 import 'api/init.dart';
@@ -210,6 +211,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Coin dco_decode_coin(dynamic raw);
 
   @protected
+  Contact dco_decode_contact(dynamic raw);
+
+  @protected
+  ContactMatch dco_decode_contact_match(dynamic raw);
+
+  @protected
   DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
@@ -244,6 +251,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Category> dco_decode_list_category(dynamic raw);
+
+  @protected
+  List<Contact> dco_decode_list_contact(dynamic raw);
+
+  @protected
+  List<ContactMatch> dco_decode_list_contact_match(dynamic raw);
 
   @protected
   List<Folder> dco_decode_list_folder(dynamic raw);
@@ -374,6 +387,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? dco_decode_opt_box_autoadd_u_8(dynamic raw);
+
+  @protected
+  List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
   Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
@@ -641,6 +657,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Coin sse_decode_coin(SseDeserializer deserializer);
 
   @protected
+  Contact sse_decode_contact(SseDeserializer deserializer);
+
+  @protected
+  ContactMatch sse_decode_contact_match(SseDeserializer deserializer);
+
+  @protected
   DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
 
   @protected
@@ -675,6 +697,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Category> sse_decode_list_category(SseDeserializer deserializer);
+
+  @protected
+  List<Contact> sse_decode_list_contact(SseDeserializer deserializer);
+
+  @protected
+  List<ContactMatch> sse_decode_list_contact_match(
+      SseDeserializer deserializer);
 
   @protected
   List<Folder> sse_decode_list_folder(SseDeserializer deserializer);
@@ -811,6 +840,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer);
+
+  @protected
+  List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
   Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -1090,6 +1122,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_coin(Coin self, SseSerializer serializer);
 
   @protected
+  void sse_encode_contact(Contact self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_contact_match(ContactMatch self, SseSerializer serializer);
+
+  @protected
   void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
 
   @protected
@@ -1125,6 +1163,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_category(List<Category> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_contact(List<Contact> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_contact_match(
+      List<ContactMatch> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_folder(List<Folder> self, SseSerializer serializer);
@@ -1272,6 +1317,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_list_prim_u_8_strict(

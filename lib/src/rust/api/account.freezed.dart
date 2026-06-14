@@ -3656,6 +3656,7 @@ mixin _$Tx {
   double? get price;
   String? get memo;
   bool get isUserMemo;
+  String? get contactName;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -3684,7 +3685,9 @@ mixin _$Tx {
             (identical(other.price, price) || other.price == price) &&
             (identical(other.memo, memo) || other.memo == memo) &&
             (identical(other.isUserMemo, isUserMemo) ||
-                other.isUserMemo == isUserMemo));
+                other.isUserMemo == isUserMemo) &&
+            (identical(other.contactName, contactName) ||
+                other.contactName == contactName));
   }
 
   @override
@@ -3702,11 +3705,12 @@ mixin _$Tx {
       assetDisplay,
       price,
       memo,
-      isUserMemo);
+      isUserMemo,
+      contactName);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo, contactName: $contactName)';
   }
 }
 
@@ -3727,7 +3731,8 @@ abstract mixin class $TxCopyWith<$Res> {
       String assetDisplay,
       double? price,
       String? memo,
-      bool isUserMemo});
+      bool isUserMemo,
+      String? contactName});
 }
 
 /// @nodoc
@@ -3755,6 +3760,7 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
     Object? price = freezed,
     Object? memo = freezed,
     Object? isUserMemo = null,
+    Object? contactName = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -3809,6 +3815,10 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
           ? _self.isUserMemo
           : isUserMemo // ignore: cast_nullable_to_non_nullable
               as bool,
+      contactName: freezed == contactName
+          ? _self.contactName
+          : contactName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -3917,7 +3927,8 @@ extension TxPatterns on Tx {
             String assetDisplay,
             double? price,
             String? memo,
-            bool isUserMemo)?
+            bool isUserMemo,
+            String? contactName)?
         $default, {
     required TResult orElse(),
   }) {
@@ -3937,7 +3948,8 @@ extension TxPatterns on Tx {
             _that.assetDisplay,
             _that.price,
             _that.memo,
-            _that.isUserMemo);
+            _that.isUserMemo,
+            _that.contactName);
       case _:
         return orElse();
     }
@@ -3971,7 +3983,8 @@ extension TxPatterns on Tx {
             String assetDisplay,
             double? price,
             String? memo,
-            bool isUserMemo)
+            bool isUserMemo,
+            String? contactName)
         $default,
   ) {
     final _that = this;
@@ -3990,7 +4003,8 @@ extension TxPatterns on Tx {
             _that.assetDisplay,
             _that.price,
             _that.memo,
-            _that.isUserMemo);
+            _that.isUserMemo,
+            _that.contactName);
     }
   }
 
@@ -4021,7 +4035,8 @@ extension TxPatterns on Tx {
             String assetDisplay,
             double? price,
             String? memo,
-            bool isUserMemo)?
+            bool isUserMemo,
+            String? contactName)?
         $default,
   ) {
     final _that = this;
@@ -4040,7 +4055,8 @@ extension TxPatterns on Tx {
             _that.assetDisplay,
             _that.price,
             _that.memo,
-            _that.isUserMemo);
+            _that.isUserMemo,
+            _that.contactName);
       case _:
         return null;
     }
@@ -4063,7 +4079,8 @@ class _Tx implements Tx {
       required this.assetDisplay,
       this.price,
       this.memo,
-      required this.isUserMemo});
+      required this.isUserMemo,
+      this.contactName});
 
   @override
   final int id;
@@ -4091,6 +4108,8 @@ class _Tx implements Tx {
   final String? memo;
   @override
   final bool isUserMemo;
+  @override
+  final String? contactName;
 
   /// Create a copy of Tx
   /// with the given fields replaced by the non-null parameter values.
@@ -4120,7 +4139,9 @@ class _Tx implements Tx {
             (identical(other.price, price) || other.price == price) &&
             (identical(other.memo, memo) || other.memo == memo) &&
             (identical(other.isUserMemo, isUserMemo) ||
-                other.isUserMemo == isUserMemo));
+                other.isUserMemo == isUserMemo) &&
+            (identical(other.contactName, contactName) ||
+                other.contactName == contactName));
   }
 
   @override
@@ -4138,11 +4159,12 @@ class _Tx implements Tx {
       assetDisplay,
       price,
       memo,
-      isUserMemo);
+      isUserMemo,
+      contactName);
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo)';
+    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo, contactName: $contactName)';
   }
 }
 
@@ -4164,7 +4186,8 @@ abstract mixin class _$TxCopyWith<$Res> implements $TxCopyWith<$Res> {
       String assetDisplay,
       double? price,
       String? memo,
-      bool isUserMemo});
+      bool isUserMemo,
+      String? contactName});
 }
 
 /// @nodoc
@@ -4192,6 +4215,7 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
     Object? price = freezed,
     Object? memo = freezed,
     Object? isUserMemo = null,
+    Object? contactName = freezed,
   }) {
     return _then(_Tx(
       id: null == id
@@ -4246,6 +4270,10 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
           ? _self.isUserMemo
           : isUserMemo // ignore: cast_nullable_to_non_nullable
               as bool,
+      contactName: freezed == contactName
+          ? _self.contactName
+          : contactName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
