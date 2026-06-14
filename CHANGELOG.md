@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [6.20.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.2...zkool-v6.20.0-rc.3) (2026-06-14)
+
+
+### Features
+
+* add contacts address book with vCard import/export and tx matching ([3f57e80](https://github.com/hhanh00/zkool2/commit/3f57e803b49a786c5f6676289622631310a36cee))
+* add debounced tx search bar filtering by memo and contact ([2f1b8b2](https://github.com/hhanh00/zkool2/commit/2f1b8b23638787bf4ec9c2c4cc06a79ce476c6c2))
+
 ## [6.20.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.1...zkool-v6.20.0-rc.2) (2026-06-14)
 
 
