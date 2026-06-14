@@ -89,7 +89,12 @@ async def kill_existing_zkool_processes():
 
 
 async def start_zkool_instance(
-    zkool_binary: str, db_path: str, port: int, lwd_url: str, log_path: str | None = None
+    zkool_binary: str,
+    db_path: str,
+    port: int,
+    lwd_url: str,
+    log_path: str | None = None,
+    zebra: bool = False,
 ) -> subprocess.Popen:
     """Start a zkool_graphql instance.
 
@@ -97,8 +102,9 @@ async def start_zkool_instance(
         zkool_binary: Path to zkool_graphql binary
         db_path: Path to database file
         port: Port to run on
-        lwd_url: Light wallet daemon URL
+        lwd_url: Light wallet daemon URL (or zebra RPC URL when zebra=True)
         log_path: Optional path for log file
+        zebra: If True, use zebra JSON-RPC backend instead of lightwalletd gRPC
 
     Returns:
         Subprocess object
@@ -114,8 +120,12 @@ async def start_zkool_instance(
     env = os.environ.copy()
     env["RUST_BACKTRACE"] = "full"
 
+    cmd = [zkool_binary, "-d", db_path, "-p", str(port), "-l", lwd_url]
+    if zebra:
+        cmd.append("--zebra")
+
     process = subprocess.Popen(
-        [zkool_binary, "-d", db_path, "-p", str(port), "-l", lwd_url],
+        cmd,
         stdout=open(log_path, "w"),
         stderr=subprocess.STDOUT,
         env=env,
