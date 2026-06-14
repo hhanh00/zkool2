@@ -1,12 +1,28 @@
 use std::sync::OnceLock;
 
 use anyhow::{anyhow, Context, Result};
-use hickory_resolver::TokioAsyncResolver;
-use tracing::info;
+use hickory_proto::error::ProtoErrorKind;
+use hickory_resolver::{
+    config::{ResolverConfig, ResolverOpts},
+    error::{ResolveError, ResolveErrorKind},
+    TokioAsyncResolver,
+};
+use tracing::{info, warn};
 use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_protocol::consensus::NetworkType;
 
 use crate::pay::Recipient;
+
+/// Outcome of DNSSEC validation for an OpenAlias DNS lookup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DnssecStatus {
+    /// DNSSEC signatures were present and validated successfully.
+    Verified,
+    /// The domain has no DNSSEC records (RRSIGs absent) — cannot verify.
+    Unsigned,
+    /// DNSSEC records exist but validation failed — possible tampering.
+    Bogus,
+}
 
 // ---------------------------------------------------------------------------
 // OA1 record parser (replaces openalias crate)
@@ -143,36 +159,102 @@ impl TryFromAddress for NetCheck {
     type Error = ();
 }
 
-/// Cached async DNS resolver, created once and reused.
-fn resolver() -> &'static TokioAsyncResolver {
-    static RESOLVER: OnceLock<TokioAsyncResolver> = OnceLock::new();
-    RESOLVER.get_or_init(|| {
-        // Try system config first (reads /etc/resolv.conf on Unix).
-        // On Android the resolv.conf file may not exist, so fall back
-        // to a built-in resolver config using Google's public DNS.
-        TokioAsyncResolver::tokio_from_system_conf().unwrap_or_else(|e| {
+/// Build a `TokioAsyncResolver` from system config (with fallback to Google DNS),
+/// optionally enabling DNSSEC validation.
+fn build_dns_resolver(secure: bool) -> TokioAsyncResolver {
+    let mut opts = ResolverOpts::default();
+    if secure {
+        opts.validate = true;
+        opts.edns0 = true;
+    }
+
+    match hickory_resolver::system_conf::read_system_conf() {
+        Ok((config, _)) => {
             info!(
-                "Failed to create DNS resolver from system config ({e}); \
-                 falling back to Google public DNS"
+                "DNS resolver created from system config (DNSSEC: {secure})"
             );
-            TokioAsyncResolver::tokio(
-                hickory_resolver::config::ResolverConfig::google(),
-                hickory_resolver::config::ResolverOpts::default(),
-            )
-        })
-    })
+            TokioAsyncResolver::tokio(config, opts)
+        }
+        Err(e) => {
+            info!(
+                "Failed to read system DNS config ({e}); \
+                 falling back to Google public DNS (DNSSEC: {secure})"
+            );
+            TokioAsyncResolver::tokio(ResolverConfig::google(), opts)
+        }
+    }
+}
+
+/// Cached async DNS resolver WITHOUT DNSSEC validation (works for all domains).
+fn resolver_insecure() -> &'static TokioAsyncResolver {
+    static RESOLVER_INSECURE: OnceLock<TokioAsyncResolver> = OnceLock::new();
+    RESOLVER_INSECURE.get_or_init(|| build_dns_resolver(false))
+}
+
+/// Cached async DNS resolver WITH DNSSEC validation.
+/// Only returns successfully for domains with valid DNSSEC signatures.
+fn resolver_secure() -> &'static TokioAsyncResolver {
+    static RESOLVER_SECURE: OnceLock<TokioAsyncResolver> = OnceLock::new();
+    RESOLVER_SECURE.get_or_init(|| build_dns_resolver(true))
+}
+
+/// Check whether a `ResolveError` was caused by the domain lacking DNSSEC
+/// records (as opposed to having broken/unverifiable DNSSEC records).
+fn is_unsigned_error(err: &ResolveError) -> bool {
+    match err.kind() {
+        ResolveErrorKind::Proto(proto_err) => matches!(
+            proto_err.kind(),
+            ProtoErrorKind::RrsigsNotPresent { .. }
+        ),
+        _ => false,
+    }
+}
+
+/// Perform a DNS TXT lookup, trying DNSSEC validation first.
+///
+/// Returns the lookup result and a [`DnssecStatus`] indicating whether the
+/// response was DNSSEC-verified, unsigned, or bogus.
+async fn lookup_txt_with_dnssec(
+    fqdn: &str,
+    alias: &str,
+) -> Result<(hickory_resolver::lookup::TxtLookup, DnssecStatus)> {
+    match resolver_secure().txt_lookup(fqdn).await {
+        Ok(response) => {
+            info!("DNSSEC-validated OpenAlias resolution for {alias}");
+            Ok((response, DnssecStatus::Verified))
+        }
+        Err(e) => {
+            let status = if is_unsigned_error(&e) {
+                warn!(
+                    "Domain for OpenAlias {alias} is not DNSSEC-signed; \
+                     falling back to insecure DNS resolution"
+                );
+                DnssecStatus::Unsigned
+            } else {
+                warn!(
+                    "DNSSEC validation failed for OpenAlias {alias}: {e}. \
+                     Falling back to insecure DNS resolution — \
+                     the response may have been tampered with"
+                );
+                DnssecStatus::Bogus
+            };
+            let response = resolver_insecure()
+                .txt_lookup(fqdn)
+                .await
+                .with_context(|| format!("DNS lookup failed for OpenAlias: {alias}"))?;
+            Ok((response, status))
+        }
+    }
 }
 
 /// Perform async DNS TXT lookup and parse OA1 records into [`Oa1Record`]s.
-async fn lookup_oa1_records(alias: &str) -> Result<Vec<Oa1Record>> {
+/// Returns the parsed records along with the DNSSEC validation status.
+async fn lookup_oa1_records(alias: &str) -> Result<(Vec<Oa1Record>, DnssecStatus)> {
     let fqdn =
         alias_to_fqdn(alias).ok_or_else(|| anyhow!("Invalid OpenAlias name: {alias}"))?;
     info!("Resolving OpenAlias: {alias} → {fqdn}");
 
-    let response = resolver()
-        .txt_lookup(&fqdn)
-        .await
-        .with_context(|| format!("DNS lookup failed for OpenAlias: {alias}"))?;
+    let (response, status) = lookup_txt_with_dnssec(&fqdn, alias).await?;
 
     let records: Vec<String> = response
         .iter()
@@ -196,27 +278,28 @@ async fn lookup_oa1_records(alias: &str) -> Result<Vec<Oa1Record>> {
     }
     info!("OpenAlias parsed {} address(es) for {alias}", addrs.len());
 
-    Ok(addrs)
+    Ok((addrs, status))
 }
 
 /// Resolve an OpenAlias name and return all found cryptocurrency addresses
-/// as [`Recipient`]s.
+/// as [`Recipient`]s, along with the DNSSEC validation status.
 ///
 /// Performs async DNS TXT lookup and parses OA1 records.
-pub async fn resolve(alias: &str) -> Result<Vec<Recipient>> {
-    let addrs = lookup_oa1_records(alias).await?;
+pub async fn resolve(alias: &str) -> Result<(Vec<Recipient>, DnssecStatus)> {
+    let (addrs, status) = lookup_oa1_records(alias).await?;
     let recipients: Vec<Recipient> = addrs.into_iter().map(Into::into).collect();
     info!(
         "OpenAlias {alias} resolved to {} total recipient(s)",
         recipients.len()
     );
-    Ok(recipients)
+    Ok((recipients, status))
 }
 
-/// Resolve an OpenAlias name and return only Zcash addresses as [`Recipient`]s.
+/// Resolve an OpenAlias name and return only Zcash addresses as [`Recipient`]s,
+/// along with the DNSSEC validation status.
 /// Filters by the `cryptocurrency` field being "zcash" (case-insensitive).
-pub async fn resolve_zcash(alias: &str) -> Result<Vec<Recipient>> {
-    let addrs = lookup_oa1_records(alias).await?;
+pub async fn resolve_zcash(alias: &str) -> Result<(Vec<Recipient>, DnssecStatus)> {
+    let (addrs, status) = lookup_oa1_records(alias).await?;
     let zcash: Vec<_> = addrs
         .into_iter()
         .filter(|a| a.cryptocurrency.eq_ignore_ascii_case("zcash"))
@@ -231,7 +314,7 @@ pub async fn resolve_zcash(alias: &str) -> Result<Vec<Recipient>> {
             zcash.len(),
             zcash
         );
-        Ok(zcash)
+        Ok((zcash, status))
     }
 }
 
@@ -260,13 +343,14 @@ pub fn validate_zcash_address(address: &str, net: NetworkType) -> bool {
 }
 
 /// Resolve an OpenAlias name and return validated Zcash [`Recipient`]s for the
-/// given network. Filters by cryptocurrency field AND validates the address
+/// given network, along with the DNSSEC validation status.
+/// Filters by cryptocurrency field AND validates the address
 /// string against the network type.
 pub async fn resolve_zcash_for_network(
     alias: &str,
     net: NetworkType,
-) -> Result<Vec<Recipient>> {
-    let zcash_addrs = resolve_zcash(alias).await?;
+) -> Result<(Vec<Recipient>, DnssecStatus)> {
+    let (zcash_addrs, status) = resolve_zcash(alias).await?;
     let total = zcash_addrs.len();
     let valid: Vec<_> = zcash_addrs
         .into_iter()
@@ -282,26 +366,27 @@ pub async fn resolve_zcash_for_network(
         ))
     } else {
         info!("OpenAlias {alias} → {valid:?} valid {net:?} recipient(s)");
-        Ok(valid)
+        Ok((valid, status))
     }
 }
 
-/// Get the raw OpenAlias TXT record strings for an alias (without parsing).
-pub async fn resolve_raw(alias: &str) -> Result<Vec<String>> {
+/// Get the raw OpenAlias TXT record strings for an alias (without parsing),
+/// along with the DNSSEC validation status.
+pub async fn resolve_raw(alias: &str) -> Result<(Vec<String>, DnssecStatus)> {
     let fqdn =
         alias_to_fqdn(alias).ok_or_else(|| anyhow!("Invalid OpenAlias name: {alias}"))?;
 
-    let response = resolver()
-        .txt_lookup(&fqdn)
-        .await
-        .with_context(|| format!("DNS lookup failed for OpenAlias: {alias}"))?;
+    let (response, status) = lookup_txt_with_dnssec(&fqdn, alias).await?;
 
-    Ok(response
-        .iter()
-        .flat_map(|txt| txt.iter())
-        .filter(|s| s.starts_with(b"oa1:"))
-        .map(|s| String::from_utf8_lossy(s).to_string())
-        .collect())
+    Ok((
+        response
+            .iter()
+            .flat_map(|txt| txt.iter())
+            .filter(|s| s.starts_with(b"oa1:"))
+            .map(|s| String::from_utf8_lossy(s).to_string())
+            .collect(),
+        status,
+    ))
 }
 
 /// Validate an OpenAlias name format.
@@ -378,5 +463,37 @@ mod tests {
     fn test_parse_oa1_not_oa1() {
         assert!(parse_oa1("v=spf1 include:_spf.example.com ~all").is_none());
         assert!(parse_oa1("not an oa1 record").is_none());
+    }
+
+    #[test]
+    fn test_dnssec_status_variants() {
+        // Verify the enum values are distinct
+        assert_ne!(DnssecStatus::Verified, DnssecStatus::Unsigned);
+        assert_ne!(DnssecStatus::Verified, DnssecStatus::Bogus);
+        assert_ne!(DnssecStatus::Unsigned, DnssecStatus::Bogus);
+
+        // Verify Copy/Clone
+        let s = DnssecStatus::Verified;
+        let _ = s; // Copy
+        let _ = s.clone();
+    }
+
+    #[test]
+    fn test_build_dns_resolver_smoke() {
+        // Smoke test: verify the resolvers can be built without panicking
+        let _ = build_dns_resolver(true);
+        let _ = build_dns_resolver(false);
+
+        // Verify the cached singletons return the same pointer
+        let secure = resolver_secure();
+        let insecure = resolver_insecure();
+        assert!(std::ptr::eq(
+            secure as *const _,
+            resolver_secure() as *const _,
+        ));
+        assert!(std::ptr::eq(
+            insecure as *const _,
+            resolver_insecure() as *const _,
+        ));
     }
 }

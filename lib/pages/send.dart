@@ -447,12 +447,37 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   /// Resolve #alias via OpenAlias DNS. Returns the first [Recipient]
-  /// on success, or null if resolution fails (silently).
+  /// on success, or null if resolution fails (silently) or the user
+  /// cancels due to an unverified DNSSEC response.
   Future<Recipient?> _resolveOpenaliasRecipient(String alias) async {
     final c = coinContext.coin;
     try {
-      final resolved = await resolveOpenalias(alias: alias, c: c);
-      return resolved.isNotEmpty ? resolved.first : null;
+      final result = await resolveOpenalias(alias: alias, c: c);
+      if (result.recipients.isEmpty) return null;
+      if (result.dnssecStatus != 'verified') {
+        final (title, message) = switch (result.dnssecStatus) {
+          'unsigned' => (
+              'DNSSEC not available',
+              'The domain for $alias does not support DNSSEC. '
+                  'The response could not be cryptographically verified. '
+                  'Proceed anyway?',
+            ),
+          'bogus' => (
+              'DNSSEC validation failed',
+              'DNSSEC validation FAILED for $alias! '
+                  'The response may have been tampered with. '
+                  'Proceed at your own risk?',
+            ),
+          _ => ('Untrusted response', 'Proceed anyway?'),
+        };
+        final confirmed = await confirmDialog(
+          context,
+          title: title,
+          message: message,
+        );
+        if (!confirmed) return null;
+      }
+      return result.recipients.first;
     } on AnyhowException catch (_) {
       return null;
     }

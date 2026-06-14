@@ -357,6 +357,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NewAccount dco_decode_new_account(dynamic raw);
 
   @protected
+  OpenAliasResolution dco_decode_open_alias_resolution(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -406,6 +409,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RaptorQParams dco_decode_raptor_q_params(dynamic raw);
+
+  @protected
+  RawOpenAliasResolution dco_decode_raw_open_alias_resolution(dynamic raw);
 
   @protected
   Receivers dco_decode_receivers(dynamic raw);
@@ -809,6 +815,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
 
   @protected
+  OpenAliasResolution sse_decode_open_alias_resolution(
+      SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -859,6 +869,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RaptorQParams sse_decode_raptor_q_params(SseDeserializer deserializer);
+
+  @protected
+  RawOpenAliasResolution sse_decode_raw_open_alias_resolution(
+      SseDeserializer deserializer);
 
   @protected
   Receivers sse_decode_receivers(SseDeserializer deserializer);
@@ -1285,6 +1299,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);
 
   @protected
+  void sse_encode_open_alias_resolution(
+      OpenAliasResolution self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -1339,6 +1357,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_raptor_q_params(RaptorQParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_raw_open_alias_resolution(
+      RawOpenAliasResolution self, SseSerializer serializer);
 
   @protected
   void sse_encode_receivers(Receivers self, SseSerializer serializer);
