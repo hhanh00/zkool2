@@ -15,6 +15,7 @@ import 'api/issuance.dart';
 import 'api/key.dart';
 import 'api/mempool.dart';
 import 'api/network.dart';
+import 'api/openalias.dart';
 import 'api/pay.dart';
 import 'api/raptor.dart';
 import 'api/sweep.dart';

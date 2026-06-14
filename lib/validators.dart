@@ -44,6 +44,10 @@ String? validAddressOrPaymentURI(String? s) {
   if (s.startsWith('@') && s.length > 1) {
     return null;
   }
+  // Allow #alias OpenAlias references — resolution happens via DNS
+  if (s.startsWith('#') && s.length > 1) {
+    return null;
+  }
   final checkAddress = validAddress(s);
   if (checkAddress == null) return null;
   final checkURI = validPaymentURI(s);

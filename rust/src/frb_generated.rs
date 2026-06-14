@@ -41,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 162684712;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1906472890;
 
 // Section: executor
 
@@ -4573,6 +4573,118 @@ fn wire__crate__api__account__reset_sync_impl(
         },
     )
 }
+fn wire__crate__api__openalias__resolve_openalias_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "resolve_openalias",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_alias = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::openalias::resolve_openalias(api_alias, &api_c).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__openalias__resolve_openalias_all_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "resolve_openalias_all",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_alias = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::openalias::resolve_openalias_all(api_alias).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__openalias__resolve_openalias_raw_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "resolve_openalias_raw",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_alias = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::openalias::resolve_openalias_raw(api_alias).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__sync__rewind_sync_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -5228,6 +5340,40 @@ fn wire__crate__api__pay__to_plan_impl(
         },
     )
 }
+fn wire__crate__api__openalias__try_validate_zcash_address_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "try_validate_zcash_address",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_address = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                (move || {
+                    let output_ok =
+                        crate::api::openalias::try_validate_zcash_address(api_address, &api_c)?;
+                    Ok(output_ok)
+                })(),
+            )
+        },
+    )
+}
 fn wire__crate__api__account__tx_account_default_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -5571,6 +5717,71 @@ fn wire__crate__api__transaction__update_historical_prices_impl(
                     .await,
                 )
             }
+        },
+    )
+}
+fn wire__crate__api__openalias__validate_openalias_name_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validate_openalias_name",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_alias = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::openalias::validate_openalias_name(&api_alias),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__openalias__validate_zcash_address_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validate_zcash_address",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_address = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::openalias::validate_zcash_address(&api_address, &api_c),
+                )?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -7394,48 +7605,63 @@ fn pde_ffi_dispatcher_primary_impl(
         114 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
         115 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
         116 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        118 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
-        120 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
-        121 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        123 => {
+        117 => {
+            wire__crate__api__openalias__resolve_openalias_impl(port, ptr, rust_vec_len, data_len)
+        }
+        118 => wire__crate__api__openalias__resolve_openalias_all_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        119 => wire__crate__api__openalias__resolve_openalias_raw_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        120 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
+        121 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        122 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
+        123 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
+        124 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        126 => {
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
-        124 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
-        125 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
-        126 => wire__crate__api__account__show_ledger_sapling_address_impl(
+        127 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
+        128 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
+        129 => wire__crate__api__account__show_ledger_sapling_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        127 => wire__crate__api__account__show_ledger_transparent_address_impl(
+        130 => wire__crate__api__account__show_ledger_transparent_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        128 => wire__crate__api__account__sign_ledger_transaction_impl(
+        131 => wire__crate__api__account__sign_ledger_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        129 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
-        131 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        133 => {
+        132 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        133 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        137 => {
             wire__crate__api__account__tx_account_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        134 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
-        135 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
-        136 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        140 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
-        142 => wire__crate__api__transaction__update_historical_prices_impl(
+        138 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
+        139 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
+        143 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        144 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        145 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__transaction__update_historical_prices_impl(
             port,
             ptr,
             rust_vec_len,
@@ -7468,9 +7694,20 @@ fn pde_ffi_dispatcher_sync_impl(
         88 => wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len),
         104 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
         110 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        122 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        138 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        125 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__openalias__try_validate_zcash_address_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        142 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        147 => {
+            wire__crate__api__openalias__validate_openalias_name_impl(ptr, rust_vec_len, data_len)
+        }
+        148 => {
+            wire__crate__api__openalias__validate_zcash_address_impl(ptr, rust_vec_len, data_len)
+        }
         _ => unreachable!(),
     }
 }
