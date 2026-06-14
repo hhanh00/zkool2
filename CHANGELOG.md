@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.20.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.4...zkool-v6.20.0-rc.5) (2026-06-14)
+
+
+### Bug Fixes
+
+* update flutter version ([139d190](https://github.com/hhanh00/zkool2/commit/139d190006e7c3c4322629eb59e17783127aa3d2))
+
 ## [6.20.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.3...zkool-v6.20.0-rc.4) (2026-06-14)
 
 
