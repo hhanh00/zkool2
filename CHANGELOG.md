@@ -1,6 +1,18 @@
 # Changelog
 
 
+## [6.20.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.1-rc...zkool-v6.20.0-rc) (2026-06-14)
+
+
+### Features
+
+* add OpenAlias resolution via DNS TXT lookup ([7871882](https://github.com/hhanh00/zkool2/commit/78718827866603d501f6b9fdf4694ca5a4ac865c))
+
+
+### Bug Fixes
+
+* watch appSettingsProvider so toggling list/table view rebuilds UI ([a5c63ae](https://github.com/hhanh00/zkool2/commit/a5c63ae7ab934e74f5bfd954723f9a846cb1f909))
+
 ## [6.19.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0...zkool-v6.19.1-rc) (2026-06-13)
 
 
