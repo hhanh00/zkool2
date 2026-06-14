@@ -40,7 +40,11 @@ String? validAddressOrPaymentURI(String? s) {
   if ((s == null || s.isEmpty)) {
     return null;
   }
-  // Allow @accountname references — resolution happens later
+  // Allow !accountname references — resolution happens later
+  if (s.startsWith('!') && s.length > 1) {
+    return null;
+  }
+  // Allow @contactname references — resolution happens later
   if (s.startsWith('@') && s.length > 1) {
     return null;
   }

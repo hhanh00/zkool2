@@ -26,6 +26,7 @@ import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/address_resolver.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/src/rust/api/openalias.dart';
+import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/widgets/input_amount.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -58,6 +59,7 @@ class SendPageState extends ConsumerState<SendPage> {
   Uint8List selectedAssetBase = zecBase;
   String? selectedAssetName;
   List<Account> _accountSuggestions = [];
+  List<Contact> _contactSuggestions = [];
   var _recipientPaysFee = false;
 
   @override
@@ -70,6 +72,13 @@ class SendPageState extends ConsumerState<SendPage> {
       final bal = await balance(c: c);
       final addrs = await getAddresses(uaPools: data.pool, c: c);
       final zsaHoldings = await listZsaHoldings(c: c);
+
+      // Preload contacts for @contactname autocomplete
+      try {
+        await ref.read(getContactsProvider.future);
+      } catch (_) {
+        // Contacts failed to load — autocomplete won't show, but send still works
+      }
 
       setState(() {
         account = data;
@@ -178,35 +187,30 @@ class SendPageState extends ConsumerState<SendPage> {
                   ],
                 ),
                 if (_accountSuggestions.isNotEmpty)
-                  Container(
-                    margin: EdgeInsets.only(top: 4),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: cs.outline.withAlpha(77)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints: BoxConstraints(maxHeight: 200),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _accountSuggestions.length,
-                      itemBuilder: (context, i) {
-                        final a = _accountSuggestions[i];
-                        return ListTile(
-                          dense: true,
-                          leading: a.avatar(),
-                          title: Text(a.name),
-                          subtitle: Text('Account #${a.id}', style: t.bodySmall),
-                          onTap: () {
-                            final fields = formKey.currentState!.fields;
-                            final value = '@${a.name}';
-                            fields["address"]!.didChange(value);
-                            setState(() {
-                              address = value;
-                              _accountSuggestions = [];
-                            });
-                          },
-                        );
-                      },
-                    ),
+                  _suggestionDropdown(
+                    cs,
+                    children: _accountSuggestions
+                        .map((a) => ListTile(
+                              dense: true,
+                              leading: a.avatar(),
+                              title: Text(a.name),
+                              subtitle: Text('Account #${a.id}', style: t.bodySmall),
+                              onTap: () => _selectSuggestion('!', a.name),
+                            ))
+                        .toList(),
+                  ),
+                if (_contactSuggestions.isNotEmpty)
+                  _suggestionDropdown(
+                    cs,
+                    children: _contactSuggestions
+                        .map((c) => ListTile(
+                              dense: true,
+                              leading: Icon(Icons.person),
+                              title: Text(c.name),
+                              subtitle: Text(c.addresses.isNotEmpty ? c.addresses.first : 'No address', style: t.bodySmall),
+                              onTap: () => _selectSuggestion('@', c.name),
+                            ))
+                        .toList(),
                   ),
                 FormBuilderDropdown<Uint8List>(
                   name: "asset",
@@ -398,20 +402,29 @@ class SendPageState extends ConsumerState<SendPage> {
     }
   }
 
-  void onAddressChanged(String? v) {
+  void onAddressChanged(String? v) async {
     if (v == null || v.isEmpty) {
-      setState(() => _accountSuggestions = []);
+      _clearSuggestions();
       return;
     }
-    // Show account suggestions when typing after @
-    if (v.startsWith('@')) {
+    // Show account suggestions when typing after !
+    if (v.startsWith('!')) {
       final query = v.substring(1).toLowerCase();
-      final accounts = ref.read(getAccountsProvider).requireValue;
+      final accounts = await ref.read(getAccountsProvider.future);
       setState(() {
-        _accountSuggestions = query.isEmpty ? accounts.toList() : accounts.where((a) => a.name.toLowerCase().contains(query)).toList();
+        _accountSuggestions = _filterByName(accounts, query);
+        _contactSuggestions = [];
+      });
+    } else if (v.startsWith('@')) {
+      // Show contact suggestions when typing after @
+      final query = v.substring(1).toLowerCase();
+      final contacts = await ref.read(getContactsProvider.future);
+      setState(() {
+        _contactSuggestions = _filterByName(contacts, query);
+        _accountSuggestions = [];
       });
     } else {
-      setState(() => _accountSuggestions = []);
+      _clearSuggestions();
     }
 
     final recipients2 = parsePaymentUri(uri: v);
@@ -511,9 +524,9 @@ class SendPageState extends ConsumerState<SendPage> {
       final fxStr = amountKey.currentState!.fx();
       final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
 
-      // Resolve @accountname to actual address
-      if (address.startsWith('@')) {
-        final accounts = ref.read(getAccountsProvider).requireValue;
+      // Resolve !accountname to actual address
+      if (address.startsWith('!')) {
+        final accounts = await ref.read(getAccountsProvider.future);
         final resolved = await resolveAccountName(address, accounts, c);
         if (resolved == null) {
           if (mounted) {
@@ -532,6 +545,19 @@ class SendPageState extends ConsumerState<SendPage> {
             );
             if (!confirmed) return null;
           }
+        }
+        address = resolved;
+      }
+
+      // Resolve @contactname to actual address
+      if (address.startsWith('@')) {
+        final contacts = await ref.read(getContactsProvider.future);
+        final resolved = resolveContactName(address, contacts);
+        if (resolved == null) {
+          if (mounted) {
+            showException(context, 'Unknown contact: ${address.substring(1)}');
+          }
+          return null;
         }
         address = resolved;
       }
@@ -583,6 +609,49 @@ class SendPageState extends ConsumerState<SendPage> {
     setState(() {});
   }
 
+  Widget _suggestionDropdown(ColorScheme cs, {required List<Widget> children}) {
+    return Container(
+      margin: EdgeInsets.only(top: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.outline.withAlpha(77)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      constraints: BoxConstraints(maxHeight: 200),
+      child: ListView(shrinkWrap: true, children: children),
+    );
+  }
+
+  Future<void> _selectSuggestion(String prefix, String name) async {
+    String? resolved;
+    if (prefix == '!') {
+      final accounts = await ref.read(getAccountsProvider.future);
+      resolved = await resolveAccountName('!$name', accounts, c);
+    } else if (prefix == '@') {
+      final contacts = await ref.read(getContactsProvider.future);
+      resolved = resolveContactName('@$name', contacts);
+    }
+    if (resolved == null) return;
+
+    formKey.currentState!.fields["address"]!.didChange(resolved);
+    setState(() {
+      address = resolved;
+      _accountSuggestions = [];
+      _contactSuggestions = [];
+    });
+  }
+
+  List<T> _filterByName<T>(List<T> items, String query) {
+    if (query.isEmpty) return items.toList();
+    return items.where((item) => (item as dynamic).name.toString().toLowerCase().contains(query)).toList();
+  }
+
+  void _clearSuggestions() {
+    setState(() {
+      _accountSuggestions = [];
+      _contactSuggestions = [];
+    });
+  }
+
   void onClear() {
     formKey.currentState!.reset();
     setState(() {
@@ -590,6 +659,7 @@ class SendPageState extends ConsumerState<SendPage> {
       amount = null;
       memo = null;
       _accountSuggestions = [];
+      _contactSuggestions = [];
     });
   }
 }
