@@ -27,7 +27,7 @@ use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
 use crate::{api::account::TxNote, tiu};
 
-pub const DB_VERSION: u16 = 8;
+pub const DB_VERSION: u16 = 9;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
@@ -444,6 +444,34 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     )
     .execute(&mut *connection)
     .await?;
+
+    // V9 — contacts
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS contacts (
+        id_contact INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        notes TEXT NOT NULL DEFAULT '')",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS contact_addresses (
+        id_address INTEGER PRIMARY KEY,
+        contact_id INTEGER NOT NULL REFERENCES contacts(id_contact) ON DELETE CASCADE,
+        address TEXT NOT NULL,
+        receiver TEXT NOT NULL,
+        pool INTEGER NOT NULL,
+        ordinal INTEGER NOT NULL DEFAULT 0)",
+    )
+    .execute(&mut *connection)
+    .await?;
+
+    let _ = sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_contact_receiver ON contact_addresses(receiver, pool)",
+    )
+    .execute(&mut *connection)
+    .await;
 
     // V7
     let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
@@ -1363,11 +1391,18 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
         "SELECT t.id_tx, t.txid, t.height, t.time, t.value, t.tpe, c.name, t.zsa_value, t.price, t.asset_id,
             a.asset_name, a.asset_desc_hash,
             um.user_memo as memo,
-            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo
+            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo,
+            oc.contact_name
             FROM transactions t
             LEFT JOIN categories c ON c.id_category = t.category
             LEFT JOIN assets a ON t.asset_id = a.id_asset
             LEFT JOIN user_memos um ON um.id_tx = t.id_tx AND um.account = t.account
+            LEFT JOIN (
+                SELECT DISTINCT o.tx, ct.name as contact_name
+                FROM outputs o
+                JOIN contact_addresses ca ON o.address = ca.receiver AND o.pool = ca.pool
+                JOIN contacts ct ON ca.contact_id = ct.id_contact
+            ) oc ON oc.tx = t.id_tx
             WHERE t.account = ?
             ORDER BY t.height DESC",
     )
@@ -1387,6 +1422,7 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
         let asset_desc_hash: Option<Vec<u8>> = row.get(11);
         let memo: Option<String> = row.get(12);
         let is_user_memo: bool = row.get(13);
+        let contact_name: Option<String> = row.get(14);
         Tx {
             id,
             txid,
@@ -1405,6 +1441,7 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
             price,
             memo,
             is_user_memo,
+            contact_name,
         }
     })
     .fetch_all(&mut *connection)

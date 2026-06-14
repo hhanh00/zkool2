@@ -888,6 +888,7 @@ List<Widget> showTxHistory(BuildContext context, List<Tx> transactions) {
           onTap: () => gotoTransaction(context, tx.id),
           zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
           zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
+          contactName: tx.contactName,
         );
 
         return Column(children: [
