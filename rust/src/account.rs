@@ -1047,8 +1047,12 @@ pub async fn get_tx_details(
     .await?;
 
     let outputs = sqlx::query(
-        "SELECT id_output, pool, height, value, address FROM outputs
-        WHERE account = ? AND tx = ?",
+        "SELECT o.id_output, o.pool, o.height, o.value, o.address,
+                c.name as contact_name
+         FROM outputs o
+         LEFT JOIN contact_addresses ca ON o.address = ca.receiver AND o.pool = ca.pool
+         LEFT JOIN contacts c ON ca.contact_id = c.id_contact
+         WHERE o.account = ? AND o.tx = ?",
     )
     .bind(account)
     .bind(tx.id)
@@ -1058,12 +1062,14 @@ pub async fn get_tx_details(
         let height: u32 = row.get(2);
         let value: u64 = row.get(3);
         let address: String = row.get(4);
+        let contact_name: Option<String> = row.get(5);
         TxOutput {
             id: id_output,
             pool,
             height,
             value,
             address,
+            contact_name,
         }
     })
     .fetch_all(&mut *connection)
