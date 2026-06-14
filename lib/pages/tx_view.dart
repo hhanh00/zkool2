@@ -248,7 +248,18 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
       ...txd.outputs.expand(
         (n) => [
           ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(n.pool))),
-          ListTile(title: Text("Address"), subtitle: CopyableText(n.address)),
+          ListTile(
+            title: Text("Address"),
+            subtitle: n.contactName != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(n.contactName!, style: TextStyle(fontWeight: FontWeight.bold)),
+                      CopyableText(n.address),
+                    ],
+                  )
+                : CopyableText(n.address),
+          ),
           ListTile(
             title: Text("Value"),
             subtitle: zatToText(n.value, selectable: true),

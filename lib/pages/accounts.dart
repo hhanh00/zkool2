@@ -185,6 +185,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                       onCategory();
                     case "folder":
                       onFolder();
+                    case "contacts":
+                      onContacts();
                   }
                 },
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -199,6 +201,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                   const PopupMenuItem<String>(
                     value: "category",
                     child: Text("Categories"),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: "contacts",
+                    child: Text("Contacts"),
                   ),
                   PopupMenuItem<String>(
                     value: 'hide',
@@ -229,6 +235,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
 
   onCategory() async {
     await GoRouter.of(context).push("/categories");
+  }
+
+  onContacts() async {
+    await GoRouter.of(context).push("/contacts");
   }
 
   onSync() async {

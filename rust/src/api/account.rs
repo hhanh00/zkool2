@@ -329,6 +329,7 @@ pub struct Tx {
     pub price: Option<f64>,
     pub memo: Option<String>,
     pub is_user_memo: bool,
+    pub contact_name: Option<String>,
 }
 
 pub struct TAddressTxCount {
@@ -847,6 +848,7 @@ pub struct TxOutput {
     pub height: u32,
     pub value: u64,
     pub address: String,
+    pub contact_name: Option<String>,
 }
 
 #[derive(Default, Debug)]

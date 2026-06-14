@@ -11,6 +11,7 @@ pub mod account;
 pub mod api;
 pub mod bip38;
 pub mod budget;
+pub mod contacts;
 pub mod db;
 #[cfg(feature="flutter")]
 mod frb_generated;

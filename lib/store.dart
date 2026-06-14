@@ -14,6 +14,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
+import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
@@ -268,6 +269,19 @@ Future<List<Folder>> getFolders(Ref ref) async {
 Future<List<Category>> getCategories(Ref ref) async {
   final c = coinContext.coin;
   return await listCategories(c: c);
+}
+
+@riverpod
+Future<List<Contact>> getContacts(Ref ref) async {
+  final c = coinContext.coin;
+  return await listContacts(c: c);
+}
+
+@riverpod
+Future<List<ContactMatch>> contactsForAddress(Ref ref, String address) async {
+  if (address.isEmpty) return [];
+  final c = coinContext.coin;
+  return await findContactsForAddress(address: address, c: c);
 }
 
 @riverpod

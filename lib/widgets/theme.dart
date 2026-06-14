@@ -88,6 +88,7 @@ class TransactionTile extends StatelessWidget {
   final void Function()? onTap;
   final BigInt? zsaValue;
   final String? zsaLabel;
+  final String? contactName;
 
   const TransactionTile({
     super.key,
@@ -100,6 +101,7 @@ class TransactionTile extends StatelessWidget {
     this.onTap,
     this.zsaValue,
     this.zsaLabel,
+    this.contactName,
   });
 
   @override
@@ -116,7 +118,14 @@ class TransactionTile extends StatelessWidget {
         ),
         child: Icon(icon, color: color),
       ),
-      title: Text(label),
+      title: contactName != null
+          ? Row(
+              children: [
+                Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+                Text(' → $contactName', style: TextStyle(color: color, fontWeight: FontWeight.w500)),
+              ],
+            )
+          : Text(label),
       subtitle: d,
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
