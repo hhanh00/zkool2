@@ -123,10 +123,15 @@ pub fn try_orchard_decrypt(
 ) -> Result<Option<(orchard::note::Note, Note)>> {
     let zip212_enforcement = zip212(network, height);
     let bb = ivk.to_bytes();
-    let ivk_fq = Fq::from_repr(bb[32..64].try_into().unwrap()).unwrap();
+    let ivk_bytes: [u8; 32] = bb[32..64].try_into()
+        .map_err(|_| anyhow::anyhow!("Invalid ivk length"))?;
+    let ivk_fq = Option::<Fq>::from(Fq::from_repr(ivk_bytes))
+        .ok_or_else(|| anyhow::anyhow!("Invalid ivk Fq repr"))?;
 
-    let epk = Point::from_bytes(&ca.ephemeral_key.clone().try_into().unwrap())
-        .unwrap()
+    let epk_bytes: [u8; 32] = ca.ephemeral_key.clone().try_into()
+        .map_err(|_| anyhow::anyhow!("Invalid ephemeral key length"))?;
+    let epk = Option::<Point>::from(Point::from_bytes(&epk_bytes))
+        .ok_or_else(|| anyhow::anyhow!("Invalid ephemeral key bytes"))?
         .to_affine();
     let ka = epk * ivk_fq;
     let key = Params::new()
@@ -142,8 +147,8 @@ pub fn try_orchard_decrypt(
 
     // Handle ZSA (84-byte) and vanilla (52-byte) ciphertext sizes
     if ciphertext_len >= 84 {
-        let mut plaintext = [0u8; 84];
-        plaintext.copy_from_slice(&ca.ciphertext);
+        // ZSA ciphertext can be > 84 bytes; use a dynamic buffer
+        let mut plaintext = ca.ciphertext.clone();
         keystream.apply_keystream(&mut plaintext);
 
         // ZSA notes use leadbyte 0x03, vanilla uses 0x01/0x02
@@ -153,17 +158,34 @@ pub fn try_orchard_decrypt(
         {
             use zcash_note_encryption::Domain;
             let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
-            let rho = Rho::from_bytes(&ca.nullifier.clone().try_into().unwrap()).unwrap();
+            let nullifier_bytes: [u8; 32] = ca.nullifier.clone()
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid nullifier length"))?;
+            let rho = Option::<Rho>::from(Rho::from_bytes(&nullifier_bytes))
+                .ok_or_else(|| anyhow::anyhow!("Invalid Rho bytes"))?;
+            let note_ciphertext = NoteBytesData::from_slice(&ca.ciphertext)
+                .ok_or_else(|| anyhow::anyhow!("Invalid orchard note ciphertext"))?;
+            let cmx_bytes: [u8; 32] = ca.cmx.clone()
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid cmx length"))?;
+            let ephemeral_key_bytes: [u8; 32] = ca.ephemeral_key.clone()
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid ephemeral key length"))?;
             let cca = CompactAction::<OrchardZSA>::from_parts(
-                Nullifier::from_bytes(&rho.to_bytes()).unwrap(),
-                ExtractedNoteCommitment::from_bytes(&ca.cmx.clone().try_into().unwrap()).unwrap(),
-                EphemeralKeyBytes(ca.ephemeral_key.clone().try_into().unwrap()),
-                NoteBytesData::from_slice(&ca.ciphertext).unwrap(),
+                Option::<Nullifier>::from(Nullifier::from_bytes(&rho.to_bytes()))
+                    .ok_or_else(|| anyhow::anyhow!("Invalid nullifier"))?,
+                Option::<ExtractedNoteCommitment>::from(
+                    ExtractedNoteCommitment::from_bytes(&cmx_bytes)
+                ).ok_or_else(|| anyhow::anyhow!("Invalid cmx"))?,
+                EphemeralKeyBytes(ephemeral_key_bytes),
+                note_ciphertext,
             );
             let d = OrchardDomain::<OrchardZSA>::for_compact_action(&cca);
+            let note_plaintext = NoteBytesData::from_slice(&plaintext)
+                .ok_or_else(|| anyhow::anyhow!("Invalid orchard note plaintext"))?;
             if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(
                 &pivk,
-                &NoteBytesData(plaintext),
+                &note_plaintext,
             ) {
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
@@ -208,12 +230,27 @@ pub fn try_orchard_decrypt(
     {
         use zcash_note_encryption::Domain;
         let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
-        let rho = Rho::from_bytes(&ca.nullifier.clone().try_into().unwrap()).unwrap();
+        let nullifier_bytes: [u8; 32] = ca.nullifier.clone()
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid nullifier length"))?;
+        let rho = Option::<Rho>::from(Rho::from_bytes(&nullifier_bytes))
+            .ok_or_else(|| anyhow::anyhow!("Invalid Rho bytes"))?;
+        let note_ciphertext = NoteBytesData::from_slice(&ca.ciphertext)
+            .ok_or_else(|| anyhow::anyhow!("Invalid orchard note ciphertext"))?;
+        let cmx_bytes: [u8; 32] = ca.cmx.clone()
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid cmx length"))?;
+        let ephemeral_key_bytes: [u8; 32] = ca.ephemeral_key.clone()
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid ephemeral key length"))?;
         let cca = CompactAction::<OrchardVanilla>::from_parts(
-            Nullifier::from_bytes(&rho.to_bytes()).unwrap(),
-            ExtractedNoteCommitment::from_bytes(&ca.cmx.clone().try_into().unwrap()).unwrap(),
-            EphemeralKeyBytes(ca.ephemeral_key.clone().try_into().unwrap()),
-            NoteBytesData::from_slice(&ca.ciphertext).unwrap(),
+            Option::<Nullifier>::from(Nullifier::from_bytes(&rho.to_bytes()))
+                .ok_or_else(|| anyhow::anyhow!("Invalid nullifier"))?,
+            Option::<ExtractedNoteCommitment>::from(
+                ExtractedNoteCommitment::from_bytes(&cmx_bytes)
+            ).ok_or_else(|| anyhow::anyhow!("Invalid cmx"))?,
+            EphemeralKeyBytes(ephemeral_key_bytes),
+            note_ciphertext,
         );
         let d = OrchardDomain::<OrchardVanilla>::for_compact_action(&cca);
         if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(

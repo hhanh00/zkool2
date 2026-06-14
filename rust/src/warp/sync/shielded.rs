@@ -202,7 +202,10 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                         vout as u32,
                         o,
                     )
-                    .unwrap()
+                    .unwrap_or_else(|e| {
+                        tracing::warn!("decrypt error: {e}");
+                        None
+                    })
                     .map(|(n, dbn)| (n, dbn, nk))
                 })
             })
