@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.20.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.6...zkool-v6.20.0-rc.7) (2026-06-14)
+
+
+### Bug Fixes
+
+* zebra JSON-RPC backend error handling and orchard decrypt panics ([7a29610](https://github.com/hhanh00/zkool2/commit/7a2961084d9c57d0b2a3adf693d7663e09554f79))
+
 ## [6.20.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.5...zkool-v6.20.0-rc.6) (2026-06-14)
 
 
