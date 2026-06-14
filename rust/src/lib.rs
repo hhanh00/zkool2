@@ -24,6 +24,7 @@ pub mod ledger;
 pub mod lwd;
 pub mod memo;
 pub mod mempool;
+pub mod openalias;
 pub mod net;
 pub mod pay;
 pub mod recover;

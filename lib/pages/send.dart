@@ -25,6 +25,7 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/address_resolver.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/src/rust/api/openalias.dart';
 import 'package:zkool/widgets/input_amount.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -166,6 +167,7 @@ class SendPageState extends ConsumerState<SendPage> {
                             onChanged: onAddressChanged,
                             textInputAction: TextInputAction.next,
                             onEditingComplete: () {
+                              _tryResolveOpenalias();
                               FocusScope.of(context).nextFocus();
                             },
                           ),
@@ -440,7 +442,37 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   void onAddressEditComplete() {
+    _tryResolveOpenalias();
     setState(() {});
+  }
+
+  /// Resolve #alias via OpenAlias DNS. Returns the first [Recipient]
+  /// on success, or null if resolution fails (silently).
+  Future<Recipient?> _resolveOpenaliasRecipient(String alias) async {
+    final c = coinContext.coin;
+    try {
+      final resolved = await resolveOpenalias(alias: alias, c: c);
+      return resolved.isNotEmpty ? resolved.first : null;
+    } on AnyhowException catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _tryResolveOpenalias() async {
+    final fields = formKey.currentState?.fields;
+    if (fields == null) return;
+    final addr = fields['address']?.value as String?;
+    if (addr == null || !addr.startsWith('#')) return;
+
+    final recipient = await _resolveOpenaliasRecipient(addr.substring(1));
+    if (recipient != null) {
+      fields['address']!.didChange(recipient.address);
+      setState(() => address = recipient.address);
+      if (recipient.userMemo != null) {
+        memo = recipient.userMemo;
+        fields['memo']!.didChange(memo);
+      }
+    }
   }
 
   Future<Recipient?> validateAndGetRecipient() async {
@@ -450,7 +482,7 @@ class SendPageState extends ConsumerState<SendPage> {
       final amountValue = form.fields['amount']?.value;
       if (amountValue == null || amountValue.isEmpty) return null;
       final amount = amountValue as String;
-      final memo = form.fields['memo']?.value as String?;
+      var memo = form.fields['memo']?.value as String?;
       final fxStr = amountKey.currentState!.fx();
       final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
 
@@ -477,6 +509,19 @@ class SendPageState extends ConsumerState<SendPage> {
           }
         }
         address = resolved;
+      }
+
+      // Resolve #alias via OpenAlias DNS
+      if (address.startsWith('#')) {
+        final recipient = await _resolveOpenaliasRecipient(address.substring(1));
+        if (recipient != null) {
+          address = recipient.address;
+          form.fields['address']!.didChange(address);
+          if (recipient.userMemo != null) {
+            memo = recipient.userMemo;
+            form.fields['memo']!.didChange(memo);
+          }
+        }
       }
 
       logger.i("Send $amount to $address");
