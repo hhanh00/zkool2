@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.20.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.7...zkool-v6.20.0-rc.8) (2026-06-14)
+
+
+### Features
+
+* add DNSSEC validation for OpenAlias DNS resolution ([b851ec2](https://github.com/hhanh00/zkool2/commit/b851ec2ae01d919b43101a6974088f9a967d1303))
+
 ## [6.20.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.6...zkool-v6.20.0-rc.7) (2026-06-14)
 
 
