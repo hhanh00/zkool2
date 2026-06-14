@@ -57,7 +57,7 @@ impl ZebraClient {
         };
 
         let url = Url::parse(url).anyhow()?;
-        let host = url.domain().ok_or(anyhow::anyhow!("Not domain"))?;
+        let host = url.host_str().ok_or(anyhow::anyhow!("No host in URL"))?;
         let port = url
             .port_or_known_default()
             .ok_or(anyhow::anyhow!("No known port"))?;
@@ -117,16 +117,29 @@ impl ZebraClient {
             let tor = &*tor_client.lock().await;
             self.post_tor(tor, req).await?
         } else {
-            self.client
+            let body: Value = self.client
                 .post(&self.url)
                 .json(&req)
                 .send()
                 .await?
                 .error_for_status()?
                 .json::<Value>()
-                .await?
+                .await?;
+            if let Some(error) = body.pointer("/error") {
+                if !error.is_null() {
+                    let msg = error
+                        .pointer("/message")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("unknown error");
+                    anyhow::bail!("JSON RPC error: {}", msg);
+                }
+            }
+            body
         };
-        let res: R = serde_json::from_value(rep["result"].clone())?;
+        let result = rep
+            .pointer("/result")
+            .ok_or_else(|| anyhow::anyhow!("Missing result field in JSON-RPC response: {rep}"))?;
+        let res: R = serde_json::from_value(result.clone())?;
         Ok(res)
     }
 
@@ -172,22 +185,15 @@ impl ZebraClient {
         let body = String::from_utf8_lossy(&buf[offset..]);
 
         let body: Value = serde_json::from_str(&body)?;
-        if let Some(error) = body.pointer("/error") {
-            anyhow::bail!(
-                "JSON RPC error: {}",
-                error.pointer("/message").unwrap().as_str().unwrap()
-            )
-        }
-        let result = body.pointer("/result").unwrap();
-
-        Ok(result.clone())
+        // Return the full body so caller can check /error and extract /result uniformly
+        Ok(body)
     }
 }
 
 #[async_trait]
 impl LwdServer for ZebraClient {
     async fn latest_height(&mut self) -> Result<u32> {
-        let block_count = jsonrpc!(self, "getblockcount", (), u32)?;
+        let block_count = jsonrpc!(self, "getblockcount", [], u32)?;
         Ok(block_count as u32)
     }
 
@@ -226,11 +232,11 @@ impl LwdServer for ZebraClient {
             [tx_hex, 1],
             Value
         )?;
-        let data = rep["result"]["hex"]
+        let data = rep["hex"]
             .as_str()
-            .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No data field"))?
+            .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No hex field"))?
             .to_string();
-        let height = rep["result"]["height"]
+        let height = rep["height"]
             .as_u64()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No height field"))?;
         let branch_id = BranchId::for_height(network, BlockHeight::from_u32(height as u32));
@@ -272,7 +278,7 @@ impl LwdServer for ZebraClient {
             "end": end
         });
         let rep = jsonrpc!(self, "getaddresstxids", [req], Value)?;
-        let txids = rep["result"]
+        let txids = rep
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("Invalid response from node: No result field"))?;
         let txids = txids
@@ -290,7 +296,8 @@ impl LwdServer for ZebraClient {
         let (txs, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
         tokio::spawn(async move {
             for txid in txids.iter() {
-                let mut txid_hex = hex::decode(txid).expect("Failed to decode txid hex");
+                let mut txid_hex = hex::decode(txid)
+                    .map_err(|e| anyhow::anyhow!("Invalid txid hex from node: {}", e))?;
                 txid_hex.reverse();
                 let (height, tx) = client.transaction(&network, &txid_hex).await?;
                 txs.send((height, tx, 0)).await?;
@@ -341,7 +348,7 @@ pub fn parse_block(
 ) -> Result<CompactBlock> {
     let bh = BlockHeader::read(&mut block_bytes)
         .map_err(|e| anyhow::anyhow!("Failed to parse block header: {}", e))?;
-    let tx_count = read_compact_u32(&mut block_bytes);
+    let tx_count = read_compact_u32(&mut block_bytes)?;
     let mut vtx = vec![];
     for ivtx in 0..tx_count {
         let tx = Transaction::read(&mut block_bytes, branch_id)?;
@@ -373,7 +380,7 @@ pub fn parse_block(
                 ($bundle:expr, $actions:expr) => {{
                     let bundle = $bundle;
                     for action in bundle.actions().iter() {
-                        let ciphertext = action.encrypted_note().enc_ciphertext.as_ref().to_vec();
+                        let ciphertext = action.encrypted_note().enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE].to_vec();
                         $actions.push(CompactOrchardAction {
                             nullifier: action.nullifier().to_bytes().to_vec(),
                             cmx: action.cmx().to_bytes().to_vec(),
@@ -434,16 +441,16 @@ pub fn parse_block(
     })
 }
 
-pub fn read_compact_u32<R: Read>(mut reader: R) -> u32 {
-    let tpe = reader.read_u8().unwrap();
+pub fn read_compact_u32<R: Read>(mut reader: R) -> Result<u32> {
+    let tpe = reader.read_u8().map_err(|e| anyhow::anyhow!("Failed to read compact u32 type: {}", e))?;
     if tpe < 0xFD {
-        return tpe as u32;
+        return Ok(tpe as u32);
     }
     if tpe == 0xFD {
-        return reader.read_u16::<LE>().unwrap() as u32;
+        return Ok(reader.read_u16::<LE>().map_err(|e| anyhow::anyhow!("Failed to read compact u16: {}", e))? as u32);
     }
     if tpe == 0xFE {
-        return reader.read_u32::<LE>().unwrap();
+        return reader.read_u32::<LE>().map_err(|e| anyhow::anyhow!("Failed to read compact u32: {}", e));
     }
-    panic!("Invalid compact u32 type: {tpe}"); // 4 bytes should not never be needed
+    anyhow::bail!("Invalid compact u32 type: {tpe}");
 }
