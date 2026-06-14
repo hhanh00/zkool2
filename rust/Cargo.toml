@@ -23,6 +23,8 @@ hex = "0.4"
 log = "0.4"
 rand = "0.6"
 rand_core = "0.6"
+openalias = "1.0.0"
+hickory-resolver = "0.24"
 thiserror = "2.0"
 
 hmac = "0.12"
