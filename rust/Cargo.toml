@@ -52,7 +52,7 @@ tor-rtcompat = {version = "0.31", features = ["tokio", "native-tls"]}
 tower = "0.5"
 
 qrcode = "0.14.1"
-raptorq = "2.0.0"
+raptorq = "=2.0.0"
 
 orchard = {version = "0.14", features = ["unstable-frost", "zsa-issuance"]}
 pczt = {version = "0.6", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "issuer", "zip-233"]}
