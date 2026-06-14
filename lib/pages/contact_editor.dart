@@ -211,14 +211,37 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
     if (alias == null || alias.trim().isEmpty) return;
 
     try {
-      final recipients = await resolveOpenalias(alias: alias.trim(), c: c);
-      if (recipients.isEmpty) {
+      final result = await resolveOpenalias(alias: alias.trim(), c: c);
+      if (result.recipients.isEmpty) {
         showMessage(context, "No Zcash addresses were found for '$alias'.", title: "No address found");
         return;
       }
+      if (result.dnssecStatus != 'verified') {
+        final (title, message) = switch (result.dnssecStatus) {
+          'unsigned' => (
+              'DNSSEC not available',
+              'The domain for $alias does not support DNSSEC. '
+                  'The response could not be cryptographically verified. '
+                  'Proceed anyway?',
+            ),
+          'bogus' => (
+              'DNSSEC validation failed',
+              'DNSSEC validation FAILED for $alias! '
+                  'The response may have been tampered with. '
+                  'Proceed at your own risk?',
+            ),
+          _ => ('Untrusted response', 'Proceed anyway?'),
+        };
+        final confirmed = await confirmDialog(
+          context,
+          title: title,
+          message: message,
+        );
+        if (!confirmed) return;
+      }
       // Fill empty slots first, then append remaining
       final newAddresses = List<String>.from(_addresses);
-      for (final r in recipients) {
+      for (final r in result.recipients) {
         final emptyIndex = newAddresses.indexWhere((a) => a.isEmpty);
         if (emptyIndex != -1) {
           newAddresses[emptyIndex] = r.address;

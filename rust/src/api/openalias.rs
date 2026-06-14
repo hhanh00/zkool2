@@ -4,8 +4,33 @@ use flutter_rust_bridge::frb;
 use zcash_protocol::consensus::Parameters;
 
 use crate::api::coin::Coin;
-use crate::openalias;
+use crate::openalias::{self, DnssecStatus};
 use crate::pay::Recipient;
+
+/// Result of an OpenAlias resolution, including DNSSEC verification status.
+#[cfg_attr(feature = "flutter", frb)]
+pub struct OpenAliasResolution {
+    pub recipients: Vec<Recipient>,
+    /// "verified" | "unsigned" | "bogus"
+    pub dnssec_status: String,
+}
+
+/// Result of a raw OpenAlias resolution, including DNSSEC verification status.
+#[cfg_attr(feature = "flutter", frb)]
+pub struct RawOpenAliasResolution {
+    pub records: Vec<String>,
+    /// "verified" | "unsigned" | "bogus"
+    pub dnssec_status: String,
+}
+
+fn status_to_string(status: DnssecStatus) -> String {
+    match status {
+        DnssecStatus::Verified => "verified",
+        DnssecStatus::Unsigned => "unsigned",
+        DnssecStatus::Bogus => "bogus",
+    }
+    .to_string()
+}
 
 /// Resolve an OpenAlias name and return Zcash [`Recipient`]s valid for
 /// the wallet's network.
@@ -16,16 +41,24 @@ use crate::pay::Recipient;
 pub async fn resolve_openalias(
     alias: String,
     c: &Coin,
-) -> Result<Vec<Recipient>> {
+) -> Result<OpenAliasResolution> {
     let net = c.network().network_type();
-    openalias::resolve_zcash_for_network(&alias, net).await
+    let (recipients, status) = openalias::resolve_zcash_for_network(&alias, net).await?;
+    Ok(OpenAliasResolution {
+        recipients,
+        dnssec_status: status_to_string(status),
+    })
 }
 
 /// Resolve an OpenAlias name and return ALL cryptocurrency addresses
 /// found (not just Zcash) as [`Recipient`]s.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn resolve_openalias_all(alias: String) -> Result<Vec<Recipient>> {
-    openalias::resolve(&alias).await
+pub async fn resolve_openalias_all(alias: String) -> Result<OpenAliasResolution> {
+    let (recipients, status) = openalias::resolve(&alias).await?;
+    Ok(OpenAliasResolution {
+        recipients,
+        dnssec_status: status_to_string(status),
+    })
 }
 
 /// Validate whether a string looks like a valid OpenAlias name format.
@@ -57,6 +90,10 @@ pub fn try_validate_zcash_address(address: String, c: &Coin) -> Result<()> {
 
 /// Get the raw OpenAlias TXT record strings for diagnostic purposes.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn resolve_openalias_raw(alias: String) -> Result<Vec<String>> {
-    openalias::resolve_raw(&alias).await
+pub async fn resolve_openalias_raw(alias: String) -> Result<RawOpenAliasResolution> {
+    let (records, status) = openalias::resolve_raw(&alias).await?;
+    Ok(RawOpenAliasResolution {
+        records,
+        dnssec_status: status_to_string(status),
+    })
 }

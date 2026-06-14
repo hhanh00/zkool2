@@ -24,7 +24,8 @@ log = "0.4"
 rand = "0.6"
 rand_core = "0.6"
 
-hickory-resolver = "0.24"
+hickory-proto = "0.24"
+hickory-resolver = {version = "0.24", features = ["dnssec-ring"]}
 thiserror = "2.0"
 
 hmac = "0.12"

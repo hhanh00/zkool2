@@ -448,13 +448,13 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAccountResetSync({required int id, required Coin c});
 
-  Future<List<Recipient>> crateApiOpenaliasResolveOpenalias(
+  Future<OpenAliasResolution> crateApiOpenaliasResolveOpenalias(
       {required String alias, required Coin c});
 
-  Future<List<Recipient>> crateApiOpenaliasResolveOpenaliasAll(
+  Future<OpenAliasResolution> crateApiOpenaliasResolveOpenaliasAll(
       {required String alias});
 
-  Future<List<String>> crateApiOpenaliasResolveOpenaliasRaw(
+  Future<RawOpenAliasResolution> crateApiOpenaliasResolveOpenaliasRaw(
       {required String alias});
 
   Future<void> crateApiSyncRewindSync(
@@ -4086,7 +4086,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<Recipient>> crateApiOpenaliasResolveOpenalias(
+  Future<OpenAliasResolution> crateApiOpenaliasResolveOpenalias(
       {required String alias, required Coin c}) {
     return handler.executeNormal(
       NormalTask(
@@ -4098,7 +4098,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 123, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_recipient,
+          decodeSuccessData: sse_decode_open_alias_resolution,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiOpenaliasResolveOpenaliasConstMeta,
@@ -4115,7 +4115,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<Recipient>> crateApiOpenaliasResolveOpenaliasAll(
+  Future<OpenAliasResolution> crateApiOpenaliasResolveOpenaliasAll(
       {required String alias}) {
     return handler.executeNormal(
       NormalTask(
@@ -4126,7 +4126,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 124, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_recipient,
+          decodeSuccessData: sse_decode_open_alias_resolution,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiOpenaliasResolveOpenaliasAllConstMeta,
@@ -4143,7 +4143,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<String>> crateApiOpenaliasResolveOpenaliasRaw(
+  Future<RawOpenAliasResolution> crateApiOpenaliasResolveOpenaliasRaw(
       {required String alias}) {
     return handler.executeNormal(
       NormalTask(
@@ -4154,7 +4154,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 125, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_String,
+          decodeSuccessData: sse_decode_raw_open_alias_resolution,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiOpenaliasResolveOpenaliasRawConstMeta,
@@ -5946,6 +5946,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  OpenAliasResolution dco_decode_open_alias_resolution(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return OpenAliasResolution(
+      recipients: dco_decode_list_recipient(arr[0]),
+      dnssecStatus: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
@@ -6078,6 +6090,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       version: dco_decode_u_16(arr[0]),
       ecLevel: dco_decode_u_8(arr[1]),
       repair: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
+  RawOpenAliasResolution dco_decode_raw_open_alias_resolution(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return RawOpenAliasResolution(
+      records: dco_decode_list_String(arr[0]),
+      dnssecStatus: dco_decode_String(arr[1]),
     );
   }
 
@@ -7471,6 +7495,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  OpenAliasResolution sse_decode_open_alias_resolution(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_recipients = sse_decode_list_recipient(deserializer);
+    var var_dnssecStatus = sse_decode_String(deserializer);
+    return OpenAliasResolution(
+        recipients: var_recipients, dnssecStatus: var_dnssecStatus);
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -7670,6 +7704,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_repair = sse_decode_u_32(deserializer);
     return RaptorQParams(
         version: var_version, ecLevel: var_ecLevel, repair: var_repair);
+  }
+
+  @protected
+  RawOpenAliasResolution sse_decode_raw_open_alias_resolution(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_records = sse_decode_list_String(deserializer);
+    var var_dnssecStatus = sse_decode_String(deserializer);
+    return RawOpenAliasResolution(
+        records: var_records, dnssecStatus: var_dnssecStatus);
   }
 
   @protected
@@ -8980,6 +9024,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_open_alias_resolution(
+      OpenAliasResolution self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_recipient(self.recipients, serializer);
+    sse_encode_String(self.dnssecStatus, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -9153,6 +9205,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_16(self.version, serializer);
     sse_encode_u_8(self.ecLevel, serializer);
     sse_encode_u_32(self.repair, serializer);
+  }
+
+  @protected
+  void sse_encode_raw_open_alias_resolution(
+      RawOpenAliasResolution self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_String(self.records, serializer);
+    sse_encode_String(self.dnssecStatus, serializer);
   }
 
   @protected
