@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [6.20.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.3...zkool-v6.20.0-rc.4) (2026-06-14)
+
+
+### Bug Fixes
+
+* add native contacts import with zcash URI support ([774a9ff](https://github.com/hhanh00/zkool2/commit/774a9ffead79180a710ed22cd788e333ce9411d0))
+* pin raptorq to exact version 2.0.0 ([63ca252](https://github.com/hhanh00/zkool2/commit/63ca2523942679e1e0ede5a5afbeac1be527aba3))
+
 ## [6.20.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.2...zkool-v6.20.0-rc.3) (2026-06-14)
 
 
