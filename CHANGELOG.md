@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.20.0-rc.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.8...zkool-v6.20.0-rc.9) (2026-06-14)
+
+
+### Bug Fixes
+
+* replace [@account](https://github.com/account) with !account, add [@contactname](https://github.com/contactname) resolver with autocomplete ([2822f94](https://github.com/hhanh00/zkool2/commit/2822f945fc6370e74e8b3dad81b1263d67514f3d))
+
 ## [6.20.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0-rc.7...zkool-v6.20.0-rc.8) (2026-06-14)
 
 
