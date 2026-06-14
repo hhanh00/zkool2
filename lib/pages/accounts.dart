@@ -268,6 +268,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
   void onOpen(BuildContext context, Account account) async {
     // Invalidate cache to ensure fresh data
     ref.invalidate(getCurrentAccountProvider);
+    ref.invalidate(accountProvider(account.id));
     // Update both the coin context and selected account ID
     await coinContext.setAccount(account: account.id);
     ref.read(selectedAccountIdProvider.notifier).set(account.id);
