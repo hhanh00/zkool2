@@ -483,12 +483,14 @@ class TxMemo {
   final int? output;
   final int pool;
   final String? memo;
+  final Uint8List memoBytes;
 
   const TxMemo({
     this.note,
     this.output,
     required this.pool,
     this.memo,
+    required this.memoBytes,
   });
 
   static Future<TxMemo> default_() =>
@@ -496,7 +498,11 @@ class TxMemo {
 
   @override
   int get hashCode =>
-      note.hashCode ^ output.hashCode ^ pool.hashCode ^ memo.hashCode;
+      note.hashCode ^
+      output.hashCode ^
+      pool.hashCode ^
+      memo.hashCode ^
+      memoBytes.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -506,7 +512,8 @@ class TxMemo {
           note == other.note &&
           output == other.output &&
           pool == other.pool &&
-          memo == other.memo;
+          memo == other.memo &&
+          memoBytes == other.memoBytes;
 }
 
 class TxNote {

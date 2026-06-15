@@ -1279,3 +1279,139 @@ abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
     element.handleValue(ref, created);
   }
 }
+
+@ProviderFor(pluginList)
+const pluginListProvider = PluginListProvider._();
+
+final class PluginListProvider extends $FunctionalProvider<
+        AsyncValue<List<plugin_api.PluginInfo>>,
+        List<plugin_api.PluginInfo>,
+        FutureOr<List<plugin_api.PluginInfo>>>
+    with
+        $FutureModifier<List<plugin_api.PluginInfo>>,
+        $FutureProvider<List<plugin_api.PluginInfo>> {
+  const PluginListProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'pluginListProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$pluginListHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<plugin_api.PluginInfo>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<plugin_api.PluginInfo>> create(Ref ref) {
+    return pluginList(ref);
+  }
+}
+
+String _$pluginListHash() => r'f396f236f61820f586848210e153f83881ad09c1';
+
+@ProviderFor(pluginMemoSections)
+const pluginMemoSectionsProvider = PluginMemoSectionsFamily._();
+
+final class PluginMemoSectionsProvider extends $FunctionalProvider<
+        AsyncValue<List<plugin_api.MemoSection>>,
+        List<plugin_api.MemoSection>,
+        FutureOr<List<plugin_api.MemoSection>>>
+    with
+        $FutureModifier<List<plugin_api.MemoSection>>,
+        $FutureProvider<List<plugin_api.MemoSection>> {
+  const PluginMemoSectionsProvider._(
+      {required PluginMemoSectionsFamily super.from,
+      required (
+        List<int>,
+        Coin,
+      )
+          super.argument})
+      : super(
+          retry: null,
+          name: r'pluginMemoSectionsProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$pluginMemoSectionsHash();
+
+  @override
+  String toString() {
+    return r'pluginMemoSectionsProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<plugin_api.MemoSection>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<plugin_api.MemoSection>> create(Ref ref) {
+    final argument = this.argument as (
+      List<int>,
+      Coin,
+    );
+    return pluginMemoSections(
+      ref,
+      argument.$1,
+      argument.$2,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PluginMemoSectionsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$pluginMemoSectionsHash() =>
+    r'ecd47c3bc96fdf29a00b04a6d8b8f97742208824';
+
+final class PluginMemoSectionsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+            FutureOr<List<plugin_api.MemoSection>>,
+            (
+              List<int>,
+              Coin,
+            )> {
+  const PluginMemoSectionsFamily._()
+      : super(
+          retry: null,
+          name: r'pluginMemoSectionsProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  PluginMemoSectionsProvider call(
+    List<int> memoBytes,
+    Coin c,
+  ) =>
+      PluginMemoSectionsProvider._(argument: (
+        memoBytes,
+        c,
+      ), from: this);
+
+  @override
+  String toString() => r'pluginMemoSectionsProvider';
+}

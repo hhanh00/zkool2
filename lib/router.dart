@@ -25,6 +25,7 @@ import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/pages/lwd_select.dart';
+import 'package:zkool/pages/plugin_manager.dart';
 import 'package:zkool/settings.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
@@ -132,6 +133,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
                     final onClose = state.extra as void Function(String);
                     return CurrencyPage(onClose: onClose);
                   }),
+              GoRoute(path: 'plugins', builder: (context, state) => const PluginManagerPage()),
             ],
             builder: (context, state) => SettingsPage()),
         GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),

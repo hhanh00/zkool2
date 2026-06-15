@@ -1106,7 +1106,7 @@ pub async fn get_tx_details(
     .await?;
 
     let memos = sqlx::query(
-        "SELECT note, output, pool, memo_text FROM memos
+        "SELECT note, output, pool, memo_text, memo_bytes FROM memos
         WHERE account = ? AND tx = ?",
     )
     .bind(account)
@@ -1116,11 +1116,13 @@ pub async fn get_tx_details(
         let output: Option<u32> = row.get(1);
         let pool: u8 = row.get(2);
         let memo: Option<String> = row.get(3);
+        let memo_bytes: Vec<u8> = row.get(4);
         TxMemo {
             note,
             output,
             pool,
             memo,
+            memo_bytes,
         }
     })
     .fetch_all(&mut *connection)
