@@ -1,6 +1,18 @@
 # Changelog
 
 
+## [6.21.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc...zkool-v6.21.0-rc.1) (2026-06-15)
+
+
+### Features
+
+* add account picker to cloud vault recovery ([719aafe](https://github.com/hhanh00/zkool2/commit/719aafe1fe7d8e72b04eccca38e26f4b72be0105))
+
+
+### Bug Fixes
+
+* remove per-item delete button, add multi-select with checkmark, fix setPluginEnabled Tokio panic ([888b8a4](https://github.com/hhanh00/zkool2/commit/888b8a4ad24d1dc93cbddfbf4f59d2d6c81c6256))
+
 ## [6.21.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0...zkool-v6.21.0-rc) (2026-06-15)
 
 
