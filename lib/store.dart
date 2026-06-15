@@ -19,6 +19,7 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
@@ -1122,4 +1123,21 @@ class VaultNotifier extends _$VaultNotifier {
       await vault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
     });
   }
+}
+
+// ── Plugin providers ────────────────────────────────────────────────────
+
+@riverpod
+Future<List<plugin_api.PluginInfo>> pluginList(Ref ref) async {
+  final c = coinContext.coin;
+  return await plugin_api.listPlugins(c: c);
+}
+
+@riverpod
+Future<List<plugin_api.MemoSection>> pluginMemoSections(
+  Ref ref,
+  List<int> memoBytes,
+  Coin c,
+) async {
+  return await plugin_api.parseMemoWithPlugins(memoBytes: memoBytes, c: c);
 }

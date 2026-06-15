@@ -334,6 +334,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                       ),
                     ),
                   ]),
+                Gap(8),
+                Tooltip(
+                  message: "Install and manage memo parsing plugins",
+                  child: Row(children: [
+                    Expanded(child: Text("Plugin Manager")),
+                    SizedBox(width: 40, child: IconButton(onPressed: () => GoRouter.of(context).push("/settings/plugins"), icon: Icon(Icons.extension))),
+                  ]),
+                ),
                 Gap(16),
                 CopyableText(dbFullPath, style: t.bodySmall),
                 Gap(8),

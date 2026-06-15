@@ -15,6 +15,7 @@ import 'api/mempool.dart';
 import 'api/network.dart';
 import 'api/openalias.dart';
 import 'api/pay.dart';
+import 'api/plugin.dart';
 import 'api/raptor.dart';
 import 'api/sweep.dart';
 import 'api/sync.dart';
@@ -269,10 +270,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Memo> dco_decode_list_memo(dynamic raw);
 
   @protected
+  List<MemoCell> dco_decode_list_memo_cell(dynamic raw);
+
+  @protected
+  List<MemoRow> dco_decode_list_memo_row(dynamic raw);
+
+  @protected
+  List<MemoSection> dco_decode_list_memo_section(dynamic raw);
+
+  @protected
   List<MempoolAmount> dco_decode_list_mempool_amount(dynamic raw);
 
   @protected
   List<MempoolNote> dco_decode_list_mempool_note(dynamic raw);
+
+  @protected
+  List<PluginInfo> dco_decode_list_plugin_info(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_32_loose(dynamic raw);
@@ -342,6 +355,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Memo dco_decode_memo(dynamic raw);
 
   @protected
+  MemoCell dco_decode_memo_cell(dynamic raw);
+
+  @protected
+  MemoRow dco_decode_memo_row(dynamic raw);
+
+  @protected
+  MemoSection dco_decode_memo_section(dynamic raw);
+
+  @protected
   MempoolAmount dco_decode_mempool_amount(dynamic raw);
 
   @protected
@@ -403,6 +425,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PcztPackage dco_decode_pczt_package(dynamic raw);
+
+  @protected
+  PluginInfo dco_decode_plugin_info(dynamic raw);
 
   @protected
   PoolBalance dco_decode_pool_balance(dynamic raw);
@@ -723,11 +748,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Memo> sse_decode_list_memo(SseDeserializer deserializer);
 
   @protected
+  List<MemoCell> sse_decode_list_memo_cell(SseDeserializer deserializer);
+
+  @protected
+  List<MemoRow> sse_decode_list_memo_row(SseDeserializer deserializer);
+
+  @protected
+  List<MemoSection> sse_decode_list_memo_section(SseDeserializer deserializer);
+
+  @protected
   List<MempoolAmount> sse_decode_list_mempool_amount(
       SseDeserializer deserializer);
 
   @protected
   List<MempoolNote> sse_decode_list_mempool_note(SseDeserializer deserializer);
+
+  @protected
+  List<PluginInfo> sse_decode_list_plugin_info(SseDeserializer deserializer);
 
   @protected
   List<int> sse_decode_list_prim_u_32_loose(SseDeserializer deserializer);
@@ -800,6 +837,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Memo sse_decode_memo(SseDeserializer deserializer);
 
   @protected
+  MemoCell sse_decode_memo_cell(SseDeserializer deserializer);
+
+  @protected
+  MemoRow sse_decode_memo_row(SseDeserializer deserializer);
+
+  @protected
+  MemoSection sse_decode_memo_section(SseDeserializer deserializer);
+
+  @protected
   MempoolAmount sse_decode_mempool_amount(SseDeserializer deserializer);
 
   @protected
@@ -863,6 +909,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PcztPackage sse_decode_pczt_package(SseDeserializer deserializer);
+
+  @protected
+  PluginInfo sse_decode_plugin_info(SseDeserializer deserializer);
 
   @protected
   PoolBalance sse_decode_pool_balance(SseDeserializer deserializer);
@@ -1197,12 +1246,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_memo(List<Memo> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_memo_cell(List<MemoCell> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_memo_row(List<MemoRow> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_memo_section(
+      List<MemoSection> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_mempool_amount(
       List<MempoolAmount> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_mempool_note(
       List<MempoolNote> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_plugin_info(
+      List<PluginInfo> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_32_loose(
@@ -1284,6 +1347,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_memo(Memo self, SseSerializer serializer);
 
   @protected
+  void sse_encode_memo_cell(MemoCell self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_memo_row(MemoRow self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_memo_section(MemoSection self, SseSerializer serializer);
+
+  @protected
   void sse_encode_mempool_amount(MempoolAmount self, SseSerializer serializer);
 
   @protected
@@ -1351,6 +1423,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_pczt_package(PcztPackage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_plugin_info(PluginInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_pool_balance(PoolBalance self, SseSerializer serializer);
