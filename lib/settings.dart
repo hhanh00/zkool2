@@ -21,6 +21,8 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/widgets/vault_account_picker.dart';
+import 'package:zkool/vault.dart';
 import 'package:zkool/main.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -737,12 +739,20 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
     if (!mounted) return;
     final existingAccounts = await ref.read(getAccountsProvider.future);
+
+    // Show account picker — let user choose which accounts to restore
+    final selected = await showVaultAccountPicker(
+      context,
+      accounts: recovered.cast<RestoredAccount>(),
+    );
+    if (selected == null || selected.isEmpty) return;
+
     final coin = coinContext.coin;
     final ctx = context;
     AwesomeDialog? dialog;
     try {
-      dialog = await showMessage(ctx, "Importing ${recovered.length} account(s)...", dismissable: false);
-      for (final ra in recovered) {
+      dialog = await showMessage(ctx, "Importing ${selected.length} account(s)...", dismissable: false);
+      for (final ra in selected) {
         // find existing account matching seed + aindex
         final match = existingAccounts.where((a) => a.seed == ra.seed && a.aindex == ra.aindex).firstOrNull;
         if (match != null) {
