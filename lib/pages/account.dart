@@ -27,6 +27,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/exchange_rate.dart';
+import 'package:zkool/widgets/plugin_memo_view.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/theme.dart';
 import 'package:zkool/widgets/transaction_table.dart';
@@ -1148,6 +1149,8 @@ class _MemoWidgetState extends State<MemoWidget> {
                         )
                       : null,
                 ),
+              // Plugin-parsed memo sections (for 0xFF arbitrary memos)
+              PluginMemoView(widget.memo.memoBytes),
             ],
           ),
         ),

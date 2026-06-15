@@ -473,6 +473,24 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await;
 
+    // Plugins
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS plugins(
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            author TEXT,
+            description TEXT,
+            min_app_version TEXT NOT NULL,
+            types TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            install_dir TEXT NOT NULL,
+            script TEXT NOT NULL,
+            manifest_json TEXT NOT NULL)",
+    )
+    .execute(&mut *connection)
+    .await?;
+
     // V7
     let _ = sqlx::query("ALTER TABLE accounts ADD COLUMN hw INTEGER NOT NULL DEFAULT(0)")
         .execute(&mut *connection)
