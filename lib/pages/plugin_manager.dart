@@ -15,6 +15,8 @@ class PluginManagerPage extends ConsumerStatefulWidget {
 }
 
 class _PluginManagerPageState extends ConsumerState<PluginManagerPage> {
+  final Set<String> _selectedIds = {};
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
@@ -22,7 +24,25 @@ class _PluginManagerPageState extends ConsumerState<PluginManagerPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Plugin Manager'),
+        title: Text(
+          _selectedIds.isEmpty
+              ? 'Plugin Manager'
+              : '${_selectedIds.length} selected',
+        ),
+        actions: [
+          if (_selectedIds.isEmpty)
+            IconButton(
+              onPressed: () => _showInstallDialog(context),
+              icon: const Icon(Icons.add),
+              tooltip: 'Install Plugin',
+            ),
+          if (_selectedIds.isNotEmpty)
+            IconButton(
+              onPressed: () => _confirmRemoveSelected(context),
+              icon: const Icon(Icons.delete),
+              tooltip: 'Remove selected plugins',
+            ),
+        ],
       ),
       body: pluginsAsync.when(
         data: (plugins) {
@@ -46,17 +66,25 @@ class _PluginManagerPageState extends ConsumerState<PluginManagerPage> {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final plugin = plugins[index];
-              return _PluginListTile(plugin: plugin);
+              final selected = _selectedIds.contains(plugin.id);
+              return _PluginListTile(
+                plugin: plugin,
+                selected: selected,
+                onAvatarTap: () {
+                  setState(() {
+                    if (selected) {
+                      _selectedIds.remove(plugin.id);
+                    } else {
+                      _selectedIds.add(plugin.id);
+                    }
+                  });
+                },
+              );
             },
           );
         },
         loading: () => blank(context),
         error: (error, _) => showError(error),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showInstallDialog(context),
-        tooltip: 'Install Plugin',
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -82,11 +110,49 @@ class _PluginManagerPageState extends ConsumerState<PluginManagerPage> {
       if (mounted) showSnackbar('Failed to install plugin: $e');
     }
   }
+
+  Future<void> _confirmRemoveSelected(BuildContext context) async {
+    final count = _selectedIds.length;
+    final confirmed = await confirmDialog(
+      context,
+      title: 'Remove Plugins',
+      message:
+          'Remove $count selected plugin${count > 1 ? 's' : ''}? This cannot be undone.',
+    );
+    if (!confirmed) return;
+
+    final c = coinContext.coin;
+    var failed = 0;
+    for (final id in _selectedIds.toList()) {
+      try {
+        await api.removePlugin(id: id, c: c);
+      } catch (_) {
+        failed++;
+      }
+    }
+
+    setState(() => _selectedIds.clear());
+    ref.invalidate(pluginListProvider);
+
+    if (!mounted) return;
+    if (failed == 0) {
+      showSnackbar('$count plugin${count > 1 ? 's' : ''} removed');
+    } else {
+      showSnackbar('${count - failed} removed, $failed failed');
+    }
+  }
 }
 
 class _PluginListTile extends ConsumerWidget {
   final api.PluginInfo plugin;
-  const _PluginListTile({required this.plugin});
+  final bool selected;
+  final VoidCallback onAvatarTap;
+
+  const _PluginListTile({
+    required this.plugin,
+    required this.selected,
+    required this.onAvatarTap,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,6 +161,7 @@ class _PluginListTile extends ConsumerWidget {
     final prefixLabel = _prefixAscii(plugin.memoPrefixes);
 
     return ListTile(
+      selected: selected,
       title: Text(plugin.name),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,65 +182,46 @@ class _PluginListTile extends ConsumerWidget {
             ),
         ],
       ),
-      leading: prefixLabel != null
-          ? CircleAvatar(
-              backgroundColor: plugin.enabled
-                  ? t.colorScheme.primaryContainer
-                  : t.disabledColor.withAlpha(40),
-              child: Text(
-                prefixLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: plugin.enabled
-                      ? t.colorScheme.onPrimaryContainer
-                      : t.disabledColor,
-                ),
-              ),
-            )
-          : Icon(
-              plugin.enabled ? Icons.extension : Icons.extension_off,
-              color: plugin.enabled
-                  ? t.colorScheme.primary
-                  : t.disabledColor,
-            ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Switch(
-            value: plugin.enabled,
-            onChanged: (enabled) async {
-              final c = coinContext.coin;
-              api.setPluginEnabled(id: plugin.id, enabled: enabled, c: c);
-              ref.invalidate(pluginListProvider);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Remove plugin',
-            onPressed: () => _confirmRemove(context, ref),
-          ),
-        ],
+      leading: GestureDetector(
+        onTap: onAvatarTap,
+        child: selected
+            ? CircleAvatar(
+                backgroundColor: t.colorScheme.primary,
+                child: Icon(Icons.check, color: t.colorScheme.onPrimary),
+              )
+            : prefixLabel != null
+                ? CircleAvatar(
+                    backgroundColor: plugin.enabled
+                        ? t.colorScheme.primaryContainer
+                        : t.disabledColor.withAlpha(40),
+                    child: Text(
+                      prefixLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: plugin.enabled
+                            ? t.colorScheme.onPrimaryContainer
+                            : t.disabledColor,
+                      ),
+                    ),
+                  )
+                : Icon(
+                    plugin.enabled ? Icons.extension : Icons.extension_off,
+                    color: plugin.enabled
+                        ? t.colorScheme.primary
+                        : t.disabledColor,
+                  ),
+      ),
+      trailing: Switch(
+        value: plugin.enabled,
+        onChanged: (enabled) async {
+          final c = coinContext.coin;
+          await api.setPluginEnabled(id: plugin.id, enabled: enabled, c: c);
+          ref.invalidate(pluginListProvider);
+        },
       ),
     );
-  }
-
-  Future<void> _confirmRemove(BuildContext context, WidgetRef ref) async {
-    final confirmed = await confirmDialog(
-      context,
-      title: 'Remove Plugin',
-      message: 'Remove "${plugin.name}"? This cannot be undone.',
-    );
-    if (!confirmed) return;
-
-    try {
-      final c = coinContext.coin;
-      await api.removePlugin(id: plugin.id, c: c);
-      ref.invalidate(pluginListProvider);
-    } catch (e) {
-      showSnackbar('Failed to remove plugin: $e');
-    }
   }
 }
 

@@ -5340,15 +5340,16 @@ fn wire__crate__api__init__set_log_stream_impl(
     )
 }
 fn wire__crate__api__plugin__set_plugin_enabled_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "set_plugin_enabled",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
         move || {
             let message = unsafe {
@@ -5364,13 +5365,17 @@ fn wire__crate__api__plugin__set_plugin_enabled_impl(
             let api_enabled = <bool>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
-            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                (move || {
-                    let output_ok =
-                        crate::api::plugin::set_plugin_enabled(api_id, api_enabled, &api_c)?;
-                    Ok(output_ok)
-                })(),
-            )
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::plugin::set_plugin_enabled(api_id, api_enabled, &api_c)
+                                .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
         },
     )
 }
@@ -8351,6 +8356,7 @@ fn pde_ffi_dispatcher_primary_impl(
         133 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
         134 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
         135 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
         138 => {
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
@@ -8423,7 +8429,6 @@ fn pde_ffi_dispatcher_sync_impl(
         114 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
         120 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
         136 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__plugin__set_plugin_enabled_impl(ptr, rust_vec_len, data_len),
         147 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
         148 => wire__crate__api__openalias__try_validate_zcash_address_impl(
             ptr,

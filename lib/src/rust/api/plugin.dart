@@ -22,7 +22,7 @@ Future<void> removePlugin({required String id, required Coin c}) =>
     RustLib.instance.api.crateApiPluginRemovePlugin(id: id, c: c);
 
 /// Enable or disable a plugin.
-void setPluginEnabled(
+Future<void> setPluginEnabled(
         {required String id, required bool enabled, required Coin c}) =>
     RustLib.instance.api
         .crateApiPluginSetPluginEnabled(id: id, enabled: enabled, c: c);

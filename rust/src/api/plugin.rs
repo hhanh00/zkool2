@@ -107,11 +107,9 @@ pub async fn remove_plugin(id: String, c: &Coin) -> Result<()> {
 }
 
 /// Enable or disable a plugin.
-#[cfg_attr(feature = "flutter", frb(sync))]
-pub fn set_plugin_enabled(id: String, enabled: bool, c: &Coin) -> Result<()> {
-    tokio::runtime::Handle::current().block_on(async {
-        plugin::set_plugin_enabled(c, &id, enabled).await
-    })
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn set_plugin_enabled(id: String, enabled: bool, c: &Coin) -> Result<()> {
+    plugin::set_plugin_enabled(c, &id, enabled).await
 }
 
 /// Parse a memo with all matching plugins.
