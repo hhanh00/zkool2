@@ -857,6 +857,7 @@ pub struct TxMemo {
     pub output: Option<u32>,
     pub pool: u8,
     pub memo: Option<String>,
+    pub memo_bytes: Vec<u8>,
 }
 
 pub(crate) async fn get_ledger(connection: &mut SqliteConnection, account: u32) -> Result<Box<dyn HWAPI + Send + Sync>> {
