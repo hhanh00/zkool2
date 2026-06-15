@@ -493,7 +493,7 @@ abstract class RustLibApi extends BaseApi {
 
   Stream<LogMessage> crateApiInitSetLogStream();
 
-  void crateApiPluginSetPluginEnabled(
+  Future<void> crateApiPluginSetPluginEnabled(
       {required String id, required bool enabled, required Coin c});
 
   Future<void> crateApiTransactionSetTxCategory(
@@ -4505,17 +4505,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  void crateApiPluginSetPluginEnabled(
+  Future<void> crateApiPluginSetPluginEnabled(
       {required String id, required bool enabled, required Coin c}) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(id, serializer);
           sse_encode_bool(enabled, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 137)!;
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 137, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
