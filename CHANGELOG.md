@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.21.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0...zkool-v6.21.0-rc) (2026-06-15)
+
+
+### Features
+
+* plugin system with rhai script engine ([f31faae](https://github.com/hhanh00/zkool2/commit/f31faaeca569b5ddb4412f3db68cf21c7e1d912c))
+
 ## [6.20.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0...zkool-v6.20.0) (2026-06-15)
 
 
