@@ -21,6 +21,7 @@ class EditableList<T extends Object> extends StatefulWidget {
   final bool Function(T a, T b) isEqual;
   final void Function(int a, int b)? onReorder;
   final List<Widget>? buttons;
+  final WidgetBuilder emptyBuilder;
 
   const EditableList({
     super.key,
@@ -34,6 +35,7 @@ class EditableList<T extends Object> extends StatefulWidget {
     required this.isEqual,
     this.onReorder,
     this.buttons,
+    required this.emptyBuilder,
   });
 
   @override
@@ -83,29 +85,32 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
         child: Column(
           children: [
             ...?widget.headerBuilder?.call(context),
-            Expanded(
-              child: AnimatedReorderableListView<T>(
-                buildDefaultDragHandles: false,
-                items: items,
-                itemBuilder: (context, index) => widget.builder(
-                  context,
-                  index,
-                  items[index],
-                  selected: selected[index],
-                  onSelectChanged: (value) => setState(() {
-                    selected[index] = value ?? false;
-                  }),
+            if (items.isEmpty)
+              Expanded(child: widget.emptyBuilder(context))
+            else
+              Expanded(
+                child: AnimatedReorderableListView<T>(
+                  buildDefaultDragHandles: false,
+                  items: items,
+                  itemBuilder: (context, index) => widget.builder(
+                    context,
+                    index,
+                    items[index],
+                    selected: selected[index],
+                    onSelectChanged: (value) => setState(() {
+                      selected[index] = value ?? false;
+                    }),
+                  ),
+                  isSameItem: (T a, T b) => widget.isEqual(a, b),
+                  onReorder: (int oldIndex, int newIndex) {
+                    widget.onReorder?.call(oldIndex, newIndex);
+                    setState(() {
+                      final T v = items.removeAt(oldIndex);
+                      items.insert(newIndex, v);
+                    });
+                  },
                 ),
-                isSameItem: (T a, T b) => widget.isEqual(a, b),
-                onReorder: (int oldIndex, int newIndex) {
-                  widget.onReorder?.call(oldIndex, newIndex);
-                  setState(() {
-                    final T v = items.removeAt(oldIndex);
-                    items.insert(newIndex, v);
-                  });
-                },
               ),
-            ),
           ],
         ),
       ),
