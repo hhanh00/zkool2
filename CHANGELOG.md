@@ -1,6 +1,31 @@
 # Changelog
 
 
+## [6.20.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0...zkool-v6.20.0) (2026-06-15)
+
+
+### Features
+
+* add contacts address book with vCard import/export and tx matching ([3f57e80](https://github.com/hhanh00/zkool2/commit/3f57e803b49a786c5f6676289622631310a36cee))
+* add debounced tx search bar filtering by memo and contact ([2f1b8b2](https://github.com/hhanh00/zkool2/commit/2f1b8b23638787bf4ec9c2c4cc06a79ce476c6c2))
+* add DNSSEC validation for OpenAlias DNS resolution ([b851ec2](https://github.com/hhanh00/zkool2/commit/b851ec2ae01d919b43101a6974088f9a967d1303))
+* add OpenAlias resolution via DNS TXT lookup ([7871882](https://github.com/hhanh00/zkool2/commit/78718827866603d501f6b9fdf4694ca5a4ac865c))
+
+
+### Bug Fixes
+
+* add native contacts import with zcash URI support ([774a9ff](https://github.com/hhanh00/zkool2/commit/774a9ffead79180a710ed22cd788e333ce9411d0))
+* fall back to Google DNS when system resolver config is unavailable ([e6aa896](https://github.com/hhanh00/zkool2/commit/e6aa89649ab1a976469a7dacfa066ec13bbdb1f3))
+* invalidate account provider cache when selecting account ([67f7605](https://github.com/hhanh00/zkool2/commit/67f7605a433b636f238462bdb98a9a0e6dab1077))
+* pin raptorq to exact version 2.0.0 ([63ca252](https://github.com/hhanh00/zkool2/commit/63ca2523942679e1e0ede5a5afbeac1be527aba3))
+* remove openalias crate dependency, inline OA1 parsing ([1fba7ec](https://github.com/hhanh00/zkool2/commit/1fba7ec351ef1aa050504cfa089da320c00511d2))
+* replace [@account](https://github.com/account) with !account, add [@contactname](https://github.com/contactname) resolver with autocomplete ([2822f94](https://github.com/hhanh00/zkool2/commit/2822f945fc6370e74e8b3dad81b1263d67514f3d))
+* show tx search bar on both table and list views ([99f8441](https://github.com/hhanh00/zkool2/commit/99f84419255ed41069f1e6c8bf449e90fd91a3c2))
+* TTL-cache getCurrentHeight in async provider with offline check ([#1083](https://github.com/hhanh00/zkool2/issues/1083)) ([ee75a1a](https://github.com/hhanh00/zkool2/commit/ee75a1a322fa4526d05565f2d06af48ce7a7307b))
+* update flutter version ([139d190](https://github.com/hhanh00/zkool2/commit/139d190006e7c3c4322629eb59e17783127aa3d2))
+* watch appSettingsProvider so toggling list/table view rebuilds UI ([a5c63ae](https://github.com/hhanh00/zkool2/commit/a5c63ae7ab934e74f5bfd954723f9a846cb1f909))
+* zebra JSON-RPC backend error handling and orchard decrypt panics ([7a29610](https://github.com/hhanh00/zkool2/commit/7a2961084d9c57d0b2a3adf693d7663e09554f79))
+
 ## [6.19.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.18.11...zkool-v6.19.0) (2026-06-13)
 
 
