@@ -82,29 +82,6 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
         final h = currentHeight != null ? currentHeight.toString() : 'N/A';
 
         final visibleAccounts = pageData.accounts.where((a) => !a.internal).toList();
-        if (visibleAccounts.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.account_balance_wallet_outlined, size: 64, color: tt.bodySmall?.color),
-                  const Gap(16),
-                  Text("No accounts yet", style: tt.titleLarge),
-                  const Gap(8),
-                  Text("Tap the + button to create your first account", style: tt.bodyMedium),
-                  const Gap(24),
-                  ElevatedButton.icon(
-                    onPressed: () => GoRouter.of(context).push("/account/new"),
-                    icon: const Icon(Icons.add),
-                    label: const Text("New Account"),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
 
         return Tooltip(
           message: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
@@ -171,48 +148,36 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
             },
             isEqual: (a, b) => a.id == b.id,
             onReorder: onReorder,
-            buttons: [
-              IconButton(onPressed: onSettings, tooltip: "Open Settings", icon: Icon(Icons.settings)),
-              IconButton(onPressed: onSync, tooltip: "Synchronize all enabled accounts or the accounts currently selected", icon: Icon(Icons.sync)),
-              PopupMenuButton<String>(
-                onSelected: (String result) {
-                  switch (result) {
-                    case "mempool":
-                      onMempool();
-                    case "hide":
-                      onHide();
-                    case "category":
-                      onCategory();
-                    case "folder":
-                      onFolder();
-                    case "contacts":
-                      onContacts();
-                  }
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: "mempool",
-                    child: Text("Mempool"),
+            buttons: _buildAppBarActions(),
+            emptyBuilder: (context) {
+              if (visibleAccounts.isNotEmpty) {
+                // Folder filter produced an empty list, but accounts exist.
+                return Center(
+                  child: Text("No accounts in this folder", style: tt.bodyLarge),
+                );
+              }
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.account_balance_wallet_outlined, size: 64, color: tt.bodySmall?.color),
+                      const Gap(16),
+                      Text("No accounts yet", style: tt.titleLarge),
+                      const Gap(8),
+                      Text("Tap the + button to create your first account", style: tt.bodyMedium),
+                      const Gap(24),
+                      ElevatedButton.icon(
+                        onPressed: () => GoRouter.of(context).push("/account/new"),
+                        icon: const Icon(Icons.add),
+                        label: const Text("New Account"),
+                      ),
+                    ],
                   ),
-                  const PopupMenuItem<String>(
-                    value: "folder",
-                    child: Text("Folders"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "category",
-                    child: Text("Categories"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "contacts",
-                    child: Text("Contacts"),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'hide',
-                    child: Text("Show All"),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              );
+            },
           ),
         );
       },
@@ -241,9 +206,40 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     await GoRouter.of(context).push("/contacts");
   }
 
+  List<Widget> _buildAppBarActions() {
+    return [
+      IconButton(onPressed: onSettings, tooltip: "Open Settings", icon: const Icon(Icons.settings)),
+      IconButton(onPressed: onSync, tooltip: "Synchronize all enabled accounts or the accounts currently selected", icon: const Icon(Icons.sync)),
+      PopupMenuButton<String>(
+        onSelected: (String result) {
+          switch (result) {
+            case "mempool":
+              onMempool();
+            case "hide":
+              onHide();
+            case "category":
+              onCategory();
+            case "folder":
+              onFolder();
+            case "contacts":
+              onContacts();
+          }
+        },
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+          const PopupMenuItem<String>(value: "mempool", child: Text("Mempool")),
+          const PopupMenuItem<String>(value: "folder", child: Text("Folders")),
+          const PopupMenuItem<String>(value: "category", child: Text("Categories")),
+          const PopupMenuItem<String>(value: "contacts", child: Text("Contacts")),
+          PopupMenuItem<String>(value: 'hide', child: const Text("Show All")),
+        ],
+      ),
+    ];
+  }
+
   onSync() async {
     try {
-      final listState = listKey.currentState!;
+      final listState = listKey.currentState;
+      if (listState == null) return;
       List<Account> accountToSync = [];
       final hasSelection = listState.selected.any((s) => s);
       if (hasSelection) {
