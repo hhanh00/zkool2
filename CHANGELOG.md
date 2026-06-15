@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.21.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.1...zkool-v6.21.0-rc.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* show scaffold with settings bar on empty account list ([a8d99f9](https://github.com/hhanh00/zkool2/commit/a8d99f99d886e22ffb49444888ed14394b79c718))
+
 ## [6.21.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc...zkool-v6.21.0-rc.1) (2026-06-15)
 
 
