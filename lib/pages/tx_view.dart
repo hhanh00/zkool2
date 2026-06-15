@@ -9,6 +9,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/plugin_memo_view.dart';
 
 class TxViewPage extends ConsumerStatefulWidget {
   final int idTx;
@@ -273,7 +274,13 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
           ListTile(title: Text("Pool"), subtitle: CopyableText(poolToString(m.pool))),
           ListTile(
             title: Text("Memo"),
-            subtitle: CopyableText(m.memo ?? "<Binary Content>"),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CopyableText(m.memo ?? "<Binary Content>"),
+                PluginMemoView(m.memoBytes),
+              ],
+            ),
           ),
           Divider(),
         ],

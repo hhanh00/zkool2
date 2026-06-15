@@ -1,0 +1,10 @@
+{
+    "id": "com.zkool.test-memo",
+    "name": "Test Memo Parser",
+    "version": "1.0.0",
+    "author": "zkool",
+    "description": "Sample plugin that parses a simple memo format: 4-byte prefix (deadbeef), 1-byte version, 32-byte sender name, 8-byte amount (LE).",
+    "min_app_version": "6.20.0",
+    "types": ["memo"],
+    "entry_point": "main.rhai"
+}

@@ -28,6 +28,7 @@ pub mod mempool;
 pub mod openalias;
 pub mod net;
 pub mod pay;
+pub mod plugin;
 pub mod recover;
 pub mod sync;
 pub mod warp;

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/plugin.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -24,6 +25,7 @@ Future<void> main() async {
   await RustLib.init();
   final dataDir = await getApplicationDocumentsDirectory();
   await initDatadir(directory: dataDir.path);
+  initPlugins();
   final prefs = SharedPreferencesAsync();
   final recovery = await prefs.getBool("recovery") ?? false;
   final disclaimerAccepted = await prefs.getBool("disclaimer_accepted") ?? false;
