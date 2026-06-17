@@ -40,4 +40,4 @@ jobs:
           echo "$NEW_BUILD" > build_number.txt
           git add build_number.txt
           git commit --amend --no-edit
-          git push --force-with-lease "https://x-access-token:$(gh auth token)@github.com/$GITHUB_REPOSITORY" "$BRANCH"
+          git push --force "https://x-access-token:$(gh auth token)@github.com/$GITHUB_REPOSITORY" "$BRANCH"
