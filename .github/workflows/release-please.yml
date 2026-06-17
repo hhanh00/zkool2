@@ -26,7 +26,6 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          prerelease: true
       - if: steps.release.outputs.pr
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
