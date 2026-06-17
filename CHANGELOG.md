@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.21.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.2...zkool-v6.21.0-rc.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* use amend instead of new commit for build number bump in release-please workflow ([be9add0](https://github.com/hhanh00/zkool2/commit/be9add03adc81cecb3d230579105e4a076908594))
+
 ## [6.21.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.1...zkool-v6.21.0-rc.2) (2026-06-15)
 
 
