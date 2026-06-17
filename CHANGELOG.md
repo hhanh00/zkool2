@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [6.21.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.3...zkool-v6.21.0-rc.4) (2026-06-17)
+
+
+### Bug Fixes
+
+* bump build number to 275 ([97d4e74](https://github.com/hhanh00/zkool2/commit/97d4e745b0fcd1458388bf08da5e718c0e3cc5ed))
+* remove unsupported prerelease input from release-please-action@v5 ([6f678bb](https://github.com/hhanh00/zkool2/commit/6f678bbd257c40f310afdfe0726eee8c57989757))
+* use --force instead of --force-with-lease for release PR push ([2e8d7b6](https://github.com/hhanh00/zkool2/commit/2e8d7b64df7ca34ef05f13d28421f45a73b324cc))
+
 ## [6.21.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.2...zkool-v6.21.0-rc.3) (2026-06-17)
 
 
