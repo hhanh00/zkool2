@@ -148,8 +148,38 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
   List<Widget> show(TxAccount txd) {
     final t = Theme.of(context).textTheme;
-    final amountSpent = txd.spends.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
-    final amountReceived = txd.notes.map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
+    // ZEC totals (idAsset == null)
+    final zecSpent = txd.spends
+        .where((n) => n.idAsset == null)
+        .map((n) => n.value)
+        .fold(BigInt.zero, (a, b) => a + b);
+    final zecReceived = txd.notes
+        .where((n) => n.idAsset == null)
+        .map((n) => n.value)
+        .fold(BigInt.zero, (a, b) => a + b);
+
+    // ZSA totals grouped by assetDisplay
+    final zsaSpent = <String, BigInt>{};
+    for (final n in txd.spends.where((n) => n.idAsset != null)) {
+      zsaSpent.update(n.assetDisplay, (v) => v + n.value, ifAbsent: () => n.value);
+    }
+    final zsaReceived = <String, BigInt>{};
+    for (final n in txd.notes.where((n) => n.idAsset != null)) {
+      zsaReceived.update(n.assetDisplay, (v) => v + n.value, ifAbsent: () => n.value);
+    }
+
+    // Compute net per ZSA asset
+    final zsaNet = <String, BigInt>{};
+    for (final entry in zsaReceived.entries) {
+      final spent = zsaSpent[entry.key] ?? BigInt.zero;
+      zsaNet[entry.key] = entry.value - spent;
+    }
+    for (final entry in zsaSpent.entries) {
+      if (!zsaNet.containsKey(entry.key)) {
+        zsaNet[entry.key] = -entry.value;
+      }
+    }
+
     final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...categoryList!.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
 
     return [
@@ -168,16 +198,32 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
       ),
       ListTile(
         title: Text("Amount Spent"),
-        subtitle: zatToText(amountSpent, selectable: true),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            zatToText(zecSpent, selectable: true),
+            ...zsaSpent.entries.map((e) => Text("${e.value} ${e.key}")),
+          ],
+        ),
       ),
       ListTile(
         title: Text("Amount Received"),
-        subtitle: zatToText(amountReceived, selectable: true),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            zatToText(zecReceived, selectable: true),
+            ...zsaReceived.entries.map((e) => Text("${e.value} ${e.key}")),
+          ],
+        ),
       ),
       ListTile(
-        title: Text("Amount Transacted"),
-        subtitle: zatToText(amountReceived - amountSpent, selectable: true),
+        title: Text("Amount Transacted (ZEC)"),
+        subtitle: zatToText(zecReceived - zecSpent, selectable: true),
       ),
+      ...zsaNet.entries.map((e) => ListTile(
+            title: Text("Amount Transacted (${e.key})"),
+            subtitle: Text(e.value.toString()),
+          )),
       ListTile(
         title: Text("Price"),
         subtitle: txd.price != null
