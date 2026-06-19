@@ -1,55 +1,6 @@
 # Changelog
 
 
-## [6.21.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.4...zkool-v6.21.0-rc.5) (2026-06-19)
-
-
-### Features
-
-* make transparent scan limit an optional GraphQL parameter ([1df02cb](https://github.com/hhanh00/zkool2/commit/1df02cb22c872b998c472aee247e16403e509f04))
-
-## [6.21.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.3...zkool-v6.21.0-rc.4) (2026-06-17)
-
-
-### Bug Fixes
-
-* bump build number to 275 ([97d4e74](https://github.com/hhanh00/zkool2/commit/97d4e745b0fcd1458388bf08da5e718c0e3cc5ed))
-* remove unsupported prerelease input from release-please-action@v5 ([6f678bb](https://github.com/hhanh00/zkool2/commit/6f678bbd257c40f310afdfe0726eee8c57989757))
-* use --force instead of --force-with-lease for release PR push ([2e8d7b6](https://github.com/hhanh00/zkool2/commit/2e8d7b64df7ca34ef05f13d28421f45a73b324cc))
-
-## [6.21.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.2...zkool-v6.21.0-rc.3) (2026-06-17)
-
-
-### Bug Fixes
-
-* use amend instead of new commit for build number bump in release-please workflow ([be9add0](https://github.com/hhanh00/zkool2/commit/be9add03adc81cecb3d230579105e4a076908594))
-
-## [6.21.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc.1...zkool-v6.21.0-rc.2) (2026-06-15)
-
-
-### Bug Fixes
-
-* show scaffold with settings bar on empty account list ([a8d99f9](https://github.com/hhanh00/zkool2/commit/a8d99f99d886e22ffb49444888ed14394b79c718))
-
-## [6.21.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0-rc...zkool-v6.21.0-rc.1) (2026-06-15)
-
-
-### Features
-
-* add account picker to cloud vault recovery ([719aafe](https://github.com/hhanh00/zkool2/commit/719aafe1fe7d8e72b04eccca38e26f4b72be0105))
-
-
-### Bug Fixes
-
-* remove per-item delete button, add multi-select with checkmark, fix setPluginEnabled Tokio panic ([888b8a4](https://github.com/hhanh00/zkool2/commit/888b8a4ad24d1dc93cbddfbf4f59d2d6c81c6256))
-
-## [6.21.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0...zkool-v6.21.0-rc) (2026-06-15)
-
-
-### Features
-
-* plugin system with rhai script engine ([f31faae](https://github.com/hhanh00/zkool2/commit/f31faaeca569b5ddb4412f3db68cf21c7e1d912c))
-
 ## [6.20.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.19.0...zkool-v6.20.0) (2026-06-15)
 
 
