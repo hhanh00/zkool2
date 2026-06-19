@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [6.21.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.21.1-rc) (2026-06-19)
+
+
+### Bug Fixes
+
+* display ZSA amounts correctly instead of as ZEC ([1dc33b5](https://github.com/hhanh00/zkool2/commit/1dc33b5d039e02d16ed3aff0399e22900afaf4c7))
+* update default block explorer URL and restore prerelease config ([dc1da9b](https://github.com/hhanh00/zkool2/commit/dc1da9bf88210c5ac8708c394e63cc244e142efa))
+
 ## [6.21.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0...zkool-v6.21.0) (2026-06-19)
 
 
