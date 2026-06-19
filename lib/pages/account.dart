@@ -995,7 +995,9 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes) {
         onTap: () => toggleLock(ref, context, note.id, !note.locked),
         leading: Text("${note.height}"),
         title: Text(poolToString(note.pool)),
-        trailing: zatToText(note.value, selectable: false),
+        trailing: note.idAsset != null
+            ? Text("${note.value} ${note.assetDisplay}", softWrap: false)
+            : zatToText(note.value, selectable: false),
         textColor: note.locked ? t.disabledColor : null,
       );
     },
