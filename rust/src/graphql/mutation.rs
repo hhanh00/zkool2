@@ -122,9 +122,12 @@ impl Mutation {
         Ok(true)
     }
 
-    async fn synchronize(id_accounts: Vec<i32>, fast: Option<bool>, context: &Context) -> FieldResult<i32> {
+    async fn synchronize(id_accounts: Vec<i32>, fast: Option<bool>, transparent_limit: Option<i32>, context: &Context) -> FieldResult<i32> {
         check_admin_auth(context)?;
         let fast = fast.unwrap_or_default();
+        let transparent_limit = transparent_limit
+            .map(|v| v as u32)
+            .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
         let height = crate::sync::synchronize_impl(
@@ -132,7 +135,7 @@ impl Mutation {
             id_accounts,
             current_height,
             100_000,
-            40,
+            transparent_limit,
             10_000,
             fast,
             &context.coin,
@@ -141,16 +144,19 @@ impl Mutation {
         Ok(height as i32)
     }
 
-    async fn synchronize_account(id_account: i32, fast: Option<bool>, context: &Context) -> FieldResult<i32> {
+    async fn synchronize_account(id_account: i32, fast: Option<bool>, transparent_limit: Option<i32>, context: &Context) -> FieldResult<i32> {
         check_auth(context, id_account, false)?;
         let fast = fast.unwrap_or_default();
+        let transparent_limit = transparent_limit
+            .map(|v| v as u32)
+            .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
         let height = crate::sync::synchronize_impl(
             (),
             vec![id_account as u32],
             current_height,
             100_000,
-            40,
+            transparent_limit,
             10_000,
             fast,
             &context.coin,
