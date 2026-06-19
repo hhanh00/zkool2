@@ -1837,12 +1837,12 @@ pub async fn fetch_shielded_slot_stats(
                 SUM(sub.value), COUNT(sub.tx), COALESCE(MAX(t.time), 0)
         FROM (
             SELECT pool, scope, diversifier_index, tx, value
-            FROM notes WHERE account = ?1 AND pool IN (1, 2)
+            FROM notes WHERE account = ?1 AND pool IN (1, 2) AND id_asset IS NULL
             UNION ALL
             SELECT n.pool, n.scope, n.diversifier_index, s.tx, s.value
             FROM spends s
             JOIN notes n ON s.id_note = n.id_note AND s.account = n.account
-            WHERE s.pool IN (1, 2) AND n.account = ?1
+            WHERE s.pool IN (1, 2) AND n.account = ?1 AND n.id_asset IS NULL
         ) sub
         JOIN transactions t ON t.id_tx = sub.tx AND t.account = ?1
         GROUP BY sub.pool, sub.scope, sub.diversifier_index
