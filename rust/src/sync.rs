@@ -42,6 +42,7 @@ use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
+pub const DEFAULT_TRANSPARENT_LIMIT: u32 = 100u32;
 
 pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
 pub use zcash_trees::types::SyncError;
@@ -308,7 +309,7 @@ pub(crate) async fn transparent_sync(
         accounts, start_height, end_height, limit
     );
     for account in accounts {
-        // scan latest 5 receive and change addresses
+        // scan the most recent receive and change addresses, bounded by `limit`
         let mut rows = sqlx::query("
                 WITH receive AS
                 (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 0 ORDER BY dindex DESC LIMIT ?2),
