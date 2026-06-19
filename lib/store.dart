@@ -358,7 +358,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? "https://zec.rocks";
     final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
-    final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://{net}.zcashexplorer.app/transactions/{txid}";
+    final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://cipherscan.app/tx/{txid}";
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
     final qrSize = (hasDb ? await getProp(key: "qr_size", c: c) : null) ?? "20";
     final qrEC = (hasDb ? await getProp(key: "qr_ecLevel", c: c) : null) ?? "1";
