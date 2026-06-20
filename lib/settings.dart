@@ -814,6 +814,11 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       settings = settings.copyWith(syncInterval: value);
       widget.onChanged(settings);
     });
+    // Restart autoSync if the interval was changed to a positive value
+    final interval = int.tryParse(value) ?? 0;
+    if (interval > 0) {
+      ref.read(synchronizerProvider.notifier).autoSync();
+    }
   }
 
   void onDatabaseManager() async {
