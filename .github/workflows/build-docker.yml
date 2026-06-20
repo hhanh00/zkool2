@@ -95,7 +95,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY_IMAGE }}
-          tags: type=semver,pattern={{version}},match=v(\d+.\d+.\d+(-rc.\d+)?)$
+          tags: type=semver,pattern={{version}},match=v(\d+.\d+.\d+(-rc(.\d+)?)?)$
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
