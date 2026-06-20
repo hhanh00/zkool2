@@ -1,6 +1,17 @@
 # Changelog
 
 
+## [6.21.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.21.1-rc) (2026-06-20)
+
+
+### Bug Fixes
+
+* accept RC tags without version number in Docker workflow semver match ([4206dec](https://github.com/hhanh00/zkool2/commit/4206dec4b1d9805037078e5bb2944e9805eee714))
+* center QR code and remove fingerprint on viewing keys page ([f1037c5](https://github.com/hhanh00/zkool2/commit/f1037c50a269518e2709f0ffa8beb215a2db3f8c))
+* display ZSA amounts correctly instead of as ZEC ([1dc33b5](https://github.com/hhanh00/zkool2/commit/1dc33b5d039e02d16ed3aff0399e22900afaf4c7))
+* restart autoSync when interval is changed back to a positive value ([0d75ea9](https://github.com/hhanh00/zkool2/commit/0d75ea95a0bceb57659e53a291e3ed7a50199f14))
+* update default block explorer URL and restore prerelease config ([dc1da9b](https://github.com/hhanh00/zkool2/commit/dc1da9bf88210c5ac8708c394e63cc244e142efa))
+
 ## [6.21.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.21.1-rc) (2026-06-19)
 
 
