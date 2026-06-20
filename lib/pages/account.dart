@@ -1176,7 +1176,6 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   late final c = coinContext.coin;
   int pools = 7;
   String? uvk;
-  String? fingerprint;
   Seed? seed;
   int accountPools = 7; // default to all pools
   bool showSeed = false;
@@ -1185,7 +1184,6 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   void initState() {
     super.initState();
     Future(() async {
-      fingerprint = await getAccountFingerprint(account: widget.account, c: c);
       seed = await getAccountSeed(account: widget.account, c: c);
       accountPools = await getAccountPools(account: widget.account, c: c);
       setState(() {});
@@ -1239,17 +1237,8 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
           SliverToBoxAdapter(child: Gap(32)),
           if (uvk != null)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
                 child: QrImageView(data: uvk!, size: 200, backgroundColor: Colors.white),
-              ),
-            ),
-          SliverToBoxAdapter(child: Gap(8)),
-          if (fingerprint != null)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: CopyableText(fingerprint!),
               ),
             ),
           SliverToBoxAdapter(child: Gap(16)),
