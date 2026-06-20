@@ -665,6 +665,7 @@ void runLogListener() async {
 @Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
   bool syncInProgress = false;
+  bool _autoSyncActive = false;
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   int retryCount = 0;
 
@@ -805,22 +806,28 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   }
 
   void autoSync({bool now = false}) async {
-    final settings = await ref.read(appSettingsProvider.future);
-    final interval = int.tryParse(settings.syncInterval) ?? 0;
-
-    if (settings.offline || interval <= 0) {
-      return;
-    }
+    if (_autoSyncActive) return;
+    _autoSyncActive = true;
     try {
-      final currentHeight = await ref.read(currentHeightProvider.notifier).fetch();
-      if (currentHeight != null) {
-        await syncIfNeeded(currentHeight, now: now);
+      final settings = await ref.read(appSettingsProvider.future);
+      final interval = int.tryParse(settings.syncInterval) ?? 0;
+
+      if (settings.offline || interval <= 0) {
+        return;
       }
-    } on AnyhowException catch (e) {
-      logger.e(e);
-      // ignore
+      try {
+        final currentHeight = await ref.read(currentHeightProvider.notifier).fetch();
+        if (currentHeight != null) {
+          await syncIfNeeded(currentHeight, now: now);
+        }
+      } on AnyhowException catch (e) {
+        logger.e(e);
+        // ignore
+      } finally {
+        if (interval > 0) Timer(Duration(seconds: 15), () => autoSync());
+      }
     } finally {
-      if (interval > 0) Timer(Duration(seconds: 15), () => autoSync());
+      _autoSyncActive = false;
     }
   }
 
