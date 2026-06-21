@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.22.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.1-rc...zkool-v6.22.0-rc) (2026-06-21)
+
+
+### Features
+
+* include txid in transaction history search/filter ([38d0240](https://github.com/hhanh00/zkool2/commit/38d0240bae8fa7133f4a55605cd23ceecbf9195a))
+
 ## [6.21.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.21.1-rc) (2026-06-20)
 
 
