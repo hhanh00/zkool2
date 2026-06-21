@@ -63,23 +63,27 @@ class TxPageState extends ConsumerState<TxPage> {
     final canSend = (txPlan.canSign || account!.hw != 0) && canBroadcast;
     final hasFrost = details!.frostParams != null;
 
+    final success = txId != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Transaction"),
+        title: Text(success ? "Transaction Sent" : "Transaction"),
         actions: [
-          if (hasFrost) IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
-          IconButton(onPressed: onCancel, tooltip: "Cancel, do NOT send", icon: Icon(Icons.cancel)),
-          IconButton(
-            onPressed: _sending ? null : (canSend ? onSend : onSave),
-            tooltip: "Confirm, broadcast transaction",
-            icon: Icon(
-              canSend
-                  ? Icons.send
-                  : txPlan.canSign
-                      ? Icons.draw
-                      : Icons.save,
+          if (!success) ...[
+            if (hasFrost) IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
+            IconButton(onPressed: onCancel, tooltip: "Cancel, do NOT send", icon: Icon(Icons.cancel)),
+            IconButton(
+              onPressed: _sending ? null : (canSend ? onSend : onSave),
+              tooltip: "Confirm, broadcast transaction",
+              icon: Icon(
+                canSend
+                    ? Icons.send
+                    : txPlan.canSign
+                        ? Icons.draw
+                        : Icons.save,
+              ),
             ),
-          ),
+          ],
         ],
       ),
       body: CustomScrollView(
@@ -89,7 +93,7 @@ class TxPageState extends ConsumerState<TxPage> {
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
-                  Text("Tx Plan", style: t.titleSmall),
+                  Text(success ? "Tx Sent Successfully" : "Tx Plan", style: t.titleSmall),
                   Text("Fee: ${zatToString(txPlan.fee)}"),
                   Gap(8),
                   if (txId != null)
@@ -104,6 +108,20 @@ class TxPageState extends ConsumerState<TxPage> {
           showTxPlan(context, txPlan),
         ],
       ),
+      bottomNavigationBar: success
+          ? SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onCancel,
+                    child: const Text("Dismiss"),
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
