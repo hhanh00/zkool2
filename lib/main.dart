@@ -36,7 +36,7 @@ Future<void> main() async {
     ProviderScope(
       child: ToastificationConfigProvider(
         config: ToastificationConfig(
-          marginBuilder: (_, _) => const EdgeInsets.only(top: 76),
+          marginBuilder: (c, a) => const EdgeInsets.only(top: 76),
         ),
         child: ToastificationWrapper(
           child: Consumer(builder: (context, ref, _) {
