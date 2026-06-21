@@ -17,12 +17,6 @@ final logger = Logger(filter: ProductionFilter());
 
 const String appName = "zkool";
 
-EdgeInsetsGeometry _offsetMarginBuilder(
-  BuildContext context,
-  AlignmentGeometry alignment,
-) =>
-    const EdgeInsets.only(top: 76);
-
 final appKey = GlobalKey();
 
 Future<void> main() async {
@@ -42,7 +36,7 @@ Future<void> main() async {
     ProviderScope(
       child: ToastificationConfigProvider(
         config: const ToastificationConfig(
-          marginBuilder: _offsetMarginBuilder,
+          marginBuilder: (_, _) => const EdgeInsets.only(top: 76),
         ),
         child: ToastificationWrapper(
           child: Consumer(builder: (context, ref, _) {
