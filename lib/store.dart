@@ -638,7 +638,7 @@ void runLogListener() async {
     if (m.span == "transaction") {
       toastification.show(
         description: Text(m.message),
-        margin: EdgeInsets.all(8),
+        margin: const EdgeInsets.fromLTRB(8, 72, 8, 8),
         borderRadius: BorderRadius.circular(8),
         animationDuration: Durations.long1,
         autoCloseDuration: Duration(seconds: 3),
