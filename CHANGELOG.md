@@ -1,6 +1,17 @@
 # Changelog
 
 
+## [6.22.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0-rc...zkool-v6.22.0-rc.1) (2026-06-21)
+
+
+### Bug Fixes
+
+* add dismiss button after successful transaction send ([ea3427a](https://github.com/hhanh00/zkool2/commit/ea3427a7e6db4875256dec755dd9be1f7ad9fbde))
+* offset all toasts 64px down using global marginBuilder ([68b80ac](https://github.com/hhanh00/zkool2/commit/68b80aca62964503e089d9cb38af1f5d2f5ccc21))
+* offset transaction toast messages 64px down ([d62b998](https://github.com/hhanh00/zkool2/commit/d62b998994493e3f23417f252667aa9aeb7f1b8a))
+* remove const from ToastificationConfig, lambda is not a constant ([105d765](https://github.com/hhanh00/zkool2/commit/105d765096cc423b8badf339ca95cfcaf928f2fe))
+* rename duplicate _ parameters in lambda ([f260bd1](https://github.com/hhanh00/zkool2/commit/f260bd13a339279a65ae98940777f888302bf193))
+
 ## [6.22.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.1-rc...zkool-v6.22.0-rc) (2026-06-21)
 
 
