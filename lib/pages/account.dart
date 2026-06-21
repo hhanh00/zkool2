@@ -95,6 +95,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     return txs.where((tx) {
       if (tx.memo?.toLowerCase().contains(q) == true) return true;
       if (tx.contactName?.toLowerCase().contains(q) == true) return true;
+      if (txIdToString(tx.txid).toLowerCase().contains(q)) return true;
       return false;
     }).toList();
   }
@@ -349,7 +350,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                   child: TextField(
                                     controller: _txSearchController,
                                     decoration: const InputDecoration(
-                                      labelText: "Search transactions (memo, contact)",
+                                      labelText: "Search transactions (memo, contact, txid)",
                                       fillColor: Colors.white,
                                       prefixIcon: Icon(Icons.search),
                                     ),
