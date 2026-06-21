@@ -17,6 +17,12 @@ final logger = Logger(filter: ProductionFilter());
 
 const String appName = "zkool";
 
+EdgeInsetsGeometry _offsetMarginBuilder(
+  BuildContext context,
+  AlignmentGeometry alignment,
+) =>
+    const EdgeInsets.only(top: 76);
+
 final appKey = GlobalKey();
 
 Future<void> main() async {
@@ -34,8 +40,12 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      child: ToastificationWrapper(
-        child: Consumer(builder: (context, ref, _) {
+      child: ToastificationConfigProvider(
+        config: const ToastificationConfig(
+          marginBuilder: _offsetMarginBuilder,
+        ),
+        child: ToastificationWrapper(
+          child: Consumer(builder: (context, ref, _) {
           final settings = ref.watch(appSettingsProvider).value;
           final scheme = settings?.let((s) {
                 try {
@@ -64,7 +74,8 @@ Future<void> main() async {
         }),
       ),
     ),
-  );
+  ),
+);
 }
 
 class PinLock extends ConsumerStatefulWidget {
