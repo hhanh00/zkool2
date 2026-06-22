@@ -80,8 +80,6 @@ impl<T: Clone + frb_generated::SseEncode + Send + Sync> Sink<T> for StreamSink<T
 }
 
 impl<T: Send + Sync + std::fmt::Debug> Sink<T> for () {
-    async fn send(&self, value: T) {
-        tracing::info!("{value:?}");
-    }
+    async fn send(&self, _value: T) {}
     async fn send_error(&self, _error: Error) {}
 }
