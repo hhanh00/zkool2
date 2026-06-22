@@ -7,8 +7,9 @@ use tracing_subscriber::{
         self,
         format::{FmtSpan, Writer},
     },
-    layer::{Context, SubscriberExt as _},
+    layer::{Context, Layered, SubscriberExt as _},
     registry::LookupSpan,
+    reload,
     util::SubscriberInitExt as _,
     EnvFilter, Layer, Registry,
 };
@@ -18,19 +19,50 @@ use crate::frb_generated::StreamSink;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
+/// The subscriber type at the point where the reload filter layer is applied
+/// (after `default_layer` but before `frb_layer`).
+type FilterSub = Layered<BoxedLayer<Registry>, Registry>;
+
+#[cfg(feature = "flutter")]
+static FILTER_HANDLE: OnceLock<reload::Handle<EnvFilter, FilterSub>> = OnceLock::new();
+
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb(init))]
 pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
     let _ = env_logger::builder().try_init();
+
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+    let (filter_layer, reload_handle) = reload::Layer::new(env_filter);
+    FILTER_HANDLE.set(reload_handle).ok();
+
     let _ = Registry::default()
         .with(default_layer())
-        .with(env_layer())
+        .with(filter_layer)
         .with(frb_layer())
         .try_init();
     let _ = rustls::crypto::ring::default_provider().install_default();
     tracing::info!("Rust logging initialized");
+}
+
+/// Enable expert mode, which lowers the log filter to allow
+/// sync, mempool, and memo target debug messages
+/// while keeping everything else at `info`.
+#[cfg_attr(feature = "flutter", frb(sync))]
+pub fn set_expert_mode(enabled: bool) {
+    if let Some(handle) = FILTER_HANDLE.get() {
+        let filter = if enabled {
+            EnvFilter::new("warp=debug,rlz=debug,info")
+        } else {
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy()
+        };
+        let _ = handle.modify(|f| *f = filter);
+    }
 }
 
 pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
@@ -46,20 +78,10 @@ where
         .boxed()
 }
 
-pub fn env_layer<S>() -> BoxedLayer<S>
-where
-    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
-{
-    EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env_lossy()
-        .boxed()
-}
-
 #[cfg(feature = "flutter")]
 fn frb_layer<S>() -> BoxedLayer<S>
 where
-    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+    S: Subscriber + for<'a> LookupSpan<'a>,
 {
     FrbLogger {}.boxed()
 }

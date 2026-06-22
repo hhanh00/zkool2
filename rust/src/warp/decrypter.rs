@@ -5,7 +5,7 @@ use zcash_trees::types::Note;
 
 use anyhow::Result;
 use blake2b_simd::Params;
-use tracing::info;
+use tracing::debug;
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher, StreamCipherSeek},
     ChaCha20,
@@ -193,7 +193,7 @@ pub fn try_orchard_decrypt(
                     // Always 32 bytes: [0u8; 32] for ZEC, non-zero for ZSA
                     let asset_base = note.asset().to_bytes().to_vec();
                     if is_zsa {
-                        info!(
+                        debug!(
                             "ZSA note: account={account} scope={scope} height={height} value={value} asset={asset:?}",
                             asset = hex::encode(&asset_base)
                         );

@@ -9,7 +9,7 @@ use futures::TryStreamExt;
 use rayon::prelude::*;
 use sqlx::{Row, SqliteConnection};
 use tokio::sync::mpsc::Sender;
-use tracing::{enabled, info};
+use tracing::{enabled, debug};
 
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
 use crate::Hash32;
@@ -111,7 +111,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let mut utxos: HashMap<Vec<u8>, UTXO> = HashMap::new();
 
         for (account, _, _, _) in keys.iter() {
-            info!(
+            debug!(
                 "fetch UTXOs - account: {}, pool: {}, height: {}",
                 account, pool, height
             );
@@ -210,7 +210,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 })
             })
             .collect::<Vec<_>>();
-        info!("Notes #{}", notes.len());
+        debug!("Notes #{}", notes.len());
 
         let mut note_iterator = notes.iter_mut();
         let mut note = note_iterator.next();
@@ -347,8 +347,8 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             swap(&mut cmxs, &mut cmxs2);
         }
 
-        tracing::info!("Old notes #{}", self.utxos.len());
-        tracing::info!("New notes #{}", new_utxos.len());
+        tracing::debug!("Old notes #{}", self.utxos.len());
+        tracing::debug!("New notes #{}", new_utxos.len());
         for utxo in new_utxos.into_iter() {
             let mut key = utxo.account.to_be_bytes().to_vec();
             key.extend_from_slice(&utxo.nullifier);

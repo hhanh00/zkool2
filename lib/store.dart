@@ -373,6 +373,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     );
     final vault = await prefs.getBool("vault") ?? false;
     final expertMode = await prefs.getBool("expert_mode") ?? false;
+    setExpertMode(enabled: expertMode);
     final paletteName = await prefs.getString("palette_name") ?? 'blue';
     final darkMode = await prefs.getBool("dark_mode") ?? true;
     final txTableMode = await prefs.getBool("tx_table_mode") ?? false;

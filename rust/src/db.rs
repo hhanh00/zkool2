@@ -10,7 +10,7 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
 };
-use tracing::info;
+use tracing::debug;
 use zcash_keys::{
     encoding::AddressCodec,
     keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey},
@@ -236,7 +236,7 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     )
     .execute(&mut *connection)
     .await?;
-    tracing::info!("create_schema: user_memos table ready");
+    tracing::debug!("create_schema: user_memos table ready");
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS assets(
@@ -650,7 +650,7 @@ pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Re
         return Ok(());
     }
 
-    info!("Backfilling diversifier_index for {} notes", count.0);
+    debug!("Backfilling diversifier_index for {} notes", count.0);
 
     // Fetch distinct accounts with unbackfilled notes
     let accounts: Vec<(u32,)> = sqlx::query_as(
@@ -711,7 +711,7 @@ pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Re
         }
     }
 
-    info!("Backfill diversifier_index complete");
+    debug!("Backfill diversifier_index complete");
     put_prop(connection, "backfilled_diversifier_index", "1").await?;
     Ok(())
 }
@@ -1322,7 +1322,7 @@ pub async fn reorder_account(
     old_position: u32,
     new_position: u32,
 ) -> Result<()> {
-    info!(
+    debug!(
         "Reordering account from {} to {}",
         old_position, new_position
     );
@@ -1404,7 +1404,7 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
     // union notes and spends, then sum value by tx into v to get tx value
     // join transactions with v by id_tx and filter by account
     // order by height desc to get latest transactions first
-    tracing::info!("fetch_txs: starting for account {}", account);
+    tracing::debug!("fetch_txs: starting for account {}", account);
     let transactions = sqlx::query(
         "SELECT t.id_tx, t.txid, t.height, t.time, t.value, t.tpe, c.name, t.zsa_value, t.price, t.asset_id,
             a.asset_name, a.asset_desc_hash,
@@ -1464,7 +1464,7 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
     })
     .fetch_all(&mut *connection)
     .await?;
-    tracing::info!("fetch_txs: completed with {} txs", transactions.len());
+    tracing::debug!("fetch_txs: completed with {} txs", transactions.len());
     Ok(transactions)
 }
 
