@@ -11,6 +11,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
@@ -787,10 +788,60 @@ class Send2PageState extends ConsumerState<Send2Page> {
     );
   }
 
+  /// Shows a warning dialog when the wallet is not fully synced.
+  /// Returns `true` if the user wants to sync first, `false` to skip,
+  /// or `null` if the dialog was dismissed.
+  Future<bool?> _showSyncWarning(int currentHeight, int accountHeight) async {
+    final result = await AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.rightSlide,
+      title: "Sync Warning",
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          "Your wallet is ${currentHeight - accountHeight} blocks behind the chain tip.\n\n"
+          "Sending before syncing may cause the transaction to fail.",
+        ),
+      ),
+      btnOkText: "Sync Now",
+      btnOkOnPress: () {},
+      btnCancelText: "Skip & Send",
+      btnCancelOnPress: () {},
+      onDismissCallback: (type) {
+        switch (type) {
+          case DismissType.btnOk:
+            GoRouter.of(context).pop(true); // sync
+          case DismissType.btnCancel:
+            GoRouter.of(context).pop(false); // skip
+          default:
+            GoRouter.of(context).pop(null); // dismissed
+        }
+      },
+      dismissOnTouchOutside: false,
+      autoDismiss: false,
+    ).show();
+    return result as bool?;
+  }
+
   void onSend() async {
     final form = formKey.currentState!;
     if (!form.saveAndValidate()) {
       return;
+    }
+
+    // Check if wallet is synced before computing the transaction plan
+    final currentHeight = ref.read(currentHeightProvider).value;
+    final accountHeight = ref.read(selectedAccountProvider).value?.height;
+    if (currentHeight != null && accountHeight != null && accountHeight < currentHeight) {
+      final syncChoice = await _showSyncWarning(currentHeight, accountHeight);
+      if (syncChoice == null) return; // user dismissed the dialog
+      if (syncChoice) {
+        // User chose to sync — await completion, then continue
+        showSnackbar("Please wait for wallet to synchronize");
+        await ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true);
+        if (!mounted) return;
+      }
     }
 
     final srcPools = form.fields['source pools']?.value ?? (hasTex ? 1 : 7);
