@@ -347,10 +347,10 @@ pub async fn remove_account(account_id: u32, c: &Coin) -> Result<()> {
 }
 
 pub async fn list_tx_history(c: &Coin) -> Result<Vec<Tx>> {
-    tracing::info!("list_tx_history: start for account {}", c.account);
+    tracing::debug!("list_tx_history: start for account {}", c.account);
     let mut connection = c.get_connection().await?;
     let txs = crate::db::fetch_txs(&mut connection, c.account).await?;
-    tracing::info!("list_tx_history: got {} transactions", txs.len());
+    tracing::debug!("list_tx_history: got {} transactions", txs.len());
     Ok(txs)
 }
 

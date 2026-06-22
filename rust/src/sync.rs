@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::channel;
 use tokio_stream::StreamExt;
-use tracing::info;
+use tracing::{debug, info};
 use zcash_transparent::address::TransparentAddress;
 
 use crate::api::account::get_ledger;
@@ -117,7 +117,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
         // Get account heights
         let mut account_heights = HashMap::new();
-        info!("Current network height: {}", current_height);
+        debug!("Current network height: {}", current_height);
         for account in accounts.iter() {
             let r: (Option<u32>, Option<u32>) = sqlx::query_as(
                 r#"SELECT account, MIN(height) FROM sync_heights
@@ -128,7 +128,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             .fetch_one(&mut *connection)
             .await?;
             if let (Some(account), Some(height)) = r {
-                info!("Account {} - current DB sync height: {}, next sync height: {}", account, height, height + 1);
+                debug!("Account {} - current DB sync height: {}, next sync height: {}", account, height, height + 1);
                 account_heights.insert(account, height + 1);
 
                 let (use_internal,): (bool,) =
@@ -143,12 +143,12 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                 let t_count: (i64,) = sqlx::query_as(
                     "SELECT COUNT(*) FROM transparent_address_accounts WHERE account = ?"
                 ).bind(account).fetch_one(&mut *connection).await?;
-                info!(
+                debug!(
                     "Account {} - has {} transparent addresses, use_internal={}",
                     account, t_count.0, use_internal
                 );
             } else {
-                info!("Account {} - NO sync_heights entry found, will be skipped", account);
+                debug!("Account {} - NO sync_heights entry found, will be skipped", account);
             }
         }
 
@@ -156,7 +156,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
         unique_heights.sort_unstable();
         unique_heights.dedup();
-        info!("Unique sync start heights for accounts: {:?}", unique_heights);
+        debug!("Unique sync start heights for accounts: {:?}", unique_heights);
 
         let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
 
@@ -187,21 +187,21 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
             // Skip if no accounts to sync
             if accounts_to_sync.is_empty() {
-                info!("No accounts to sync for start_height {}", start_height);
+                debug!("No accounts to sync for start_height {}", start_height);
                 continue;
             }
 
-            info!("Syncing accounts {:?} from height {} to {}", accounts_to_sync.iter().map(|(a, _)| a).collect::<Vec<_>>(), start_height, end_height);
+            debug!("Syncing accounts {:?} from height {} to {}", accounts_to_sync.iter().map(|(a, _)| a).collect::<Vec<_>>(), start_height, end_height);
 
             let pool = c.get_pool()?;
             // Update the sync heights for these accounts
             let mut client = c.client().await?;
 
-            info!("Start height: {}", start_height);
-            info!("End height: {}", end_height);
+            debug!("Start height: {}", start_height);
+            debug!("End height: {}", end_height);
 
             if start_height > end_height {
-                info!("Skipping sync: start_height ({}) > end_height ({}), wallet is ahead of network", start_height, end_height);
+                debug!("Skipping sync: start_height ({}) > end_height ({}), wallet is ahead of network", start_height, end_height);
                 return Ok(());
             }
 
@@ -234,11 +234,11 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             )
             .await?;
 
-            info!("heights_without_time");
+            debug!("heights_without_time");
             let heights_without_time =
                 get_heights_without_time(&mut connection, start_height, end_height).await?;
             for h in heights_without_time {
-                info!("fetch block @{h}");
+                debug!("fetch block @{h}");
                 let block = client.block(&network, h).await?;
                 let time = block.time;
                 sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0")
@@ -263,7 +263,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                 }
             }
 
-            info!(
+            debug!(
                 "Sync completed for height range {}-{}",
                 start_height, end_height
             );
@@ -279,7 +279,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
     match res.await {
         Ok(_) => {}
         Err(e) => {
-            info!("Error during sync: {:?}", e);
+            debug!("Error during sync: {:?}", e);
             progress2.send_error(e).await;
         }
     }
@@ -304,7 +304,7 @@ pub(crate) async fn transparent_sync(
     mut rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
     let mut addresses = vec![];
-    info!(
+    debug!(
         "transparent_sync: scanning accounts {:?} from height {} to {} with limit {}",
         accounts, start_height, end_height, limit
     );
@@ -327,7 +327,7 @@ pub(crate) async fn transparent_sync(
 
         let mut addr_count = 0u32;
         while let Some((id_taddress, address)) = rows.try_next().await? {
-            info!(
+            debug!(
                 "transparent_sync: account {} has taddress id={} addr={}",
                 account, id_taddress, address
             );
@@ -335,18 +335,18 @@ pub(crate) async fn transparent_sync(
             // Add the address to the client
             addresses.push((*account, (id_taddress, address)));
         }
-        info!(
+        debug!(
             "transparent_sync: account {} has {} transparent addresses to scan",
             account, addr_count
         );
     }
-    info!(
+    debug!(
         "transparent_sync: total {} addresses to scan across all accounts",
         addresses.len()
     );
     for (account, address_row) in addresses.iter() {
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
-        info!(
+        debug!(
             "transparent_sync: scanning account {} address {} (decoded: {:?})",
             account,
             address_row.1,
@@ -361,13 +361,13 @@ pub(crate) async fn transparent_sync(
         loop {
             tokio::select! {
                 _ = rx_cancel.recv() => {
-                    info!("Canceling sync");
+                    debug!("Canceling sync");
                     anyhow::bail!("Sync canceled");
                 }
                 m = txs.recv() => {
                     if let Some((height, transaction, _)) = m {
                         let txid = transaction.txid().as_ref().to_vec();
-                        info!(
+                        debug!(
                             "transparent_sync: found tx {} at height {} for account {} version={:?} branch_id={:?}",
                             hex::encode(&txid),
                             height,
@@ -382,7 +382,7 @@ pub(crate) async fn transparent_sync(
                         .bind(height)
                         .execute(&mut *db_tx)
                         .await?;
-                        info!(
+                        debug!(
                             "transparent_sync: tx {} inserted into transactions (rows_affected={})",
                             hex::encode(&txid),
                             tx_insert_result.rows_affected()
@@ -390,7 +390,7 @@ pub(crate) async fn transparent_sync(
 
                         // Access the transparent bundle part
                         if let Some(transparent_bundle) = transaction.transparent_bundle() {
-                            info!(
+                            debug!(
                                 "transparent_sync: tx {} has transparent bundle: {} vins, {} vouts",
                                 transaction.txid(),
                                 transparent_bundle.vin.len(),
@@ -412,7 +412,7 @@ pub(crate) async fn transparent_sync(
                             .await?;
 
                                 if let Some((id, amount)) = row {
-                                    info!(
+                                    debug!(
                                         "transparent_sync: tx {} vin spends note {} amount {}",
                                         transaction.txid(),
                                         id,
@@ -443,7 +443,7 @@ pub(crate) async fn transparent_sync(
                                     let vout_addr_encoded = vout_addr.encode(network);
                                     let my_addr_encoded = my_address.encode(network);
                                     let is_match = vout_addr == my_address;
-                                    info!(
+                                    debug!(
                                         "transparent_sync: tx {} vout[{}] value={} recipient={} my_address={} match={}",
                                         transaction.txid(),
                                         i,
@@ -470,7 +470,7 @@ pub(crate) async fn transparent_sync(
                                         .bind(account)
                                         .execute(&mut *db_tx)
                                         .await?;
-                                        info!(
+                                        debug!(
                                             "transparent_sync: tx {} vout[{}] NOTE CREATED value={} rows_affected={}",
                                             transaction.txid(),
                                             i,
@@ -479,7 +479,7 @@ pub(crate) async fn transparent_sync(
                                         );
                                     }
                                 } else {
-                                    info!(
+                                    debug!(
                                         "transparent_sync: tx {} vout[{}] value={} has NO recipient address (script cannot be decoded)",
                                         transaction.txid(),
                                         i,
@@ -488,7 +488,7 @@ pub(crate) async fn transparent_sync(
                                 }
                             }
                         } else {
-                            info!(
+                            debug!(
                                 "transparent_sync: tx {} has NO transparent bundle (shielded-only tx) version={:?} branch_id={:?} height={}",
                                 transaction.txid(),
                                 transaction.version(),
@@ -659,9 +659,9 @@ pub async fn shielded_sync(
     let db_writer_task = {
         let (s, o) = get_tree_state(network, client, start - 1).await?;
 
-        info!("get compact block range");
+        debug!("get compact block range");
         let blocks = get_compact_block_range(network, client, start, end).await?;
-        info!("got streaming blocks");
+        debug!("got streaming blocks");
         let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
 
         let mut connection = pool.acquire().await?;
@@ -678,9 +678,9 @@ pub async fn shielded_sync(
         let network = *network;
         let mut messages = vec![];
         let db_writer_task = tokio::spawn(async move {
-            info!("[db handler] starting");
+            debug!("[db handler] starting");
             while let Some(msg) = rx_messages.recv().await {
-                //info!("Received message: {:?}", msg);
+                //debug!("Received message: {:?}", msg);
                 if let WarpSyncMessage::Commit = msg {
                     let mut db_tx = writer_connection.begin().await.unwrap();
                     let mut new_messages = vec![];
@@ -695,7 +695,7 @@ pub async fn shielded_sync(
                         }
                     }
                     db_tx.commit().await.unwrap();
-                    info!("Committing transaction");
+                    debug!("Committing transaction");
                 } else {
                     messages.push(msg);
                 }
@@ -713,14 +713,14 @@ pub async fn shielded_sync(
             }
             db_tx.commit().await.unwrap();
 
-            info!("[db handler] stopped");
+            debug!("[db handler] stopped");
             check_witness_consistency(&mut writer_connection).await?;
 
             Ok::<_, anyhow::Error>(())
         });
 
         tokio::spawn(async move {
-            info!("Start sync");
+            debug!("Start sync");
             if let Err(e) = warp_sync(
                 &network,
                 &mut connection,
@@ -740,7 +740,7 @@ pub async fn shielded_sync(
                 let _ = tx_messages.send(WarpSyncMessage::Error(e)).await;
             }
 
-            info!("Sync finished");
+            debug!("Sync finished");
         });
 
         db_writer_task
@@ -757,7 +757,7 @@ async fn handle_message(
     tx_progress: &Sender<SyncProgress>,
     key_cache: &AccountKeyCache,
 ) -> Result<()> {
-    tracing::info!(target: "warp", "Warp Message: {msg:?}");
+    tracing::debug!(target: "warp", "Warp Message: {msg:?}");
     match msg {
         WarpSyncMessage::Issuance(iss) => {
             sqlx::query(
@@ -771,7 +771,7 @@ async fn handle_message(
             .bind(iss.height)
             .execute(&mut **db_tx)
             .await?;
-            tracing::info!("asset base {}", hex::encode(&iss.asset_base));
+            tracing::debug!("asset base {}", hex::encode(&iss.asset_base));
 
             if iss.finalized {
                 sqlx::query(
@@ -782,7 +782,7 @@ async fn handle_message(
                 .execute(&mut **db_tx)
                 .await?;
             }
-            info!(
+            debug!(
                 "Processing Issuance: height={}, finalized={}",
                 iss.height, iss.finalized
             );
@@ -800,7 +800,7 @@ async fn handle_message(
             .bind(tx.time)
             .execute(&mut **db_tx)
             .await?;
-            info!("Processing Transaction: id={}, height={}", tx.id, tx.height);
+            debug!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {
             // Resolve id_asset via LEFT JOIN on the assets table.
@@ -808,7 +808,7 @@ async fn handle_message(
             // matching row inserted earlier by an Issuance message.
             // For vanilla ZEC notes, asset_base is empty and id_asset
             // resolves to NULL.
-            tracing::info!("note asset base {}", hex::encode(&note.asset_base));
+            tracing::debug!("note asset base {}", hex::encode(&note.asset_base));
 
             // Resolve diversifier_index from the preloaded key cache
             let diversifier_index = resolve_diversifier_index(
@@ -841,11 +841,11 @@ async fn handle_message(
                     .bind(note.account)
                     .bind(&note.txid)
                     .execute(&mut **db_tx).await?;
-            info!(
+            debug!(
                 "Processing Note: id={}, account={}, height={}",
                 note.id, note.account, note.height
             );
-            info!("{:?}", note);
+            debug!("{:?}", note);
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Witness(account, height, cmx, witness) => {
@@ -880,7 +880,7 @@ async fn handle_message(
             .bind(&utxo.txid)
             .execute(&mut **db_tx)
             .await?;
-            info!("Processing Spend: {:?}", &utxo);
+            debug!("Processing Spend: {:?}", &utxo);
             assert_eq!(r.rows_affected(), 1);
         }
         WarpSyncMessage::Checkpoint(accounts, pool, height) => {
@@ -895,13 +895,13 @@ async fn handle_message(
                     .bind(height)
                     .execute(&mut **db_tx)
                     .await?;
-                    info!("Checkpoint for account: {}, height: {}", a, height);
+                    debug!("Checkpoint for account: {}, height: {}", a, height);
                 }
                 let _ = tx_progress.send(SyncProgress { height, time: 0 }).await;
             }
         }
         WarpSyncMessage::BlockHeader(block_header) => {
-            info!("Processing BlockHeader: {:?}", block_header);
+            debug!("Processing BlockHeader: {:?}", block_header);
             // ignore dups because we could have already inserted the block header
             // if a transparent transaction needs it
             // to resolve the time of the transaction
@@ -924,7 +924,7 @@ async fn handle_message(
             // handled in the caller
         }
         WarpSyncMessage::Rewind(accounts, height) => {
-            info!("Discard height: {}", height);
+            debug!("Discard height: {}", height);
             for account in accounts {
                 rewind_sync(network, db_tx, account, height).await?;
             }
@@ -1033,12 +1033,12 @@ pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Res
     .fetch_all(connection).await?;
 
     for (account, pool, height, value, db_height) in notes.iter() {
-        info!("Missing witness for note {pool} {height} {value} of account {account} at height {db_height}");
+        debug!("Missing witness for note {pool} {height} {value} of account {account} at height {db_height}");
     }
     if !notes.is_empty() {
         anyhow::bail!("Some notes have no witness data. Abort Sync");
     }
-    info!("Db check passed");
+    debug!("Db check passed");
     Ok(())
 }
 
