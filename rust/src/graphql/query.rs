@@ -726,7 +726,6 @@ impl dataloader::BatchFn<i32, Result<Transaction, Arc<Error>>> for TxBatcher {
             .await?;
             let txs: HashMap<i32, Result<Transaction, Arc<Error>>> =
                 txs.into_iter().map(|tx| (tx.id, Ok(tx))).collect();
-            tracing::info!("{txs:?}");
             Ok::<_, anyhow::Error>(txs)
         };
 

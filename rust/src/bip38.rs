@@ -13,7 +13,6 @@ pub fn export_tsk(sk: &TSecretKey) -> String {
 
 pub fn import_tsk(tsk: &str) -> Result<TSecretKey> {
     let v = bs58::decode(tsk).with_check(Some(0x80)).into_vec()?;
-    tracing::info!("{}", hex::encode(&v));
     if v.len() != 33 && v.len() != 34 {
         return Err(anyhow::anyhow!("Invalid TSK length {}", v.len()));
     }

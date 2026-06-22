@@ -1250,7 +1250,6 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     span.in_scope(|| {
         info!("Tx Ready - {} bytes", tx_bytes.len());
     });
-    info!("{}", hex::encode(&tx_bytes));
 
     Ok(tx_bytes)
 }
@@ -1296,7 +1295,6 @@ impl TryFromAddress for MyTransparentAddress {
 }
 
 fn get_transparent_address(network: &Network, address: &str) -> Result<TransparentAddress> {
-    tracing::info!("{address}");
     let addr = ZcashAddress::try_from_encoded(address)?;
     if addr.can_receive_as(zcash_protocol::PoolType::Transparent) {
         let taddr: MyTransparentAddress = addr.convert_if_network(network.network_type()).unwrap();

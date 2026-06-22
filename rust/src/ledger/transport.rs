@@ -113,7 +113,6 @@ pub trait Device {
 
         for p in data.iter() {
             for c in p.chunks(200) {
-                tracing::info!("Sending: {}", hex::encode(c));
                 let ins = command.ins;
                 let command = APDUCommand {
                     cla: command.cla,
