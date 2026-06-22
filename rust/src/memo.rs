@@ -3,7 +3,7 @@ use orchard::{keys::Scope, note::ExtractedNoteCommitment, primitives::OrchardDom
 use zcash_primitives::transaction::OrchardBundle;
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use tracing::info;
+use tracing::debug;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 use zcash_primitives::transaction::{
@@ -21,7 +21,7 @@ pub async fn fetch_tx_details(
     client: &mut Client,
     account: u32,
 ) -> Result<()> {
-    info!("fetch_tx_details");
+    debug!("fetch_tx_details");
     let txids =
         sqlx::query("SELECT id_tx, txid FROM transactions WHERE account = ? AND details = FALSE")
             .bind(account)
@@ -118,7 +118,7 @@ pub async fn decrypt_memo(
     account: u32,
     txid: &[u8],
 ) -> Result<()> {
-    info!("decrypt_memo {account} {}", hex::encode(txid));
+    debug!("decrypt_memo {account} {}", hex::encode(txid));
     let (height, tx) = client.transaction(network, txid).await?;
 
     let tx_data = tx.into_data();
@@ -343,7 +343,7 @@ async fn process_memo(
     vout: u32,
     memo_bytes: &[u8],
 ) -> Result<()> {
-    info!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
+    debug!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
     if let Ok(memo) = Memo::from_bytes(memo_bytes) {
         match memo {
             Memo::Empty => {}

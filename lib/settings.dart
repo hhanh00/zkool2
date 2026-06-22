@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
+import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
@@ -352,6 +353,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     final prefs = SharedPreferencesAsync();
                     final newExpertMode = !settings.expertMode;
                     await prefs.setBool("expert_mode", newExpertMode);
+                    setExpertMode(enabled: newExpertMode);
                     setState(() {
                       settings = settings.copyWith(expertMode: newExpertMode);
                       widget.onChanged(settings);

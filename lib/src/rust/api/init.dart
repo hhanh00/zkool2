@@ -9,9 +9,15 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'init.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `frb_layer`
-// These functions are ignored because they have generic arguments: `default_layer`, `env_layer`
+// These functions are ignored because they have generic arguments: `default_layer`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FrbLogger`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `on_event`
+
+/// Enable expert mode, which lowers the log filter to allow
+/// `warp` target debug messages (sync note/spend details)
+/// while keeping everything else at `info`.
+void setExpertMode({required bool enabled}) =>
+    RustLib.instance.api.crateApiInitSetExpertMode(enabled: enabled);
 
 Stream<LogMessage> setLogStream() =>
     RustLib.instance.api.crateApiInitSetLogStream();
