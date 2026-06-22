@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use bip32::Prefix;
 use bip39::Mnemonic;
 use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
@@ -11,7 +10,6 @@ use sapling_crypto::{zip32::sapling_derive_internal_fvk, PaymentAddress};
 use crate::keys::{SaplingAddressDerivation, ScopeExt};
 use crate::pay::pool::PoolMask;
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
-use tracing::info;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
     address::UnifiedAddress,
@@ -598,47 +596,19 @@ pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
     )
     .bind(id)
     .map(|row: SqliteRow| {
-        let name: String = row.get(0);
+        let _name: String = row.get(0);
         let seed: Option<String> = row.get(1);
-        let seed_fingerprint: Vec<u8> = row.get(2);
+        let _seed_fingerprint: Vec<u8> = row.get(2);
         let aindex: u32 = row.get(3);
-        let dindex: u32 = row.get(4);
-        let def_dindex: u32 = row.get(5);
-        let birth: u32 = row.get(6);
+        let _dindex: u32 = row.get(4);
+        let _def_dindex: u32 = row.get(5);
+        let _birth: u32 = row.get(6);
 
-        info!(
-            "Account {}: {} - {:?} - {} - {} - {} - {} - {}",
-            id,
-            name,
-            seed,
-            hex::encode(seed_fingerprint),
-            aindex,
-            dindex,
-            def_dindex,
-            birth
-        );
         (seed, aindex)
     })
     .fetch_one(&mut *connection)
     .await?;
 
-    sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
-        .bind(id)
-        .map(|row: SqliteRow| {
-            let xsk: Option<Vec<u8>> = row.get(0);
-            let xvk: Vec<u8> = row.get(1);
-            let xsk = xsk.as_ref().map(|xsk| {
-                let mut bytes = Prefix::XPRV.to_bytes().to_vec();
-                bytes.extend_from_slice(xsk);
-                bs58::encode(bytes).with_check().into_string()
-            });
-
-            let xvk = hex::encode(&xvk);
-
-            info!("Transparent Account {}: {:?} - {}", id, &xsk, &xvk,);
-        })
-        .fetch_all(&mut *connection)
-        .await?;
 
     let seed = seed.unwrap();
     let memo = Mnemonic::from_str(&seed).unwrap();
