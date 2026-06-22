@@ -1,6 +1,19 @@
 # Changelog
 
 
+## [6.22.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0-rc.1...zkool-v6.22.0-rc.2) (2026-06-22)
+
+
+### Features
+
+* hook setExpertMode to AppSettings, move verbose sync/db/memo logs to debug ([ed0f01b](https://github.com/hhanh00/zkool2/commit/ed0f01b2b4ba1808e91401fb0c6c3aa4fcfdb95f))
+
+
+### Bug Fixes
+
+* move wallet sync check before transaction plan computation ([e17b296](https://github.com/hhanh00/zkool2/commit/e17b296186090adf76b2bf7528a97b969a3ffea7))
+* remove sensitive wallet data from production logging ([047a5e7](https://github.com/hhanh00/zkool2/commit/047a5e702a2cfc62b7e17f5b78104cd35aec41af))
+
 ## [6.22.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0-rc...zkool-v6.22.0-rc.1) (2026-06-21)
 
 
