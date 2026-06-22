@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::info;
+use tracing::debug;
 use zcash_primitives::transaction::Transaction;
 
 use tokio_stream::wrappers::ReceiverStream;
@@ -38,7 +38,7 @@ impl LwdServer for GRPCClient {
         start: u32,
         end: u32,
     ) -> Result<Self::CompactBlockStream> {
-        info!("Fetching block range from {} to {}", start, end);
+        debug!("Fetching block range from {} to {}", start, end);
         let mut blocks = self
             .get_block_range(Request::new(BlockRange {
                 start: Some(BlockId {
@@ -132,7 +132,7 @@ impl LwdServer for GRPCClient {
                     .transparent_bundle()
                     .map(|tb| (tb.vin.len(), tb.vout.len()))
                     .unwrap_or((0, 0));
-                info!(
+                debug!(
                     "LWD raw_tx: height={} branch_id={:?} txid={} size={} has_transparent={} n_vin={} n_vout={} raw_hex_first120={}",
                     rtx.height,
                     branch_id,
