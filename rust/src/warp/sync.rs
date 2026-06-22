@@ -7,7 +7,7 @@ use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use std::collections::HashMap;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
-use tracing::info;
+use tracing::debug;
 use zcash_protocol::consensus::Parameters;
 use zcash_trees::network::Network;
 
@@ -203,7 +203,7 @@ pub async fn warp_sync(
     .await?;
 
     if sap_dec.has_no_keys() && orch_dec.has_no_keys() {
-        info!("No keys to sync");
+        debug!("No keys to sync");
         return Ok(());
     }
 
@@ -228,16 +228,16 @@ pub async fn warp_sync(
         loop {
             tokio::select! {
                 _ = interval.tick() => {
-                    info!("Syncing at height {}", current_height);
+                    debug!("Syncing at height {}", current_height);
                     if prev_current_height == current_height {
-                        info!("Connection stalled. Aborting...");
+                        debug!("Connection stalled. Aborting...");
                         let _ = tx_blocks.send(BlockMessage::StallAbort).await;
                         break;
                     }
                     prev_current_height = current_height;
                 }
                 _ = rx_cancel.recv() => {
-                    info!("Sync cancelled");
+                    debug!("Sync cancelled");
                     let _ = tx_blocks.send(BlockMessage::Cancel).await;
                     break;
                 }
@@ -248,7 +248,7 @@ pub async fn warp_sync(
                         if let Some(prev_hash) = prev_hash {
                             if prev_hash != block_prev_hash {
                                 let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
-                                info!("Reorganization detected at block {}", block.height);
+                                debug!("Reorganization detected at block {}", block.height);
                                 break;
                             }
                         }
@@ -278,7 +278,7 @@ pub async fn warp_sync(
                         }
                     }
                     else {
-                        info!("no more blocks to process");
+                        debug!("no more blocks to process");
                         if !bs.is_empty() {
                             tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
                         }
@@ -288,14 +288,14 @@ pub async fn warp_sync(
             }
         }
 
-        info!("warp_sync completed");
+        debug!("warp_sync completed");
         Ok::<_, SyncError>(())
     });
 
     while let Some(bm) = rx_blocks.recv().await {
         match bm {
             BlockMessage::Chunk(bs) => {
-                info!("Processing {} blocks", bs.len());
+                debug!("Processing {} blocks", bs.len());
 
                 // Preprocess: convert CompactBlock → SyncBlock, merging
                 // issuance notes into orchard_outputs per transaction.
@@ -343,7 +343,7 @@ pub async fn warp_sync(
                 let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
             }
             BlockMessage::Cancel | BlockMessage::StallAbort => {
-                info!("Cancelling...");
+                debug!("Cancelling...");
                 break;
             }
             BlockMessage::Reorg(accounts, height) => {
