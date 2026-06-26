@@ -1,56 +1,5 @@
 # Changelog
 
-
-## [6.22.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0-rc.1...zkool-v6.22.0-rc.2) (2026-06-22)
-
-
-### Features
-
-* hook setExpertMode to AppSettings, move verbose sync/db/memo logs to debug ([ed0f01b](https://github.com/hhanh00/zkool2/commit/ed0f01b2b4ba1808e91401fb0c6c3aa4fcfdb95f))
-
-
-### Bug Fixes
-
-* move wallet sync check before transaction plan computation ([e17b296](https://github.com/hhanh00/zkool2/commit/e17b296186090adf76b2bf7528a97b969a3ffea7))
-* remove sensitive wallet data from production logging ([047a5e7](https://github.com/hhanh00/zkool2/commit/047a5e702a2cfc62b7e17f5b78104cd35aec41af))
-
-## [6.22.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0-rc...zkool-v6.22.0-rc.1) (2026-06-21)
-
-
-### Bug Fixes
-
-* add dismiss button after successful transaction send ([ea3427a](https://github.com/hhanh00/zkool2/commit/ea3427a7e6db4875256dec755dd9be1f7ad9fbde))
-* offset all toasts 64px down using global marginBuilder ([68b80ac](https://github.com/hhanh00/zkool2/commit/68b80aca62964503e089d9cb38af1f5d2f5ccc21))
-* offset transaction toast messages 64px down ([d62b998](https://github.com/hhanh00/zkool2/commit/d62b998994493e3f23417f252667aa9aeb7f1b8a))
-* remove const from ToastificationConfig, lambda is not a constant ([105d765](https://github.com/hhanh00/zkool2/commit/105d765096cc423b8badf339ca95cfcaf928f2fe))
-* rename duplicate _ parameters in lambda ([f260bd1](https://github.com/hhanh00/zkool2/commit/f260bd13a339279a65ae98940777f888302bf193))
-
-## [6.22.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.1-rc...zkool-v6.22.0-rc) (2026-06-21)
-
-
-### Features
-
-* include txid in transaction history search/filter ([38d0240](https://github.com/hhanh00/zkool2/commit/38d0240bae8fa7133f4a55605cd23ceecbf9195a))
-
-## [6.21.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.21.1-rc) (2026-06-20)
-
-
-### Bug Fixes
-
-* accept RC tags without version number in Docker workflow semver match ([4206dec](https://github.com/hhanh00/zkool2/commit/4206dec4b1d9805037078e5bb2944e9805eee714))
-* center QR code and remove fingerprint on viewing keys page ([f1037c5](https://github.com/hhanh00/zkool2/commit/f1037c50a269518e2709f0ffa8beb215a2db3f8c))
-* display ZSA amounts correctly instead of as ZEC ([1dc33b5](https://github.com/hhanh00/zkool2/commit/1dc33b5d039e02d16ed3aff0399e22900afaf4c7))
-* restart autoSync when interval is changed back to a positive value ([0d75ea9](https://github.com/hhanh00/zkool2/commit/0d75ea95a0bceb57659e53a291e3ed7a50199f14))
-* update default block explorer URL and restore prerelease config ([dc1da9b](https://github.com/hhanh00/zkool2/commit/dc1da9bf88210c5ac8708c394e63cc244e142efa))
-
-## [6.21.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.21.1-rc) (2026-06-19)
-
-
-### Bug Fixes
-
-* display ZSA amounts correctly instead of as ZEC ([1dc33b5](https://github.com/hhanh00/zkool2/commit/1dc33b5d039e02d16ed3aff0399e22900afaf4c7))
-* update default block explorer URL and restore prerelease config ([dc1da9b](https://github.com/hhanh00/zkool2/commit/dc1da9bf88210c5ac8708c394e63cc244e142efa))
-
 ## [6.21.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.20.0...zkool-v6.21.0) (2026-06-19)
 
 
