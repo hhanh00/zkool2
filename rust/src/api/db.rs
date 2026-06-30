@@ -12,6 +12,7 @@ pub async fn change_db_password(
     old_password: &str,
     new_password: &str,
 ) -> Result<()> {
+    crate::api::coin::close_pool(db_filepath);
     crate::db::change_db_password(db_filepath, tmp_dir, old_password, new_password).await
 }
 
