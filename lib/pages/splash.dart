@@ -64,7 +64,10 @@ class SplashPageState extends ConsumerState<SplashPage> {
         break;
       } catch (e, s) {
         logger.e(e);
-        if (mounted) {
+        // On the first attempt (password is null, i.e. no password was provided),
+        // skip the error dialog and go straight to the password prompt.
+        // Only show the error dialog if the user already entered a password that was wrong.
+        if (password != null && mounted) {
           await ErrorDialog.show(
             context,
             error: e,

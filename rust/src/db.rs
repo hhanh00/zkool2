@@ -1886,22 +1886,25 @@ pub async fn change_db_password(
     let tmp_db_filepath = format!("{tmp_dir}/__tmp.db");
     File::create(&tmp_db_filepath)?;
 
-    {
-        let mut connection = SqliteConnection::connect_with(&options).await?;
-        let escaped_password = new_password.replace('\'', "''");
-        sqlx::query(&format!(
-            "ATTACH DATABASE '{}' AS new_db KEY '{}'",
-            tmp_db_filepath, escaped_password
-        ))
+    let mut connection = SqliteConnection::connect_with(&options).await?;
+    let escaped_password = new_password.replace('\'', "''");
+    sqlx::query(&format!(
+        "ATTACH DATABASE '{}' AS new_db KEY '{}'",
+        tmp_db_filepath, escaped_password
+    ))
+    .execute(&mut connection)
+    .await?;
+    sqlx::query("SELECT sqlcipher_export('new_db')")
         .execute(&mut connection)
         .await?;
-        sqlx::query("SELECT sqlcipher_export('new_db')")
-            .execute(&mut connection)
-            .await?;
-        sqlx::query("DETACH DATABASE new_db")
-            .execute(&mut connection)
-            .await?;
-    }
+    sqlx::query("DETACH DATABASE new_db")
+        .execute(&mut connection)
+        .await?;
+
+    // Explicitly close the connection before file operations to ensure Windows
+    // file handles are fully released. Relying on Drop (sqlite3_close_v2) may not
+    // be synchronous enough on Windows, causing remove_file/rename to fail.
+    connection.close().await?;
 
     std::fs::remove_file(db_filepath)?;
     std::fs::rename(tmp_db_filepath, db_filepath)?;
