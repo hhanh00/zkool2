@@ -460,3 +460,9 @@ pub static TOR: OnceCell<Mutex<TorClient<PreferredRuntime>>> = OnceCell::const_n
 pub static DATADIR: OnceLock<String> = OnceLock::new();
 pub static POOLS: LazyLock<std::sync::Mutex<HashMap<String, SqlitePool>>> =
     LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
+
+pub fn close_pool(db_filepath: &str) {
+    let mut pools = POOLS.lock().unwrap();
+    pools.remove(db_filepath);
+    // Dropping the SqlitePool closes all connections, releasing file handles
+}
