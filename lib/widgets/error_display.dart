@@ -1,4 +1,5 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -296,7 +297,7 @@ class ErrorDialog extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          if (stackTrace != null) ...[
+          if (stackTrace != null && !kReleaseMode) ...[
             const Gap(16),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
