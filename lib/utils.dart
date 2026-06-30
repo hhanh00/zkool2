@@ -294,6 +294,7 @@ Future<String?> inputPassword(
   final passStrengthNotifier = ValueNotifier<PasswordStrength?>(null);
   final password = await inputData<String?>(
     context,
+    title: title,
     builder: (context) => FormBuilder(
       key: formKey,
       child: Column(
@@ -359,6 +360,7 @@ Future<T?> inputData<T>(
   required Widget Function(BuildContext) builder,
   required T Function() onConfirmed,
   bool Function()? validate,
+  String? title,
 }) async {
   bool validated = false;
   late final AwesomeDialog dialog;
@@ -366,6 +368,7 @@ Future<T?> inputData<T>(
     context: context,
     dialogType: DialogType.question,
     animType: AnimType.rightSlide,
+    title: title,
     body: builder(context),
     btnCancelOnPress: () {},
     btnOkOnPress: () {},
