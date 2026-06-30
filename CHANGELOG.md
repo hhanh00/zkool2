@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.22.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0...zkool-v6.22.1-rc) (2026-06-30)
+
+
+### Bug Fixes
+
+* resolve Windows db password change failure and improve error UX ([551bc34](https://github.com/hhanh00/zkool2/commit/551bc344e29e2cbc870fdd6f34a1b03009ae927c))
+
 ## [6.22.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.22.0) (2026-06-26)
 
 
