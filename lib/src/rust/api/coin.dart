@@ -16,6 +16,9 @@ Future<void> initDatadir({required String directory}) =>
 
 Future<void> getTorClient() => RustLib.instance.api.crateApiCoinGetTorClient();
 
+Future<void> closePool({required String dbFilepath}) =>
+    RustLib.instance.api.crateApiCoinClosePool(dbFilepath: dbFilepath);
+
 @freezed
 sealed class Coin with _$Coin {
   const Coin._();

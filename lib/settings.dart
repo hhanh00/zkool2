@@ -17,6 +17,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
+import 'package:zkool/src/rust/api/sapling.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
@@ -109,10 +110,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   String dbFullPath = "";
   String versionString = "";
+  bool saplingDownloaded = false;
+  bool saplingDownloading = false;
 
   @override
   void initState() {
     super.initState();
+    _checkSaplingParams();
     Future(() async {
       dbFullPath = await getFullDatabasePath(settings.dbName);
       final packageInfo = await PackageInfo.fromPlatform();
@@ -121,6 +125,11 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       versionString = "$version+$buildNumber";
       setState(() {});
     });
+  }
+
+  void _checkSaplingParams() {
+    final status = checkSaplingParams();
+    saplingDownloaded = status.downloaded;
   }
 
   @override
@@ -337,6 +346,37 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                       ),
                     ),
                   ]),
+                Gap(8),
+                Tooltip(
+                  message: "Sapling proving parameters (required for shielded transactions). "
+                      "They download automatically on first use (~49 MB).",
+                  child: Row(children: [
+                    Expanded(child: Text("Sapling Parameters")),
+                    if (saplingDownloaded)
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        Gap(4),
+                        Text("Downloaded", style: TextStyle(color: Colors.green)),
+                      ])
+                    else ...[
+                      Text("Not Downloaded",
+                          style: TextStyle(color: Colors.orange.shade700)),
+                      Gap(8),
+                      if (saplingDownloading)
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        IconButton(
+                          tooltip: "Download Sapling Parameters",
+                          icon: Icon(Icons.download),
+                          onPressed: onDownloadSaplingParams,
+                        ),
+                    ],
+                  ]),
+                ),
                 Gap(8),
                 Tooltip(
                   message: "Install and manage memo parsing plugins",
@@ -833,6 +873,30 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       final prefs = SharedPreferencesAsync();
       await prefs.setBool("recovery", true);
       await showMessage(context, "Restart the app to enter the database manager");
+    }
+  }
+
+  Future<void> onDownloadSaplingParams() async {
+    setState(() => saplingDownloading = true);
+    try {
+      await downloadSaplingParams();
+      if (mounted) {
+        showSnackbar('Sapling parameters downloaded successfully');
+        setState(() {
+          saplingDownloaded = true;
+          saplingDownloading = false;
+        });
+      }
+    } on AnyhowException catch (e) {
+      if (mounted) {
+        await showException(context, e.message);
+        setState(() => saplingDownloading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        await ErrorDialog.show(context, error: e);
+        setState(() => saplingDownloading = false);
+      }
     }
   }
 }

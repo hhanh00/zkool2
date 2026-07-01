@@ -17,6 +17,7 @@ import 'api/openalias.dart';
 import 'api/pay.dart';
 import 'api/plugin.dart';
 import 'api/raptor.dart';
+import 'api/sapling.dart';
 import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
@@ -452,6 +453,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RestoredAccount dco_decode_restored_account(dynamic raw);
+
+  @protected
+  SaplingParamsStatus dco_decode_sapling_params_status(dynamic raw);
 
   @protected
   Seed dco_decode_seed(dynamic raw);
@@ -938,6 +942,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RestoredAccount sse_decode_restored_account(SseDeserializer deserializer);
+
+  @protected
+  SaplingParamsStatus sse_decode_sapling_params_status(
+      SseDeserializer deserializer);
 
   @protected
   Seed sse_decode_seed(SseDeserializer deserializer);
@@ -1454,6 +1462,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_restored_account(
       RestoredAccount self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sapling_params_status(
+      SaplingParamsStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);
