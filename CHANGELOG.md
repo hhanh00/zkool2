@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.23.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.1-rc...zkool-v6.23.0-rc) (2026-07-01)
+
+
+### Features
+
+* switch from bundled Sapling proving keys to downloadable params ([#1117](https://github.com/hhanh00/zkool2/issues/1117)) ([0cb03c4](https://github.com/hhanh00/zkool2/commit/0cb03c41f7ae25261cdd1580e33bf40b88c5d999))
+
 ## [6.22.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0...zkool-v6.22.1-rc) (2026-06-30)
 
 
