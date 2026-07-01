@@ -219,6 +219,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ContactMatch dco_decode_contact_match(dynamic raw);
 
   @protected
+  DbAccountPreview dco_decode_db_account_preview(dynamic raw);
+
+  @protected
   DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
@@ -259,6 +262,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ContactMatch> dco_decode_list_contact_match(dynamic raw);
+
+  @protected
+  List<DbAccountPreview> dco_decode_list_db_account_preview(dynamic raw);
 
   @protected
   List<Folder> dco_decode_list_folder(dynamic raw);
@@ -698,6 +704,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ContactMatch sse_decode_contact_match(SseDeserializer deserializer);
 
   @protected
+  DbAccountPreview sse_decode_db_account_preview(SseDeserializer deserializer);
+
+  @protected
   DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
 
   @protected
@@ -738,6 +747,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ContactMatch> sse_decode_list_contact_match(
+      SseDeserializer deserializer);
+
+  @protected
+  List<DbAccountPreview> sse_decode_list_db_account_preview(
       SseDeserializer deserializer);
 
   @protected
@@ -1199,6 +1212,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_contact_match(ContactMatch self, SseSerializer serializer);
 
   @protected
+  void sse_encode_db_account_preview(
+      DbAccountPreview self, SseSerializer serializer);
+
+  @protected
   void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
 
   @protected
@@ -1241,6 +1258,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_contact_match(
       List<ContactMatch> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_db_account_preview(
+      List<DbAccountPreview> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_folder(List<Folder> self, SseSerializer serializer);

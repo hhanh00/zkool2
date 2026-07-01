@@ -6,12 +6,15 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `download_and_verify`, `resolve_params_dir`, `set_sapling_params_dir`
+
 /// Check whether Sapling parameters are already on disk.
 SaplingParamsStatus checkSaplingParams() =>
     RustLib.instance.api.crateApiSaplingCheckSaplingParams();
 
 /// Download Sapling parameters from the z.cash download server.
-/// Verifies file size and hash upon download.
+///
+/// Verifies file size and Blake2b hash upon download.
 /// Safe to call even if they are already downloaded (no-op if valid).
 Future<void> downloadSaplingParams() =>
     RustLib.instance.api.crateApiSaplingDownloadSaplingParams();
