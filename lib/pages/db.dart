@@ -25,11 +25,19 @@ class DatabaseManagerPage extends ConsumerStatefulWidget {
 
 class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
   List<(String, bool)> dbNames = [];
+  String? _lastOpenedDb;
 
   @override
   void initState() {
     super.initState();
+    _loadLastOpened();
     Future(refresh);
+  }
+
+  Future<void> _loadLastOpened() async {
+    final prefs = SharedPreferencesAsync();
+    final name = await prefs.getString("database");
+    if (mounted) setState(() => _lastOpenedDb = name);
   }
 
   Future<void> refresh() async {
@@ -52,13 +60,13 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
             IconButton(onPressed: onChangePassword, icon: Icon(Icons.password)),
           ],
           if (hasSelection) IconButton(onPressed: onDeleteDatabases, icon: Icon(Icons.delete)),
-          IconButton(onPressed: onOK, icon: Icon(Icons.check)),
         ],
       ),
       body: ListView.builder(
         itemCount: dbNames.length,
         itemBuilder: (context, index) {
           final dbName = dbNames[index];
+          final isLastOpened = dbName.$1 == _lastOpenedDb;
           return ListTile(
             leading: Checkbox(
               value: dbName.$2,
@@ -66,7 +74,13 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
                 setState(() => dbNames[index] = (dbName.$1, v ?? false));
               },
             ),
-            title: Text(dbName.$1),
+            title: Text(dbName.$1,
+              style: isLastOpened
+                  ? TextStyle(fontWeight: FontWeight.bold)
+                  : null,),
+            trailing: isLastOpened
+                ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                : null,
             onTap: () => onSelect(dbName.$1),
           );
         },
@@ -79,8 +93,29 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
   bool get hasSelection => selection.isNotEmpty;
 
   void onSelect(String dbName) async {
-    await selectDatabase(ref, dbName);
-    await showMessage(context, "Database $dbName selected");
+    final dbPath = await getFullDatabasePath(dbName);
+    String? accountsInfo;
+    try {
+      final accounts = await listDbAccounts(dbFilepath: dbPath);
+      if (accounts.isNotEmpty) {
+        accountsInfo = accounts.map((a) => a.name).join(', ');
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    final message = accountsInfo != null
+        ? 'Open database "$dbName"?\nAccounts: $accountsInfo'
+        : 'Open database "$dbName"?';
+
+    final confirmed = await confirmDialog(context, title: "Open Database", message: message);
+    if (!mounted) return;
+    if (confirmed) {
+      await selectDatabase(ref, dbName);
+      final prefs = SharedPreferencesAsync();
+      await prefs.remove("recovery");
+      GoRouter.of(context).go("/splash");
+    }
   }
 
   void onNewDatabase() async {
@@ -247,12 +282,6 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     }
     if (!mounted) return;
     await showMessage(context, "Database password changed successfully");
-  }
-
-  Future<void> onOK() async {
-    final prefs = SharedPreferencesAsync();
-    await prefs.remove("recovery");
-    GoRouter.of(context).go("/splash");
   }
 }
 
