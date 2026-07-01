@@ -15,5 +15,6 @@ pub mod sync;
 pub mod transaction;
 pub mod sweep;
 pub mod raptor;
+pub mod sapling;
 pub mod vault;
 pub mod zsa;
