@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.23.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.3...zkool-v6.23.0-rc.4) (2026-07-01)
+
+
+### Features
+
+* **db-manager:** show account list when tapping a database, highlight last-opened DB, remove OK button ([#1122](https://github.com/hhanh00/zkool2/issues/1122)) ([15d1c61](https://github.com/hhanh00/zkool2/commit/15d1c61457fac2b0b98882de5bb69bb4acdf6e12))
+
+
+### Bug Fixes
+
+* **graphql:** download sapling params on startup ([#1124](https://github.com/hhanh00/zkool2/issues/1124)) ([4b67956](https://github.com/hhanh00/zkool2/commit/4b679560bc7fb0639fe873a43e7d5e5c46c09b3d))
+
 ## [6.23.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.2...zkool-v6.23.0-rc.3) (2026-07-01)
 
 
