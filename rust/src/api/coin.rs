@@ -439,6 +439,16 @@ pub(crate) use zcash_trees::network::Network;
 
 pub async fn init_datadir(directory: &str) -> Result<()> {
     let _ = DATADIR.set(directory.to_string());
+
+    // On Android the HOME env var is not set, which breaks
+    // zcash_proofs::default_params_folder().  Point it at a
+    // writable subdirectory inside the app's documents folder.
+    #[cfg(target_os = "android")]
+    {
+        let sapling_dir = std::path::PathBuf::from(directory).join(".zcash-params");
+        crate::api::sapling::set_sapling_params_dir(sapling_dir);
+    }
+
     Ok(())
 }
 
