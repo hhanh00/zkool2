@@ -14,7 +14,7 @@ part 'init.freezed.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `on_event`
 
 /// Enable expert mode, which lowers the log filter to allow
-/// `warp` target debug messages (sync note/spend details)
+/// sync, mempool, and memo target debug messages
 /// while keeping everything else at `info`.
 void setExpertMode({required bool enabled}) =>
     RustLib.instance.api.crateApiInitSetExpertMode(enabled: enabled);

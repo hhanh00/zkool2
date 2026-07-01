@@ -1555,7 +1555,19 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     Ok(unspent_notes)
 }
 
-pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(LocalTxProver::bundled);
+pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(|| {
+    if let Some(prover) = LocalTxProver::with_default_location() {
+        return prover;
+    }
+    // Parameters not found on disk — download them.
+    zcash_proofs::download_sapling_parameters(None).expect(
+        "Failed to download Sapling parameters. Check network and disk space.",
+    );
+    LocalTxProver::with_default_location().expect(
+        "Failed to load Sapling parameters after download. \
+         Try deleting the ZcashParams directory and restarting.",
+    )
+});
 pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>());
 pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>());
 

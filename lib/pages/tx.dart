@@ -34,6 +34,7 @@ class TxPageState extends ConsumerState<TxPage> {
   Account? account;
   AccountData? details;
   bool _sending = false;
+  String _sendStep = "";
 
   @override
   void initState() {
@@ -85,26 +86,63 @@ class TxPageState extends ConsumerState<TxPage> {
           ],
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  Text(success ? "Tx Sent Successfully" : "Tx Plan", style: t.titleSmall),
-                  Text("Fee: ${zatToString(txPlan.fee)}"),
-                  Gap(8),
-                  if (txId != null)
-                    Tooltip(
-                      message: "Transaction ID",
-                      child: CopyableText("Transaction ID: ${txId!}"),
+      body: Column(
+        children: [
+          if (_sending) const LinearProgressIndicator(),
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        if (_sending) ...[
+                          SizedBox(height: 16),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              Gap(12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_sendStep,
+                                        style: t.bodyMedium
+                                            ?.copyWith(fontWeight: FontWeight.w600,),),
+                                    Text(
+                                      "Tx will be sent in the background if this page is closed",
+                                      style: t.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Divider(height: 24),
+                        ],
+                        if (success)
+                          Text("Tx Sent Successfully", style: t.titleSmall),
+                        Text("Fee: ${zatToString(txPlan.fee)}"),
+                        Gap(8),
+                        if (txId != null)
+                          Tooltip(
+                            message: "Transaction ID",
+                            child: CopyableText("Transaction ID: ${txId!}"),
+                          ),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+                ),
+                if (!success)
+                  showTxPlan(context, txPlan),
+              ],
             ),
           ),
-          showTxPlan(context, txPlan),
         ],
       ),
       bottomNavigationBar: success
@@ -129,17 +167,15 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   Future<void> _confirmAndSend() async {
-    setState(() => _sending = true);
     try {
       final confirmed = await confirmDialog(
         context,
         title: "Confirm Transaction",
         message: "Are you sure you want to send this transaction?",
       );
-      if (!confirmed) {
-        setState(() => _sending = false);
-        return;
-      }
+      if (!confirmed) return;
+
+      setState(() => _sendStep = "Signing transaction...");
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
@@ -168,7 +204,10 @@ class TxPageState extends ConsumerState<TxPage> {
         }
       }
 
+      setState(() => _sendStep = "Extracting transaction...");
       final txBytes = await extractTransaction(package: pczt);
+
+      setState(() => _sendStep = "Broadcasting...");
       final result = await broadcastTransaction(
         height: txPlan.height,
         txBytes: txBytes,
@@ -176,15 +215,13 @@ class TxPageState extends ConsumerState<TxPage> {
       );
       logger.i("tx result $result");
 
-      // broadcastTransaction returns Ok for node-level failures (e.g.
-      // double-spend) as an error message string rather than Err.
-      // Decode the hex txid to distinguish success from failure.
       Uint8List? txidHex;
       try {
         txidHex = Uint8List.fromList(hex.decode(result));
       } on FormatException {
-        // result is not valid hex — broadcast returned an error message
+        // result is not a valid hex txid — broadcast returned an error message
       }
+
       if (txidHex != null) {
         await storePendingTx(
           height: txPlan.height,
@@ -193,27 +230,49 @@ class TxPageState extends ConsumerState<TxPage> {
           category: pczt.category,
           c: c,
         );
-        await showMessage(context, result);
-        showSnackbar("Transaction broadcasted successfully");
+        if (mounted) {
+          setState(() => txId = result);
+          showSnackbar("Transaction broadcasted successfully");
+        } else {
+          showSnackbar("Transaction sent successfully (background)");
+        }
       } else {
-        setState(() => _sending = false);
-        if (mounted) await showException(context, result);
+        if (mounted) {
+          setState(() => _sendStep = "");
+          await showException(context, result);
+        }
       }
-      if (mounted) setState(() => txId = result);
+      if (mounted) setState(() => _sendStep = "");
     } on AnyhowException catch (e) {
-      setState(() => _sending = false);
-      if (mounted) await showException(context, e.message);
+      if (mounted) {
+        setState(() => _sendStep = "");
+        await showException(context, e.message);
+      } else {
+        showSnackbar("Send failed: ${e.message}");
+      }
     }
   }
 
   void onSend() async {
-    setState(() => _sending = true);
+    setState(() {
+      _sending = true;
+      _sendStep = "Preparing...";
+    });
     try {
       await _confirmAndSend();
     } on AnyhowException catch (e) {
-      if (mounted) await showException(context, e.message);
+      if (mounted) {
+        await showException(context, e.message);
+      } else {
+        showSnackbar("Send failed: ${e.message}");
+      }
     } finally {
-      setState(() => _sending = false);
+      if (mounted) {
+        setState(() {
+          _sending = false;
+          _sendStep = "";
+        });
+      }
     }
   }
 
