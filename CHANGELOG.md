@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.23.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc...zkool-v6.23.0-rc.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **pay:** simplify coin selection — separate fee handling from note assignment ([04a24cc](https://github.com/hhanh00/zkool2/commit/04a24cc4abb0155f1241dc5760d717b4a2a14f50))
+
 ## [6.23.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.1-rc...zkool-v6.23.0-rc) (2026-07-01)
 
 
