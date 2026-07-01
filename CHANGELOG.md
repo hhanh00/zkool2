@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.23.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.1...zkool-v6.23.0-rc.2) (2026-07-01)
+
+
+### Bug Fixes
+
+* **android:** resolve sapling params directory from app data dir ([a4793b3](https://github.com/hhanh00/zkool2/commit/a4793b332358ec3f13e6b990d2e7fbe09e4a9729))
+
 ## [6.23.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc...zkool-v6.23.0-rc.1) (2026-07-01)
 
 
