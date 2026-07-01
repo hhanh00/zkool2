@@ -179,18 +179,15 @@ pub async fn plan_transaction(
     let mut change_address =
         get_account_full_address(network, connection, account, change_scope, hw).await?;
 
-    let mut fee_manager = FeeManager::default();
-    fee_manager.add_output(change_pool);
-
-    // Issuance fee is separate from the orchard bundle (ZIP-317).
+    // Issuance action counts stored for post-selection fee computation.
     // total_issue_note_count: 2 for first issuance (reference + real), 1 otherwise.
     // finalize only sets a flag on the action — it does NOT add a note,
     // so it doesn't affect the fee. CREATION_COST is 0 in current zebra.
-    if let Some(info) = issuance {
+    let issuance_action_info: Option<(u64, u64)> = issuance.map(|info| {
         let issue_note_count: u64 = if info.first_issuance { 2 } else { 1 };
         let asset_creation_count: u64 = if info.first_issuance { 1 } else { 0 };
-        fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
-    }
+        (issue_note_count, asset_creation_count)
+    });
 
     let confirmations = confirmations.unwrap_or_default();
     let height = client.latest_height().await?;
@@ -266,7 +263,6 @@ pub async fn plan_transaction(
                 used += take;
                 if note.is_used() {
                     total_selected += note.amount;
-                    fee_manager.add_input(2);
                     buffered_zsaspends.push(note.clone());
                     info!(
                         "ZSA spend: id={} amount={} asset={}",
@@ -276,10 +272,9 @@ pub async fn plan_transaction(
             }
             assert!(used >= needed, "Not enough funds for asset {}", hex::encode(&asset_key));
 
-            // Track recipient outputs in fee_manager and buffer
+            // Buffer ZSA recipient outputs
             for r in &zsa_recipients {
                 if r.asset_base == asset_key {
-                    fee_manager.add_output(2);
                     let mut rs = r.clone();
                     rs.remaining = 0;
                     rs.pool_mask = PoolMask::from_pool(2); // ZSA only exists in orchard
@@ -290,7 +285,6 @@ pub async fn plan_transaction(
             // ZSA change output (only if actual change)
             let asset_change = total_selected.saturating_sub(needed);
             if asset_change > 0 {
-                fee_manager.add_output(2);
                 buffered_zsaoutputs.push(RecipientState {
                     recipient: Recipient {
                         address: change_address.clone(),
@@ -336,6 +330,11 @@ pub async fn plan_transaction(
         input_pools[group as usize].extend(items);
     }
 
+    // Remove notes too small to pay for even a single logical action.
+    for pool in input_pools.iter_mut() {
+        pool.retain(|n| n.amount >= COST_PER_ACTION);
+    }
+
     // we can merge notes from the same pool because they are fully fungible
     // but we should keep the funds from different pools separate
     // because even though they can participate in the same transaction
@@ -361,40 +360,7 @@ pub async fn plan_transaction(
         .into_iter()
         .partition::<Vec<_>, _>(|r| r.pool_mask != PoolMask(6));
 
-    // If no ZEC recipients but ZSA is present, use a dummy recipient to
-    // drive ZEC note selection for fees. The change output is already
-    // pre-counted in fee_manager, so we skip output tracking.
-    let mut fee_paid = 0;
-    if has_zsa && single.is_empty() && double.is_empty() {
-        let mut dummy = vec![RecipientState {
-            recipient: Recipient {
-                address: change_address.clone(),
-                amount: 0,
-                asset_base: zec_key.clone(),
-                ..Recipient::default()
-            },
-            remaining: 0,
-            pool_mask: PoolMask::from_pool(2),
-            asset_base: zec_key.clone(),
-        }];
-        fill_single_receivers(
-            &mut input_pools,
-            &mut dummy,
-            &mut fee_manager,
-            false, // recipient_pays_fee
-            &mut fee_paid,
-            false, // don't track output (change already pre-counted)
-        )?;
-    }
-
-    fill_single_receivers(
-        &mut input_pools,
-        &mut single,
-        &mut fee_manager,
-        recipient_pays_fee,
-        &mut fee_paid,
-        true,
-    )?;
+    fill_single_receivers(&mut input_pools, &mut single)?;
 
     // In the second pass, we will consider the recipients that have
     // multiple receivers. We always favor shielded receivers over
@@ -426,56 +392,206 @@ pub async fn plan_transaction(
         d.pool_mask = largest_shielded_pool;
     }
 
-    fill_single_receivers(
-        &mut input_pools,
-        &mut double,
-        &mut fee_manager,
-        recipient_pays_fee,
-        &mut fee_paid,
-        true,
-    )?;
+    fill_single_receivers(&mut input_pools, &mut double)?;
 
-    // Now we have pick the inputs and paid the fee if the sender
-    // should be paying it
+    // ── Build FeeManager from actual inputs and outputs ──────────────────
+    let mut fee_manager = FeeManager::default();
+
+    // Count inputs from selected notes
+    for pool_inputs in input_pools.iter() {
+        for inp in pool_inputs.iter() {
+            if inp.is_used() {
+                fee_manager.add_input(inp.pool);
+            }
+        }
+    }
+
+    // Count ZSA orchard spends
+    for _spend in &buffered_zsaspends {
+        fee_manager.add_input(2);
+    }
+
+    // Count outputs: ZEC recipients
+    for r in single.iter().chain(double.iter()) {
+        fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
+    }
+
+    // Count ZSA orchard outputs
+    for _output in &buffered_zsaoutputs {
+        fee_manager.add_output(2);
+    }
+
+    // Count change output
+    fee_manager.add_output(change_pool);
+
+    // Add issuance actions (ZIP-317)
+    if let Some((issue_note_count, asset_creation_count)) = issuance_action_info {
+        fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
+    }
 
     info!("Fee {}", &fee_manager);
-    let fee = fee_manager.fee();
+    let mut fee = fee_manager.fee();
 
-    if recipient_pays_fee {
-        fee_paid += fee;
-    }
-
-    if fee > fee_paid {
-        return Err(Error::NotEnoughFunds(to_zec(fee - fee_paid)).into());
-    }
-
-    let recipients = single.iter_mut().chain(double.iter_mut());
-    for (i, r) in recipients.enumerate() {
-        if r.remaining > 0 {
-            return Err(Error::NotEnoughFunds(to_zec(r.remaining)).into());
-        }
-        if i == 0 && recipient_pays_fee {
-            // if the recipient pays the fee, we need to pay it
-            // from the first recipient
-            if r.recipient.amount < fee {
-                return Err(Error::NotEnoughFunds(to_zec(fee - r.recipient.amount)).into());
+    // ── Check all recipients fully funded ────────────────────────────────
+    {
+        let recipients = single.iter().chain(double.iter());
+        for r in recipients {
+            if r.remaining > 0 {
+                return Err(Error::NotEnoughFunds(to_zec(r.remaining)).into());
             }
-            r.recipient.amount -= fee;
         }
     }
 
-    let recipients = single.iter().chain(double.iter());
-    let total_input = input_pools
-        .iter()
-        .map(|pool| {
-            pool.iter()
-                .map(|n| if n.is_used() { n.amount } else { 0 })
-                .sum::<u64>()
-        })
-        .sum::<u64>();
-    let total_output = recipients.map(|r| r.recipient.amount).sum::<u64>();
+    // ── Handle fee payment ───────────────────────────────────────────────
+    if recipient_pays_fee {
+        let first = single
+            .first_mut()
+            .or_else(|| double.first_mut())
+            .ok_or_else(|| Error::NotEnoughFunds(to_zec(fee)))?;
+        if first.recipient.amount < fee {
+            return Err(Error::NotEnoughFunds(to_zec(fee - first.recipient.amount)).into());
+        }
+        first.recipient.amount -= fee;
+    }
 
-    let change = total_input - total_output - fee;
+    // Compute total input and output
+    let total_output = single
+        .iter()
+        .chain(double.iter())
+        .map(|r| r.recipient.amount)
+        .sum::<u64>();
+
+    let compute_total_input = |input_pools: &[Vec<InputNote>]| -> u64 {
+        input_pools
+            .iter()
+            .map(|pool| {
+                pool.iter()
+                    .map(|n| if n.is_used() { n.amount } else { 0 })
+                    .sum::<u64>()
+            })
+            .sum()
+    };
+
+    let mut total_input = compute_total_input(&input_pools);
+
+    if !recipient_pays_fee {
+        // Preliminary change before fee
+        let change_before_fee = total_input.saturating_sub(total_output);
+
+        if change_before_fee >= fee {
+            // Fee fully covered by change — no additional notes needed
+        } else {
+            // Need to select additional notes to cover the fee shortfall
+            let deficit = total_output + fee - total_input;
+
+            // Track current inputs per pool (for marginal fee cost computation)
+            let mut input_counts: [u8; 3] = [0; 3];
+            for (pi, pool_inputs) in input_pools.iter().enumerate() {
+                input_counts[pi] = pool_inputs.iter().filter(|n| n.is_used()).count() as u8;
+            }
+            // Include buffered ZSA spends
+            input_counts[2] += buffered_zsaspends.len() as u8;
+
+            let output_counts = fee_manager.num_outputs; // outputs don't change during fee selection
+
+            // Helper: compute marginal fee cost of adding one input to a pool
+            let marginal_cost = |pool: u8, input_cnt: u8, output_cnt: u8| -> u64 {
+                let old_actions = if pool == 0 {
+                    input_cnt.max(output_cnt) as u64
+                } else if input_cnt > 0 || output_cnt > 0 {
+                    (input_cnt.max(output_cnt)).max(2) as u64
+                } else {
+                    0
+                };
+                let new_input_cnt = input_cnt + 1;
+                let new_actions = if pool == 0 {
+                    new_input_cnt.max(output_cnt) as u64
+                } else if new_input_cnt > 0 || output_cnt > 0 {
+                    (new_input_cnt.max(output_cnt)).max(2) as u64
+                } else {
+                    0
+                };
+                (new_actions - old_actions) * COST_PER_ACTION
+            };
+
+            // Determine which pools already have used inputs
+            let used_bitmap: u8 = input_counts
+                .iter()
+                .enumerate()
+                .filter(|(_, &c)| c > 0)
+                .fold(0u8, |acc, (i, _)| acc | (1 << i as u8));
+
+            // Priority order: used pools (O→S→T), then unused pools (O→S→T)
+            let priority_pools: Vec<u8> = [2u8, 1, 0]
+                .iter()
+                .filter(|&&p| used_bitmap & (1 << p) != 0)
+                .chain([2u8, 1, 0].iter().filter(|&&p| used_bitmap & (1 << p) == 0))
+                .copied()
+                .collect();
+
+            let mut deficit = deficit as i64;
+
+            for &pool in &priority_pools {
+                if deficit <= 0 {
+                    break;
+                }
+                for inp in input_pools[pool as usize].iter_mut() {
+                    if deficit <= 0 {
+                        break;
+                    }
+                    if inp.remaining == 0 {
+                        continue;
+                    }
+
+                    let mc = marginal_cost(pool, input_counts[pool as usize], output_counts[pool as usize]) as i64;
+                    let take = (inp.remaining as i64).min(deficit + mc);
+                    inp.remaining -= take as u64;
+                    deficit = deficit + mc - take;
+                    input_counts[pool as usize] += 1;
+
+                    info!(
+                        "Fee note: id={}, amount={}, taken={}, deficit_after={}",
+                        inp.id,
+                        to_zec(inp.amount),
+                        to_zec(take as u64),
+                        to_zec(if deficit > 0 { deficit as u64 } else { 0 })
+                    );
+                }
+            }
+
+            if deficit > 0 {
+                return Err(Error::NotEnoughFunds(to_zec(deficit as u64)).into());
+            }
+
+            // Rebuild fee_manager with the new inputs and recompute fee
+            fee_manager = FeeManager::default();
+            for pool_inputs in input_pools.iter() {
+                for inp in pool_inputs.iter() {
+                    if inp.is_used() {
+                        fee_manager.add_input(inp.pool);
+                    }
+                }
+            }
+            for _spend in &buffered_zsaspends {
+                fee_manager.add_input(2);
+            }
+            for r in single.iter().chain(double.iter()) {
+                fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
+            }
+            for _output in &buffered_zsaoutputs {
+                fee_manager.add_output(2);
+            }
+            fee_manager.add_output(change_pool);
+            if let Some((issue_note_count, asset_creation_count)) = issuance_action_info {
+                fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
+            }
+            fee = fee_manager.fee();
+            total_input = compute_total_input(&input_pools);
+            info!("Fee (after fee-note selection) {}", &fee_manager);
+        }
+    }
+
+    let change = total_input.saturating_sub(total_output + fee);
 
     for o in single.iter_mut().chain(double.iter_mut()) {
         let RecipientState {
@@ -1327,17 +1443,7 @@ fn get_orchard_address(network: &Network, address: &str) -> Result<Address> {
 fn fill_single_receivers(
     input_pools: &mut [Vec<InputNote>],
     recipients: &mut [RecipientState],
-    fee_manager: &mut FeeManager,
-    recipient_pays_fee: bool,
-    fee_paid: &mut u64,
-    track_outputs: bool,
 ) -> Result<()> {
-    if track_outputs {
-        for r in recipients.iter() {
-            fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
-        }
-    }
-
     let fill_order: [(u8, u8); 9] = [
         (2, 2),
         (1, 1), // O->O, S->S
@@ -1352,53 +1458,18 @@ fn fill_single_receivers(
 
     for (src, dst) in fill_order {
         for r in recipients.iter_mut() {
+            if r.remaining == 0 {
+                continue;
+            }
             for inp in input_pools[src as usize].iter_mut() {
-                if inp.remaining == 0 || inp.amount < COST_PER_ACTION {
+                if inp.remaining == 0 {
                     continue;
                 }
-
                 // skip if the recipient is not interested in this pool
                 if r.pool_mask.intersect(&PoolMask::from_pool(dst)).is_empty() {
                     continue;
                 }
-
-                // if the recipient pays the fees, we do not need to pay now
-                let fee_remaining = if recipient_pays_fee {
-                    0
-                } else {
-                    fee_manager.fee() - *fee_paid
-                };
-
-                if fee_remaining == 0 && r.remaining == 0 {
-                    // nothing to pay anymore
-                    break;
-                }
-
-                // first time we see this note, add it to the fee manager
-                if inp.amount == inp.remaining {
-                    fee_manager.add_input(src)
-                }
-
-                // re-evaluate the fee after adding the input
-                // this is needed because the fee is based on the inputs
-                let fee_remaining = if recipient_pays_fee {
-                    0
-                } else {
-                    fee_manager.fee() - *fee_paid
-                };
-
-                // if the fee is not paid, we need to pay it on top of the output
-                let to_pay = r.remaining + fee_remaining;
-                // transfer the amount to the recipient
-                let mut amount = inp.remaining.min(to_pay);
-
-                // pay the fee first
-                let a = amount.min(fee_remaining);
-                *fee_paid += a;
-                inp.remaining -= a;
-                amount -= a;
-
-                // use the rest to pay the output
+                let amount = inp.remaining.min(r.remaining);
                 r.remaining -= amount;
                 inp.remaining -= amount;
 
@@ -1414,6 +1485,9 @@ fn fill_single_receivers(
                     to_zec(r.recipient.amount),
                     to_zec(r.remaining)
                 );
+                if r.remaining == 0 {
+                    break;
+                }
             }
         }
     }
