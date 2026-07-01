@@ -97,6 +97,15 @@ async fn main() -> Result<()> {
     // convert key format: openssl pkcs8 -topk8 -nocrypt -in private.pem -out private_p8.pem
     // issue jwt: jwt encode --secret @private_p8.pem --alg ES256 --exp=<epoch secs> --sub=<account id> '{"write": true}'
 
+    // Download Sapling proving parameters to the default location
+    // (typically $HOME/.zcash-params/) if they are not already on disk.
+    let sapling_status = rlz::api::sapling::check_sapling_params();
+    if !sapling_status.downloaded {
+        tracing::info!("Sapling parameters not found, downloading …");
+        rlz::api::sapling::download_sapling_params().await?;
+        tracing::info!("Sapling parameters downloaded successfully");
+    }
+
     let server_type: u8 = if zebra { 1 } else { 0 };
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port} zebra {zebra}");
     let coin = Coin::new()
