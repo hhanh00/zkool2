@@ -7,6 +7,9 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+Future<List<DbAccountPreview>> listDbAccounts({required String dbFilepath}) =>
+    RustLib.instance.api.crateApiDbListDbAccounts(dbFilepath: dbFilepath);
+
 Future<void> changeDbPassword(
         {required String dbFilepath,
         required String tmpDir,
@@ -27,3 +30,24 @@ Future<void> putProp(
 
 Future<List<String>> listDbNames({required String dir}) =>
     RustLib.instance.api.crateApiDbListDbNames(dir: dir);
+
+class DbAccountPreview {
+  final int id;
+  final String name;
+
+  const DbAccountPreview({
+    required this.id,
+    required this.name,
+  });
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DbAccountPreview &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name;
+}
