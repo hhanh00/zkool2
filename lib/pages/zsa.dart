@@ -311,10 +311,9 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
 
     AwesomeDialog? dialog;
     try {
-      dialog = await showMessage(
+      dialog = showLoadingDialog(
         context,
         "Building and broadcasting issuance transaction...",
-        dismissable: false,
       );
 
       final txBytes = await issueAsset(
