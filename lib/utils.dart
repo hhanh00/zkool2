@@ -244,7 +244,7 @@ AwesomeDialog showLoadingDialog(BuildContext context, String message) {
         ],
       ),
     ),
-    autoDismiss: false,
+    autoDismiss: true,
     dismissOnTouchOutside: false,
     dismissOnBackKeyPress: false,
     onDismissCallback: (_) {},
