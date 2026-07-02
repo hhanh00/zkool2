@@ -263,7 +263,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSyncFetchTxDetails(
       {required int account, required Coin c});
 
-  Future<void> crateApiTransactionFillMissingTxPrices(
+  Future<int> crateApiTransactionFillMissingTxPrices(
       {required String api, required String currency, required Coin c});
 
   Future<List<ContactMatch>> crateApiContactsFindContactsForAddress(
@@ -2103,7 +2103,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiTransactionFillMissingTxPrices(
+  Future<int> crateApiTransactionFillMissingTxPrices(
       {required String api, required String currency, required Coin c}) {
     return handler.executeNormal(
       NormalTask(
@@ -2116,7 +2116,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
               funcId: 51, port: port_);
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
+          decodeSuccessData: sse_decode_u_32,
           decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiTransactionFillMissingTxPricesConstMeta,
