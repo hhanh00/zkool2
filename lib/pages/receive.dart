@@ -166,7 +166,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
           title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
       if (!confirmed) return;
       if (!mounted) return;
-      final dialog = await showMessage(context, "Please wait for the address generation\nCheck your Ledger", dismissable: false);
+      final dialog = showLoadingDialog(context, "Please wait for the address generation\nCheck your Ledger");
       await generateNextDindex(c: c); // This takes a while on the Ledger
       addresses = await getAddresses(uaPools: uaPools, c: c);
       dialog.dismiss();
