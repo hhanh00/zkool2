@@ -32,7 +32,6 @@ use tracing::info;
 use zcash_primitives::transaction::{
     sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
 };
-use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::memo::Memo;
 
 use crate::{
@@ -47,7 +46,7 @@ use crate::{
         get_mailbox_account, publish,
     },
     pay::{
-        plan::{get_orchard_pk, SAPLING_PROVER},
+        plan::{get_orchard_pk, get_sapling_prover},
         send,
     },
     Client, Sink,
@@ -688,7 +687,7 @@ pub async fn do_sign_impl(
         let pczt = signer.finish();
         info!("Signed");
 
-        let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+        let sapling_prover = get_sapling_prover().await?;
 
         let pczt = Prover::new(pczt)
             .create_sapling_proofs(sapling_prover, sapling_prover)
@@ -701,7 +700,7 @@ pub async fn do_sign_impl(
         let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
         info!("Spend Finalized");
 
-        let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+        let sapling_prover = get_sapling_prover().await?;
         let (svk, ovk) = sapling_prover.verifying_keys();
         let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
         let tx = tx_extractor

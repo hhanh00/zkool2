@@ -43,7 +43,7 @@ use crate::{
         },
         LedgerError, LedgerResult,
     },
-    pay::plan::SAPLING_PROVER,
+    pay::plan::get_sapling_prover,
     tiu, IntoAnyhow,
 };
 
@@ -667,12 +667,13 @@ pub async fn sign_ledger_transaction(
         use crate::ledger::transport::connect_ledger;
 
         let ledger = connect_ledger().await?;
+        let sapling_prover = get_sapling_prover().await?;
         sign_transaction(
             &network,
             &mut connection,
             account,
             &package,
-            &SAPLING_PROVER,
+            sapling_prover,
             &sink,
             &ledger,
             OsRng,
