@@ -1,5 +1,24 @@
 # Changelog
 
+## [6.23.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0...zkool-v6.23.0) (2026-07-02)
+
+
+### Features
+
+* **db-manager:** show account list when tapping a database, highlight last-opened DB, remove OK button ([#1122](https://github.com/hhanh00/zkool2/issues/1122)) ([8299461](https://github.com/hhanh00/zkool2/commit/829946133714218cafbcdd2e778d4e792cb9c7bd))
+* switch from bundled Sapling proving keys to downloadable params ([#1117](https://github.com/hhanh00/zkool2/issues/1117)) ([17a21cd](https://github.com/hhanh00/zkool2/commit/17a21cd105fb65fcfd802a449e434c6a3eebd498))
+
+
+### Bug Fixes
+
+* **android,ios:** resolve sapling params directory from app data dir ([97b9d26](https://github.com/hhanh00/zkool2/commit/97b9d26e0705af009040086cf13be5cb6dfec114))
+* **android:** resolve sapling params directory from app data dir ([e460e4e](https://github.com/hhanh00/zkool2/commit/e460e4e1698c2da567d3c74d89ee0d128435a022))
+* **graphql:** download sapling params on startup ([#1124](https://github.com/hhanh00/zkool2/issues/1124)) ([ed82f71](https://github.com/hhanh00/zkool2/commit/ed82f7151bf88131c90bd78da2d478af4ff3a951))
+* **pay:** replace panicking SAPLING_PROVER LazyLock with fallible async get_sapling_prover ([#1125](https://github.com/hhanh00/zkool2/issues/1125)) ([66e6348](https://github.com/hhanh00/zkool2/commit/66e63481033038e1f3133905fcf0e6425a0340d8))
+* **pay:** simplify coin selection — separate fee handling from note assignment ([f50759b](https://github.com/hhanh00/zkool2/commit/f50759b852b91b410ab2ae97476d8b9fd9cb09b1))
+* resolve Windows db password change failure and improve error UX ([8bbdeda](https://github.com/hhanh00/zkool2/commit/8bbdedae299b748b68eeb56296119347d6dee4c5))
+* **tx:** add error_for_status, return count, and progress feedback for Fetch Tx Prices ([3efc6f2](https://github.com/hhanh00/zkool2/commit/3efc6f255211e09a0f857992a936f6b8d8a0ec13))
+
 ## [6.22.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.21.0...zkool-v6.22.0) (2026-06-26)
 
 
