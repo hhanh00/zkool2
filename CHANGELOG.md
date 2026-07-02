@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.24.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0...zkool-v6.24.0-rc) (2026-07-02)
+
+
+### Features
+
+* **vault:** bullet-proof recovery, passkey fallback, and compress ([d745381](https://github.com/hhanh00/zkool2/commit/d7453811a2bf33a6eb23299fe21e9723842c4270))
+* **vault:** offer passkey registration after password recovery ([c30c06e](https://github.com/hhanh00/zkool2/commit/c30c06e4c006a9ab50d0716a17dd70158cf52f97))
+
+
+### Bug Fixes
+
+* add explicit import for kReleaseMode ([eaf2091](https://github.com/hhanh00/zkool2/commit/eaf2091e057979dc969870f627b0f101335c352a))
+* **db:** add visiblePassword keyboard type to fix deleting password field content ([377e67e](https://github.com/hhanh00/zkool2/commit/377e67ed2f34247f429bebe9e4e047915dd21289))
+* **vault:** always show Google picker when enabling vault, even on re-enable ([ad54d1c](https://github.com/hhanh00/zkool2/commit/ad54d1c6fde90c7a856bfa045d8e2583f0990e91))
+* **vault:** bypass EasyDebounce in compress to save all accounts ([fc60a62](https://github.com/hhanh00/zkool2/commit/fc60a62000fdc894f9913d08feb64de4aeba60bf))
+* **vault:** disable passkeys on iOS, limit macOS to debug builds ([4f0ba24](https://github.com/hhanh00/zkool2/commit/4f0ba249669c47f743db9323214fae61c0524d9e))
+* **vault:** explicit Google Drive sign-in during vault enable, credentials cached ([3a0f991](https://github.com/hhanh00/zkool2/commit/3a0f9915d1bb7d36b1cd6b2371cfd6e3bb671490))
+
 ## [6.23.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0...zkool-v6.23.0) (2026-07-02)
 
 
