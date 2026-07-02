@@ -57,6 +57,12 @@ class Vault {
     logger.i("Signed in ${account!.displayName} ${account.email}");
   }
 
+  Future<void> signOut() async {
+    logger.i("signOut: disconnecting Google account");
+    await googleSignIn?.disconnect();
+    googleSignIn = null;
+  }
+
   Future<bool> hasVault() async {
     logger.i("hasVault: checking local file");
     final file = await _localMasterFile;
@@ -103,6 +109,13 @@ class Vault {
     if (await masterFile.exists()) await masterFile.delete();
     final localFile = await _localFile;
     if (await localFile.exists()) await localFile.delete();
+  }
+
+  /// Reset the device part so the next append starts fresh (no cloud download).
+  Future<void> resetDevicePart() async {
+    final localFile = await _localFile;
+    if (await localFile.exists()) await localFile.delete();
+    _hasDownloadedDevicePart = true; // skip cloud download, start empty
   }
 
   Future<void> registerDevice({required String password, required Uint8List prf}) async {
