@@ -247,6 +247,7 @@ AwesomeDialog showLoadingDialog(BuildContext context, String message) {
     autoDismiss: false,
     dismissOnTouchOutside: false,
     dismissOnBackKeyPress: false,
+    onDismissCallback: (_) {},
   );
   dialog.show();
   return dialog;
