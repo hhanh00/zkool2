@@ -24,7 +24,13 @@ async fn get_historical_prices(days: u32, currency: &str, api: &str) -> Result<V
     let historical_price_url = format!(
         "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
     );
-    let rep: Value = coingecko_client().get(&historical_price_url).send().await?.json().await?;
+    let rep: Value = coingecko_client()
+        .get(&historical_price_url)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
     let prices = rep
         .pointer("/prices")
         .ok_or(anyhow!("No /prices"))?
@@ -105,12 +111,13 @@ pub async fn fill_missing_tx_prices(
     account: u32,
     currency: &str,
     api: &str,
-) -> Result<()> {
+) -> Result<u32> {
     let mut txs = fetch_missing_tx_prices(&mut *connection, account).await?;
+    let n = txs.len() as u32;
     let pqs = get_historical_prices_all(currency, api).await?;
     fill_historical_prices(&mut txs, &pqs).await?;
     store_tx_prices(&mut *connection, &txs).await?;
-    Ok(())
+    Ok(n)
 }
 
 /// Recompute every transaction's price column for a currency change.
