@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.23.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.4...zkool-v6.23.0-rc.5) (2026-07-02)
+
+
+### Bug Fixes
+
+* **pay:** replace panicking SAPLING_PROVER LazyLock with fallible async get_sapling_prover ([#1125](https://github.com/hhanh00/zkool2/issues/1125)) ([7e7372d](https://github.com/hhanh00/zkool2/commit/7e7372dfdd8ffb0e57a34550efe13bf889010fe0))
+
 ## [6.23.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.3...zkool-v6.23.0-rc.4) (2026-07-01)
 
 
