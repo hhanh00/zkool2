@@ -1320,7 +1320,7 @@ pub async fn sign_transaction(
     span.in_scope(|| {
         info!("Adding Proofs to PCZT");
     });
-    let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+    let sapling_prover = get_sapling_prover().await?;
 
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
@@ -1355,7 +1355,7 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
 
     let pczt = Pczt::parse(&package.pczt).unwrap();
 
-    let sapling_prover: &LocalTxProver = &SAPLING_PROVER;
+    let sapling_prover = get_sapling_prover().await?;
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
     let tx = tx_extractor.extract().unwrap();
@@ -1629,24 +1629,26 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     Ok(unspent_notes)
 }
 
-pub static SAPLING_PROVER: LazyLock<LocalTxProver> = LazyLock::new(|| {
-    let params_dir = crate::api::sapling::resolve_params_dir()
-        .expect("Failed to resolve Sapling parameters directory");
-    let spend_path = params_dir.join(zcash_proofs::SAPLING_SPEND_NAME);
-    let output_path = params_dir.join(zcash_proofs::SAPLING_OUTPUT_NAME);
+pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
+    static PROVER: tokio::sync::OnceCell<LocalTxProver> = tokio::sync::OnceCell::const_new();
+    PROVER
+        .get_or_try_init(|| async {
+            let params_dir = crate::api::sapling::resolve_params_dir()
+                .ok_or_else(|| {
+                    anyhow::anyhow!("Failed to resolve Sapling parameters directory")
+                })?;
+            let spend_path = params_dir.join(zcash_proofs::SAPLING_SPEND_NAME);
+            let output_path = params_dir.join(zcash_proofs::SAPLING_OUTPUT_NAME);
 
-    if spend_path.exists() && output_path.exists() {
-        return LocalTxProver::new(&spend_path, &output_path);
-    }
-    // Parameters not found on disk — download them.
-    tokio::runtime::Runtime::new()
-        .expect("Failed to create Tokio runtime for downloading Sapling params")
-        .block_on(crate::api::sapling::download_sapling_params())
-        .expect(
-            "Failed to download Sapling parameters. Check network and disk space.",
-        );
-    LocalTxProver::new(&spend_path, &output_path)
-});
+            if spend_path.exists() && output_path.exists() {
+                return Ok(LocalTxProver::new(&spend_path, &output_path));
+            }
+            // Parameters not found on disk — download them.
+            crate::api::sapling::download_sapling_params().await?;
+            Ok(LocalTxProver::new(&spend_path, &output_path))
+        })
+        .await
+}
 pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>());
 pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>());
 
