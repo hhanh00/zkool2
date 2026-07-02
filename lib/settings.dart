@@ -942,14 +942,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       await ref.read(vaultProvider.notifier).resetDevicePart();
       await ref.read(vaultProvider.notifier).initialize(newPassword);
 
+      // Get vault for direct (non-debounced) store
+      final vault = await ref.read(vaultProvider.future);
+      final pk = (await vault.masterPk)!;
       for (final ra in selected) {
-        await ref.read(vaultProvider.notifier).storeAccount(
-              name: ra.name,
-              seed: ra.seed,
-              aindex: ra.aindex,
-              useInternal: ra.useInternal,
-              birthHeight: ra.birthHeight,
-            );
+        await vault.storeAccount(
+          name: ra.name,
+          seed: ra.seed,
+          aindex: ra.aindex,
+          useInternal: ra.useInternal,
+          birthHeight: ra.birthHeight,
+          pk: pk,
+        );
         // Import into local DB
         await newAccount(
           na: NewAccount(
