@@ -437,10 +437,27 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final confirmed =
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
     if (confirmed) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
       try {
-        await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.currency);
+        final n = await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.currency);
+        if (mounted) {
+          GoRouter.of(context).pop();
+          if (n > 0) {
+            showSnackbar("Updated $n transaction price${n == 1 ? '' : 's'}");
+          } else {
+            showSnackbar("No transactions needed price updates");
+          }
+        }
       } on AnyhowException catch (e) {
-        if (mounted) await showException(context, e.message);
+        if (mounted) {
+          GoRouter.of(context).pop();
+          await showException(context, e.message);
+        }
       }
     }
   }

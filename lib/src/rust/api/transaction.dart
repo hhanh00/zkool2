@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-Future<void> fillMissingTxPrices(
+Future<int> fillMissingTxPrices(
         {required String api, required String currency, required Coin c}) =>
     RustLib.instance.api.crateApiTransactionFillMissingTxPrices(
         api: api, currency: currency, c: c);
