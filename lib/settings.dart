@@ -744,6 +744,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       }
     }
 
+    // Show loading spinner during async operations (download + PRF recovery)
+    AwesomeDialog? loadingDialog;
+    if (mounted) loadingDialog = showLoadingDialog(context, "Recovering vault...");
+
     // 2. Download vault bytes once
     Uint8List vaultBytes;
     try {
@@ -752,10 +756,12 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       logger.i("[Recover] step 2: downloaded ${vaultBytes.length} bytes");
     } on AnyhowException catch (e) {
       logger.e("[Recover] step 2: download failed: $e");
+      loadingDialog?.dismiss();
       if (mounted) await showException(context, e.message);
       return;
     } catch (e) {
       logger.e("[Recover] step 2: download failed: $e");
+      loadingDialog?.dismiss();
       if (mounted) await ErrorDialog.show(context, error: e);
       return;
     }
@@ -777,10 +783,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     String? masterPassword;
     bool recoveredViaPassword = false;
     if (recovered == null) {
+      loadingDialog?.dismiss();
       logger.i("[Recover] step 4: prompting for password");
       if (!mounted) return;
       masterPassword = await inputPassword(context, title: "Vault Password", required: true);
       if (masterPassword == null) return;
+      // Show spinner for the password decryption step
+      if (mounted) loadingDialog = showLoadingDialog(context, "Decrypting accounts...");
       try {
         logger.i("[Recover] step 4: recovering with password");
         recovered = await ref.read(vaultProvider.notifier).recoverVault(vaultBytes: vaultBytes, masterPassword: masterPassword);
@@ -788,10 +797,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         recoveredViaPassword = true;
       } on AnyhowException catch (e) {
         logger.e("[Recover] step 4: password recovery failed: $e");
+        loadingDialog?.dismiss();
         if (mounted) await showException(context, e.message);
         return;
       }
     }
+
+    loadingDialog?.dismiss();
 
     if (!mounted) return;
     final existingAccounts = await ref.read(getAccountsProvider.future);
@@ -807,7 +819,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     final ctx = context;
     AwesomeDialog? dialog;
     try {
-      dialog = await showMessage(ctx, "Importing ${selected.length} account(s)...", dismissable: false);
+      dialog = showLoadingDialog(ctx, "Importing ${selected.length} account(s)...");
       for (final ra in selected) {
         // find existing account matching seed + aindex
         final match = existingAccounts.where((a) => a.seed == ra.seed && a.aindex == ra.aindex).firstOrNull;
@@ -910,6 +922,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     // 3. Download and decrypt vault
     Uint8List vaultBytes;
     List<RestoredAccount> recovered;
+    AwesomeDialog? compressLoading = showLoadingDialog(context, "Downloading vault...");
     try {
       vaultBytes = await ref
           .read(vaultProvider.notifier)
@@ -917,7 +930,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       recovered = await ref
           .read(vaultProvider.notifier)
           .recoverVault(vaultBytes: vaultBytes, masterPassword: password);
+      compressLoading.dismiss();
     } catch (e) {
+      compressLoading.dismiss();
       if (mounted) {
         await showException(context, "Failed to decrypt vault: $e");
       }
@@ -967,13 +982,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
     // 7. Create fresh vault and store accounts
     final coin = coinContext.coin;
-    AwesomeDialog? dialog;
+    AwesomeDialog? compressDialog;
     try {
-      dialog = await showMessage(
-        context,
-        "Creating fresh vault...",
-        dismissable: false,
-      );
+      compressDialog = showLoadingDialog(context, "Creating fresh vault...");
       await ref.read(vaultProvider.notifier).deleteLocalVault();
       await ref.read(vaultProvider.notifier).resetDevicePart();
       await ref.read(vaultProvider.notifier).initialize(newPassword);
@@ -1007,7 +1018,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         );
       }
       ref.invalidate(getAccountsProvider);
-      dialog.dismiss();
+      compressDialog.dismiss();
       if (mounted) {
         await showMessage(
           context,
@@ -1015,7 +1026,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         );
       }
     } on AnyhowException catch (e) {
-      dialog?.dismiss();
+      compressDialog?.dismiss();
       if (mounted) await showException(context, e.message);
     }
   }

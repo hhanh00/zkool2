@@ -229,6 +229,29 @@ Future<AwesomeDialog> showMessage(BuildContext context, String message, {String?
   return dialog;
 }
 
+/// Shows a non-dismissable loading dialog with a [CircularProgressIndicator] and [message].
+/// Call [AwesomeDialog.dismiss] on the returned dialog when the async work completes.
+AwesomeDialog showLoadingDialog(BuildContext context, String message) {
+  final dialog = AwesomeDialog(
+    context: context,
+    body: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      child: Row(
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 20),
+          Expanded(child: Text(message, style: const TextStyle(fontSize: 16))),
+        ],
+      ),
+    ),
+    autoDismiss: false,
+    dismissOnTouchOutside: false,
+    dismissOnBackKeyPress: false,
+  );
+  dialog.show();
+  return dialog;
+}
+
 Future<void> showSeed(BuildContext context, String message) async {
   final t = Theme.of(context).textTheme;
   await AwesomeDialog(
