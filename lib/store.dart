@@ -1099,6 +1099,11 @@ class VaultNotifier extends _$VaultNotifier {
     await vault.deleteLocalVault();
   }
 
+  Future<void> resetDevicePart() async {
+    final vault = await future;
+    await vault.resetDevicePart();
+  }
+
   Future<void> registerDevice({required String password, required Uint8List prf}) async {
     logger.i("VaultNotifier.registerDevice");
     final vault = await future;
@@ -1130,6 +1135,18 @@ class VaultNotifier extends _$VaultNotifier {
       final pk = (await vault.masterPk)!;
       await vault.storeAccount(name: name, seed: seed, aindex: aindex, useInternal: useInternal, birthHeight: birthHeight, pk: pk);
     });
+  }
+
+  Future<void> signOut() async {
+    logger.i("VaultNotifier.signOut");
+    final vault = await future;
+    await vault.signOut();
+  }
+
+  Future<void> signIn() async {
+    logger.i("VaultNotifier.signIn");
+    final vault = await future;
+    await vault.signIn(silent: false);
   }
 }
 

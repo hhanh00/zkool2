@@ -327,10 +327,63 @@ pub fn recover_with_prf(
 
 fn parse_entries(vault_bytes: &[u8]) -> Result<Vec<LogEntry>> {
     let mut entries = Vec::new();
-    let mut cursor = std::io::Cursor::new(vault_bytes);
-    while cursor.position() < vault_bytes.len() as u64 {
-        entries.push(LogEntry::read_from(&mut cursor)?);
+    let len = vault_bytes.len();
+    let mut pos = 0;
+
+    while pos < len {
+        let tag = vault_bytes[pos];
+
+        // Compute frame size based on tag (frame includes the tag byte itself)
+        let frame_size = match tag {
+            0 => 109usize,  // tag(1) + pk(32) + protected_sk(60) + salt(16)
+            1 => 81,        // tag(1) + device_id(20) + protected_sk(60)
+            2 => {
+                // tag(1) + len(2 BE) + payload(var)
+                if pos + 3 > len {
+                    tracing::warn!(
+                        "parse_entries: truncated Account entry header at offset {pos}, stopping"
+                    );
+                    break;
+                }
+                let payload_len =
+                    u16::from_be_bytes([vault_bytes[pos + 1], vault_bytes[pos + 2]]) as usize;
+                3 + payload_len
+            }
+            _ => {
+                tracing::warn!(
+                    "parse_entries: invalid tag {tag} at offset {pos}, skipping byte"
+                );
+                pos += 1;
+                continue;
+            }
+        };
+
+        let end = (pos + frame_size).min(len);
+        let chunk = &vault_bytes[pos..end];
+
+        // Skip truncated frames (e.g. incomplete write)
+        if chunk.len() < frame_size {
+            tracing::warn!(
+                "parse_entries: truncated entry (tag={tag}) at offset {pos}, \
+                 expected {frame_size} bytes, got {}",
+                chunk.len()
+            );
+            pos = end;
+            continue;
+        }
+
+        match LogEntry::read_from(chunk) {
+            Ok(entry) => entries.push(entry),
+            Err(e) => {
+                tracing::warn!(
+                    "parse_entries: skipping corrupt entry (tag={tag}) at offset {pos}: {e}"
+                );
+            }
+        }
+
+        pos = end;
     }
+
     Ok(entries)
 }
 
@@ -359,11 +412,28 @@ fn decrypt_accounts(entries: &[LogEntry], sk_bytes: &[u8]) -> Result<Vec<Restore
 
             let cipher = ChaCha20Poly1305::new(Key::from_slice(derived_key.as_bytes()));
             let nonce = Nonce::from_slice(nonce);
-            let plaintext = cipher.decrypt(nonce, ciphertext.as_slice() as &[u8])
-                .map_err(|e| anyhow!("Account decryption failed: {}", e))?;
+            let plaintext = match cipher.decrypt(nonce, ciphertext.as_slice() as &[u8]) {
+                Ok(p) => p,
+                Err(e) => {
+                    tracing::warn!("Skipping corrupt account entry: {}", e);
+                    continue;
+                }
+            };
 
-            let account = AccountPayload::read_from(plaintext.as_slice())?;
-            let mnemonic = bip39::Mnemonic::from_entropy(&account.entropy)?;
+            let account = match AccountPayload::read_from(plaintext.as_slice()) {
+                Ok(a) => a,
+                Err(e) => {
+                    tracing::warn!("Skipping account entry with invalid payload: {}", e);
+                    continue;
+                }
+            };
+            let mnemonic = match bip39::Mnemonic::from_entropy(&account.entropy) {
+                Ok(m) => m,
+                Err(e) => {
+                    tracing::warn!("Skipping account entry with invalid entropy: {}", e);
+                    continue;
+                }
+            };
             tracing::info!("Recovered account: name={}, aindex={}, use_internal={}, birth_height={}",
                 account.name, account.aindex, account.use_internal, account.birth_height);
 
