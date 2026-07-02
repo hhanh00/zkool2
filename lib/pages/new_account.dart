@@ -355,7 +355,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       try {
         String message = "Please wait while we create the account";
         if (ledger) message += "\nConfirm on your Ledger device";
-        dialog = await showMessage(context, message, dismissable: false);
+        dialog = showLoadingDialog(context, message);
         final account = await newAccount(
             na: NewAccount(
               icon: icon,
