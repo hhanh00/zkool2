@@ -138,12 +138,15 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
               name: "password",
               decoration: InputDecoration(labelText: 'Password'),
               obscureText: true,
+              autofocus: false,
+              keyboardType: TextInputType.visiblePassword,
             ),
             Gap(8),
             FormBuilderTextField(
               name: "repeat_password",
               decoration: InputDecoration(labelText: 'Repeat Password'),
               obscureText: true,
+              keyboardType: TextInputType.visiblePassword,
               validator: (v) {
                 final newPassword = formKey.currentState!.fields["password"]!.value as String?;
                 if (newPassword != v) return "Passwords do not match";
@@ -306,18 +309,21 @@ Future<(String?, String?)?> showChangeDbPassword(BuildContext context, {required
             name: 'old_password',
             decoration: InputDecoration(labelText: 'Old Password'),
             obscureText: true,
+            keyboardType: TextInputType.visiblePassword,
           ),
           Gap(8),
           FormBuilderTextField(
             name: 'new_password',
             decoration: InputDecoration(labelText: 'New Password'),
             obscureText: true,
+            keyboardType: TextInputType.visiblePassword,
           ),
           Gap(8),
           FormBuilderTextField(
             name: 'repeat_password',
             decoration: InputDecoration(labelText: 'Repeat New Password'),
             obscureText: true,
+            keyboardType: TextInputType.visiblePassword,
             validator: (v) {
               final newPassword = formKey.currentState!.fields["new_password"]!.value as String?;
               if (newPassword != v) return "New password does not match";
