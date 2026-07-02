@@ -6,7 +6,6 @@ use crate::{api::coin::Coin, pay::{Recipient, TxPlan, plan::plan_transaction, so
 /// FFI-compatible coin-selection mode (maps to `solve::Mode`).
 /// 0 = Fee optimisation, 1 = Privacy preservation (default).
 const MODE_FEE: u8 = 0;
-const MODE_PRIVACY: u8 = 1;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
