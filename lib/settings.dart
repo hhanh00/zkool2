@@ -610,9 +610,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         if (!confirmed) return;
 
         final vault = ref.read(vaultProvider.notifier);
-        // Explicit sign-in to Google Drive. Shows picker on first time,
-        // uses cached credentials silently on subsequent enables.
-        await (await ref.read(vaultProvider.future)).signIn();
+        // Always show the Google account picker when enabling the vault.
+        // The OS caches credentials so app restart still works silently.
+        await (await ref.read(vaultProvider.future)).signIn(silent: false);
         // newVault is true iff there is a local master file
         final newVault = !(await vault.hasVault());
         logger.i("[Vault] enable: newVault=$newVault");
