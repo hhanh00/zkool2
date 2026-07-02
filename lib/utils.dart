@@ -506,8 +506,8 @@ extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);
 }
 
-// flutter_passkey_service only supports Android, iOS, and macOS
-bool get passkeySupported => Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+// passkeys: Android always, macOS debug only, iOS never
+bool get passkeySupported => Platform.isAndroid || (!kReleaseMode && Platform.isMacOS);
 
 // domain associated with zkool,
 // ie the author's github account
