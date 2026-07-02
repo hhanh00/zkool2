@@ -774,15 +774,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     }
 
     // 4. Fall back to password recovery
+    String? masterPassword;
+    bool recoveredViaPassword = false;
     if (recovered == null) {
       logger.i("[Recover] step 4: prompting for password");
       if (!mounted) return;
-      final password = await inputPassword(context, title: "Vault Password", required: true);
-      if (password == null) return;
+      masterPassword = await inputPassword(context, title: "Vault Password", required: true);
+      if (masterPassword == null) return;
       try {
         logger.i("[Recover] step 4: recovering with password");
-        recovered = await ref.read(vaultProvider.notifier).recoverVault(vaultBytes: vaultBytes, masterPassword: password);
+        recovered = await ref.read(vaultProvider.notifier).recoverVault(vaultBytes: vaultBytes, masterPassword: masterPassword);
         logger.i("[Recover] step 4: recovered ${recovered.length} accounts");
+        recoveredViaPassword = true;
       } on AnyhowException catch (e) {
         logger.e("[Recover] step 4: password recovery failed: $e");
         if (mounted) await showException(context, e.message);
@@ -840,6 +843,36 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       }
       ref.invalidate(getAccountsProvider);
       dialog.dismiss();
+
+      // 5. If recovered via password, offer to register a passkey for this device
+      if (recoveredViaPassword && passkeySupported && mounted) {
+        final registerKey = await confirmDialog(
+          context,
+          title: "Register Passkey?",
+          message: "Do you want to register a passkey for this device so you can recover without a password next time?",
+        );
+        if (registerKey && mounted) {
+          try {
+            final registration = await registerPasskey();
+            Uint8List? prf;
+            if (registration == null) {
+              // Passkey already exists, just authenticate
+              prf = await authenticatePasskey();
+            } else {
+              prf = await authenticatePasskey();
+            }
+            if (prf != null && mounted) {
+              await ref.read(vaultProvider.notifier).registerDevice(
+                password: masterPassword!,
+                prf: prf,
+              );
+            }
+          } catch (e) {
+            logger.w("[Recover] passkey registration failed: $e");
+          }
+        }
+      }
+
       if (mounted) await showMessage(context, "Vault recovery completed");
     } on AnyhowException catch (e) {
       dialog?.dismiss();
