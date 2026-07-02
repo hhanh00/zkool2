@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.23.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.5...zkool-v6.23.0-rc.6) (2026-07-02)
+
+
+### Bug Fixes
+
+* **tx:** add error_for_status, return count, and progress feedback for Fetch Tx Prices ([44952ae](https://github.com/hhanh00/zkool2/commit/44952ae07e942b929d70bd970268d3c5eb537070))
+
 ## [6.23.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0-rc.4...zkool-v6.23.0-rc.5) (2026-07-02)
 
 
