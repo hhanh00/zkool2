@@ -346,6 +346,17 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                       ),
                     ),
                   ]),
+                if (settings.expertMode && settings.vault)
+                  Row(children: [
+                    Expanded(child: Text("Compress Vault")),
+                    SizedBox(
+                      width: 40,
+                      child: IconButton(
+                        onPressed: onVaultCompress,
+                        icon: Icon(Icons.auto_fix_high),
+                      ),
+                    ),
+                  ]),
                 Gap(8),
                 Tooltip(
                   message: "Sapling proving parameters (required for shielded transactions). "
@@ -640,11 +651,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 logger.i("[Vault] enable: passkey PRF verified OK, vault decrypted successfully");
                 needsDeviceRegistration = false;
               } catch (e) {
-                logger.e("[Vault] enable: passkey PRF cannot decrypt vault: $e");
-                if (mounted) {
-                  await showException(context, "This passkey cannot unlock the vault. It may not be the correct key for this vault.");
-                }
-                return;
+                logger.w("[Vault] enable: passkey PRF cannot decrypt vault: $e, proceeding without passkey registration");
+                needsDeviceRegistration = false;
               }
             }
           } on PasskeyException catch (e) {
@@ -659,8 +667,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             );
 
             if (!registerNewKey) {
-              logger.i("[Vault] enable: user declined to register new key");
-              return;
+              logger.i("[Vault] enable: user declined to register new key, proceeding without passkey registration");
+              needsDeviceRegistration = false;
             }
 
             // Prompt for Master Password before allowing registration
@@ -830,6 +838,142 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       ref.invalidate(getAccountsProvider);
       dialog.dismiss();
       if (mounted) await showMessage(context, "Vault recovery completed");
+    } on AnyhowException catch (e) {
+      dialog?.dismiss();
+      if (mounted) await showException(context, e.message);
+    }
+  }
+
+  void onVaultCompress() async {
+    final authenticated = await onUnlock(ref);
+    if (!authenticated) return;
+    if (!mounted) return;
+
+    // 1. Guard: refuse if DB has accounts
+    final existingAccounts = await ref.read(getAccountsProvider.future);
+    if (existingAccounts.isNotEmpty) {
+      if (mounted) {
+        await showException(
+          context,
+          "The local database must be empty before compressing the vault. "
+              "Please delete all accounts first.",
+        );
+      }
+      return;
+    }
+
+    // 2. Enter current master password
+    final password = await inputPassword(
+      context,
+      title: "Current Vault Password",
+      required: true,
+    );
+    if (password == null) return;
+    if (!mounted) return;
+
+    // 3. Download and decrypt vault
+    Uint8List vaultBytes;
+    List<RestoredAccount> recovered;
+    try {
+      vaultBytes = await ref
+          .read(vaultProvider.notifier)
+          .downloadVaultBytes();
+      recovered = await ref
+          .read(vaultProvider.notifier)
+          .recoverVault(vaultBytes: vaultBytes, masterPassword: password);
+    } catch (e) {
+      if (mounted) {
+        await showException(context, "Failed to decrypt vault: $e");
+      }
+      return;
+    }
+
+    if (recovered.isEmpty) {
+      if (mounted) {
+        await showException(context, "No accounts found in the vault.");
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    // 4. Show account list → confirm (reuse recovery's picker)
+    final selected = await showVaultAccountPicker(
+      context,
+      accounts: recovered,
+    );
+    if (selected == null || selected.isEmpty) return;
+    if (!mounted) return;
+
+    // 5. Enter new master password
+    final newPassword = await inputPassword(
+      context,
+      title: "New Vault Password",
+      repeated: true,
+      required: true,
+    );
+    if (newPassword == null) return;
+    if (!mounted) return;
+
+    // 6. Ask: sign into a different Google account?
+    final switchAccount = await confirmDialog(
+      context,
+      title: "Switch Google Account?",
+      message:
+          "Do you want to create the new vault on a different Google account?",
+    );
+    if (!mounted) return;
+
+    if (switchAccount) {
+      await ref.read(vaultProvider.notifier).signOut();
+      await ref.read(vaultProvider.notifier).signIn();
+      if (!mounted) return;
+    }
+
+    // 7. Create fresh vault and store accounts
+    final coin = coinContext.coin;
+    AwesomeDialog? dialog;
+    try {
+      dialog = await showMessage(
+        context,
+        "Creating fresh vault...",
+        dismissable: false,
+      );
+      await ref.read(vaultProvider.notifier).deleteLocalVault();
+      await ref.read(vaultProvider.notifier).resetDevicePart();
+      await ref.read(vaultProvider.notifier).initialize(newPassword);
+
+      for (final ra in selected) {
+        await ref.read(vaultProvider.notifier).storeAccount(
+              name: ra.name,
+              seed: ra.seed,
+              aindex: ra.aindex,
+              useInternal: ra.useInternal,
+              birthHeight: ra.birthHeight,
+            );
+        // Import into local DB
+        await newAccount(
+          na: NewAccount(
+            name: ra.name,
+            restore: true,
+            key: ra.seed,
+            aindex: ra.aindex,
+            birth: ra.birthHeight,
+            folder: "",
+            useInternal: ra.useInternal,
+            internal: false,
+            ledger: false,
+          ),
+          c: coin,
+        );
+      }
+      ref.invalidate(getAccountsProvider);
+      dialog.dismiss();
+      if (mounted) {
+        await showMessage(
+          context,
+          "Vault compressed successfully. Your accounts have been restored.",
+        );
+      }
     } on AnyhowException catch (e) {
       dialog?.dismiss();
       if (mounted) await showException(context, e.message);
