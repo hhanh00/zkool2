@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.24.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc...zkool-v6.24.0-rc.1) (2026-07-02)
+
+
+### Features
+
+* **vault:** add loading spinner dialogs to vault recovery and other async wait points ([64304d3](https://github.com/hhanh00/zkool2/commit/64304d323ff78132edfcaf59c9b738ebabf5b2ab))
+
+
+### Bug Fixes
+
+* **vault:** add onDismissCallback to showLoadingDialog for AwesomeDialog compat ([6d61d7a](https://github.com/hhanh00/zkool2/commit/6d61d7a7e308288df74899459ea373a71f831b4d))
+* **vault:** set autoDismiss=true in showLoadingDialog so .dismiss() pops the navigator ([0afbcb8](https://github.com/hhanh00/zkool2/commit/0afbcb82720013cad100f8ecc5ebc70e09fc7d97))
+
 ## [6.24.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0...zkool-v6.24.0-rc) (2026-07-02)
 
 
