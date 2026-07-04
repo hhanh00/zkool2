@@ -22,7 +22,8 @@ runs:
         export PUB_CACHE="$RUNNER_TEMP/.pub-cache"
         dart pub global activate fastforge
         echo "$RUNNER_TEMP/.pub-cache/bin" >> $GITHUB_PATH
-        ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
+        # TODO: re-enable ledger after pczt API compat is restored
+        # ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
     - name: Build
       shell: powershell
       run: |
