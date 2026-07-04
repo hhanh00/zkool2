@@ -66,5 +66,11 @@ target/
 *.db
 *.hex
 
+# macOS auto-generated artifacts (never commit)
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Runner.xcodeproj/project.pbxproj
+macos/Runner.xcworkspace/
+macos/Podfile.lock
+
 # FVM Version Cache
 .fvm/
