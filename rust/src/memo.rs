@@ -1,6 +1,5 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain, flavor::OrchardVanilla /* ZSA-TODO: OrchardZSA */};
-use zcash_primitives::transaction::OrchardBundle;
+use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::debug;

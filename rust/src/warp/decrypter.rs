@@ -5,7 +5,7 @@ use zcash_trees::types::Note;
 
 use anyhow::Result;
 use blake2b_simd::Params;
-use tracing::debug;
+
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher, StreamCipherSeek},
     ChaCha20,
@@ -19,7 +19,6 @@ use orchard::{
     keys::IncomingViewingKey,
     note::{ExtractedNoteCommitment, Nullifier, Rho},
     note_encryption::{CompactAction, OrchardDomain},
-    flavor::OrchardVanilla, /* ZSA-TODO: OrchardZSA */
 };
 use sapling_crypto::{
     note_encryption::{
@@ -27,7 +26,7 @@ use sapling_crypto::{
     },
     SaplingIvk,
 };
-use zcash_note_encryption::{note_bytes::{NoteBytesData, NoteBytes}, EphemeralKeyBytes};
+use zcash_note_encryption::EphemeralKeyBytes;
 
 const COMPACT_NOTE_SIZE: usize = 52;
 
@@ -141,7 +140,7 @@ pub fn try_orchard_decrypt(
         .update(&ka.to_bytes())
         .update(&ca.ephemeral_key)
         .finalize();
-    let ciphertext_len = ca.ciphertext.len();
+    let _ciphertext_len = ca.ciphertext.len();
     let mut keystream = ChaCha20::new(key.as_ref().into(), [0u8; 12][..].into());
     keystream.seek(64);
 
