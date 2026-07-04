@@ -31,7 +31,6 @@ jobs:
             target: windows
     env:
       FLUTTER_VERSION: 3.44.2
-      RUSTFLAGS: '--cfg zcash_unstable="nu7"'
     permissions:
       id-token: write
       attestations: write
