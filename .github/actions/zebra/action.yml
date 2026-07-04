@@ -33,8 +33,6 @@ runs:
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
       run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.17.0 --features=graphql --root ./tools --bin zkool_graphql
-      env:
-        RUSTFLAGS: '--cfg zcash_unstable="nu7"'
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'

@@ -25,7 +25,7 @@ Future<void> setAssetName(
 
 /// Check whether ZSA (Zcash Shielded Assets) is available on the current network.
 /// ZSA requires NU7 consensus, which is only active on regtest networks
-/// compiled with the `zcash_unstable = "nu7"` cfg flag and whose database
+/// running on a network that has NU7 support and whose database
 /// path contains "zsa".
 Future<bool> isZsaAvailable({required Coin c}) =>
     RustLib.instance.api.crateApiZsaIsZsaAvailable(c: c);
