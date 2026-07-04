@@ -6,7 +6,7 @@ use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
     circuit::ProvingKey,
-    flavor::{OrchardVanilla, OrchardZSA},
+    flavor::OrchardVanilla, /* ZSA-TODO: OrchardZSA */
     keys::{Scope, SpendAuthorizingKey},
     note::{AssetBase, ExtractedNoteCommitment},
     value::NoteValue,
@@ -14,7 +14,7 @@ use orchard::{
 };
 use pczt::{
     roles::{
-        creator::Creator, io_finalizer::IoFinalizer, issuer::Issuer, prover::Prover,
+        creator::Creator, io_finalizer::IoFinalizer, /* ZSA-TODO: issuer::Issuer */ prover::Prover,
         signer::Signer, spend_finalizer::SpendFinalizer,
         tx_extractor::TransactionExtractor, updater::Updater,
     },
@@ -668,6 +668,7 @@ pub async fn plan_transaction(
         BuildConfig::Standard {
             sapling_anchor: sapling_crypto::Anchor::from_bytes(sapling_anchor).into_option(),
             orchard_anchor: orchard::Anchor::from_bytes(orchard_anchor).into_option(),
+            ironwood_anchor: None,
         },
     );
 
@@ -894,11 +895,11 @@ pub async fn plan_transaction(
                     to_zec(value.into()),
                     hex::encode(&r.asset_base)
                 );
+                // ZSA-TODO: pass asset_base
                 builder.add_orchard_output::<Infallible>(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
                     value,
-                    asset_base,
                     memo,
                 )?;
             }
@@ -909,33 +910,12 @@ pub async fn plan_transaction(
     info!("Building");
     event!(Level::INFO, "Preparing PCZT");
 
-    // Attach the ZsaBuilder before build_for_pczt so the Builder includes
-    // issuance actions in its fee computation (ZIP-317), avoiding a mismatch
-    // with FeeManager that would cause ChangeRequired.
-    if let Some(info) = issuance {
-        let oaddress = ovk
-            .as_ref()
-            .ok_or_else(|| anyhow!("No orchard key for issuance"))?
-            .address_at(dindex, Scope::External);
-        let mut zsa = ZsaBuilder::new(info.isk.clone());
-        zsa.add_issue_output(
-            info.desc_hash,
-            oaddress,
-            NoteValue::from_raw(info.amount),
-            info.first_issuance,
-            &mut OsRng,
-        )
-        .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
-        if info.finalize {
-            zsa.finalize_asset(&info.desc_hash)
-                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
-        }
-        builder.set_zsa_builder(zsa);
-    }
+    // ZSA-TODO: ZsaBuilder attachment (commented — not yet implemented)
 
     // we pass false to the fee rule callback because Zebra does not track new ZSA issuance and does not
     // charge the CREATION_COST
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
+    // ZSA-TODO: pass is_new_asset callback
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
 
@@ -1025,7 +1005,7 @@ pub async fn plan_transaction(
             )> = (0..action_count)
                 .map(|idx| {
                     let a = &u.bundle().actions()[idx];
-                    (*a.spend().asset(), *a.output().asset())
+                    (Some(a.spend().asset()), a.output().asset())
                 })
                 .collect();
 
@@ -1084,52 +1064,19 @@ pub async fn plan_transaction(
 
     let pczt = updater.finish();
 
-    // ── Issuance: build ZsaBuilder + Issuer phase 1 (build_awaiting_sighash) ──
-    let pczt = if let Some(info) = issuance {
-        let oaddress = ovk
-            .as_ref()
-            .ok_or_else(|| anyhow!("No orchard key for issuance"))?
-            .address_at(dindex, Scope::External);
-        let mut zsa_builder = ZsaBuilder::new(info.isk.clone());
-        zsa_builder
-            .add_issue_output(
-                info.desc_hash,
-                oaddress,
-                NoteValue::from_raw(info.amount),
-                info.first_issuance,
-                &mut OsRng,
-            )
-            .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
-        if info.finalize {
-            zsa_builder
-                .finalize_asset(&info.desc_hash)
-                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
-        }
-        Issuer::new(pczt)
-            .build_awaiting_sighash(zsa_builder, OsRng)
-            .map_err(|e| anyhow!("Issuer (phase 1) failed: {e:?}"))?
-    } else {
-        pczt
-    };
+    // ZSA-TODO: Issuer phase 1 (commented — not yet implemented)
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
     info!("IO Finalized");
 
-    // ── Issuance: Issuer phase 2 (sign) ──
-    let pczt = if let Some(info) = issuance {
-        Issuer::new(pczt)
-            .sign(&info.isk)
-            .map_err(|e| anyhow!("Issuer (phase 2/sign) failed: {e:?}"))?
-    } else {
-        pczt
-    };
+    // ZSA-TODO: Issuer phase 2 (commented — not yet implemented)
 
     let orchard_split_spend_indices: Vec<usize> = (0..orchard_meta.num_split_spends())
         .map(|n| orchard_meta.split_spend_action_index(n).unwrap())
         .collect();
 
     let pczt_package = PcztPackage {
-        pczt: pczt.serialize(),
+        pczt: pczt.serialize().unwrap(),
         n_spends,
         sapling_indices: (0..n_spends[1])
             .map(|n| sapling_meta.spend_index(n).unwrap())
@@ -1334,7 +1281,7 @@ pub async fn sign_transaction(
     info!("Spend Finalized");
 
     Ok(PcztPackage {
-        pczt: pczt.serialize(),
+        pczt: pczt.serialize().unwrap(),
         n_spends: *n_spends,
         sapling_indices: sapling_indices.clone(),
         orchard_indices: orchard_indices.clone(),
@@ -1649,15 +1596,15 @@ pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
         })
         .await
 }
-pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>());
-pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>());
+pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::FixedPostNu6_2));
+pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::FixedPostNu6_2));
 
 pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKey {
     // Check if NU7 is active (ZSA-enabled)
     let uses_orchard_zsa = match network {
         crate::api::coin::Network::Regtest(config) => {
             // NU7 active means ZSA transactions
-            config.nu7.is_some()
+            config.orchard_mode() == zcash_protocol::consensus::OrchardMode::Zsa
         }
         _ => false,
     };
