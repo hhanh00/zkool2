@@ -1,5 +1,5 @@
 use zcash_primitives::transaction::Transaction;
-use zcash_protocol::consensus::{BlockHeight, BranchId};
+use zcash_protocol::consensus::{BlockHeight, BranchId, OrchardMode};
 use zcash_protocol::local_consensus::LocalNetwork;
 
 #[test]
@@ -19,7 +19,8 @@ fn parse_shield_tx() {
         nu6: Some(BlockHeight::from_u32(1)),
         nu6_1: Some(BlockHeight::from_u32(1)),
         nu6_2: Some(BlockHeight::from_u32(1)),
-        nu7: Some(BlockHeight::from_u32(1)),
+        nu6_3: None,
+        orchard_mode: OrchardMode::Normal,
     };
 
     let height = BlockHeight::from_u32(152);
