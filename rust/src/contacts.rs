@@ -13,7 +13,7 @@ use zcash_address::unified::{Address as UnifiedAddress, Container, Encoding, Rec
 use zcash_address::ZcashAddress;
 use zcash_keys::encoding::AddressCodec;
 use zcash_protocol::consensus::Parameters;
-use zcash_protocol::{PoolType, ShieldedProtocol};
+use zcash_protocol::{PoolType, ShieldedPool};
 use zcash_transparent::address::TransparentAddress;
 
 use crate::api::coin::Network;
@@ -81,9 +81,9 @@ pub fn expand_address_to_receivers_with_pool(
     let zaddr = ZcashAddress::try_from_encoded(addr).map_err(|e| anyhow!("Invalid address: {e}"))?;
     let pool = if zaddr.can_receive_as(PoolType::Transparent) {
         0u8
-    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedProtocol::Sapling)) {
+    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
         1u8
-    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedProtocol::Orchard)) {
+    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Orchard)) {
         2u8
     } else {
         anyhow::bail!("Unrecognized address pool");
