@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.3...zkool-v6.24.0-rc.4) (2026-07-04)
+
+
+### Bug Fixes
+
+* disable ledger feature in CI builds due to pczt API breakage ([6ac5998](https://github.com/hhanh00/zkool2/commit/6ac5998c6e17c9544cac8efb3de3797bb4e0b8bd))
+
 ## [6.24.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.2...zkool-v6.24.0-rc.3) (2026-07-04)
 
 
