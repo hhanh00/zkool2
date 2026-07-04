@@ -39,7 +39,8 @@ runs:
     - name: Build
       shell: bash
       run: |
-        ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
+        # TODO: re-enable ledger after pczt API compat is restored
+        # ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
         fastforge package --platform=linux --targets=deb,appimage
     - name: Build Flatpak
       if: ${{ inputs.arch == 'x86_64' && github.event_name != 'pull_request' }}
