@@ -622,7 +622,7 @@ pub async fn get_orchard_note(
     } else {
         AssetBase::from_bytes(&asset_base.try_into().unwrap()).unwrap()
     };
-    let note = Note::from_parts(recipient, value, asset_base, rho, rseed)
+    let note = Note::from_parts(recipient, value, asset_base, rho, rseed, orchard::NoteVersion::V2)
         .into_option()
         .unwrap();
 

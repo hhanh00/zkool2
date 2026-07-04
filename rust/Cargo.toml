@@ -12,7 +12,7 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = {git = "https://github.com/hhanh00/zcash-trees", rev = "dd9aca2f222b03a8cfde4bcdda2a860f0369bccf"}
+zcash-trees = {git = "https://github.com/hhanh00/zcash-trees", rev = "c9d9d7c"}
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
@@ -57,17 +57,17 @@ tower = "0.5"
 qrcode = "0.14.1"
 raptorq = "=2.0.0"
 
-orchard = {version = "0.14", features = ["unstable-frost", "zsa-issuance"]}
-pczt = {version = "0.6", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "issuer", "zip-233"]}
-zcash_address = "0.12"
+orchard = {version = "0.15.0-pre.1", features = ["unstable-frost", "zsa"]}
+pczt = {version = "0.7", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233"]}
+zcash_address = "0.13.0-pre.0"
 zcash_encoding = "0.4"
-zcash_keys = {version = "0.14", features = ["sapling", "orchard", "transparent-inputs"]}
+zcash_keys = {version = "0.15.0-pre.0", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.4"
-zcash_primitives = {version = "0.28", features = ["transparent-inputs", "zip-233"]}
-zcash_proofs = {version = "0.28", features = ["download-params"]}
-zcash_protocol = {version = "0.9", features = ["local-consensus"]}
-zcash_script = "0.4"
-zcash_transparent = {version = "0.8", features = ["transparent-inputs"]}
+zcash_primitives = {version = "0.29.0-pre.0", features = ["transparent-inputs", "zsa"]}
+zcash_proofs = {version = "0.29.0-pre.0", features = ["download-params"]}
+zcash_protocol = {version = "0.10.0-pre.0", features = ["local-consensus"]}
+zcash_script = "0.4.3"
+zcash_transparent = {version = "0.9.0-pre.0", features = ["transparent-inputs"]}
 zip321 = "0.8"
 
 frost-rerandomized = "2.1.0"
@@ -153,16 +153,3 @@ ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 flutter_rust_bridge = ["dep:flutter_rust_bridge"]
 
-#[patch.crates-io]
-#orchard = { path = "../../orchard" }
-#sapling-crypto = { path = "../../sapling-crypto" }
-#zcash_address = { path = "../../librustzcash/components/zcash_address" }
-#zcash_encoding = { path = "../../librustzcash/components/zcash_encoding" }
-#zcash_keys = { path = "../../librustzcash/zcash_keys" }
-#zcash_note_encryption = { path = "../../zcash_note_encryption" }
-#zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
-#zcash_proofs = { path = "../../librustzcash/zcash_proofs" }
-#zcash_protocol = { path = "../../librustzcash/components/zcash_protocol" }
-#zcash_transparent = { path = "../../librustzcash/zcash_transparent" }
-#pczt = { path = "../../librustzcash/pczt" }
-#zip321 = { path = "../../librustzcash/components/zip321" }
