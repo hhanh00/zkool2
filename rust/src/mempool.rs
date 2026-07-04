@@ -2,7 +2,7 @@ use crate::api::coin::Network;
 use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::{keys::Scope, note_encryption::OrchardDomain, flavor::OrchardVanilla /* ZSA-TODO: OrchardZSA */};
+use orchard::{keys::Scope, note_encryption::OrchardDomain};
 use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use sapling_crypto::{
     keys::PreparedIncomingViewingKey,
@@ -16,7 +16,7 @@ use tokio_util::sync::CancellationToken;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::try_note_decryption;
 use zcash_primitives::transaction::{
-    components::sapling::zip212_enforcement, Authorized, OrchardBundle, Transaction, TransactionData,
+    components::sapling::zip212_enforcement, Authorized, Transaction, TransactionData,
 };
 use zcash_protocol::memo::Memo;
 use zcash_transparent::address::TransparentAddress;

@@ -4,7 +4,7 @@ use zcash_protocol::consensus::Parameters;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
-use crate::api::coin::{Coin, Network};
+use crate::api::coin::Coin;
 
 use crate::db::ZsaAssetRow;
 
