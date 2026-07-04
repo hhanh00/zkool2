@@ -1,0 +1,734 @@
+warning: unexpected `cfg` condition value: `zsa-circuit`
+  --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:73:7
+   |
+73 | #[cfg(feature = "zsa-circuit")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `circuit`, `default`, `dev-graph`, `halo2_gadgets`, `halo2_proofs`, `image`, `multicore`, `plotters`, `proptest`, `secp256k1`, `std`, `test-dependencies`, `unstable-frost`, `unstable-voting-circuits`, and `zsa`
+   = help: consider adding `zsa-circuit` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `zsa-circuit`
+  --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:75:7
+   |
+75 | #[cfg(feature = "zsa-circuit")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `circuit`, `default`, `dev-graph`, `halo2_gadgets`, `halo2_proofs`, `image`, `multicore`, `plotters`, `proptest`, `secp256k1`, `std`, `test-dependencies`, `unstable-frost`, `unstable-voting-circuits`, and `zsa`
+   = help: consider adding `zsa-circuit` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `zsa-circuit`
+   --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:230:7
+    |
+230 | #[cfg(feature = "zsa-circuit")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `circuit`, `default`, `dev-graph`, `halo2_gadgets`, `halo2_proofs`, `image`, `multicore`, `plotters`, `proptest`, `secp256k1`, `std`, `test-dependencies`, `unstable-frost`, `unstable-voting-circuits`, and `zsa`
+    = help: consider adding `zsa-circuit` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `zsa-circuit`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:2387:7
+     |
+2387 | #[cfg(feature = "zsa-circuit")]
+     |       ^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: expected values for `feature` are: `circuit`, `default`, `dev-graph`, `halo2_gadgets`, `halo2_proofs`, `image`, `multicore`, `plotters`, `proptest`, `secp256k1`, `std`, `test-dependencies`, `unstable-frost`, `unstable-voting-circuits`, and `zsa`
+     = help: consider adding `zsa-circuit` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused import: `AssetBase`
+  --> /Users/hanh/projects/zsa/orchard_zsa/src/pczt.rs:17:12
+   |
+17 |     note::{AssetBase, ExtractedNoteCommitment, Nullifier, RandomSeed, Rho, TransmittedNoteCiphertext},
+   |            ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unexpected `cfg` condition value: `zsa-circuit`
+  --> /Users/hanh/projects/zsa/orchard_zsa/src/zsa/mod.rs:20:7
+   |
+20 | #[cfg(feature = "zsa-circuit")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `circuit`, `default`, `dev-graph`, `halo2_gadgets`, `halo2_proofs`, `image`, `multicore`, `plotters`, `proptest`, `secp256k1`, `std`, `test-dependencies`, `unstable-frost`, `unstable-voting-circuits`, and `zsa`
+   = help: consider adding `zsa-circuit` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: type `note_commit::DecomposeB` is more private than the item `NoteCommitConfig::b`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1429:5
+     |
+1429 |     pub(crate) b: DecomposeB,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::b` is reachable at visibility `pub(crate)`
+     |
+note: but type `note_commit::DecomposeB` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:76:1
+     |
+  76 | struct DecomposeB {
+     | ^^^^^^^^^^^^^^^^^
+     = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `note_commit::DecomposeD` is more private than the item `NoteCommitConfig::d`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1430:5
+     |
+1430 |     pub(crate) d: DecomposeD,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::d` is reachable at visibility `pub(crate)`
+     |
+note: but type `note_commit::DecomposeD` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:221:1
+     |
+ 221 | struct DecomposeD {
+     | ^^^^^^^^^^^^^^^^^
+
+warning: type `note_commit::DecomposeE` is more private than the item `NoteCommitConfig::e`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1431:5
+     |
+1431 |     pub(crate) e: DecomposeE,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::e` is reachable at visibility `pub(crate)`
+     |
+note: but type `note_commit::DecomposeE` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:357:1
+     |
+ 357 | struct DecomposeE {
+     | ^^^^^^^^^^^^^^^^^
+
+warning: type `note_commit::DecomposeG` is more private than the item `NoteCommitConfig::g`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1432:5
+     |
+1432 |     pub(crate) g: DecomposeG,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::g` is reachable at visibility `pub(crate)`
+     |
+note: but type `note_commit::DecomposeG` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:476:1
+     |
+ 476 | struct DecomposeG {
+     | ^^^^^^^^^^^^^^^^^
+
+warning: type `note_commit::DecomposeH` is more private than the item `NoteCommitConfig::h`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1433:5
+     |
+1433 |     pub(crate) h: DecomposeH,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::h` is reachable at visibility `pub(crate)`
+     |
+note: but type `note_commit::DecomposeH` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:598:1
+     |
+ 598 | struct DecomposeH {
+     | ^^^^^^^^^^^^^^^^^
+
+warning: type `GdCanonicity` is more private than the item `NoteCommitConfig::g_d`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1434:5
+     |
+1434 |     pub(crate) g_d: GdCanonicity,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::g_d` is reachable at visibility `pub(crate)`
+     |
+note: but type `GdCanonicity` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:715:1
+     |
+ 715 | struct GdCanonicity {
+     | ^^^^^^^^^^^^^^^^^^^
+
+warning: type `PkdCanonicity` is more private than the item `NoteCommitConfig::pk_d`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1435:5
+     |
+1435 |     pub(crate) pk_d: PkdCanonicity,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::pk_d` is reachable at visibility `pub(crate)`
+     |
+note: but type `PkdCanonicity` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:832:1
+     |
+ 832 | struct PkdCanonicity {
+     | ^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ValueCanonicity` is more private than the item `NoteCommitConfig::value`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1436:5
+     |
+1436 |     pub(crate) value: ValueCanonicity,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::value` is reachable at visibility `pub(crate)`
+     |
+note: but type `ValueCanonicity` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:948:1
+     |
+ 948 | struct ValueCanonicity {
+     | ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `RhoCanonicity` is more private than the item `NoteCommitConfig::rho`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1437:5
+     |
+1437 |     pub(crate) rho: RhoCanonicity,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::rho` is reachable at visibility `pub(crate)`
+     |
+note: but type `RhoCanonicity` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1026:1
+     |
+1026 | struct RhoCanonicity {
+     | ^^^^^^^^^^^^^^^^^^^^
+
+warning: type `PsiCanonicity` is more private than the item `NoteCommitConfig::psi`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1438:5
+     |
+1438 |     pub(crate) psi: PsiCanonicity,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::psi` is reachable at visibility `pub(crate)`
+     |
+note: but type `PsiCanonicity` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1141:1
+     |
+1141 | struct PsiCanonicity {
+     | ^^^^^^^^^^^^^^^^^^^^
+
+warning: type `note_commit::YCanonicity` is more private than the item `NoteCommitConfig::y_canon`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1439:5
+     |
+1439 |     pub(crate) y_canon: YCanonicity,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `NoteCommitConfig::y_canon` is reachable at visibility `pub(crate)`
+     |
+note: but type `note_commit::YCanonicity` is only usable at visibility `pub(self)`
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit/note_commit.rs:1268:1
+     |
+1268 | struct YCanonicity {
+     | ^^^^^^^^^^^^^^^^^^
+
+warning: `orchard` (lib) generated 17 warnings (run `cargo fix --lib -p orchard` to apply 1 suggestion)
+warning: unused import: `crate::transaction::components::issuance`
+  --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/transaction/mod.rs:53:5
+   |
+53 |     crate::transaction::components::issuance,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `ORCHARD_SIGHASH_INFO_V0` is never used
+  --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/sighash_versioning.rs:13:7
+   |
+13 | const ORCHARD_SIGHASH_INFO_V0: [u8; 1] = [0];
+   |       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `orchard_sighash_kind_to_info` is never used
+  --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/sighash_versioning.rs:17:15
+   |
+17 | pub(crate) fn orchard_sighash_kind_to_info(kind: &OrchardSighashKind) -> Vec<u8> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `orchard_sighash_kind_from_info` is never used
+  --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/sighash_versioning.rs:25:15
+   |
+25 | pub(crate) fn orchard_sighash_kind_from_info(bytes: &[u8]) -> Option<OrchardSighashKind> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `read_asset` is never used
+   --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/transaction/components/issuance.rs:127:15
+    |
+127 | pub(crate) fn read_asset<R: Read>(reader: &mut R) -> io::Result<AssetBase> {
+    |               ^^^^^^^^^^
+
+warning: `zcash_primitives` (lib) generated 5 warnings (run `cargo fix --lib -p zcash_primitives` to apply 1 suggestion)
+    Checking rlz v0.1.0 (/Users/hanh/projects/zkool2/rust)
+error: expected expression, found `,`
+   --> rust/src/warp/sync.rs:128:21
+    |
+128 |                     , orchard::NoteVersion::V2)
+    |                     ^ expected expression
+
+error: expected expression, found `,`
+   --> rust/src/warp/sync/shielded/orchard.rs:156:17
+    |
+156 |                 , orchard::NoteVersion::V2)
+    |                 ^ expected expression
+
+error[E0432]: unresolved import `orchard::primitives::OrchardDomain`
+ --> rust/src/memo.rs:2:59
+  |
+2 | use orchard::{keys::Scope, note::ExtractedNoteCommitment, primitives::OrchardDomain, flavor::{OrchardVanilla, OrchardZSA}};
+  |                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^ no `OrchardDomain` in `primitives`
+
+error[E0432]: unresolved import `orchard::primitives::OrchardDomain`
+ --> rust/src/mempool.rs:5:28
+  |
+5 | use orchard::{keys::Scope, primitives::OrchardDomain, flavor::{OrchardVanilla, OrchardZSA}};
+  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^ no `OrchardDomain` in `primitives`
+
+error[E0432]: unresolved imports `orchard::primitives::CompactAction`, `orchard::primitives::OrchardDomain`
+  --> rust/src/warp/decrypter.rs:21:18
+   |
+21 |     primitives::{CompactAction, OrchardDomain},
+   |                  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^ no `OrchardDomain` in `primitives`
+   |                  |
+   |                  no `CompactAction` in `primitives`
+
+warning: unused import: `Network`
+ --> rust/src/api/zsa.rs:7:30
+  |
+7 | use crate::api::coin::{Coin, Network};
+  |                              ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `tracing::debug`
+ --> rust/src/warp/decrypter.rs:8:5
+  |
+8 | use tracing::debug;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `value::NoteValue`
+  --> rust/src/warp/sync.rs:17:5
+   |
+17 |     value::NoteValue,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `value::NoteValue`
+ --> rust/src/warp/sync/shielded/orchard.rs:6:5
+  |
+6 |     value::NoteValue,
+  |     ^^^^^^^^^^^^^^^^
+
+warning: use of deprecated type alias `zcash_protocol::ShieldedProtocol`: Use `ShieldedPool` instead.
+  --> rust/src/contacts.rs:16:32
+   |
+16 | use zcash_protocol::{PoolType, ShieldedProtocol};
+   |                                ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated type alias `zcash_protocol::ShieldedProtocol`: Use `ShieldedPool` instead.
+  --> rust/src/contacts.rs:84:55
+   |
+84 |     } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedProtocol::Sapling)) {
+   |                                                       ^^^^^^^^^^^^^^^^
+
+warning: use of deprecated type alias `zcash_protocol::ShieldedProtocol`: Use `ShieldedPool` instead.
+  --> rust/src/contacts.rs:86:55
+   |
+86 |     } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedProtocol::Orchard)) {
+   |                                                       ^^^^^^^^^^^^^^^^
+
+warning: use of deprecated type alias `zcash_protocol::ShieldedProtocol`: Use `ShieldedPool` instead.
+  --> rust/src/pay/pool.rs:73:29
+   |
+73 |             zcash_protocol::ShieldedProtocol::Sapling,
+   |                             ^^^^^^^^^^^^^^^^
+
+warning: use of deprecated type alias `zcash_protocol::ShieldedProtocol`: Use `ShieldedPool` instead.
+  --> rust/src/pay/pool.rs:78:29
+   |
+78 |             zcash_protocol::ShieldedProtocol::Orchard,
+   |                             ^^^^^^^^^^^^^^^^
+
+error[E0277]: the trait bound `orchard::pczt::ParseError: From<OrchardParseError>` is not satisfied
+   --> rust/src/frost/sign.rs:456:18
+    |
+456 |                 .sign_orchard_with(|_pczt, bundle, _| {
+    |                  ^^^^^^^^^^^^^^^^^ the trait `From<OrchardParseError>` is not implemented for `orchard::pczt::ParseError`
+    |
+note: required by a bound in `pczt::roles::low_level_signer::Signer::sign_orchard_with`
+   --> /Users/hanh/projects/zsa/lrz/pczt/src/roles/low_level_signer/mod.rs:44:12
+    |
+ 42 |     pub fn sign_orchard_with<E, F>(self, f: F) -> Result<Self, E>
+    |            ----------------- required by a bound in this associated function
+ 43 |     where
+ 44 |         E: From<OrchardParseError>,
+    |            ^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Signer::sign_orchard_with`
+
+error[E0277]: the trait bound `orchard::pczt::ParseError: From<OrchardParseError>` is not satisfied
+   --> rust/src/frost/sign.rs:672:14
+    |
+672 |             .sign_orchard_with(|_pczt, bundle, _| {
+    |              ^^^^^^^^^^^^^^^^^ the trait `From<OrchardParseError>` is not implemented for `orchard::pczt::ParseError`
+    |
+note: required by a bound in `pczt::roles::low_level_signer::Signer::sign_orchard_with`
+   --> /Users/hanh/projects/zsa/lrz/pczt/src/roles/low_level_signer/mod.rs:44:12
+    |
+ 42 |     pub fn sign_orchard_with<E, F>(self, f: F) -> Result<Self, E>
+    |            ----------------- required by a bound in this associated function
+ 43 |     where
+ 44 |         E: From<OrchardParseError>,
+    |            ^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Signer::sign_orchard_with`
+
+error[E0308]: mismatched types
+   --> rust/src/memo.rs:319:13
+    |
+318 |         match bundle {
+    |               ------ this expression has type `&orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+319 |             OrchardBundle::OrchardVanilla(b) => process_orchard_memo!(b, OrchardVanilla),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Bundle<Authorized, ZatBalance>`, found `OrchardBundle<_>`
+    |
+    = note: expected struct `orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+                 found enum `OrchardBundle<_>`
+
+error[E0308]: mismatched types
+   --> rust/src/memo.rs:320:13
+    |
+318 |         match bundle {
+    |               ------ this expression has type `&orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+319 |             OrchardBundle::OrchardVanilla(b) => process_orchard_memo!(b, OrchardVanilla),
+320 |             OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Bundle<Authorized, ZatBalance>`, found `OrchardBundle<_>`
+    |
+    = note: expected struct `orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+                 found enum `OrchardBundle<_>`
+
+error[E0599]: no method named `actions` found for reference `&orchard::Bundle<_, ZatBalance, OrchardZSADomain>` in the current scope
+   --> rust/src/memo.rs:242:35
+    |
+242 |             for _action in bundle.actions().iter() {
+    |                                   ^^^^^^^ private field, not a method
+...
+320 |             OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
+    |                                             ------------------------------------ in this macro invocation
+    |
+    = note: this error originates in the macro `process_orchard_memo` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no method named `actions` found for reference `&orchard::Bundle<_, ZatBalance, OrchardZSADomain>` in the current scope
+   --> rust/src/memo.rs:250:46
+    |
+250 |                 for (vout, action) in bundle.actions().iter().enumerate() {
+    |                                              ^^^^^^^ private field, not a method
+...
+320 |             OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
+    |                                             ------------------------------------ in this macro invocation
+    |
+    = note: this error originates in the macro `process_orchard_memo` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> rust/src/memo.rs:253:50
+    |
+253 |                     if let Some((note, _address, memo_bytes)) =
+    |                                                  ^^^^^^^^^^ doesn't have a size known at compile-time
+...
+320 |             OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
+    |                                             ------------------------------------ in this macro invocation
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+    = note: all local variables must have a statically known size
+    = note: this error originates in the macro `process_orchard_memo` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> rust/src/memo.rs:278:56
+    |
+278 |                     } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
+    |                                                        ^^^^^^^^^^ doesn't have a size known at compile-time
+...
+320 |             OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
+    |                                             ------------------------------------ in this macro invocation
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+    = note: all local variables must have a statically known size
+    = note: this error originates in the macro `process_orchard_memo` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+   --> rust/src/mempool.rs:340:13
+    |
+339 |         match obundle {
+    |               ------- this expression has type `&orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+340 |             OrchardBundle::OrchardVanilla(b) => process_orchard_bundle!(b, OrchardVanilla),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Bundle<Authorized, ZatBalance>`, found `OrchardBundle<_>`
+    |
+    = note: expected struct `orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+                 found enum `OrchardBundle<_>`
+
+error[E0308]: mismatched types
+   --> rust/src/mempool.rs:341:13
+    |
+339 |         match obundle {
+    |               ------- this expression has type `&orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+340 |             OrchardBundle::OrchardVanilla(b) => process_orchard_bundle!(b, OrchardVanilla),
+341 |             OrchardBundle::OrchardZSA(b) => process_orchard_bundle!(b, OrchardZSA),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Bundle<Authorized, ZatBalance>`, found `OrchardBundle<_>`
+    |
+    = note: expected struct `orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+                 found enum `OrchardBundle<_>`
+
+error[E0599]: no method named `actions` found for reference `&orchard::Bundle<_, ZatBalance, OrchardZSADomain>` in the current scope
+   --> rust/src/mempool.rs:278:29
+    |
+278 |             for v in bundle.actions().iter() {
+    |                             ^^^^^^^ private field, not a method
+...
+341 |             OrchardBundle::OrchardZSA(b) => process_orchard_bundle!(b, OrchardZSA),
+    |                                             -------------------------------------- in this macro invocation
+    |
+    = note: this error originates in the macro `process_orchard_bundle` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> rust/src/mempool.rs:308:55
+    |
+308 |                         if let Some((note, recipient, memo_bytes)) =
+    |                                                       ^^^^^^^^^^ doesn't have a size known at compile-time
+...
+341 |             OrchardBundle::OrchardZSA(b) => process_orchard_bundle!(b, OrchardZSA),
+    |                                             -------------------------------------- in this macro invocation
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+    = note: all local variables must have a statically known size
+    = note: this error originates in the macro `process_orchard_bundle` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0061]: this method takes 4 arguments but 5 arguments were supplied
+   --> rust/src/pay/plan.rs:898:25
+    |
+898 |                 builder.add_orchard_output::<Infallible>(
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+902 |                     asset_base,
+    |                     ---------- unexpected argument #4 of type `AssetBase`
+    |
+note: method defined here
+   --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/transaction/builder.rs:744:12
+    |
+744 |     pub fn add_orchard_output<FE>(
+    |            ^^^^^^^^^^^^^^^^^^
+help: remove the extra argument
+    |
+901 -                     value,
+902 -                     asset_base,
+901 +                     value,
+    |
+
+error[E0277]: the trait bound `Vec<u8>: From<IssueAuthKey<ZSASchnorr>>` is not satisfied
+   --> rust/src/pay/plan.rs:921:39
+    |
+921 |         let mut zsa = ZsaBuilder::new(info.isk.clone());
+    |                       --------------- ^^^^^^^^^^^^^^^^ the trait `From<IssueAuthKey<ZSASchnorr>>` is not implemented for `Vec<u8>`
+    |                       |
+    |                       required by a bound introduced by this call
+    |
+    = help: `Vec<u8>` implements trait `From<T>`:
+              From<&SupportedAlgorithms>
+              From<&str>
+              From<&zcash_script::Opcode>
+              From<&zcash_script::opcode::PossiblyBad>
+              From<&zcash_script::opcode::PushValue>
+              From<&zcash_script::opcode::push_value::LargeValue>
+              From<ByteString>
+              From<BytesMut>
+            and 11 others
+    = note: required for `IssueAuthKey<ZSASchnorr>` to implement `Into<Vec<u8>>`
+note: required by a bound in `ZsaBuilder::new`
+   --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/transaction/zsa_builder.rs:14:27
+    |
+ 14 |     pub fn new(_isk: impl Into<Vec<u8>>) -> Self {
+    |                           ^^^^^^^^^^^^^ required by this bound in `ZsaBuilder::new`
+help: consider removing this method call, as the receiver has type `IssueAuthKey<ZSASchnorr>` and `IssueAuthKey<ZSASchnorr>: From<IssueAuthKey<ZSASchnorr>>` trivially holds
+    |
+921 -         let mut zsa = ZsaBuilder::new(info.isk.clone());
+921 +         let mut zsa = ZsaBuilder::new(info.isk);
+    |
+
+error[E0061]: this method takes 2 arguments but 3 arguments were supplied
+    --> rust/src/pay/plan.rs:939:21
+     |
+ 939 |     let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
+     |                     ^^^^^^^^^^^^^^                              -------------------------- unexpected argument #3 of type `{closure@rust/src/pay/plan.rs:939:65: 939:85}`
+     |
+note: method defined here
+    --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/transaction/builder.rs:1371:12
+     |
+1371 |     pub fn build_for_pczt<R: RngCore + CryptoRng, FR: FeeRule>(
+     |            ^^^^^^^^^^^^^^
+help: remove the extra argument
+     |
+ 939 -     let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
+ 939 +     let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
+     |
+
+error[E0599]: no method named `asset` found for reference `&orchard::pczt::Spend` in the current scope
+    --> rust/src/pay/plan.rs:1029:33
+     |
+1029 |                     (*a.spend().asset(), *a.output().asset())
+     |                                 ^^^^^ method not found in `&orchard::pczt::Spend`
+
+error[E0599]: no method named `asset` found for reference `&orchard::pczt::Output` in the current scope
+    --> rust/src/pay/plan.rs:1029:54
+     |
+1029 |                     (*a.spend().asset(), *a.output().asset())
+     |                                                      ^^^^^ method not found in `&orchard::pczt::Output`
+
+error[E0277]: the trait bound `Vec<u8>: From<IssueAuthKey<ZSASchnorr>>` is not satisfied
+    --> rust/src/pay/plan.rs:1094:47
+     |
+1094 |         let mut zsa_builder = ZsaBuilder::new(info.isk.clone());
+     |                               --------------- ^^^^^^^^^^^^^^^^ the trait `From<IssueAuthKey<ZSASchnorr>>` is not implemented for `Vec<u8>`
+     |                               |
+     |                               required by a bound introduced by this call
+     |
+     = help: `Vec<u8>` implements trait `From<T>`:
+               From<&SupportedAlgorithms>
+               From<&str>
+               From<&zcash_script::Opcode>
+               From<&zcash_script::opcode::PossiblyBad>
+               From<&zcash_script::opcode::PushValue>
+               From<&zcash_script::opcode::push_value::LargeValue>
+               From<ByteString>
+               From<BytesMut>
+             and 11 others
+     = note: required for `IssueAuthKey<ZSASchnorr>` to implement `Into<Vec<u8>>`
+note: required by a bound in `ZsaBuilder::new`
+    --> /Users/hanh/projects/zsa/lrz/zcash_primitives/src/transaction/zsa_builder.rs:14:27
+     |
+  14 |     pub fn new(_isk: impl Into<Vec<u8>>) -> Self {
+     |                           ^^^^^^^^^^^^^ required by this bound in `ZsaBuilder::new`
+help: consider removing this method call, as the receiver has type `IssueAuthKey<ZSASchnorr>` and `IssueAuthKey<ZSASchnorr>: From<IssueAuthKey<ZSASchnorr>>` trivially holds
+     |
+1094 -         let mut zsa_builder = ZsaBuilder::new(info.isk.clone());
+1094 +         let mut zsa_builder = ZsaBuilder::new(info.isk);
+     |
+
+error[E0433]: cannot find type `Issuer` in this scope
+    --> rust/src/pay/plan.rs:1109:9
+     |
+1109 |         Issuer::new(pczt)
+     |         ^^^^^^ use of undeclared type `Issuer`
+
+error[E0433]: cannot find type `Issuer` in this scope
+    --> rust/src/pay/plan.rs:1121:9
+     |
+1121 |         Issuer::new(pczt)
+     |         ^^^^^^ use of undeclared type `Issuer`
+
+error[E0599]: no method named `num_split_spends` found for reference `&BundleMetadata` in the current scope
+    --> rust/src/pay/plan.rs:1128:68
+     |
+1128 |     let orchard_split_spend_indices: Vec<usize> = (0..orchard_meta.num_split_spends())
+     |                                                                    ^^^^^^^^^^^^^^^^ method not found in `&BundleMetadata`
+
+error[E0599]: no method named `split_spend_action_index` found for reference `&BundleMetadata` in the current scope
+    --> rust/src/pay/plan.rs:1129:31
+     |
+1129 |         .map(|n| orchard_meta.split_spend_action_index(n).unwrap())
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `spend_action_index` with a similar name
+     |
+1129 -         .map(|n| orchard_meta.split_spend_action_index(n).unwrap())
+1129 +         .map(|n| orchard_meta.spend_action_index(n).unwrap())
+     |
+
+error[E0308]: mismatched types
+    --> rust/src/pay/plan.rs:1338:15
+     |
+1338 |         pczt: pczt.serialize(),
+     |               ^^^^^^^^^^^^^^^^ expected `Vec<u8>`, found `Result<Vec<u8>, EncodingError>`
+     |
+     = note: expected struct `Vec<_>`
+                  found enum `std::result::Result<Vec<_>, EncodingError>`
+help: use the `?` operator to extract the `std::result::Result<Vec<u8>, EncodingError>` value, propagating a `Result::Err` value to the caller
+     |
+1338 |         pczt: pczt.serialize()?,
+     |                               +
+
+error[E0308]: mismatched types
+   --> rust/src/net/zebra.rs:394:17
+    |
+393 |             match orchard_bundle {
+    |                   -------------- this expression has type `&orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+394 |                 OrchardBundle::OrchardVanilla(b) => push_actions!(b, actions),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Bundle<Authorized, ZatBalance>`, found `OrchardBundle<_>`
+    |
+    = note: expected struct `orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+                 found enum `OrchardBundle<_>`
+
+error[E0308]: mismatched types
+   --> rust/src/net/zebra.rs:395:17
+    |
+393 |             match orchard_bundle {
+    |                   -------------- this expression has type `&orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+394 |                 OrchardBundle::OrchardVanilla(b) => push_actions!(b, actions),
+395 |                 OrchardBundle::OrchardZSA(b) => push_actions!(b, actions),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Bundle<Authorized, ZatBalance>`, found `OrchardBundle<_>`
+    |
+    = note: expected struct `orchard::Bundle<orchard::bundle::Authorized, ZatBalance>`
+                 found enum `OrchardBundle<_>`
+
+error[E0599]: no method named `actions` found for reference `&orchard::Bundle<_, ZatBalance, OrchardZSADomain>` in the current scope
+   --> rust/src/net/zebra.rs:382:42
+    |
+382 |                     for action in bundle.actions().iter() {
+    |                                          ^^^^^^^ private field, not a method
+...
+395 |                 OrchardBundle::OrchardZSA(b) => push_actions!(b, actions),
+    |                                                 ------------------------- in this macro invocation
+    |
+    = note: this error originates in the macro `push_actions` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0107]: associated function takes 0 generic arguments but 1 generic argument was supplied
+    --> rust/src/pay/plan.rs:1653:84
+     |
+1653 | pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>());
+     |                                                                                    ^^^^^------------------ help: remove the unnecessary generics
+     |                                                                                    |
+     |                                                                                    expected 0 generic arguments
+     |
+note: associated function defined here, with 0 generic parameters
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:1286:12
+     |
+1286 |     pub fn build(circuit_version: OrchardCircuitVersion) -> Self {
+     |            ^^^^^
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+    --> rust/src/pay/plan.rs:1653:72
+     |
+1653 | pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>());
+     |                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `OrchardCircuitVersion` is missing
+     |
+note: associated function defined here
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:1286:12
+     |
+1286 |     pub fn build(circuit_version: OrchardCircuitVersion) -> Self {
+     |            ^^^^^
+help: provide the argument
+     |
+1653 | pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardVanilla>(/* OrchardCircuitVersion */));
+     |                                                                                                            +++++++++++++++++++++++++++
+
+error[E0107]: associated function takes 0 generic arguments but 1 generic argument was supplied
+    --> rust/src/pay/plan.rs:1654:80
+     |
+1654 | pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>());
+     |                                                                                ^^^^^-------------- help: remove the unnecessary generics
+     |                                                                                |
+     |                                                                                expected 0 generic arguments
+     |
+note: associated function defined here, with 0 generic parameters
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:1286:12
+     |
+1286 |     pub fn build(circuit_version: OrchardCircuitVersion) -> Self {
+     |            ^^^^^
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+    --> rust/src/pay/plan.rs:1654:68
+     |
+1654 | pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>());
+     |                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `OrchardCircuitVersion` is missing
+     |
+note: associated function defined here
+    --> /Users/hanh/projects/zsa/orchard_zsa/src/circuit.rs:1286:12
+     |
+1286 |     pub fn build(circuit_version: OrchardCircuitVersion) -> Self {
+     |            ^^^^^
+help: provide the argument
+     |
+1654 | pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build::<OrchardZSA>(/* OrchardCircuitVersion */));
+     |                                                                                                    +++++++++++++++++++++++++++
+
+error[E0308]: mismatched types
+   --> rust/src/warp/decrypter.rs:86:89
+    |
+ 86 |         if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(&pivk, &NoteBytesData(plaintext))
+    |                                            -------------------------------------        ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `&[u8]`, found `&NoteBytesData<52>`
+    |                                            |
+    |                                            arguments to this method are incorrect
+    |
+    = note: expected reference `&[u8]`
+               found reference `&NoteBytesData<52>`
+note: method defined here
+   --> /Users/hanh/projects/zsa/zcash_note_encryption/src/lib.rs:253:8
+    |
+253 |     fn parse_note_plaintext_without_memo_ivk(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some errors have detailed explanations: E0061, E0107, E0277, E0308, E0432, E0433, E0599.
+For more information about an error, try `rustc --explain E0061`.
+warning: `rlz` (lib) generated 9 warnings
+error: could not compile `rlz` (lib) due to 36 previous errors; 9 warnings emitted
