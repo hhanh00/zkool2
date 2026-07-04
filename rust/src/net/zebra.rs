@@ -18,7 +18,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_rustls::TlsConnector;
 use tor_rtcompat::PreferredRuntime;
 use webpki_roots::TLS_SERVER_ROOTS;
-use zcash_primitives::{block::BlockHeader, transaction::{OrchardBundle, Transaction}};
+use zcash_primitives::{block::BlockHeader, transaction::Transaction};
 
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;

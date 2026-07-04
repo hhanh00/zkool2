@@ -1,6 +1,6 @@
 use super::error::{Error, Result};
 use zcash_address::ZcashAddress;
-use zcash_protocol::PoolType;
+use zcash_protocol::{PoolType, ShieldedPool};
 
 // A bit field to represent the pools that a transaction can use
 // in a single byte. The bits are as follows:
@@ -70,12 +70,12 @@ impl PoolMask {
             pool_mask |= 1;
         }
         if address.can_receive_as(PoolType::Shielded(
-            zcash_protocol::ShieldedProtocol::Sapling,
+            ShieldedPool::Sapling,
         )) {
             pool_mask |= 2;
         }
         if address.can_receive_as(PoolType::Shielded(
-            zcash_protocol::ShieldedProtocol::Orchard,
+            ShieldedPool::Orchard,
         )) {
             pool_mask |= 4;
         }

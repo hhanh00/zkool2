@@ -6,10 +6,8 @@ use bip32::PrivateKey;
 use itertools::Itertools;
 use orchard::{
     circuit::ProvingKey,
-    flavor::OrchardVanilla, /* ZSA-TODO: OrchardZSA */
     keys::{Scope, SpendAuthorizingKey},
     note::{AssetBase, ExtractedNoteCommitment},
-    value::NoteValue,
     Address,
 };
 use pczt::{
@@ -32,7 +30,6 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder},
     fees::zip317::FeeRule,
-    zsa_builder::ZsaBuilder,
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
@@ -884,7 +881,7 @@ pub async fn plan_transaction(
                     &recipient.address,
                     to_zec(value.into())
                 );
-                let asset_base = if r.asset_base == zec_key {
+                let _asset_base = if r.asset_base == zec_key {
                     AssetBase::zatoshi()
                 } else {
                     AssetBase::from_bytes(&r.asset_base.clone().try_into().unwrap()).unwrap()
