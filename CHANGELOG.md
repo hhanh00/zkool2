@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.1...zkool-v6.24.0-rc.2) (2026-07-04)
+
+
+### Features
+
+* switch to git-based ZSA dependencies, replace nu7 hacks with orchard_mode() ([6f97e1f](https://github.com/hhanh00/zkool2/commit/6f97e1fc563bd08248da5cca656643c6f08b4f13))
+
 ## [6.24.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc...zkool-v6.24.0-rc.1) (2026-07-02)
 
 
