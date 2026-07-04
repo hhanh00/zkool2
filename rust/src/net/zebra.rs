@@ -390,10 +390,8 @@ pub fn parse_block(
                     }
                 }};
             }
-            match orchard_bundle {
-                OrchardBundle::OrchardVanilla(b) => push_actions!(b, actions),
-                OrchardBundle::OrchardZSA(b) => push_actions!(b, actions),
-            }
+            // ZSA-TODO: was OrchardBundle::OrchardVanilla(b) match
+            push_actions!(orchard_bundle, actions);
         }
 
         // Extract ZSA issuance data from the issue bundle.

@@ -125,7 +125,7 @@ async fn preprocess(
                         asset_base,
                         rho,
                         rseed,
-                    )
+                    orchard::NoteVersion::V2)
                     .unwrap();
                     let cmx =
                         ExtractedNoteCommitment::from(note.commitment()).to_bytes();

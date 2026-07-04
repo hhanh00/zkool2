@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, primitives::OrchardDomain, flavor::{OrchardVanilla, OrchardZSA}};
+use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain, flavor::OrchardVanilla /* ZSA-TODO: OrchardZSA */};
 use zcash_primitives::transaction::OrchardBundle;
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
@@ -248,7 +248,7 @@ pub async fn decrypt_memo(
                 let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
                 let ovk = ovk.to_ovk(Scope::External);
                 for (vout, action) in bundle.actions().iter().enumerate() {
-                    let domain = OrchardDomain::<$flavor>::for_action(action);
+                    let domain = OrchardDomain::for_action(action);
 
                     if let Some((note, _address, memo_bytes)) =
                         try_note_decryption(&domain, &pivk, action)
@@ -315,10 +315,8 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.orchard_bundle() {
-        match bundle {
-            OrchardBundle::OrchardVanilla(b) => process_orchard_memo!(b, OrchardVanilla),
-            OrchardBundle::OrchardZSA(b) => process_orchard_memo!(b, OrchardZSA),
-        }
+        // ZSA-TODO: was OrchardBundle::OrchardVanilla(b) match
+        process_orchard_memo!(bundle, OrchardVanilla);
     }
 
     let fee = fee_manager.fee();

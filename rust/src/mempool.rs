@@ -2,7 +2,7 @@ use crate::api::coin::Network;
 use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::{keys::Scope, primitives::OrchardDomain, flavor::{OrchardVanilla, OrchardZSA}};
+use orchard::{keys::Scope, note_encryption::OrchardDomain, flavor::OrchardVanilla /* ZSA-TODO: OrchardZSA */};
 use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use sapling_crypto::{
     keys::PreparedIncomingViewingKey,
@@ -300,7 +300,7 @@ pub async fn decode_raw_transaction(
                 .await?;
                 notes.extend(spent_amount);
 
-                let domain = OrchardDomain::<$flavor>::for_action(v);
+                let domain = OrchardDomain::for_action(v);
                 for (account, name, fvk) in okeys.iter() {
                     for scope in [Scope::External, Scope::Internal] {
                         let ivk = fvk.to_ivk(scope);
@@ -336,10 +336,8 @@ pub async fn decode_raw_transaction(
     }
 
     if let Some(obundle) = tx_data.orchard_bundle() {
-        match obundle {
-            OrchardBundle::OrchardVanilla(b) => process_orchard_bundle!(b, OrchardVanilla),
-            OrchardBundle::OrchardZSA(b) => process_orchard_bundle!(b, OrchardZSA),
-        }
+        // ZSA-TODO: was OrchardBundle::OrchardVanilla(b) match
+        process_orchard_bundle!(obundle, OrchardVanilla);
     }
 
     Ok(notes)

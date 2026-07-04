@@ -14,7 +14,7 @@ use tokio::sync::{Mutex, OnceCell};
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Uri};
 use tor_rtcompat::PreferredRuntime;
 use tower::service_fn;
-use zcash_protocol::consensus::BlockHeight;
+use zcash_protocol::consensus::{BlockHeight, OrchardMode};
 use zcash_protocol::local_consensus::LocalNetwork;
 
 use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addresses, put_prop};
@@ -87,11 +87,10 @@ impl Coin {
             0 => Network::Main,
             1 => Network::Test,
             2 => {
-                #[cfg(zcash_unstable = "nu7")]
-                let nu7 = if self.db_filepath.to_lowercase().contains("zsa") {
-                    Some(BlockHeight::from_u32(1))
+                let orchard_mode = if self.db_filepath.to_lowercase().contains("zsa") {
+                    OrchardMode::Zsa
                 } else {
-                    None
+                    OrchardMode::Normal
                 };
                 Network::Regtest(LocalNetwork {
                     overwinter: Some(BlockHeight::from_u32(1)),
@@ -103,8 +102,10 @@ impl Coin {
                     nu6: Some(BlockHeight::from_u32(1)),
                     nu6_1: Some(BlockHeight::from_u32(1)),
                     nu6_2: Some(BlockHeight::from_u32(1)),
+                    nu6_3: Some(BlockHeight::from_u32(1)),
                     #[cfg(zcash_unstable = "nu7")]
-                    nu7,
+                    nu7: Some(BlockHeight::from_u32(1)),
+                    orchard_mode,
                 })
             }
             _ => Network::Main,

@@ -457,7 +457,7 @@ pub async fn do_sign_impl(
                     let a = &bundle.actions()[action_index];
                     let spend = a.spend();
                     alpha = spend.alpha().expect("Failed to get alpha");
-                    Ok::<_, orchard::pczt::ParseError>(())
+                    Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
                 })
                 .unwrap();
 
@@ -681,7 +681,7 @@ pub async fn do_sign_impl(
                     // How do we update the spend_auth_sig?
                     // a[0].spend().spend_auth_sig = Some(signature.clone());
                 }
-                Ok::<_, orchard::pczt::ParseError>(())
+                Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
             })
             .unwrap();
         let pczt = signer.finish();

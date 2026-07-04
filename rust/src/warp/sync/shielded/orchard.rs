@@ -153,7 +153,7 @@ impl ShieldedProtocol for OrchardProtocol {
                     asset_base_val,
                     rho,
                     rseed,
-                )
+                orchard::NoteVersion::V2)
                 .unwrap();
 
                 let dbn = types::Note {
