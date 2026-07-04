@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.2...zkool-v6.24.0-rc.3) (2026-07-04)
+
+
+### Bug Fixes
+
+* revert accidental macOS file changes since 61ccf03f ([df28782](https://github.com/hhanh00/zkool2/commit/df287829cf03e864f453f3cc8d06e59ca51c3c6a))
+
 ## [6.24.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.1...zkool-v6.24.0-rc.2) (2026-07-04)
 
 
