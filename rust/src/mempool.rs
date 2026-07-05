@@ -336,10 +336,8 @@ pub async fn decode_raw_transaction(
     }
 
     if let Some(obundle) = tx_data.orchard_bundle() {
-        // ZSA-TODO: was OrchardBundle::OrchardVanilla(b) match
         process_orchard_bundle!(obundle, OrchardVanilla);
     }
-
     Ok(notes)
 }
 
