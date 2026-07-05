@@ -41,8 +41,7 @@ runs:
     - name: Build
       shell: bash
       run: |
-        # TODO: re-enable ledger after pczt API compat is restored
-        # ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
+        ./misc/mkcargokit_options.sh ledger > rust/cargokit.yaml
         flutter build macos
     - name: Notarization
       shell: bash
