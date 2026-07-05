@@ -69,7 +69,6 @@ pub struct PcztPackage {
     pub n_spends: [usize; 3],
     pub sapling_indices: Vec<usize>,
     pub orchard_indices: Vec<usize>,
-    pub orchard_split_spend_indices: Vec<usize>,
     pub can_sign: bool,
     pub can_broadcast: bool,
     pub price: Option<f64>,
