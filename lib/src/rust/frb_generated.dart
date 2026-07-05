@@ -6456,19 +6456,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PcztPackage dco_decode_pczt_package(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return PcztPackage(
       pczt: dco_decode_list_prim_u_8_strict(arr[0]),
       nSpends: dco_decode_usize_array_3(arr[1]),
       saplingIndices: dco_decode_list_prim_usize_strict(arr[2]),
       orchardIndices: dco_decode_list_prim_usize_strict(arr[3]),
-      orchardSplitSpendIndices: dco_decode_list_prim_usize_strict(arr[4]),
-      canSign: dco_decode_bool(arr[5]),
-      canBroadcast: dco_decode_bool(arr[6]),
-      price: dco_decode_opt_box_autoadd_f_64(arr[7]),
-      category: dco_decode_opt_box_autoadd_u_32(arr[8]),
-      isIssuance: dco_decode_bool(arr[9]),
+      canSign: dco_decode_bool(arr[4]),
+      canBroadcast: dco_decode_bool(arr[5]),
+      price: dco_decode_opt_box_autoadd_f_64(arr[6]),
+      category: dco_decode_opt_box_autoadd_u_32(arr[7]),
+      isIssuance: dco_decode_bool(arr[8]),
     );
   }
 
@@ -8195,8 +8194,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_nSpends = sse_decode_usize_array_3(deserializer);
     var var_saplingIndices = sse_decode_list_prim_usize_strict(deserializer);
     var var_orchardIndices = sse_decode_list_prim_usize_strict(deserializer);
-    var var_orchardSplitSpendIndices =
-        sse_decode_list_prim_usize_strict(deserializer);
     var var_canSign = sse_decode_bool(deserializer);
     var var_canBroadcast = sse_decode_bool(deserializer);
     var var_price = sse_decode_opt_box_autoadd_f_64(deserializer);
@@ -8207,7 +8204,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         nSpends: var_nSpends,
         saplingIndices: var_saplingIndices,
         orchardIndices: var_orchardIndices,
-        orchardSplitSpendIndices: var_orchardSplitSpendIndices,
         canSign: var_canSign,
         canBroadcast: var_canBroadcast,
         price: var_price,
@@ -9822,8 +9818,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_usize_array_3(self.nSpends, serializer);
     sse_encode_list_prim_usize_strict(self.saplingIndices, serializer);
     sse_encode_list_prim_usize_strict(self.orchardIndices, serializer);
-    sse_encode_list_prim_usize_strict(
-        self.orchardSplitSpendIndices, serializer);
     sse_encode_bool(self.canSign, serializer);
     sse_encode_bool(self.canBroadcast, serializer);
     sse_encode_opt_box_autoadd_f_64(self.price, serializer);

@@ -11,15 +11,15 @@ sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "869
 zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "cb10e9f3516e76d1a18e4e037243ef9c237cb415" }
 
 # -- lrz fork with ZSA support --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c1f8dc68" }
+pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
+zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "e8663646" }
 
 # -- remaining transitive deps --
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
