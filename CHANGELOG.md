@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.5...zkool-v6.24.0-rc.6) (2026-07-05)
+
+
+### Bug Fixes
+
+* rewrite ledger builder.rs for new pczt API with in-place Updater ([cbce57e](https://github.com/hhanh00/zkool2/commit/cbce57ed5c01cbf9f191a5363c5cee5065421515))
+
 ## [6.24.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.4...zkool-v6.24.0-rc.5) (2026-07-05)
 
 
