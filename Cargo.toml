@@ -7,7 +7,7 @@ resolver = "2"
 [patch.crates-io]
 # -- ZSA support branches --
 orchard = { git = "https://github.com/zcash-shielded-assets/orchard", rev = "8d0e5c4" }
-sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "869b1701aa876905f2b8e979a9cae38fe41d08ee" }
+sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "bf29f9732eeaa417b63982aa8001acb542343b83" }
 zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "cb10e9f3516e76d1a18e4e037243ef9c237cb415" }
 
 # -- lrz fork with ZSA support --
