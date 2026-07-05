@@ -8,11 +8,12 @@ use orchard::{
     circuit::ProvingKey,
     keys::{Scope, SpendAuthorizingKey},
     note::{AssetBase, ExtractedNoteCommitment},
+    value::NoteValue,
     Address,
 };
 use pczt::{
     roles::{
-        creator::Creator, io_finalizer::IoFinalizer, /* ZSA-TODO: issuer::Issuer */ prover::Prover,
+        creator::Creator, io_finalizer::IoFinalizer, issuer::Issuer, prover::Prover,
         signer::Signer, spend_finalizer::SpendFinalizer,
         tx_extractor::TransactionExtractor, updater::Updater,
     },
@@ -68,6 +69,8 @@ use crate::{
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
     Client,
 };
+
+use zcash_primitives::transaction::zsa_builder::ZsaBuilder;
 
 pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
     let zaddress = ZcashAddress::from_str(address)?;
@@ -881,7 +884,7 @@ pub async fn plan_transaction(
                     &recipient.address,
                     to_zec(value.into())
                 );
-                let _asset_base = if r.asset_base == zec_key {
+                let asset_base = if r.asset_base == zec_key {
                     AssetBase::zatoshi()
                 } else {
                     AssetBase::from_bytes(&r.asset_base.clone().try_into().unwrap()).unwrap()
@@ -892,11 +895,11 @@ pub async fn plan_transaction(
                     to_zec(value.into()),
                     hex::encode(&r.asset_base)
                 );
-                // ZSA-TODO: pass asset_base
                 builder.add_orchard_output::<Infallible>(
                     ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
                     to,
                     value,
+                    asset_base,
                     memo,
                 )?;
             }
@@ -907,12 +910,31 @@ pub async fn plan_transaction(
     info!("Building");
     event!(Level::INFO, "Preparing PCZT");
 
-    // ZSA-TODO: ZsaBuilder attachment (commented — not yet implemented)
+    // Attach ZsaBuilder before build_for_pczt for fee computation (ZIP-317)
+    if let Some(info) = issuance {
+        let oaddress = ovk
+            .as_ref()
+            .ok_or_else(|| anyhow!("No orchard key for issuance"))?
+            .address_at(dindex, Scope::External);
+        let mut zsa = ZsaBuilder::new(info.isk.clone());
+        zsa.add_issue_output(
+            info.desc_hash,
+            oaddress,
+            NoteValue::from_raw(info.amount),
+            info.first_issuance,
+            &mut OsRng,
+        )
+        .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
+        if info.finalize {
+            zsa.finalize_asset(&info.desc_hash)
+                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
+        }
+        builder.set_zsa_builder(zsa);
+    }
 
     // we pass false to the fee rule callback because Zebra does not track new ZSA issuance and does not
     // charge the CREATION_COST
-    // ZSA-TODO: pass is_new_asset callback
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard())?;
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
 
@@ -1061,16 +1083,45 @@ pub async fn plan_transaction(
 
     let pczt = updater.finish();
 
-    // ZSA-TODO: Issuer phase 1 (commented — not yet implemented)
+    // Issuer phase 1: build the AwaitingSighash issue bundle
+    let pczt = if let Some(info) = issuance {
+        let oaddress = ovk
+            .as_ref()
+            .ok_or_else(|| anyhow!("No orchard key for issuance"))?
+            .address_at(dindex, Scope::External);
+        let mut zsa_builder = ZsaBuilder::new(info.isk.clone());
+        zsa_builder
+            .add_issue_output(
+                info.desc_hash,
+                oaddress,
+                NoteValue::from_raw(info.amount),
+                info.first_issuance,
+                &mut OsRng,
+            )
+            .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
+        if info.finalize {
+            zsa_builder
+                .finalize_asset(&info.desc_hash)
+                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
+        }
+        Issuer::new(pczt)
+            .build_awaiting_sighash(zsa_builder, OsRng)
+            .map_err(|e| anyhow!("Issuer (phase 1) failed: {e:?}"))?
+    } else {
+        pczt
+    };
 
     let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
     info!("IO Finalized");
 
-    // ZSA-TODO: Issuer phase 2 (commented — not yet implemented)
-
-    let orchard_split_spend_indices: Vec<usize> = (0..orchard_meta.num_split_spends())
-        .map(|n| orchard_meta.split_spend_action_index(n).unwrap())
-        .collect();
+    // Issuer phase 2: sign the issue bundle
+    let pczt = if let Some(info) = issuance {
+        Issuer::new(pczt)
+            .sign(&info.isk)
+            .map_err(|e| anyhow!("Issuer (phase 2/sign) failed: {e:?}"))?
+    } else {
+        pczt
+    };
 
     let pczt_package = PcztPackage {
         pczt: pczt.serialize().unwrap(),
@@ -1081,7 +1132,6 @@ pub async fn plan_transaction(
         orchard_indices: (0..n_spends[2])
             .map(|n| orchard_meta.spend_action_index(n).unwrap())
             .collect(),
-        orchard_split_spend_indices,
         can_sign,
         can_broadcast: false,
         price,
@@ -1121,7 +1171,6 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
-        orchard_split_spend_indices,
         price,
         category,
         is_issuance,
@@ -1252,13 +1301,6 @@ pub async fn sign_transaction(
         };
         signer.sign_orchard(*bundle_index, osak).unwrap();
     }
-    for (index, bundle_index) in orchard_split_spend_indices.iter().enumerate() {
-        info!("signing orchard split-spend {index}");
-        let Some(osak) = osak.as_ref() else {
-            return Err(Error::NoSigningKey.into());
-        };
-        signer.sign_orchard(*bundle_index, osak).unwrap();
-    }
     let pczt = signer.finish();
 
     span.in_scope(|| {
@@ -1282,7 +1324,6 @@ pub async fn sign_transaction(
         n_spends: *n_spends,
         sapling_indices: sapling_indices.clone(),
         orchard_indices: orchard_indices.clone(),
-        orchard_split_spend_indices: orchard_split_spend_indices.clone(),
         can_sign: true,
         can_broadcast: true,
         price: *price,

@@ -26,7 +26,7 @@ use sapling_crypto::{
     },
     SaplingIvk,
 };
-use zcash_note_encryption::EphemeralKeyBytes;
+use zcash_note_encryption::{note_bytes::{NoteBytes, NoteBytesData}, EphemeralKeyBytes};
 
 const COMPACT_NOTE_SIZE: usize = 52;
 
@@ -140,11 +140,10 @@ pub fn try_orchard_decrypt(
         .update(&ka.to_bytes())
         .update(&ca.ephemeral_key)
         .finalize();
-    let _ciphertext_len = ca.ciphertext.len();
+    let ciphertext_len = ca.ciphertext.len();
     let mut keystream = ChaCha20::new(key.as_ref().into(), [0u8; 12][..].into());
     keystream.seek(64);
 
-/* ZSA-TODO: ZSA decryption path
     // Handle ZSA (84-byte) and vanilla (52-byte) ciphertext sizes
     if ciphertext_len >= 84 {
         // ZSA ciphertext can be > 84 bytes; use a dynamic buffer
@@ -180,23 +179,17 @@ pub fn try_orchard_decrypt(
                 note_ciphertext,
             );
             let d = OrchardDomain::for_compact_action(&cca);
-            let note_plaintext = NoteBytesData::from_slice(&plaintext)
+            let note_plaintext = NoteBytesData::<84>::from_slice(&plaintext[..84])
                 .ok_or_else(|| anyhow::anyhow!("Invalid orchard note plaintext"))?;
             if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(
                 &pivk,
-                &note_plaintext,
+                note_plaintext.as_ref(),
             ) {
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
                 if cmx.to_bytes() == *ca.cmx {
                     // Always 32 bytes: [0u8; 32] for ZEC, non-zero for ZSA
                     let asset_base = note.asset().to_bytes().to_vec();
-                    if is_zsa {
-                        debug!(
-                            "ZSA note: account={account} scope={scope} height={height} value={value} asset={asset:?}",
-                            asset = hex::encode(&asset_base)
-                        );
-                    }
                     let dbn = Note {
                         pool: 2,
                         account,
@@ -218,8 +211,6 @@ pub fn try_orchard_decrypt(
         }
         return Ok(None);
     }
-
-*/ /* ZSA-TODO end */
     // Vanilla (52-byte) path
     let mut plaintext = [0u8; 52];
     plaintext.copy_from_slice(&ca.ciphertext);
