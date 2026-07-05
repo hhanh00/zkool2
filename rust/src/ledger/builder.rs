@@ -2,10 +2,8 @@ use std::io::Write;
 
 use anyhow::Result;
 use byteorder::{WriteBytesExt, LE};
-use incrementalmerkletree::Position;
 use jubjub::Fr;
 use pczt::{
-    common::LockTimeInput,
     roles::{
         io_finalizer::IoFinalizer, prover::Prover,
         spend_finalizer::SpendFinalizer, updater::Updater,
@@ -19,14 +17,14 @@ use sapling_crypto::{
     keys::FullViewingKey,
     note::ExtractedNoteCommitment,
     note_encryption::{sapling_note_encryption, SaplingDomain, Zip212Enforcement},
-    value::{NoteValue, TrapdoorSum, ValueCommitTrapdoor, ValueCommitment},
-    Diversifier, MerklePath, Node, Note, PaymentAddress, ProofGenerationKey, Rseed,
+    value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
+    Diversifier, Note, PaymentAddress, ProofGenerationKey, Rseed,
 };
 use secp256k1::PublicKey;
 use sqlx::{pool::PoolConnection, Sqlite, SqliteConnection};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
-use zcash_note_encryption::{try_output_recovery_with_ovk, Domain, EphemeralKeyBytes};
+use zcash_note_encryption::{try_output_recovery_with_ovk, Domain, EphemeralKeyBytes, OutgoingCipherKey};
 use zcash_script::script::Evaluable;
 use zcash_transparent::address::TransparentAddress;
 use zcash_proofs::prover::LocalTxProver;
@@ -78,9 +76,6 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         let ovk = fvk.ovk;
 
         let pczt = Pczt::parse(&package.pczt).expect("cannot parse PCZT");
-        let orig_pczt = pczt.clone();
-
-        let global = pczt.global().clone();
 
         let mut buffers = vec![];
         let mut data = vec![];
@@ -106,23 +101,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         data.write_u8(stout as u8)?;
         buffers.push(data);
 
-        let mut tins = vec![];
         let mut pks = vec![];
         for tin in pczt.transparent().inputs() {
-            let pczt_tin = pczt::transparent::Input::from_parts(
-                *tin.prevout_txid(),
-                *tin.prevout_index(),
-                *tin.sequence(),
-                tin.required_time_lock_time(),
-                tin.required_height_lock_time(),
-                None,
-                *tin.value(),
-                tin.script_pubkey().clone(),
-                None,
-                1,
-            );
-            tins.push(pczt_tin);
-
             let mut nullifier = vec![];
             nullifier.write_all(tin.prevout_txid())?;
             nullifier.write_u32::<LE>(*tin.prevout_index())?;
@@ -157,15 +137,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             buffers.push(data);
         }
 
-        let mut touts = vec![];
         for tout in pczt.transparent().outputs() {
-            let pczt_tout = pczt::transparent::Output::from_parts(
-                *tout.value(),
-                tout.script_pubkey().clone(),
-                None,
-            );
-            touts.push(pczt_tout);
-
             let mut data = vec![];
             let output_script = tout.script_pubkey();
             data.write_u8(output_script.len() as u8)?;
@@ -174,8 +146,6 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             assert_eq!(data.len(), 34);
             buffers.push(data);
         }
-        let tbundle = pczt::transparent::Bundle::from_parts(tins, touts);
-
         for sp in pczt.sapling().spends().iter() {
             let nullifier = sp.nullifier();
             let (value, diversifier): (u64, Vec<u8>) = sqlx::query_as(
@@ -265,15 +235,28 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         // On confirmation, we move on to the next step
         // Step 2. Retrieve the random values for the spends and outputs
         // These values are generated on the Ledger and must be used
-        // by the PCZT
-        // Since the current PCZT was created with different random
-        // values, we must create a new one
+        // by the PCZT. We collect the data then apply it in-place via the Updater.
+        struct SpendUpdate {
+            rcv: [u8; 32],
+            alpha: [u8; 32],
+            rseed: Rseed,
+            value: u64,
+            ak: [u8; 32],
+        }
+        struct OutputUpdate {
+            rcv: [u8; 32],
+            rseed: [u8; 32],
+            value: u64,
+            recipient_bytes: [u8; 43],
+            epk_bytes: [u8; 32],
+            enc: Vec<u8>,
+            cout: Vec<u8>,
+            ock_bytes: [u8; 32],
+        }
         let mut nsk: [u8; 32] = [0; 32];
-        let mut value_sum: i128 = 0;
-        let mut bsk = TrapdoorSum::zero();
-        let mut sins = vec![];
+        let mut spend_updates: Vec<SpendUpdate> = vec![];
+        let mut output_updates: Vec<OutputUpdate> = vec![];
         let mut rseeds = vec![];
-        let mut anchor: Option<[u8; 32]> = None;
         let xtract_sp = APDUCommand {
             cla: 0x85,
             ins: 0xA1,
@@ -304,54 +287,23 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                 .bind(&nullifier[..])
                 .fetch_one(&mut *connection)
                 .await.anyhow()?;
-            value_sum += value as i128;
             let rcm: [u8; 32] = tiu!(rcm);
             let rcv: [u8; 32] = tiu!(rcv);
             let diversifier = Diversifier(tiu!(diversifier));
             let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
             let rseed = Rseed::BeforeZip212(Fr::from_bytes(&rcm).unwrap());
-            let rcv2 = ValueCommitTrapdoor::from_bytes(rcv).unwrap();
             let note = Note::from_parts(recipient, NoteValue::from_raw(value), rseed);
             let _nf = note.nf(&fvk.vk.nk, position as u64);
 
-            if anchor.is_none() {
-                let witness = sp
-                    .witness()
-                    .map(|(position, auth_path_bytes)| {
-                        let path_elems = auth_path_bytes
-                            .into_iter()
-                            .map(|hash| Node::from_bytes(hash).unwrap())
-                            .collect::<Vec<_>>();
+            // Store data for in-place modification via Updater
+            spend_updates.push(SpendUpdate {
+                rcv,
+                alpha,
+                rseed,
+                value,
+                ak,
+            });
 
-                        MerklePath::from_parts(path_elems, u64::from(position).into()).unwrap()
-                    })
-                    .unwrap();
-                let root = witness.root(Node::from_cmu(&note.cmu()));
-                anchor = Some(root.to_bytes())
-            }
-
-            let pk: VerificationKeyBytes<SpendAuth> = ak.into();
-            let pk: VerificationKey<SpendAuth> = tiu!(pk);
-            let alpha2 = Fr::from_bytes(&alpha).unwrap();
-            let rk = pk.randomize(&alpha2);
-            let rk: [u8; 32] = rk.into();
-
-            bsk += &rcv2;
-            let cv = ValueCommitment::derive(NoteValue::from_raw(value), rcv2);
-
-            let pczt_sin = pczt::sapling::Spend::from_parts(
-                Some(recipient.to_bytes()),
-                Some(value),
-                cv.to_bytes(),
-                *nullifier,
-                rk,
-                None,
-                Some(rcv),
-                Some(rcm),
-                Some(alpha),
-                None,
-            );
-            sins.push(pczt_sin);
             rseeds.push((rcm, position));
         }
 
@@ -362,7 +314,6 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             p2: 0,
             data: vec![],
         };
-        let mut souts: Vec<pczt::sapling::Output> = vec![];
         for (out, memo) in pczt.sapling().outputs().iter().zip(memos.iter()) {
             let _ = sink.add(SigningEvent::Progress(
                 "Extracting output randomness".to_string(),
@@ -376,15 +327,13 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let rseed: [u8; 32] = tiu!(rseed);
 
             let value = out.value().unwrap_or_default();
-            value_sum -= value as i128;
-            let value = NoteValue::from_raw(value);
+            let value_note = NoteValue::from_raw(value);
             let rcv2 = ValueCommitTrapdoor::from_bytes(tiu!(rcv)).unwrap();
-            bsk -= &rcv2;
 
-            let cv = ValueCommitment::derive(value, rcv2);
+            let cv = ValueCommitment::derive(value_note, rcv2);
             let recipient = out.recipient().unwrap();
             let recipient = PaymentAddress::from_bytes(&recipient).unwrap();
-            let note = Note::from_parts(recipient, value, Rseed::AfterZip212(rseed));
+            let note = Note::from_parts(recipient, value_note, Rseed::AfterZip212(rseed));
             let cmu = note.cmu();
 
             let note_enc = sapling_note_encryption(Some(ovk), note.clone(), *memo, &mut rng);
@@ -393,31 +342,74 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let enc = note_enc.encrypt_note_plaintext();
             let ock = SaplingDomain::derive_ock(&ovk, &cv, &cmu.to_bytes(), &epk);
 
-            let sout = pczt::sapling::Output::from_parts(
-                cv.to_bytes(),
-                cmu.to_bytes(),
-                Some(recipient.to_bytes()),
-                Some(value.inner()),
-                tiu!(epk.as_ref()),
-                enc.0.to_vec(),
-                cout.to_vec(),
-                Some(rseed),
-                Some(rcv),
-                Some(tiu!(ock.as_ref())),
-            );
-            souts.push(sout);
+            let recipient_bytes: [u8; 43] = tiu!(recipient.to_bytes());
+            output_updates.push(OutputUpdate {
+                rcv,
+                rseed,
+                value,
+                recipient_bytes,
+                epk_bytes: tiu!(epk.as_ref()),
+                enc: enc.0.to_vec(),
+                cout: cout.to_vec(),
+                ock_bytes: tiu!(ock.as_ref()),
+            });
         }
 
-        info!("Creating new PCZT");
-        let sbundle = pczt::sapling::Bundle::from_parts(
-            sins,
-            souts,
-            value_sum,
-            anchor.unwrap_or_default(),
-            None,
-        );
-        let pczt =
-            pczt::Pczt::from_parts(global, tbundle, sbundle, pczt::orchard::Bundle::default());
+        // Apply all Ledger random values in-place via the Updater
+        info!("Applying Ledger randomness to PCZT");
+        let pczt = Updater::new(pczt)
+            .update_sapling_with(|mut u| {
+                for (i, su) in spend_updates.iter().enumerate() {
+                    u.update_spend_with(i, |mut su_updater| {
+                        let rcv = ValueCommitTrapdoor::from_bytes(su.rcv).unwrap();
+                        let alpha = jubjub::Fr::from_bytes(&su.alpha).unwrap();
+                        let cv = ValueCommitment::derive(
+                            NoteValue::from_raw(su.value),
+                            rcv,
+                        );
+                        let pk: VerificationKeyBytes<SpendAuth> = su.ak.into();
+                        let pk: VerificationKey<SpendAuth> = pk.try_into().expect("valid ak from Ledger");
+                        let rk = pk.randomize(&alpha);
+                        // Re-derive rcv since ValueCommitment::derive consumed it
+                        let rcv2 = ValueCommitTrapdoor::from_bytes(su.rcv).unwrap();
+                        su_updater.set_cv(cv);
+                        su_updater.set_rk(rk);
+                        su_updater.set_rcv(rcv2);
+                        su_updater.set_alpha(alpha);
+                        su_updater.set_rseed(su.rseed);
+                        Ok(())
+                    }).unwrap();
+                }
+                for (i, ou) in output_updates.iter().enumerate() {
+                    u.update_output_with(i, |mut ou_updater| {
+                        let rcv = ValueCommitTrapdoor::from_bytes(ou.rcv).unwrap();
+                        let value_note = NoteValue::from_raw(ou.value);
+                        let cv = ValueCommitment::derive(value_note, rcv);
+                        let rcv2 = ValueCommitTrapdoor::from_bytes(ou.rcv).unwrap();
+                        let recipient = PaymentAddress::from_bytes(&ou.recipient_bytes).unwrap();
+                        let note = Note::from_parts(
+                            recipient,
+                            value_note,
+                            Rseed::AfterZip212(ou.rseed),
+                        );
+                        let cmu = note.cmu();
+                        let epk = EphemeralKeyBytes(ou.epk_bytes);
+                        let ock = OutgoingCipherKey(ou.ock_bytes);
+                        ou_updater.set_cv(cv);
+                        ou_updater.set_cmu(cmu);
+                        ou_updater.set_ephemeral_key(epk);
+                        ou_updater.set_enc_ciphertext(tiu!(ou.enc.as_slice()));
+                        ou_updater.set_out_ciphertext(tiu!(ou.cout.as_slice()));
+                        ou_updater.set_rcv(rcv2);
+                        ou_updater.set_rseed(ou.rseed);
+                        ou_updater.set_ock(ock);
+                        Ok(())
+                    }).unwrap();
+                }
+                Ok(())
+            })
+            .unwrap()
+            .finish();
 
         let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
 
@@ -429,21 +421,14 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let updater = updater
                 .update_sapling_with(|mut u| {
                     for bundle_index in package.sapling_indices.iter() {
-                        u.update_spend_with(*bundle_index, |mut u| {
-                            u.set_proof_generation_key(pgk.clone()).unwrap();
-                            let (position, path) = orig_pczt.sapling().spends()[*bundle_index]
-                                .witness()
-                                .unwrap();
-                            // TODO: Improve - this requires a getter for the witness
-                            let path = path
-                                .into_iter()
-                                .map(|n| Node::from_bytes(n).unwrap())
-                                .collect::<Vec<_>>();
-                            let witness = incrementalmerkletree::MerklePath::from_parts(
-                                path,
-                                Position::from(position as u64),
-                            );
-                            u.set_witness(witness.unwrap());
+                        // Read witness before the mutable borrow on update_spend_with
+                        let witness = u.bundle().spends()[*bundle_index]
+                            .witness()
+                            .clone()
+                            .expect("spend must have a witness");
+                        u.update_spend_with(*bundle_index, |mut su| {
+                            su.set_proof_generation_key(pgk.clone()).unwrap();
+                            su.set_witness(witness);
                             Ok(())
                         })
                         .unwrap();
@@ -485,28 +470,45 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             assert_eq!(data.len(), 40);
             buffers.push(data);
         }
-        let anchor = pczt.sapling().anchor();
-        for sin in pczt.sapling().spends() {
-            let mut data = vec![];
-            data.write_all(sin.cv())?;
-            data.write_all(anchor)?;
-            data.write_all(sin.nullifier())?;
-            data.write_all(sin.rk())?;
-            data.write_all(&sin.zkproof().unwrap())?;
-            assert_eq!(data.len(), 320);
-            buffers.push(data);
+        // Read zkproof from sapling-crypto types (pczt types don't expose it)
+        let anchor = *pczt.sapling().anchor();
+        // Use update_sapling_with to access sapling-crypto Spend/Output which have full
+        // getters including zkproof()
+        let mut proof_bufs: Vec<Vec<u8>> = vec![];
+        {
+            let pczt_for_read = pczt.clone();
+            let _ = Updater::new(pczt_for_read)
+                .update_sapling_with(|u| {
+                    let bundle = u.bundle();
+                    for sin in bundle.spends() {
+                        let mut data = vec![];
+                        data.write_all(&sin.cv().to_bytes()).unwrap();
+                        data.write_all(&anchor).unwrap();
+                        data.write_all(sin.nullifier().as_ref()).unwrap();
+                        let rk_bytes: [u8; 32] = VerificationKeyBytes::from(*sin.rk()).into();
+                        data.write_all(&rk_bytes).unwrap();
+                        let zkp = sin.zkproof().expect("spend must have zkproof after proving");
+                        data.write_all(zkp.as_ref()).unwrap();
+                        assert_eq!(data.len(), 320);
+                        proof_bufs.push(data);
+                    }
+                    for sout in bundle.outputs() {
+                        let mut data = vec![];
+                        data.write_all(&sout.cv().to_bytes()).unwrap();
+                        data.write_all(&sout.cmu().to_bytes()).unwrap();
+                        data.write_all(sout.ephemeral_key().as_ref()).unwrap();
+                        data.write_all(sout.enc_ciphertext()).unwrap();
+                        data.write_all(sout.out_ciphertext()).unwrap();
+                        let zkp = sout.zkproof().expect("output must have zkproof after proving");
+                        data.write_all(zkp.as_ref()).unwrap();
+                        assert_eq!(data.len(), 948);
+                        proof_bufs.push(data);
+                    }
+                    Ok(())
+                })
+                .unwrap();
         }
-        for sout in pczt.sapling().outputs() {
-            let mut data = vec![];
-            data.write_all(sout.cv())?;
-            data.write_all(sout.cmu())?;
-            data.write_all(sout.ephemeral_key())?;
-            data.write_all(sout.enc_ciphertext())?;
-            data.write_all(sout.out_ciphertext())?;
-            data.write_all(&sout.zkproof().unwrap())?;
-            assert_eq!(data.len(), 948);
-            buffers.push(data);
-        }
+        buffers.extend(proof_bufs);
 
         let mut sighashes = vec![];
         let header = pczt.global();
