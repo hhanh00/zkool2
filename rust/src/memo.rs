@@ -314,10 +314,8 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.orchard_bundle() {
-        // ZSA-TODO: was OrchardBundle::OrchardVanilla(b) match
         process_orchard_memo!(bundle, OrchardVanilla);
     }
-
     let fee = fee_manager.fee();
     sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")
         .bind(fee as i64)
