@@ -630,7 +630,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 
         // The new package is ready to be broadcast
         let new_package = PcztPackage {
-            pczt: pczt.serialize(),
+            pczt: pczt.serialize().unwrap(),
             n_spends: *n_spends,
             sapling_indices: sapling_indices.clone(),
             orchard_indices: orchard_indices.clone(),
