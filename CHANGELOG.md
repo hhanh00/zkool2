@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.24.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.4...zkool-v6.24.0-rc.5) (2026-07-05)
+
+
+### Features
+
+* re-enable ZSA — issuance pipeline, decryption, split note padding ([d9d504a](https://github.com/hhanh00/zkool2/commit/d9d504acd2596f72cba18bee8d7e8f840108282a))
+
+
+### Bug Fixes
+
+* update lrz rev, add zkproof getter, fix pczt.serialize() in ledger ([0bf32b1](https://github.com/hhanh00/zkool2/commit/0bf32b10d0064a6dac20fe42055d39259fa162f5))
+
 ## [6.24.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.3...zkool-v6.24.0-rc.4) (2026-07-04)
 
 
