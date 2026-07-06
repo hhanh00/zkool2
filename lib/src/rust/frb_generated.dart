@@ -6456,18 +6456,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PcztPackage dco_decode_pczt_package(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return PcztPackage(
       pczt: dco_decode_list_prim_u_8_strict(arr[0]),
-      nSpends: dco_decode_usize_array_3(arr[1]),
+      nSpends: dco_decode_usize_array_4(arr[1]),
       saplingIndices: dco_decode_list_prim_usize_strict(arr[2]),
       orchardIndices: dco_decode_list_prim_usize_strict(arr[3]),
-      canSign: dco_decode_bool(arr[4]),
-      canBroadcast: dco_decode_bool(arr[5]),
-      price: dco_decode_opt_box_autoadd_f_64(arr[6]),
-      category: dco_decode_opt_box_autoadd_u_32(arr[7]),
-      isIssuance: dco_decode_bool(arr[8]),
+      ironwoodIndices: dco_decode_list_prim_usize_strict(arr[4]),
+      canSign: dco_decode_bool(arr[5]),
+      canBroadcast: dco_decode_bool(arr[6]),
+      price: dco_decode_opt_box_autoadd_f_64(arr[7]),
+      category: dco_decode_opt_box_autoadd_u_32(arr[8]),
+      isIssuance: dco_decode_bool(arr[9]),
     );
   }
 
@@ -6908,9 +6909,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  UsizeArray3 dco_decode_usize_array_3(dynamic raw) {
+  UsizeArray4 dco_decode_usize_array_4(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return UsizeArray3(dco_decode_list_prim_usize_strict(raw));
+    return UsizeArray4(dco_decode_list_prim_usize_strict(raw));
   }
 
   @protected
@@ -8191,9 +8192,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PcztPackage sse_decode_pczt_package(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_pczt = sse_decode_list_prim_u_8_strict(deserializer);
-    var var_nSpends = sse_decode_usize_array_3(deserializer);
+    var var_nSpends = sse_decode_usize_array_4(deserializer);
     var var_saplingIndices = sse_decode_list_prim_usize_strict(deserializer);
     var var_orchardIndices = sse_decode_list_prim_usize_strict(deserializer);
+    var var_ironwoodIndices = sse_decode_list_prim_usize_strict(deserializer);
     var var_canSign = sse_decode_bool(deserializer);
     var var_canBroadcast = sse_decode_bool(deserializer);
     var var_price = sse_decode_opt_box_autoadd_f_64(deserializer);
@@ -8204,6 +8206,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         nSpends: var_nSpends,
         saplingIndices: var_saplingIndices,
         orchardIndices: var_orchardIndices,
+        ironwoodIndices: var_ironwoodIndices,
         canSign: var_canSign,
         canBroadcast: var_canBroadcast,
         price: var_price,
@@ -8654,10 +8657,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  UsizeArray3 sse_decode_usize_array_3(SseDeserializer deserializer) {
+  UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_usize_strict(deserializer);
-    return UsizeArray3(inner);
+    return UsizeArray4(inner);
   }
 
   @protected
@@ -9815,9 +9818,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_pczt_package(PcztPackage self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(self.pczt, serializer);
-    sse_encode_usize_array_3(self.nSpends, serializer);
+    sse_encode_usize_array_4(self.nSpends, serializer);
     sse_encode_list_prim_usize_strict(self.saplingIndices, serializer);
     sse_encode_list_prim_usize_strict(self.orchardIndices, serializer);
+    sse_encode_list_prim_usize_strict(self.ironwoodIndices, serializer);
     sse_encode_bool(self.canSign, serializer);
     sse_encode_bool(self.canBroadcast, serializer);
     sse_encode_opt_box_autoadd_f_64(self.price, serializer);
@@ -10144,7 +10148,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer) {
+  void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_usize_strict(self.inner, serializer);
   }

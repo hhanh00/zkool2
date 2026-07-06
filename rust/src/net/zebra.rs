@@ -314,7 +314,7 @@ impl LwdServer for ZebraClient {
         Ok(ReceiverStream::new(rx))
     }
 
-    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)> {
+    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
         let res = jsonrpc!(
             self,
             "z_gettreestate",
@@ -337,7 +337,11 @@ impl LwdServer for ZebraClient {
                 )
             })?
             .to_string();
-        Ok((hex::decode(sapling_tree)?, hex::decode(orchard_tree)?))
+        let ironwood_tree = res["ironwood"]["commitments"]["finalState"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        Ok((hex::decode(sapling_tree)?, hex::decode(orchard_tree)?, hex::decode(&ironwood_tree).unwrap_or_default()))
     }
 }
 

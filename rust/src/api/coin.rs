@@ -45,7 +45,8 @@ impl Coin {
     ) -> Result<Coin> {
         let network = self.network();
 
-        let pool = try_open(&db_filepath, &password).await?;
+        let hint_coin = if self.coin != 0 { Some(self.coin) } else { None };
+        let pool = try_open(&db_filepath, &password, hint_coin).await?;
         {
             let mut pools = POOLS.lock().unwrap();
             pools.insert(db_filepath.clone(), pool.clone());
@@ -88,8 +89,8 @@ impl Coin {
         match self.coin {
             0 => Network::Main,
             1 => Network::Test,
-            2 | 3 => {
-                let orchard_mode = if self.coin == 3 || self.db_filepath.to_lowercase().contains("zsa") {
+            2 => {
+                let orchard_mode = if self.db_filepath.to_lowercase().contains("zsa") {
                     OrchardMode::Zsa
                 } else {
                     OrchardMode::Normal
@@ -104,12 +105,27 @@ impl Coin {
                     nu6: Some(BlockHeight::from_u32(1)),
                     nu6_1: Some(BlockHeight::from_u32(1)),
                     nu6_2: Some(BlockHeight::from_u32(1)),
-                    nu6_3: None,
-                    nu7: match orchard_mode {
-                        OrchardMode::Zsa => Some(BlockHeight::from_u32(1)),
-                        OrchardMode::Normal => None,
-                    },
+                    nu6_3: Some(BlockHeight::from_u32(1)),
+                    nu7: None,
                     orchard_mode,
+                })
+            }
+            3 => {
+                // ZSA regtest: NU7 active, no Ironwood (NU6.3 not active).
+                // Orchard protocol V2 with cross-address transfers enabled.
+                Network::ZsaRegtest(LocalNetwork {
+                    overwinter: Some(BlockHeight::from_u32(1)),
+                    sapling: Some(BlockHeight::from_u32(1)),
+                    blossom: Some(BlockHeight::from_u32(1)),
+                    heartwood: Some(BlockHeight::from_u32(1)),
+                    canopy: Some(BlockHeight::from_u32(1)),
+                    nu5: Some(BlockHeight::from_u32(1)),
+                    nu6: Some(BlockHeight::from_u32(1)),
+                    nu6_1: Some(BlockHeight::from_u32(1)),
+                    nu6_2: Some(BlockHeight::from_u32(1)),
+                    nu6_3: None,
+                    nu7: Some(BlockHeight::from_u32(1)),
+                    orchard_mode: OrchardMode::Zsa,
                 })
             }
             _ => Network::Main,
@@ -194,7 +210,11 @@ impl Coin {
     }
 }
 
-async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<SqlitePool> {
+async fn try_open(
+    db_filepath: &str,
+    password: &Option<String>,
+    hint_coin: Option<u8>,
+) -> Result<SqlitePool> {
     // Create a connection pool
     let options = get_connect_options(db_filepath, password);
     let pool = SqlitePoolOptions::new()
@@ -211,19 +231,24 @@ async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<Sqlite
         .await?
         .is_some()
     {
-        let testnet = db_filepath.contains("testnet");
-        let regtest = db_filepath.contains("regtest");
-        let zsa = db_filepath.contains("zsa");
-        let coin_value = if zsa {
-            "3"
-        } else if testnet {
-            "1"
-        } else if regtest {
-            "2"
+        let coin_value = if let Some(coin) = hint_coin {
+            coin.to_string()
         } else {
-            "0"
+            let testnet = db_filepath.contains("testnet");
+            let zsa = db_filepath.contains("zsa");
+            let regtest = db_filepath.contains("regtest");
+            if testnet {
+                "1"
+            } else if zsa {
+                "3"
+            } else if regtest {
+                "2"
+            } else {
+                "0"
+            }
+            .to_string()
         };
-        crate::db::put_prop(&mut connection, "coin", coin_value).await?;
+        crate::db::put_prop(&mut connection, "coin", &coin_value).await?;
     }
 
     Ok(pool)

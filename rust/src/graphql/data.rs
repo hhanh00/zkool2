@@ -35,6 +35,7 @@ pub struct Balance {
     pub transparent: BigDecimal,
     pub sapling: BigDecimal,
     pub orchard: BigDecimal,
+    pub ironwood: BigDecimal,
     pub total: BigDecimal,
 }
 

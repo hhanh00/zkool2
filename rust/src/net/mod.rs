@@ -39,5 +39,5 @@ pub trait LwdServer: Send {
 
     async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream>;
 
-    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)>;
+    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)>;
 }

@@ -933,7 +933,15 @@ pub async fn init_sync_heights(
     account: u32,
     birth_height: u32,
 ) -> Result<()> {
-    for pool in 0..3 {
+    let max_pool = if network
+        .activation_height(NetworkUpgrade::Nu6_3)
+        .is_some()
+    {
+        4
+    } else {
+        3
+    };
+    for pool in 0..max_pool {
         let activation_height: u32 = match pool {
             0 => 0,
             1 => network
@@ -942,6 +950,10 @@ pub async fn init_sync_heights(
                 .into(),
             2 => network
                 .activation_height(NetworkUpgrade::Nu5)
+                .unwrap()
+                .into(),
+            3 => network
+                .activation_height(NetworkUpgrade::Nu6_3)
                 .unwrap()
                 .into(),
             _ => unreachable!(),
@@ -1316,6 +1328,11 @@ pub async fn has_pool(connection: &mut SqliteConnection, account: u32, pool: u8)
             .await?
             .is_some(),
         2 => sqlx::query("SELECT 1 FROM orchard_accounts WHERE account = ?1")
+            .bind(account)
+            .fetch_optional(connection)
+            .await?
+            .is_some(),
+        3 => sqlx::query("SELECT 1 FROM orchard_accounts WHERE account = ?1")
             .bind(account)
             .fetch_optional(connection)
             .await?

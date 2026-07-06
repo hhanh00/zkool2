@@ -9785,7 +9785,6 @@ dependencies = [
 [[package]]
 name = "zcash-trees"
 version = "0.1.0"
-source = "git+https://github.com/hhanh00/zcash-trees?rev=c9d9d7c#c9d9d7c9667117c9caf772662537d74bd0c61c28"
 dependencies = [
  "anyhow",
  "bincode",

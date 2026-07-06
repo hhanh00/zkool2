@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::debug;
-use zcash_protocol::consensus::Parameters;
+use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 use zcash_trees::network::Network;
 
 use orchard::{
@@ -33,6 +33,7 @@ mod shielded;
 
 pub type SaplingSync = Synchronizer<shielded::sapling::SaplingProtocol>;
 pub type OrchardSync = Synchronizer<shielded::orchard::OrchardProtocol>;
+pub type IronwoodSync = Synchronizer<shielded::ironwood::IronwoodProtocol>;
 
 pub enum BlockMessage {
     Chunk(Vec<CompactBlock>),
@@ -147,6 +148,7 @@ async fn preprocess(
                 sapling_outputs: vtx.outputs.clone(),
                 orchard_actions: vtx.actions.clone(),
                 orchard_outputs,
+                ironwood_actions: vtx.ironwood_actions.clone(),
                 issuances: vtx.issuances.clone(),
             });
         }
@@ -172,6 +174,7 @@ pub async fn warp_sync(
     actions_per_sync: u32,
     sapling_state: &CommitmentTreeFrontier,
     orchard_state: &CommitmentTreeFrontier,
+    ironwood_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
     mut rx_cancel: broadcast::Receiver<()>,
 ) -> Result<(), SyncError> {
@@ -202,7 +205,32 @@ pub async fn warp_sync(
     )
     .await?;
 
-    if sap_dec.has_no_keys() && orch_dec.has_no_keys() {
+    let ironwood_active = network
+        .activation_height(NetworkUpgrade::Nu6_3)
+        .is_some();
+    let ironwood_hasher = OrchardHasher::default();
+    let mut ironwood_dec = if ironwood_active {
+        Some(
+            IronwoodSync::new(
+                *network,
+                &mut *connection,
+                3,
+                start_height,
+                accounts,
+                tx_decrypted.clone(),
+                ironwood_state.size() as u32,
+                ironwood_state.to_edge(&ironwood_hasher),
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+
+    let ironwood_has_keys = ironwood_dec
+        .as_ref()
+        .map_or(false, |d| !d.has_no_keys());
+    if sap_dec.has_no_keys() && orch_dec.has_no_keys() && !ironwood_has_keys {
         debug!("No keys to sync");
         return Ok(());
     }
@@ -330,6 +358,9 @@ pub async fn warp_sync(
 
                 sap_dec.add(&sync_blocks).await?;
                 orch_dec.add(&sync_blocks).await?;
+                if let Some(ref mut ironwood_dec) = ironwood_dec {
+                    ironwood_dec.add(&sync_blocks).await?;
+                }
 
                 let lcb = bs.last().unwrap();
                 // Use the last original block for header (sync_blocks is

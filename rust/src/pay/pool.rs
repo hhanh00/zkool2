@@ -7,11 +7,13 @@ use zcash_protocol::{PoolType, ShieldedPool};
 // 0 - Transparent
 // 1 - Sapling
 // 2 - Orchard
+// 3 - Ironwood
 #[derive(Clone, Copy, PartialEq, Default, Debug)]
 pub struct PoolMask(pub u8);
 
-pub const ALL_POOLS: u8 = 0b111;
-pub const ALL_SHIELDED_POOLS: u8 = 0b110;
+pub const NUM_POOLS: usize = 4;
+pub const ALL_POOLS: u8 = 0b1111;
+pub const ALL_SHIELDED_POOLS: u8 = 0b1110;
 
 impl PoolMask {
     pub fn empty() -> Self {
@@ -28,8 +30,12 @@ impl PoolMask {
     }
 
     // Return the best pool available in the mask
-    // or None if no pools are available
+    // or None if no pools are available.
+    // Priority: Ironwood > Orchard > Sapling > Transparent
     pub fn to_best_pool(&self) -> Option<u8> {
+        if self.0 & 8 != 0 {
+            return Some(3);
+        }
         if self.0 & 4 != 0 {
             return Some(2);
         }
@@ -79,6 +85,11 @@ impl PoolMask {
         )) {
             pool_mask |= 4;
         }
+        if address.can_receive_as(PoolType::Shielded(
+            ShieldedPool::Ironwood,
+        )) {
+            pool_mask |= 8;
+        }
         Ok(PoolMask(pool_mask))
     }
 
@@ -91,7 +102,7 @@ impl PoolMask {
             return Ok(PoolMask(1));
         }
         // otherwise, mask out the transparent pool
-        let masked = self.0 & 0b110;
+        let masked = self.0 & 0b1110;
         Ok(PoolMask(masked))
     }
 }
