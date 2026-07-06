@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.7...zkool-v6.24.0-rc.8) (2026-07-06)
+
+
+### Bug Fixes
+
+* switch zcash-trees from local path to git dependency ([4c2149e](https://github.com/hhanh00/zkool2/commit/4c2149e65e1fc37b6f1d909372158a52c21f1c2c))
+
 ## [6.24.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.6...zkool-v6.24.0-rc.7) (2026-07-06)
 
 
