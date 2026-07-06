@@ -15,9 +15,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PcztPackage {
   Uint8List get pczt;
-  UsizeArray3 get nSpends;
+  UsizeArray4 get nSpends;
   Uint64List get saplingIndices;
   Uint64List get orchardIndices;
+  Uint64List get ironwoodIndices;
   bool get canSign;
   bool get canBroadcast;
   double? get price;
@@ -42,6 +43,8 @@ mixin _$PcztPackage {
                 .equals(other.saplingIndices, saplingIndices) &&
             const DeepCollectionEquality()
                 .equals(other.orchardIndices, orchardIndices) &&
+            const DeepCollectionEquality()
+                .equals(other.ironwoodIndices, ironwoodIndices) &&
             (identical(other.canSign, canSign) || other.canSign == canSign) &&
             (identical(other.canBroadcast, canBroadcast) ||
                 other.canBroadcast == canBroadcast) &&
@@ -59,6 +62,7 @@ mixin _$PcztPackage {
       const DeepCollectionEquality().hash(nSpends),
       const DeepCollectionEquality().hash(saplingIndices),
       const DeepCollectionEquality().hash(orchardIndices),
+      const DeepCollectionEquality().hash(ironwoodIndices),
       canSign,
       canBroadcast,
       price,
@@ -67,7 +71,7 @@ mixin _$PcztPackage {
 
   @override
   String toString() {
-    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category, isIssuance: $isIssuance)';
+    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, ironwoodIndices: $ironwoodIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category, isIssuance: $isIssuance)';
   }
 }
 
@@ -79,9 +83,10 @@ abstract mixin class $PcztPackageCopyWith<$Res> {
   @useResult
   $Res call(
       {Uint8List pczt,
-      UsizeArray3 nSpends,
+      UsizeArray4 nSpends,
       Uint64List saplingIndices,
       Uint64List orchardIndices,
+      Uint64List ironwoodIndices,
       bool canSign,
       bool canBroadcast,
       double? price,
@@ -105,6 +110,7 @@ class _$PcztPackageCopyWithImpl<$Res> implements $PcztPackageCopyWith<$Res> {
     Object? nSpends = null,
     Object? saplingIndices = null,
     Object? orchardIndices = null,
+    Object? ironwoodIndices = null,
     Object? canSign = null,
     Object? canBroadcast = null,
     Object? price = freezed,
@@ -119,7 +125,7 @@ class _$PcztPackageCopyWithImpl<$Res> implements $PcztPackageCopyWith<$Res> {
       nSpends: null == nSpends
           ? _self.nSpends
           : nSpends // ignore: cast_nullable_to_non_nullable
-              as UsizeArray3,
+              as UsizeArray4,
       saplingIndices: null == saplingIndices
           ? _self.saplingIndices
           : saplingIndices // ignore: cast_nullable_to_non_nullable
@@ -127,6 +133,10 @@ class _$PcztPackageCopyWithImpl<$Res> implements $PcztPackageCopyWith<$Res> {
       orchardIndices: null == orchardIndices
           ? _self.orchardIndices
           : orchardIndices // ignore: cast_nullable_to_non_nullable
+              as Uint64List,
+      ironwoodIndices: null == ironwoodIndices
+          ? _self.ironwoodIndices
+          : ironwoodIndices // ignore: cast_nullable_to_non_nullable
               as Uint64List,
       canSign: null == canSign
           ? _self.canSign
@@ -245,9 +255,10 @@ extension PcztPackagePatterns on PcztPackage {
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
             Uint8List pczt,
-            UsizeArray3 nSpends,
+            UsizeArray4 nSpends,
             Uint64List saplingIndices,
             Uint64List orchardIndices,
+            Uint64List ironwoodIndices,
             bool canSign,
             bool canBroadcast,
             double? price,
@@ -264,6 +275,7 @@ extension PcztPackagePatterns on PcztPackage {
             _that.nSpends,
             _that.saplingIndices,
             _that.orchardIndices,
+            _that.ironwoodIndices,
             _that.canSign,
             _that.canBroadcast,
             _that.price,
@@ -291,9 +303,10 @@ extension PcztPackagePatterns on PcztPackage {
   TResult when<TResult extends Object?>(
     TResult Function(
             Uint8List pczt,
-            UsizeArray3 nSpends,
+            UsizeArray4 nSpends,
             Uint64List saplingIndices,
             Uint64List orchardIndices,
+            Uint64List ironwoodIndices,
             bool canSign,
             bool canBroadcast,
             double? price,
@@ -309,6 +322,7 @@ extension PcztPackagePatterns on PcztPackage {
             _that.nSpends,
             _that.saplingIndices,
             _that.orchardIndices,
+            _that.ironwoodIndices,
             _that.canSign,
             _that.canBroadcast,
             _that.price,
@@ -333,9 +347,10 @@ extension PcztPackagePatterns on PcztPackage {
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
             Uint8List pczt,
-            UsizeArray3 nSpends,
+            UsizeArray4 nSpends,
             Uint64List saplingIndices,
             Uint64List orchardIndices,
+            Uint64List ironwoodIndices,
             bool canSign,
             bool canBroadcast,
             double? price,
@@ -351,6 +366,7 @@ extension PcztPackagePatterns on PcztPackage {
             _that.nSpends,
             _that.saplingIndices,
             _that.orchardIndices,
+            _that.ironwoodIndices,
             _that.canSign,
             _that.canBroadcast,
             _that.price,
@@ -370,6 +386,7 @@ class _PcztPackage implements PcztPackage {
       required this.nSpends,
       required this.saplingIndices,
       required this.orchardIndices,
+      required this.ironwoodIndices,
       required this.canSign,
       required this.canBroadcast,
       this.price,
@@ -379,11 +396,13 @@ class _PcztPackage implements PcztPackage {
   @override
   final Uint8List pczt;
   @override
-  final UsizeArray3 nSpends;
+  final UsizeArray4 nSpends;
   @override
   final Uint64List saplingIndices;
   @override
   final Uint64List orchardIndices;
+  @override
+  final Uint64List ironwoodIndices;
   @override
   final bool canSign;
   @override
@@ -414,6 +433,8 @@ class _PcztPackage implements PcztPackage {
                 .equals(other.saplingIndices, saplingIndices) &&
             const DeepCollectionEquality()
                 .equals(other.orchardIndices, orchardIndices) &&
+            const DeepCollectionEquality()
+                .equals(other.ironwoodIndices, ironwoodIndices) &&
             (identical(other.canSign, canSign) || other.canSign == canSign) &&
             (identical(other.canBroadcast, canBroadcast) ||
                 other.canBroadcast == canBroadcast) &&
@@ -431,6 +452,7 @@ class _PcztPackage implements PcztPackage {
       const DeepCollectionEquality().hash(nSpends),
       const DeepCollectionEquality().hash(saplingIndices),
       const DeepCollectionEquality().hash(orchardIndices),
+      const DeepCollectionEquality().hash(ironwoodIndices),
       canSign,
       canBroadcast,
       price,
@@ -439,7 +461,7 @@ class _PcztPackage implements PcztPackage {
 
   @override
   String toString() {
-    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category, isIssuance: $isIssuance)';
+    return 'PcztPackage(pczt: $pczt, nSpends: $nSpends, saplingIndices: $saplingIndices, orchardIndices: $orchardIndices, ironwoodIndices: $ironwoodIndices, canSign: $canSign, canBroadcast: $canBroadcast, price: $price, category: $category, isIssuance: $isIssuance)';
   }
 }
 
@@ -453,9 +475,10 @@ abstract mixin class _$PcztPackageCopyWith<$Res>
   @useResult
   $Res call(
       {Uint8List pczt,
-      UsizeArray3 nSpends,
+      UsizeArray4 nSpends,
       Uint64List saplingIndices,
       Uint64List orchardIndices,
+      Uint64List ironwoodIndices,
       bool canSign,
       bool canBroadcast,
       double? price,
@@ -479,6 +502,7 @@ class __$PcztPackageCopyWithImpl<$Res> implements _$PcztPackageCopyWith<$Res> {
     Object? nSpends = null,
     Object? saplingIndices = null,
     Object? orchardIndices = null,
+    Object? ironwoodIndices = null,
     Object? canSign = null,
     Object? canBroadcast = null,
     Object? price = freezed,
@@ -493,7 +517,7 @@ class __$PcztPackageCopyWithImpl<$Res> implements _$PcztPackageCopyWith<$Res> {
       nSpends: null == nSpends
           ? _self.nSpends
           : nSpends // ignore: cast_nullable_to_non_nullable
-              as UsizeArray3,
+              as UsizeArray4,
       saplingIndices: null == saplingIndices
           ? _self.saplingIndices
           : saplingIndices // ignore: cast_nullable_to_non_nullable
@@ -501,6 +525,10 @@ class __$PcztPackageCopyWithImpl<$Res> implements _$PcztPackageCopyWith<$Res> {
       orchardIndices: null == orchardIndices
           ? _self.orchardIndices
           : orchardIndices // ignore: cast_nullable_to_non_nullable
+              as Uint64List,
+      ironwoodIndices: null == ironwoodIndices
+          ? _self.ironwoodIndices
+          : ironwoodIndices // ignore: cast_nullable_to_non_nullable
               as Uint64List,
       canSign: null == canSign
           ? _self.canSign

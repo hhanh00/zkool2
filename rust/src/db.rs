@@ -27,7 +27,7 @@ use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
 use crate::{api::account::TxNote, tiu};
 
-pub const DB_VERSION: u16 = 9;
+pub const DB_VERSION: u16 = 10;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
@@ -1383,7 +1383,7 @@ pub async fn calculate_balance(
     account: u32,
     height: Option<u32>,
 ) -> Result<PoolBalance> {
-    let mut balance = PoolBalance(vec![0, 0, 0]);
+    let mut balance = PoolBalance(vec![0, 0, 0, 0]);
     let height = height.unwrap_or(u32::MAX);
 
     let mut rows = sqlx::query("
