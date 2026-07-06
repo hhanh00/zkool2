@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.24.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.6...zkool-v6.24.0-rc.7) (2026-07-06)
+
+
+### Features
+
+* wire up ironwood sync protocol, add ironwood balance widget ([4b5a34f](https://github.com/hhanh00/zkool2/commit/4b5a34f3631263f3d1f7445acf3d25518524706c))
+
+
+### Bug Fixes
+
+* add NU7/ZSA fields and coin type 3 for lrz zsa branch compatibility ([ee88aaf](https://github.com/hhanh00/zkool2/commit/ee88aaf308a1172c8d3873568aca5787cdc004dd))
+* use lrz zsa branch with git rev, pass shielded sighash to Issuer::sign() ([9ce4dae](https://github.com/hhanh00/zkool2/commit/9ce4dae0df5f8cca5c0b23a1fac49c5ad87fd6fd))
+
 ## [6.24.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.5...zkool-v6.24.0-rc.6) (2026-07-05)
 
 
