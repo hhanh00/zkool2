@@ -7,8 +7,8 @@ pub const CREATION_COST: u64 = 0;
 
 #[derive(Clone, Default, Debug)]
 pub struct FeeManager {
-    pub num_inputs: [u8; 3],
-    pub num_outputs: [u8; 3],
+    pub num_inputs: [u8; 4],
+    pub num_outputs: [u8; 4],
     /// Logical actions contributed by the issue bundle (ZIP-317).
     /// Equal to `total_issue_note_count + CREATION_COST * asset_creation_count`.
     pub issuance_actions: u64,
@@ -65,8 +65,17 @@ impl FeeManager {
         } else {
             0
         };
-        let f = (t + s + o).max(2); // minimum 2 logical actions (due to grace? actions)
-        (f as u64 + self.issuance_actions) * COST_PER_ACTION
+        let i = if self.num_inputs[3] > 0 || self.num_outputs[3] > 0 {
+            // Ironwood has same padding as Orchard: min 2 actions
+            self.num_inputs[3].max(self.num_outputs[3]).max(2)
+        } else {
+            0
+        };
+        let f = (t + s + o + i).max(2); // minimum 2 logical actions
+        // Issuance actions are counted by the builder as orchard actions,
+        // so we don't add them separately here. The issuance counts are
+        // informational for logging only.
+        f as u64 * COST_PER_ACTION
     }
 
     #[allow(dead_code)]
@@ -83,13 +92,15 @@ impl std::fmt::Display for FeeManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "fee: {}:{} {}:{} {}:{} issuance:{}",
+            "fee: {}:{} {}:{} {}:{} {}:{} issuance:{}",
             self.num_inputs[0],
             self.num_outputs[0],
             self.num_inputs[1],
             self.num_outputs[1],
             self.num_inputs[2],
             self.num_outputs[2],
+            self.num_inputs[3],
+            self.num_outputs[3],
             self.issuance_actions,
         )
     }

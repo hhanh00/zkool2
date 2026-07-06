@@ -20,6 +20,7 @@ fn parse_shield_tx() {
         nu6_1: Some(BlockHeight::from_u32(1)),
         nu6_2: Some(BlockHeight::from_u32(1)),
         nu6_3: None,
+        nu7: None,
         orchard_mode: OrchardMode::Normal,
     };
 

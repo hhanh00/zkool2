@@ -46,6 +46,8 @@ pub async fn get_account_pools(account: u32, c: &Coin) -> Result<u8> {
     }
     if okeys.xvk.is_some() {
         pools |= 4;
+        // Ironwood uses the same keys as Orchard
+        pools |= 8;
     }
     Ok(pools)
 }

@@ -40,7 +40,8 @@ message CompactTx {
     repeated CompactSaplingSpend spends = 4;   // inputs
     repeated CompactSaplingOutput outputs = 5; // outputs
     repeated CompactOrchardAction actions = 6;
-    repeated CompactIssuance issuances = 9; // ZSA issuance actions
+    repeated CompactOrchardAction ironwoodActions = 9; // Ironwood actions (canonical)
+    repeated CompactIssuance issuances = 10; // ZSA issuance actions
 }
 
 // CompactIssueNote carries the unencrypted note fields for a single note

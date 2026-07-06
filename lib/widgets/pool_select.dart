@@ -15,7 +15,7 @@ class PoolSelect extends StatefulWidget {
   State<PoolSelect> createState() => _PoolSelectState();
 }
 
-enum Pool { transparent, sapling, orchard }
+enum Pool { transparent, sapling, orchard, ironwood }
 
 class _PoolSelectState extends State<PoolSelect> {
   late Set<Pool> pools;
@@ -25,6 +25,7 @@ class _PoolSelectState extends State<PoolSelect> {
       if (value & 1 != 0) Pool.transparent,
       if (value & 2 != 0) Pool.sapling,
       if (value & 4 != 0) Pool.orchard,
+      if (value & 8 != 0) Pool.ironwood,
     };
   }
 
@@ -71,7 +72,7 @@ class _PoolSelectState extends State<PoolSelect> {
             ),
             ButtonSegment<Pool>(
               value: Pool.orchard,
-              label: Text('Orchard'),
+              label: Text('Ironwood'),
               enabled: widget.enabled & 4 != 0,
             ),
           ],
@@ -89,6 +90,8 @@ class _PoolSelectState extends State<PoolSelect> {
                             return previousValue | 2;
                           case Pool.orchard:
                             return previousValue | 4;
+                          case Pool.ironwood:
+                            return previousValue | 8;
                         }
                       }),
                     );

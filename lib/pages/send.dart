@@ -600,10 +600,16 @@ class SendPageState extends ConsumerState<SendPage> {
     switch (pool) {
       case 0:
         address = (a.taddr ?? "");
+        break;
       case 1:
         address = (a.saddr ?? "");
+        break;
       case 2:
         address = (a.oaddr ?? "");
+        break;
+      case 3:
+        address = (a.oaddr ?? ""); // Ironwood uses same address as Orchard
+        break;
       default:
         logger.w("Unknown pool selected: $pool");
     }
@@ -844,7 +850,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       }
     }
 
-    final srcPools = form.fields['source pools']?.value ?? (hasTex ? 1 : 7);
+    final srcPools = form.fields['source pools']?.value ?? (hasTex ? 1 : 15);
 
     try {
       final options = PaymentOptions(

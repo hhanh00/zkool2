@@ -45,6 +45,10 @@ pub struct Config {
     // Note: Once set in a config file, jwt_public_key_file
     // cannot be unset by a later config source because
     // None means skip
+    /// Coin type: 0=mainnet, 1=testnet, 2=regtest, 3=ZSA regtest.
+    /// Overrides auto-detection from database filename.
+    #[clap(short = 'C', long, value_parser)]
+    pub coin: Option<u8>,
     #[clap(short, long, value_parser)]
     pub jwt_public_key_file: Option<String>,
     /// Coin type: 0=mainnet, 1=testnet, 2=regtest, 3=zsa-regtest.

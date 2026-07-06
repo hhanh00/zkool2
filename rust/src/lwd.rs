@@ -55,6 +55,8 @@ pub struct CompactTx {
     #[prost(message, repeated, tag = "6")]
     pub actions: ::prost::alloc::vec::Vec<CompactOrchardAction>,
     #[prost(message, repeated, tag = "9")]
+    pub ironwood_actions: ::prost::alloc::vec::Vec<CompactOrchardAction>,
+    #[prost(message, repeated, tag = "10")]
     pub issuances: ::prost::alloc::vec::Vec<CompactIssuance>,
 }
 /// CompactSaplingSpend is a Sapling Spend Description as described in 7.3 of the Zcash

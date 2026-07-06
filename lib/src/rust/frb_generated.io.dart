@@ -527,7 +527,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt dco_decode_usize(dynamic raw);
 
   @protected
-  UsizeArray3 dco_decode_usize_array_3(dynamic raw);
+  UsizeArray4 dco_decode_usize_array_4(dynamic raw);
 
   @protected
   ZsaHolding dco_decode_zsa_holding(dynamic raw);
@@ -1024,7 +1024,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  UsizeArray3 sse_decode_usize_array_3(SseDeserializer deserializer);
+  UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer);
 
   @protected
   ZsaHolding sse_decode_zsa_holding(SseDeserializer deserializer);
@@ -1553,7 +1553,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_usize(BigInt self, SseSerializer serializer);
 
   @protected
-  void sse_encode_usize_array_3(UsizeArray3 self, SseSerializer serializer);
+  void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer);
 
   @protected
   void sse_encode_zsa_holding(ZsaHolding self, SseSerializer serializer);

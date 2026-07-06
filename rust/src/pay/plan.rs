@@ -616,7 +616,7 @@ pub async fn plan_transaction(
     );
 
     let h = crate::sync::get_db_height(connection, account).await?;
-    let (ts, to) = crate::sync::get_tree_state(network, client, h.height).await?;
+    let (ts, to, _ti) = crate::sync::get_tree_state(network, client, h.height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
     let sapling_anchor = es.root(&SaplingHasher::default());
@@ -630,24 +630,11 @@ pub async fn plan_transaction(
             .unwrap();
     }
 
-    let change_recipient = RecipientState {
-        recipient: Recipient {
-            address: change_address,
-            amount: change,
-            ..Recipient::default()
-        },
-        remaining: 0,
-        pool_mask: PoolMask::from_pool(change_pool),
-        asset_base: [0u8; 32].to_vec(),
-    };
-
     let mut outputs = single
         .iter()
         .chain(double.iter())
         .cloned()
         .collect::<Vec<_>>();
-
-    outputs.push(change_recipient.clone());
 
     // Flush buffered ZSA outputs (ZSA-after-ZEC for ZIP-226)
     outputs.extend(buffered_zsaoutputs);
@@ -902,6 +889,50 @@ pub async fn plan_transaction(
                     asset_base,
                     memo,
                 )?;
+            }
+            _ => {}
+        }
+    }
+
+    // Add change output using the proper change method (avoids dummy spend
+    // inflation that would mismatch the FeeManager calculation).
+    if change > 0 {
+        let change_addr = if change_pool == 0 && tkeys.xvk.is_some() {
+            // Re-fetch transparent change address
+            generate_next_change_address(network, connection, account).await?.unwrap()
+        } else {
+            change_address.clone()
+        };
+        match change_pool {
+            0 => {
+                let to = get_transparent_address(network, &change_addr)?;
+                builder
+                    .add_transparent_output(&to, Zatoshis::const_from_u64(change))
+                    .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
+            }
+            1 => {
+                let to = get_sapling_address(network, &change_addr)?;
+                builder.add_sapling_output::<Infallible>(
+                    svk.as_ref().map(|svk| svk.to_ovk(Scope::External)),
+                    to,
+                    Zatoshis::const_from_u64(change),
+                    MemoBytes::empty(),
+                )?;
+            }
+            2 => {
+                let to = get_orchard_address(network, &change_addr)?;
+                if let Some(ref fvk) = ovk {
+                    builder.add_orchard_change_output::<Infallible>(
+                        fvk.clone(),
+                        Some(fvk.to_ovk(Scope::External)),
+                        to,
+                        Zatoshis::const_from_u64(change),
+                        orchard::note::AssetBase::zatoshi(),
+                        MemoBytes::empty(),
+                    )?;
+                } else {
+                    anyhow::bail!("No orchard key for change output");
+                }
             }
             _ => {}
         }
@@ -1349,6 +1380,7 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     info!("Tx Extracted");
 
     span.in_scope(|| {
+    eprintln!("TX HEX: {}", hex::encode(&tx_bytes));
         info!("Tx Ready - {} bytes", tx_bytes.len());
     });
 
@@ -1640,8 +1672,8 @@ pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::b
 pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKey {
     // Check if NU7 is active (ZSA-enabled)
     let uses_orchard_zsa = match network {
-        crate::api::coin::Network::Regtest(config) => {
-            // NU7 active means ZSA transactions
+        crate::api::coin::Network::Regtest(config)
+        | crate::api::coin::Network::ZsaRegtest(config) => {
             config.orchard_mode() == zcash_protocol::consensus::OrchardMode::Zsa
         }
         _ => false,
