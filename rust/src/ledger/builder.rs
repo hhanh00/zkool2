@@ -411,7 +411,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             .unwrap()
             .finish();
 
-        let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
+        let (pczt, _) = IoFinalizer::new(pczt).finalize_io().unwrap();
 
         let pczt = if !pczt.sapling().spends().is_empty() || !pczt.sapling().outputs().is_empty() {
             let updater = Updater::new(pczt);
