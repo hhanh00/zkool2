@@ -1111,13 +1111,13 @@ pub async fn plan_transaction(
         pczt
     };
 
-    let pczt = IoFinalizer::new(pczt).finalize_io().unwrap();
+    let (pczt, shielded_sighash) = IoFinalizer::new(pczt).finalize_io().unwrap();
     info!("IO Finalized");
 
     // Issuer phase 2: sign the issue bundle
     let pczt = if let Some(info) = issuance {
         Issuer::new(pczt)
-            .sign(&info.isk)
+            .sign(&info.isk, shielded_sighash)
             .map_err(|e| anyhow!("Issuer (phase 2/sign) failed: {e:?}"))?
     } else {
         pczt
