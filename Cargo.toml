@@ -4,9 +4,6 @@ members = [
 ]
 resolver = "2"
 
-[workspace.dependencies]
-orchard = { git = "https://github.com/zcash-shielded-assets/orchard", rev = "8d0e5c4" }
-
 [patch.crates-io]
 # -- ZSA support branches --
 orchard = { git = "https://github.com/zcash-shielded-assets/orchard", rev = "8d0e5c4" }
@@ -23,7 +20,6 @@ zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", 
 zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "136b15d8" }
 zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "136b15d8" }
 zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "136b15d8" }
-zcash-trees = { path = "/Users/hanh/projects/zcash-trees" }
 
 # -- remaining transitive deps --
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
