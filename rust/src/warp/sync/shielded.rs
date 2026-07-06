@@ -17,6 +17,7 @@ use zcash_trees::types::{Note, Transaction, WarpSyncMessage, UTXO};
 
 use super::block::{SyncBlock, SyncTx};
 
+pub mod ironwood;
 pub mod orchard;
 pub mod sapling;
 

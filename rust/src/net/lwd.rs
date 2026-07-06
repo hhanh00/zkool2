@@ -170,7 +170,7 @@ impl LwdServer for GRPCClient {
         Ok(ReceiverStream::new(rx))
     }
 
-    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>)> {
+    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
         let state = self
             .get_tree_state(Request::new(BlockId {
                 height: height as u64,
@@ -182,7 +182,8 @@ impl LwdServer for GRPCClient {
             hex::decode(&state.sapling_tree).expect("Failed to decode sapling tree hex");
         let orchard_tree =
             hex::decode(&state.orchard_tree).expect("Failed to decode sapling tree hex");
-        Ok((sapling_tree, orchard_tree))
+        // Lightwalletd does not yet support Ironwood tree state
+        Ok((sapling_tree, orchard_tree, vec![]))
     }
 }
 

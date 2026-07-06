@@ -17,10 +17,11 @@ use halo2_proofs::pasta::{
 };
 use orchard::{
     keys::IncomingViewingKey,
-    note::{ExtractedNoteCommitment, NoteVersion, Nullifier, Rho},
+    note::{ExtractedNoteCommitment, Nullifier, Rho},
     note_encryption::{CompactAction, OrchardDomain},
     zsa::OrchardZSADomain,
 };
+use zcash_note_encryption::note_bytes::{NoteBytes, NoteBytesData};
 use sapling_crypto::{
     note_encryption::{
         plaintext_version_is_valid, SaplingDomain, Zip212Enforcement, KDF_SAPLING_PERSONALIZATION,
@@ -163,24 +164,74 @@ pub fn try_orchard_decrypt(
             let rho = Option::<Rho>::from(Rho::from_bytes(&nullifier_bytes))
                 .ok_or_else(|| anyhow::anyhow!("Invalid Rho bytes"))?;
 
-            let d = OrchardZSADomain { rho };
-            if let Some((note_v3, recipient)) = d.parse_note_plaintext_without_memo_ivk(
-                &pivk,
-                &plaintext,
-            ) {
-                // Rebuild as V2 so commitment uses rcm_v2 (matching chain)
-                let note = orchard::note::Note::from_parts(
-                    note_v3.recipient(),
-                    note_v3.value(),
-                    note_v3.asset(),
-                    rho,
-                    *note_v3.rseed(),
-                    NoteVersion::V2,
-                ).into_option()
-                .ok_or_else(|| anyhow::anyhow!("Failed to build V2 note from ZSA plaintext"))?;
+            let is_zsa = true;
+            // Ciphertext may be >= 84 bytes (ZSA); take only the first 52 for CompactAction.
+            let note_ciphertext: [u8; 52] = ca.ciphertext[..52].try_into()
+                .map_err(|_| anyhow::anyhow!("ciphertext too short"))?;
+            let cmx_bytes: [u8; 32] = ca.cmx.clone()
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid cmx length"))?;
+            let ephemeral_key_bytes: [u8; 32] = ca.ephemeral_key.clone()
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid ephemeral key length"))?;
+            let cca = CompactAction::from_parts(
+                Option::<Nullifier>::from(Nullifier::from_bytes(&rho.to_bytes()))
+                    .ok_or_else(|| anyhow::anyhow!("Invalid nullifier"))?,
+                Option::<ExtractedNoteCommitment>::from(
+                    ExtractedNoteCommitment::from_bytes(&cmx_bytes)
+                ).ok_or_else(|| anyhow::anyhow!("Invalid cmx"))?,
+                EphemeralKeyBytes(ephemeral_key_bytes),
+                note_ciphertext,
+            );
+            let note_plaintext = NoteBytesData::<84>::from_slice(&plaintext[..84])
+                .ok_or_else(|| anyhow::anyhow!("Invalid orchard note plaintext"))?;
+            // ZSA notes (lead byte 0x03) use OrchardZSADomain which parses V3 plaintext
+            // with the 32-byte asset field. Vanilla notes in 84-byte form use OrchardDomain.
+            let parsed = if is_zsa {
+                OrchardZSADomain { rho }.parse_note_plaintext_without_memo_ivk(
+                    &pivk,
+                    note_plaintext.as_ref(),
+                )
+            } else {
+                OrchardDomain::for_compact_action(&cca).parse_note_plaintext_without_memo_ivk(
+                    &pivk,
+                    note_plaintext.as_ref(),
+                )
+            };
+            tracing::debug!(
+                "ZSA parsed result: height={} vout={} is_some={}",
+                height, vout, parsed.is_some()
+            );
+            if let Some((note, recipient)) = parsed {
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
-                if cmx.to_bytes() == *ca.cmx {
+                let matched = if cmx.to_bytes() == *ca.cmx {
+                    true
+                } else if is_zsa {
+                    // Legacy cmx: orchard 0.14.0 (and earlier zcashd) computed
+                    // note commitments without the asset field. Try a V2 note
+                    // with zatoshi asset to match older chains.
+                    let legacy = orchard::note::Note::from_parts(
+                        recipient,
+                        orchard::value::NoteValue::from_raw(value),
+                        orchard::note::AssetBase::zatoshi(),
+                        rho,
+                        *note.rseed(),
+                        orchard::NoteVersion::V2,
+                    );
+                    let legacy_result = Option::<orchard::note::Note>::from(legacy)
+                        .map(|n| ExtractedNoteCommitment::from(n.commitment()).to_bytes() == *ca.cmx)
+                        .unwrap_or(false);
+                    tracing::debug!(
+                        "ZSA legacy cmx: height={} vout={} matched={}",
+                        height, vout, legacy_result
+                    );
+                    legacy_result
+                } else {
+                    false
+                };
+                if matched {
+                    // Always 32 bytes: [0u8; 32] for ZEC, non-zero for ZSA
                     let asset_base = note.asset().to_bytes().to_vec();
                     let dbn = Note {
                         pool: 2,
@@ -193,7 +244,7 @@ pub fn try_orchard_decrypt(
                         vout,
                         diversifier: recipient.diversifier().as_array().to_vec(),
                         ivtx,
-                        cmx: cmx.to_bytes().to_vec(),
+                        cmx: Vec::from(&*ca.cmx),
                         asset_base,
                         ..Note::default()
                     };
@@ -218,7 +269,8 @@ pub fn try_orchard_decrypt(
             .map_err(|_| anyhow::anyhow!("Invalid nullifier length"))?;
         let rho = Option::<Rho>::from(Rho::from_bytes(&nullifier_bytes))
             .ok_or_else(|| anyhow::anyhow!("Invalid Rho bytes"))?;
-        let note_ciphertext: [u8; 52] = ca.ciphertext.clone().try_into().map_err(|_| anyhow::anyhow!("Invalid orchard note ciphertext"))?;
+        let note_ciphertext: [u8; 52] = ca.ciphertext[..52].try_into()
+            .map_err(|_| anyhow::anyhow!("ciphertext too short"))?;
         let cmx_bytes: [u8; 32] = ca.cmx.clone()
             .try_into()
             .map_err(|_| anyhow::anyhow!("Invalid cmx length"))?;

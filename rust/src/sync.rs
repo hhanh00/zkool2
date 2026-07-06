@@ -530,7 +530,7 @@ pub async fn get_tree_state(
     network: &Network,
     client: &mut Client,
     height: u32,
-) -> Result<(CommitmentTreeFrontier, CommitmentTreeFrontier)> {
+) -> Result<(CommitmentTreeFrontier, CommitmentTreeFrontier, CommitmentTreeFrontier)> {
     let min_height: u32 = network
         .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
         .unwrap()
@@ -540,10 +540,11 @@ pub async fn get_tree_state(
         return Ok((
             CommitmentTreeFrontier::default(),
             CommitmentTreeFrontier::default(),
+            CommitmentTreeFrontier::default(),
         ));
     }
 
-    let (sapling_tree, orchard_tree) = client.tree_state(height).await?;
+    let (sapling_tree, orchard_tree, ironwood_tree) = client.tree_state(height).await?;
 
     fn decode_tree_state(tree: &[u8]) -> CommitmentTreeFrontier {
         if tree.is_empty() {
@@ -555,8 +556,9 @@ pub async fn get_tree_state(
 
     let sapling = decode_tree_state(&sapling_tree);
     let orchard = decode_tree_state(&orchard_tree);
+    let ironwood = decode_tree_state(&ironwood_tree);
 
-    Ok((sapling, orchard))
+    Ok((sapling, orchard, ironwood))
 }
 
 /// Preload all Sapling and Orchard account keys from the database.
@@ -657,7 +659,7 @@ pub async fn shielded_sync(
 
     let accounts = accounts.to_vec();
     let db_writer_task = {
-        let (s, o) = get_tree_state(network, client, start - 1).await?;
+        let (s, o, i) = get_tree_state(network, client, start - 1).await?;
 
         debug!("get compact block range");
         let blocks = get_compact_block_range(network, client, start, end).await?;
@@ -731,6 +733,7 @@ pub async fn shielded_sync(
                 actions_per_sync,
                 &s,
                 &o,
+                &i,
                 tx_messages.clone(),
                 rx_cancel,
             )
@@ -810,17 +813,21 @@ async fn handle_message(
             // resolves to NULL.
             tracing::debug!("note asset base {}", hex::encode(&note.asset_base));
 
-            // Register previously unseen ZSA assets discovered via transfer notes.
-            // Issuance messages provide desc_hash + ik; transfer notes only have
-            // asset_base. Use asset_base as a placeholder desc_hash so the LEFT JOIN
-            // below resolves id_asset. Issuance messages (sent before notes) have
-            // already registered the asset if known.
-            if note.asset_base != [0u8; 32] {
+            // Auto-register ZSA assets discovered through decryption.
+            // Issuance messages insert with known desc_hash+ik; for encrypted
+            // ZSA transfers we only know the asset_base. Use the asset_base
+            // itself as a unique key so the LEFT JOIN below can resolve id_asset.
+            if note.asset_base.len() == 32 && note.asset_base != [0u8; 32] {
+                // Use asset_base as the desc_hash placeholder and a zero-prefixed
+                // asset_base as the ik placeholder to get a unique (desc_hash, ik).
+                let mut ik_placeholder = vec![0u8; 33];
+                ik_placeholder[1..].copy_from_slice(&note.asset_base[..32]);
                 sqlx::query(
-                    "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, first_seen_height)
-                     VALUES (?1, ?1, ?2, ?3)",
+                    "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, finalized, first_seen_height)
+                     VALUES (?1, ?2, ?3, 0, ?4)",
                 )
                 .bind(&note.asset_base)
+                .bind(&ik_placeholder)
                 .bind(&note.asset_base)
                 .bind(note.height)
                 .execute(&mut **db_tx)

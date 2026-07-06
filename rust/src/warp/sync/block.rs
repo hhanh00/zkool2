@@ -34,6 +34,8 @@ pub struct SyncTx {
     /// Merged Orchard outputs: actions first, then issuance notes. Used by
     /// `extract_outputs` — cmxs are naturally interleaved per-tx.
     pub orchard_outputs: Vec<OrchardOutput>,
+    /// Ironwood actions from the v6 Ironwood bundle (same wire format as Orchard).
+    pub ironwood_actions: Vec<CompactOrchardAction>,
     /// Asset metadata for DB storage (sent as `WarpSyncMessage::Issuance`).
     pub issuances: Vec<CompactIssuance>,
 }

@@ -102,11 +102,11 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
               ],
               if (addresses.oaddr != null)
                 ListTile(
-                  title: Text("Orchard only Address"),
+                  title: Text("Orchard / Ironwood Address"),
                   subtitle: CopyableText(addresses.oaddr!),
                   trailing: IconButton(
                     icon: Icon(Icons.qr_code),
-                    onPressed: () => onShowQR("Orchard", addresses.oaddr!),
+                    onPressed: () => onShowQR("Orchard/Ironwood", addresses.oaddr!),
                   ),
                 ),
               if (addresses.saddr != null)

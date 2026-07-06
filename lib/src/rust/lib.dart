@@ -7,16 +7,16 @@ import 'frb_generated.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-class UsizeArray3 extends NonGrowableListView<BigInt> {
-  static const arraySize = 3;
+class UsizeArray4 extends NonGrowableListView<BigInt> {
+  static const arraySize = 4;
 
   @internal
   Uint64List get inner => _inner;
   final Uint64List _inner;
 
-  UsizeArray3(this._inner)
+  UsizeArray4(this._inner)
       : assert(_inner.length == arraySize),
         super(_inner);
 
-  UsizeArray3.init() : this(Uint64List(arraySize));
+  UsizeArray4.init() : this(Uint64List(arraySize));
 }

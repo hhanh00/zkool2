@@ -95,9 +95,10 @@ class PaymentOptions {
 sealed class PcztPackage with _$PcztPackage {
   const factory PcztPackage({
     required Uint8List pczt,
-    required UsizeArray3 nSpends,
+    required UsizeArray4 nSpends,
     required Uint64List saplingIndices,
     required Uint64List orchardIndices,
+    required Uint64List ironwoodIndices,
     required bool canSign,
     required bool canBroadcast,
     double? price,

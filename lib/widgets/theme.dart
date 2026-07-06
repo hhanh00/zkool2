@@ -215,7 +215,8 @@ class AccountCard extends StatelessWidget {
 enum PoolType {
   transparent("T"),
   sapling("S"),
-  orchard("O");
+  orchard("O"),
+  ironwood("I");
 
   final String label;
   const PoolType(this.label);
@@ -229,5 +230,7 @@ Color poolTypeColor(PoolType pool) {
       return Colors.orange;
     case PoolType.orchard:
       return Colors.green;
+    case PoolType.ironwood:
+      return Colors.cyan;
   }
 }

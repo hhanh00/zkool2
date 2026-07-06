@@ -282,7 +282,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               final settings = ref.read(appSettingsProvider).requireValue;
               final currency = settings.currency;
               final fiat = fullData.price?.let((p) {
-                final f = (b[0] + b[1] + b[2]).toDouble() * p / zatsPerZec.toDouble();
+                final f = (b[0] + b[1] + b[2] + b[3]).toDouble() * p / zatsPerZec.toDouble();
                 return formatFiat(f, currency);
               });
 
@@ -318,7 +318,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                             message: "Balance across all pools",
                                             child: Column(children: [
                                               zatToText(
-                                                b[0] + b[1] + b[2],
+                                                b[0] + b[1] + b[2] + b[3],
                                                 selectable: true,
                                                 style: tt.displaySmall!,
                                               ),
@@ -922,14 +922,17 @@ class BalanceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final b = balance.field0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        GestureDetector(onTap: () => onPoolSelected?.call(0), child: BalanceChip(PoolType.transparent, zatToShortString(balance.field0[0]))),
-        Gap(8),
-        GestureDetector(onTap: () => onPoolSelected?.call(1), child: BalanceChip(PoolType.sapling, zatToShortString(balance.field0[1]))),
-        Gap(8),
-        GestureDetector(onTap: () => onPoolSelected?.call(2), child: BalanceChip(PoolType.orchard, zatToShortString(balance.field0[2]))),
+        GestureDetector(onTap: () => onPoolSelected?.call(0), child: BalanceChip(PoolType.transparent, zatToShortString(b[0]))),
+        const Gap(8),
+        GestureDetector(onTap: () => onPoolSelected?.call(1), child: BalanceChip(PoolType.sapling, zatToShortString(b[1]))),
+        const Gap(8),
+        GestureDetector(onTap: () => onPoolSelected?.call(2), child: BalanceChip(PoolType.orchard, zatToShortString(b[2]))),
+        const Gap(8),
+        GestureDetector(onTap: () => onPoolSelected?.call(3), child: BalanceChip(PoolType.ironwood, zatToShortString(b[3]))),
       ],
     );
   }
