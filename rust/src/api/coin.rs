@@ -53,9 +53,10 @@ impl Coin {
 
         let mut connection = pool.acquire().await?;
 
+        let default_coin = self.coin.to_string();
         let coin = crate::db::get_prop(&mut connection, "coin")
             .await?
-            .unwrap_or("0".to_string());
+            .unwrap_or(default_coin);
         let coin = coin.parse::<u8>()?;
         let account = crate::db::get_prop(&mut connection, "account")
             .await?
@@ -78,6 +79,7 @@ impl Coin {
             0 => "mainnet",
             1 => "testnet",
             2 => "regnet",
+            3 => "zsa",
             _ => unimplemented!(),
         }
     }
@@ -86,8 +88,8 @@ impl Coin {
         match self.coin {
             0 => Network::Main,
             1 => Network::Test,
-            2 => {
-                let orchard_mode = if self.db_filepath.to_lowercase().contains("zsa") {
+            2 | 3 => {
+                let orchard_mode = if self.coin == 3 || self.db_filepath.to_lowercase().contains("zsa") {
                     OrchardMode::Zsa
                 } else {
                     OrchardMode::Normal
@@ -103,6 +105,10 @@ impl Coin {
                     nu6_1: Some(BlockHeight::from_u32(1)),
                     nu6_2: Some(BlockHeight::from_u32(1)),
                     nu6_3: None,
+                    nu7: match orchard_mode {
+                        OrchardMode::Zsa => Some(BlockHeight::from_u32(1)),
+                        OrchardMode::Normal => None,
+                    },
                     orchard_mode,
                 })
             }
@@ -207,7 +213,10 @@ async fn try_open(db_filepath: &str, password: &Option<String>) -> Result<Sqlite
     {
         let testnet = db_filepath.contains("testnet");
         let regtest = db_filepath.contains("regtest");
-        let coin_value = if testnet {
+        let zsa = db_filepath.contains("zsa");
+        let coin_value = if zsa {
+            "3"
+        } else if testnet {
             "1"
         } else if regtest {
             "2"
@@ -407,9 +416,9 @@ async fn http_connect_tunnel(
 
 impl Coin {
     #[cfg_attr(feature = "flutter", frb(sync))]
-    pub fn new() -> Self {
+    pub fn new(default_coin: Option<u8>) -> Self {
         Coin {
-            coin: 0,
+            coin: default_coin.unwrap_or(0),
             account: 0,
             db_filepath: String::new(),
             server_type: 0,

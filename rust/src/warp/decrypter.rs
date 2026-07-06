@@ -17,8 +17,9 @@ use halo2_proofs::pasta::{
 };
 use orchard::{
     keys::IncomingViewingKey,
-    note::{ExtractedNoteCommitment, Nullifier, Rho},
+    note::{ExtractedNoteCommitment, NoteVersion, Nullifier, Rho},
     note_encryption::{CompactAction, OrchardDomain},
+    zsa::OrchardZSADomain,
 };
 use sapling_crypto::{
     note_encryption::{
@@ -26,7 +27,7 @@ use sapling_crypto::{
     },
     SaplingIvk,
 };
-use zcash_note_encryption::{note_bytes::{NoteBytes, NoteBytesData}, EphemeralKeyBytes};
+use zcash_note_encryption::EphemeralKeyBytes;
 
 const COMPACT_NOTE_SIZE: usize = 52;
 
@@ -146,15 +147,14 @@ pub fn try_orchard_decrypt(
 
     // Handle ZSA (84-byte) and vanilla (52-byte) ciphertext sizes
     if ciphertext_len >= 84 {
-        // ZSA ciphertext can be > 84 bytes; use a dynamic buffer
+        // 84-byte ZSA compact format with leadbyte 0x03.
         let mut plaintext = ca.ciphertext.clone();
         keystream.apply_keystream(&mut plaintext);
 
-        // ZSA notes use leadbyte 0x03, vanilla uses 0x01/0x02
-        let is_zsa = plaintext[0] == 0x03;
-        if (is_zsa || plaintext[0] == 0x01 || plaintext[0] == 0x02)
-            && (is_zsa || plaintext_version_is_valid(zip212_enforcement, plaintext[0]))
-        {
+        // ZSA notes use leadbyte 0x03, 84-byte plaintext.
+        // NU7 does not activate NoteVersion::V3 — commitments are V2.
+        // Parse with OrchardZSADomain to extract fields, then rebuild as V2.
+        if plaintext[0] == 0x03 {
             use zcash_note_encryption::Domain;
             let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
             let nullifier_bytes: [u8; 32] = ca.nullifier.clone()
@@ -162,33 +162,25 @@ pub fn try_orchard_decrypt(
                 .map_err(|_| anyhow::anyhow!("Invalid nullifier length"))?;
             let rho = Option::<Rho>::from(Rho::from_bytes(&nullifier_bytes))
                 .ok_or_else(|| anyhow::anyhow!("Invalid Rho bytes"))?;
-            let note_ciphertext: [u8; 52] = ca.ciphertext.clone().try_into().map_err(|_| anyhow::anyhow!("Invalid orchard note ciphertext"))?;
-            let cmx_bytes: [u8; 32] = ca.cmx.clone()
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid cmx length"))?;
-            let ephemeral_key_bytes: [u8; 32] = ca.ephemeral_key.clone()
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid ephemeral key length"))?;
-            let cca = CompactAction::from_parts(
-                Option::<Nullifier>::from(Nullifier::from_bytes(&rho.to_bytes()))
-                    .ok_or_else(|| anyhow::anyhow!("Invalid nullifier"))?,
-                Option::<ExtractedNoteCommitment>::from(
-                    ExtractedNoteCommitment::from_bytes(&cmx_bytes)
-                ).ok_or_else(|| anyhow::anyhow!("Invalid cmx"))?,
-                EphemeralKeyBytes(ephemeral_key_bytes),
-                note_ciphertext,
-            );
-            let d = OrchardDomain::for_compact_action(&cca);
-            let note_plaintext = NoteBytesData::<84>::from_slice(&plaintext[..84])
-                .ok_or_else(|| anyhow::anyhow!("Invalid orchard note plaintext"))?;
-            if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(
+
+            let d = OrchardZSADomain { rho };
+            if let Some((note_v3, recipient)) = d.parse_note_plaintext_without_memo_ivk(
                 &pivk,
-                note_plaintext.as_ref(),
+                &plaintext,
             ) {
+                // Rebuild as V2 so commitment uses rcm_v2 (matching chain)
+                let note = orchard::note::Note::from_parts(
+                    note_v3.recipient(),
+                    note_v3.value(),
+                    note_v3.asset(),
+                    rho,
+                    *note_v3.rseed(),
+                    NoteVersion::V2,
+                ).into_option()
+                .ok_or_else(|| anyhow::anyhow!("Failed to build V2 note from ZSA plaintext"))?;
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
                 if cmx.to_bytes() == *ca.cmx {
-                    // Always 32 bytes: [0u8; 32] for ZEC, non-zero for ZSA
                     let asset_base = note.asset().to_bytes().to_vec();
                     let dbn = Note {
                         pool: 2,

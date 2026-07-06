@@ -47,6 +47,10 @@ pub struct Config {
     // None means skip
     #[clap(short, long, value_parser)]
     pub jwt_public_key_file: Option<String>,
+    /// Coin type: 0=mainnet, 1=testnet, 2=regtest, 3=zsa-regtest.
+    /// Defaults to the value stored in the database, or 0 for a new database.
+    #[clap(short = 'C', long, value_parser)]
+    pub coin: Option<u8>,
 }
 
 #[tokio::main]
@@ -72,6 +76,7 @@ async fn main() -> Result<()> {
         jwt_public_key_file,
         no_mempool,
         zebra,
+        coin,
         ..
     } = config;
     let db_path = db_path.unwrap_or("zkool.db".to_string());
@@ -108,7 +113,7 @@ async fn main() -> Result<()> {
 
     let server_type: u8 = if zebra { 1 } else { 0 };
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port} zebra {zebra}");
-    let coin = Coin::new()
+    let coin = Coin::new(coin)
         .open_database(db_path, None)
         .await?
         .set_lwd(server_type, lwd_url)?;
