@@ -1110,7 +1110,7 @@ fn wire__crate__api__coin__coin_new_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(crate::api::coin::Coin::new())?;
+                let output_ok = Result::<_, ()>::Ok(crate::api::coin::Coin::new(None))?;
                 Ok(output_ok)
             })())
         },

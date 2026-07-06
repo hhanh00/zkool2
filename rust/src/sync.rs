@@ -810,6 +810,23 @@ async fn handle_message(
             // resolves to NULL.
             tracing::debug!("note asset base {}", hex::encode(&note.asset_base));
 
+            // Register previously unseen ZSA assets discovered via transfer notes.
+            // Issuance messages provide desc_hash + ik; transfer notes only have
+            // asset_base. Use asset_base as a placeholder desc_hash so the LEFT JOIN
+            // below resolves id_asset. Issuance messages (sent before notes) have
+            // already registered the asset if known.
+            if note.asset_base != [0u8; 32] {
+                sqlx::query(
+                    "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, first_seen_height)
+                     VALUES (?1, ?1, ?2, ?3)",
+                )
+                .bind(&note.asset_base)
+                .bind(&note.asset_base)
+                .bind(note.height)
+                .execute(&mut **db_tx)
+                .await?;
+            }
+
             // Resolve diversifier_index from the preloaded key cache
             let diversifier_index = resolve_diversifier_index(
                 key_cache,
