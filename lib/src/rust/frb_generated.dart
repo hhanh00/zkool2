@@ -185,7 +185,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiCoinCoinGetName({required Coin that});
 
-  Coin crateApiCoinCoinNew();
+  Coin crateApiCoinCoinNew({int? defaultCoin});
 
   Future<Coin> crateApiCoinCoinOpenDatabase(
       {required Coin that, required String dbFilepath, String? password});
@@ -1306,11 +1306,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Coin crateApiCoinCoinNew() {
+  Coin crateApiCoinCoinNew({int? defaultCoin}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_box_autoadd_u_8(defaultCoin, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
@@ -1318,7 +1319,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiCoinCoinNewConstMeta,
-        argValues: [],
+        argValues: [defaultCoin],
         apiImpl: this,
       ),
     );
@@ -1326,7 +1327,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiCoinCoinNewConstMeta => const TaskConstMeta(
         debugName: "coin_new",
-        argNames: [],
+        argNames: ["defaultCoin"],
       );
 
   @override

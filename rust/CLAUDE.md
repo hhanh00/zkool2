@@ -1,0 +1,3 @@
+- do not edit .cargo/git, always edit local git clone
+- if no local git clone exists, make one and put a path override in Cargo.toml
+- do not create new git clone if one exists in Cargo.toml

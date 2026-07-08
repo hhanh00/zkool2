@@ -38,7 +38,7 @@ use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use jubjub::Fr;
 use orchard::{
     keys::FullViewingKey,
-    note::{AssetBase, RandomSeed, Rho},
+    note::{AssetBase, NoteVersion, RandomSeed, Rho},
     tree::MerkleHashOrchard,
     value::NoteValue,
     Note,
@@ -581,6 +581,7 @@ pub async fn get_orchard_note(
     ovk: &orchard::keys::FullViewingKey,
     eo: &FragmentAuthPath,
     ero: &AuthPath,
+    note_version: NoteVersion,
 ) -> Result<(orchard::Note, orchard::tree::MerklePath)> {
     let (scope, position, diversifier, value, rcm, rho, witness, asset_base) = sqlx::query(
         "SELECT scope, position, diversifier, value, rcm, rho, witness,
@@ -622,7 +623,7 @@ pub async fn get_orchard_note(
     } else {
         AssetBase::from_bytes(&asset_base.try_into().unwrap()).unwrap()
     };
-    let note = Note::from_parts(recipient, value, asset_base, rho, rseed, orchard::NoteVersion::V2)
+    let note = Note::from_parts(recipient, value, asset_base, rho, rseed, note_version)
         .into_option()
         .unwrap();
 

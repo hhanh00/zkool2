@@ -5,6 +5,7 @@ use zcash_trees::types::Note;
 
 use anyhow::Result;
 use blake2b_simd::Params;
+use hex;
 
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher, StreamCipherSeek},
@@ -18,7 +19,7 @@ use halo2_proofs::pasta::{
 use orchard::{
     keys::IncomingViewingKey,
     note::{ExtractedNoteCommitment, Nullifier, Rho},
-    note_encryption::{CompactAction, OrchardDomain},
+    note_encryption::{CompactAction, IronwoodDomain, OrchardDomain},
     zsa::OrchardZSADomain,
 };
 use zcash_note_encryption::note_bytes::{NoteBytes, NoteBytesData};
@@ -259,9 +260,29 @@ pub fn try_orchard_decrypt(
     plaintext.copy_from_slice(&ca.ciphertext);
     keystream.apply_keystream(&mut plaintext);
 
-    if (plaintext[0] == 0x01 || plaintext[0] == 0x02)
-        && plaintext_version_is_valid(zip212_enforcement, plaintext[0])
-    {
+    if height == 4152337 {
+        tracing::info!(
+            "DEBUG 4152337: vout={} ivtx={} ct_len={} epk={} key={} raw_lb=0x{:02x} pt_lb=0x{:02x} nullifier={} cmx={} plaintext={}",
+            vout,
+            ivtx,
+            ciphertext_len,
+            hex::encode(&ca.ephemeral_key),
+            hex::encode(key.as_ref()),
+            ca.ciphertext.first().unwrap_or(&0),
+            plaintext[0],
+            hex::encode(&ca.nullifier),
+            hex::encode(&ca.cmx),
+            hex::encode(&plaintext),
+        );
+    }
+
+    let is_ironwood = plaintext[0] == 0x03;
+    let is_orchard = matches!(plaintext[0], 0x01 | 0x02)
+        && plaintext_version_is_valid(zip212_enforcement, plaintext[0]);
+    if is_ironwood || is_orchard {
+        if height == 4152337 {
+            tracing::info!("Valid leading byte");
+        }
         use zcash_note_encryption::Domain;
         let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
         let nullifier_bytes: [u8; 32] = ca.nullifier.clone()
@@ -286,17 +307,28 @@ pub fn try_orchard_decrypt(
             EphemeralKeyBytes(ephemeral_key_bytes),
             note_ciphertext,
         );
-        let d = OrchardDomain::for_compact_action(&cca);
-        if let Some((note, recipient)) = d.parse_note_plaintext_without_memo_ivk(
-            &pivk,
-            plaintext.as_ref(),
-        )
-        {
+        let parsed = if is_ironwood {
+            IronwoodDomain::for_compact_action(&cca)
+                .parse_note_plaintext_without_memo_ivk(&pivk, plaintext.as_ref())
+        } else {
+            OrchardDomain::for_compact_action(&cca)
+                .parse_note_plaintext_without_memo_ivk(&pivk, plaintext.as_ref())
+        };
+        if let Some((note, recipient)) = parsed {
+            if height == 4152337 {
+                tracing::info!("Parse OK");
+            }
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let value = note.value().inner();
             if cmx.to_bytes() == *ca.cmx {
+                // ZSA-patched orchard: AssetBase::zatoshi().to_bytes() is now
+                // a non-zero Pallas point, not [0u8; 32]. Only store a non-empty
+                // asset_base for actual ZSA assets so the auto-register check
+                // (asset_base != [0u8; 32]) still works and ZEC notes get
+                // id_asset = NULL for inclusion in calculate_balance.
+                let is_zec = bool::from(note.asset().is_zatoshi());
                 let dbn = Note {
-                    pool: 2,
+                    pool: if is_ironwood { 3 } else { 2 },
                     account,
                     scope,
                     height,
@@ -307,7 +339,7 @@ pub fn try_orchard_decrypt(
                     diversifier: recipient.diversifier().as_array().to_vec(),
                     ivtx,
                     cmx: cmx.to_bytes().to_vec(),
-                    asset_base: note.asset().to_bytes().to_vec(),
+                    asset_base: if is_zec { vec![] } else { note.asset().to_bytes().to_vec() },
                     ..Note::default()
                 };
                 return Ok(Some((note, dbn)));

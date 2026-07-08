@@ -66,9 +66,10 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
 #[derive(Encode, Decode)]
 pub struct PcztPackage {
     pub pczt: Vec<u8>,
-    pub n_spends: [usize; 3],
+    pub n_spends: [usize; 4],
     pub sapling_indices: Vec<usize>,
     pub orchard_indices: Vec<usize>,
+    pub ironwood_indices: Vec<usize>,
     pub can_sign: bool,
     pub can_broadcast: bool,
     pub price: Option<f64>,
