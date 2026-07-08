@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.8...zkool-v6.24.0-rc.9) (2026-07-08)
+
+
+### Features
+
+* ironwood protocol support, proto build from service.proto, lrz dep bump ([a06a7dd](https://github.com/hhanh00/zkool2/commit/a06a7ddcebf5d0da035b50ae44c2df9f59278704))
+
 ## [6.24.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.7...zkool-v6.24.0-rc.8) (2026-07-06)
 
 
