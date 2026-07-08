@@ -1,5 +1,15 @@
 # Changelog
 
+## [6.24.0-rc.12](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.11...zkool-v6.24.0-rc.12) (2026-07-08)
+
+
+### Bug Fixes
+
+* **frost:** update get_orchard_pk call to pass ironwood_active ([31892bc](https://github.com/hhanh00/zkool2/commit/31892bc592624ef9f5aabc6464129cc38bc2a676))
+* **tx plan:** only create Ironwood txs after Nu6.3 activation ([20a9384](https://github.com/hhanh00/zkool2/commit/20a938431ba597deb162275589dbb55afacfe880))
+* **ui:** fix pool selector segment order to Trp/Sap/Orc/Iwd ([5748dda](https://github.com/hhanh00/zkool2/commit/5748dda1d06cdec8d48f9870f66c9510820472aa))
+* **ui:** reorder balance chips to Trp/Sap/Orc/Iwd ([dfabdd2](https://github.com/hhanh00/zkool2/commit/dfabdd2669b7ffdb4d4934e0f8c6398743887f71))
+
 ## [6.24.0-rc.11](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.10...zkool-v6.24.0-rc.11) (2026-07-08)
 
 
