@@ -204,9 +204,9 @@ pub async fn plan_transaction(
             .fetch_one(&mut *connection)
             .await?;
 
+    let height = client.latest_height().await?;
     let ironwood_active = network
-        .activation_height(NetworkUpgrade::Nu6_3)
-        .is_some();
+        .is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height));
     info!("ironwood_active: {ironwood_active}");
 
     let effective_src_pools = if has_tex || smart_transparent {
@@ -214,6 +214,8 @@ pub async fn plan_transaction(
     } else {
         crate::pay::plan::get_effective_src_pools(&mut *connection, account, src_pools).await?
     };
+    // Strip Ironwood (pool 3) from source pools when not active.
+    let effective_src_pools = if !ironwood_active { PoolMask(effective_src_pools.0 & !8) } else { effective_src_pools };
 
     let recipients = recipients.to_vec();
     let mut recipient_pools = PoolMask(0);
@@ -221,7 +223,7 @@ pub async fn plan_transaction(
         let pool = PoolMask::from_address(&recipient.address)?
             .intersect(&PoolMask(recipient.pools.unwrap_or(ALL_POOLS)));
         // Orchard (pool 2) is spend-only when Ironwood is active.
-        let pool = if ironwood_active { PoolMask(pool.0 & !4) } else { pool };
+        let pool = if ironwood_active { PoolMask(pool.0 & !4) } else { PoolMask(pool.0 & !8) };
         recipient_pools = recipient_pools.union(&pool);
     }
     info!(
@@ -258,7 +260,6 @@ pub async fn plan_transaction(
     });
 
     let confirmations = confirmations.unwrap_or_default();
-    let height = client.latest_height().await?;
     let max_height = height.saturating_sub(confirmations);
 
     let mut input_pools = vec![vec![]; NUM_POOLS as usize];
@@ -290,6 +291,10 @@ pub async fn plan_transaction(
             if ironwood_active {
                 // Orchard (pool 2) is spend-only; strip it from recipient masks.
                 rs.pool_mask = PoolMask(rs.pool_mask.0 & !4);
+            }
+            else {
+                // Ironwood (pool 3) is not active; strip it from recipient masks.
+                rs.pool_mask = PoolMask(rs.pool_mask.0 & !8);
             }
             rs
         })
@@ -1412,6 +1417,8 @@ pub async fn sign_transaction(
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
 
+    let ironwood_active = network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(*pczt.global().expiry_height()));
+
     let dindex = get_account_dindex(connection, account).await?;
     let tkeys = select_account_transparent(connection, account, dindex).await?;
     let tsk = tkeys.xsk;
@@ -1549,7 +1556,7 @@ pub async fn sign_transaction(
     });
     let sapling_prover = get_sapling_prover().await?;
 
-    let orchard_pk = get_orchard_pk(network);
+    let orchard_pk = get_orchard_pk(network, ironwood_active);
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
@@ -1920,7 +1927,7 @@ pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKe
 pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::ZsaFixed));
 pub static IRONWOOD_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::PostNu6_3));
 
-pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKey {
+pub fn get_orchard_pk(network: &crate::api::coin::Network, ironwood_active: bool) -> &'static ProvingKey {
     // ZSA and Ironwood are mutually exclusive hard forks with different
     // V6 version group IDs and circuit versions.
     let uses_orchard_zsa = match network {
@@ -1933,7 +1940,7 @@ pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKe
 
     if uses_orchard_zsa {
         &ORCHARD_ZSA_PK
-    } else if network.activation_height(NetworkUpgrade::Nu6_3).is_some() {
+    } else if ironwood_active {
         &IRONWOOD_PK
     } else {
         &ORCHARD_VANILLA_PK
