@@ -1108,9 +1108,10 @@ fn wire__crate__api__coin__coin_new_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_default_coin = <Option<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(crate::api::coin::Coin::new(None))?;
+                let output_ok = Result::<_, ()>::Ok(crate::api::coin::Coin::new(api_default_coin))?;
                 Ok(output_ok)
             })())
         },
@@ -7737,9 +7738,10 @@ impl SseDecode for crate::api::pay::PcztPackage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_pczt = <Vec<u8>>::sse_decode(deserializer);
-        let mut var_nSpends = <[usize; 3]>::sse_decode(deserializer);
+        let mut var_nSpends = <[usize; 4]>::sse_decode(deserializer);
         let mut var_saplingIndices = <Vec<usize>>::sse_decode(deserializer);
         let mut var_orchardIndices = <Vec<usize>>::sse_decode(deserializer);
+        let mut var_ironwoodIndices = <Vec<usize>>::sse_decode(deserializer);
         let mut var_canSign = <bool>::sse_decode(deserializer);
         let mut var_canBroadcast = <bool>::sse_decode(deserializer);
         let mut var_price = <Option<f64>>::sse_decode(deserializer);
@@ -7750,6 +7752,7 @@ impl SseDecode for crate::api::pay::PcztPackage {
             n_spends: var_nSpends,
             sapling_indices: var_saplingIndices,
             orchard_indices: var_orchardIndices,
+            ironwood_indices: var_ironwoodIndices,
             can_sign: var_canSign,
             can_broadcast: var_canBroadcast,
             price: var_price,
@@ -8277,7 +8280,7 @@ impl SseDecode for usize {
     }
 }
 
-impl SseDecode for [usize; 3] {
+impl SseDecode for [usize; 4] {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <Vec<usize>>::sse_decode(deserializer);
@@ -9313,6 +9316,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PcztPackage {
             self.n_spends.into_into_dart().into_dart(),
             self.sapling_indices.into_into_dart().into_dart(),
             self.orchard_indices.into_into_dart().into_dart(),
+            self.ironwood_indices.into_into_dart().into_dart(),
             self.can_sign.into_into_dart().into_dart(),
             self.can_broadcast.into_into_dart().into_dart(),
             self.price.into_into_dart().into_dart(),
@@ -10834,9 +10838,10 @@ impl SseEncode for crate::api::pay::PcztPackage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.pczt, serializer);
-        <[usize; 3]>::sse_encode(self.n_spends, serializer);
+        <[usize; 4]>::sse_encode(self.n_spends, serializer);
         <Vec<usize>>::sse_encode(self.sapling_indices, serializer);
         <Vec<usize>>::sse_encode(self.orchard_indices, serializer);
+        <Vec<usize>>::sse_encode(self.ironwood_indices, serializer);
         <bool>::sse_encode(self.can_sign, serializer);
         <bool>::sse_encode(self.can_broadcast, serializer);
         <Option<f64>>::sse_encode(self.price, serializer);
@@ -11207,7 +11212,7 @@ impl SseEncode for usize {
     }
 }
 
-impl SseEncode for [usize; 3] {
+impl SseEncode for [usize; 4] {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<usize>>::sse_encode(

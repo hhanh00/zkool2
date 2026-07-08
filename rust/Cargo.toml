@@ -12,7 +12,7 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "0dc1bfdd4611ffbb8ffd4524a17fe44f0d1974b4" }
+zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "880fefd" }
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
@@ -57,7 +57,7 @@ tower = "0.5"
 qrcode = "0.14.1"
 raptorq = "=2.0.0"
 
-orchard = {version = "0.15.0-pre.1", features = ["unstable-frost", "zsa", "zsa-issuance"]}
+orchard = {version = "0.15.0-pre.1", features = ["unstable-frost", "zsa"]}
 pczt = {version = "0.7", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233", "zsa"]}
 zcash_address = "0.13.0-pre.0"
 zcash_encoding = "0.4"
@@ -152,4 +152,5 @@ graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp"
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 flutter_rust_bridge = ["dep:flutter_rust_bridge"]
+
 
