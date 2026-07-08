@@ -156,7 +156,7 @@ impl TxPlan {
             })
             .unwrap();
 
-        let _verifier = verifier
+        let verifier = verifier
             .with_orchard(|bundle| {
                 for a in bundle.actions().iter() {
                     let input_asset_name = a
@@ -186,6 +186,33 @@ impl TxPlan {
                             .cloned()
                             .unwrap_or_default(),
                         asset_name: output_asset_name,
+                    });
+                }
+                let f: i64 = (*bundle.value_sum()).try_into().unwrap();
+                fee += f;
+                Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
+            })
+            .unwrap();
+
+        let _verifier = verifier
+            .with_ironwood(|bundle| {
+                for a in bundle.actions().iter() {
+                    // Ironwood only supports ZEC (no ZSA tokens).
+                    inputs.push(TxPlanIn {
+                        pool: 3,
+                        amount: None,
+                        asset_name: "ZEC".to_string(),
+                    });
+                    outputs.push(TxPlanOut {
+                        pool: 3,
+                        amount: a.output().value().expect("value").inner(),
+                        address: a
+                            .output()
+                            .user_address()
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_default(),
+                        asset_name: "ZEC".to_string(),
                     });
                 }
                 let f: i64 = (*bundle.value_sum()).try_into().unwrap();
