@@ -923,16 +923,26 @@ class BalanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = balance.field0;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(onTap: () => onPoolSelected?.call(0), child: BalanceChip(PoolType.transparent, zatToShortString(b[0]))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(onTap: () => onPoolSelected?.call(0), child: BalanceChip(PoolType.transparent, zatToShortString(b[0]))),
+            const Gap(8),
+            GestureDetector(onTap: () => onPoolSelected?.call(1), child: BalanceChip(PoolType.sapling, zatToShortString(b[1]))),
+          ],
+        ),
         const Gap(8),
-        GestureDetector(onTap: () => onPoolSelected?.call(1), child: BalanceChip(PoolType.sapling, zatToShortString(b[1]))),
-        const Gap(8),
-        GestureDetector(onTap: () => onPoolSelected?.call(2), child: BalanceChip(PoolType.orchard, zatToShortString(b[2]))),
-        const Gap(8),
-        GestureDetector(onTap: () => onPoolSelected?.call(3), child: BalanceChip(PoolType.ironwood, zatToShortString(b[3]))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(onTap: () => onPoolSelected?.call(2), child: BalanceChip(PoolType.orchard, zatToShortString(b[2]))),
+            const Gap(8),
+            GestureDetector(onTap: () => onPoolSelected?.call(3), child: BalanceChip(PoolType.ironwood, zatToShortString(b[3]))),
+          ],
+        ),
       ],
     );
   }
