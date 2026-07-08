@@ -51,10 +51,8 @@ pub struct Config {
     pub coin: Option<u8>,
     #[clap(short, long, value_parser)]
     pub jwt_public_key_file: Option<String>,
-    /// Coin type: 0=mainnet, 1=testnet, 2=regtest, 3=zsa-regtest.
-    /// Defaults to the value stored in the database, or 0 for a new database.
-    #[clap(short = 'C', long, value_parser)]
-    pub coin: Option<u8>,
+    #[clap(long, value_parser)]
+    pub decode_tx: Option<String>,
 }
 
 #[tokio::main]
@@ -81,8 +79,36 @@ async fn main() -> Result<()> {
         no_mempool,
         zebra,
         coin,
+        decode_tx,
         ..
     } = config;
+
+    if let Some(hex) = decode_tx {
+        use zcash_primitives::transaction::Transaction;
+        use zcash_protocol::consensus::BranchId;
+        let bytes = hex::decode(hex.trim())?;
+        for branch in [BranchId::Nu6_3, BranchId::Nu6_2, BranchId::Nu6, BranchId::Nu5] {
+            if let Ok(tx) = Transaction::read(&mut &bytes[..], branch) {
+                let txid = tx.txid();
+                eprintln!("TXID: {}", hex::encode(txid.as_ref()));
+                eprintln!("Branch: {branch:?}");
+                eprintln!("Version: {:?}", tx.version());
+                eprintln!("Consensus branch: {:?}", tx.consensus_branch_id());
+                eprintln!("Transparent: {}", tx.transparent_bundle().is_some());
+                eprintln!("Sapling: {}", tx.sapling_bundle().is_some());
+                let oa = tx.orchard_bundle().map(|b| b.actions().iter().count()).unwrap_or(0);
+                let iw = tx.ironwood_bundle().map(|b| (b.actions().iter().count(), b.flags().clone()));
+                eprintln!("Orchard actions: {oa}");
+                if let Some((count, flags)) = iw {
+                    eprintln!("Ironwood actions: {count}, flags: {flags:?}");
+                } else {
+                    eprintln!("Ironwood: none");
+                }
+                break;
+            }
+        }
+        return Ok(());
+    }
     let db_path = db_path.unwrap_or("zkool.db".to_string());
     let lwd_url = lwd_url.unwrap_or("https://zec.rocks".to_string());
     let port = port.unwrap_or(8000);

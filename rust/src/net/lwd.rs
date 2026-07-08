@@ -182,8 +182,9 @@ impl LwdServer for GRPCClient {
             hex::decode(&state.sapling_tree).expect("Failed to decode sapling tree hex");
         let orchard_tree =
             hex::decode(&state.orchard_tree).expect("Failed to decode sapling tree hex");
-        // Lightwalletd does not yet support Ironwood tree state
-        Ok((sapling_tree, orchard_tree, vec![]))
+        let ironwood_tree =
+            hex::decode(&state.ironwood_tree).unwrap_or_default();
+        Ok((sapling_tree, orchard_tree, ironwood_tree))
     }
 }
 
