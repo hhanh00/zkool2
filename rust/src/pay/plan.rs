@@ -25,7 +25,7 @@ use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use tracing::{event, info, span, Level};
+use tracing::{debug, event, info, span, Level};
 use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
@@ -34,7 +34,7 @@ use zcash_primitives::transaction::{
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
-    consensus::{BlockHeight, NetworkType, Parameters, ZIP212_GRACE_PERIOD},
+    consensus::{BlockHeight, NetworkType, NetworkUpgrade, Parameters, ZIP212_GRACE_PERIOD},
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
@@ -62,7 +62,7 @@ use crate::{
     pay::{
         error::Error,
         fee::{FeeManager, COST_PER_ACTION},
-        pool::{PoolMask, ALL_POOLS},
+        pool::{PoolMask, ALL_POOLS, NUM_POOLS},
         prepare::to_zec,
         InputNote, Recipient, RecipientState, TxPlanIn, TxPlanOut,
     },
@@ -98,6 +98,63 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
     let puri = puri.to_uri();
 
     Ok(puri)
+}
+
+fn build_zsa_builder(info: &IssuanceInfo, oaddress: orchard::Address) -> Result<ZsaBuilder> {
+    let mut zsa = ZsaBuilder::new(info.isk.clone());
+    zsa.add_issue_output(
+        info.desc_hash,
+        oaddress,
+        NoteValue::from_raw(info.amount),
+        info.first_issuance,
+        &mut OsRng,
+    )
+    .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
+    if info.finalize {
+        zsa.finalize_asset(&info.desc_hash)
+            .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
+    }
+    Ok(zsa)
+}
+
+fn build_fee_manager(
+    input_pools: &[Vec<InputNote>],
+    buffered_zsaspends: &[InputNote],
+    single: &[RecipientState],
+    double: &[RecipientState],
+    buffered_zsaoutputs: &[RecipientState],
+    change_pool: u8,
+    issuance_action_info: Option<(u64, u64)>,
+) -> FeeManager {
+    let mut fee_manager = FeeManager::default();
+
+    for pool_inputs in input_pools.iter() {
+        for inp in pool_inputs.iter() {
+            if inp.is_used() {
+                fee_manager.add_input(inp.pool);
+            }
+        }
+    }
+
+    for _spend in buffered_zsaspends {
+        fee_manager.add_input(2);
+    }
+
+    for r in single.iter().chain(double.iter()) {
+        fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
+    }
+
+    for _output in buffered_zsaoutputs {
+        fee_manager.add_output(2);
+    }
+
+    fee_manager.add_output(change_pool);
+
+    if let Some((issue_note_count, asset_creation_count)) = issuance_action_info {
+        fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
+    }
+
+    fee_manager
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -147,6 +204,11 @@ pub async fn plan_transaction(
             .fetch_one(&mut *connection)
             .await?;
 
+    let ironwood_active = network
+        .activation_height(NetworkUpgrade::Nu6_3)
+        .is_some();
+    info!("ironwood_active: {ironwood_active}");
+
     let effective_src_pools = if has_tex || smart_transparent {
         PoolMask::from_pool(0) // restrict to transparent pool
     } else {
@@ -158,6 +220,8 @@ pub async fn plan_transaction(
     for recipient in recipients.iter() {
         let pool = PoolMask::from_address(&recipient.address)?
             .intersect(&PoolMask(recipient.pools.unwrap_or(ALL_POOLS)));
+        // Orchard (pool 2) is spend-only when Ironwood is active.
+        let pool = if ironwood_active { PoolMask(pool.0 & !4) } else { pool };
         recipient_pools = recipient_pools.union(&pool);
     }
     info!(
@@ -166,6 +230,10 @@ pub async fn plan_transaction(
     );
     info!("recipient_pools: {:#b}", recipient_pools.0);
     let change_pool = get_change_pool(effective_src_pools, recipient_pools);
+    // Orchard (pool 2) is spend-only when Ironwood is active;
+    // redirect change to Ironwood (pool 3).
+    // I and O share the same keys & addresses, so this is transparent to the user.
+    let change_pool = if ironwood_active && change_pool == 2 { 3 } else { change_pool };
     // ZSA assets only exist in orchard; force change to orchard if any ZSA recipient.
     // The ZEC change output also satisfies ZIP-226 (no dummy needed).
     // Issuance also forces orchard change (needs orchard ZEC note for nullifier).
@@ -193,7 +261,7 @@ pub async fn plan_transaction(
     let height = client.latest_height().await?;
     let max_height = height.saturating_sub(confirmations);
 
-    let mut input_pools = vec![vec![]; 3];
+    let mut input_pools = vec![vec![]; NUM_POOLS as usize];
     let (mut inputs, recipients, recipient_pays_fee) = if smart_transparent {
         // Restrict to using one transparent address per shielding
         let mut notes = fetch_one_taddr_unspent_notes(connection, account).await?;
@@ -218,6 +286,13 @@ pub async fn plan_transaction(
     let recipient_states = recipients
         .into_iter()
         .map(|r| RecipientState::new(r).unwrap())
+        .map(|mut rs| {
+            if ironwood_active {
+                // Orchard (pool 2) is spend-only; strip it from recipient masks.
+                rs.pool_mask = PoolMask(rs.pool_mask.0 & !4);
+            }
+            rs
+        })
         .collect::<Vec<_>>();
 
     // ── ZSA block: handle non-ZEC recipients separately ──────────────────
@@ -270,7 +345,14 @@ pub async fn plan_transaction(
                     );
                 }
             }
-            assert!(used >= needed, "Not enough funds for asset {}", hex::encode(&asset_key));
+            if used < needed {
+                return Err(anyhow!(
+                    "Not enough funds for asset {}: needed {}, available {}",
+                    hex::encode(&asset_key),
+                    needed,
+                    used
+                ));
+            }
 
             // Buffer ZSA recipient outputs
             for r in &zsa_recipients {
@@ -356,19 +438,25 @@ pub async fn plan_transaction(
     // choose what pool to use for the inputs.
     // This is handled by the function fill_single_receivers
     //
+    let double_mask = if ironwood_active {
+        PoolMask(10) // S(2) | I(8)
+    } else {
+        PoolMask(6) // S(2) | O(4)
+    };
     let (mut single, mut double) = recipient_states
         .into_iter()
-        .partition::<Vec<_>, _>(|r| r.pool_mask != PoolMask(6));
+        .partition::<Vec<_>, _>(|r| r.pool_mask != double_mask);
 
-    fill_single_receivers(&mut input_pools, &mut single)?;
+    fill_single_receivers(&mut input_pools, &mut single, ironwood_active)?;
 
     // In the second pass, we will consider the recipients that have
     // multiple receivers. We always favor shielded receivers over
     // transparent ones. Hence, if a UA has a transparent and a
     // sapling receiver, it counts as a single sapling receiver.
     // Then, the only time we can have a multiple receiver recipient
-    // is when we have a sapling and an orchard receiver, ie.
-    // when we have to choose between shielded pools
+    // is when we have a sapling and an ironwood receiver, ie.
+    // when we have to choose between shielded pools.
+    // (Orchard is spend-only when Ironwood is active.)
 
     let balances = input_pools
         .iter()
@@ -382,52 +470,28 @@ pub async fn plan_transaction(
 
     let largest_shielded_pool = if change_pool != 0 {
         PoolMask::from_pool(change_pool)
-    } else if balances[1] > balances[2] {
-        PoolMask(2)
+    } else if ironwood_active && balances[3] > balances[1] {
+        PoolMask(8) // Ironwood
     } else {
-        PoolMask(4)
+        PoolMask(2) // Sapling
     };
 
     for d in double.iter_mut() {
         d.pool_mask = largest_shielded_pool;
     }
 
-    fill_single_receivers(&mut input_pools, &mut double)?;
+    fill_single_receivers(&mut input_pools, &mut double, ironwood_active)?;
 
     // ── Build FeeManager from actual inputs and outputs ──────────────────
-    let mut fee_manager = FeeManager::default();
-
-    // Count inputs from selected notes
-    for pool_inputs in input_pools.iter() {
-        for inp in pool_inputs.iter() {
-            if inp.is_used() {
-                fee_manager.add_input(inp.pool);
-            }
-        }
-    }
-
-    // Count ZSA orchard spends
-    for _spend in &buffered_zsaspends {
-        fee_manager.add_input(2);
-    }
-
-    // Count outputs: ZEC recipients
-    for r in single.iter().chain(double.iter()) {
-        fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
-    }
-
-    // Count ZSA orchard outputs
-    for _output in &buffered_zsaoutputs {
-        fee_manager.add_output(2);
-    }
-
-    // Count change output
-    fee_manager.add_output(change_pool);
-
-    // Add issuance actions (ZIP-317)
-    if let Some((issue_note_count, asset_creation_count)) = issuance_action_info {
-        fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
-    }
+    let mut fee_manager = build_fee_manager(
+        &input_pools,
+        &buffered_zsaspends,
+        &single,
+        &double,
+        &buffered_zsaoutputs,
+        change_pool,
+        issuance_action_info,
+    );
 
     info!("Fee {}", &fee_manager);
     let mut fee = fee_manager.fee();
@@ -485,7 +549,7 @@ pub async fn plan_transaction(
             let deficit = total_output + fee - total_input;
 
             // Track current inputs per pool (for marginal fee cost computation)
-            let mut input_counts: [u8; 3] = [0; 3];
+            let mut input_counts: [u8; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
             for (pi, pool_inputs) in input_pools.iter().enumerate() {
                 input_counts[pi] = pool_inputs.iter().filter(|n| n.is_used()).count() as u8;
             }
@@ -521,11 +585,11 @@ pub async fn plan_transaction(
                 .filter(|(_, &c)| c > 0)
                 .fold(0u8, |acc, (i, _)| acc | (1 << i as u8));
 
-            // Priority order: used pools (O→S→T), then unused pools (O→S→T)
-            let priority_pools: Vec<u8> = [2u8, 1, 0]
+            // Priority order: used pools (I→O→S→T), then unused pools (I→O→S→T)
+            let priority_pools: Vec<u8> = [3u8, 2, 1, 0]
                 .iter()
                 .filter(|&&p| used_bitmap & (1 << p) != 0)
-                .chain([2u8, 1, 0].iter().filter(|&&p| used_bitmap & (1 << p) == 0))
+                .chain([3u8, 2, 1, 0].iter().filter(|&&p| used_bitmap & (1 << p) == 0))
                 .copied()
                 .collect();
 
@@ -564,30 +628,28 @@ pub async fn plan_transaction(
             }
 
             // Rebuild fee_manager with the new inputs and recompute fee
-            fee_manager = FeeManager::default();
-            for pool_inputs in input_pools.iter() {
-                for inp in pool_inputs.iter() {
-                    if inp.is_used() {
-                        fee_manager.add_input(inp.pool);
-                    }
-                }
-            }
-            for _spend in &buffered_zsaspends {
-                fee_manager.add_input(2);
-            }
-            for r in single.iter().chain(double.iter()) {
-                fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
-            }
-            for _output in &buffered_zsaoutputs {
-                fee_manager.add_output(2);
-            }
-            fee_manager.add_output(change_pool);
-            if let Some((issue_note_count, asset_creation_count)) = issuance_action_info {
-                fee_manager.add_issuance_actions(issue_note_count, asset_creation_count);
-            }
+            fee_manager = build_fee_manager(
+                &input_pools,
+                &buffered_zsaspends,
+                &single,
+                &double,
+                &buffered_zsaoutputs,
+                change_pool,
+                issuance_action_info,
+            );
             fee = fee_manager.fee();
             total_input = compute_total_input(&input_pools);
             info!("Fee (after fee-note selection) {}", &fee_manager);
+
+            // Ensure recomputed fee doesn't exceed available funds
+            if total_input < total_output + fee {
+                return Err(anyhow!(
+                    "Insufficient funds after fee recomputation: total_input={} < total_output={} + fee={}",
+                    to_zec(total_input),
+                    to_zec(total_output),
+                    to_zec(fee)
+                ));
+            }
         }
     }
 
@@ -600,7 +662,13 @@ pub async fn plan_transaction(
             pool_mask,
             ..
         } = o;
-        assert_eq!(*remaining, 0);
+        if *remaining != 0 {
+            return Err(anyhow!(
+                "Recipient {} not fully funded: remaining {}",
+                recipient.address,
+                to_zec(*remaining)
+            ));
+        }
         info!(
             "address: {}, pool: {}, amount: {}",
             recipient.address,
@@ -616,11 +684,13 @@ pub async fn plan_transaction(
     );
 
     let h = crate::sync::get_db_height(connection, account).await?;
-    let (ts, to, _ti) = crate::sync::get_tree_state(network, client, h.height).await?;
+    let (ts, to, ti) = crate::sync::get_tree_state(network, client, h.height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
+    let ei = ti.to_edge(&OrchardHasher::default());
     let sapling_anchor = es.root(&SaplingHasher::default());
     let orchard_anchor = eo.root(&OrchardHasher::default());
+    let ironwood_anchor = ei.root(&OrchardHasher::default());
 
     // Update change address for transparent pool (orchard was pre-fetched)
     let tkeys = select_account_transparent(connection, account, dindex).await?;
@@ -655,15 +725,17 @@ pub async fn plan_transaction(
         BuildConfig::Standard {
             sapling_anchor: sapling_crypto::Anchor::from_bytes(sapling_anchor).into_option(),
             orchard_anchor: orchard::Anchor::from_bytes(orchard_anchor).into_option(),
-            ironwood_anchor: None,
+            ironwood_anchor: orchard::Anchor::from_bytes(ironwood_anchor).into_option(),
         },
     );
 
     let es = es.to_auth_path(&SaplingHasher::default());
     let eo = eo.to_auth_path(&OrchardHasher::default());
+    let ei = ei.to_auth_path(&OrchardHasher::default());
 
     let ers = empty_roots(&SaplingHasher::default());
     let ero = empty_roots(&OrchardHasher::default());
+    // Ironwood shares the same hasher (and empty roots) as Orchard.
 
     let svk = get_sapling_vk(connection, account).await?;
     let ovk = get_orchard_vk(connection, account).await?;
@@ -679,7 +751,7 @@ pub async fn plan_transaction(
     // Flush buffered ZSA orchard spends into input_pools[2] (ZEC spends already there)
     input_pools[2].extend(buffered_zsaspends);
 
-    let mut n_spends: [usize; 3] = [0, 0, 0];
+    let mut n_spends: [usize; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
     let mut inputs = vec![];
     for pool in input_pools.iter() {
         for inp in pool.iter() {
@@ -704,7 +776,7 @@ pub async fn plan_transaction(
                         .fetch_one(&mut *connection)
                         .await?;
 
-                        let nf: Vec<u8> = row.get(0);
+                        let _nf: Vec<u8> = row.get(0);
                         let pk: Vec<u8> = row.get(1);
                         let sk: Option<Vec<u8>> = row.get(2);
                         let scope: u32 = row.get(3);
@@ -718,8 +790,8 @@ pub async fn plan_transaction(
 
                         let pubkey = PublicKey::from_slice(&pk).unwrap();
                         let mut hash = [0u8; 32];
-                        hash.copy_from_slice(&nf[0..32]);
-                        let n = u32::from_le_bytes(nf[32..36].try_into().unwrap());
+                        hash.copy_from_slice(&_nf[0..32]);
+                        let n = u32::from_le_bytes(_nf[32..36].try_into().unwrap());
                         let utxo = OutPoint::new(hash, n);
                         let pk_bytes = if uncompressed {
                             pubkey.serialize_uncompressed().to_vec()
@@ -770,6 +842,7 @@ pub async fn plan_transaction(
                             ovk.as_ref().unwrap(),
                             &eo,
                             &ero,
+                            orchard::NoteVersion::V2,
                         )
                         .await?;
 
@@ -789,7 +862,36 @@ pub async fn plan_transaction(
                             merkle_path,
                         )?;
                     }
-                    _ => {}
+                    3 => {
+                        // Ironwood reuses Orchard keys and note structure.
+                        let (note, merkle_path) = get_orchard_note(
+                            connection,
+                            *id,
+                            h.height,
+                            ovk.as_ref().unwrap(),
+                            &ei,
+                            &ero,
+                            orchard::NoteVersion::V3,
+                        )
+                        .await?;
+
+                        if osk.is_none() {
+                            can_sign = false;
+                        }
+
+                        info!(
+                            "Adding ironwood input {}",
+                            hex::encode(
+                                ExtractedNoteCommitment::from(note.commitment()).to_bytes()
+                            )
+                        );
+                        builder.add_ironwood_spend::<Infallible>(
+                            ovk.clone().unwrap(),
+                            note,
+                            merkle_path,
+                        )?;
+                    }
+                    _ => unreachable!(),
                 }
 
                 let (nf,): (Vec<u8>,) =
@@ -797,6 +899,7 @@ pub async fn plan_transaction(
                         .bind(id)
                         .fetch_one(&mut *connection)
                         .await?;
+
                 info!(
                     "id: {id}, pool: {pool}, nullifier: {}, amount: {}",
                     hex::encode(nf),
@@ -807,7 +910,7 @@ pub async fn plan_transaction(
     }
 
     event!(Level::INFO, "Adding Outputs");
-    let mut n_outputs: [usize; 3] = [0, 0, 0];
+    let mut n_outputs: [usize; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
     let mut outs = vec![];
     for r in outputs.iter() {
         let RecipientState {
@@ -816,8 +919,20 @@ pub async fn plan_transaction(
             pool_mask,
             ..
         } = r;
-        assert_eq!(*remaining, 0);
-        assert!(pool_mask.single_pool());
+        if *remaining != 0 {
+            return Err(anyhow!(
+                "Output for {} not fully funded: remaining {}",
+                recipient.address,
+                to_zec(*remaining)
+            ));
+        }
+        if !pool_mask.single_pool() {
+            return Err(anyhow!(
+                "Output for {} has ambiguous pool mask: {:#b}",
+                recipient.address,
+                pool_mask.0
+            ));
+        }
 
         outs.push(TxPlanOut {
             pool: pool_mask.to_best_pool().unwrap(),
@@ -865,6 +980,8 @@ pub async fn plan_transaction(
                 )?;
             }
             2 => {
+                // Orchard output (ZSA tokens or ZEC where recipient only has orchard).
+                // For non-ZSA ZEC, this path should be rare since ironwood is preferred.
                 let to = get_orchard_address(network, &recipient.address)?;
                 info!(
                     "Adding orchard output {} {}",
@@ -874,7 +991,13 @@ pub async fn plan_transaction(
                 let asset_base = if r.asset_base == zec_key {
                     AssetBase::zatoshi()
                 } else {
-                    AssetBase::from_bytes(&r.asset_base.clone().try_into().unwrap()).unwrap()
+                    let asset_bytes: [u8; 32] = r
+                        .asset_base
+                        .clone()
+                        .try_into()
+                        .map_err(|v: Vec<u8>| anyhow!("Invalid asset_base length: expected 32, got {}", v.len()))?;
+                    Option::from(AssetBase::from_bytes(&asset_bytes))
+                        .ok_or_else(|| anyhow!("Invalid asset_base bytes: {}", hex::encode(&asset_bytes)))?
                 };
                 info!(
                     "Adding orchard output {} {} asset={}",
@@ -887,6 +1010,22 @@ pub async fn plan_transaction(
                     to,
                     value,
                     asset_base,
+                    memo,
+                )?;
+            }
+            3 => {
+                // Ironwood output. IW uses the same addresses/keys as Orchard.
+                // ZSA tokens are not supported in Ironwood (always ZEC).
+                let to = get_orchard_address(network, &recipient.address)?;
+                info!(
+                    "Adding ironwood output {} {}",
+                    &recipient.address,
+                    to_zec(value.into())
+                );
+                builder.add_ironwood_output::<Infallible>(
+                    ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
+                    to,
+                    value,
                     memo,
                 )?;
             }
@@ -920,6 +1059,8 @@ pub async fn plan_transaction(
                 )?;
             }
             2 => {
+                // Orchard change (ZSA or pre-ironwood). ZSA forces change_pool=2
+                // to satisfy the orchard ZEC nullifier requirement.
                 let to = get_orchard_address(network, &change_addr)?;
                 if let Some(ref fvk) = ovk {
                     builder.add_orchard_change_output::<Infallible>(
@@ -932,6 +1073,19 @@ pub async fn plan_transaction(
                     )?;
                 } else {
                     anyhow::bail!("No orchard key for change output");
+                }
+            }
+            3 => {
+                let to = get_orchard_address(network, &change_addr)?;
+                if let Some(ref fvk) = ovk {
+                    builder.add_ironwood_output::<Infallible>(
+                        Some(fvk.to_ovk(Scope::External)),
+                        to,
+                        Zatoshis::const_from_u64(change),
+                        MemoBytes::empty(),
+                    )?;
+                } else {
+                    anyhow::bail!("No orchard key for ironwood change output");
                 }
             }
             _ => {}
@@ -947,19 +1101,7 @@ pub async fn plan_transaction(
             .as_ref()
             .ok_or_else(|| anyhow!("No orchard key for issuance"))?
             .address_at(dindex, Scope::External);
-        let mut zsa = ZsaBuilder::new(info.isk.clone());
-        zsa.add_issue_output(
-            info.desc_hash,
-            oaddress,
-            NoteValue::from_raw(info.amount),
-            info.first_issuance,
-            &mut OsRng,
-        )
-        .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
-        if info.finalize {
-            zsa.finalize_asset(&info.desc_hash)
-                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
-        }
+        let zsa = build_zsa_builder(info, oaddress)?;
         builder.set_zsa_builder(zsa);
     }
 
@@ -968,8 +1110,79 @@ pub async fn plan_transaction(
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
+    let ironwood_meta = &r.ironwood_meta;
 
     info!("Prepared");
+
+    // ── Trace builder output ──────────────────────────────────────────────
+    {
+        let parts = &r.pczt_parts;
+        debug!("=== Builder Output ===");
+        debug!("  version={:?} branch={:?} lock_time={} expiry={} fee={}",
+            parts.version, parts.consensus_branch_id, parts.lock_time,
+            u32::from(parts.expiry_height), fee);
+        // Transparent
+        if let Some(ref t) = parts.transparent {
+            debug!("  Transparent: inputs={} outputs={}",
+                t.inputs().len(), t.outputs().len());
+            for (i, inp) in t.inputs().iter().enumerate() {
+                debug!("    txin[{}]: prevout={}:{} seq={}",
+                    i, hex::encode(inp.prevout_txid().as_ref()),
+                    inp.prevout_index(),
+                    inp.sequence().unwrap_or(0));
+            }
+            for (i, out) in t.outputs().iter().enumerate() {
+                debug!("    txout[{}]: value={}", i, u64::from(*out.value()));
+            }
+        } else {
+            debug!("  Transparent: <none>");
+        }
+        // Sapling
+        if let Some(ref s) = parts.sapling {
+            let vb: i64 = i64::try_from(*s.value_sum()).unwrap_or(0);
+            debug!("  Sapling: spends={} outputs={} valueBalance={} anchor={}",
+                s.spends().len(), s.outputs().len(), vb,
+                hex::encode(s.anchor().to_bytes()));
+            for (i, sp) in s.spends().iter().enumerate() {
+                let rk_bytes: [u8; 32] = sp.rk().clone().into();
+                debug!("    spend[{}]: cv={} nf={} rk={}",
+                    i, hex::encode(sp.cv().to_bytes()),
+                    hex::encode(sp.nullifier().0),
+                    hex::encode(rk_bytes));
+            }
+            for (i, out) in s.outputs().iter().enumerate() {
+                debug!("    output[{}]: cv={} cmu={} epk={}",
+                    i, hex::encode(out.cv().to_bytes()),
+                    hex::encode(out.cmu().to_bytes()),
+                    hex::encode(out.ephemeral_key().0));
+            }
+        } else {
+            debug!("  Sapling: <none>");
+        }
+        // Orchard
+        if let Some(ref o) = parts.orchard {
+            let vb: i64 = i64::try_from(*o.value_sum()).unwrap_or(0);
+            debug!("  Orchard: actions={} valueBalance={}", o.actions().len(), vb);
+            for (i, act) in o.actions().iter().enumerate() {
+                let nf_bytes = act.spend().nullifier().to_bytes();
+                debug!("    action[{}]: nf={}", i, hex::encode(nf_bytes));
+            }
+        } else {
+            debug!("  Orchard: <none>");
+        }
+        // Ironwood
+        if let Some(ref iw) = parts.ironwood {
+            let vb: i64 = i64::try_from(*iw.value_sum()).unwrap_or(0);
+            debug!("  Ironwood: actions={} valueBalance={}", iw.actions().len(), vb);
+            for (i, act) in iw.actions().iter().enumerate() {
+                let nf_bytes = act.spend().nullifier().to_bytes();
+                debug!("    action[{}]: nf={}", i, hex::encode(nf_bytes));
+            }
+        } else {
+            debug!("  Ironwood: <none>");
+        }
+        debug!("=== End Builder Output ===");
+    }
 
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
     info!("Created");
@@ -1120,21 +1333,7 @@ pub async fn plan_transaction(
             .as_ref()
             .ok_or_else(|| anyhow!("No orchard key for issuance"))?
             .address_at(dindex, Scope::External);
-        let mut zsa_builder = ZsaBuilder::new(info.isk.clone());
-        zsa_builder
-            .add_issue_output(
-                info.desc_hash,
-                oaddress,
-                NoteValue::from_raw(info.amount),
-                info.first_issuance,
-                &mut OsRng,
-            )
-            .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
-        if info.finalize {
-            zsa_builder
-                .finalize_asset(&info.desc_hash)
-                .map_err(|e| anyhow!("Failed to finalize asset: {e:?}"))?;
-        }
+        let zsa_builder = build_zsa_builder(info, oaddress)?;
         Issuer::new(pczt)
             .build_awaiting_sighash(zsa_builder, OsRng)
             .map_err(|e| anyhow!("Issuer (phase 1) failed: {e:?}"))?
@@ -1156,12 +1355,15 @@ pub async fn plan_transaction(
 
     let pczt_package = PcztPackage {
         pczt: pczt.serialize().unwrap(),
-        n_spends,
+        n_spends: [n_spends[0], n_spends[1], n_spends[2], n_spends[3]],
         sapling_indices: (0..n_spends[1])
             .map(|n| sapling_meta.spend_index(n).unwrap())
             .collect(),
         orchard_indices: (0..n_spends[2])
             .map(|n| orchard_meta.spend_action_index(n).unwrap())
+            .collect(),
+        ironwood_indices: (0..n_spends[3])
+            .map(|n| ironwood_meta.spend_action_index(n).unwrap())
             .collect(),
         can_sign,
         can_broadcast: false,
@@ -1202,6 +1404,7 @@ pub async fn sign_transaction(
         n_spends,
         sapling_indices,
         orchard_indices,
+        ironwood_indices,
         price,
         category,
         is_issuance,
@@ -1332,6 +1535,13 @@ pub async fn sign_transaction(
         };
         signer.sign_orchard(*bundle_index, osak).unwrap();
     }
+    for (index, bundle_index) in ironwood_indices.iter().enumerate() {
+        info!("signing ironwood {index}");
+        let Some(osak) = osak.as_ref() else {
+            return Err(Error::NoSigningKey.into());
+        };
+        signer.sign_ironwood(*bundle_index, osak).unwrap();
+    }
     let pczt = signer.finish();
 
     span.in_scope(|| {
@@ -1339,10 +1549,13 @@ pub async fn sign_transaction(
     });
     let sapling_prover = get_sapling_prover().await?;
 
+    let orchard_pk = get_orchard_pk(network);
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
-        .create_orchard_proof(if *is_issuance { &ORCHARD_ZSA_PK } else { get_orchard_pk(network) })
+        .create_orchard_proof(orchard_pk)
+        .unwrap()
+        .create_ironwood_proof(&IRONWOOD_PK)
         .unwrap()
         .finish();
     info!("Proved");
@@ -1355,6 +1568,7 @@ pub async fn sign_transaction(
         n_spends: *n_spends,
         sapling_indices: sapling_indices.clone(),
         orchard_indices: orchard_indices.clone(),
+        ironwood_indices: ironwood_indices.clone(),
         can_sign: true,
         can_broadcast: true,
         price: *price,
@@ -1366,7 +1580,7 @@ pub async fn sign_transaction(
 pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
-        info!("Extracting Tx");
+        debug!("Extracting Tx");
     });
 
     let pczt = Pczt::parse(&package.pczt).unwrap();
@@ -1374,17 +1588,27 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     let sapling_prover = get_sapling_prover().await?;
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
-    let tx = tx_extractor.extract().unwrap();
-    let mut tx_bytes = vec![];
-    tx.write(&mut tx_bytes).unwrap();
-    info!("Tx Extracted");
-
-    span.in_scope(|| {
-    eprintln!("TX HEX: {}", hex::encode(&tx_bytes));
-        info!("Tx Ready - {} bytes", tx_bytes.len());
-    });
-
-    Ok(tx_bytes)
+    match tx_extractor.extract() {
+        Ok(tx) => {
+            if let Some(bundle) = tx.sapling_bundle() {
+                let vb: i64 = (*bundle.value_balance()).into();
+                info!("Sapling verify OK: spends={} outputs={} valueBalance={}",
+                    bundle.shielded_spends().len(), bundle.shielded_outputs().len(), vb);
+            }
+            let mut tx_bytes = vec![];
+            tx.write(&mut tx_bytes).unwrap();
+            debug!("Tx Extracted");
+            span.in_scope(|| {
+                debug!("TX HEX: {}", hex::encode(&tx_bytes));
+                debug!("Tx Ready - {} bytes", tx_bytes.len());
+            });
+            return Ok(tx_bytes);
+        }
+        Err(e) => {
+            info!("Extraction failed: {:?}", e);
+            return Err(anyhow!("Extraction failed: {:?}", e));
+        }
+    }
 }
 
 struct MyTransparentAddress(TransparentAddress);
@@ -1460,30 +1684,51 @@ fn get_orchard_address(network: &Network, address: &str) -> Result<Address> {
 fn fill_single_receivers(
     input_pools: &mut [Vec<InputNote>],
     recipients: &mut [RecipientState],
+    ironwood_active: bool,
 ) -> Result<()> {
-    let fill_order: [(u8, u8); 9] = [
-        (2, 2),
-        (1, 1), // O->O, S->S
-        (2, 1),
-        (1, 2), // O->S, S->O
-        (0, 2),
-        (0, 1), // T->O, T->S
-        (2, 0),
-        (1, 0), // O->T, S->T
-        (0, 0), // T->T
-    ];
+    // Fill order: Ironwood > Orchard > Sapling > Transparent.
+    // When Ironwood is active, Orchard (pool 2) is spend-only \u{2014} no outputs
+    // to orchard allowed.
+    let fill_order: &[(u8, u8)] = if ironwood_active {
+        &[
+            (3, 3),             // I\u{2192}I
+            (1, 1),             // S\u{2192}S (intra-pool)
+            (3, 1),
+            (2, 1),             // I\u{2192}S, O\u{2192}S
+            (1, 3),             // S\u{2192}I
+            (2, 3),             // O\u{2192}I
+            (0, 3),
+            (0, 1),             // T\u{2192}I, T\u{2192}S
+            (3, 0),
+            (2, 0),
+            (1, 0),             // I\u{2192}T, O\u{2192}T, S\u{2192}T
+            (0, 0),             // T\u{2192}T
+        ]
+    } else {
+        &[
+            (2, 2),
+            (1, 1),             // O\u{2192}O, S\u{2192}S
+            (2, 1),
+            (1, 2),             // O\u{2192}S, S\u{2192}O
+            (0, 2),
+            (0, 1),             // T\u{2192}O, T\u{2192}S
+            (2, 0),
+            (1, 0),             // O\u{2192}T, S\u{2192}T
+            (0, 0),             // T\u{2192}T
+        ]
+    };
 
     for (src, dst) in fill_order {
         for r in recipients.iter_mut() {
             if r.remaining == 0 {
                 continue;
             }
-            for inp in input_pools[src as usize].iter_mut() {
+            for inp in input_pools[*src as usize].iter_mut() {
                 if inp.remaining == 0 {
                     continue;
                 }
                 // skip if the recipient is not interested in this pool
-                if r.pool_mask.intersect(&PoolMask::from_pool(dst)).is_empty() {
+                if r.pool_mask.intersect(&PoolMask::from_pool(*dst)).is_empty() {
                     continue;
                 }
                 let amount = inp.remaining.min(r.remaining);
@@ -1549,8 +1794,13 @@ pub async fn get_account_pool_mask(
             .bind(account)
             .fetch_one(&mut *connection)
             .await?;
-    let account_pool_mask =
-        PoolMask((has_transparent as u8) | (has_sapling as u8) << 1 | (has_orchard as u8) << 2);
+    // Ironwood uses the same keys as Orchard; include it when Orchard is available.
+    let account_pool_mask = PoolMask(
+        (has_transparent as u8)
+            | (has_sapling as u8) << 1
+            | (has_orchard as u8) << 2
+            | (has_orchard as u8) << 3,
+    );
 
     Ok(account_pool_mask)
 }
@@ -1667,10 +1917,12 @@ pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
         .await
 }
 pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::FixedPostNu6_2));
-pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::FixedPostNu6_2));
+pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::ZsaFixed));
+pub static IRONWOOD_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::PostNu6_3));
 
 pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKey {
-    // Check if NU7 is active (ZSA-enabled)
+    // ZSA and Ironwood are mutually exclusive hard forks with different
+    // V6 version group IDs and circuit versions.
     let uses_orchard_zsa = match network {
         crate::api::coin::Network::Regtest(config)
         | crate::api::coin::Network::ZsaRegtest(config) => {
@@ -1681,6 +1933,8 @@ pub fn get_orchard_pk(network: &crate::api::coin::Network) -> &'static ProvingKe
 
     if uses_orchard_zsa {
         &ORCHARD_ZSA_PK
+    } else if network.activation_height(NetworkUpgrade::Nu6_3).is_some() {
+        &IRONWOOD_PK
     } else {
         &ORCHARD_VANILLA_PK
     }
