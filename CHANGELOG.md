@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.11](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.10...zkool-v6.24.0-rc.11) (2026-07-08)
+
+
+### Bug Fixes
+
+* **tx plan:** decode ironwood bundle in TxPlan::from_package ([e5f9bf0](https://github.com/hhanh00/zkool2/commit/e5f9bf04e4d7926e9d91c34c4f9f8232f3996532))
+
 ## [6.24.0-rc.10](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.9...zkool-v6.24.0-rc.10) (2026-07-08)
 
 
