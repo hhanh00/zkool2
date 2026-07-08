@@ -62,18 +62,23 @@ class _PoolSelectState extends State<PoolSelect> {
           segments: <ButtonSegment<Pool>>[
             ButtonSegment<Pool>(
               value: Pool.transparent,
-              label: Text('Transparent'),
+              label: Text('Trp'),
               enabled: widget.enabled & 1 != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.sapling,
-              label: Text('Sapling'),
+              label: Text('Sap'),
               enabled: widget.enabled & 2 != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.orchard,
-              label: Text('Ironwood'),
+              label: Text('Orc'),
               enabled: widget.enabled & 4 != 0,
+            ),
+            ButtonSegment<Pool>(
+              value: Pool.ironwood,
+              label: Text('Iwd'),
+              enabled: widget.enabled & 8 != 0,
             ),
           ],
           selected: pools,
