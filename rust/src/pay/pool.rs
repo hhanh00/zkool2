@@ -83,12 +83,7 @@ impl PoolMask {
         if address.can_receive_as(PoolType::Shielded(
             ShieldedPool::Orchard,
         )) {
-            pool_mask |= 4;
-        }
-        if address.can_receive_as(PoolType::Shielded(
-            ShieldedPool::Ironwood,
-        )) {
-            pool_mask |= 8;
+            pool_mask |= 4 | 8; // I and O share the same addresses
         }
         Ok(PoolMask(pool_mask))
     }

@@ -40,7 +40,7 @@ impl RecipientState {
         let amount = recipient.amount;
         let pool_mask = PoolMask::from_address(&recipient.address)?.trim_transparent()?;
         let pm = pool_mask.0;
-        assert!(pm == 1 || pm == 2 || pm == 4 || pm == 6);
+        assert!(pm == 1 || pm == 2 || pm == 12 || pm == 14);
         let asset_base = if recipient.asset_base.is_empty() {
             [0u8; 32].to_vec()
         } else {

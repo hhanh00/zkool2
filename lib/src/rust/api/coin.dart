@@ -35,7 +35,8 @@ sealed class Coin with _$Coin {
         that: this,
       );
 
-  factory Coin() => RustLib.instance.api.crateApiCoinCoinNew();
+  factory Coin({int? defaultCoin}) =>
+      RustLib.instance.api.crateApiCoinCoinNew(defaultCoin: defaultCoin);
 
   Future<Coin> openDatabase({required String dbFilepath, String? password}) =>
       RustLib.instance.api.crateApiCoinCoinOpenDatabase(
