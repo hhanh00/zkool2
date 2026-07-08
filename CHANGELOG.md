@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.10](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.9...zkool-v6.24.0-rc.10) (2026-07-08)
+
+
+### Bug Fixes
+
+* comment out proto build in build.rs ([398cbdf](https://github.com/hhanh00/zkool2/commit/398cbdf1ef4deda2276a1bbfdf7ffb91d032c0ad))
+
 ## [6.24.0-rc.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.8...zkool-v6.24.0-rc.9) (2026-07-08)
 
 
