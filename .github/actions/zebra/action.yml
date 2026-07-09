@@ -17,36 +17,40 @@ runs:
       with:
         path: |
           ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-6.0.0
+        key: ${{ runner.os }}-zebra-lwd-6.0.0-rc.0
 
     - name: Install zebra & zaino
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
       run: |
         sudo apt update && sudo apt install -y libclang-dev clang
-
-        cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.0.0 --features=internal-miner --root ./tools zebrad
-        go install github.com/zcash-shielded-assets/lightwalletd@44adcde
-        cp $HOME/go/bin/lightwalletd tools/bin
+        rm -rf ./tools
+        rm -rf $HOME/.cache/zebra
+        rm -rf data
+        cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.0.0-rc.0 --features=internal-miner --root ./tools zebrad
+        git clone https://github.com/zecrocks/lightwalletd.git
+        cd lightwalletd
+        git checkout 9b69519c57785e04e92a16365483f869dd878700
+        go build -o ../tools/bin/lightwalletd .
 
     - name: Install zkool
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.17.0 --features=graphql --root ./tools --bin zkool_graphql
+      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.24.0-rc.12 --features=graphql --root ./tools --force --bin zkool_graphql
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5
       with:
         path: ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-6.0.0
+        key: ${{ runner.os }}-zebra-lwd-6.0.0-rc.0
 
     - name: Install config
       if: github.repository != 'hhanh00/zkool2'
       shell: bash
       run: |
         curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
-        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zcash.conf -o misc/zcash.conf
+        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.conf -o misc/zebra.conf
         curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o example/sh/mine.sh
         chmod +x ./example/sh/mine.sh
 
