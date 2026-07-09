@@ -107,13 +107,13 @@ gql 'mutation Synchronize($id: Int!) { synchronizeAccount(idAccount: $id) }' \
 
 # Check balance
 BALANCE=$(gql 'query GetBalance($id: Int!) {
-    balanceByAccount(idAccount: $id) { orchard }
+    balanceByAccount(idAccount: $id) { transparent orchard ironwood }
 }' "$(jq -n --argjson id "$WALLET" '{id: $id}')")
 echo "$BALANCE"
 
-ORCHARD=$(echo "$BALANCE" | jq -r '.balanceByAccount.orchard | tonumber')
-if (( $(echo "$ORCHARD <= 0" | bc -l) )); then
-    echo "Error: Expected positive orchard balance, got $ORCHARD" >&2
+IRONWOOD=$(echo "$BALANCE" | jq -r '.balanceByAccount.ironwood | tonumber')
+if (( $(echo "$IRONWOOD <= 0" | bc -l) )); then
+    echo "Error: Expected positive orchard balance, got $IRONWOOD" >&2
     exit 1
 fi
 
