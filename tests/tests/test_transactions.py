@@ -161,6 +161,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         transparent
                         sapling
                         orchard
+                        ironwood
                     }
                 }
                 """
@@ -174,8 +175,9 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print(f"  Transparent: {addresses['transparent'][:50]}..." if addresses['transparent'] else "  Transparent: None")
             print(f"  Sapling: {addresses['sapling'][:50]}..." if addresses['sapling'] else "  Sapling: None")
             print(f"  Orchard: {addresses['orchard'][:50]}..." if addresses['orchard'] else "  Orchard: None")
+            print(f"  Ironwood: {addresses['ironwood'][:50]}..." if addresses['ironwood'] else "  Ironwood: None")
 
-            assert addresses["orchard"], "Orchard address should be present"
+            assert addresses["ironwood"], "Ironwood address should be present"
 
             print("\n=== Step 6: Test new_addresses mutation ===")
             new_addresses_mutation = gql(
@@ -186,6 +188,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         transparent
                         sapling
                         orchard
+                        ironwood
                         diversifierIndex
                     }
                 }
@@ -196,7 +199,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             )
             new_addresses = result["newAddresses"]
             print(f"Generated new addresses for account 1, diversifier index: {new_addresses['diversifierIndex']}")
-            assert new_addresses["orchard"], "New Orchard address should be present"
+            assert new_addresses["ironwood"], "New Ironwood address should be present"
 
             print("\n=== Step 7: Send transaction from funding to account 1 ===")
             pay_mutation = gql(
@@ -216,7 +219,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                     pay_mutation,
                     variable_values={
                         "account": funding_id,
-                        "address": addresses["orchard"],
+                        "address": addresses["ironwood"],
                         "amount": "0.05"
                     }
                 )
@@ -243,6 +246,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                         transparent
                         sapling
                         orchard
+                        ironwood
                         total
                     }
                 }
@@ -257,8 +261,9 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print(f"  Transparent: {balance['transparent']} ZEC")
             print(f"  Sapling: {balance['sapling']} ZEC")
             print(f"  Orchard: {balance['orchard']} ZEC")
+            print(f"  Ironwood: {balance['ironwood']} ZEC")
             print(f"  Total: {balance['total']} ZEC")
-            assert balance["orchard"] == "0.05000000", f"Expected 0.05 ZEC in Orchard, got {balance['orchard']}"
+            assert balance["ironwood"] == "0.05000000", f"Expected 0.05 ZEC in Ironwood, got {balance['ironwood']}"
 
             print("\n=== Step 9: Test transactions_by_account query ===")
             transactions_query = gql(
@@ -315,7 +320,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": account2_id})
             )
-            account2_address = result["addressByAccount"]["orchard"]
+            account2_address = result["addressByAccount"]["ironwood"]
 
             result = await client.execute_async(
                 GraphQLRequest(
