@@ -147,7 +147,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -155,7 +155,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": test_account_id})
             )
-            test_address = result["addressByAccount"]["orchard"]
+            test_address = result["addressByAccount"]["ironwood"]
 
             pay_mutation = gql(
                 """
@@ -262,7 +262,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": receiver_id})
             )
-            receiver_address = result["addressByAccount"]["orchard"]
+            receiver_address = result["addressByAccount"]["ironwood"]
 
             # Send with memo (using PaymentMemoInput)
             pay_with_memo_mutation = gql(

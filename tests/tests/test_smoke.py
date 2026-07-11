@@ -102,7 +102,7 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -110,7 +110,7 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": a2_id})
             )
-            address = result["addressByAccount"]["orchard"]
+            address = result["addressByAccount"]["ironwood"]
             assert address
             assert address.startswith("uregtest1") or address.startswith("zrays")
             print(f"Recipient address: {address}")
@@ -132,7 +132,7 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
                 """
                 query ($account: Int!) {
                     balanceByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -140,7 +140,7 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": wallet_id})
             )
-            funding_balance = result["balanceByAccount"]["orchard"]
+            funding_balance = result["balanceByAccount"]["ironwood"]
             print(f"Funding wallet balance: {funding_balance}")
 
             # Send funds
@@ -186,7 +186,7 @@ async def test_transfer_to_new_wallet(gql_client_factory, rpc_url, seed, zkool_b
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": a2_id})
             )
-            final_balance = result["balanceByAccount"]["orchard"]
+            final_balance = result["balanceByAccount"]["ironwood"]
             print(f"Final balance: {final_balance}")
 
             assert final_balance == "10.50000000", f"Expected 10.50000000, got {final_balance}"

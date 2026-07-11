@@ -25,8 +25,6 @@ runs:
       run: |
         sudo apt update && sudo apt install -y libclang-dev clang
         rm -rf ./tools
-        rm -rf $HOME/.cache/zebra
-        rm -rf data
         cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.0.0-rc.0 --features=internal-miner --root ./tools zebrad
         git clone https://github.com/zecrocks/lightwalletd.git
         cd lightwalletd
@@ -49,9 +47,10 @@ runs:
       if: github.repository != 'hhanh00/zkool2'
       shell: bash
       run: |
-        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
-        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.conf -o misc/zebra.conf
-        curl -sf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o example/sh/mine.sh
+        set -e
+        curl -sSf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
+        curl -sSf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.conf -o misc/zebra.conf
+        curl -sSf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o example/sh/mine.sh
         chmod +x ./example/sh/mine.sh
 
     - name: Add tools to PATH
@@ -60,7 +59,12 @@ runs:
 
     - name: Start regtest, mine and shield to wallet
       shell: bash
-      run: ./example/sh/mine.sh
+      run: |
+        set -e
+        rm -rf $HOME/.cache/zebra
+        rm -rf data
+        rm -f regtest.db
+        ./example/sh/mine.sh
       env:
         MINER_SEED: ${{ inputs.MINER_SEED }}
         MINER_ADDRESS: ${{ inputs.MINER_ADDRESS }}

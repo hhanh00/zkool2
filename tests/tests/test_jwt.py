@@ -236,7 +236,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 """
                 query ($account: Int!) {
                     balanceByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -244,7 +244,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": admin_id})
             )
-            admin_balance = result["balanceByAccount"]["orchard"]
+            admin_balance = result["balanceByAccount"]["ironwood"]
             print(f"Admin balance: {admin_balance} ZEC")
 
             print("\n=== Step 2: Create 2 new accounts ===")
@@ -278,7 +278,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -286,13 +286,13 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": account1_id})
             )
-            account1_address = result["addressByAccount"]["orchard"]
+            account1_address = result["addressByAccount"]["ironwood"]
             print(f"Account 1 address: {account1_address}")
 
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": account2_id})
             )
-            account2_address = result["addressByAccount"]["orchard"]
+            account2_address = result["addressByAccount"]["ironwood"]
             print(f"Account 2 address: {account2_address}")
 
             # Generate JWTs for account 1 & 2
@@ -307,7 +307,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": admin_id})
             )
-            admin_balance = result["balanceByAccount"]["orchard"]
+            admin_balance = result["balanceByAccount"]["ironwood"]
             print(f"Admin balance: {admin_balance} ZEC")
 
             # Send 0.1 ZEC (smaller amount in case admin balance is low)
@@ -348,17 +348,17 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": admin_id})
             )
-            print(f"Admin sees admin balance: {result['balanceByAccount']['orchard']} ZEC")
+            print(f"Admin sees admin balance: {result['balanceByAccount']['ironwood']} ZEC")
 
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": account1_id})
             )
-            print(f"Admin sees account 1 balance: {result['balanceByAccount']['orchard']} ZEC")
+            print(f"Admin sees account 1 balance: {result['balanceByAccount']['ironwood']} ZEC")
 
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": account2_id})
             )
-            print(f"Admin sees account 2 balance: {result['balanceByAccount']['orchard']} ZEC")
+            print(f"Admin sees account 2 balance: {result['balanceByAccount']['ironwood']} ZEC")
 
             print("\n=== Step 5: Check account 1 JWT can only see their own balance ===")
             # With JWT 1, should be able to see account 1 balance
@@ -366,7 +366,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 result = await jwt1_client.execute_async(
                     GraphQLRequest(balance_query, variable_values={"account": account1_id})
                 )
-                account1_balance = result["balanceByAccount"]["orchard"]
+                account1_balance = result["balanceByAccount"]["ironwood"]
                 print(f"Account 1 JWT sees account 1 balance: {account1_balance} ZEC")
 
                 # Should NOT be able to see account 2 balance
@@ -395,7 +395,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 result = await jwt2_client.execute_async(
                     GraphQLRequest(balance_query, variable_values={"account": account2_id})
                 )
-                account2_balance = result["balanceByAccount"]["orchard"]
+                account2_balance = result["balanceByAccount"]["ironwood"]
                 print(f"Account 2 JWT sees account 2 balance: {account2_balance} ZEC")
 
                 # Should NOT be able to see account 1 balance
@@ -426,7 +426,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": account2_id})
             )
-            print(f"Account 2 balance before: {result['balanceByAccount']['orchard']} ZEC")
+            print(f"Account 2 balance before: {result['balanceByAccount']['ironwood']} ZEC")
 
             async with gql_client_factory(GRAPHQL_URL, jwt1_token) as jwt1_client:
                 # Now try to send from account 1 to account 2 using JWT 1
@@ -484,7 +484,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 result = await jwt1_client.execute_async(
                     GraphQLRequest(balance_query, variable_values={"account": account1_id})
                 )
-                print(f"JWT 1 sees account 1 balance: {result['balanceByAccount']['orchard']} ZEC")
+                print(f"JWT 1 sees account 1 balance: {result['balanceByAccount']['ironwood']} ZEC")
 
                 # Still cannot see account 2
                 try:
@@ -500,7 +500,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 result = await jwt2_client.execute_async(
                     GraphQLRequest(balance_query, variable_values={"account": account2_id})
                 )
-                print(f"JWT 2 sees account 2 balance: {result['balanceByAccount']['orchard']} ZEC")
+                print(f"JWT 2 sees account 2 balance: {result['balanceByAccount']['ironwood']} ZEC")
 
                 # Still cannot see account 1
                 try:
@@ -518,12 +518,12 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 result = await client.execute_async(
                     GraphQLRequest(balance_query, variable_values={"account": account1_id})
                 )
-                print(f"Admin sees account 1 balance: {result['balanceByAccount']['orchard']} ZEC")
+                print(f"Admin sees account 1 balance: {result['balanceByAccount']['ironwood']} ZEC")
 
                 result = await client.execute_async(
                     GraphQLRequest(balance_query, variable_values={"account": account2_id})
                 )
-                print(f"Admin sees account 2 balance: {result['balanceByAccount']['orchard']} ZEC")
+                print(f"Admin sees account 2 balance: {result['balanceByAccount']['ironwood']} ZEC")
 
             print("\n=== Step 12: Test subscription access control ===")
             import websockets
@@ -635,14 +635,14 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                     gql("""
                         mutation ($account: Int!) {
                             newAddresses(idAccount: $account) {
-                                orchard
+                                ironwood
                             }
                         }
                     """),
                     variable_values={"account": account2_id}
                 )
             )
-            account2_address = result["newAddresses"]["orchard"]
+            account2_address = result["newAddresses"]["ironwood"]
             print(f"Generated new address for account 2")
 
             # Test 1: Set up subscriptions for BOTH accounts BEFORE transaction

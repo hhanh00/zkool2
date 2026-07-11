@@ -166,7 +166,7 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
             """
@@ -174,14 +174,14 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": account1_id})
             )
-            account1_address = result["addressByAccount"]["orchard"]
-            print(f"Account 1 Orchard address: {account1_address[:50]}...")
+            account1_address = result["addressByAccount"]["ironwood"]
+            print(f"Account 1 Ironwood address: {account1_address[:50]}...")
 
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": account2_id})
             )
-            account2_address = result["addressByAccount"]["orchard"]
-            print(f"Account 2 Orchard address: {account2_address[:50]}...")
+            account2_address = result["addressByAccount"]["ironwood"]
+            print(f"Account 2 Ironwood address: {account2_address[:50]}...")
 
             print("\n=== Step 4: Send funding transaction to account 1 ===")
             pay_mutation = gql(
