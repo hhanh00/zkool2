@@ -242,7 +242,8 @@ impl Mutation {
             ua: addresses.ua,
             transparent: addresses.taddr,
             sapling: addresses.saddr,
-            orchard: addresses.oaddr,
+            orchard: addresses.oaddr.clone(),
+            ironwood: addresses.oaddr,
             diversifier_index: BigDecimal::from(addresses.diversifier_index),
         };
         Ok(addresses)
