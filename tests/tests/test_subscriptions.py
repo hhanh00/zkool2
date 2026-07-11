@@ -80,7 +80,7 @@ async def test_websocket_subscriptions(gql_client_factory, rpc_url, seed, zkool_
                 """
                 query ($account: Int!) {
                     balanceByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -88,7 +88,7 @@ async def test_websocket_subscriptions(gql_client_factory, rpc_url, seed, zkool_
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": funding_id})
             )
-            balance = result["balanceByAccount"]["orchard"]
+            balance = result["balanceByAccount"]["ironwood"]
             print(f"Funding wallet balance: {balance} ZEC")
 
             # Create receiver account
@@ -116,7 +116,7 @@ async def test_websocket_subscriptions(gql_client_factory, rpc_url, seed, zkool_
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -124,7 +124,7 @@ async def test_websocket_subscriptions(gql_client_factory, rpc_url, seed, zkool_
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": receiver_id})
             )
-            receiver_address = result["addressByAccount"]["orchard"]
+            receiver_address = result["addressByAccount"]["ironwood"]
             print(f"Receiver address: {receiver_address}")
 
             print("\n=== Setting up WebSocket subscription ===")

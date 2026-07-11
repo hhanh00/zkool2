@@ -110,7 +110,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -118,7 +118,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             result = await client.execute_async(
                 GraphQLRequest(address_query, variable_values={"account": test_account_id})
             )
-            test_address = result["addressByAccount"]["orchard"]
+            test_address = result["addressByAccount"]["ironwood"]
             print(f"Test account address: {test_address}")
 
             print("\n=== Step 3: Send funds to test account ===")
@@ -187,7 +187,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
                 """
                 query ($account: Int!) {
                     balanceByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -195,7 +195,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": test_account_id})
             )
-            balance_before_reorg = result["balanceByAccount"]["orchard"]
+            balance_before_reorg = result["balanceByAccount"]["ironwood"]
             print(f"Test account balance before reorg: {balance_before_reorg} ZEC")
 
             assert float(balance_before_reorg) > 0, f"Balance should be > 0, got {balance_before_reorg}"
@@ -279,7 +279,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": test_account_id})
             )
-            balance_after_reorg = result["balanceByAccount"]["orchard"]
+            balance_after_reorg = result["balanceByAccount"]["ironwood"]
             print(f"Test account balance after reorg: {balance_after_reorg} ZEC")
 
             assert float(balance_after_reorg) == 0, f"Balance should be 0 after reorg, got {balance_after_reorg}"
