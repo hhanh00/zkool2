@@ -113,7 +113,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
             """
             query ($account: Int!) {
                 addressByAccount(idAccount: $account) {
-                    orchard
+                    ironwood
                 }
             }
             """
@@ -121,7 +121,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
         result = await coordinator.execute(
             GraphQLRequest(address_query, variable_values={"account": receiver_account})
         )
-        receiver_address = result["addressByAccount"]["orchard"]
+        receiver_address = result["addressByAccount"]["ironwood"]
         print(f"Receiver address: {receiver_address}")
 
         print("\n=== Step 4: Synchronize FROST account ===")
@@ -209,7 +209,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
             """
             query ($account: Int!) {
                 balanceByAccount(idAccount: $account) {
-                    orchard
+                    ironwood
                 }
             }
             """
@@ -217,7 +217,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
         result = await coordinator.execute(
             GraphQLRequest(balance_query, variable_values={"account": coordinator_frost_account})
         )
-        frost_balance = result["balanceByAccount"]["orchard"]
+        frost_balance = result["balanceByAccount"]["ironwood"]
         print(f"FROST shared account balance after signing: {frost_balance} ZEC")
 
         print("\n=== Step 7: Verify transaction completed ===")
@@ -238,7 +238,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
             result = await coordinator.execute(
                 GraphQLRequest(balance_query, variable_values={"account": receiver_account})
             )
-            receiver_balance = result["balanceByAccount"]["orchard"]
+            receiver_balance = result["balanceByAccount"]["ironwood"]
             print(f"Receiver balance: {receiver_balance} ZEC (waiting for {expected_amount} ZEC)")
             return receiver_balance == expected_amount
 
@@ -251,7 +251,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
             result = await coordinator.execute(
                 GraphQLRequest(balance_query, variable_values={"account": receiver_account})
             )
-            final_balance = result["balanceByAccount"]["orchard"]
+            final_balance = result["balanceByAccount"]["ironwood"]
             pytest.fail(
                 f"Transaction did not complete. Final receiver balance: {final_balance} ZEC "
                 f"(expected {expected_amount} ZEC)"

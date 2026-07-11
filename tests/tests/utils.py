@@ -219,6 +219,7 @@ ADDRESS_BY_ACCOUNT_QUERY = gql(
             transparent
             sapling
             orchard
+            ironwood
         }
     }
     """
@@ -233,6 +234,7 @@ BALANCE_BY_ACCOUNT_QUERY = gql(
             transparent
             sapling
             orchard
+            ironwood
             total
         }
     }
@@ -292,13 +294,13 @@ async def sync_account(client, account_id: int):
     )
 
 
-async def get_address(client, account_id: int, pool: str = "orchard") -> str:
+async def get_address(client, account_id: int, pool: str = "ironwood") -> str:
     """Get an address for an account.
 
     Args:
         client: GraphQL client
         account_id: Account ID
-        pool: Address pool (orchard, sapling, transparent, ua)
+        pool: Address pool (ironwood, orchard, sapling, transparent, ua)
 
     Returns:
         Address string
@@ -309,13 +311,13 @@ async def get_address(client, account_id: int, pool: str = "orchard") -> str:
     return result["addressByAccount"][pool]
 
 
-async def get_balance(client, account_id: int, pool: str = "orchard") -> str:
+async def get_balance(client, account_id: int, pool: str = "ironwood") -> str:
     """Get balance for an account.
 
     Args:
         client: GraphQL client
         account_id: Account ID
-        pool: Balance pool (orchard, sapling, transparent, total)
+        pool: Balance pool (ironwood, orchard, sapling, transparent, total)
 
     Returns:
         Balance as string
