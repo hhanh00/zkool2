@@ -214,8 +214,15 @@ pub async fn plan_transaction(
     } else {
         crate::pay::plan::get_effective_src_pools(&mut *connection, account, src_pools).await?
     };
-    // Strip Ironwood (pool 3) from source pools when not active.
-    let effective_src_pools = if !ironwood_active { PoolMask(effective_src_pools.0 & !8) } else { effective_src_pools };
+    // Include Ironwood (pool 3) in source pools when active, strip when not.
+    // Orchard and Ironwood share keys/addresses, and notes are stored in the
+    // Ironwood pool when NU6.3 is active. The caller's src_pools value predates
+    // Ironwood (typically T|S|O = 7), so we OR in the Ironwood bit here.
+    let effective_src_pools = if ironwood_active {
+        PoolMask(effective_src_pools.0 | 8)
+    } else {
+        PoolMask(effective_src_pools.0 & !8)
+    };
 
     let recipients = recipients.to_vec();
     let mut recipient_pools = PoolMask(0);
