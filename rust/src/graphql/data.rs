@@ -45,6 +45,7 @@ pub struct Addresses {
     pub transparent: Option<String>,
     pub sapling: Option<String>,
     pub orchard: Option<String>,
+    pub ironwood: Option<String>,
     pub diversifier_index: BigDecimal,
 }
 

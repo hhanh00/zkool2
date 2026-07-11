@@ -1,5 +1,11 @@
 #![allow(unused_variables)]
 
+//! Zebra JSON-RPC connector.
+//!
+//! NOTE: This connector needs to be updated to support Ironwood (NU6.3).
+//! Currently it only handles Sapling and Orchard tree states and bundle
+//! decoding. Ironwood actions, tree state, and note scanning are missing.
+
 use std::{
     io::Read,
     pin::Pin,
