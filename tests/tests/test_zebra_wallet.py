@@ -92,12 +92,12 @@ async def test_zebra_wallet_sync(gql_client_factory, rpc_url, seed, zkool_binary
             print("Wallet synchronized via zebra backend")
 
             # Verify balance — mine.sh sent funds to this wallet's address
-            orchard_balance = await get_balance(client, wallet_id, "orchard")
-            print(f"Orchard balance: {orchard_balance} ZEC")
+            ironwood_balance = await get_balance(client, wallet_id, "ironwood")
+            print(f"Ironwood balance: {ironwood_balance} ZEC")
 
-            orchard_val = float(orchard_balance)
-            assert orchard_val > 0, (
-                f"Expected positive orchard balance (funded by mine.sh), got {orchard_balance}"
+            ironwood_val = float(ironwood_balance)
+            assert ironwood_val > 0, (
+                f"Expected positive ironwood balance (funded by mine.sh), got {ironwood_balance}"
             )
 
             # Also verify total balance is consistent
@@ -115,5 +115,14 @@ async def test_zebra_wallet_sync(gql_client_factory, rpc_url, seed, zkool_binary
             print("✅ Zebra wallet sync test passed!")
 
     finally:
+        # Dump server log for debugging
+        if os.path.exists(LOG_PATH):
+            with open(LOG_PATH) as f:
+                log_content = f.read()
+                print(f"\n=== Server log (last 50 lines) ===")
+                log_lines = log_content.strip().split('\n')
+                for line in log_lines[-50:]:
+                    print(f"  {line}")
+                print(f"=== End server log ===\n")
         await stop_zkool_instance(process)
         cleanup_test_files(DB_PATH, LOG_PATH)

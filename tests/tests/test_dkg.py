@@ -99,7 +99,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
                 """
                 query ($account: Int!) {
                     balanceByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -107,7 +107,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": main_wallet})
             )
-            funding_balance = result["balanceByAccount"]["orchard"]
+            funding_balance = result["balanceByAccount"]["ironwood"]
             print(f"Funding wallet balance: {funding_balance}")
 
         print("\n=== Step 3: Initialize DKG for each participant ===")
@@ -132,7 +132,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
                 """
                 query ($account: Int!) {
                     addressByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -140,7 +140,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await participant.execute(
                 GraphQLRequest(address_query, variable_values={"account": participant.funding_account})
             )
-            participant.funding_address = result["addressByAccount"]["orchard"]
+            participant.funding_address = result["addressByAccount"]["ironwood"]
 
             print(f"Participant {i} funding account: {participant.funding_account}")
             print(f"Participant {i} funding address: {participant.funding_address}")
@@ -221,7 +221,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             """
             query ($account: Int!) {
                 balanceByAccount(idAccount: $account) {
-                    orchard
+                    ironwood
                 }
             }
             """
@@ -230,7 +230,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await participant.execute(
                 GraphQLRequest(balance_query, variable_values={"account": participant.funding_account})
             )
-            balance = result["balanceByAccount"]["orchard"]
+            balance = result["balanceByAccount"]["ironwood"]
             print(f"Participant {i} funding account balance: {balance}")
             assert balance and balance != "0", f"Participant {i} has insufficient balance"
 
@@ -280,7 +280,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             """
             query ($account: Int!) {
                 addressByAccount(idAccount: $account) {
-                    orchard
+                    ironwood
                 }
             }
             """
@@ -292,7 +292,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await participant.execute(
                 GraphQLRequest(address_query, variable_values={"account": participant.frost_account})
             )
-            frost_address = result["addressByAccount"]["orchard"]
+            frost_address = result["addressByAccount"]["ironwood"]
             print(f"Participant {i} shared address: {frost_address}")
 
             if shared_address is None:
@@ -318,7 +318,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
                 """
                 query ($account: Int!) {
                     balanceByAccount(idAccount: $account) {
-                        orchard
+                        ironwood
                     }
                 }
                 """
@@ -326,7 +326,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await client.execute_async(
                 GraphQLRequest(balance_query, variable_values={"account": main_wallet})
             )
-            funding_balance = result["balanceByAccount"]["orchard"]
+            funding_balance = result["balanceByAccount"]["ironwood"]
             print(f"Funding wallet balance: {funding_balance}")
 
             pay_mutation = gql(
@@ -373,7 +373,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             """
             query ($account: Int!) {
                 balanceByAccount(idAccount: $account) {
-                    orchard
+                    ironwood
                 }
             }
             """
@@ -382,7 +382,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await participant.execute(
                 GraphQLRequest(balance_query, variable_values={"account": participant.frost_account})
             )
-            final_balance = result["balanceByAccount"]["orchard"]
+            final_balance = result["balanceByAccount"]["ironwood"]
             print(f"Participant {i} FROST balance: {final_balance}")
             assert final_balance == "0.10000000", f"Expected 0.10000000, got {final_balance}"
 
