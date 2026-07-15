@@ -22,6 +22,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -1165,4 +1166,104 @@ Future<List<plugin_api.MemoSection>> pluginMemoSections(
   Coin c,
 ) async {
   return await plugin_api.parseMemoWithPlugins(memoBytes: memoBytes, c: c);
+}
+
+// ── Migration providers ────────────────────────────────────────────────────
+
+/// Tracks cumulative fees for the current migration session (in-memory only).
+class MigrationFeeTracker {
+  BigInt splitFees = BigInt.zero;
+  BigInt migrateFees = BigInt.zero;
+
+  BigInt get totalFees => splitFees + migrateFees;
+}
+
+final migrationFeeTrackerProvider = Provider<MigrationFeeTracker>((ref) {
+  return MigrationFeeTracker();
+});
+
+/// The migration notifier — polls stepMigration() periodically when active.
+@riverpod
+class MigrationNotifier extends _$MigrationNotifier {
+  Timer? _timer;
+  bool _active = false;
+
+  @override
+  Future<MigrationStatus?> build() async {
+    // Check if there's anything to migrate
+    try {
+      final c = coinContext.coin;
+      final status = await getMigrationStatus(c: c);
+      return status;
+    } on Exception {
+      return null;
+    }
+  }
+
+  /// Start polling — called when the migration page opens.
+  void start() {
+    if (_active) return;
+    _active = true;
+    _scheduleNext();
+  }
+
+  /// Stop polling — called when the migration page closes.
+  void stop() {
+    _active = false;
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  /// Resume after app suspend — re-randomize wait.
+  void onResume() async {
+    if (!_active) return;
+    try {
+      final c = coinContext.coin;
+      // Re-fetch status
+      final status = await getMigrationStatus(c: c);
+      state = AsyncData(status);
+      // Re-fetch and schedule next poll
+      _scheduleNext();
+    } on Exception {
+      // ignore
+    }
+  }
+
+  void _scheduleNext() {
+    if (!_active) return;
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 6), _step);
+  }
+
+  Future<void> _step() async {
+    if (!_active) return;
+    try {
+      final c = coinContext.coin;
+      final event = await stepMigration(c: c);
+
+      switch (event) {
+        case MigrationEvent_SplitComplete(:final fee):
+          ref.read(migrationFeeTrackerProvider).splitFees += fee;
+          break;
+        case MigrationEvent_MigrateComplete(:final fee):
+          ref.read(migrationFeeTrackerProvider).migrateFees += fee;
+          break;
+        case MigrationEvent_Complete():
+        case MigrationEvent_NothingToDo():
+          break;
+        case MigrationEvent_Error(:final message):
+          logger.w('Migration error: $message');
+          break;
+      }
+
+      // Refresh status for the UI
+      final status = await getMigrationStatus(c: c);
+      state = AsyncData(status);
+
+      _scheduleNext();
+    } on Exception catch (e) {
+      logger.w('Migration step failed: $e');
+      _scheduleNext();
+    }
+  }
 }

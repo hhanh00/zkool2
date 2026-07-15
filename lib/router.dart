@@ -23,6 +23,7 @@ import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
+import 'package:zkool/pages/migrate.dart';
 import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/pages/lwd_select.dart';
 import 'package:zkool/pages/plugin_manager.dart';
@@ -141,6 +142,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
         GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
         GoRoute(path: '/lwd_select', builder: (context, state) => const LWDSelectPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
+        GoRoute(path: '/migrate', builder: (context, state) => const MigratePage()),
         GoRoute(path: '/zsa', builder: (context, state) => const ZsaHoldingsPage()),
         GoRoute(path: '/zsa/issue', builder: (context, state) => IssueAssetPage(args: state.extra as IssuanceArgs?)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),

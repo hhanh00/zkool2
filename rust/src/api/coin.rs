@@ -105,7 +105,7 @@ impl Coin {
                     nu6: Some(BlockHeight::from_u32(1)),
                     nu6_1: Some(BlockHeight::from_u32(1)),
                     nu6_2: Some(BlockHeight::from_u32(1)),
-                    nu6_3: Some(BlockHeight::from_u32(1)),
+                    nu6_3: Some(BlockHeight::from_u32(250)),
                     nu7: None,
                     orchard_mode,
                 })

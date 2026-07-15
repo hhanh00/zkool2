@@ -6,20 +6,22 @@ resolver = "2"
 
 [patch.crates-io]
 # -- ZSA support branches --
-orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "7bc6c6f" }
+#orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "7bc6c6f3b48ace8db768f3145f86ffb1593b83e0" }
+orchard = { path = "../zsa/orchard" }
 sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "bf29f9732eeaa417b63982aa8001acb542343b83" }
 zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "57d048381d376f71ce6ba753d7876ef04b6e57cb" }
 
 # -- lrz ZSA branch --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
+#pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "c98b772d" }
+pczt = {path = "../zsa/lrz/pczt"}
+zcash_address = { path = "../zsa/lrz/components/zcash_address" }
+zcash_encoding = { path = "../zsa/lrz/components/zcash_encoding" }
+zcash_keys = { path = "../zsa/lrz/zcash_keys" }
+zcash_primitives = { path = "../zsa/lrz/zcash_primitives" }
+zcash_proofs = { path = "../zsa/lrz/zcash_proofs" }
+zcash_protocol = { path = "../zsa/lrz/components/zcash_protocol" }
+zcash_transparent = { path = "../zsa/lrz/zcash_transparent" }
+zip321 = { path = "../zsa/lrz/components/zip321" }
 
 # -- remaining transitive deps --
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }

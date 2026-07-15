@@ -124,6 +124,8 @@ pub async fn issue_asset(
         false,         // smart_transparent
         None,          // category
         Some(&issuance_info),
+        false,         // migration
+        None,           // preselected
     )
     .await?;
 
