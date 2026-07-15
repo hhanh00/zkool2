@@ -10,7 +10,7 @@ use zcash_keys::keys::UnifiedFullViewingKey;
 use crate::api::coin::{Coin, Network};
 use crate::api::pay::PcztPackage;
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, AssetInfo, Balance, Note, Transaction, UnconfirmedTx};
+use crate::graphql::data::{Account, Addresses, AssetInfo, Balance, MigrationStatus, Note, Transaction, UnconfirmedTx};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::{Context, check_admin_auth, check_auth};
@@ -253,6 +253,26 @@ impl Query {
         Ok(height as i32)
     }
 
+    /// Get the current migration status for an account.
+    async fn migration_status(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<MigrationStatus> {
+        check_auth(context, id_account, false)?;
+        let mut connection = context.coin.get_connection().await?;
+        let status = crate::migrate::get_status(&mut connection, id_account as u32)
+            .await
+            .map_err(|e| FieldError::new(e.to_string(), juniper::Value::Null))?;
+        Ok(MigrationStatus {
+            phase: status.phase,
+            progress: status.progress,
+            next_action: status.next_action,
+            work_summary: status.work_summary,
+            sd_notes_count: status.sd_notes_count as i32,
+            non_sd_notes_count: status.non_sd_notes_count as i32,
+        })
+    }
+
     async fn prepare_send(
         id_account: i32,
         payment: Payment,
@@ -387,6 +407,8 @@ pub async fn prepare_tx(
         false,
         None,
         None,
+        false, // migration
+        None,  // preselected
     )
     .await?;
     Ok(pczt)

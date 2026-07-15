@@ -480,6 +480,8 @@ pub async fn publish(
         false,
         None,
         None,
+        false, // migration
+        None,  // preselected
     )
     .await
     .unwrap();

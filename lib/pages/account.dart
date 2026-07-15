@@ -169,249 +169,252 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
         final fullDataAV = ref.watch(fullAccountPageDataProvider);
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(fullDataAV.value?.currentAccount?.account.name ?? "Loading"),
-            actions: [
-              Tooltip(
-                message: "Synchronize only this account",
-                child: IconButton(
-                  tooltip: "Sync this account",
-                  onPressed: fullDataAV.value?.currentAccount != null ? () => onSync(fullDataAV.value!.currentAccount!) : null,
-                  icon: Icon(Icons.sync),
-                ),
-              ),
-              IconButton(
-                tooltip: "Show the account receiving addresses",
-                onPressed: onReceive,
-                icon: Icon(Icons.download),
-              ),
-              IconButton(
-                tooltip: "Send funds to one or many addresses",
-                onPressed: onSend,
-                icon: Icon(Icons.send),
-              ),
-              PopupMenuButton<String>(
-                onSelected: (String result) async {
-                  switch (result) {
-                    case "account_manager":
-                      GoRouter.of(context).push("/accounts");
-                    case "backup":
-                      final account = fullDataAV.value?.currentAccount?.account;
-                      if (account != null) {
-                        GoRouter.of(context).push("/viewing_keys", extra: account.id);
-                      }
-                    case "edit_account":
-                      final account = fullDataAV.value?.currentAccount?.account;
-                      if (account != null) {
-                        GoRouter.of(context).push("/account/edit", extra: [account]);
-                      }
-                    case "market_price":
-                      GoRouter.of(context).push("/market");
-                    case "update_fx":
-                      onUpdateAllTxPrices();
-                    case "toggle_tx_view":
-                      ref.read(appSettingsProvider.notifier)
-                          .setTransactionViewMode(
-                              !(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
-                    case "charts":
-                      GoRouter.of(context).push("/chart");
-                    case "settings":
-                      GoRouter.of(context).push("/settings");
-                    default:
-                      onExport(int.parse(result));
-                  }
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: "account_manager",
-                    child: Text("Account Manager"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "settings",
-                    child: Text("Settings"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "edit_account",
-                    child: Text("Edit Account"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "backup",
-                    child: Text("Backup"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "market_price",
-                    child: Text("Market Price"),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: "update_fx",
-                    child: Text("Fetch Tx Prices"),
-                  ),
-                  PopupMenuItem<String>(
-                    value: tabIndex(context).toString(),
-                    child: Text("Export ${tabNames[tabIndex(context)]}"),
-                  ),
-                  PopupMenuItem<String>(
-                    value: "toggle_tx_view",
-                    child: Text((ref.read(appSettingsProvider).value?.transactionTableMode ?? false)
-                        ? "View: List"
-                        : "View: Table"),
-                  ),
-                  if (!Platform.isLinux)
-                    const PopupMenuItem<String>(
-                      value: "charts",
-                      child: Text("Charts"),
-                    ),
-                ],
-              ),
-            ],
-            bottom: TabBar(
-              controller: tabController,
-              tabs: tabNames.map((n) => Tab(text: n)).toList(),
-            ),
-          ),
-          body: fullDataAV.when(
-            skipLoadingOnReload: true,
-            skipLoadingOnRefresh: true,
-            loading: () => blank(context),
-            error: (error, stack) => showError(error),
-            data: (fullData) {
-              final account = fullData.currentAccount!;
-
-              final b = account.balance.field0;
-              final settings = ref.read(appSettingsProvider).requireValue;
-              final currency = settings.currency;
-              final fiat = fullData.price?.let((p) {
-                final f = (b[0] + b[1] + b[2] + b[3]).toDouble() * p / zatsPerZec.toDouble();
-                return formatFiat(f, currency);
-              });
-
-              final t = Theme.of(context);
-              final tt = t.textTheme;
-
-              final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
-
-              return Builder(
-                builder: (context) {
-                  final ss = fullData.syncState;
-                  if (ss == null) return const SizedBox.shrink();
-
-                  final syncing = ss.start != ss.end;
-                  return Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                      child: TabBarView(
-                        controller: tabController,
-                        children: [
-                          CustomScrollView(
-                            slivers: [
-                              PinnedHeaderSliver(
-                                child: Container(
-                                    color: Theme.of(context).colorScheme.surface,
-                                    child: Column(children: [
-                                      if (syncing) ...[
-                                        HeroProgressWidget(account.account),
-                                        Gap(8),
-                                      ],
-                                      DisplayPanel(
-                                        child: Column(children: [
-                                          Tooltip(
-                                            message: "Balance across all pools",
-                                            child: Column(children: [
-                                              zatToText(
-                                                b[0] + b[1] + b[2] + b[3],
-                                                selectable: true,
-                                                style: tt.displaySmall!,
-                                              ),
-                                            ]),
-                                          ),
-                                          if (fiat != null) Text(fiat),
-                                          const Gap(4),
-                                          const ExchangeRateButton(),
-                                          Gap(8),
-                                          BalanceWidget(account.balance),
-                                        ]),
-                                      ),
-                                      Gap(8),
-                                      if (unconfirmedAmount != null) ...[
-                                        zatToText(
-                                          BigInt.from(unconfirmedAmount),
-                                          prefix: "Unconfirmed: ",
-                                          colored: true,
-                                          selectable: true,
-                                          style: tt.bodyLarge,
-                                        ),
-                                        Gap(8),
-                                      ],
-                                    ])),
-                              ),
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                  child: TextField(
-                                    controller: _txSearchController,
-                                    decoration: const InputDecoration(
-                                      labelText: "Search transactions (memo, contact, txid)",
-                                      fillColor: Colors.white,
-                                      prefixIcon: Icon(Icons.search),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: Center(
-                                    child: Text(
-                                      "Transaction History (${_filterTx(account.transactions).length} txs)",
-                                      style: Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (settings.transactionTableMode)
-                                SliverToBoxAdapter(
-                                  child: TransactionTable(
-                                    transactions: _filterTx(account.transactions),
-                                    currency: currency,
-                                    onTap: (id) => gotoTransaction(context, id),
-                                    onMemoChanged: (txId, newMemo) async {
-                                      await setUserMemo(
-                                        idTx: txId,
-                                        memo: newMemo,
-                                        c: c,
-                                      );
-                                      ref.invalidate(accountProvider);
-                                    },
-                                  ),
-                                )
-                              else
-                                SliverToBoxAdapter(
-                                  child: SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.55,
-                                    child: showTxHistory(
-                                      context,
-                                      _filterTx(account.transactions),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          showMemos(context, account.memos, () {
-                            final selectedAccount =
-                                ref.read(selectedAccountProvider).requireValue!;
-                            ref.invalidate(
-                                accountProvider(selectedAccount.id));
-                          }),
-                          showNotes(ref, account.notes),
-                          _showZsaHoldings(context, account.zsas),
-                        ],
-                      ));
-                },
-              );
-            },
-          ),
+        return fullDataAV.when(
+          loading: () => blank(context),
+          error: (error, stack) => showError(error),
+          data: (fullData) => _buildAccountScaffold(context, fullData),
         );
       },
+    );
+  }
+
+  Widget _buildAccountScaffold(BuildContext context, FullAccountPageData fullData) {
+    final account = fullData.currentAccount!;
+    final b = account.balance.field0;
+    final settings = ref.read(appSettingsProvider).requireValue;
+    final currency = settings.currency;
+    final hasOrchardBalance = b[2] > BigInt.zero;
+
+    final fiat = fullData.price?.let((p) {
+      final f = (b[0] + b[1] + b[2] + b[3]).toDouble() * p / zatsPerZec.toDouble();
+      return formatFiat(f, currency);
+    });
+
+    final t = Theme.of(context);
+    final tt = t.textTheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(account.account.name),
+        actions: [
+          Tooltip(
+            message: "Synchronize only this account",
+            child: IconButton(
+              tooltip: "Sync this account",
+              onPressed: () => onSync(account),
+              icon: Icon(Icons.sync),
+            ),
+          ),
+          IconButton(
+            tooltip: "Show the account receiving addresses",
+            onPressed: onReceive,
+            icon: Icon(Icons.download),
+          ),
+          IconButton(
+            tooltip: "Send funds to one or many addresses",
+            onPressed: onSend,
+            icon: Icon(Icons.send),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (String result) async {
+              switch (result) {
+                case "account_manager":
+                  GoRouter.of(context).push("/accounts");
+                case "backup":
+                  GoRouter.of(context).push("/viewing_keys", extra: account.account.id);
+                case "edit_account":
+                  GoRouter.of(context).push("/account/edit", extra: [account.account]);
+                case "market_price":
+                  GoRouter.of(context).push("/market");
+                case "update_fx":
+                  onUpdateAllTxPrices();
+                case "toggle_tx_view":
+                  ref.read(appSettingsProvider.notifier)
+                      .setTransactionViewMode(
+                          !(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
+                case "charts":
+                  GoRouter.of(context).push("/chart");
+                case "migration":
+                  GoRouter.of(context).push("/migrate");
+                case "settings":
+                  GoRouter.of(context).push("/settings");
+                default:
+                  onExport(int.parse(result));
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: "account_manager",
+                child: Text("Account Manager"),
+              ),
+              const PopupMenuItem<String>(
+                value: "settings",
+                child: Text("Settings"),
+              ),
+              const PopupMenuItem<String>(
+                value: "edit_account",
+                child: Text("Edit Account"),
+              ),
+              const PopupMenuItem<String>(
+                value: "backup",
+                child: Text("Backup"),
+              ),
+              const PopupMenuItem<String>(
+                value: "market_price",
+                child: Text("Market Price"),
+              ),
+              const PopupMenuItem<String>(
+                value: "update_fx",
+                child: Text("Fetch Tx Prices"),
+              ),
+              PopupMenuItem<String>(
+                value: tabIndex(context).toString(),
+                child: Text("Export ${tabNames[tabIndex(context)]}"),
+              ),
+              PopupMenuItem<String>(
+                value: "toggle_tx_view",
+                child: Text((ref.read(appSettingsProvider).value?.transactionTableMode ?? false)
+                    ? "View: List"
+                    : "View: Table"),
+              ),
+              if (!Platform.isLinux)
+                const PopupMenuItem<String>(
+                  value: "charts",
+                  child: Text("Charts"),
+                ),
+              // Show migration option when there is Orchard balance
+              if (hasOrchardBalance)
+                const PopupMenuItem<String>(
+                  value: "migration",
+                  child: Text("Note Migration"),
+                ),
+            ],
+          ),
+        ],
+        bottom: TabBar(
+          controller: tabController,
+          tabs: tabNames.map((n) => Tab(text: n)).toList(),
+        ),
+      ),
+      body: Builder(
+        builder: (context) {
+          final ss = fullData.syncState;
+          if (ss == null) return const SizedBox.shrink();
+
+          final syncing = ss.start != ss.end;
+          final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
+
+          return Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: TabBarView(
+                controller: tabController,
+                children: [
+                  CustomScrollView(
+                    slivers: [
+                      PinnedHeaderSliver(
+                        child: Container(
+                            color: Theme.of(context).colorScheme.surface,
+                            child: Column(children: [
+                              if (syncing) ...[
+                                HeroProgressWidget(account.account),
+                                Gap(8),
+                              ],
+                              DisplayPanel(
+                                child: Column(children: [
+                                  Tooltip(
+                                    message: "Balance across all pools",
+                                    child: Column(children: [
+                                      zatToText(
+                                        b[0] + b[1] + b[2] + b[3],
+                                        selectable: true,
+                                        style: tt.displaySmall!,
+                                      ),
+                                    ]),
+                                  ),
+                                  if (fiat != null) Text(fiat),
+                                  const Gap(4),
+                                  const ExchangeRateButton(),
+                                  Gap(8),
+                                  BalanceWidget(account.balance),
+                                ]),
+                              ),
+                              Gap(8),
+                              if (unconfirmedAmount != null) ...[
+                                zatToText(
+                                  BigInt.from(unconfirmedAmount),
+                                  prefix: "Unconfirmed: ",
+                                  colored: true,
+                                  selectable: true,
+                                  style: tt.bodyLarge,
+                                ),
+                                Gap(8),
+                              ],
+                            ])),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          child: TextField(
+                            controller: _txSearchController,
+                            decoration: const InputDecoration(
+                              labelText: "Search transactions (memo, contact, txid)",
+                              fillColor: Colors.white,
+                              prefixIcon: Icon(Icons.search),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Center(
+                            child: Text(
+                              "Transaction History (${_filterTx(account.transactions).length} txs)",
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (settings.transactionTableMode)
+                        SliverToBoxAdapter(
+                          child: TransactionTable(
+                            transactions: _filterTx(account.transactions),
+                            currency: currency,
+                            onTap: (id) => gotoTransaction(context, id),
+                            onMemoChanged: (txId, newMemo) async {
+                              await setUserMemo(
+                                idTx: txId,
+                                memo: newMemo,
+                                c: c,
+                              );
+                              ref.invalidate(accountProvider);
+                            },
+                          ),
+                        )
+                      else
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.55,
+                            child: showTxHistory(
+                              context,
+                              _filterTx(account.transactions),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  showMemos(context, account.memos, () {
+                    final selectedAccount =
+                        ref.read(selectedAccountProvider).requireValue!;
+                    ref.invalidate(
+                        accountProvider(selectedAccount.id));
+                  }),
+                  showNotes(ref, account.notes),
+                  _showZsaHoldings(context, account.zsas),
+                ],
+              ));
+        },
+      ),
     );
   }
 

@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use crate::{
     Sink, account::generate_next_dindex, api::mempool::MempoolMsg, graphql::{
-        Context, data::{Addresses, Event, EventType, UnconfirmedNote}, query::{prepare_tx, zats_to_zec}, subs::SUBS
+        Context, data::{Addresses, Event, EventType, MigrationEvent, UnconfirmedNote}, query::{prepare_tx, zats_to_zec}, subs::SUBS
     }, pay::plan::{extract_transaction, sign_transaction}
 };
 use bigdecimal::BigDecimal;
@@ -282,6 +282,47 @@ impl Mutation {
 
     pub async fn frost_sign(id_coordinator: i32, id_account: i32, message_account: i32, pczt: String, context: &Context) -> FieldResult<bool> {
         crate::graphql::frost::frost_sign(id_coordinator, id_account, message_account, pczt, context).await
+    }
+
+    /// Run one step of the note migration process (split non-SD → SD, then
+    /// migrate SD to Ironwood). Idempotent — call every ~6 seconds until
+    /// Complete.
+    async fn step_migration(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<MigrationEvent> {
+        check_auth(context, id_account, true)?;
+        let event =
+            crate::api::migrate::step_migration(&context.coin)
+                .await
+                .map_err(|e| format!("Migration error: {e}"))?;
+        Ok(match event {
+            crate::api::migrate::MigrationEvent::SplitComplete { fee } => MigrationEvent {
+                event: "SplitComplete".to_string(),
+                fee: Some(fee as i32),
+                message: None,
+            },
+            crate::api::migrate::MigrationEvent::MigrateComplete { fee } => MigrationEvent {
+                event: "MigrateComplete".to_string(),
+                fee: Some(fee as i32),
+                message: None,
+            },
+            crate::api::migrate::MigrationEvent::Complete => MigrationEvent {
+                event: "Complete".to_string(),
+                fee: None,
+                message: None,
+            },
+            crate::api::migrate::MigrationEvent::NothingToDo => MigrationEvent {
+                event: "NothingToDo".to_string(),
+                fee: None,
+                message: None,
+            },
+            crate::api::migrate::MigrationEvent::Error { message } => MigrationEvent {
+                event: "Error".to_string(),
+                fee: None,
+                message: Some(message),
+            },
+        })
     }
 
     pub async fn frost_cancel(context: &Context) -> FieldResult<bool> {

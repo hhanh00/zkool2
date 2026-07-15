@@ -15,6 +15,7 @@ import 'api/init.dart';
 import 'api/issuance.dart';
 import 'api/key.dart';
 import 'api/mempool.dart';
+import 'api/migrate.dart';
 import 'api/network.dart';
 import 'api/openalias.dart';
 import 'api/pay.dart';
@@ -383,6 +384,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MempoolTx dco_decode_mempool_tx(dynamic raw);
+
+  @protected
+  MigrationEvent dco_decode_migration_event(dynamic raw);
+
+  @protected
+  MigrationStatus dco_decode_migration_status(dynamic raw);
 
   @protected
   NewAccount dco_decode_new_account(dynamic raw);
@@ -875,6 +882,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MempoolTx sse_decode_mempool_tx(SseDeserializer deserializer);
+
+  @protected
+  MigrationEvent sse_decode_migration_event(SseDeserializer deserializer);
+
+  @protected
+  MigrationStatus sse_decode_migration_status(SseDeserializer deserializer);
 
   @protected
   NewAccount sse_decode_new_account(SseDeserializer deserializer);
@@ -1397,6 +1410,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_mempool_tx(MempoolTx self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_migration_event(
+      MigrationEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_migration_status(
+      MigrationStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_new_account(NewAccount self, SseSerializer serializer);
