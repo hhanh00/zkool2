@@ -125,6 +125,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<MempoolMsg> dco_decode_StreamSink_mempool_msg_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<MigrationStatus> dco_decode_StreamSink_migration_status_Sse(
+      dynamic raw);
+
+  @protected
   RustStreamSink<SigningEvent> dco_decode_StreamSink_signing_event_Sse(
       dynamic raw);
 
@@ -609,6 +613,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<MempoolMsg> sse_decode_StreamSink_mempool_msg_Sse(
+      SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<MigrationStatus> sse_decode_StreamSink_migration_status_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -1119,6 +1127,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_mempool_msg_Sse(
       RustStreamSink<MempoolMsg> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_migration_status_Sse(
+      RustStreamSink<MigrationStatus> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_signing_event_Sse(
