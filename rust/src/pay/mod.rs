@@ -14,6 +14,7 @@ pub mod fee;
 pub mod plan;
 pub mod pool;
 pub mod prepare;
+pub mod select;
 
 #[derive(Clone, Default, Debug)]
 pub struct Recipient {
@@ -80,12 +81,37 @@ pub struct InputNote {
     pub pool: u8,
     pub id_asset: Option<u32>,
     pub asset_base: Vec<u8>,
+    pub taddress: Option<u32>,
 }
 
 impl InputNote {
     pub fn is_used(&self) -> bool {
         self.remaining != self.amount
     }
+}
+
+use zcash_address::unified::Receiver;
+
+/// A single receiver alternative within a decomposed recipient.
+/// Stores the raw `Receiver` to avoid wasteful encode→decode round-trips.
+#[derive(Clone, Debug)]
+pub struct ReceiverOption {
+    pub receiver: Receiver,
+    pub pool: u8,       // 1=Sapling, 2=Orchard, 3=Ironwood
+    pub remaining: u64, // amount selected from this receiver so far
+}
+
+/// A recipient decomposed into receiver alternatives (OR, not AND).
+/// Coin selection picks exactly one ReceiverOption per recipient.
+#[derive(Clone, Debug)]
+pub struct DecomposedRecipient {
+    pub address: String,
+    pub receiver: ReceiverOption,
+    pub amount: u64,
+    pub remaining: u64,
+    pub memo: Option<String>,
+    pub memo_bytes: Option<Vec<u8>>,
+    pub asset_base: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize)]

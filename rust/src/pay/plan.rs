@@ -26,7 +26,7 @@ use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::{debug, event, info, span, Level};
-use zcash_address::{ConversionError, TryFromAddress, ZcashAddress};
+use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder},
@@ -37,6 +37,7 @@ use zcash_protocol::{
     consensus::{BlockHeight, NetworkType, NetworkUpgrade, Parameters, ZIP212_GRACE_PERIOD},
     memo::{Memo, MemoBytes},
     value::Zatoshis,
+    PoolType, ShieldedPool,
 };
 use zcash_transparent::{
     address::TransparentAddress,
@@ -64,7 +65,9 @@ use crate::{
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS, NUM_POOLS},
         prepare::to_zec,
-        InputNote, Recipient, RecipientState, TxPlanIn, TxPlanOut,
+        select,
+        DecomposedRecipient, InputNote, ReceiverOption, Recipient, RecipientState,
+        TxPlanIn, TxPlanOut,
     },
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
     Client,
@@ -155,6 +158,768 @@ fn build_fee_manager(
     }
 
     fee_manager
+}
+
+/// Decompose a Zcash address into its individual shielded receivers.
+/// - UA address → S/O/I receivers (transparent stripped)
+/// - Pre-ironwood: Ironwood removed → max S/O
+/// - Post-ironwood: Orchard removed → max S/I
+/// - Single-pool address → 1 receiver as-is
+/// Returns 1 or 2 ReceiverOptions (OR alternatives).
+/// Prefer O/I over S, returning exactly 1 shielded receiver.
+fn decompose_address(
+    address: &str,
+    network: &Network,
+    ironwood_active: bool,
+) -> Result<ReceiverOption> {
+    // Decode as unified address (works for UAs and single-pool shielded)
+    if let Ok(ua) = UnifiedAddress::decode(network, address) {
+        // Prefer Orchard/Ironwood over Sapling
+        if let Some(orchard) = ua.orchard() {
+            return Ok(ReceiverOption {
+                receiver: Receiver::Orchard(orchard.to_raw_address_bytes()),
+                pool: if ironwood_active { 3 } else { 2 },
+                remaining: 0,
+            });
+        }
+        if let Some(sapling) = ua.sapling() {
+            return Ok(ReceiverOption {
+                receiver: Receiver::Sapling(sapling.to_bytes()),
+                pool: 1,
+                remaining: 0,
+            });
+        }
+        anyhow::bail!("Address has no shielded receivers");
+    }
+
+    // Fallback: transparent-only or unrecognized address
+    let zaddr = ZcashAddress::try_from_encoded(address)?;
+    let pool = if zaddr.can_receive_as(PoolType::Transparent) {
+        0u8
+    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
+        1u8
+    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Orchard)) {
+        if ironwood_active { 3 } else { 2 }
+    } else {
+        anyhow::bail!("Unrecognized address pool");
+    };
+    // Extract Receiver bytes via re-parse
+    let ua = UnifiedAddress::decode(network, address)
+        .map_err(|e| anyhow!("Failed to decode address: {e}"))?;
+    let receiver = if let Some(o) = ua.orchard() {
+        Receiver::Orchard(o.to_raw_address_bytes())
+    } else if let Some(s) = ua.sapling() {
+        Receiver::Sapling(s.to_bytes())
+    } else {
+        anyhow::bail!("Failed to extract receiver from address");
+    };
+    Ok(ReceiverOption { receiver, pool, remaining: 0 })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn plan_transaction_wip(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    account: u32,
+    src_pools: u8,
+    recipients: &[Recipient],
+    recipient_pays_fee: bool,
+    confirmations: Option<u32>,
+    smart_transparent: bool,
+    category: Option<u32>,
+    _issuance: Option<&IssuanceInfo>,
+    migration: bool,
+) -> Result<PcztPackage> {
+    let mut input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
+    let height = client.latest_height().await?;
+    let confirmations = confirmations.unwrap_or_default();
+    let max_height = height.saturating_sub(confirmations);
+    for pool in 0..NUM_POOLS {
+        if src_pools & (1 << pool) == 0 {
+            input_pools[pool].clear();
+        } else {
+            input_pools[pool].retain(|n| n.height <= max_height);
+        }
+    }
+
+    let recipients = recipients.to_vec();
+    let (mut input_pools, recipients, recipient_pays_fee) = if smart_transparent {
+        let mut notes = std::mem::take(&mut input_pools[0]);
+        notes.sort_by_key(|n| n.taddress);
+        let groups: Vec<Vec<InputNote>> = notes
+            .into_iter()
+            .chunk_by(|n| n.taddress)
+            .into_iter()
+            .map(|(_, group)| group.collect())
+            .collect();
+        let notes = if groups.is_empty() {
+            vec![]
+        } else {
+            let i = OsRng.next_u32() as usize % groups.len();
+            groups[i].clone()
+        };
+        let max = notes.iter().map(|n| n.amount).sum::<u64>();
+        let recipient = Recipient {
+            amount: max,
+            ..recipients.first().cloned().unwrap_or_default()
+        };
+        let mut pools = vec![vec![]; NUM_POOLS as usize];
+        pools[0] = notes;
+        (pools, vec![recipient], true)
+    } else {
+        (input_pools, recipients, recipient_pays_fee)
+    };
+
+    let ironwood_active = network
+        .is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height));
+    let decomposed: Vec<DecomposedRecipient> = recipients
+        .iter()
+        .map(|r| {
+            Ok(DecomposedRecipient {
+                address: r.address.clone(),
+                receiver: decompose_address(&r.address, network, ironwood_active)?,
+                amount: r.amount,
+                remaining: r.amount,
+                memo: r.user_memo.clone(),
+                memo_bytes: r.memo_bytes.clone(),
+                asset_base: r.asset_base.clone(),
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    // ── Compute additional context ───────────────────────────────────────
+    let dindex = get_account_dindex(connection, account).await?;
+    let hw = get_account_hw(&mut *connection, account).await?;
+    let (use_internal,): (bool,) =
+        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
+
+    // Remove dust notes
+    for pool in input_pools.iter_mut() {
+        pool.retain(|n| n.amount >= COST_PER_ACTION);
+    }
+
+    // ── Coin selection via select_notes ──────────────────────────────────
+    let select_notes_input: Vec<select::Note> = input_pools
+        .iter()
+        .enumerate()
+        .flat_map(|(pool, notes)| {
+            notes.iter().map(move |n| select::Note {
+                pool: pool as u8,
+                amount: n.amount,
+            })
+        })
+        .collect();
+
+    let select_outputs: Vec<select::Output> = decomposed
+        .iter()
+        .map(|dr| select::Output {
+            pool: dr.receiver.pool,
+            amount: dr.amount,
+        })
+        .collect();
+
+    let f_unit = COST_PER_ACTION;
+    let slack = COST_PER_ACTION * 20;
+
+    let selection = select::select_notes(&select_notes_input, &select_outputs, f_unit, slack)
+        .ok_or_else(|| anyhow!("No feasible note selection found"))?;
+
+    // Mark selected notes as consumed (select_notes uses 0/1 knapsack)
+    for pool in 0..NUM_POOLS {
+        for &idx in &selection.per_pool_indices[pool] {
+            input_pools[pool][idx].remaining = 0;
+        }
+    }
+
+    let change_pool = selection.change_pool;
+
+    // ── Build RecipientStates ────────────────────────────────────────────
+    let recipient_states: Vec<RecipientState> = decomposed
+        .iter()
+        .map(|dr| RecipientState {
+            recipient: Recipient {
+                address: dr.address.clone(),
+                amount: dr.amount,
+                asset_base: dr.asset_base.clone(),
+                ..Default::default()
+            },
+            remaining: 0,
+            pool_mask: PoolMask::from_pool(dr.receiver.pool),
+            asset_base: dr.asset_base.clone(),
+        })
+        .collect();
+
+    // ── Fee computation ──────────────────────────────────────────────────
+    let mut fee_manager = FeeManager {
+        migration,
+        ..FeeManager::default()
+    };
+    for pool_inputs in input_pools.iter() {
+        for inp in pool_inputs.iter() {
+            if inp.is_used() {
+                fee_manager.add_input(inp.pool);
+            }
+        }
+    }
+    for r in &recipient_states {
+        fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
+    }
+    fee_manager.add_output(change_pool);
+
+    info!("Fee (select_notes) {}", &fee_manager);
+    let mut fee = fee_manager.fee();
+
+    // ── Check recipients ─────────────────────────────────────────────────
+    for r in &recipient_states {
+        if r.remaining > 0 {
+            return Err(anyhow!(
+                "Recipient {} not fully funded: remaining {}",
+                r.recipient.address,
+                to_zec(r.remaining)
+            ));
+        }
+    }
+
+    // ── Handle fee payment ───────────────────────────────────────────────
+    if recipient_pays_fee {
+        let first = recipient_states
+            .first()
+            .ok_or_else(|| Error::NotEnoughFunds(to_zec(fee)))?;
+        if first.recipient.amount < fee {
+            return Err(Error::NotEnoughFunds(to_zec(fee - first.recipient.amount)).into());
+        }
+    }
+
+    let total_output: u64 = recipient_states.iter().map(|r| r.recipient.amount).sum();
+
+    let compute_total_input = |input_pools: &[Vec<InputNote>]| -> u64 {
+        input_pools
+            .iter()
+            .map(|pool| {
+                pool.iter()
+                    .map(|n| if n.is_used() { n.amount } else { 0 })
+                    .sum::<u64>()
+            })
+            .sum()
+    };
+
+    let mut total_input = compute_total_input(&input_pools);
+
+    if !recipient_pays_fee {
+        let change_before_fee = total_input.saturating_sub(total_output);
+        if change_before_fee < fee {
+            let deficit = total_output + fee - total_input;
+            let mut input_counts: [u8; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
+            for (pi, pool_inputs) in input_pools.iter().enumerate() {
+                input_counts[pi] = pool_inputs.iter().filter(|n| n.is_used()).count() as u8;
+            }
+
+            let marginal_cost = |pool: u8| -> u64 {
+                let mut fm = fee_manager.clone();
+                fm.add_input(pool);
+                fm.fee().saturating_sub(fee_manager.fee())
+            };
+
+            let used_bitmap: u8 = input_counts
+                .iter()
+                .enumerate()
+                .filter(|(_, &c)| c > 0)
+                .fold(0u8, |acc, (i, _)| acc | (1 << i as u8));
+
+            let priority_pools: Vec<u8> = [3u8, 2, 1, 0]
+                .iter()
+                .filter(|&&p| used_bitmap & (1 << p) != 0)
+                .chain(
+                    [3u8, 2, 1, 0]
+                        .iter()
+                        .filter(|&&p| used_bitmap & (1 << p) == 0),
+                )
+                .copied()
+                .collect();
+
+            let mut deficit = deficit as i64;
+            for &pool in &priority_pools {
+                if deficit <= 0 {
+                    break;
+                }
+                for inp in input_pools[pool as usize].iter_mut() {
+                    if deficit <= 0 {
+                        break;
+                    }
+                    if inp.remaining == 0 {
+                        continue;
+                    }
+                    let is_new = !inp.is_used();
+                    let mc = if is_new {
+                        marginal_cost(pool) as i64
+                    } else {
+                        0
+                    };
+                    let take = (inp.remaining as i64).min(deficit + mc);
+                    inp.remaining -= take as u64;
+                    deficit = deficit + mc - take;
+                    if is_new {
+                        input_counts[pool as usize] += 1;
+                    }
+                }
+            }
+
+            if deficit > 0 {
+                return Err(Error::NotEnoughFunds(to_zec(deficit as u64)).into());
+            }
+
+            // Recompute fee with new inputs
+            fee_manager = FeeManager {
+                migration,
+                ..FeeManager::default()
+            };
+            for pool_inputs in input_pools.iter() {
+                for inp in pool_inputs.iter() {
+                    if inp.is_used() {
+                        fee_manager.add_input(inp.pool);
+                    }
+                }
+            }
+            for r in &recipient_states {
+                fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
+            }
+            fee_manager.add_output(change_pool);
+            fee = fee_manager.fee();
+            total_input = compute_total_input(&input_pools);
+            info!("Fee (after fee-note selection) {}", &fee_manager);
+
+            if total_input < total_output + fee {
+                return Err(anyhow!(
+                    "Insufficient funds after fee recomputation: total_input={} < total_output={} + fee={}",
+                    to_zec(total_input),
+                    to_zec(total_output),
+                    to_zec(fee)
+                ));
+            }
+        }
+    }
+
+    let change = total_input.saturating_sub(total_output + fee);
+
+    info!(
+        "change: {}, pool: {change_pool}, fee: {}",
+        to_zec(change),
+        to_zec(fee)
+    );
+
+    // ── Log outputs ──────────────────────────────────────────────────────
+    for r in &recipient_states {
+        info!(
+            "address: {}, pool: {}, amount: {}",
+            r.recipient.address,
+            r.pool_mask.to_best_pool().unwrap(),
+            to_zec(r.recipient.amount)
+        );
+    }
+
+    // ── Fetch tree states and anchors ────────────────────────────────────
+    let h = crate::sync::get_db_height(connection, account).await?;
+    let (ts, to, ti) = crate::sync::get_tree_state(network, client, h.height).await?;
+    let es = ts.to_edge(&SaplingHasher::default());
+    let eo = to.to_edge(&OrchardHasher::default());
+    let ei = ti.to_edge(&OrchardHasher::default());
+    let sapling_anchor = es.root(&SaplingHasher::default());
+    let orchard_anchor = eo.root(&OrchardHasher::default());
+    let ironwood_anchor = ei.root(&OrchardHasher::default());
+
+    let mut has_pool = [false; NUM_POOLS as usize];
+    for pool in 1..NUM_POOLS {
+        let p = pool as u8;
+        has_pool[pool] = input_pools[pool].iter().any(|inp| inp.is_used())
+            || recipient_states.iter().any(|r| r.pool_mask.to_best_pool() == Some(p))
+            || change_pool == p;
+    }
+    has_pool[3] &= ironwood_active;
+
+    // ── Fetch change address ─────────────────────────────────────────────
+    let change_scope = if use_internal { 1 } else { 0 };
+    let mut change_address =
+        get_account_full_address(network, connection, account, change_scope, hw).await?;
+    let tkeys = select_account_transparent(connection, account, dindex).await?;
+    if change_pool == 0 && tkeys.xvk.is_some() {
+        change_address = generate_next_change_address(network, connection, account)
+            .await?
+            .unwrap();
+    }
+
+    // ── Fetch keys ───────────────────────────────────────────────────────
+    let svk = get_sapling_vk(connection, account).await?;
+    let ovk = get_orchard_vk(connection, account).await?;
+    let ssk = get_sapling_sk(&mut *connection, account).await?;
+    let osk = get_orchard_sk(&mut *connection, account).await?;
+
+    // ── Build transaction ────────────────────────────────────────────────
+    let current_height = client.latest_height().await?;
+    let target_height = current_height;
+
+    let build_config = BuildConfig::Standard {
+        sapling_anchor: if has_pool[1] {
+            sapling_crypto::Anchor::from_bytes(sapling_anchor).into_option()
+        } else {
+            None
+        },
+        orchard_anchor: if has_pool[2] {
+            orchard::Anchor::from_bytes(orchard_anchor).into_option()
+        } else {
+            None
+        },
+        ironwood_anchor: if has_pool[3] {
+            orchard::Anchor::from_bytes(ironwood_anchor).into_option()
+        } else {
+            None
+        },
+    };
+    let mut builder = Builder::new(network, BlockHeight::from_u32(target_height), build_config);
+
+    let es = es.to_auth_path(&SaplingHasher::default());
+    let eo = eo.to_auth_path(&OrchardHasher::default());
+    let ei = ei.to_auth_path(&OrchardHasher::default());
+    let ers = empty_roots(&SaplingHasher::default());
+    let ero = empty_roots(&OrchardHasher::default());
+
+    let mut tsk_dindex = vec![];
+    let mut s_scope = vec![];
+
+    event!(Level::INFO, "Adding Inputs");
+
+    let mut n_spends: [usize; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
+    let mut can_sign = true;
+
+    for pool_notes in input_pools.iter() {
+        for inp in pool_notes.iter() {
+            if inp.is_used() {
+                let &InputNote {
+                    id, amount, pool, ..
+                } = inp;
+                n_spends[pool as usize] += 1;
+                match pool {
+                    0 => {
+                        let row = sqlx::query(
+                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex, t.address, t.uncompressed FROM notes
+                            JOIN transparent_address_accounts t ON notes.taddress = t.id_taddress
+                            WHERE id_note = ?",
+                        )
+                        .bind(id)
+                        .fetch_one(&mut *connection)
+                        .await?;
+
+                        let _nf: Vec<u8> = row.get(0);
+                        let pk: Vec<u8> = row.get(1);
+                        let sk: Option<Vec<u8>> = row.get(2);
+                        let scope: u32 = row.get(3);
+                        let dindex_t: u32 = row.get(4);
+                        let taddress: String = row.get(5);
+                        let uncompressed: bool = row.get(6);
+
+                        if sk.is_none() {
+                            can_sign = false;
+                        }
+
+                        let pubkey = PublicKey::from_slice(&pk).unwrap();
+                        let mut hash = [0u8; 32];
+                        hash.copy_from_slice(&_nf[0..32]);
+                        let n = u32::from_le_bytes(_nf[32..36].try_into().unwrap());
+                        let utxo = OutPoint::new(hash, n);
+                        let pk_bytes = if uncompressed {
+                            pubkey.serialize_uncompressed().to_vec()
+                        } else {
+                            pubkey.serialize().to_vec()
+                        };
+                        let pkh: [u8; 20] =
+                            Ripemd160::digest(Sha256::digest(&pk_bytes)).into();
+                        let addr = TransparentAddress::PublicKeyHash(pkh);
+                        let coin = TxOut::new(
+                            Zatoshis::from_u64(amount).unwrap(),
+                            addr.script().into(),
+                        );
+
+                        builder
+                            .add_transparent_input(
+                                TransparentInputInfo::from_parts(
+                                    utxo,
+                                    coin,
+                                    SpendInfo::P2pkh { pubkey },
+                                )
+                                .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
+                            );
+                        tsk_dindex.push((pubkey, scope, dindex_t, taddress, uncompressed));
+                    }
+                    1 => {
+                        let (note, scope, merkle_path) = get_sapling_note(
+                            connection,
+                            id,
+                            h.height,
+                            svk.as_ref().unwrap(),
+                            &es,
+                            &ers,
+                        )
+                        .await?;
+
+                        if ssk.is_none() {
+                            can_sign = false;
+                        }
+
+                        let dfvk = svk.as_ref().unwrap();
+                        let fvk = dfvk.to_fvk(scope);
+                        builder.add_sapling_spend::<Infallible>(fvk, note, merkle_path)?;
+                        s_scope.push(scope);
+                    }
+                    2 => {
+                        let (note, merkle_path) = get_orchard_note(
+                            connection,
+                            id,
+                            h.height,
+                            ovk.as_ref().unwrap(),
+                            &eo,
+                            &ero,
+                            orchard::NoteVersion::V2,
+                        )
+                        .await?;
+
+                        if osk.is_none() {
+                            can_sign = false;
+                        }
+
+                        builder.add_orchard_spend::<Infallible>(
+                            ovk.clone().unwrap(),
+                            note,
+                            merkle_path,
+                        )?;
+                    }
+                    3 => {
+                        let (note, merkle_path) = get_orchard_note(
+                            connection,
+                            id,
+                            h.height,
+                            ovk.as_ref().unwrap(),
+                            &ei,
+                            &ero,
+                            orchard::NoteVersion::V3,
+                        )
+                        .await?;
+
+                        if osk.is_none() {
+                            can_sign = false;
+                        }
+
+                        builder.add_ironwood_spend::<Infallible>(
+                            ovk.clone().unwrap(),
+                            note,
+                            merkle_path,
+                        )?;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+
+    // ── Add outputs ──────────────────────────────────────────────────────
+    event!(Level::INFO, "Adding Outputs");
+    let mut n_outputs: [usize; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
+
+    for r in &recipient_states {
+        let pool = r.pool_mask.to_best_pool().unwrap();
+        let value = Zatoshis::from_u64(r.recipient.amount)?;
+        let memo = encode_memo(&r.recipient)?.unwrap_or(MemoBytes::empty());
+
+        n_outputs[pool as usize] += 1;
+        match pool {
+            0 => {
+                if value != Zatoshis::ZERO {
+                    let to = get_transparent_address(network, &r.recipient.address)?;
+                    builder
+                        .add_transparent_output(&to, value)
+                        .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
+                }
+            }
+            1 => {
+                let to = get_sapling_address(network, &r.recipient.address)?;
+                builder.add_sapling_output::<Infallible>(
+                    svk.as_ref().map(|svk| svk.to_ovk(Scope::External)),
+                    to,
+                    value,
+                    memo,
+                )?;
+            }
+            2 => {
+                let to = get_orchard_address(network, &r.recipient.address)?;
+                let asset_base = if r.asset_base == [0u8; 32].to_vec() {
+                    AssetBase::zatoshi()
+                } else {
+                    let asset_bytes: [u8; 32] = r.asset_base.clone().try_into().map_err(
+                        |v: Vec<u8>| {
+                            anyhow!("Invalid asset_base length: expected 32, got {}", v.len())
+                        },
+                    )?;
+                    Option::from(AssetBase::from_bytes(&asset_bytes)).ok_or_else(|| {
+                        anyhow!("Invalid asset_base bytes: {}", hex::encode(&asset_bytes))
+                    })?
+                };
+                builder.add_orchard_output::<Infallible>(
+                    ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
+                    to,
+                    value,
+                    asset_base,
+                    memo,
+                )?;
+            }
+            3 => {
+                let to = get_orchard_address(network, &r.recipient.address)?;
+                builder.add_ironwood_output::<Infallible>(
+                    ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
+                    to,
+                    value,
+                    memo,
+                )?;
+            }
+            _ => {}
+        }
+    }
+
+    // ── Add change output ────────────────────────────────────────────────
+    if change > 0 {
+        let change_addr = if change_pool == 0 && tkeys.xvk.is_some() {
+            generate_next_change_address(network, connection, account)
+                .await?
+                .unwrap()
+        } else {
+            change_address.clone()
+        };
+        match change_pool {
+            0 => {
+                let to = get_transparent_address(network, &change_addr)?;
+                builder
+                    .add_transparent_output(&to, Zatoshis::const_from_u64(change))
+                    .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?;
+            }
+            1 => {
+                let to = get_sapling_address(network, &change_addr)?;
+                builder.add_sapling_output::<Infallible>(
+                    svk.as_ref().map(|svk| svk.to_ovk(Scope::External)),
+                    to,
+                    Zatoshis::const_from_u64(change),
+                    MemoBytes::empty(),
+                )?;
+            }
+            2 => {
+                let to = get_orchard_address(network, &change_addr)?;
+                if let Some(ref fvk) = ovk {
+                    builder.add_orchard_change_output::<Infallible>(
+                        fvk.clone(),
+                        Some(fvk.to_ovk(Scope::External)),
+                        to,
+                        Zatoshis::const_from_u64(change),
+                        AssetBase::zatoshi(),
+                        MemoBytes::empty(),
+                    )?;
+                } else {
+                    anyhow::bail!("No orchard key for change output");
+                }
+            }
+            3 => {
+                let to = get_orchard_address(network, &change_addr)?;
+                if let Some(ref fvk) = ovk {
+                    builder.add_ironwood_output::<Infallible>(
+                        Some(fvk.to_ovk(Scope::External)),
+                        to,
+                        Zatoshis::const_from_u64(change),
+                        MemoBytes::empty(),
+                    )?;
+                } else {
+                    anyhow::bail!("No orchard key for ironwood change output");
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // ── Build PCZT ───────────────────────────────────────────────────────
+    info!("Building");
+    event!(Level::INFO, "Preparing PCZT");
+
+    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
+    let sapling_meta = &r.sapling_meta;
+    let orchard_meta = &r.orchard_meta;
+    let ironwood_meta = &r.ironwood_meta;
+
+    let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
+    info!("Created");
+
+    let updater = Updater::new(pczt);
+    let updater = updater
+        .update_transparent_with(|mut u| {
+            for (i, (pubkey, scope, dindex_t, taddress, uncompressed)) in
+                tsk_dindex.into_iter().enumerate()
+            {
+                u.update_input_with(i, |mut u| {
+                    let derivation_path = vec![scope, dindex_t];
+                    let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
+                    u.set_bip32_derivation(pubkey.serialize(), path);
+                    u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
+                    u.set_proprietary("dindex".to_string(), dindex_t.to_le_bytes().to_vec());
+                    u.set_proprietary("address".to_string(), taddress.into_bytes());
+                    u.set_proprietary("uncompressed".to_string(), vec![uncompressed as u8]);
+                    let pk_bytes = if uncompressed {
+                        pubkey.serialize_uncompressed().to_vec()
+                    } else {
+                        pubkey.serialize().to_vec()
+                    };
+                    u.set_hash160_preimage(pk_bytes);
+                    Ok(())
+                })?;
+            }
+            Ok(())
+        })
+        .unwrap();
+
+    let updater = updater
+        .update_sapling_with(|mut u| {
+            for (c_input, scope) in s_scope.iter().enumerate() {
+                let bundle_index = sapling_meta.spend_index(c_input).unwrap();
+                u.update_spend_with(bundle_index, |mut u| {
+                    u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
+                    Ok(())
+                })?;
+            }
+            Ok(())
+        })
+        .unwrap();
+
+    let pczt = updater.finish();
+
+    let (pczt, _shielded_sighash) = IoFinalizer::new(pczt).finalize_io().unwrap();
+    info!("IO Finalized");
+
+    let pczt_package = PcztPackage {
+        pczt: pczt.serialize().unwrap(),
+        n_spends: [n_spends[0], n_spends[1], n_spends[2], n_spends[3]],
+        sapling_indices: (0..n_spends[1])
+            .map(|n| sapling_meta.spend_index(n).unwrap())
+            .collect(),
+        orchard_indices: (0..n_spends[2])
+            .map(|n| orchard_meta.spend_action_index(n).unwrap())
+            .collect(),
+        ironwood_indices: (0..n_spends[3])
+            .map(|n| ironwood_meta.spend_action_index(n).unwrap())
+            .collect(),
+        can_sign,
+        can_broadcast: false,
+        price: None,
+        category,
+        is_issuance: false,
+    };
+
+    Ok(pczt_package)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1849,6 +2614,7 @@ async fn fetch_one_taddr_unspent_notes(
                 pool: 0, // transparent pool
                 id_asset: None,
                 asset_base: [0u8; 32].to_vec(),
+                taddress: Some(taddress),
             },
         )
     })
@@ -1877,7 +2643,7 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
     account: u32,
 ) -> Result<Vec<InputNote>> {
     let unspent_notes = sqlx::query(
-        "SELECT a.id_note, a.height, a.pool, a.value, a.id_asset,
+        "SELECT a.id_note, a.height, a.pool, a.value, a.id_asset, a.taddress,
                 COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
@@ -1893,7 +2659,8 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
         let pool: u8 = row.get(2);
         let value: i64 = row.get(3);
         let id_asset: Option<i64> = row.get(4);
-        let asset_base: Vec<u8> = row.get(5);
+        let taddress: Option<i64> = row.get(5);
+        let asset_base: Vec<u8> = row.get(6);
         InputNote {
             id: id_note,
             height,
@@ -1902,12 +2669,58 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
             pool,
             id_asset: id_asset.map(|v| v as u32),
             asset_base,
+            taddress: taddress.map(|v| v as u32),
         }
     })
     .fetch_all(connection)
     .await?;
 
     Ok(unspent_notes)
+}
+
+pub async fn fetch_unspent_notes_by_pool(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<Vec<InputNote>>> {
+    let unspent_notes = sqlx::query(
+        "SELECT a.id_note, a.height, a.pool, a.value, a.id_asset, a.taddress,
+                COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base
+        FROM notes a
+        LEFT JOIN spends b ON a.id_note = b.id_note
+        LEFT JOIN assets ast ON a.id_asset = ast.id_asset
+        WHERE b.id_note IS NULL AND a.account = ?
+        AND locked = 0",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id_note: u32 = row.get(0);
+        let height: u32 = row.get(1);
+        let pool: u8 = row.get(2);
+        let value: i64 = row.get(3);
+        let id_asset: Option<i64> = row.get(4);
+        let taddress: Option<i64> = row.get(5);
+        let asset_base: Vec<u8> = row.get(6);
+        InputNote {
+            id: id_note,
+            height,
+            amount: value as u64,
+            remaining: value as u64,
+            pool,
+            id_asset: id_asset.map(|v| v as u32),
+            asset_base,
+            taddress: taddress.map(|v| v as u32),
+        }
+    })
+    .fetch_all(connection)
+    .await?;
+
+    let mut result: Vec<Vec<InputNote>> = vec![vec![]; NUM_POOLS as usize];
+    for note in unspent_notes {
+        let pool = note.pool as usize;
+        anyhow::ensure!(pool < NUM_POOLS, "unexpected pool {pool}");
+        result[pool].push(note);
+    }
+    Ok(result)
 }
 
 pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
