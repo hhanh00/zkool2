@@ -9,15 +9,18 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'migrate.freezed.dart';
 
+// These functions are ignored because they are not marked as `pub`: `do_step`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
-/// Run one migration step. Fully idempotent — re-scans notes on every call.
-/// The caller should poll this periodically (e.g., every 6 seconds).
+/// Single-shot step (kept for FRB generated-code compatibility).
 Future<MigrationEvent> stepMigration({required Coin c}) =>
     RustLib.instance.api.crateApiMigrateStepMigration(c: c);
 
-/// Get current migration status for the UI.
-/// Returns phase, progress, and work breakdown based on current note state.
+/// Run migration to completion, streaming MigrationStatus to Flutter.
+Stream<MigrationStatus> runMigration({required Coin c}) =>
+    RustLib.instance.api.crateApiMigrateRunMigration(c: c);
+
+/// Stub kept for FRB generated-code compatibility.
 Future<MigrationStatus> getMigrationStatus({required Coin c}) =>
     RustLib.instance.api.crateApiMigrateGetMigrationStatus(c: c);
 
@@ -25,54 +28,54 @@ Future<MigrationStatus> getMigrationStatus({required Coin c}) =>
 sealed class MigrationEvent with _$MigrationEvent {
   const MigrationEvent._();
 
-  /// A split transaction was broadcast.
   const factory MigrationEvent.splitComplete({
     required BigInt fee,
   }) = MigrationEvent_SplitComplete;
-
-  /// A migration transaction was broadcast.
   const factory MigrationEvent.migrateComplete({
     required BigInt fee,
   }) = MigrationEvent_MigrateComplete;
-
-  /// Migration is complete.
   const factory MigrationEvent.complete() = MigrationEvent_Complete;
-
-  /// No action needed (idempotent — call again later).
   const factory MigrationEvent.nothingToDo() = MigrationEvent_NothingToDo;
-
-  /// An error occurred.
   const factory MigrationEvent.error({
     required String message,
   }) = MigrationEvent_Error;
 }
 
-/// Current migration status for the UI.
+/// Current migration status — streamed to Flutter by run_migration().
 class MigrationStatus {
   final String phase;
+  final BigInt splitFees;
+  final BigInt migrateFees;
+  final BigInt totalFees;
+  final int sdNotesCount;
+  final int nonSdNotesCount;
   final double progress;
   final String nextAction;
   final String workSummary;
-  final int sdNotesCount;
-  final int nonSdNotesCount;
 
   const MigrationStatus({
     required this.phase,
+    required this.splitFees,
+    required this.migrateFees,
+    required this.totalFees,
+    required this.sdNotesCount,
+    required this.nonSdNotesCount,
     required this.progress,
     required this.nextAction,
     required this.workSummary,
-    required this.sdNotesCount,
-    required this.nonSdNotesCount,
   });
 
   @override
   int get hashCode =>
       phase.hashCode ^
+      splitFees.hashCode ^
+      migrateFees.hashCode ^
+      totalFees.hashCode ^
+      sdNotesCount.hashCode ^
+      nonSdNotesCount.hashCode ^
       progress.hashCode ^
       nextAction.hashCode ^
-      workSummary.hashCode ^
-      sdNotesCount.hashCode ^
-      nonSdNotesCount.hashCode;
+      workSummary.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -80,9 +83,12 @@ class MigrationStatus {
       other is MigrationStatus &&
           runtimeType == other.runtimeType &&
           phase == other.phase &&
+          splitFees == other.splitFees &&
+          migrateFees == other.migrateFees &&
+          totalFees == other.totalFees &&
+          sdNotesCount == other.sdNotesCount &&
+          nonSdNotesCount == other.nonSdNotesCount &&
           progress == other.progress &&
           nextAction == other.nextAction &&
-          workSummary == other.workSummary &&
-          sdNotesCount == other.sdNotesCount &&
-          nonSdNotesCount == other.nonSdNotesCount;
+          workSummary == other.workSummary;
 }
