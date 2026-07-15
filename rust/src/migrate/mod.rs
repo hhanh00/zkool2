@@ -9,7 +9,7 @@ use crate::{
     pay::{
         fee::{COST_PER_ACTION, FeeManager},
         plan::{
-            extract_transaction, fetch_unspent_notes_grouped_by_pool, plan_transaction,
+            extract_transaction, plan_transaction,
             sign_transaction,
         },
         pool::PoolMask,
@@ -21,7 +21,7 @@ use crate::{
 /// Minimum spendable chunk: 100 × COST_PER_ACTION (500,000 zats).
 /// Below this threshold, non-SD notes are left alone — splitting them
 /// would cost more in fees than the value recovered.
-const MIN_SD: u64 = 100 * COST_PER_ACTION;
+pub const MIN_SD: u64 = 100 * COST_PER_ACTION;
 
 /// Maximum number of non-SD notes to split in a single transaction.
 /// Caps transaction size to avoid oversized bundles that nodes reject.
@@ -32,25 +32,6 @@ const MAX_SPLIT_INPUTS: usize = 50;
 /// output (2 actions, padded) = 4 × COST_PER_ACTION = 20,000 zats.
 const SD_FEE_PAD: u64 = 4 * COST_PER_ACTION;
 
-/// Standard denominations: powers of 10 up to 10^15.
-const STANDARD_DENOMINATIONS: &[u64] = &[
-    1,
-    10,
-    100,
-    1_000,
-    10_000,
-    100_000,
-    1_000_000,
-    10_000_000,
-    100_000_000,
-    1_000_000_000,
-    10_000_000_000,
-    100_000_000_000,
-    1_000_000_000_000,
-    10_000_000_000_000,
-    100_000_000_000_000,
-    1_000_000_000_000_000,
-];
 
 /// Decompose a total amount into standard denomination notes with embedded fees.
 ///
@@ -401,71 +382,6 @@ pub async fn step(
 
     // No SD and no non-SD orchard notes
     Ok(MigrationEvent::Complete)
-}
-
-/// Get the current migration status for the UI.
-pub async fn get_status(
-    connection: &mut SqliteConnection,
-    account: u32,
-) -> Result<MigrationStatus> {
-    let all_notes = fetch_unspent_notes_grouped_by_pool(connection, account).await?;
-    let orchard_zec: Vec<&crate::pay::InputNote> = all_notes
-        .iter()
-        .filter(|n| n.pool == 2 && n.asset_base == vec![0u8; 32])
-        .collect();
-
-    let sd_count = orchard_zec.iter().filter(|n| is_sd(n.amount)).count() as u32;
-    let non_sd_count = orchard_zec.len() as u32 - sd_count;
-
-    let (phase, next_action, work_summary, progress) = if non_sd_count > 0 {
-        let total: u64 = orchard_zec
-            .iter()
-            .filter(|n| !is_sd(n.amount))
-            .map(|n| n.amount)
-            .sum();
-        let (sd_amounts, remainder) = decompose_to_sd(total);
-        (
-            "splitting",
-            format!(
-                "Split {} non-SD notes (total {}) → {} SD outputs{}",
-                non_sd_count,
-                total,
-                sd_amounts.len(),
-                if remainder > 0 {
-                    format!(" + {} remainder", remainder)
-                } else {
-                    String::new()
-                }
-            ),
-            format!(
-                "{} SD notes created so far, {} non-SD remaining",
-                sd_count, non_sd_count
-            ),
-            if sd_count + non_sd_count > 0 {
-                sd_count as f64 / (sd_count + non_sd_count) as f64
-            } else {
-                0.0
-            },
-        )
-    } else if sd_count > 0 {
-        (
-            "migrating",
-            format!("Migrate next SD note to Ironwood ({} remaining)", sd_count),
-            format!("{} SD notes remaining to migrate", sd_count),
-            0.5, // halfway point: splitting done, migration in progress
-        )
-    } else {
-        ("complete", "Done".to_string(), "No Orchard notes to migrate".to_string(), 1.0)
-    };
-
-    Ok(MigrationStatus {
-        phase: phase.to_string(),
-        progress,
-        next_action,
-        work_summary,
-        sd_notes_count: sd_count,
-        non_sd_notes_count: non_sd_count,
-    })
 }
 
 #[cfg(test)]
