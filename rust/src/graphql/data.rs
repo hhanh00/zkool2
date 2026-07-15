@@ -120,4 +120,24 @@ pub struct AssetInfo {
     pub balance: BigDecimal,
 }
 
+#[derive(GraphQLObject)]
+pub struct MigrationStatus {
+    pub phase: String,
+    pub progress: f64,
+    pub next_action: String,
+    pub work_summary: String,
+    pub sd_notes_count: i32,
+    pub non_sd_notes_count: i32,
+}
+
+#[derive(GraphQLObject)]
+pub struct MigrationEvent {
+    /// "SplitComplete" | "MigrateComplete" | "Complete" | "NothingToDo" | "Error"
+    pub event: String,
+    /// Fee in zats for SplitComplete / MigrateComplete
+    pub fee: Option<i32>,
+    /// Error message for Error variant
+    pub message: Option<String>,
+}
+
 pub type EventStream = Pin<Box<dyn Stream<Item = FieldResult<Event>> + Send>>;
