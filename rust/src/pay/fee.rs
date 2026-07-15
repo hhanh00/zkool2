@@ -12,6 +12,10 @@ pub struct FeeManager {
     /// Logical actions contributed by the issue bundle (ZIP-317).
     /// Equal to `total_issue_note_count + CREATION_COST * asset_creation_count`.
     pub issuance_actions: u64,
+    /// In migration mode (O→O self-sends), the Orchard V3 bundle disables
+    /// cross-address transfers, so actions are `spends + outputs` instead
+    /// of `max(spends, outputs)`.
+    pub migration: bool,
 }
 
 impl FeeManager {
@@ -60,8 +64,14 @@ impl FeeManager {
             0
         };
         let o = if self.num_inputs[2] > 0 || self.num_outputs[2] > 0 {
-            // padding min 2 actions
-            self.num_inputs[2].max(self.num_outputs[2]).max(2)
+            if self.migration {
+                // Migration O→O uses Orchard V3 bundle: cross-address transfers
+                // are disabled, so each spend and each output require separate
+                // actions. Use sum instead of max.
+                (self.num_inputs[2] as u64 + self.num_outputs[2] as u64).max(2)
+            } else {
+                self.num_inputs[2].max(self.num_outputs[2]).max(2) as u64
+            }
         } else {
             0
         };
@@ -71,7 +81,7 @@ impl FeeManager {
         } else {
             0
         };
-        let f = (t + s + o + i).max(2); // minimum 2 logical actions
+        let f = (t as u64 + s as u64 + o + i as u64).max(2); // minimum 2 logical actions
         // Issuance actions are counted by the builder as orchard actions,
         // so we don't add them separately here. The issuance counts are
         // informational for logging only.
