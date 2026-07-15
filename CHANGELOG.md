@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.24.0-rc.13](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.12...zkool-v6.24.0-rc.13) (2026-07-15)
+
+
+### Features
+
+* add Orchard-to-Ironwood migration (splitting + migrating phases) ([b3f53ad](https://github.com/hhanh00/zkool2/commit/b3f53add09d521b26aef2ceeb70f1fdd9a49416d))
+
+
+### Bug Fixes
+
+* add Ironwood bundle to fee decrypt, streaming migration, menu gate ([ea5af33](https://github.com/hhanh00/zkool2/commit/ea5af3308184302eeeabbb1cd20857b3316b1762))
+* add ironwood field to Addresses GQL type and include ironwood in source pools ([dbebf8e](https://github.com/hhanh00/zkool2/commit/dbebf8edb4eb4174299de070b65c15c1777a5780))
+* bump MIN_SD to 500k zats, reserve fee buffer when remainder too small ([9f37c78](https://github.com/hhanh00/zkool2/commit/9f37c78ac252a370e6ad96bd092c0d30dfd15a61))
+* revert plan_transaction signature, add coin-selection module ([55f57f1](https://github.com/hhanh00/zkool2/commit/55f57f136f3511870057e7e24b1173695a3914da))
+* update regtest to ironwood ([0f74a45](https://github.com/hhanh00/zkool2/commit/0f74a45de1afd5a7018da06ad94149249dac39be))
+* update tests for Ironwood (pool 3) and zebra connector support ([f589271](https://github.com/hhanh00/zkool2/commit/f589271ec74033f595202383461168b4edbf261b))
+* wire select_notes knapsack DP into plan_transaction, fix migration fees ([c6d2368](https://github.com/hhanh00/zkool2/commit/c6d236801891d52f214bc33be13ba145eb0fdab1))
+
 ## [6.24.0-rc.12](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.11...zkool-v6.24.0-rc.12) (2026-07-08)
 
 
