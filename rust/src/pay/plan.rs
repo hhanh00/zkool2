@@ -217,7 +217,7 @@ fn decompose_address(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn plan_transaction_wip(
+pub async fn plan_transaction(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
@@ -230,6 +230,7 @@ pub async fn plan_transaction_wip(
     category: Option<u32>,
     _issuance: Option<&IssuanceInfo>,
     migration: bool,
+    preselected: Option<&[u32]>,
 ) -> Result<PcztPackage> {
     let mut input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
     let height = client.latest_height().await?;
@@ -240,6 +241,13 @@ pub async fn plan_transaction_wip(
             input_pools[pool].clear();
         } else {
             input_pools[pool].retain(|n| n.height <= max_height);
+        }
+    }
+
+    // Preselected filter: restrict to specific note IDs (e.g. migration)
+    if let Some(ids) = preselected {
+        for pool in 0..NUM_POOLS {
+            input_pools[pool].retain(|n| ids.contains(&n.id));
         }
     }
 
@@ -277,6 +285,11 @@ pub async fn plan_transaction_wip(
     let decomposed: Vec<DecomposedRecipient> = recipients
         .iter()
         .map(|r| {
+            let asset_base = if r.asset_base.is_empty() {
+                [0u8; 32].to_vec()
+            } else {
+                r.asset_base.clone()
+            };
             Ok(DecomposedRecipient {
                 address: r.address.clone(),
                 receiver: decompose_address(&r.address, network, ironwood_active)?,
@@ -284,7 +297,7 @@ pub async fn plan_transaction_wip(
                 remaining: r.amount,
                 memo: r.user_memo.clone(),
                 memo_bytes: r.memo_bytes.clone(),
-                asset_base: r.asset_base.clone(),
+                asset_base,
             })
         })
         .collect::<Result<Vec<_>>>()?;
@@ -315,10 +328,17 @@ pub async fn plan_transaction_wip(
         })
         .collect();
 
-    let select_outputs: Vec<select::Output> = decomposed
+    // Use recipient's explicit pool preference when set (e.g. migration
+    // chooses Orchard vs Ironwood per phase), otherwise fall back to the
+    // address-derived pool from decompose_address.
+    let select_outputs: Vec<select::Output> = recipients
         .iter()
-        .map(|dr| select::Output {
-            pool: dr.receiver.pool,
+        .zip(decomposed.iter())
+        .map(|(r, dr)| select::Output {
+            pool: r
+                .pools
+                .and_then(|p| PoolMask(p).to_best_pool())
+                .unwrap_or(dr.receiver.pool),
             amount: dr.amount,
         })
         .collect();
@@ -339,18 +359,27 @@ pub async fn plan_transaction_wip(
     let change_pool = selection.change_pool;
 
     // ── Build RecipientStates ────────────────────────────────────────────
-    let recipient_states: Vec<RecipientState> = decomposed
+    // Use recipient's explicit pool preference when set (e.g. migration
+    // chooses Orchard vs Ironwood per phase), matching select_outputs above.
+    let recipient_states: Vec<RecipientState> = recipients
         .iter()
-        .map(|dr| RecipientState {
-            recipient: Recipient {
-                address: dr.address.clone(),
-                amount: dr.amount,
+        .zip(decomposed.iter())
+        .map(|(r, dr)| {
+            let pool = r
+                .pools
+                .and_then(|p| PoolMask(p).to_best_pool())
+                .unwrap_or(dr.receiver.pool);
+            RecipientState {
+                recipient: Recipient {
+                    address: dr.address.clone(),
+                    amount: dr.amount,
+                    asset_base: dr.asset_base.clone(),
+                    ..Default::default()
+                },
+                remaining: 0, // fully funded by select_notes
+                pool_mask: PoolMask::from_pool(pool),
                 asset_base: dr.asset_base.clone(),
-                ..Default::default()
-            },
-            remaining: 0, // fully funded by select_notes
-            pool_mask: PoolMask::from_pool(dr.receiver.pool),
-            asset_base: dr.asset_base.clone(),
+            }
         })
         .collect();
 
@@ -767,13 +796,30 @@ pub async fn plan_transaction_wip(
                     Option::from(AssetBase::from_bytes(&asset_bytes))
                         .ok_or_else(|| anyhow!("Invalid asset_base bytes: {}", hex::encode(&asset_bytes)))?
                 };
-                builder.add_orchard_output::<Infallible>(
-                    ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
-                    to,
-                    value,
-                    asset_base,
-                    memo,
-                )?;
+                if migration {
+                    // O->O self-send: use change output to avoid dummy-spend
+                    // fee inflation (Orchard V3 disables cross-address transfers).
+                    if let Some(ref fvk) = ovk {
+                        builder.add_orchard_change_output::<Infallible>(
+                            fvk.clone(),
+                            Some(fvk.to_ovk(Scope::External)),
+                            to,
+                            value,
+                            asset_base,
+                            MemoBytes::empty(),
+                        )?;
+                    } else {
+                        anyhow::bail!("No orchard key for migration change output");
+                    }
+                } else {
+                    builder.add_orchard_output::<Infallible>(
+                        ovk.as_ref().map(|ovk| ovk.to_ovk(Scope::External)),
+                        to,
+                        value,
+                        asset_base,
+                        memo,
+                    )?;
+                }
             }
             3 => {
                 let to = get_orchard_address(network, &r.recipient.address)?;
@@ -908,9 +954,23 @@ pub async fn plan_transaction_wip(
         sapling_indices: (0..n_spends[1])
             .map(|n| sapling_meta.spend_index(n).unwrap())
             .collect(),
-        orchard_indices: (0..n_spends[2])
-            .map(|n| orchard_meta.spend_action_index(n).unwrap())
-            .collect(),
+        orchard_indices: {
+            let mut indices: Vec<usize> = (0..n_spends[2])
+                .map(|n| orchard_meta.spend_action_index(n).unwrap())
+                .collect();
+            // Change outputs pair with a fabricated spend that needs signing.
+            // Only applicable when change actually goes to Orchard.
+            if change_pool == 2 && change > 0 {
+                let mut n = 0;
+                while let Some(idx) = orchard_meta.output_action_index(n) {
+                    if !indices.contains(&idx) {
+                        indices.push(idx);
+                    }
+                    n += 1;
+                }
+            }
+            indices
+        },
         ironwood_indices: (0..n_spends[3])
             .map(|n| ironwood_meta.spend_action_index(n).unwrap())
             .collect(),
@@ -925,7 +985,7 @@ pub async fn plan_transaction_wip(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn plan_transaction(
+pub async fn plan_transaction_old(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
