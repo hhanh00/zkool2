@@ -136,6 +136,7 @@ fn solve_with_folded_fee(
     out_i: u64,
     required_net: u64,
     f_unit: u64,
+    pool: usize,
 ) -> Option<(u64, u64, Vec<usize>)> {
     let mut order: Vec<usize> = (0..notes.len()).collect();
     order.sort_unstable_by(|&a, &b| notes[b].cmp(&notes[a])); // largest first
@@ -144,7 +145,7 @@ fn solve_with_folded_fee(
     for (pos, &idx) in order.iter().enumerate() {
         let n = (pos + 1) as u64;
         gross += notes[idx];
-        let penalty = f_unit * n.saturating_sub(out_i);
+        let penalty = pool_fee(n, out_i, pool) * f_unit;
         let net = gross.saturating_sub(penalty);
         if net >= required_net {
             return Some((n, gross, order[..=pos].to_vec()));
@@ -209,7 +210,7 @@ pub fn select_notes(notes: &[Note], outputs: &[Output], f_unit: u64, slack: u64)
         let required = (a_o + fixed_fee).saturating_sub(covered_by_others);
 
         let Some((n_cp, gross_cp, idx_cp)) =
-            solve_with_folded_fee(&notes_by_pool[cp], out_count[cp], required, f_unit)
+            solve_with_folded_fee(&notes_by_pool[cp], out_count[cp], required, f_unit, cp)
         else {
             continue; // this pool can't cover it even using all its notes
         };
@@ -276,7 +277,7 @@ fn fallback_with_pool0(
     let required = (a_o + fixed_fee).saturating_sub(covered);
 
     let (n0, gross0, idx0) =
-        solve_with_folded_fee(&notes_by_pool[0], out_count[0], required, f_unit)?;
+        solve_with_folded_fee(&notes_by_pool[0], out_count[0], required, f_unit, 0)?;
 
     per_pool[0] = PoolSolution { note_indices: idx0, sum: gross0 };
     let fee0 = pool_fee(n0, out_count[0], 0);
