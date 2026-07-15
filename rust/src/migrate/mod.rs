@@ -22,6 +22,15 @@ use crate::{
 /// Notes smaller than this are not economical to split or migrate.
 const MIN_SD: u64 = 20 * COST_PER_ACTION;
 
+/// Maximum number of non-SD notes to split in a single transaction.
+/// Caps transaction size to avoid oversized bundles that nodes reject.
+const MAX_SPLIT_INPUTS: usize = 50;
+
+/// Fee padding embedded in each standard denomination.
+/// Covers Orchard input + change (2 actions in sum mode) and Ironwood
+/// output (2 actions, padded) = 4 × COST_PER_ACTION = 20,000 zats.
+const SD_FEE_PAD: u64 = 4 * COST_PER_ACTION;
+
 /// Standard denominations: powers of 10 up to 10^15.
 const STANDARD_DENOMINATIONS: &[u64] = &[
     1,
@@ -50,7 +59,7 @@ const STANDARD_DENOMINATIONS: &[u64] = &[
 /// Greedy from largest to smallest. Returns sparse `(denom, count)` pairs
 /// and any leftover below the smallest denomination.
 pub fn decompose_to_sd(total: u64) -> (Vec<(u64, u8)>, u64) {
-    let p = 2 * COST_PER_ACTION;
+    let p = SD_FEE_PAD;
     let d_min = 10u64.pow(5) + p; // 110_000
     let k_min = 5u32;
     let k_max = 16u32; // 10^16 + P covers 100M ZEC
@@ -75,7 +84,7 @@ pub fn decompose_to_sd(total: u64) -> (Vec<(u64, u8)>, u64) {
 /// Check if a value is a fee-inclusive standard denomination:
 /// `10^(i+5) + 2*COST_PER_ACTION` (110_000, 1_010_000, 10_010_000, …).
 pub fn is_sd(value: u64) -> bool {
-    let base = 2 * COST_PER_ACTION;
+    let base = SD_FEE_PAD;
     if value <= base {
         return false;
     }
@@ -192,9 +201,20 @@ pub async fn step(
 
     // ── Splitting phase ──
 
-    // Calculate total from non-SD notes (excluding SD).
-    let total: u64 = non_sd_notes.iter().map(|n| n.value).sum();
+    // Cap inputs to keep transaction size manageable. Sort by value
+    // descending so the largest notes are split first; remaining non-SD
+    // notes will be handled in subsequent step() calls.
+    let capped_non_sd: Vec<&OrchardZecNote> = {
+        let mut sorted = non_sd_notes.clone();
+        sorted.sort_by_key(|n| std::cmp::Reverse(n.value));
+        sorted.truncate(MAX_SPLIT_INPUTS);
+        sorted
+    };
 
+    // Calculate total from capped non-SD notes.
+    let total: u64 = capped_non_sd.iter().map(|n| n.value).sum();
+
+    if total >= MIN_SD {
     // Decompose into standard denomination counts (digits) and remainder.
     let (mut digits, mut remainder) = decompose_to_sd(total);
     info!(
@@ -203,7 +223,7 @@ pub async fn step(
     );
 
     let mut num_outputs: u64 = digits.iter().map(|&(_, c)| c as u64).sum();
-    let num_inputs = non_sd_notes.len() as u64;
+    let num_inputs = capped_non_sd.len() as u64;
 
     // Build a FeeManager matching what plan_transaction will construct,
     // including the change output, so our fee estimate is exact.
@@ -258,13 +278,13 @@ pub async fn step(
 
         info!(
             "Migration split: {} non-SD notes (total {}) → {} SD outputs (remainder {})",
-            non_sd_notes.len(),
+            capped_non_sd.len(),
             total,
             recipients.len(),
             remainder,
         );
 
-        let preselected: Vec<u32> = non_sd_notes.iter().map(|n| n.id).collect();
+        let preselected: Vec<u32> = capped_non_sd.iter().map(|n| n.id).collect();
 
         let pczt = plan_transaction(
             network,
@@ -294,6 +314,7 @@ pub async fn step(
         return Ok(MigrationEvent::SplitComplete { fee });
     }
     // If no outputs after trimming, fall through to migration phase.
+    } // end if total >= MIN_SD
 
     if !sd_notes.is_empty() {
 
@@ -319,7 +340,7 @@ pub async fn step(
         // Pick one SD note (largest cmx). Its value embeds 2*COST_PER_ACTION
         // for Orchard fees; the Ironwood output is the "real" denomination.
         let note = sorted_sd.last().unwrap();
-        let ironwood_amount = note.value - 2 * COST_PER_ACTION;
+        let ironwood_amount = note.value - SD_FEE_PAD;
 
         // One Ironwood output (dummy output for padding is handled by the
         // builder, as is the dummy Orchard input).
@@ -440,18 +461,22 @@ mod tests {
 
     #[test]
     fn test_is_sd() {
+        // SD_FEE_PAD = 20_000, so SD = 10^k + 20_000
         assert!(!is_sd(10_001));     // not a multiple of 10,000
-        assert!(!is_sd(11_000));     // (11000-10000) % 10000 = 1000 ≠ 0
-        assert!(is_sd(110_000));
-        assert!(is_sd(1_010_000));
-        assert!(is_sd(10_010_000));
+        assert!(!is_sd(20_001));     // (20001-20000) % 100000 = 1 ≠ 0
+        assert!(is_sd(120_000));     // 10^5 + 20_000
+        assert!(is_sd(1_020_000));   // 10^6 + 20_000
+        assert!(is_sd(10_020_000));  // 10^7 + 20_000
         assert!(!is_sd(1_000_000));  // missing +base
-        assert!(!is_sd(115_000));    // (115000-10000) % 10000 = 5000 ≠ 0
+        assert!(!is_sd(120_001));    // (120001-20000) % 100000 = 1 ≠ 0
+        // Old P=10_000 values are no longer SD
+        assert!(!is_sd(110_000));
+        assert!(!is_sd(1_010_000));
     }
 
     #[test]
     fn test_decompose_below_min_denom() {
-        // Below d_min (20_000).
+        // Below d_min (120_000).
         let (pairs, leftover) = decompose_to_sd(10_000);
         assert!(pairs.is_empty());
         assert_eq!(leftover, 10_000);
@@ -466,40 +491,40 @@ mod tests {
 
     #[test]
     fn test_decompose_exact_sd() {
-        // 110_000 = 10^5 + 10_000.
-        let (pairs, leftover) = decompose_to_sd(110_000);
-        assert_eq!(pairs, vec![(110_000, 1)]);
+        // 120_000 = 10^5 + 20_000.
+        let (pairs, leftover) = decompose_to_sd(120_000);
+        assert_eq!(pairs, vec![(120_000, 1)]);
         assert_eq!(leftover, 0);
     }
 
     #[test]
     fn test_decompose_multiple() {
-        // 5 × 110_000 = 550_000.
-        let (pairs, leftover) = decompose_to_sd(550_000);
-        assert_eq!(pairs, vec![(110_000, 5)]);
-        assert_eq!(leftover, 0);
+        // 4 × 120_000 = 480_000, leftover 20_000.
+        let (pairs, leftover) = decompose_to_sd(500_000);
+        assert_eq!(pairs, vec![(120_000, 4)]);
+        assert_eq!(leftover, 20_000);
     }
 
     #[test]
     fn test_decompose_two_positions() {
-        // 1,120,000 → 1×1_010_000 + 1×110_000.
-        let (pairs, leftover) = decompose_to_sd(1_120_000);
-        assert_eq!(pairs, vec![(1_010_000, 1), (110_000, 1)]);
+        // 1_140_000 → 1×1_020_000 + 1×120_000.
+        let (pairs, leftover) = decompose_to_sd(1_140_000);
+        assert_eq!(pairs, vec![(1_020_000, 1), (120_000, 1)]);
         assert_eq!(leftover, 0);
     }
 
     #[test]
     fn test_decompose_with_remainder() {
-        // 123,000 → 1×110_000, leftover 13,000 (below d_min).
-        let (pairs, leftover) = decompose_to_sd(123_000);
-        assert_eq!(pairs, vec![(110_000, 1)]);
-        assert_eq!(leftover, 13_000);
+        // 130_000 → 1×120_000, leftover 10_000 (below d_min).
+        let (pairs, leftover) = decompose_to_sd(130_000);
+        assert_eq!(pairs, vec![(120_000, 1)]);
+        assert_eq!(leftover, 10_000);
     }
 
     /// Round-trip invariant: sum(denom × count) + leftover ≡ original total.
     #[test]
     fn test_decompose_round_trip() {
-        let cases = &[0, 10_000, 110_000, 550_000, 1_120_000, 123_000, 5_000_000];
+        let cases = &[0, 10_000, 120_000, 500_000, 1_140_000, 130_000, 5_000_000];
         for &total in cases {
             let (pairs, leftover) = decompose_to_sd(total);
             let represented: u64 = pairs.iter().map(|&(d, c)| d * c as u64).sum();
