@@ -27,6 +27,7 @@ pub mod memo;
 pub mod mempool;
 pub mod openalias;
 pub mod net;
+pub mod migrate;
 pub mod pay;
 pub mod plugin;
 pub mod recover;

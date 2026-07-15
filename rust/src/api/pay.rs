@@ -36,6 +36,39 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         options.smart_transparent,
         options.category,
         None, // issuance — normal sends have no issuance
+        false, // migration — only used by note migration
+        None,  // preselected
+    )
+    .await
+}
+
+/// Prepare a migration transaction (splitting or migrating).
+/// Uses `migration=true` to allow Orchard outputs when Ironwood is active.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn prepare_migration(
+    recipients: &[Recipient],
+    src_pools: u8,
+    c: &Coin,
+) -> Result<PcztPackage> {
+    let account = c.account;
+    let network = &c.network();
+    let mut connection = c.get_connection().await?;
+    let mut client = c.client().await?;
+
+    plan_transaction(
+        network,
+        &mut *connection,
+        &mut client,
+        account,
+        src_pools,
+        recipients,
+        false, // recipient_pays_fee
+        None,   // confirmations
+        false,  // smart_transparent
+        None,   // category
+        None,   // issuance
+        true,   // migration
+        None,  // preselected
     )
     .await
 }
