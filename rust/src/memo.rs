@@ -236,11 +236,11 @@ pub async fn decrypt_memo(
     let ovk = get_orchard_vk(connection, account).await?;
 
     macro_rules! process_orchard_memo {
-        ($bundle:expr, $flavor:ty) => {{
+        ($bundle:expr, $pool:expr) => {{
             let bundle = $bundle;
             for _action in bundle.actions().iter() {
-                fee_manager.add_input(2);
-                fee_manager.add_output(2);
+                fee_manager.add_input($pool);
+                fee_manager.add_output($pool);
             }
 
             if let Some(ovk) = ovk.as_ref() {
@@ -269,7 +269,7 @@ pub async fn decrypt_memo(
                             id_tx,
                             Some(id_note),
                             None,
-                            2,
+                            $pool,
                             vout as u32,
                             &memo_bytes,
                         )
@@ -288,7 +288,7 @@ pub async fn decrypt_memo(
                             account,
                             height,
                             id_tx,
-                            2, // Orchard pool
+                            $pool,
                             vout as u32,
                             note.value().inner(),
                             &address.encode(network),
@@ -302,7 +302,7 @@ pub async fn decrypt_memo(
                             id_tx,
                             None,
                             Some(id_output),
-                            2,
+                            $pool,
                             vout as u32,
                             &memo_bytes,
                         )
@@ -314,7 +314,10 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.orchard_bundle() {
-        process_orchard_memo!(bundle, OrchardVanilla);
+        process_orchard_memo!(bundle, 2);
+    }
+    if let Some(bundle) = tx_data.ironwood_bundle() {
+        process_orchard_memo!(bundle, 3);
     }
     let fee = fee_manager.fee();
     sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")

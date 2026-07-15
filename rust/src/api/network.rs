@@ -12,6 +12,15 @@ pub async fn init_datadir(directory: &str) -> Result<()> {
     crate::api::coin::init_datadir(directory).await
 }
 
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn is_ironwood_active(c: &Coin) -> Result<bool> {
+    use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
+    let network = c.network();
+    let mut client = c.client().await?;
+    let height = client.latest_height().await?;
+    Ok(network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height)))
+}
+
 pub async fn get_current_height(c: &Coin) -> Result<u32> {
     let mut client = c.client().await?;
     let height = client.latest_height().await?;

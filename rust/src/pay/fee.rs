@@ -65,9 +65,6 @@ impl FeeManager {
         };
         let o = if self.num_inputs[2] > 0 || self.num_outputs[2] > 0 {
             if self.migration {
-                // Migration O→O uses Orchard V3 bundle: cross-address transfers
-                // are disabled, so each spend and each output require separate
-                // actions. Use sum instead of max.
                 (self.num_inputs[2] as u64 + self.num_outputs[2] as u64).max(2)
             } else {
                 self.num_inputs[2].max(self.num_outputs[2]).max(2) as u64
