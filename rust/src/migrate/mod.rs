@@ -18,9 +18,10 @@ use crate::{
     Client,
 };
 
-/// Minimum standard denomination: 20 × COST_PER_ACTION (100,000 zats).
-/// Notes smaller than this are not economical to split or migrate.
-const MIN_SD: u64 = 20 * COST_PER_ACTION;
+/// Minimum spendable chunk: 100 × COST_PER_ACTION (500,000 zats).
+/// Below this threshold, non-SD notes are left alone — splitting them
+/// would cost more in fees than the value recovered.
+const MIN_SD: u64 = 100 * COST_PER_ACTION;
 
 /// Maximum number of non-SD notes to split in a single transaction.
 /// Caps transaction size to avoid oversized bundles that nodes reject.
@@ -221,6 +222,18 @@ pub async fn step(
         "SD split: {:?}",
         digits,
     );
+
+    // If the natural remainder is too small to cover the transaction fee,
+    // carve out MIN_SD from the decomposable pool as a fee buffer.
+    if remainder < MIN_SD / 2 {
+        let (d, r) = decompose_to_sd(total.saturating_sub(MIN_SD));
+        digits = d;
+        remainder = r + MIN_SD;
+        info!(
+            "SD split (reserved {} for fees): {:?}",
+            MIN_SD, digits,
+        );
+    }
 
     let mut num_outputs: u64 = digits.iter().map(|&(_, c)| c as u64).sum();
     let num_inputs = capped_non_sd.len() as u64;
