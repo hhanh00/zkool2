@@ -1170,3 +1170,7 @@ Future<List<plugin_api.MemoSection>> pluginMemoSections(
 
 // ── Migration providers ────────────────────────────────────────────────────
 
+final ironwoodActiveProvider = FutureProvider<bool>((ref) async {
+  return await isIronwoodActive(c: coinContext.coin);
+});
+
