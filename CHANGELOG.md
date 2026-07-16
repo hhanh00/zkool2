@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.15](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.14...zkool-v6.24.0-rc.15) (2026-07-16)
+
+
+### Features
+
+* add migration speed slider to control delay between steps ([fae7415](https://github.com/hhanh00/zkool2/commit/fae7415e7c414e400bd6db6f9fb3a55bbec221c9))
+
 ## [6.24.0-rc.14](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.13...zkool-v6.24.0-rc.14) (2026-07-16)
 
 
