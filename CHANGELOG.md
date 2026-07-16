@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.14](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.13...zkool-v6.24.0-rc.14) (2026-07-16)
+
+
+### Bug Fixes
+
+* update Cargo.lock after switching to git refs ([9dfa40b](https://github.com/hhanh00/zkool2/commit/9dfa40be4149e4db74eddb0a158b8f6f9c51a216))
+
 ## [6.24.0-rc.13](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.12...zkool-v6.24.0-rc.13) (2026-07-15)
 
 
