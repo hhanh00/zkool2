@@ -22,6 +22,16 @@ class _MigratePageState extends State<MigratePage>
   MigrationStatus? _status;
   bool _started = false;
   bool _didShowCompleteDialog = false;
+  double _speedIndex = 1; // default: Fast (60s)
+
+  static const _speedLabels = ["Very Fast", "Fast", "Medium", "Slow"];
+  static const _speedMeanMs = [15000, 60000, 300000, 3600000];
+  static const _speedDescriptions = [
+    "~15s between steps",
+    "~1m between steps",
+    "~5m between steps",
+    "~1h between steps",
+  ];
 
   @override
   void initState() {
@@ -32,7 +42,9 @@ class _MigratePageState extends State<MigratePage>
   void _startMigration() {
     _sub?.cancel();
     final c = coinContext.coin;
-    final stream = runMigration(c: c);
+    final meanDelayMs =
+        BigInt.from(_speedMeanMs[_speedIndex.round()]);
+    final stream = runMigration(c: c, meanDelayMs: meanDelayMs);
     _sub = stream.listen(
       (status) => setState(() => _status = status),
       onError: (e) => logger.w('Migration stream error: $e'),
@@ -109,6 +121,79 @@ class _MigratePageState extends State<MigratePage>
                             "with random delays between steps. You can close "
                             "this page at any time and resume later.\n\n"
                             "Fees apply to each transaction.",
+                          ),
+                          const Gap(16),
+                          // Speed selector
+                          Text("Migration Speed",
+                              style: Theme.of(context).textTheme.titleMedium),
+                          const Gap(8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Slider(
+                                  value: _speedIndex,
+                                  min: 0,
+                                  max: 3,
+                                  divisions: 3,
+                                  label: _speedLabels[_speedIndex.round()],
+                                  onChanged: (v) =>
+                                      setState(() => _speedIndex = v),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 80,
+                                child: Text(
+                                  _speedLabels[_speedIndex.round()],
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            _speedDescriptions[_speedIndex.round()],
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                          const Gap(12),
+                          // Privacy note
+                          Card(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.shield_outlined,
+                                      size: 20,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant),
+                                  const Gap(8),
+                                  Expanded(
+                                    child: Text(
+                                      "Faster migration creates transactions closer "
+                                      "together, making it easier for an observer "
+                                      "to correlate them as part of the same "
+                                      "migration. Slower speeds spread "
+                                      "transactions out over time, improving "
+                                      "privacy.",
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                           const Gap(16),
                           FilledButton.icon(

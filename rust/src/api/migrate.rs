@@ -44,10 +44,15 @@ pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
 }
 
 /// Run migration to completion, streaming MigrationStatus to Flutter.
+///
+/// `mean_delay_ms` controls the mean wait time (in milliseconds) of the
+/// exponential random delay between migration steps. Longer delays make
+/// it harder for an observer to correlate the transactions.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn run_migration(
     sink: StreamSink<MigrationStatus>,
     c: &Coin,
+    mean_delay_ms: u64,
 ) -> Result<()> {
     use rand_core::{OsRng, RngCore};
     use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
@@ -88,8 +93,9 @@ pub async fn run_migration(
             break;
         }
 
+        let mean = mean_delay_ms as f64;
         let u = (OsRng.next_u32() as f64 + 1.0) / (u32::MAX as f64 + 2.0);
-        let delay_ms = ((-15_000.0 * u.ln()) as u64).min(60_000);
+        let delay_ms = ((-mean * u.ln()) as u64).min(mean_delay_ms * 4);
         tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
     }
 
