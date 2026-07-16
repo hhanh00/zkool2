@@ -17,8 +17,14 @@ Future<MigrationEvent> stepMigration({required Coin c}) =>
     RustLib.instance.api.crateApiMigrateStepMigration(c: c);
 
 /// Run migration to completion, streaming MigrationStatus to Flutter.
-Stream<MigrationStatus> runMigration({required Coin c}) =>
-    RustLib.instance.api.crateApiMigrateRunMigration(c: c);
+///
+/// `mean_delay_ms` controls the mean wait time (in milliseconds) of the
+/// exponential random delay between migration steps. Longer delays make
+/// it harder for an observer to correlate the transactions.
+Stream<MigrationStatus> runMigration(
+        {required Coin c, required BigInt meanDelayMs}) =>
+    RustLib.instance.api
+        .crateApiMigrateRunMigration(c: c, meanDelayMs: meanDelayMs);
 
 /// Stub kept for FRB generated-code compatibility.
 Future<MigrationStatus> getMigrationStatus({required Coin c}) =>
