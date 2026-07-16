@@ -15,6 +15,9 @@ part 'network.freezed.dart';
 Future<void> initDatadir({required String directory}) =>
     RustLib.instance.api.crateApiNetworkInitDatadir(directory: directory);
 
+Future<bool> isIronwoodActive({required Coin c}) =>
+    RustLib.instance.api.crateApiNetworkIsIronwoodActive(c: c);
+
 Future<int> getCurrentHeight({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetCurrentHeight(c: c);
 
