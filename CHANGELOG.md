@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.16](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.15...zkool-v6.24.0-rc.16) (2026-07-16)
+
+
+### Bug Fixes
+
+* use isIronwoodActive API instead of hardcoded height 450 ([d710b17](https://github.com/hhanh00/zkool2/commit/d710b176949a1f948084a9a4b80f39222d27feff))
+
 ## [6.24.0-rc.15](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.14...zkool-v6.24.0-rc.15) (2026-07-16)
 
 
