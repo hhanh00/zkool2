@@ -184,7 +184,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final settings = ref.read(appSettingsProvider).requireValue;
     final currency = settings.currency;
     final hasOrchardBalance = b[2] > BigInt.zero || b[3] > BigInt.zero;
-    final ironwoodActive = (ref.watch(currentHeightProvider).value ?? 0) > 450; // past NU6.3
+    final ironwoodActive = ref.watch(ironwoodActiveProvider).value ?? false;
 
     final fiat = fullData.price?.let((p) {
       final f = (b[0] + b[1] + b[2] + b[3]).toDouble() * p / zatsPerZec.toDouble();
