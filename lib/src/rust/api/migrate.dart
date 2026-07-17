@@ -55,6 +55,7 @@ class MigrationStatus {
   final BigInt totalFees;
   final int sdNotesCount;
   final int nonSdNotesCount;
+  final int ironwoodSdCount;
   final double progress;
   final String nextAction;
   final String workSummary;
@@ -66,6 +67,7 @@ class MigrationStatus {
     required this.totalFees,
     required this.sdNotesCount,
     required this.nonSdNotesCount,
+    required this.ironwoodSdCount,
     required this.progress,
     required this.nextAction,
     required this.workSummary,
@@ -79,6 +81,7 @@ class MigrationStatus {
       totalFees.hashCode ^
       sdNotesCount.hashCode ^
       nonSdNotesCount.hashCode ^
+      ironwoodSdCount.hashCode ^
       progress.hashCode ^
       nextAction.hashCode ^
       workSummary.hashCode;
@@ -94,6 +97,7 @@ class MigrationStatus {
           totalFees == other.totalFees &&
           sdNotesCount == other.sdNotesCount &&
           nonSdNotesCount == other.nonSdNotesCount &&
+          ironwoodSdCount == other.ironwoodSdCount &&
           progress == other.progress &&
           nextAction == other.nextAction &&
           workSummary == other.workSummary;

@@ -133,7 +133,12 @@ class InputAmountState extends ConsumerState<InputAmount> {
 
   void onPriceChanged(String? v) {
     if (v == null) return;
-    final p = stringToDecimal(v, scale: 3);
+    final p;
+    try {
+      p = stringToDecimal(v, scale: 3);
+    } on Exception {
+      return; // invalid input — ignore
+    }
     setState(() {
       double pp = p.toDecimal().toDouble();
       final price = ref.read(priceProvider.notifier);
@@ -144,8 +149,12 @@ class InputAmountState extends ConsumerState<InputAmount> {
       final form = formKey.currentState!;
       final v = form.fields["zat"]!.value;
       if (v != null) {
-        final usd = stringToZat(v).toDecimal() * p.toDecimal() / Decimal.fromInt(zatsPerZec);
-        form.fields["fiat"]?.didChange(displayPrice(usd.toDecimal().toDouble()));
+        try {
+          final usd = stringToZat(v).toDecimal() * p.toDecimal() / Decimal.fromInt(zatsPerZec);
+          form.fields["fiat"]?.didChange(displayPrice(usd.toDecimal().toDouble()));
+        } on Exception {
+          // invalid input — ignore
+        }
       }
       disableChangeHandlers = false;
     });
@@ -163,8 +172,12 @@ class InputAmountState extends ConsumerState<InputAmount> {
         onReset(zat: false);
         formFieldKey.currentState!.didChange("");
       } else if (price != null) {
-        final usd = stringToZat(v).toDouble() * price / 1e8;
-        form.fields["fiat"]?.didChange(displayPrice(usd));
+        try {
+          final usd = stringToZat(v).toDouble() * price / 1e8;
+          form.fields["fiat"]?.didChange(displayPrice(usd));
+        } on Exception {
+          // invalid input — ignore
+        }
       }
       disableChangeHandlers = false;
     });

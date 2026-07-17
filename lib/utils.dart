@@ -104,11 +104,21 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
         );
 }
 
-Fixed stringToDecimal(String s, {int? scale}) => Fixed.parse(s, scale: scale, invertSeparator: invertSeparator);
+Fixed stringToDecimal(String s, {int? scale}) {
+  try {
+    return Fixed.parse(s, scale: scale, invertSeparator: invertSeparator);
+  } on RangeError {
+    throw FormatException('Invalid decimal: $s');
+  }
+}
 
 BigInt stringToZat(String s) {
-  final z = Fixed.parse(s, scale: 8, invertSeparator: invertSeparator);
-  return z.minorUnits;
+  try {
+    final z = Fixed.parse(s, scale: 8, invertSeparator: invertSeparator);
+    return z.minorUnits;
+  } on RangeError {
+    throw FormatException('Invalid amount: $s');
+  }
 }
 
 String timeToString(int time) {

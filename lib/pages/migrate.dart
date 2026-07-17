@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 class MigratePage extends StatefulWidget {
   const MigratePage({super.key});
@@ -20,6 +22,8 @@ class _MigratePageState extends State<MigratePage>
     with WidgetsBindingObserver {
   StreamSubscription<MigrationStatus>? _sub;
   MigrationStatus? _status;
+  Timer? _countdown;
+  int _countdownSecs = 0;
   bool _started = false;
   bool _didShowCompleteDialog = false;
   double _speedIndex = 1; // default: Fast (60s)
@@ -40,15 +44,54 @@ class _MigratePageState extends State<MigratePage>
   }
 
   void _startMigration() {
-    _sub?.cancel();
-    final c = coinContext.coin;
-    final meanDelayMs =
-        BigInt.from(_speedMeanMs[_speedIndex.round()]);
-    final stream = runMigration(c: c, meanDelayMs: meanDelayMs);
-    _sub = stream.listen(
-      (status) => setState(() => _status = status),
-      onError: (e) => logger.w('Migration stream error: $e'),
-    );
+    try {
+      _sub?.cancel();
+      final c = coinContext.coin;
+      final meanDelayMs =
+          BigInt.from(_speedMeanMs[_speedIndex.round()]);
+      final stream = runMigration(c: c, meanDelayMs: meanDelayMs);
+      _sub = stream.listen(
+        (status) {
+          setState(() => _status = status);
+
+          if (status.nextAction.startsWith('Waiting')) {
+            // Parse total seconds and start countdown
+            final m =
+                RegExp(r'Waiting (\d+)s').firstMatch(status.nextAction);
+            if (m != null) {
+              _countdownSecs = int.parse(m.group(1)!);
+              _countdown?.cancel();
+              _countdown = Timer.periodic(
+                const Duration(seconds: 1),
+                (_) {
+                  if (_countdownSecs > 0) {
+                    setState(() => _countdownSecs--);
+                  }
+                },
+              );
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(status.nextAction),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          } else {
+            _countdown?.cancel();
+            _countdown = null;
+          }
+        },
+        onError: (e) async {
+          final exc = e as AnyhowException;
+          if (!context.mounted) return;
+          await showException(context, exc.message);
+        },
+      );
+    } on AnyhowException catch (e) {
+      if (!context.mounted) return;
+      showException(context, e.message);
+    }
   }
 
   @override
@@ -56,12 +99,15 @@ class _MigratePageState extends State<MigratePage>
     WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     _sub = null;
+    _countdown?.cancel();
+    _countdown = null;
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _startMigration();
+    // Don't restart on resume — the stream keeps running in background.
+    // Restarting creates a new Rust task whose first step runs immediately.
   }
 
   @override
@@ -216,8 +262,9 @@ class _MigratePageState extends State<MigratePage>
     final t = Theme.of(context);
     final tt = t.textTheme;
     final phase = status.phase;
+    final waiting = status.nextAction.startsWith('Waiting');
     final isComplete = phase == 'complete';
-    final isActive = phase == 'splitting' || phase == 'migrating';
+    final isActive = phase == 'splitting' || phase == 'migrating' || waiting;
 
     return Scaffold(
       appBar: AppBar(
@@ -256,20 +303,24 @@ class _MigratePageState extends State<MigratePage>
                   Text(
                     isComplete
                         ? "Migration Complete"
-                        : isActive
-                            ? "Migrating to Ironwood"
-                            : "Ready to Migrate",
+                        : waiting
+                            ? "Waiting..."
+                            : isActive
+                                ? "Migrating to Ironwood"
+                                : "Ready to Migrate",
                     style: tt.headlineSmall,
                   ),
                   const Gap(4),
                   Text(
-                    phase == 'splitting'
-                        ? "Phase 1: Splitting into standard denominations"
-                        : phase == 'migrating'
-                            ? "Phase 2: Migrating notes to Ironwood"
-                            : phase == 'complete'
-                                ? "All notes have been migrated"
-                                : "Start the migration to move your funds",
+                    waiting
+                        ? "Waiting ${_countdownSecs}s..."
+                        : phase == 'splitting'
+                            ? "Phase 1: Splitting into standard denominations"
+                            : phase == 'migrating'
+                                ? "Phase 2: Migrating notes to Ironwood"
+                                : phase == 'complete'
+                                    ? "All notes have been migrated"
+                                    : "Start the migration to move your funds",
                     style: tt.bodyMedium?.copyWith(
                         color: t.colorScheme.onSurfaceVariant),
                   ),
@@ -290,8 +341,6 @@ class _MigratePageState extends State<MigratePage>
                     Text("Progress", style: tt.titleMedium),
                     const Gap(8),
                     LinearProgressIndicator(value: status.progress),
-                    const Gap(8),
-                    Text(status.workSummary, style: tt.bodyMedium),
                   ],
                 ),
               ),
@@ -299,7 +348,7 @@ class _MigratePageState extends State<MigratePage>
             const Gap(16),
           ],
 
-          // Note counts
+          // Note counts — phase-dependent
           if (isActive || isComplete) ...[
             Card(
               child: Padding(
@@ -307,10 +356,16 @@ class _MigratePageState extends State<MigratePage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Orchard Notes", style: tt.titleMedium),
+                    Text(
+                        phase == 'migrating'
+                            ? "Migration Progress"
+                            : "Orchard Notes",
+                        style: tt.titleMedium),
                     const Gap(8),
                     Text(
-                        "SD: ${status.sdNotesCount}  |  Non-SD: ${status.nonSdNotesCount}",
+                        phase == 'migrating'
+                            ? "Orchard: ${status.sdNotesCount} SD  |  Ironwood: ${status.ironwoodSdCount} SD"
+                            : "SD: ${status.sdNotesCount}  |  Non-SD: ${status.nonSdNotesCount}",
                         style: tt.bodyLarge),
                   ],
                 ),

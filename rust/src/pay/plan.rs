@@ -191,28 +191,47 @@ fn decompose_address(
         anyhow::bail!("Address has no shielded receivers");
     }
 
-    // Fallback: transparent-only or unrecognized address
+    // Fallback: single-pool address (transparent, sapling, orchard).
+    // UnifiedAddress::decode only handles Bech32m UA containers, so
+    // regtest Sapling (Bech32) and transparent (Base58) addresses
+    // must be decoded individually via the AddressCodec trait.
     let zaddr = ZcashAddress::try_from_encoded(address)?;
-    let pool = if zaddr.can_receive_as(PoolType::Transparent) {
-        0u8
-    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
-        1u8
-    } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Orchard)) {
-        if ironwood_active { 3 } else { 2 }
-    } else {
-        anyhow::bail!("Unrecognized address pool");
-    };
-    // Extract Receiver bytes via re-parse
-    let ua = UnifiedAddress::decode(network, address)
-        .map_err(|e| anyhow!("Failed to decode address: {e}"))?;
-    let receiver = if let Some(o) = ua.orchard() {
-        Receiver::Orchard(o.to_raw_address_bytes())
-    } else if let Some(s) = ua.sapling() {
-        Receiver::Sapling(s.to_bytes())
-    } else {
-        anyhow::bail!("Failed to extract receiver from address");
-    };
-    Ok(ReceiverOption { receiver, pool, remaining: 0 })
+
+    if zaddr.can_receive_as(PoolType::Transparent) {
+        let taddr = TransparentAddress::decode(network, address)
+            .map_err(|e| anyhow!("Failed to decode transparent address: {e:?}"))?;
+        let receiver = match taddr {
+            TransparentAddress::PublicKeyHash(hash) => Receiver::P2pkh(hash),
+            TransparentAddress::ScriptHash(hash) => Receiver::P2sh(hash),
+        };
+        return Ok(ReceiverOption { receiver, pool: 0, remaining: 0 });
+    }
+
+    if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
+        let sapling = PaymentAddress::decode(network, address)
+            .map_err(|e| anyhow!("Failed to decode sapling address: {e}"))?;
+        return Ok(ReceiverOption {
+            receiver: Receiver::Sapling(sapling.to_bytes()),
+            pool: 1,
+            remaining: 0,
+        });
+    }
+
+    if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Orchard)) {
+        // Orchard single-pool addresses — re-decode through UA
+        let ua = UnifiedAddress::decode(network, address)
+            .map_err(|e| anyhow!("Failed to decode orchard address: {e}"))?;
+        let orchard = ua
+            .orchard()
+            .ok_or_else(|| anyhow!("Address has no orchard receiver"))?;
+        return Ok(ReceiverOption {
+            receiver: Receiver::Orchard(orchard.to_raw_address_bytes()),
+            pool: if ironwood_active { 3 } else { 2 },
+            remaining: 0,
+        });
+    }
+
+    anyhow::bail!("Unrecognized address pool");
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -229,6 +248,7 @@ pub async fn plan_transaction(
     category: Option<u32>,
     _issuance: Option<&IssuanceInfo>,
     migration: bool,
+    mode: crate::pay::solve::Mode,
     preselected: Option<&[u32]>,
 ) -> Result<PcztPackage> {
     let mut input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
@@ -320,38 +340,40 @@ pub async fn plan_transaction(
         .iter()
         .enumerate()
         .flat_map(|(pool, notes)| {
-            notes.iter().map(move |n| solve::Note {
+            notes.iter().enumerate().map(move |(idx, n)| solve::Note {
                 pool: pool as u8,
                 amount: n.amount,
+                pool_index: idx,
             })
         })
         .collect();
 
-    // Use recipient's explicit pool preference when set (e.g. migration
-    // chooses Orchard vs Ironwood per phase), otherwise fall back to the
-    // address-derived pool from decompose_address.
-    let select_outputs: Vec<solve::Output> = recipients
+    // Compute pool preference per recipient once (explicit pool hint, or
+    // fall back to the address-derived pool from decompose_address).
+    let pool_prefs: Vec<u8> = recipients
         .iter()
         .zip(decomposed.iter())
-        .map(|(r, dr)| solve::Output {
-            pool: r
-                .pools
+        .map(|(r, dr)| {
+            r.pools
                 .and_then(|p| PoolMask(p).to_best_pool())
-                .unwrap_or(dr.receiver.pool),
-            amount: dr.amount,
+                .unwrap_or(dr.receiver.pool)
         })
         .collect();
 
-    let f_unit = COST_PER_ACTION;
-    let first_recipient_amount = recipients.first().map(|r| r.amount).unwrap_or(0);
+    let select_outputs: Vec<solve::Output> = pool_prefs
+        .iter()
+        .zip(decomposed.iter())
+        .map(|(&pool, dr)| solve::Output { pool, amount: dr.amount })
+        .collect();
 
     let selection = solve::select_notes(
         &select_notes_input,
         &select_outputs,
-        f_unit,
+        COST_PER_ACTION,
         migration,
         recipient_pays_fee,
-        first_recipient_amount,
+        recipients.first().map(|r| r.amount).unwrap_or(0),
+        mode,
     )
     .ok_or_else(|| anyhow!("No feasible note selection found"))?;
 
@@ -365,16 +387,10 @@ pub async fn plan_transaction(
     let change_pool = selection.change_pool;
 
     // ── Build RecipientStates ────────────────────────────────────────────
-    // Use recipient's explicit pool preference when set (e.g. migration
-    // chooses Orchard vs Ironwood per phase), matching select_outputs above.
-    let recipient_states: Vec<RecipientState> = recipients
+    let recipient_states: Vec<RecipientState> = pool_prefs
         .iter()
         .zip(decomposed.iter())
-        .map(|(r, dr)| {
-            let pool = r
-                .pools
-                .and_then(|p| PoolMask(p).to_best_pool())
-                .unwrap_or(dr.receiver.pool);
+        .map(|(&pool, dr)| {
             RecipientState {
                 recipient: Recipient {
                     address: dr.address.clone(),
@@ -389,159 +405,12 @@ pub async fn plan_transaction(
         })
         .collect();
 
-    // ── Fee computation ──────────────────────────────────────────────────
-    let mut fee_manager = FeeManager {
-        migration,
-        ..FeeManager::default()
-    };
-
-    for pool_inputs in input_pools.iter() {
-        for inp in pool_inputs.iter() {
-            if inp.is_used() {
-                fee_manager.add_input(inp.pool);
-            }
-        }
-    }
-    for r in &recipient_states {
-        fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
-    }
-    fee_manager.add_output(change_pool);
-
-    info!("Fee (select_notes) {}", &fee_manager);
-    let mut fee = fee_manager.fee();
-
-    // ── Check all recipients fully funded ────────────────────────────────
-    for r in &recipient_states {
-        if r.remaining > 0 {
-            return Err(anyhow!(
-                "Recipient {} not fully funded: remaining {}",
-                r.recipient.address,
-                to_zec(r.remaining)
-            ));
-        }
-    }
-
-    // ── Handle fee payment ───────────────────────────────────────────────
-    if recipient_pays_fee {
-        let first = recipient_states
-            .first()
-            .ok_or_else(|| Error::NotEnoughFunds(to_zec(fee)))?;
-        if first.recipient.amount < fee {
-            return Err(Error::NotEnoughFunds(to_zec(fee - first.recipient.amount)).into());
-        }
-        // Fee deducted from first recipient's amount (caller adjusts)
-    }
+    // ── Fee, totals, and change (select_notes already validated feasibility) ─
+    let fee = selection.fee;
+    info!("Fee (select_notes): {}", to_zec(fee));
 
     let total_output: u64 = recipient_states.iter().map(|r| r.recipient.amount).sum();
-
-    let compute_total_input = |input_pools: &[Vec<InputNote>]| -> u64 {
-        input_pools
-            .iter()
-            .map(|pool| {
-                pool.iter()
-                    .map(|n| if n.is_used() { n.amount } else { 0 })
-                    .sum::<u64>()
-            })
-            .sum()
-    };
-
-    let mut total_input = compute_total_input(&input_pools);
-
-    if !recipient_pays_fee {
-        let change_before_fee = total_input.saturating_sub(total_output);
-        if change_before_fee < fee {
-            // Need additional notes to cover the fee shortfall
-            let deficit = total_output + fee - total_input;
-            let mut input_counts: [u8; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
-            for (pi, pool_inputs) in input_pools.iter().enumerate() {
-                input_counts[pi] = pool_inputs.iter().filter(|n| n.is_used()).count() as u8;
-            }
-
-            let marginal_cost = |pool: u8| -> u64 {
-                let mut fm = fee_manager.clone();
-                fm.add_input(pool);
-                fm.fee().saturating_sub(fee_manager.fee())
-            };
-
-            let used_bitmap: u8 = input_counts
-                .iter()
-                .enumerate()
-                .filter(|(_, &c)| c > 0)
-                .fold(0u8, |acc, (i, _)| acc | (1 << i as u8));
-
-            let priority_pools: Vec<u8> = [3u8, 2, 1, 0]
-                .iter()
-                .filter(|&&p| used_bitmap & (1 << p) != 0)
-                .chain(
-                    [3u8, 2, 1, 0]
-                        .iter()
-                        .filter(|&&p| used_bitmap & (1 << p) == 0),
-                )
-                .copied()
-                .collect();
-
-            let mut deficit = deficit as i64;
-            for &pool in &priority_pools {
-                if deficit <= 0 {
-                    break;
-                }
-                for inp in input_pools[pool as usize].iter_mut() {
-                    if deficit <= 0 {
-                        break;
-                    }
-                    if inp.remaining == 0 {
-                        continue;
-                    }
-                    let is_new = !inp.is_used();
-                    let mc = if is_new {
-                        marginal_cost(pool) as i64
-                    } else {
-                        0
-                    };
-                    let take = (inp.remaining as i64).min(deficit + mc);
-                    inp.remaining -= take as u64;
-                    deficit = deficit + mc - take;
-                    if is_new {
-                        input_counts[pool as usize] += 1;
-                    }
-                }
-            }
-
-            if deficit > 0 {
-                return Err(Error::NotEnoughFunds(to_zec(deficit as u64)).into());
-            }
-
-            // Recompute fee with new inputs
-            fee_manager = FeeManager {
-                migration,
-                ..FeeManager::default()
-            };
-            for pool_inputs in input_pools.iter() {
-                for inp in pool_inputs.iter() {
-                    if inp.is_used() {
-                        fee_manager.add_input(inp.pool);
-                    }
-                }
-            }
-            for r in &recipient_states {
-                fee_manager.add_output(r.pool_mask.to_best_pool().unwrap());
-            }
-            fee_manager.add_output(change_pool);
-            fee = fee_manager.fee();
-            total_input = compute_total_input(&input_pools);
-            info!("Fee (after fee-note selection) {}", &fee_manager);
-
-            if total_input < total_output + fee {
-                return Err(anyhow!(
-                    "Insufficient funds after fee recomputation: total_input={} < total_output={} + fee={}",
-                    to_zec(total_input),
-                    to_zec(total_output),
-                    to_zec(fee)
-                ));
-            }
-        }
-    }
-
+    let total_input: u64 = selection.inputs.iter().map(|n| n.amount).sum();
     let change = total_input.saturating_sub(total_output + fee);
 
     info!(
@@ -964,9 +833,11 @@ pub async fn plan_transaction(
             let mut indices: Vec<usize> = (0..n_spends[2])
                 .map(|n| orchard_meta.spend_action_index(n).unwrap())
                 .collect();
-            // Change outputs pair with a fabricated spend that needs signing.
-            // Only applicable when change actually goes to Orchard.
-            if change_pool == 2 && change > 0 {
+            // Change outputs (and migration recipient outputs) pair with
+            // a fabricated spend that needs signing.
+            // Applicable when change goes to Orchard, or when migration
+            // (all Orchard outputs use add_orchard_change_output).
+            if migration || (change_pool == 2 && change > 0) {
                 let mut n = 0;
                 while let Some(idx) = orchard_meta.output_action_index(n) {
                     if !indices.contains(&idx) {
