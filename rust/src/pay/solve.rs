@@ -1,8 +1,14 @@
 //! Anytime branch-and-bound note selection for Zcash transactions.
 //!
-//! Minimizes ZIP-317 conventional fee by exploring the subset-sum space
-//! with a best-first search, folding change-pool assignment into the
-//! cost evaluation at each feasibility checkpoint.
+//! Two modes:
+//!   - `Mode::Fee`     — minimize ZIP-317 conventional fee. Monotonic, so
+//!     the search prunes supersets after reaching feasibility.
+//!   - `Mode::Privacy` — minimize cross-pool turnstile value (tin + tout +
+//!     Σ|balance|). Non-monotonic, so the search continues exploring
+//!     supersets that might improve per-pool balance.
+//!
+//! Both modes fold change-pool assignment into the cost evaluation at
+//! each feasibility checkpoint.
 //!
 //! Replaces the knapsack+greedy solver in `select.rs`.
 
@@ -16,12 +22,24 @@ use std::time::{Duration, Instant};
 
 pub const N_POOLS: usize = 4; // Transparent=0, Sapling=1, Orchard=2, Ironwood=3
 
+/// Optimisation target for note selection.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Mode {
+    /// Minimize ZIP-317 conventional fee.
+    Fee,
+    /// Minimize cross-pool turnstile (privacy-preserving).
+    Privacy,
+}
+
 /// Candidate note for selection.  `pool` is the pool index (0–3), `amount`
 /// is the note value in zatoshis.
 #[derive(Clone, Debug)]
 pub(super) struct Note {
     pub pool: u8,
     pub amount: u64,
+    /// Index within the original per-pool `input_pools[pool]` array so the
+    /// caller can map results back after sorting/reordering.
+    pub pool_index: usize,
 }
 
 /// A required output.  Mirrors `select::Output` so callers in `plan.rs`
@@ -78,6 +96,7 @@ struct Context<'a> {
     migration: bool,                 // orchard fee = inputs+outputs instead of max
     recipient_pays_fee: bool,
     first_recipient_amount: u64,
+    mode: Mode,
 }
 
 // ---------------------------------------------------------------------
@@ -176,9 +195,20 @@ fn compute_min_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], f_unit
 // ---------------------------------------------------------------------
 
 /// Evaluate a state by trying every pool as the change absorber.
-/// Returns `(fee, best_change_pool)` if any pool yields a feasible
+/// Returns `(cost, best_change_pool)` if any pool yields a feasible
 /// solution, or `(u64::MAX, 0)` if none does.
+/// In Fee mode cost is the ZIP-317 fee; in Privacy mode cost is the
+/// cross-pool turnstile value.
 fn evaluate(state: &State, ctx: &Context) -> (u64, u8) {
+    match ctx.mode {
+        Mode::Fee => evaluate_fee(state, ctx),
+        Mode::Privacy => evaluate_privacy(state, ctx),
+    }
+}
+
+/// Fee-mode evaluation: return the lowest fee achievable by assigning
+/// change to any pool.
+fn evaluate_fee(state: &State, ctx: &Context) -> (u64, u8) {
     let mut best_fee = u64::MAX;
     let mut best_pool = 0u8;
 
@@ -203,10 +233,67 @@ fn evaluate(state: &State, ctx: &Context) -> (u64, u8) {
     (best_fee, best_pool)
 }
 
-/// Optimistic lower bound on the fee achievable by extending `state`.
-/// Because fee is monotonic non-decreasing as notes are added, the
-/// minimum fee across all change-pool assignments is a valid bound.
+/// Privacy-mode evaluation: return the lowest turnstile achievable by
+/// assigning change to any pool, with fee feasibility as a constraint.
+fn evaluate_privacy(state: &State, ctx: &Context) -> (u64, u8) {
+    let mut best_turnstile = u64::MAX;
+    let mut best_pool = 0u8;
+
+    for cp in 0..N_POOLS as u8 {
+        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
+
+        let needed = if ctx.recipient_pays_fee {
+            if fee > ctx.first_recipient_amount {
+                continue;
+            }
+            ctx.output_sum
+        } else {
+            ctx.output_sum.saturating_add(fee)
+        };
+
+        if state.sum < needed {
+            continue;
+        }
+
+        let change = state.sum.saturating_sub(needed);
+
+        // Turnstile: transparent value + per-pool shielded imbalance.
+        // All transparent value passes through the turnstile.
+        let turnstile = state.tin
+            + state.tout
+            + (1..N_POOLS).map(|p| {
+                let bal = state.balance[p];
+                // Change output adds to the change-pool's output side,
+                // deepening any deficit or reducing any surplus.
+                let adjusted = if p == cp as usize {
+                    (bal - change as i64).unsigned_abs()
+                } else {
+                    bal.unsigned_abs()
+                };
+                adjusted
+            }).sum::<u64>();
+
+        if turnstile < best_turnstile {
+            best_turnstile = turnstile;
+            best_pool = cp;
+        }
+    }
+
+    (best_turnstile, best_pool)
+}
+
+/// Optimistic lower bound on the cost achievable by extending `state`.
 fn lower_bound(state: &State, ctx: &Context) -> u64 {
+    match ctx.mode {
+        Mode::Fee => lower_bound_fee(state, ctx),
+        Mode::Privacy => lower_bound_privacy(state, ctx),
+    }
+}
+
+/// Fee-mode lower bound: the minimum fee across all change-pool
+/// assignments. Because fee is monotonic non-decreasing as notes are
+/// added, the current minimum fee is always a valid bound.
+fn lower_bound_fee(state: &State, ctx: &Context) -> u64 {
     let mut min_fee = u64::MAX;
     for cp in 0..N_POOLS as u8 {
         let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
@@ -223,6 +310,31 @@ fn lower_bound(state: &State, ctx: &Context) -> u64 {
         min_fee = min_no_change;
     }
     min_fee
+}
+
+/// Privacy-mode lower bound: tin + tout is monotonic; per-pool
+/// |balance| can only shrink by at most the sum of remaining note
+/// values in that pool. So we subtract the remaining pool value from
+/// each pool's absolute balance to get an optimistic floor.
+fn lower_bound_privacy(state: &State, ctx: &Context) -> u64 {
+    // tin + tout is monotonic (inputs only add to tin)
+    let mut bound = state.tin + state.tout;
+
+    // Compute remaining note value per pool (without full remaining_notes)
+    let chosen: HashSet<usize> = state.selected.iter().copied().collect();
+    let mut remaining_by_pool = [0u64; N_POOLS];
+    for (i, n) in ctx.notes.iter().enumerate() {
+        if !chosen.contains(&i) {
+            remaining_by_pool[n.pool as usize] += n.amount;
+        }
+    }
+
+    for p in 1..N_POOLS {
+        let abs_bal = state.balance[p].unsigned_abs();
+        bound += abs_bal.saturating_sub(remaining_by_pool[p]);
+    }
+
+    bound
 }
 
 // ---------------------------------------------------------------------
@@ -275,13 +387,30 @@ fn remaining_notes<'a>(ctx: &Context<'a>, state: &State) -> Vec<&'a Note> {
 // Heuristic for beam-search expansion ordering
 // ---------------------------------------------------------------------
 
-/// Larger notes first — fewer notes means fewer inputs, which means lower fee.
-fn local_score(note: &Note) -> i64 {
-    note.amount as i64
+/// Score a candidate note for beam expansion. Higher = expand first.
+fn local_score(note: &Note, state: &State, mode: Mode) -> i64 {
+    match mode {
+        Mode::Fee => {
+            // Larger notes first — fewer notes means fewer inputs, lower fee.
+            note.amount as i64
+        }
+        Mode::Privacy => {
+            // Prefer notes that reduce a pool's imbalance toward zero.
+            let bal = state.balance[note.pool as usize];
+            let old_abs = bal.unsigned_abs() as i64;
+            let new_abs = (bal + note.amount as i64).unsigned_abs() as i64;
+            let reduction = old_abs - new_abs;
+            // Light penalty on note size so smaller, more precise notes
+            // are preferred when equally corrective.
+            reduction - (note.amount as i64 / 1000)
+        }
+    }
 }
 
 fn top_k_by_local_heuristic<'a>(
     remaining: &[&'a Note],
+    state: &State,
+    mode: Mode,
     k: usize,
 ) -> Vec<&'a Note> {
     if remaining.len() <= k {
@@ -289,7 +418,7 @@ fn top_k_by_local_heuristic<'a>(
     }
     let mut scored: Vec<(i64, &Note)> = remaining
         .iter()
-        .map(|&n| (local_score(n), n))
+        .map(|&n| (local_score(n, state, mode), n))
         .collect();
     scored.sort_by(|a, b| b.0.cmp(&a.0)); // descending
     scored.into_iter().take(k).map(|(_, n)| n).collect()
@@ -377,7 +506,7 @@ impl Ord for QueueItem {
 // Public entry point
 // ---------------------------------------------------------------------
 
-/// Select notes to cover `outputs`, minimizing ZIP-317 conventional fee.
+/// Select notes to cover `outputs`, minimizing the cost given by `mode`.
 ///
 /// `f_unit` is `COST_PER_ACTION` (5000).  Notes with `amount < f_unit` are
 /// filtered out — they can never pay for their own marginal fee.
@@ -392,6 +521,7 @@ pub(super) fn select_notes(
     migration: bool,
     recipient_pays_fee: bool,
     first_recipient_amount: u64,
+    mode: Mode,
 ) -> Option<Selection> {
     // ---- 1. Pre-filter dust ------------------------------------------------
     let filtered: Vec<Note> = notes
@@ -435,10 +565,11 @@ pub(super) fn select_notes(
         migration,
         recipient_pays_fee,
         first_recipient_amount,
+        mode,
     };
 
     // ---- 5. Greedy baseline -----------------------------------------------
-    let (mut best_state, mut best_fee, mut best_pool) = match greedy_solution(&ctx) {
+    let (mut best_state, mut best_cost, mut best_pool) = match greedy_solution(&ctx) {
         Some(s) => s,
         None => {
             // Even consuming all notes doesn't reach the target
@@ -449,11 +580,11 @@ pub(super) fn select_notes(
                 }
                 s
             };
-            let (fee, pool) = evaluate(&state, &ctx);
-            if fee == u64::MAX {
+            let (cost, pool) = evaluate(&state, &ctx);
+            if cost == u64::MAX {
                 return None;
             }
-            (state, fee, pool)
+            (state, cost, pool)
         }
     };
 
@@ -466,9 +597,11 @@ pub(super) fn select_notes(
     // ---- 6. Initialize search ---------------------------------------------
     let start = initial_state(&ctx);
     let start_bound = lower_bound(&start, &ctx);
-    if start_bound < best_fee {
+    if start_bound < best_cost {
         heap.push(Reverse(QueueItem { bound: start_bound, seq, state: start }));
     }
+
+    let monotonic = matches!(ctx.mode, Mode::Fee);
 
     // ---- 7. Best-first branch-and-bound -----------------------------------
     while let Some(Reverse(item)) = heap.pop() {
@@ -478,18 +611,22 @@ pub(super) fn select_notes(
 
         let QueueItem { bound, state, .. } = item;
 
-        if bound >= best_fee {
+        if bound >= best_cost {
             continue; // cannot beat incumbent
         }
 
         // Feasibility check: evaluate with change-pool folding
         let (cost, pool) = evaluate(&state, &ctx);
-        if cost != u64::MAX && cost < best_fee {
-            best_fee = cost;
+        if cost != u64::MAX && cost < best_cost {
+            best_cost = cost;
             best_state = state.clone();
             best_pool = pool;
-            // Fee is monotonic: supersets can only have >= cost
-            continue;
+            if monotonic {
+                // Fee is monotonic: supersets can only have >= cost
+                continue;
+            }
+            // Privacy is non-monotonic: supersets may improve balance,
+            // so don't prune — keep expanding this state.
         }
 
         let remaining = remaining_notes(&ctx, &state);
@@ -503,7 +640,7 @@ pub(super) fn select_notes(
             continue;
         }
 
-        let candidates = top_k_by_local_heuristic(&remaining, budget.beam_width);
+        let candidates = top_k_by_local_heuristic(&remaining, &state, ctx.mode, budget.beam_width);
 
         for note in candidates {
             // Find the note's index in ctx.notes
@@ -518,7 +655,7 @@ pub(super) fn select_notes(
             let child = apply(&state, note_idx, note);
             let child_bound = lower_bound(&child, &ctx);
 
-            if child_bound >= best_fee {
+            if child_bound >= best_cost {
                 continue;
             }
 
@@ -536,10 +673,27 @@ pub(super) fn select_notes(
     }
 
     // ---- 8. Build Selection ------------------------------------------------
+    // Recompute the actual fee for the best state (needed even in Privacy
+    // mode: the Selection always reports the ZIP-317 fee, not turnstile).
+    let (actual_fee, _) = evaluate_fee(&best_state, &ctx);
+    // If evaluate_fee returned u64::MAX (shouldn't happen since best_state
+    // was feasible), fall back to computing fee for the recorded best_pool.
+    let fee = if actual_fee != u64::MAX {
+        actual_fee
+    } else {
+        compute_fee(
+            &best_state.n_inputs,
+            &ctx.n_outputs,
+            best_pool,
+            ctx.f_unit,
+            ctx.migration,
+        )
+    };
+
     let change_needed = if recipient_pays_fee {
         ctx.output_sum
     } else {
-        ctx.output_sum.saturating_add(best_fee)
+        ctx.output_sum.saturating_add(fee)
     };
     let change_amount = best_state.sum.saturating_sub(change_needed);
 
@@ -548,8 +702,8 @@ pub(super) fn select_notes(
 
     let mut per_pool_indices: [Vec<usize>; N_POOLS] = Default::default();
     for &idx in &best_state.selected {
-        let p = ctx.notes[idx].pool as usize;
-        per_pool_indices[p].push(idx);
+        let note = &ctx.notes[idx];
+        per_pool_indices[note.pool as usize].push(note.pool_index);
     }
 
     Some(Selection {
@@ -557,7 +711,7 @@ pub(super) fn select_notes(
         per_pool_indices,
         change_pool: best_pool,
         change_amount,
-        fee: best_fee,
+        fee,
     })
 }
 
@@ -572,13 +726,13 @@ mod tests {
     #[test]
     fn test_select_notes_basic() {
         let notes = vec![
-            Note { pool: 1, amount: 120_000 },
-            Note { pool: 1, amount: 80_000 },
-            Note { pool: 1, amount: 30_000 },
-            Note { pool: 2, amount: 200_000 },
-            Note { pool: 2, amount: 15_000 },
-            Note { pool: 3, amount: 60_000 },
-            Note { pool: 0, amount: 500_000 },
+            Note { pool: 1, amount: 120_000, pool_index: 0 },
+            Note { pool: 1, amount: 80_000, pool_index: 1 },
+            Note { pool: 1, amount: 30_000, pool_index: 2 },
+            Note { pool: 2, amount: 200_000, pool_index: 0 },
+            Note { pool: 2, amount: 15_000, pool_index: 1 },
+            Note { pool: 3, amount: 60_000, pool_index: 0 },
+            Note { pool: 0, amount: 500_000, pool_index: 0 },
         ];
 
         let outputs = vec![
@@ -588,7 +742,7 @@ mod tests {
 
         let f_unit = 5_000u64;
 
-        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0)
+        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0, Mode::Fee)
             .expect("should find a feasible selection");
 
         // Total input >= total output + fee
@@ -618,14 +772,14 @@ mod tests {
     fn test_select_notes_dust_filtered() {
         // Notes below f_unit (5000) should be filtered out
         let notes = vec![
-            Note { pool: 1, amount: 120 },       // dust
-            Note { pool: 1, amount: 4_000 },     // dust
-            Note { pool: 2, amount: 1_000_000 }, // only usable note
+            Note { pool: 1, amount: 120, pool_index: 0 },       // dust
+            Note { pool: 1, amount: 4_000, pool_index: 1 },     // dust
+            Note { pool: 2, amount: 1_000_000, pool_index: 0 }, // only usable note
         ];
         let outputs = vec![Output { pool: 2, amount: 500_000 }];
         let f_unit = 5_000u64;
 
-        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0)
+        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0, Mode::Fee)
             .expect("should find a feasible selection");
 
         // Should only use the non-dust note
@@ -636,15 +790,15 @@ mod tests {
     #[test]
     fn test_select_notes_recipient_pays_fee() {
         let notes = vec![
-            Note { pool: 2, amount: 200_000 },
-            Note { pool: 2, amount: 100_000 },
-            Note { pool: 2, amount: 50_000 },
+            Note { pool: 2, amount: 200_000, pool_index: 0 },
+            Note { pool: 2, amount: 100_000, pool_index: 1 },
+            Note { pool: 2, amount: 50_000, pool_index: 2 },
         ];
         let outputs = vec![Output { pool: 2, amount: 150_000 }];
         let f_unit = 5_000u64;
 
         // First recipient has 200_000, fee will be well under that
-        let sel = select_notes(&notes, &outputs, f_unit, false, true, 200_000)
+        let sel = select_notes(&notes, &outputs, f_unit, false, true, 200_000, Mode::Fee)
             .expect("should find a feasible selection");
 
         // With recipient_pays_fee, target = output_sum (no fee added)
@@ -662,16 +816,16 @@ mod tests {
     #[test]
     fn test_select_notes_recipient_pays_fee_too_high() {
         let notes = vec![
-            Note { pool: 2, amount: 200_000 },
-            Note { pool: 2, amount: 100_000 },
-            Note { pool: 1, amount: 300_000 },
-            Note { pool: 0, amount: 500_000 },
+            Note { pool: 2, amount: 200_000, pool_index: 0 },
+            Note { pool: 2, amount: 100_000, pool_index: 1 },
+            Note { pool: 1, amount: 300_000, pool_index: 0 },
+            Note { pool: 0, amount: 500_000, pool_index: 0 },
         ];
         let outputs = vec![Output { pool: 2, amount: 150_000 }];
         let f_unit = 5_000u64;
 
         // First recipient only has 1_000 zats — fee will exceed that
-        let result = select_notes(&notes, &outputs, f_unit, false, true, 1_000);
+        let result = select_notes(&notes, &outputs, f_unit, false, true, 1_000, Mode::Fee);
         // Should still work if it can find a change pool where fee <= 1000,
         // but with 4 pools and enough notes the min fee is >= 10000.
         // This may or may not find a solution depending on fee structure.
@@ -684,12 +838,12 @@ mod tests {
     #[test]
     fn test_select_notes_insufficient_funds() {
         let notes = vec![
-            Note { pool: 2, amount: 10_000 },
+            Note { pool: 2, amount: 10_000, pool_index: 0 },
         ];
         let outputs = vec![Output { pool: 2, amount: 1_000_000 }];
         let f_unit = 5_000u64;
 
-        let result = select_notes(&notes, &outputs, f_unit, false, false, 0);
+        let result = select_notes(&notes, &outputs, f_unit, false, false, 0, Mode::Fee);
         assert!(result.is_none(), "should return None for insufficient funds");
     }
 

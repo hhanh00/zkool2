@@ -1,7 +1,11 @@
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
 
-use crate::{api::coin::Coin, pay::{Recipient, TxPlan, plan::plan_transaction}};
+use crate::{api::coin::Coin, pay::{Recipient, TxPlan, plan::plan_transaction, solve::Mode}};
+
+/// FFI-compatible coin-selection mode (maps to `solve::Mode`).
+/// 0 = Fee optimisation, 1 = Privacy preservation.
+const MODE_PRIVACY: u8 = 1;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
@@ -10,6 +14,8 @@ pub struct PaymentOptions {
     pub recipient_pays_fee: bool,
     pub smart_transparent: bool,
     pub category: Option<u32>,
+    /// Coin-selection mode: 0 = fee minimisation, 1 = privacy preservation.
+    pub mode: u8,
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -24,6 +30,8 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
+    let mode = if options.mode == MODE_PRIVACY { Mode::Privacy } else { Mode::Fee };
+
     plan_transaction(
         network,
         &mut *connection,
@@ -37,6 +45,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         options.category,
         None, // issuance — normal sends have no issuance
         false, // migration — only used by note migration
+        mode,
         None,  // preselected
     )
     .await
@@ -68,6 +77,7 @@ pub async fn prepare_migration(
         None,   // category
         None,   // issuance
         true,   // migration
+        Mode::Fee,
         None,  // preselected
     )
     .await
@@ -150,6 +160,27 @@ pub async fn store_pending_tx(height: u32, txid: &[u8],
     crate::db::store_pending_tx(&mut connection, c.account, height, txid, price, category).await?;
 
     Ok(())
+}
+
+/// Get the persisted coin-selection mode preference.
+/// Returns 0 for fee optimisation, 1 for privacy preservation.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_coin_selection_mode(c: &Coin) -> Result<u8> {
+    let mut connection = c.get_connection().await?;
+    let mode = crate::db::get_coin_selection_mode(&mut connection).await?;
+    Ok(match mode {
+        Mode::Fee => 0,
+        Mode::Privacy => 1,
+    })
+}
+
+/// Persist the coin-selection mode preference.
+/// Pass 0 for fee optimisation, 1 for privacy preservation.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn set_coin_selection_mode(mode: u8, c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    let mode = if mode == MODE_PRIVACY { Mode::Privacy } else { Mode::Fee };
+    crate::db::set_coin_selection_mode(&mut connection, mode).await
 }
 
 #[cfg_attr(feature = "flutter", frb(sync))]
