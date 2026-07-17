@@ -61,8 +61,7 @@ use crate::{
         fee::{FeeManager, COST_PER_ACTION},
         pool::{PoolMask, ALL_POOLS, NUM_POOLS},
         prepare::to_zec,
-        select,
-        InputNote, Recipient, RecipientState, ReceiverOption, DecomposedRecipient,
+        solve, InputNote, Recipient, RecipientState, ReceiverOption, DecomposedRecipient,
         TxPlanIn, TxPlanOut,
     },
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
@@ -316,12 +315,12 @@ pub async fn plan_transaction(
         pool.retain(|n| n.amount >= COST_PER_ACTION);
     }
 
-    // ── Coin selection via select_notes ──────────────────────────────────
-    let select_notes_input: Vec<select::Note> = input_pools
+    // ── Coin selection via solve::select_notes ─────────────────────────────
+    let select_notes_input: Vec<solve::Note> = input_pools
         .iter()
         .enumerate()
         .flat_map(|(pool, notes)| {
-            notes.iter().map(move |n| select::Note {
+            notes.iter().map(move |n| solve::Note {
                 pool: pool as u8,
                 amount: n.amount,
             })
@@ -331,10 +330,10 @@ pub async fn plan_transaction(
     // Use recipient's explicit pool preference when set (e.g. migration
     // chooses Orchard vs Ironwood per phase), otherwise fall back to the
     // address-derived pool from decompose_address.
-    let select_outputs: Vec<select::Output> = recipients
+    let select_outputs: Vec<solve::Output> = recipients
         .iter()
         .zip(decomposed.iter())
-        .map(|(r, dr)| select::Output {
+        .map(|(r, dr)| solve::Output {
             pool: r
                 .pools
                 .and_then(|p| PoolMask(p).to_best_pool())
@@ -344,10 +343,17 @@ pub async fn plan_transaction(
         .collect();
 
     let f_unit = COST_PER_ACTION;
-    let slack = COST_PER_ACTION * 20; // 100_000 zatoshis search window
+    let first_recipient_amount = recipients.first().map(|r| r.amount).unwrap_or(0);
 
-    let selection = select::select_notes(&select_notes_input, &select_outputs, f_unit, slack)
-        .ok_or_else(|| anyhow!("No feasible note selection found"))?;
+    let selection = solve::select_notes(
+        &select_notes_input,
+        &select_outputs,
+        f_unit,
+        migration,
+        recipient_pays_fee,
+        first_recipient_amount,
+    )
+    .ok_or_else(|| anyhow!("No feasible note selection found"))?;
 
     // Mark selected notes as fully consumed (select_notes uses 0/1 knapsack)
     for pool in 0..NUM_POOLS {
