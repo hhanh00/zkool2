@@ -41,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 607482081;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1618730169;
 
 // Section: executor
 
@@ -2633,6 +2633,42 @@ fn wire__crate__api__account__get_addresses_impl(
                     (move || async move {
                         let output_ok =
                             crate::api::account::get_addresses(api_ua_pools, &api_c).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__pay__get_coin_selection_mode_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_coin_selection_mode",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::pay::get_coin_selection_mode(&api_c).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5509,6 +5545,44 @@ fn wire__crate__api__zsa__set_asset_name_impl(
         },
     )
 }
+fn wire__crate__api__pay__set_coin_selection_mode_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_coin_selection_mode",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_mode = <u8>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::pay::set_coin_selection_mode(api_mode, &api_c).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__frost__set_dkg_address_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -7777,6 +7851,7 @@ impl SseDecode for crate::api::migrate::MigrationStatus {
         let mut var_totalFees = <u64>::sse_decode(deserializer);
         let mut var_sdNotesCount = <u32>::sse_decode(deserializer);
         let mut var_nonSdNotesCount = <u32>::sse_decode(deserializer);
+        let mut var_ironwoodSdCount = <u32>::sse_decode(deserializer);
         let mut var_progress = <f64>::sse_decode(deserializer);
         let mut var_nextAction = <String>::sse_decode(deserializer);
         let mut var_workSummary = <String>::sse_decode(deserializer);
@@ -7787,6 +7862,7 @@ impl SseDecode for crate::api::migrate::MigrationStatus {
             total_fees: var_totalFees,
             sd_notes_count: var_sdNotesCount,
             non_sd_notes_count: var_nonSdNotesCount,
+            ironwood_sd_count: var_ironwoodSdCount,
             progress: var_progress,
             next_action: var_nextAction,
             work_summary: var_workSummary,
@@ -7990,11 +8066,13 @@ impl SseDecode for crate::api::pay::PaymentOptions {
         let mut var_recipientPaysFee = <bool>::sse_decode(deserializer);
         let mut var_smartTransparent = <bool>::sse_decode(deserializer);
         let mut var_category = <Option<u32>>::sse_decode(deserializer);
+        let mut var_mode = <u8>::sse_decode(deserializer);
         return crate::api::pay::PaymentOptions {
             src_pools: var_srcPools,
             recipient_pays_fee: var_recipientPaysFee,
             smart_transparent: var_smartTransparent,
             category: var_category,
+            mode: var_mode,
         };
     }
 }
@@ -8731,152 +8809,158 @@ fn pde_ffi_dispatcher_primary_impl(
         62 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
         63 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
         64 => {
+            wire__crate__api__pay__get_coin_selection_mode_impl(port, ptr, rust_vec_len, data_len)
+        }
+        65 => {
             wire__crate__api__network__get_coingecko_price_impl(port, ptr, rust_vec_len, data_len)
         }
-        65 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__network__get_exchange_rate_impl(port, ptr, rust_vec_len, data_len),
-        69 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
-        72 => {
+        66 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
+        68 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__network__get_exchange_rate_impl(port, ptr, rust_vec_len, data_len),
+        70 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
+        73 => {
             wire__crate__api__migrate__get_migration_status_impl(port, ptr, rust_vec_len, data_len)
         }
-        73 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
-        74 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__network__get_supported_vs_currencies_impl(
+        74 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
+        75 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__network__get_supported_vs_currencies_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        77 => wire__crate__api__coin__get_tor_client_impl(port, ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__frost__has_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__frost__has_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__account__has_transparent_pub_key_impl(
+        78 => wire__crate__api__coin__get_tor_client_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__frost__has_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__frost__has_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__account__has_transparent_pub_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        82 => wire__crate__api__account__import_account_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__contacts__import_contacts_vcard_impl(
+        83 => wire__crate__api__account__import_account_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__contacts__import_contacts_vcard_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        84 => wire__crate__api__init__init_app_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__raptor__init_app_impl(port, ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__coin__init_datadir_impl(port, ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__network__init_datadir_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__frost__init_dkg_impl(port, ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__frost__init_sign_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__vault__init_vault_impl(port, ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__plugin__install_plugin_impl(port, ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__network__is_ironwood_active_impl(port, ptr, rust_vec_len, data_len),
-        94 => {
+        85 => wire__crate__api__init__init_app_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__raptor__init_app_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__coin__init_datadir_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__network__init_datadir_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__frost__init_dkg_impl(port, ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__frost__init_sign_impl(port, ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__vault__init_vault_impl(port, ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__plugin__install_plugin_impl(port, ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__network__is_ironwood_active_impl(port, ptr, rust_vec_len, data_len),
+        95 => {
             wire__crate__api__frost__is_signing_in_progress_impl(port, ptr, rust_vec_len, data_len)
         }
-        101 => wire__crate__api__zsa__is_zsa_available_impl(port, ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__issuance__issue_asset_impl(port, ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__account__list_accounts_impl(port, ptr, rust_vec_len, data_len),
-        104 => wire__crate__api__account__list_categories_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__contacts__list_contacts_impl(port, ptr, rust_vec_len, data_len),
-        106 => wire__crate__api__db__list_db_accounts_impl(port, ptr, rust_vec_len, data_len),
-        107 => wire__crate__api__db__list_db_names_impl(port, ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__account__list_folders_impl(port, ptr, rust_vec_len, data_len),
-        109 => wire__crate__api__account__list_memos_impl(port, ptr, rust_vec_len, data_len),
-        110 => wire__crate__api__account__list_notes_impl(port, ptr, rust_vec_len, data_len),
-        111 => wire__crate__api__plugin__list_plugins_impl(port, ptr, rust_vec_len, data_len),
-        112 => wire__crate__api__account__list_tx_history_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__zsa__list_zsa_holdings_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__account__lock_note_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__account__lock_recent_notes_impl(port, ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__account__max_spendable_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
-        118 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__plugin__parse_memo_with_plugins_impl(
+        102 => wire__crate__api__zsa__is_zsa_available_impl(port, ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__issuance__issue_asset_impl(port, ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__account__list_accounts_impl(port, ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__account__list_categories_impl(port, ptr, rust_vec_len, data_len),
+        106 => wire__crate__api__contacts__list_contacts_impl(port, ptr, rust_vec_len, data_len),
+        107 => wire__crate__api__db__list_db_accounts_impl(port, ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__db__list_db_names_impl(port, ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__account__list_folders_impl(port, ptr, rust_vec_len, data_len),
+        110 => wire__crate__api__account__list_memos_impl(port, ptr, rust_vec_len, data_len),
+        111 => wire__crate__api__account__list_notes_impl(port, ptr, rust_vec_len, data_len),
+        112 => wire__crate__api__plugin__list_plugins_impl(port, ptr, rust_vec_len, data_len),
+        113 => wire__crate__api__account__list_tx_history_impl(port, ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__zsa__list_zsa_holdings_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__account__lock_note_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__account__lock_recent_notes_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__account__max_spendable_impl(port, ptr, rust_vec_len, data_len),
+        118 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__plugin__parse_memo_with_plugins_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        121 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
-        122 => wire__crate__api__pay__prepare_migration_impl(port, ptr, rust_vec_len, data_len),
-        123 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
-        124 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
-        125 => wire__crate__api__network__query_lwd_list_impl(port, ptr, rust_vec_len, data_len),
-        126 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
-        128 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
-        129 => wire__crate__api__plugin__remove_plugin_impl(port, ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__account__rename_category_impl(port, ptr, rust_vec_len, data_len),
-        131 => wire__crate__api__account__rename_folder_impl(port, ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
-        133 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
-        135 => {
+        122 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
+        123 => wire__crate__api__pay__prepare_migration_impl(port, ptr, rust_vec_len, data_len),
+        124 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
+        125 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
+        126 => wire__crate__api__network__query_lwd_list_impl(port, ptr, rust_vec_len, data_len),
+        127 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
+        129 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
+        130 => wire__crate__api__plugin__remove_plugin_impl(port, ptr, rust_vec_len, data_len),
+        131 => wire__crate__api__account__rename_category_impl(port, ptr, rust_vec_len, data_len),
+        132 => wire__crate__api__account__rename_folder_impl(port, ptr, rust_vec_len, data_len),
+        133 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
+        136 => {
             wire__crate__api__openalias__resolve_openalias_impl(port, ptr, rust_vec_len, data_len)
         }
-        136 => wire__crate__api__openalias__resolve_openalias_all_impl(
+        137 => wire__crate__api__openalias__resolve_openalias_all_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        137 => wire__crate__api__openalias__resolve_openalias_raw_impl(
+        138 => wire__crate__api__openalias__resolve_openalias_raw_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        138 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__migrate__run_migration_impl(port, ptr, rust_vec_len, data_len),
-        140 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
-        142 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
-        143 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        146 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
-        147 => {
+        139 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__migrate__run_migration_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
+        143 => {
+            wire__crate__api__pay__set_coin_selection_mode_impl(port, ptr, rust_vec_len, data_len)
+        }
+        144 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
+        145 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        148 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
+        149 => {
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
-        148 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
-        150 => wire__crate__api__account__show_ledger_sapling_address_impl(
+        150 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
+        151 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
+        152 => wire__crate__api__account__show_ledger_sapling_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        151 => wire__crate__api__account__show_ledger_transparent_address_impl(
+        153 => wire__crate__api__account__show_ledger_transparent_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        152 => wire__crate__api__account__sign_ledger_transaction_impl(
+        154 => wire__crate__api__account__sign_ledger_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        153 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        154 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
-        155 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
-        156 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        159 => {
+        155 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        156 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
+        157 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        158 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        161 => {
             wire__crate__api__account__tx_account_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        160 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
-        161 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
-        162 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
-        163 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
-        165 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        166 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        167 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
-        168 => wire__crate__api__contacts__update_contact_impl(port, ptr, rust_vec_len, data_len),
-        169 => wire__crate__api__transaction__update_historical_prices_impl(
+        162 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
+        163 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
+        164 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
+        165 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
+        167 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        168 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        169 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        170 => wire__crate__api__contacts__update_contact_impl(port, ptr, rust_vec_len, data_len),
+        171 => wire__crate__api__transaction__update_historical_prices_impl(
             port,
             ptr,
             rust_vec_len,
@@ -8900,32 +8984,32 @@ fn pde_ffi_dispatcher_sync_impl(
         26 => wire__crate__api__coin__coin_set_lwd_impl(ptr, rust_vec_len, data_len),
         27 => wire__crate__api__coin__coin_set_proxy_impl(ptr, rust_vec_len, data_len),
         56 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__plugin__init_plugins_impl(ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__key__is_tex_address_impl(ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__key__is_valid_fvk_impl(ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
-        99 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
-        100 => {
+        71 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
+        76 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__plugin__init_plugins_impl(ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__key__is_tex_address_impl(ptr, rust_vec_len, data_len),
+        97 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__key__is_valid_fvk_impl(ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
+        101 => {
             wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len)
         }
-        120 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
-        127 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        144 => wire__crate__api__init__set_expert_mode_impl(ptr, rust_vec_len, data_len),
-        145 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        157 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        158 => wire__crate__api__openalias__try_validate_zcash_address_impl(
+        121 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
+        128 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__init__set_expert_mode_impl(ptr, rust_vec_len, data_len),
+        147 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        159 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        160 => wire__crate__api__openalias__try_validate_zcash_address_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        164 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
-        170 => {
+        166 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        172 => {
             wire__crate__api__openalias__validate_openalias_name_impl(ptr, rust_vec_len, data_len)
         }
-        171 => {
+        173 => {
             wire__crate__api__openalias__validate_zcash_address_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -9548,6 +9632,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::migrate::MigrationStatus {
             self.total_fees.into_into_dart().into_dart(),
             self.sd_notes_count.into_into_dart().into_dart(),
             self.non_sd_notes_count.into_into_dart().into_dart(),
+            self.ironwood_sd_count.into_into_dart().into_dart(),
             self.progress.into_into_dart().into_dart(),
             self.next_action.into_into_dart().into_dart(),
             self.work_summary.into_into_dart().into_dart(),
@@ -9627,6 +9712,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::pay::PaymentOptions {
             self.recipient_pays_fee.into_into_dart().into_dart(),
             self.smart_transparent.into_into_dart().into_dart(),
             self.category.into_into_dart().into_dart(),
+            self.mode.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11051,6 +11137,7 @@ impl SseEncode for crate::api::migrate::MigrationStatus {
         <u64>::sse_encode(self.total_fees, serializer);
         <u32>::sse_encode(self.sd_notes_count, serializer);
         <u32>::sse_encode(self.non_sd_notes_count, serializer);
+        <u32>::sse_encode(self.ironwood_sd_count, serializer);
         <f64>::sse_encode(self.progress, serializer);
         <String>::sse_encode(self.next_action, serializer);
         <String>::sse_encode(self.work_summary, serializer);
@@ -11221,6 +11308,7 @@ impl SseEncode for crate::api::pay::PaymentOptions {
         <bool>::sse_encode(self.recipient_pays_fee, serializer);
         <bool>::sse_encode(self.smart_transparent, serializer);
         <Option<u32>>::sse_encode(self.category, serializer);
+        <u8>::sse_encode(self.mode, serializer);
     }
 }
 

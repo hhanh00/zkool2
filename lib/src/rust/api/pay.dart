@@ -66,6 +66,16 @@ Future<void> storePendingTx(
     RustLib.instance.api.crateApiPayStorePendingTx(
         height: height, txid: txid, price: price, category: category, c: c);
 
+/// Get the persisted coin-selection mode preference.
+/// Returns 0 for fee optimisation, 1 for privacy preservation.
+Future<int> getCoinSelectionMode({required Coin c}) =>
+    RustLib.instance.api.crateApiPayGetCoinSelectionMode(c: c);
+
+/// Persist the coin-selection mode preference.
+/// Pass 0 for fee optimisation, 1 for privacy preservation.
+Future<void> setCoinSelectionMode({required int mode, required Coin c}) =>
+    RustLib.instance.api.crateApiPaySetCoinSelectionMode(mode: mode, c: c);
+
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);
 
@@ -75,11 +85,15 @@ class PaymentOptions {
   final bool smartTransparent;
   final int? category;
 
+  /// Coin-selection mode: 0 = fee minimisation, 1 = privacy preservation.
+  final int mode;
+
   const PaymentOptions({
     required this.srcPools,
     required this.recipientPaysFee,
     required this.smartTransparent,
     this.category,
+    required this.mode,
   });
 
   @override
@@ -87,7 +101,8 @@ class PaymentOptions {
       srcPools.hashCode ^
       recipientPaysFee.hashCode ^
       smartTransparent.hashCode ^
-      category.hashCode;
+      category.hashCode ^
+      mode.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -97,7 +112,8 @@ class PaymentOptions {
           srcPools == other.srcPools &&
           recipientPaysFee == other.recipientPaysFee &&
           smartTransparent == other.smartTransparent &&
-          category == other.category;
+          category == other.category &&
+          mode == other.mode;
 }
 
 @freezed

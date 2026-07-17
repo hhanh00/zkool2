@@ -65,21 +65,21 @@ pub fn decompose_to_sd(total: u64) -> (Vec<(u64, u8)>, u64) {
 
 /// Check if a value is a fee-inclusive standard denomination:
 /// `10^(i+5) + 2*COST_PER_ACTION` (110_000, 1_010_000, 10_010_000, …).
-pub fn is_sd(value: u64) -> bool {
-    let base = SD_FEE_PAD;
-    if value <= base {
-        return false;
-    }
-    let n = value - base; // must be exactly 10^(i+5), i ≥ 0
-    // n must be ≥ 100_000, a multiple thereof, and reduce to 1 after
-    // dividing out factors of 10.
-    n >= 100_000 && n % 100_000 == 0 && {
-        let mut x = n / 100_000;
+/// Check whether `value` is a standard denomination: exactly `10^(i+5)`, i ≥ 0.
+/// Ironwood notes are minted at the pure denomination; Orchard SD notes include
+/// an additional `SD_FEE_PAD`.
+pub fn is_iw_sd(value: u64) -> bool {
+    value >= 100_000 && value % 100_000 == 0 && {
+        let mut x = value / 100_000;
         while x % 10 == 0 {
             x /= 10;
         }
         x == 1
     }
+}
+
+pub fn is_sd(value: u64) -> bool {
+    value > SD_FEE_PAD && is_iw_sd(value - SD_FEE_PAD)
 }
 
 /// Result of a migration step.
@@ -293,6 +293,7 @@ pub async fn step(
             None,
             None,
             true, // migration
+            crate::pay::solve::Mode::Fee,
             Some(&preselected),
         )
         .await?;
@@ -365,6 +366,7 @@ pub async fn step(
             None,
             None,
             true, // migration — O→I
+            crate::pay::solve::Mode::Fee,
             Some(&preselected),
         )
         .await?;
