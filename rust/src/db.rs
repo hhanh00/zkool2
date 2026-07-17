@@ -735,6 +735,28 @@ pub async fn get_prop(connection: &mut SqliteConnection, key: &str) -> Result<Op
     Ok(value.map(|v| v.0))
 }
 
+const MODE_KEY: &str = "coin_selection_mode";
+
+pub async fn get_coin_selection_mode(
+    connection: &mut SqliteConnection,
+) -> Result<crate::pay::solve::Mode> {
+    match get_prop(connection, MODE_KEY).await? {
+        Some(v) if v == "privacy" => Ok(crate::pay::solve::Mode::Privacy),
+        _ => Ok(crate::pay::solve::Mode::Fee),
+    }
+}
+
+pub async fn set_coin_selection_mode(
+    connection: &mut SqliteConnection,
+    mode: crate::pay::solve::Mode,
+) -> Result<()> {
+    let value = match mode {
+        crate::pay::solve::Mode::Fee => "fee",
+        crate::pay::solve::Mode::Privacy => "privacy",
+    };
+    put_prop(connection, MODE_KEY, value).await
+}
+
 pub async fn store_account_metadata(
     connection: &mut SqliteConnection,
     name: &str,

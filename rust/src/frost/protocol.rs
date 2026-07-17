@@ -481,6 +481,7 @@ pub async fn publish(
         None,
         None,
         false, // migration
+        crate::pay::solve::Mode::Fee,
         None,  // preselected
     )
     .await

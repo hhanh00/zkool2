@@ -314,6 +314,7 @@ class SendPageState extends ConsumerState<SendPage> {
         srcPools: 1, // Only the transparent pool (mask)
         recipientPaysFee: true,
         smartTransparent: smartTransparent,
+        mode: 0,
       );
       final pczt = await prepare(
         recipients: [
@@ -339,6 +340,7 @@ class SendPageState extends ConsumerState<SendPage> {
         srcPools: 6, // Only the sapling and orchard pool (mask)
         recipientPaysFee: true,
         smartTransparent: false,
+        mode: 0,
       );
       final pczt = await prepare(
         recipients: [
@@ -688,6 +690,8 @@ class Send2PageState extends ConsumerState<Send2Page> {
   late final hasTex = widget.recipients.any((r) => isTexAddress(address: r.address, c: c));
   late final hasZsa = widget.recipients.any((r) => !r.assetBase.every((b) => b == 0));
   late var recipientPaysFee = widget.recipientPaysFee;
+  /// 0 = fee optimisation, 1 = privacy preservation.
+  var coinSelectionMode = 1;
   int? category;
   var puri = "";
   AccountData? account;
@@ -759,6 +763,18 @@ class Send2PageState extends ConsumerState<Send2Page> {
                     title: Text("Recipient Pays Fee"),
                     initialValue: widget.recipientPaysFee,
                     onChanged: (v) => setState(() => recipientPaysFee = v!),
+                  ),
+                ),
+                Tooltip(
+                  message: "Fee optimisation picks notes to minimise transaction fees. "
+                      "Privacy preservation picks notes to minimise cross-pool transfers, "
+                      "keeping value within the same shielded pool.",
+                  child: FormBuilderSwitch(
+                    name: "privacyMode",
+                    title: Text("Privacy Preservation"),
+                    initialValue: coinSelectionMode == 1,
+                    onChanged: (v) =>
+                        setState(() => coinSelectionMode = (v ?? false) ? 1 : 0),
                   ),
                 ),
                 Tooltip(
@@ -858,6 +874,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
         recipientPaysFee: recipientPaysFee,
         smartTransparent: false,
         category: category,
+        mode: coinSelectionMode,
       );
       final pczt = await prepare(
         recipients: widget.recipients,

@@ -15,6 +15,7 @@ pub struct MigrationStatus {
     pub total_fees: u64,
     pub sd_notes_count: u32,
     pub non_sd_notes_count: u32,
+    pub ironwood_sd_count: u32,
     // Deprecated, kept for FRB generated-code compat.
     pub progress: f64,
     pub next_action: String,
@@ -65,7 +66,7 @@ pub async fn run_migration(
         sink.add(MigrationStatus {
             phase: "complete".into(),
             split_fees: 0, migrate_fees: 0, total_fees: 0,
-            sd_notes_count: 0, non_sd_notes_count: 0,
+            sd_notes_count: 0, non_sd_notes_count: 0, ironwood_sd_count: 0,
             progress: 1.0,
             next_action: String::new(), work_summary: String::new(),
         }).ok();
@@ -87,15 +88,38 @@ pub async fn run_migration(
 
         let is_complete = matches!(event, crate::migrate::MigrationEvent::Complete);
 
-        sink.add(status).ok();
+        sink.add(status.clone()).ok();
 
         if is_complete {
             break;
         }
 
+        // Exponential delay between steps.
         let mean = mean_delay_ms as f64;
         let u = (OsRng.next_u32() as f64 + 1.0) / (u32::MAX as f64 + 2.0);
         let delay_ms = ((-mean * u.ln()) as u64).min(mean_delay_ms * 4);
+        let delay_secs = delay_ms / 1000;
+
+        tracing::info!(
+            "Migration delay: {}ms (mean={}ms, u={:.6})",
+            delay_ms, mean_delay_ms, u
+        );
+
+        // Notify UI of the delay before sleeping, preserving phase + counts.
+        sink.add(MigrationStatus {
+            phase: status.phase.clone(),
+            split_fees: acc_split,
+            migrate_fees: acc_migrate,
+            total_fees: acc_split + acc_migrate,
+            sd_notes_count: status.sd_notes_count,
+            non_sd_notes_count: status.non_sd_notes_count,
+            ironwood_sd_count: status.ironwood_sd_count,
+            progress: status.progress,
+            next_action: format!("Waiting {}s...", delay_secs),
+            work_summary: status.work_summary.clone(),
+        })
+        .ok();
+
         tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
     }
 
@@ -112,6 +136,7 @@ pub async fn get_migration_status(_c: &Coin) -> Result<MigrationStatus> {
         total_fees: 0,
         sd_notes_count: 0,
         non_sd_notes_count: 0,
+        ironwood_sd_count: 0,
         progress: 1.0,
         next_action: String::new(),
         work_summary: String::new(),
@@ -166,33 +191,6 @@ async fn do_step(
         .await;
     }
 
-    // Build status from current wallet state + accumulated fees.
-    let all_notes = crate::pay::plan::fetch_unspent_notes_grouped_by_pool(&mut connection, c.account).await?;
-    let orchard_zec: Vec<&crate::pay::InputNote> = all_notes
-        .iter()
-        .filter(|n| n.pool == 2 && n.asset_base == vec![0u8; 32])
-        .collect();
-    let sd_count = orchard_zec.iter().filter(|n| crate::migrate::is_sd(n.amount)).count() as u32;
-
-    let non_sd_vals: Vec<u64> = orchard_zec
-        .iter()
-        .filter(|n| !crate::migrate::is_sd(n.amount))
-        .map(|n| n.amount)
-        .collect();
-    let non_sd_total: u64 = non_sd_vals.iter().sum();
-    let effective_non_sd = if non_sd_total >= crate::migrate::MIN_SD {
-        non_sd_vals.len() as u32
-    } else {
-        0
-    };
-
-    let phase = match &event {
-        crate::migrate::MigrationEvent::Complete => "complete",
-        _ if effective_non_sd > 0 => "splitting",
-        _ if sd_count > 0 => "migrating",
-        _ => "complete",
-    };
-
     // Re-read for updated counts after potential broadcast + sync.
     let all_notes = crate::pay::plan::fetch_unspent_notes_grouped_by_pool(&mut connection, c.account).await?;
     let orchard_zec: Vec<&crate::pay::InputNote> = all_notes
@@ -212,6 +210,31 @@ async fn do_step(
         0
     };
 
+    // Count Ironwood SD notes for phase 2 progress (amount is value - SD_FEE_PAD).
+    let ironwood_sd = all_notes
+        .iter()
+        .filter(|n| n.pool == 3 && n.asset_base == vec![0u8; 32] && crate::migrate::is_iw_sd(n.amount))
+        .count() as u32;
+    let total_sd = sd_count + ironwood_sd;
+
+    // Determine phase from current (post-sync) counts.
+    let phase = match &event {
+        crate::migrate::MigrationEvent::Complete => "complete",
+        _ if effective_non_sd > 0 => "splitting",
+        _ if sd_count > 0 => "migrating",
+        _ => "complete",
+    };
+
+    let progress = match phase {
+        "splitting" if sd_count + effective_non_sd > 0 => {
+            sd_count as f64 / (sd_count + effective_non_sd) as f64
+        }
+        "migrating" if total_sd > 0 => {
+            ironwood_sd as f64 / total_sd as f64
+        }
+        _ => 1.0,
+    };
+
     Ok((event, MigrationStatus {
         phase: phase.to_string(),
         split_fees: acc_split,
@@ -219,9 +242,8 @@ async fn do_step(
         total_fees: acc_split + acc_migrate,
         sd_notes_count: sd_count,
         non_sd_notes_count: effective_non_sd,
-        progress: if sd_count + effective_non_sd > 0 {
-            sd_count as f64 / (sd_count + effective_non_sd) as f64
-        } else { 1.0 },
+        ironwood_sd_count: ironwood_sd,
+        progress,
         next_action: String::new(),
         work_summary: format!("SD: {}, non-SD: {}", sd_count, effective_non_sd),
     }))

@@ -163,10 +163,10 @@ impl TxPlan {
 
         let verifier = verifier
             .with_sapling(|bundle| {
-                for _ in bundle.spends().iter() {
+                for spend in bundle.spends().iter() {
                     inputs.push(TxPlanIn {
                         pool: 1,
-                        amount: None,
+                        amount: spend.value().map(|v| v.inner()),
                         asset_name: "ZEC".to_string(),
                     });
                 }
@@ -200,7 +200,7 @@ impl TxPlan {
                         .unwrap_or_else(|| "ZEC".to_string());
                     inputs.push(TxPlanIn {
                         pool: 2,
-                        amount: None,
+                        amount: a.spend().value().map(|v| v.inner()),
                         asset_name: input_asset_name,
                     });
                     outputs.push(TxPlanOut {
@@ -227,7 +227,7 @@ impl TxPlan {
                     // Ironwood only supports ZEC (no ZSA tokens).
                     inputs.push(TxPlanIn {
                         pool: 3,
-                        amount: None,
+                        amount: a.spend().value().map(|v| v.inner()),
                         asset_name: "ZEC".to_string(),
                     });
                     outputs.push(TxPlanOut {
