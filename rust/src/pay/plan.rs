@@ -387,7 +387,7 @@ pub async fn plan_transaction(
     let change_pool = selection.change_pool;
 
     // ── Build RecipientStates ────────────────────────────────────────────
-    let recipient_states: Vec<RecipientState> = pool_prefs
+    let mut recipient_states: Vec<RecipientState> = pool_prefs
         .iter()
         .zip(decomposed.iter())
         .map(|(&pool, dr)| {
@@ -408,6 +408,15 @@ pub async fn plan_transaction(
     // ── Fee, totals, and change (select_notes already validated feasibility) ─
     let fee = selection.fee;
     info!("Fee (select_notes): {}", to_zec(fee));
+
+    // When the recipient pays the fee, deduct it from the first recipient
+    // so the sender only needs to cover (total_output - fee), matching the
+    // solver's target of `output_sum` (without fee).
+    if recipient_pays_fee {
+        if let Some(first) = recipient_states.first_mut() {
+            first.recipient.amount = first.recipient.amount.saturating_sub(fee);
+        }
+    }
 
     let total_output: u64 = recipient_states.iter().map(|r| r.recipient.amount).sum();
     let total_input: u64 = selection.inputs.iter().map(|n| n.amount).sum();
