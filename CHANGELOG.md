@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.17](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.16...zkool-v6.24.0-rc.17) (2026-07-17)
+
+
+### Bug Fixes
+
+* deduct fee from recipient when recipient_pays_fee is true ([#1150](https://github.com/hhanh00/zkool2/issues/1150)) ([f3d0f8f](https://github.com/hhanh00/zkool2/commit/f3d0f8f6c6389d0f25b42f83799bcb4d5ff6b841))
+
 ## [6.24.0-rc.16](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.15...zkool-v6.24.0-rc.16) (2026-07-17)
 
 
