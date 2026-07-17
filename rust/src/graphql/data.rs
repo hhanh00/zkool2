@@ -121,16 +121,6 @@ pub struct AssetInfo {
 }
 
 #[derive(GraphQLObject)]
-pub struct MigrationStatus {
-    pub phase: String,
-    pub progress: f64,
-    pub next_action: String,
-    pub work_summary: String,
-    pub sd_notes_count: i32,
-    pub non_sd_notes_count: i32,
-}
-
-#[derive(GraphQLObject)]
 pub struct MigrationEvent {
     /// "SplitComplete" | "MigrateComplete" | "Complete" | "NothingToDo" | "Error"
     pub event: String,
