@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.18](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.17...zkool-v6.24.0-rc.18) (2026-07-18)
+
+
+### Bug Fixes
+
+* track note index through B&B pipeline to prevent duplicate selection ([5f4cce1](https://github.com/hhanh00/zkool2/commit/5f4cce16c88684e03372ac4c7f212921c736e5e9))
+
 ## [6.24.0-rc.17](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.16...zkool-v6.24.0-rc.17) (2026-07-17)
 
 
