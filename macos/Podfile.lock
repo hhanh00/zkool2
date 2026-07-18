@@ -1,0 +1,53 @@
+PODS:
+  - device_info_plus (0.0.1):
+    - FlutterMacOS
+  - flutter_inappwebview_macos (0.0.1):
+    - FlutterMacOS
+    - OrderedSet (~> 6.0.3)
+  - flutter_passkey_service (0.0.1):
+    - FlutterMacOS
+  - FlutterMacOS (1.0.0)
+  - OrderedSet (6.0.3)
+  - rive_common (0.0.1):
+    - FlutterMacOS
+  - rlz (0.0.1):
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
+  - flutter_inappwebview_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_inappwebview_macos/macos`)
+  - flutter_passkey_service (from `Flutter/ephemeral/.symlinks/plugins/flutter_passkey_service/macos`)
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - rive_common (from `Flutter/ephemeral/.symlinks/plugins/rive_common/macos`)
+  - rlz (from `Flutter/ephemeral/.symlinks/plugins/rlz/macos`)
+
+SPEC REPOS:
+  trunk:
+    - OrderedSet
+
+EXTERNAL SOURCES:
+  device_info_plus:
+    :path: Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos
+  flutter_inappwebview_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_inappwebview_macos/macos
+  flutter_passkey_service:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_passkey_service/macos
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  rive_common:
+    :path: Flutter/ephemeral/.symlinks/plugins/rive_common/macos
+  rlz:
+    :path: Flutter/ephemeral/.symlinks/plugins/rlz/macos
+
+SPEC CHECKSUMS:
+  device_info_plus: a56e6e74dbbd2bb92f2da12c64ddd4f67a749041
+  flutter_inappwebview_macos: c2d68649f9f8f1831bfcd98d73fd6256366d9d1d
+  flutter_passkey_service: 8a668ddd91daec2b51c1ef6e50259b80606b6918
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
+  rive_common: ea79040f86acf053a2d5a75a2506175ee39796a5
+  rlz: c93f8cd30b41e61cd7b1cff62b4aa859ffb6124e
+
+PODFILE CHECKSUM: 6acf97521436d16fc31cd5e1a02000905acdb3ae
+
+COCOAPODS: 1.16.2
