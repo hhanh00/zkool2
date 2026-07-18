@@ -16,6 +16,8 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::time::{Duration, Instant};
 
+use tracing::info;
+
 // ---------------------------------------------------------------------
 // Domain types
 // ---------------------------------------------------------------------
@@ -200,10 +202,16 @@ fn compute_min_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], f_unit
 /// In Fee mode cost is the ZIP-317 fee; in Privacy mode cost is the
 /// cross-pool turnstile value.
 fn evaluate(state: &State, ctx: &Context) -> (u64, u8) {
-    match ctx.mode {
+    let (cost, pool) = match ctx.mode {
         Mode::Fee => evaluate_fee(state, ctx),
         Mode::Privacy => evaluate_privacy(state, ctx),
+    };
+    if cost == u64::MAX {
+        info!("evaluate: mode={:?}, sum={}, INFEASIBLE", ctx.mode, state.sum);
+    } else {
+        info!("evaluate: mode={:?}, sum={}, fee/cost={}, change_pool={}", ctx.mode, state.sum, cost, pool);
     }
+    (cost, pool)
 }
 
 /// Fee-mode evaluation: return the lowest fee achievable by assigning
@@ -217,6 +225,10 @@ fn evaluate_fee(state: &State, ctx: &Context) -> (u64, u8) {
 
         let needed = if ctx.recipient_pays_fee {
             if fee > ctx.first_recipient_amount {
+                info!(
+                    "evaluate_fee: cp={} SKIP — fee({}) > first_recipient_amount({})",
+                    cp, fee, ctx.first_recipient_amount
+                );
                 continue; // fee exceeds what the first recipient can cover
             }
             ctx.output_sum
@@ -224,7 +236,13 @@ fn evaluate_fee(state: &State, ctx: &Context) -> (u64, u8) {
             ctx.output_sum.saturating_add(fee)
         };
 
-        if state.sum >= needed && fee < best_fee {
+        let feasible = state.sum >= needed;
+        info!(
+            "evaluate_fee: cp={} fee={} needed={} sum={} feasible={} best_fee={}",
+            cp, fee, needed, state.sum, feasible, best_fee
+        );
+
+        if feasible && fee < best_fee {
             best_fee = fee;
             best_pool = cp;
         }
@@ -377,10 +395,15 @@ fn apply(state: &State, note_idx: usize, note: &Note) -> State {
     child
 }
 
-/// Notes not yet selected.
-fn remaining_notes<'a>(ctx: &Context<'a>, state: &State) -> Vec<&'a Note> {
+/// Notes not yet selected, each with its original index in ctx.notes.
+fn remaining_notes<'a>(ctx: &Context<'a>, state: &State) -> Vec<(usize, &'a Note)> {
     let chosen: HashSet<usize> = state.selected.iter().copied().collect();
-    ctx.notes.iter().enumerate().filter(|(i, _)| !chosen.contains(i)).map(|(_, n)| n).collect()
+    ctx.notes
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !chosen.contains(i))
+        .map(|(i, n)| (i, n))
+        .collect()
 }
 
 // ---------------------------------------------------------------------
@@ -408,20 +431,20 @@ fn local_score(note: &Note, state: &State, mode: Mode) -> i64 {
 }
 
 fn top_k_by_local_heuristic<'a>(
-    remaining: &[&'a Note],
+    remaining: &[(usize, &'a Note)],
     state: &State,
     mode: Mode,
     k: usize,
-) -> Vec<&'a Note> {
+) -> Vec<(usize, &'a Note)> {
     if remaining.len() <= k {
         return remaining.to_vec();
     }
-    let mut scored: Vec<(i64, &Note)> = remaining
+    let mut scored: Vec<(i64, usize, &Note)> = remaining
         .iter()
-        .map(|&n| (local_score(n, state, mode), n))
+        .map(|&(idx, n)| (local_score(n, state, mode), idx, n))
         .collect();
     scored.sort_by(|a, b| b.0.cmp(&a.0)); // descending
-    scored.into_iter().take(k).map(|(_, n)| n).collect()
+    scored.into_iter().take(k).map(|(_, idx, n)| (idx, n)).collect()
 }
 
 // ---------------------------------------------------------------------
@@ -524,12 +547,25 @@ pub(super) fn select_notes(
     mode: Mode,
 ) -> Option<Selection> {
     // ---- 1. Pre-filter dust ------------------------------------------------
+    let total_notes = notes.len();
+    let total_input_sum: u64 = notes.iter().map(|n| n.amount).sum();
+    info!(
+        "select_notes: {} notes total, sum={} zats, outputs={}, f_unit={}, migration={}, recipient_pays_fee={}, first_recipient={}, mode={:?}",
+        total_notes, total_input_sum, outputs.len(), f_unit, migration, recipient_pays_fee, first_recipient_amount, mode
+    );
     let filtered: Vec<Note> = notes
         .iter()
         .filter(|n| n.amount >= f_unit)
         .cloned()
         .collect();
+    info!(
+        "select_notes: after dust filter (>= {}): {} notes (removed {})",
+        f_unit,
+        filtered.len(),
+        total_notes - filtered.len()
+    );
     if filtered.is_empty() {
+        info!("select_notes: FAIL — no notes after dust filter");
         return None;
     }
 
@@ -545,6 +581,10 @@ pub(super) fn select_notes(
             output_sum = output_sum.saturating_add(o.amount);
         }
     }
+    info!(
+        "select_notes: output_sum={} zats, n_outputs={:?}, output_amounts={:?}",
+        output_sum, n_outputs, output_amounts
+    );
 
     // ---- 3. Sort notes: shielded pools first, then transparent; within each
     //         pool descending by amount (best notes for greedy + heuristic) --
@@ -569,10 +609,18 @@ pub(super) fn select_notes(
     };
 
     // ---- 5. Greedy baseline -----------------------------------------------
+    info!("select_notes: running greedy baseline...");
     let (mut best_state, mut best_cost, mut best_pool) = match greedy_solution(&ctx) {
-        Some(s) => s,
+        Some((state, cost, pool)) => {
+            info!(
+                "select_notes: greedy found solution — sum={}, fee={}, change_pool={}, n_inputs={:?}",
+                state.sum, cost, pool, state.n_inputs
+            );
+            (state, cost, pool)
+        }
         None => {
             // Even consuming all notes doesn't reach the target
+            info!("select_notes: greedy failed, trying all notes...");
             let state = {
                 let mut s = initial_state(&ctx);
                 for idx in 0..ctx.notes.len() {
@@ -580,10 +628,22 @@ pub(super) fn select_notes(
                 }
                 s
             };
+            info!(
+                "select_notes: all-notes state sum={}, n_inputs={:?}",
+                state.sum, state.n_inputs
+            );
             let (cost, pool) = evaluate(&state, &ctx);
             if cost == u64::MAX {
+                info!(
+                    "select_notes: FAIL — all notes (sum={}) still infeasible. output_sum={}, recipient_pays_fee={}, first_recipient={}",
+                    state.sum, output_sum, recipient_pays_fee, first_recipient_amount
+                );
                 return None;
             }
+            info!(
+                "select_notes: all-notes feasible — fee={}, pool={}",
+                cost, pool
+            );
             (state, cost, pool)
         }
     };
@@ -635,22 +695,14 @@ pub(super) fn select_notes(
         }
 
         // Overshoot cap
-        let max_remaining = remaining.iter().map(|n| n.amount).max().unwrap_or(0);
+        let max_remaining = remaining.iter().map(|(_, n)| n.amount).max().unwrap_or(0);
         if state.sum > ctx.output_sum.saturating_add(max_remaining) {
             continue;
         }
 
         let candidates = top_k_by_local_heuristic(&remaining, &state, ctx.mode, budget.beam_width);
 
-        for note in candidates {
-            // Find the note's index in ctx.notes
-            let note_idx = ctx.notes.iter().position(|n| {
-                n.pool == note.pool && n.amount == note.amount
-            });
-            let note_idx = match note_idx {
-                Some(i) => i,
-                None => continue, // shouldn't happen
-            };
+        for (note_idx, note) in candidates {
 
             let child = apply(&state, note_idx, note);
             let child_bound = lower_bound(&child, &ctx);
