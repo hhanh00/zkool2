@@ -338,6 +338,9 @@ pub async fn decode_raw_transaction(
     if let Some(obundle) = tx_data.orchard_bundle() {
         process_orchard_bundle!(obundle, OrchardVanilla);
     }
+    if let Some(iwbundle) = tx_data.ironwood_bundle() {
+        process_orchard_bundle!(iwbundle, OrchardVanilla);
+    }
     Ok(notes)
 }
 
