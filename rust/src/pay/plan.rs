@@ -331,9 +331,17 @@ pub async fn plan_transaction(
             .await?;
 
     // Remove dust notes (too small to pay for a single logical action)
+    let before_dust: [usize; NUM_POOLS] = std::array::from_fn(|p| input_pools[p].len());
     for pool in input_pools.iter_mut() {
         pool.retain(|n| n.amount >= COST_PER_ACTION);
     }
+    info!(
+        "plan: after dust filter — t:{}→{}, s:{}→{}, o:{}→{}, iw:{}→{}",
+        before_dust[0], input_pools[0].len(),
+        before_dust[1], input_pools[1].len(),
+        before_dust[2], input_pools[2].len(),
+        before_dust[3], input_pools[3].len(),
+    );
 
     // ── Coin selection via solve::select_notes ─────────────────────────────
     let select_notes_input: Vec<solve::Note> = input_pools
@@ -366,6 +374,15 @@ pub async fn plan_transaction(
         .map(|(&pool, dr)| solve::Output { pool, amount: dr.amount })
         .collect();
 
+    info!(
+        "plan: calling select_notes — {} input notes, {} outputs, migration={}, recipient_pays_fee={}, first_recipient={}, mode={:?}",
+        select_notes_input.len(), select_outputs.len(), migration, recipient_pays_fee,
+        recipients.first().map(|r| r.amount).unwrap_or(0), mode
+    );
+    for o in &select_outputs {
+        info!("plan: output pool={} amount={}", o.pool, o.amount);
+    }
+
     let selection = solve::select_notes(
         &select_notes_input,
         &select_outputs,
@@ -376,6 +393,11 @@ pub async fn plan_transaction(
         mode,
     )
     .ok_or_else(|| anyhow!("No feasible note selection found"))?;
+
+    info!(
+        "plan: select_notes succeeded — fee={}, change_pool={}, selected_inputs={}",
+        selection.fee, selection.change_pool, selection.inputs.len()
+    );
 
     // Mark selected notes as fully consumed (select_notes uses 0/1 knapsack)
     for pool in 0..NUM_POOLS {
