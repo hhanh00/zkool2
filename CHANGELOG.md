@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.19](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.18...zkool-v6.24.0-rc.19) (2026-07-18)
+
+
+### Bug Fixes
+
+* handle Ironwood bundles in mempool and zebra block parsing ([de6d89b](https://github.com/hhanh00/zkool2/commit/de6d89b4eef693fb817393459316e17c0863a116))
+
 ## [6.24.0-rc.18](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.17...zkool-v6.24.0-rc.18) (2026-07-18)
 
 
