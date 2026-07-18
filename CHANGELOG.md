@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.20](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.19...zkool-v6.24.0-rc.20) (2026-07-18)
+
+
+### Bug Fixes
+
+* commit macos project files ([746b0c4](https://github.com/hhanh00/zkool2/commit/746b0c4ffaba5ad8e6ffca21e7bec5e51b099eb0))
+
 ## [6.24.0-rc.19](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.18...zkool-v6.24.0-rc.19) (2026-07-18)
 
 
