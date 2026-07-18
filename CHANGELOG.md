@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.21](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.20...zkool-v6.24.0-rc.21) (2026-07-18)
+
+
+### Bug Fixes
+
+* **macos:** configure manual code signing with Developer ID and zkool provisioning profile ([#1155](https://github.com/hhanh00/zkool2/issues/1155)) ([e4db342](https://github.com/hhanh00/zkool2/commit/e4db3428413738097ce60e742d3cc9be4b3701a7))
+
 ## [6.24.0-rc.20](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.19...zkool-v6.24.0-rc.20) (2026-07-18)
 
 
