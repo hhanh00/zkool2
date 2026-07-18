@@ -2,9 +2,7 @@
 
 //! Zebra JSON-RPC connector.
 //!
-//! NOTE: This connector needs to be updated to support Ironwood (NU6.3).
-//! Currently it only handles Sapling and Orchard tree states and bundle
-//! decoding. Ironwood actions, tree state, and note scanning are missing.
+//! Handles Sapling, Orchard, and Ironwood (NU6.3) bundle decoding.
 
 use std::{
     io::Read,
@@ -365,7 +363,10 @@ pub fn parse_block(
         let txid = tx.txid().as_ref().to_vec();
         let tx_data = tx.into_data();
         // Skip fully transparent transactions
-        if tx_data.sapling_bundle().is_none() && tx_data.orchard_bundle().is_none() {
+        if tx_data.sapling_bundle().is_none()
+            && tx_data.orchard_bundle().is_none()
+            && tx_data.ironwood_bundle().is_none()
+        {
             continue;
         }
         let mut spends = vec![];
@@ -384,46 +385,51 @@ pub fn parse_block(
                 });
             }
         }
+        macro_rules! push_actions {
+            ($bundle:expr, $actions:expr) => {{
+                let bundle = $bundle;
+                for action in bundle.actions().iter() {
+                    let ciphertext = action.encrypted_note().enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE].to_vec();
+                    $actions.push(CompactOrchardAction {
+                        nullifier: action.nullifier().to_bytes().to_vec(),
+                        cmx: action.cmx().to_bytes().to_vec(),
+                        ephemeral_key: action.encrypted_note().epk_bytes.to_vec(),
+                        ciphertext,
+                    });
+                }
+            }};
+        }
         let mut actions = vec![];
         if let Some(orchard_bundle) = tx_data.orchard_bundle() {
-            macro_rules! push_actions {
-                ($bundle:expr, $actions:expr) => {{
-                    let bundle = $bundle;
-                    for action in bundle.actions().iter() {
-                        let ciphertext = action.encrypted_note().enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE].to_vec();
-                        $actions.push(CompactOrchardAction {
-                            nullifier: action.nullifier().to_bytes().to_vec(),
-                            cmx: action.cmx().to_bytes().to_vec(),
-                            ephemeral_key: action.encrypted_note().epk_bytes.to_vec(),
-                            ciphertext,
-                        });
-                    }
-                }};
-            }
-            // ZSA-TODO: was OrchardBundle::OrchardVanilla(b) match
             push_actions!(orchard_bundle, actions);
+        }
+        let mut ironwood_actions = vec![];
+        if let Some(ironwood_bundle) = tx_data.ironwood_bundle() {
+            push_actions!(ironwood_bundle, ironwood_actions);
         }
 
         // Extract ZSA issuance data from the issue bundle.
-        //
-        // TODO: Per-note encrypted data (cmx, ephemeral_key, ciphertext) from
-        // each IssueAction should also be extracted into `CompactOrchardAction`
-        // entries so the decryption pipeline can decrypt the newly minted notes.
-        // Currently only metadata is captured in `CompactIssuance`; the actual
-        // note ciphertexts are not available for Orchard decryption when using
-        // the direct-zebra path. The lightwalletd (LWD) path is unaffected
-        // because the server supplies the CompactOrchardAction entries.
         let mut issuances = vec![];
         if let Some(ref issue_bundle) = tx_data.issue_bundle() {
             let ik = issue_bundle.ik().encode(); // 33 bytes: algorithm_byte + x-only pubkey
             for action in issue_bundle.actions().iter() {
                 let issued_amount: u64 = action.notes().iter().map(|n| n.value().inner()).sum();
+                let notes: Vec<CompactIssueNote> = action
+                    .notes()
+                    .iter()
+                    .map(|note| CompactIssueNote {
+                        recipient: note.recipient().to_raw_address_bytes().to_vec(),
+                        value: note.value().inner(),
+                        rho: note.rho().to_bytes().to_vec(),
+                        rseed: note.rseed().as_bytes().to_vec(),
+                    })
+                    .collect();
                 issuances.push(CompactIssuance {
                     asset_desc_hash: action.asset_desc_hash().to_vec(),
                     finalize: action.is_finalized(),
                     ik: ik.clone(),
                     issued_amount,
-                    notes: vec![], // per-note data not available in direct-zebra path
+                    notes,
                 });
             }
         }
@@ -434,6 +440,7 @@ pub fn parse_block(
             spends,
             outputs,
             actions,
+            ironwood_actions,
             issuances,
             ..Default::default()
         });
