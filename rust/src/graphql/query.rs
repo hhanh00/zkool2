@@ -14,7 +14,7 @@ use crate::graphql::data::{Account, Addresses, AssetInfo, Balance, Note, Transac
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::{Context, check_admin_auth, check_auth};
-use crate::pay::TxPlan;
+use crate::pay::{TxPlan, pool::ALL_POOLS};
 
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -385,7 +385,7 @@ pub async fn prepare_tx(
         &mut connection,
         &mut client,
         id_account as u32,
-        payment.src_pools.unwrap_or(7) as u8,
+        payment.src_pools.unwrap_or(ALL_POOLS.into()) as u8,
         &recipients,
         payment.recipient_pays_fee.unwrap_or_default(),
         payment.confirmations.map(|v| v as u32),
