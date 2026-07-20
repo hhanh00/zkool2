@@ -428,11 +428,11 @@ fn resolve_note(
                 .and_then(|d| d.0.try_into().ok());
             (Some(address.encode(&network)), diversifier_index)
         }
-        2 => {
+        2 | 3 => {
             let div = n
                 .diversifier
                 .as_ref()
-                .ok_or_else(|| "Orchard note missing diversifier".to_string())?
+                .ok_or_else(|| "Orchard/Ironwood note missing diversifier".to_string())?
                 .clone();
             let d = orchard::keys::Diversifier::from_bytes(
                 div.clone()
@@ -454,7 +454,7 @@ fn resolve_note(
         _ => (None, None),
     };
 
-    let asset_base = if n.pool == 2 && n.id_asset.is_some() {
+    let asset_base = if (n.pool == 2 || n.pool == 3) && n.id_asset.is_some() {
         Some("".to_string()) // Placeholder: could look up actual asset_base from assets
     } else {
         None
