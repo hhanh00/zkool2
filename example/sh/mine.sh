@@ -10,7 +10,7 @@ nohup lightwalletd --no-tls-very-insecure --data-dir=./data/regtest --grpc-bind-
 nohup zkool_graphql -d regtest.db -l http://localhost:8137 -n &
 sleep 60
 
-curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [200] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
+curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [300] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
 
 GRAPHQL_URL="http://localhost:8000/graphql"
 MATURITY_THRESHOLD=100
