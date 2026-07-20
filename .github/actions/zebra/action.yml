@@ -34,7 +34,7 @@ runs:
     - name: Install zkool
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.24.0-rc.12 --features=graphql --root ./tools --force --bin zkool_graphql
+      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.24.0-rc.21 --features=graphql --root ./tools --force --bin zkool_graphql
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'

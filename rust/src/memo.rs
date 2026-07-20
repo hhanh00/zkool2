@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::OrchardDomain};
+use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::{IronwoodDomain, OrchardDomain}};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::debug;
@@ -236,7 +236,7 @@ pub async fn decrypt_memo(
     let ovk = get_orchard_vk(connection, account).await?;
 
     macro_rules! process_orchard_memo {
-        ($bundle:expr, $pool:expr) => {{
+        ($bundle:expr, $pool:expr, $domain:ident) => {{
             let bundle = $bundle;
             for _action in bundle.actions().iter() {
                 fee_manager.add_input($pool);
@@ -247,7 +247,7 @@ pub async fn decrypt_memo(
                 let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
                 let ovk = ovk.to_ovk(Scope::External);
                 for (vout, action) in bundle.actions().iter().enumerate() {
-                    let domain = OrchardDomain::for_action(action);
+                    let domain = $domain::for_action(action);
 
                     if let Some((note, _address, memo_bytes)) =
                         try_note_decryption(&domain, &pivk, action)
@@ -314,10 +314,10 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.orchard_bundle() {
-        process_orchard_memo!(bundle, 2);
+        process_orchard_memo!(bundle, 2, OrchardDomain);
     }
     if let Some(bundle) = tx_data.ironwood_bundle() {
-        process_orchard_memo!(bundle, 3);
+        process_orchard_memo!(bundle, 3, IronwoodDomain);
     }
     let fee = fee_manager.fee();
     sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")
