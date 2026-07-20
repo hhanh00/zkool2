@@ -1,5 +1,68 @@
 # Changelog
 
+## [6.24.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0...zkool-v6.24.0) (2026-07-20)
+
+
+### Features
+
+* add coin selection mode (fee vs privacy) and improve migration UI ([dac2b7b](https://github.com/hhanh00/zkool2/commit/dac2b7bf51e30f01abbce1b25c163425ac1e7bd8))
+* add migration speed slider to control delay between steps ([7f7de27](https://github.com/hhanh00/zkool2/commit/7f7de2707e08205dda1a148a6afbf969e2541953))
+* add Orchard-to-Ironwood migration (splitting + migrating phases) ([c028d2a](https://github.com/hhanh00/zkool2/commit/c028d2aa1c559797ed396f45a7ef0a27687c0bc6))
+* ironwood protocol support, proto build from service.proto, lrz dep bump ([d029e58](https://github.com/hhanh00/zkool2/commit/d029e5897383e9161d6599a8d785aaaf6816711b))
+* **pay:** add anytime branch-and-bound note selection solver ([8dad07c](https://github.com/hhanh00/zkool2/commit/8dad07c05b5f9ee4798cd10fe219a0f633a20f06))
+* re-enable ZSA — issuance pipeline, decryption, split note padding ([86cc86c](https://github.com/hhanh00/zkool2/commit/86cc86cb5b7494097a72a1d314b1e99f87ac8578))
+* switch to git-based ZSA dependencies, replace nu7 hacks with orchard_mode() ([7fa33be](https://github.com/hhanh00/zkool2/commit/7fa33be10df77f60018f5da1d019945b638fb5ed))
+* **vault:** add loading spinner dialogs to vault recovery and other async wait points ([78266c3](https://github.com/hhanh00/zkool2/commit/78266c3bdc1ebc5412bfbdc5c8271d4d09591fe4))
+* **vault:** bullet-proof recovery, passkey fallback, and compress ([835b729](https://github.com/hhanh00/zkool2/commit/835b729143fb63976ace3106f7ca5c4b83c61f15))
+* **vault:** offer passkey registration after password recovery ([d0eb7ee](https://github.com/hhanh00/zkool2/commit/d0eb7ee49d4fa4dcd4e8ea3313b48c93ca5ffdd6))
+* wire up ironwood sync protocol, add ironwood balance widget ([609e941](https://github.com/hhanh00/zkool2/commit/609e9419eadc8eb7ad6c24dc542040eba70eaf85))
+
+
+### Bug Fixes
+
+* accept older account backups on import, relax version check ([d626b2c](https://github.com/hhanh00/zkool2/commit/d626b2ca0cdb25e88d4ea1be21bbd62a7112af5e))
+* add Ironwood bundle to fee decrypt, streaming migration, menu gate ([e192ec8](https://github.com/hhanh00/zkool2/commit/e192ec8d4646a4da15744aeb335d6de041d9c869))
+* add ironwood field to Addresses GQL type and include ironwood in source pools ([c13f79c](https://github.com/hhanh00/zkool2/commit/c13f79cfaa4f774876eb8f5fb170eb3af3d52b71))
+* add NU7/ZSA fields and coin type 3 for lrz zsa branch compatibility ([232aff9](https://github.com/hhanh00/zkool2/commit/232aff93bf3106a19a165b577648e57ad1808d33))
+* bump MIN_SD to 500k zats, reserve fee buffer when remainder too small ([3321548](https://github.com/hhanh00/zkool2/commit/3321548f5f5286574b417a6e3fe1fb42c46dcf4e))
+* comment out proto build in build.rs ([02fa0c5](https://github.com/hhanh00/zkool2/commit/02fa0c5d744b85ba54e430144e3560ca988ca098))
+* commit macos project files ([6860c33](https://github.com/hhanh00/zkool2/commit/6860c330ce83ab85fd26011c6686c8fce089dd31))
+* **db:** add visiblePassword keyboard type to fix deleting password field content ([3fd232c](https://github.com/hhanh00/zkool2/commit/3fd232cc5ec3c1c84daf6e640cba294554856397))
+* deduct fee from recipient when recipient_pays_fee is true ([#1150](https://github.com/hhanh00/zkool2/issues/1150)) ([e752431](https://github.com/hhanh00/zkool2/commit/e752431ee6e1c222cbde5e8bb9c34e9fddca0b8e))
+* disable ledger feature in CI builds due to pczt API breakage ([9725959](https://github.com/hhanh00/zkool2/commit/97259595478663f21f79b60ac0e16c8bef214eb6))
+* **frost:** update get_orchard_pk call to pass ironwood_active ([d5fcff2](https://github.com/hhanh00/zkool2/commit/d5fcff2fc652be0a113886560c2c1f78d879adc8))
+* handle Ironwood bundles in mempool and zebra block parsing ([335497b](https://github.com/hhanh00/zkool2/commit/335497b312db6d9accfe5e240282f1ddcdcc335a))
+* Ironwood DKG memo decryption, sign protocol, and misc fixes ([3841b6e](https://github.com/hhanh00/zkool2/commit/3841b6e6bae65774d8569d67d4233676778687b5))
+* **macos:** configure manual code signing with Developer ID and zkool provisioning profile ([#1155](https://github.com/hhanh00/zkool2/issues/1155)) ([4e050f7](https://github.com/hhanh00/zkool2/commit/4e050f70170b0ba35d212ceb148495e919a08188))
+* remove unused GraphQL migration_status query ([d7bd6e0](https://github.com/hhanh00/zkool2/commit/d7bd6e0a7ee9de1e235ba0d55377c05c9df75253))
+* revert accidental macOS file changes since 61ccf03f ([b05f7c6](https://github.com/hhanh00/zkool2/commit/b05f7c6e40b5c06b4d3b31e746211af9c5ff7d95))
+* revert plan_transaction signature, add coin-selection module ([94208cc](https://github.com/hhanh00/zkool2/commit/94208cc3da9a6ff97ae3ad9bb4e30b829a3ef410))
+* rewrite ledger builder.rs for new pczt API with in-place Updater ([911b7f1](https://github.com/hhanh00/zkool2/commit/911b7f175ec86c8f36e90cb7ddd19e96d9642374))
+* show loading spinner in blank() instead of empty screen ([#1157](https://github.com/hhanh00/zkool2/issues/1157)) ([41e645c](https://github.com/hhanh00/zkool2/commit/41e645c0a23061587ca67008aa265ec30535e91b))
+* switch zcash-trees from local path to git dependency ([4e84b27](https://github.com/hhanh00/zkool2/commit/4e84b2774f1adf727b9eab7ad908f081a1313118))
+* track note index through B&B pipeline to prevent duplicate selection ([8945f05](https://github.com/hhanh00/zkool2/commit/8945f05cf51e237169ad4f546d6cee403e9d51f8))
+* **tx plan:** decode ironwood bundle in TxPlan::from_package ([d0f7b27](https://github.com/hhanh00/zkool2/commit/d0f7b27e622b491c2a5531ad340fd748aedf7a70))
+* **tx plan:** only create Ironwood txs after Nu6.3 activation ([f0e09a2](https://github.com/hhanh00/zkool2/commit/f0e09a27377a5f15deefb51812d5b5e2496529cb))
+* **ui:** fix pool selector segment order to Trp/Sap/Orc/Iwd ([a9320f1](https://github.com/hhanh00/zkool2/commit/a9320f1dd545173724eab9e538dd15fe63978ed7))
+* **ui:** reorder balance chips to Trp/Sap/Orc/Iwd ([ab5f317](https://github.com/hhanh00/zkool2/commit/ab5f3175a77470c5e012058f36fe684cb151c5c4))
+* update lrz rev, add zkproof getter, fix pczt.serialize() in ledger ([e45e745](https://github.com/hhanh00/zkool2/commit/e45e7458d19fb8c6139bba70fb6ff34b8614fa7a))
+* update regtest to ironwood ([43f7e92](https://github.com/hhanh00/zkool2/commit/43f7e922f4deee0944b9572151beec7c12f7377b))
+* update tests for Ironwood (pool 3) and zebra connector support ([de7254a](https://github.com/hhanh00/zkool2/commit/de7254ab92c9b02db111a19aa316bece2703fa11))
+* use isIronwoodActive API instead of hardcoded height 450 ([ac33aec](https://github.com/hhanh00/zkool2/commit/ac33aecfece1e28ed210157fd3f7c2c77608acc8))
+* use lrz zsa branch with git rev, pass shielded sighash to Issuer::sign() ([74187c3](https://github.com/hhanh00/zkool2/commit/74187c314835af240bbff708c1ca9585ea44fdf3))
+* **vault:** add onDismissCallback to showLoadingDialog for AwesomeDialog compat ([c1dfe33](https://github.com/hhanh00/zkool2/commit/c1dfe3386819f92ad334761ca0f7a960cfdbf40f))
+* **vault:** always show Google picker when enabling vault, even on re-enable ([a22d3e4](https://github.com/hhanh00/zkool2/commit/a22d3e43190eb864fd263587659ad445a465f6ac))
+* **vault:** bypass EasyDebounce in compress to save all accounts ([ed35a6c](https://github.com/hhanh00/zkool2/commit/ed35a6cd0d8de1f4de58ae53f4020a2389ebfe39))
+* **vault:** disable passkeys on iOS, limit macOS to debug builds ([825fe60](https://github.com/hhanh00/zkool2/commit/825fe60c26394755792d2af41a81cae395edcd4d))
+* **vault:** explicit Google Drive sign-in during vault enable, credentials cached ([54ca242](https://github.com/hhanh00/zkool2/commit/54ca2421c491e5d3755ce4865958993649943676))
+* **vault:** set autoDismiss=true in showLoadingDialog so .dismiss() pops the navigator ([d8dc9fb](https://github.com/hhanh00/zkool2/commit/d8dc9fb4856df7e6ad656cd7c24582f535bdf91b))
+* wire select_notes knapsack DP into plan_transaction, fix migration fees ([14c229c](https://github.com/hhanh00/zkool2/commit/14c229cfd02283cd5f514033ad97650a90c6042b))
+
+
+### Reverts
+
+* remove ios/ files accidentally committed in 0c6a82c8 ([35a375a](https://github.com/hhanh00/zkool2/commit/35a375af31331fc426521819b68e22f22775e1ac))
+
 ## [6.23.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.22.0...zkool-v6.23.0) (2026-07-02)
 
 
