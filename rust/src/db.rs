@@ -27,7 +27,10 @@ use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
 use crate::{api::account::TxNote, tiu};
 
-pub const DB_VERSION: u16 = 10;
+/// Schema version. Bump only when the export format changes (IOAccount or any
+/// embedded struct gains/removes/changes a field). Do NOT bump for runtime-only
+/// changes (queries, PoolBalance, solve mode, etc.).
+pub const DB_VERSION: u16 = 9;
 
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
