@@ -911,8 +911,8 @@ async fn handle_message(
             for a in accounts {
                 if has_pool(db_tx, a, pool).await? {
                     sqlx::query(
-                        "UPDATE sync_heights SET height = ?3
-                        WHERE account = ?1 AND pool = ?2",
+                        "INSERT OR REPLACE INTO sync_heights(account, pool, height)
+                        VALUES (?1, ?2, ?3)",
                     )
                     .bind(a)
                     .bind(pool)

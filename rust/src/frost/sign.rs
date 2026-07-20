@@ -252,7 +252,7 @@ pub async fn do_sign_impl(
     info!("sign: got keys");
     let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Failed to parse PCZT");
     let sighash = get_sighash(pczt.clone());
-    let nsigs = pczt_pkg.orchard_indices.len() as u32;
+    let nsigs = (pczt_pkg.orchard_indices.len() + pczt_pkg.ironwood_indices.len()) as u32;
     info!("sign: sighash={}, nsigs={}", hex::encode(&sighash), nsigs);
 
     // Create a mailbox account if it doesn't exist
@@ -446,17 +446,29 @@ pub async fn do_sign_impl(
             let sigpackage = SigningPackage::new(c.clone(), &sighash);
 
             // get the randomizer from the pczt
-            let action_index = pczt_pkg.orchard_indices[idx];
             let signer = Signer::new(pczt.clone());
             let mut alpha = Fq::zero();
-            signer
-                .sign_orchard_with(|_pczt, bundle, _| {
-                    let a = &bundle.actions()[action_index];
-                    let spend = a.spend();
-                    alpha = spend.alpha().expect("Failed to get alpha");
-                    Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
-                })
-                .unwrap();
+            if idx < pczt_pkg.orchard_indices.len() {
+                let action_index = pczt_pkg.orchard_indices[idx];
+                signer
+                    .sign_orchard_with(|_pczt, bundle, _| {
+                        let a = &bundle.actions()[action_index];
+                        let spend = a.spend();
+                        alpha = spend.alpha().expect("Failed to get alpha");
+                        Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
+                    })
+                    .unwrap();
+            } else {
+                let action_index = pczt_pkg.ironwood_indices[idx - pczt_pkg.orchard_indices.len()];
+                signer
+                    .sign_ironwood_with(|_pczt, bundle, _| {
+                        let a = &bundle.actions()[action_index];
+                        let spend = a.spend();
+                        alpha = spend.alpha().expect("Failed to get alpha");
+                        Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
+                    })
+                    .unwrap();
+            }
 
             let randomizer = Randomizer::from_scalar(alpha);
             let sigpackage = sigpackage.serialize()?;
@@ -660,36 +672,38 @@ pub async fn do_sign_impl(
 
         status.send(SigningStatus::PreparingTransaction).await;
 
-        let signer = pczt::roles::signer::Signer::new(pczt).unwrap();
-        let sighash: [u8; 32] = signer.shielded_sighash();
-        let pczt = signer.finish();
-
-        let signer = Signer::new(pczt);
-        let signer = signer
-            .sign_orchard_with(|_pczt, bundle, _| {
-                for (idx, signature) in signatures.into_iter().enumerate() {
-                    let action_index = if idx < pczt_pkg.orchard_indices.len() {
-                        pczt_pkg.orchard_indices[idx]
-                    } else {
-                        pczt_pkg.orchard_indices[idx]
-                    };
-                    let action = &mut bundle.actions_mut()[action_index];
-                    let _ = action.apply_signature(sighash, signature);
-                    // How do we update the spend_auth_sig?
-                    // a[0].spend().spend_auth_sig = Some(signature.clone());
-                }
-                Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
-            })
-            .unwrap();
+        // Apply signatures using the high-level signer which properly
+        // handles bundle serialization for both orchard and ironwood.
+        let orchard_count = pczt_pkg.orchard_indices.len();
+        let (orchard_sigs, ironwood_sigs) = signatures.split_at(orchard_count);
+        let mut signer = pczt::roles::signer::Signer::new(pczt).unwrap();
+        info!(
+            "signer sighash={} get_sighash={}",
+            hex::encode(signer.shielded_sighash()),
+            hex::encode(&sighash)
+        );
+        for (idx, signature) in orchard_sigs.iter().enumerate() {
+            signer.apply_orchard_signature(
+                pczt_pkg.orchard_indices[idx], signature.clone())
+                .expect("apply_orchard_signature must succeed");
+        }
+        for (idx, signature) in ironwood_sigs.iter().enumerate() {
+            signer.apply_ironwood_signature(
+                pczt_pkg.ironwood_indices[idx], signature.clone())
+                .expect("apply_ironwood_signature must succeed");
+        }
         let pczt = signer.finish();
         info!("Signed");
 
         let sapling_prover = get_sapling_prover().await?;
 
+        let orchard_pk = get_orchard_pk(network, network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height)));
         let pczt = Prover::new(pczt)
             .create_sapling_proofs(sapling_prover, sapling_prover)
             .unwrap()
-            .create_orchard_proof(get_orchard_pk(network, network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height))))
+            .create_orchard_proof(orchard_pk)
+            .unwrap()
+            .create_ironwood_proof(orchard_pk)
             .unwrap()
             .finish();
         info!("Proved");
@@ -707,21 +721,27 @@ pub async fn do_sign_impl(
         tx.write(&mut tx_bytes).unwrap();
         info!("Transaction Len: {}", tx_bytes.len());
 
+        // Clean up sign state first — once we broadcast, we don't retry.
+        // If send fails, the tx is lost and a new signing session must be started.
+        delete_frost_state(&mut *connection).await?;
+
         status.send(SigningStatus::SendingTransaction).await;
         let txid = send(client, height, &tx_bytes).await?;
         info!("Transaction sent: {}", txid);
         status.send(SigningStatus::TransactionSent(txid)).await;
     }
 
-    delete_frost_state(&mut *connection).await?;
-
     Ok(())
 }
 
 fn get_sighash(pczt: Pczt) -> Vec<u8> {
+    use zcash_primitives::transaction::{TxVersion, sighash_v6::v6_signature_hash};
     let tx = pczt.into_effects().unwrap();
     let txid_parts = tx.digest(TxIdDigester);
-    let shielded_sighash = v5_signature_hash(&tx, &SignableInput::Shielded, &txid_parts);
+    let shielded_sighash = match tx.version() {
+        TxVersion::V6 => v6_signature_hash(&tx, &SignableInput::Shielded, &txid_parts),
+        _ => v5_signature_hash(&tx, &SignableInput::Shielded, &txid_parts),
+    };
     let sighash = shielded_sighash.as_bytes();
     info!("sighash: {}", hex::encode(sighash));
     sighash.to_vec()
