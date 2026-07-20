@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.24.0-rc.22](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.21...zkool-v6.24.0-rc.22) (2026-07-20)
+
+
+### Bug Fixes
+
+* show loading spinner in blank() instead of empty screen ([#1157](https://github.com/hhanh00/zkool2/issues/1157)) ([58d08c0](https://github.com/hhanh00/zkool2/commit/58d08c01b5e37a70cc9a6d981cc8d954b5c564f7))
+
 ## [6.24.0-rc.21](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.20...zkool-v6.24.0-rc.21) (2026-07-18)
 
 
