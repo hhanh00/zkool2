@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.24.0-rc.23](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.22...zkool-v6.24.0-rc.23) (2026-07-20)
+
+
+### Bug Fixes
+
+* accept older account backups on import, relax version check ([bff6eac](https://github.com/hhanh00/zkool2/commit/bff6eac2feaa69f44610226b226544719ba44005))
+* Ironwood DKG memo decryption, sign protocol, and misc fixes ([44c99d3](https://github.com/hhanh00/zkool2/commit/44c99d3cc4ef96f4783dd1e37e3afb97b22092c5))
+
 ## [6.24.0-rc.22](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0-rc.21...zkool-v6.24.0-rc.22) (2026-07-20)
 
 
