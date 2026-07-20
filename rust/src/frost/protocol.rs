@@ -25,7 +25,7 @@ use crate::{
     api::{account::NewAccount, coin::Network},
     pay::{
         plan::{extract_transaction, plan_transaction, sign_transaction},
-        pool::ALL_POOLS,
+        pool::ALL_SHIELDED_POOLS,
         Recipient,
     },
     Client,
@@ -473,7 +473,7 @@ pub async fn publish(
         connection,
         client,
         account,
-        ALL_POOLS,
+        ALL_SHIELDED_POOLS,
         &recipients,
         false,
         None,
@@ -481,14 +481,17 @@ pub async fn publish(
         None,
         None,
         false, // migration
-        crate::pay::solve::Mode::Fee,
+        crate::pay::solve::Mode::Privacy,
         None,  // preselected
     )
     .await
-    .unwrap();
-    let pczt = sign_transaction(connection, account, network, &pczt).await?;
-    let txb = extract_transaction(&pczt).await?;
-    let result = crate::pay::send(client, height, &txb).await?;
+    .context("plan_transaction in DKG publish")?;
+    let pczt = sign_transaction(connection, account, network, &pczt).await
+    .context("sign_transaction in DKG publish")?;
+    let txb = extract_transaction(&pczt).await
+    .context("extract_transaction in DKG publish")?;
+    let result = crate::pay::send(client, height, &txb).await
+    .context("send in DKG publish")?;
     if hex::decode(&result).is_err() {
         anyhow::bail!(result);
     }

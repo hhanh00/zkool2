@@ -376,8 +376,8 @@ pub async fn prepare_tx(
     let network = coin.network();
 
     let mode = match payment.mode.as_deref() {
-        Some("privacy") => crate::pay::solve::Mode::Privacy,
-        _ => crate::pay::solve::Mode::Fee,
+        Some("fee") => crate::pay::solve::Mode::Fee,
+        _ => crate::pay::solve::Mode::Privacy,
     };
 
     let pczt = crate::pay::plan::plan_transaction(
