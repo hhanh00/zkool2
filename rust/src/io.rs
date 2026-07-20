@@ -481,8 +481,8 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
     let mut data = String::new();
     decoder.read_to_string(&mut data)?;
     let io_account = serde_json::from_str::<IOAccount>(&data)?;
-    if io_account.version != DB_VERSION {
-        anyhow::bail!("This version only supports database version {DB_VERSION}");
+    if io_account.version > DB_VERSION {
+        anyhow::bail!("This backup was created by a newer app version. Please update.");
     }
 
     info!("Importing account {}", io_account.name);
