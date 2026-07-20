@@ -238,9 +238,10 @@ pub async fn decrypt_memo(
     macro_rules! process_orchard_memo {
         ($bundle:expr, $pool:expr, $domain:ident) => {{
             let bundle = $bundle;
+            let pool: u8 = $pool;
             for _action in bundle.actions().iter() {
-                fee_manager.add_input($pool);
-                fee_manager.add_output($pool);
+                fee_manager.add_input(pool);
+                fee_manager.add_output(pool);
             }
 
             if let Some(ovk) = ovk.as_ref() {
@@ -252,6 +253,7 @@ pub async fn decrypt_memo(
                     if let Some((note, _address, memo_bytes)) =
                         try_note_decryption(&domain, &pivk, action)
                     {
+                        debug!("decrypt_memo: ivk decrypt ok for vout={vout} pool={pool}");
                         let cmx: ExtractedNoteCommitment = note.commitment().into();
                         let id_note =
                             sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
@@ -269,7 +271,7 @@ pub async fn decrypt_memo(
                             id_tx,
                             Some(id_note),
                             None,
-                            $pool,
+                            pool,
                             vout as u32,
                             &memo_bytes,
                         )
@@ -288,7 +290,7 @@ pub async fn decrypt_memo(
                             account,
                             height,
                             id_tx,
-                            $pool,
+                            pool,
                             vout as u32,
                             note.value().inner(),
                             &address.encode(network),
@@ -302,11 +304,15 @@ pub async fn decrypt_memo(
                             id_tx,
                             None,
                             Some(id_output),
-                            $pool,
+                            pool,
                             vout as u32,
                             &memo_bytes,
                         )
                         .await?;
+                    } else {
+                        debug!(
+                            "decrypt_memo: both ivk and ovk decrypt failed for vout={vout} pool={pool}"
+                        );
                     }
                 }
             }
@@ -314,10 +320,14 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.orchard_bundle() {
+        debug!("decrypt_memo: orchard bundle with {} actions", bundle.actions().len());
         process_orchard_memo!(bundle, 2, OrchardDomain);
     }
     if let Some(bundle) = tx_data.ironwood_bundle() {
+        debug!("decrypt_memo: ironwood bundle with {} actions", bundle.actions().len());
         process_orchard_memo!(bundle, 3, IronwoodDomain);
+    } else {
+        debug!("decrypt_memo: no ironwood bundle in tx {}", hex::encode(txid));
     }
     let fee = fee_manager.fee();
     sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")

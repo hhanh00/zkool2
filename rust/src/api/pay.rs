@@ -4,7 +4,8 @@ use bincode::{config::legacy, Decode, Encode};
 use crate::{api::coin::Coin, pay::{Recipient, TxPlan, plan::plan_transaction, solve::Mode}};
 
 /// FFI-compatible coin-selection mode (maps to `solve::Mode`).
-/// 0 = Fee optimisation, 1 = Privacy preservation.
+/// 0 = Fee optimisation, 1 = Privacy preservation (default).
+const MODE_FEE: u8 = 0;
 const MODE_PRIVACY: u8 = 1;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
@@ -30,7 +31,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
-    let mode = if options.mode == MODE_PRIVACY { Mode::Privacy } else { Mode::Fee };
+    let mode = if options.mode == MODE_FEE { Mode::Fee } else { Mode::Privacy };
 
     plan_transaction(
         network,
@@ -179,7 +180,7 @@ pub async fn get_coin_selection_mode(c: &Coin) -> Result<u8> {
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn set_coin_selection_mode(mode: u8, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    let mode = if mode == MODE_PRIVACY { Mode::Privacy } else { Mode::Fee };
+    let mode = if mode == MODE_FEE { Mode::Fee } else { Mode::Privacy };
     crate::db::set_coin_selection_mode(&mut connection, mode).await
 }
 
