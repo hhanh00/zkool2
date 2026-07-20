@@ -418,6 +418,8 @@ pub async fn plan_transaction(
                     address: dr.address.clone(),
                     amount: dr.amount,
                     asset_base: dr.asset_base.clone(),
+                    memo_bytes: dr.memo_bytes.clone(),
+                    user_memo: dr.memo.clone(),
                     ..Default::default()
                 },
                 remaining: 0, // fully funded by select_notes

@@ -741,8 +741,8 @@ pub async fn get_coin_selection_mode(
     connection: &mut SqliteConnection,
 ) -> Result<crate::pay::solve::Mode> {
     match get_prop(connection, MODE_KEY).await? {
-        Some(v) if v == "privacy" => Ok(crate::pay::solve::Mode::Privacy),
-        _ => Ok(crate::pay::solve::Mode::Fee),
+        Some(v) if v == "fee" => Ok(crate::pay::solve::Mode::Fee),
+        _ => Ok(crate::pay::solve::Mode::Privacy),
     }
 }
 
