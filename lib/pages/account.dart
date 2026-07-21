@@ -157,6 +157,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final selectedAccountAV = ref.watch(selectedAccountProvider);
     ref.watch(appSettingsProvider); // rebuild when settings change (e.g. list/table toggle)
     return selectedAccountAV.when(
+      skipLoadingOnReload: true,
       loading: () => blank(context),
       error: (error, stack) => showError(error),
       data: (selectedAccount) {
@@ -170,6 +171,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         final fullDataAV = ref.watch(fullAccountPageDataProvider);
 
         return fullDataAV.when(
+          skipLoadingOnReload: true,
           loading: () => blank(context),
           error: (error, stack) => showError(error),
           data: (fullData) => _buildAccountScaffold(context, fullData),
