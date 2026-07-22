@@ -249,7 +249,8 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         asset_base BLOB NOT NULL,
         finalized BOOL NOT NULL DEFAULT FALSE,
         first_seen_height INTEGER NOT NULL,
-        UNIQUE (asset_desc_hash, ik))",
+        UNIQUE (asset_desc_hash, ik),
+        UNIQUE (asset_base))",
     )
     .execute(&mut *connection)
     .await?;
@@ -271,6 +272,14 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     // Migration: add asset_name to assets for human-readable naming
     let _ = sqlx::query(
         "ALTER TABLE assets ADD COLUMN asset_name TEXT",
+    )
+    .execute(&mut *connection)
+    .await;
+
+    // Migration: ensure asset_base is unique to prevent duplicate note inserts
+    // caused by duplicate issuances with the same asset_base.
+    let _ = sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_asset_base ON assets(asset_base)",
     )
     .execute(&mut *connection)
     .await;

@@ -40,7 +40,7 @@ message CompactTx {
     repeated CompactSaplingSpend spends = 4;   // inputs
     repeated CompactSaplingOutput outputs = 5; // outputs
     repeated CompactOrchardAction actions = 6;
-    repeated CompactOrchardAction ironwoodActions = 9; // Ironwood actions (canonical)
+    repeated CompactOrchardAction ironwoodActions = 9;
     repeated CompactIssuance issuances = 10; // ZSA issuance actions
 }
 
