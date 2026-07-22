@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.25.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0...zkool-v6.25.0-rc) (2026-07-22)
+
+
+### Features
+
+* re-enable ZSA support ([#1164](https://github.com/hhanh00/zkool2/issues/1164)) ([e99fd7d](https://github.com/hhanh00/zkool2/commit/e99fd7d38427c1883a62225542ea5415597f3f6c))
+
+
+### Bug Fixes
+
+* skip loading state on account page reload, enable prerelease versioning ([bf8e4fe](https://github.com/hhanh00/zkool2/commit/bf8e4fe23104946f041a08b2c39b5e6ac5963bef))
+
 ## [6.24.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0...zkool-v6.24.0) (2026-07-20)
 
 
