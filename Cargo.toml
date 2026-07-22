@@ -6,21 +6,21 @@ resolver = "2"
 
 [patch.crates-io]
 # -- ZSA support branches --
-orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "7bc6c6f3b48ace8db768f3145f86ffb1593b83e0" }
-#orchard = { path = "../zsa/orchard" }
+#orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "7bc6c6f3b48ace8db768f3145f86ffb1593b83e0" }
+orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "bd4be3bd585389ae7e2870b0c4899027dfd1afcd" }
 sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "bf29f9732eeaa417b63982aa8001acb542343b83" }
 zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "57d048381d376f71ce6ba753d7876ef04b6e57cb" }
 
-# -- lrz ZSA branch --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "20f1c954a029ba6762a130bf9824887b105037c9" }
+# -- lrz ZSA branch (rev f53afe2a) --
+pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
+zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f53afe2a9a28c1e2e7a025a810174c02381c6e39" }
 
 # -- remaining transitive deps --
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
