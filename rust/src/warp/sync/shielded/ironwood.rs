@@ -6,8 +6,7 @@ use orchard::{
 use sqlx::SqliteConnection;
 
 use crate::{
-    lwd::CompactOrchardAction,
-    warp::sync::block::SyncTx,
+    lwd::{CompactOrchardAction, CompactTx},
     Hash32,
 };
 use zcash_trees::{network::Network, types};
@@ -26,10 +25,6 @@ impl ShieldedProtocol for IronwoodProtocol {
     type Spend = CompactOrchardAction;
     type Output = CompactOrchardAction;
     type IssueAuth = ();
-
-    fn supports_issuance() -> bool {
-        false
-    }
 
     async fn extract_ivk(
         connection: &mut SqliteConnection,
@@ -55,19 +50,12 @@ impl ShieldedProtocol for IronwoodProtocol {
         Ok(keys)
     }
 
-    async fn extract_issue_auth(
-        _connection: &mut SqliteConnection,
-        _account: u32,
-        _coin_type: u32,
-    ) -> Result<Option<(Self::IssueAuth, Self::NK)>> {
-        Ok(None)
-    }
-
-    fn extract_inputs(tx: &SyncTx) -> &Vec<Self::Spend> {
+    fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend> {
+        // Decode field9 as CompactOrchardAction on Ironwood networks
         &tx.ironwood_actions
     }
 
-    fn extract_outputs(tx: &SyncTx) -> &Vec<Self::Output> {
+    fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output> {
         &tx.ironwood_actions
     }
 

@@ -1,5 +1,6 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::{IronwoodDomain, OrchardDomain}};
+use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::{IronwoodDomain, OrchardDomain}, zsa::OrchardZSADomain};
+use zcash_note_encryption::note_bytes::NoteBytesData;
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::debug;
@@ -110,6 +111,62 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
     }
 }
 
+/// Try ZSA decryption using the raw 612-byte enc_ciphertext with OrchardZSADomain.
+/// Called when vanilla OrchardDomain decryption fails and raw ZSA ciphertext is available.
+fn try_zsa_decrypt(
+    action: &orchard::Action<<orchard::bundle::Authorized as orchard::bundle::Authorization>::SpendAuth>,
+    raw_enc: &[u8],
+    pivk: &orchard::keys::PreparedIncomingViewingKey,
+    ovk: &orchard::keys::OutgoingViewingKey,
+) -> Option<(
+    orchard::Note,
+    orchard::Address,
+    [u8; 512],
+)> {
+    use orchard::note::TransmittedNoteCiphertext;
+    use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
+
+    let vanilla_nc = action.encrypted_note();
+
+    // Reconstruct the ZSA TransmittedNoteCiphertext from raw bytes
+    let mut enc = NoteBytesData([0u8; 612]);
+    enc.0.copy_from_slice(raw_enc);
+
+    let zsa_nc = TransmittedNoteCiphertext::<OrchardZSADomain> {
+        epk_bytes: vanilla_nc.epk_bytes,
+        enc_ciphertext: enc,
+        out_ciphertext: vanilla_nc.out_ciphertext,
+    };
+
+    let zsa_action = orchard::Action::from_parts(
+        *action.nullifier(),
+        action.rk().clone(),
+        orchard::note::ExtractedNoteCommitment::from_bytes(&action.cmx().to_bytes()).unwrap(),
+        zsa_nc,
+        action.cv_net().clone(),
+        (),
+    )
+    .ok()?;
+
+    let zsa_domain = OrchardZSADomain { rho: zsa_action.rho() };
+
+    if let Some((note, _address, memo_bytes)) =
+        try_note_decryption(&zsa_domain, pivk, &zsa_action)
+    {
+        Some((note, _address, memo_bytes))
+    } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
+        &zsa_domain,
+        ovk,
+        &zsa_action,
+        zsa_action.cv_net(),
+        &zsa_action.encrypted_note().out_ciphertext,
+    ) {
+        Some((note, address, memo_bytes))
+    } else {
+        None
+    }
+}
+
 pub async fn decrypt_memo(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -119,6 +176,9 @@ pub async fn decrypt_memo(
 ) -> Result<()> {
     debug!("decrypt_memo {account} {}", hex::encode(txid));
     let (height, tx) = client.transaction(network, txid).await?;
+
+    // Extract raw ZSA enc_ciphertexts before consuming tx with into_data()
+    let zsa_raw_ciphertexts = tx.zsa_action_enc_ciphertexts.clone();
 
     let tx_data = tx.into_data();
 
@@ -309,6 +369,53 @@ pub async fn decrypt_memo(
                             &memo_bytes,
                         )
                         .await?;
+                    } else if pool == 2 && vout < zsa_raw_ciphertexts.len() {
+                        // Try ZSA decryption with the original 612-byte enc_ciphertext
+                        if let Some(zsa_action) = try_zsa_decrypt(
+                            action,
+                            &zsa_raw_ciphertexts[vout],
+                            &pivk,
+                            &ovk,
+                        ) {
+                            let (note, address, memo_bytes) = zsa_action;
+                            let cmx: ExtractedNoteCommitment = note.commitment().into();
+                            if let Ok(Some(id_note)) = sqlx::query(
+                                "SELECT id_note FROM notes WHERE account = ? AND cmx = ?",
+                            )
+                            .bind(account)
+                            .bind(&cmx.to_bytes()[..])
+                            .map(|row: SqliteRow| row.get::<u32, _>(0))
+                            .fetch_optional(&mut *connection)
+                            .await
+                            {
+                                process_memo(
+                                    connection, account, height, id_tx,
+                                    Some(id_note), None, pool, vout as u32, &memo_bytes,
+                                )
+                                .await?;
+                            } else {
+                                let address = UnifiedAddress::from_receivers(
+                                    Some(address), None, None,
+                                )
+                                .unwrap();
+                                let id_output = store_output(
+                                    connection, account, height, id_tx, pool,
+                                    vout as u32,
+                                    note.value().inner(),
+                                    &address.encode(network),
+                                )
+                                .await?;
+                                process_memo(
+                                    connection, account, height, id_tx,
+                                    None, Some(id_output), pool, vout as u32, &memo_bytes,
+                                )
+                                .await?;
+                            }
+                        } else {
+                            debug!(
+                                "decrypt_memo: both ivk and ovk decrypt failed for vout={vout} pool={pool}"
+                            );
+                        }
                     } else {
                         debug!(
                             "decrypt_memo: both ivk and ovk decrypt failed for vout={vout} pool={pool}"
