@@ -1,8 +1,7 @@
 use anyhow::Result;
 use orchard::{
     keys::{FullViewingKey, IncomingViewingKey},
-    note::{AssetBase, RandomSeed, Rho},
-    issuance::auth::{IssueAuthKey, IssueValidatingKey, ZSASchnorr},
+    note::{AssetBase, ExtractedNoteCommitment, NoteVersion, RandomSeed, Rho},
     value::NoteValue,
     Address, Note,
 };
@@ -10,8 +9,7 @@ use sqlx::SqliteConnection;
 use crate::keys::ScopeExt;
 
 use crate::{
-    lwd::CompactOrchardAction,
-    warp::sync::block::{OrchardOutput, SyncTx},
+    lwd::{CompactIssueNote, CompactOrchardAction, CompactTx},
     Hash32,
 };
 use zcash_trees::{network::Network, types};
@@ -28,12 +26,8 @@ impl ShieldedProtocol for OrchardProtocol {
     type NK = FullViewingKey;
     type Note = Note;
     type Spend = CompactOrchardAction;
-    type Output = OrchardOutput;
-    type IssueAuth = IssueValidatingKey<ZSASchnorr>;
-
-    fn supports_issuance() -> bool {
-        true
-    }
+    type Output = CompactOrchardAction;
+    type IssueAuth = ();
 
     async fn extract_ivk(
         connection: &mut SqliteConnection,
@@ -54,44 +48,12 @@ impl ShieldedProtocol for OrchardProtocol {
         Ok(keys)
     }
 
-    async fn extract_issue_auth(
-        connection: &mut SqliteConnection,
-        account: u32,
-        coin_type: u32,
-    ) -> Result<Option<(Self::IssueAuth, Self::NK)>> {
-        if let Ok(Some(seed_info)) =
-            crate::account::get_account_seed(&mut *connection, account).await
-        {
-            if let Ok(mnemonic) = bip39::Mnemonic::parse(seed_info.mnemonic) {
-                let seed = mnemonic.to_seed(&seed_info.phrase);
-                if let Ok(isk) =
-                    IssueAuthKey::<ZSASchnorr>::from_zip32_seed(&seed, coin_type, 0)
-                {
-                    let ik = IssueValidatingKey::from(&isk);
-                    // Reuse the FVK from orchard_accounts for nullifier derivation
-                    let vk: Option<(Vec<u8>,)> = sqlx::query_as(
-                        "SELECT xvk FROM orchard_accounts WHERE account = ?",
-                    )
-                    .bind(account)
-                    .fetch_optional(&mut *connection)
-                    .await?;
-                    if let Some((xvk,)) = vk {
-                        let fvk = FullViewingKey::from_bytes(&xvk.try_into().unwrap())
-                            .unwrap();
-                        return Ok(Some((ik, fvk)));
-                    }
-                }
-            }
-        }
-        Ok(None)
+    fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend> {
+        &tx.actions
     }
 
-    fn extract_inputs(tx: &SyncTx) -> &Vec<Self::Spend> {
-        &tx.orchard_actions
-    }
-
-    fn extract_outputs(tx: &SyncTx) -> &Vec<Self::Output> {
-        &tx.orchard_outputs
+    fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output> {
+        &tx.actions
     }
 
     fn extract_nf(i: &Self::Spend) -> Hash32 {
@@ -99,10 +61,7 @@ impl ShieldedProtocol for OrchardProtocol {
     }
 
     fn extract_cmx(o: &Self::Output) -> Hash32 {
-        match o {
-            OrchardOutput::Action(a) => a.cmx.clone().try_into().unwrap(),
-            OrchardOutput::Issuance { cmx, .. } => *cmx,
-        }
+        o.cmx.clone().try_into().unwrap()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -116,69 +75,108 @@ impl ShieldedProtocol for OrchardProtocol {
         vout: u32,
         output: &Self::Output,
     ) -> Result<Option<(Self::Note, types::Note)>> {
-        match output {
-            OrchardOutput::Action(a) => {
-                try_orchard_decrypt(network, account, scope, ivk, height, ivtx, vout, a)
-            }
-            OrchardOutput::Issuance {
-                note: note_data,
-                asset_base,
-                cmx,
-                owner,
-                ..
-            } => {
-                // Only synthesize if this account owns the issuance key and
-                // we are on the external scope (issuance uses Scope::External).
-                if *owner != Some(account) || scope != 0 {
-                    return Ok(None);
-                }
-                let recipient_bytes: [u8; 43] =
-                    note_data.recipient.as_slice().try_into().unwrap();
-                let recipient =
-                    Address::from_raw_address_bytes(&recipient_bytes).unwrap();
-                let rho_bytes: [u8; 32] =
-                    note_data.rho.as_slice().try_into().unwrap();
-                let rho = Rho::from_bytes(&rho_bytes).unwrap();
-                let rseed_bytes: [u8; 32] =
-                    note_data.rseed.as_slice().try_into().unwrap();
-                let rseed = RandomSeed::from_bytes(rseed_bytes, &rho).unwrap();
-                let asset_base_bytes: [u8; 32] =
-                    asset_base.as_slice().try_into().unwrap();
-                let asset_base_val =
-                    AssetBase::from_bytes(&asset_base_bytes).unwrap();
+        try_orchard_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
+    }
 
-                let note = Note::from_parts(
-                    recipient,
-                    NoteValue::from_raw(note_data.value),
-                    asset_base_val,
-                    rho,
-                    rseed,
-                orchard::NoteVersion::V2)
-                .unwrap();
+    fn compute_issuance_cmx(
+        issue_note: &CompactIssueNote,
+        asset_base: &AssetBase,
+    ) -> Result<Option<Hash32>> {
+        let (_, cmx) = construct_issuance_note(issue_note, asset_base)?;
+        Ok(Some(cmx))
+    }
 
-                let dbn = types::Note {
-                    account,
-                    scope: 0,
-                    height,
-                    pool: 2,
-                    value: note_data.value,
-                    cmx: cmx.to_vec(),
-                    asset_base: asset_base.clone(),
-                    rho: note_data.rho.clone(),
-                    rcm: note.rseed().as_bytes().to_vec(),
-                    diversifier: recipient.diversifier().as_array().to_vec(),
-                    ivtx,
-                    vout,
-                    ..types::Note::default()
-                };
-
-                Ok(Some((note, dbn)))
-            }
+    #[allow(clippy::too_many_arguments)]
+    fn try_decrypt_issuance(
+        _network: &Network,
+        account: u32,
+        scope: u8,
+        ivk: &Self::IVK,
+        height: u32,
+        ivtx: u32,
+        vout: u32,
+        issue_note: &CompactIssueNote,
+        asset_base: &AssetBase,
+    ) -> Result<Option<(Self::Note, types::Note)>> {
+        let recipient_bytes: [u8; 43] = issue_note.recipient.as_slice().try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid issuance note recipient length"))?;
+        let parsed_addr = Address::from_raw_address_bytes(&recipient_bytes);
+        if parsed_addr.is_none().into() {
+            return Ok(None);
         }
+        let parsed_addr = parsed_addr.unwrap();
+        let d = parsed_addr.diversifier();
+        let our_addr = ivk.address(d);
+        if our_addr.to_raw_address_bytes() != recipient_bytes {
+            return Ok(None);
+        }
+
+        let (note, cmx_bytes) = construct_issuance_note(issue_note, asset_base)?;
+        let is_zec = bool::from(note.asset().is_zatoshi());
+        let value = note.value().inner();
+        let rho = note.rho();
+        let dbn = types::Note {
+            pool: 2, // Orchard
+            account,
+            scope,
+            height,
+            value,
+            rcm: note.rseed().as_bytes().to_vec(),
+            rho: rho.to_bytes().to_vec(),
+            vout,
+            diversifier: our_addr.diversifier().as_array().to_vec(),
+            ivtx,
+            cmx: cmx_bytes.to_vec(),
+            asset_base: if is_zec { vec![] } else { note.asset().to_bytes().to_vec() },
+            ..types::Note::default()
+        };
+        Ok(Some((note, dbn)))
     }
 
     fn derive_nf(nk: &Self::NK, _position: u32, note: &mut Self::Note) -> Result<Hash32> {
         let nf = note.nullifier(nk);
         Ok(nf.to_bytes())
     }
+}
+
+/// Construct an Orchard note from a plaintext issuance note and return both the
+/// note and its extracted cmx (note commitment x-coordinate).
+fn construct_issuance_note(
+    issue_note: &CompactIssueNote,
+    asset_base: &AssetBase,
+) -> Result<(Note, Hash32)> {
+    let recipient_bytes: [u8; 43] = issue_note.recipient.as_slice().try_into()
+        .map_err(|_| anyhow::anyhow!("Invalid issuance note recipient length"))?;
+    let addr = Address::from_raw_address_bytes(&recipient_bytes);
+    if addr.is_none().into() {
+        anyhow::bail!("Invalid issuance note recipient address");
+    }
+    let addr = addr.unwrap();
+
+    let value = NoteValue::from_raw(issue_note.value);
+    let rho = Rho::from_bytes(
+        issue_note.rho.as_slice().try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid issuance note rho length"))?,
+    );
+    if rho.is_none().into() {
+        anyhow::bail!("Invalid issuance note rho");
+    }
+    let rho = rho.unwrap();
+    let rseed = RandomSeed::from_bytes(
+        issue_note.rseed.as_slice().try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid issuance note rseed length"))?,
+        &rho,
+    );
+    if rseed.is_none().into() {
+        anyhow::bail!("Invalid issuance note rseed");
+    }
+    let rseed = rseed.unwrap();
+
+    let note = Note::from_parts(addr, value, *asset_base, rho, rseed, NoteVersion::V2);
+    if note.is_none().into() {
+        anyhow::bail!("Invalid issuance note");
+    }
+    let note = note.unwrap();
+    let cmx = ExtractedNoteCommitment::from(note.commitment());
+    Ok((note, cmx.to_bytes()))
 }

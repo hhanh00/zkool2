@@ -42,6 +42,10 @@ pub(super) struct Note {
     /// Index within the original per-pool `input_pools[pool]` array so the
     /// caller can map results back after sorting/reordering.
     pub pool_index: usize,
+    /// Asset index: 0 = ZEC, 1+ = ZSA asset. Determines which output
+    /// asset this note can satisfy. ZEC notes only cover ZEC outputs;
+    /// ZSA notes only cover outputs of the same asset.
+    pub asset_index: u8,
 }
 
 /// A required output.  Mirrors `select::Output` so callers in `plan.rs`
@@ -50,6 +54,9 @@ pub(super) struct Note {
 pub(super) struct Output {
     pub pool: u8,
     pub amount: u64,
+    /// Asset index: 0 = ZEC, 1+ = ZSA asset. Only notes of the same
+    /// asset_index can satisfy this output.
+    pub asset_index: u8,
 }
 
 /// Result of a successful coin-selection run.
@@ -75,7 +82,9 @@ const GRACE_ACTIONS: u64 = 2;
 
 #[derive(Clone, Debug)]
 struct State {
-    sum: u64,
+    /// Per-asset input sums. Index 0 = ZEC, index 1+ = ZSA asset.
+    /// Only ZEC (asset 0) can pay the fee.
+    asset_sums: Vec<u64>,
     /// Per-pool balance: inputs_value - outputs_value (including change).
     balance: [i64; N_POOLS],
     /// Number of inputs selected per pool.  Drives the fee computation.
@@ -91,9 +100,10 @@ struct State {
 /// Fixed, precomputed context for a single selection run.
 struct Context<'a> {
     notes: &'a [Note],               // sorted: shielded pools first, then transparent; within pool descending by amount
+    n_assets: u8,                    // total number of distinct assets (1 = ZEC only)
+    asset_output_amounts: Vec<u64>,  // required output amount per asset (index 0 = ZEC)
     output_amounts: [u64; N_POOLS],  // output value per pool (zats)
     n_outputs: [u32; N_POOLS],       // number of fixed recipient outputs per pool
-    output_sum: u64,                 // total output value (zats)
     f_unit: u64,                     // COST_PER_ACTION (5000)
     migration: bool,                 // orchard fee = inputs+outputs instead of max
     recipient_pays_fee: bool,
@@ -207,11 +217,33 @@ fn evaluate(state: &State, ctx: &Context) -> (u64, u8) {
         Mode::Privacy => evaluate_privacy(state, ctx),
     };
     if cost == u64::MAX {
-        info!("evaluate: mode={:?}, sum={}, INFEASIBLE", ctx.mode, state.sum);
+        info!("evaluate: mode={:?}, asset_sums[0]={}, INFEASIBLE", ctx.mode, state.asset_sums[0]);
     } else {
-        info!("evaluate: mode={:?}, sum={}, fee/cost={}, change_pool={}", ctx.mode, state.sum, cost, pool);
+        info!("evaluate: mode={:?}, asset_sums[0]={}, fee/cost={}, change_pool={}", ctx.mode, state.asset_sums[0], cost, pool);
     }
     (cost, pool)
+}
+
+/// Check whether `state` satisfies all asset requirements with the
+/// given `fee` and change-pool assignment.
+fn is_feasible(state: &State, ctx: &Context, fee: u64) -> bool {
+    // Asset 0 (ZEC) must cover ZEC outputs + fee
+    let zec_needed = if ctx.recipient_pays_fee {
+        ctx.asset_output_amounts[0]
+    } else {
+        ctx.asset_output_amounts[0].saturating_add(fee)
+    };
+    if state.asset_sums[0] < zec_needed {
+        return false;
+    }
+
+    // Each ZSA asset (i > 0) must cover its own outputs (no fee)
+    for i in 1..ctx.n_assets as usize {
+        if state.asset_sums[i] < ctx.asset_output_amounts[i] {
+            return false;
+        }
+    }
+    true
 }
 
 /// Fee-mode evaluation: return the lowest fee achievable by assigning
@@ -223,23 +255,18 @@ fn evaluate_fee(state: &State, ctx: &Context) -> (u64, u8) {
     for cp in 0..N_POOLS as u8 {
         let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
 
-        let needed = if ctx.recipient_pays_fee {
-            if fee > ctx.first_recipient_amount {
-                info!(
-                    "evaluate_fee: cp={} SKIP — fee({}) > first_recipient_amount({})",
-                    cp, fee, ctx.first_recipient_amount
-                );
-                continue; // fee exceeds what the first recipient can cover
-            }
-            ctx.output_sum
-        } else {
-            ctx.output_sum.saturating_add(fee)
-        };
+        if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
+            info!(
+                "evaluate_fee: cp={} SKIP — fee({}) > first_recipient_amount({})",
+                cp, fee, ctx.first_recipient_amount
+            );
+            continue;
+        }
 
-        let feasible = state.sum >= needed;
+        let feasible = is_feasible(state, ctx, fee);
         info!(
-            "evaluate_fee: cp={} fee={} needed={} sum={} feasible={} best_fee={}",
-            cp, fee, needed, state.sum, feasible, best_fee
+            "evaluate_fee: cp={} fee={} asset_sums[0]={} feasible={} best_fee={}",
+            cp, fee, state.asset_sums[0], feasible, best_fee
         );
 
         if feasible && fee < best_fee {
@@ -260,20 +287,20 @@ fn evaluate_privacy(state: &State, ctx: &Context) -> (u64, u8) {
     for cp in 0..N_POOLS as u8 {
         let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
 
-        let needed = if ctx.recipient_pays_fee {
-            if fee > ctx.first_recipient_amount {
-                continue;
-            }
-            ctx.output_sum
-        } else {
-            ctx.output_sum.saturating_add(fee)
-        };
-
-        if state.sum < needed {
+        if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
             continue;
         }
 
-        let change = state.sum.saturating_sub(needed);
+        if !is_feasible(state, ctx, fee) {
+            continue;
+        }
+
+        let zec_needed = if ctx.recipient_pays_fee {
+            ctx.asset_output_amounts[0]
+        } else {
+            ctx.asset_output_amounts[0].saturating_add(fee)
+        };
+        let change = state.asset_sums[0].saturating_sub(zec_needed);
 
         // Turnstile: transparent value + per-pool shielded imbalance.
         // All transparent value passes through the turnstile.
@@ -316,6 +343,15 @@ fn lower_bound_fee(state: &State, ctx: &Context) -> u64 {
     for cp in 0..N_POOLS as u8 {
         let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
         if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
+            continue;
+        }
+        // Only consider fees that could be feasible given current ZEC sum
+        let zec_needed = if ctx.recipient_pays_fee {
+            ctx.asset_output_amounts[0]
+        } else {
+            ctx.asset_output_amounts[0].saturating_add(fee)
+        };
+        if state.asset_sums[0] < zec_needed {
             continue;
         }
         if fee < min_fee {
@@ -367,7 +403,7 @@ fn initial_state(ctx: &Context) -> State {
         balance[p] = -(ctx.output_amounts[p] as i64);
     }
     State {
-        sum: 0,
+        asset_sums: vec![0u64; ctx.n_assets as usize],
         balance,
         n_inputs: [0; N_POOLS],
         tin: 0,
@@ -379,8 +415,8 @@ fn initial_state(ctx: &Context) -> State {
 /// Apply picking `note_idx` on top of `state`, returning a new child state.
 fn apply(state: &State, note_idx: usize, note: &Note) -> State {
     let mut child = state.clone();
-    child.sum += note.amount;
     child.selected.push(note_idx);
+    child.asset_sums[note.asset_index as usize] += note.amount;
     child.n_inputs[note.pool as usize] = child.n_inputs[note.pool as usize].saturating_add(1);
 
     match note.pool {
@@ -454,13 +490,14 @@ fn top_k_by_local_heuristic<'a>(
 /// Balances rounded to nearest QUANT zats to bound the `seen` map size.
 const QUANT: i64 = 1000;
 
-type StateKey = (u64, [i64; N_POOLS], u64, [u32; N_POOLS]);
-//            = (sum, quantized_balances, tout, n_inputs)
+type StateKey = (Vec<i64>, [i64; N_POOLS], u64, [u32; N_POOLS]);
+//              asset_sums(q)  balance(q)     tout  n_inputs
 
 fn state_key(state: &State) -> StateKey {
     let q = |b: i64| (b / QUANT) * QUANT;
+    let q_u64 = |v: u64| ((v as i64) / QUANT) * QUANT;
     (
-        state.sum,
+        state.asset_sums.iter().map(|&s| q_u64(s)).collect(),
         [
             q(state.balance[0]), q(state.balance[1]),
             q(state.balance[2]), q(state.balance[3]),
@@ -573,17 +610,23 @@ pub(super) fn select_notes(
     let mut output_amounts = [0u64; N_POOLS];
     let mut n_outputs = [0u32; N_POOLS];
     let mut output_sum = 0u64;
+
+    // Derive n_assets and per-asset output amounts from outputs
+    let n_assets = outputs.iter().map(|o| o.asset_index).max().unwrap_or(0) + 1;
+    let mut asset_output_amounts = vec![0u64; n_assets as usize];
+
     for o in outputs {
         let p = o.pool as usize;
         if p < N_POOLS {
             output_amounts[p] = output_amounts[p].saturating_add(o.amount);
             n_outputs[p] = n_outputs[p].saturating_add(1);
-            output_sum = output_sum.saturating_add(o.amount);
         }
+        output_sum = output_sum.saturating_add(o.amount);
+        asset_output_amounts[o.asset_index as usize] += o.amount;
     }
     info!(
-        "select_notes: output_sum={} zats, n_outputs={:?}, output_amounts={:?}",
-        output_sum, n_outputs, output_amounts
+        "select_notes: output_sum={} zats, n_assets={}, asset_output_amounts={:?}, n_outputs={:?}, output_amounts={:?}",
+        output_sum, n_assets, asset_output_amounts, n_outputs, output_amounts
     );
 
     // ---- 3. Sort notes: shielded pools first, then transparent; within each
@@ -598,9 +641,10 @@ pub(super) fn select_notes(
     // ---- 4. Build context -------------------------------------------------
     let ctx = Context {
         notes: &sorted,
+        n_assets,
+        asset_output_amounts,
         output_amounts,
         n_outputs,
-        output_sum,
         f_unit,
         migration,
         recipient_pays_fee,
@@ -613,8 +657,8 @@ pub(super) fn select_notes(
     let (mut best_state, mut best_cost, mut best_pool) = match greedy_solution(&ctx) {
         Some((state, cost, pool)) => {
             info!(
-                "select_notes: greedy found solution — sum={}, fee={}, change_pool={}, n_inputs={:?}",
-                state.sum, cost, pool, state.n_inputs
+                "select_notes: greedy found solution — asset_sums[0]={}, fee={}, change_pool={}, n_inputs={:?}",
+                state.asset_sums[0], cost, pool, state.n_inputs
             );
             (state, cost, pool)
         }
@@ -629,14 +673,14 @@ pub(super) fn select_notes(
                 s
             };
             info!(
-                "select_notes: all-notes state sum={}, n_inputs={:?}",
-                state.sum, state.n_inputs
+                "select_notes: all-notes state asset_sums[0]={}, n_inputs={:?}",
+                state.asset_sums[0], state.n_inputs
             );
             let (cost, pool) = evaluate(&state, &ctx);
             if cost == u64::MAX {
                 info!(
-                    "select_notes: FAIL — all notes (sum={}) still infeasible. output_sum={}, recipient_pays_fee={}, first_recipient={}",
-                    state.sum, output_sum, recipient_pays_fee, first_recipient_amount
+                    "select_notes: FAIL — all notes (asset_sums[0]={}) still infeasible. output_sum={}, recipient_pays_fee={}, first_recipient={}",
+                    state.asset_sums[0], output_sum, recipient_pays_fee, first_recipient_amount
                 );
                 return None;
             }
@@ -694,9 +738,10 @@ pub(super) fn select_notes(
             continue;
         }
 
-        // Overshoot cap
+        // Overshoot cap: skip if ZEC sum already exceeds output + max single note
+        // (additional notes beyond this can't improve the solution)
         let max_remaining = remaining.iter().map(|(_, n)| n.amount).max().unwrap_or(0);
-        if state.sum > ctx.output_sum.saturating_add(max_remaining) {
+        if state.asset_sums[0] > ctx.asset_output_amounts[0].saturating_add(max_remaining) {
             continue;
         }
 
@@ -743,11 +788,11 @@ pub(super) fn select_notes(
     };
 
     let change_needed = if recipient_pays_fee {
-        ctx.output_sum
+        ctx.asset_output_amounts[0]
     } else {
-        ctx.output_sum.saturating_add(fee)
+        ctx.asset_output_amounts[0].saturating_add(fee)
     };
-    let change_amount = best_state.sum.saturating_sub(change_needed);
+    let change_amount = best_state.asset_sums[0].saturating_sub(change_needed);
 
     // Gather inputs and per-pool indices
     let inputs: Vec<Note> = best_state.selected.iter().map(|&idx| ctx.notes[idx].clone()).collect();
@@ -778,18 +823,18 @@ mod tests {
     #[test]
     fn test_select_notes_basic() {
         let notes = vec![
-            Note { pool: 1, amount: 120_000, pool_index: 0 },
-            Note { pool: 1, amount: 80_000, pool_index: 1 },
-            Note { pool: 1, amount: 30_000, pool_index: 2 },
-            Note { pool: 2, amount: 200_000, pool_index: 0 },
-            Note { pool: 2, amount: 15_000, pool_index: 1 },
-            Note { pool: 3, amount: 60_000, pool_index: 0 },
-            Note { pool: 0, amount: 500_000, pool_index: 0 },
+            Note { pool: 1, amount: 120_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 1, amount: 80_000, pool_index: 1, asset_index: 0 },
+            Note { pool: 1, amount: 30_000, pool_index: 2, asset_index: 0 },
+            Note { pool: 2, amount: 200_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 2, amount: 15_000, pool_index: 1, asset_index: 0 },
+            Note { pool: 3, amount: 60_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 0, amount: 500_000, pool_index: 0, asset_index: 0 },
         ];
 
         let outputs = vec![
-            Output { pool: 1, amount: 150_000 },
-            Output { pool: 2, amount: 100_000 },
+            Output { pool: 1, amount: 150_000, asset_index: 0 },
+            Output { pool: 2, amount: 100_000, asset_index: 0 },
         ];
 
         let f_unit = 5_000u64;
@@ -824,11 +869,11 @@ mod tests {
     fn test_select_notes_dust_filtered() {
         // Notes below f_unit (5000) should be filtered out
         let notes = vec![
-            Note { pool: 1, amount: 120, pool_index: 0 },       // dust
-            Note { pool: 1, amount: 4_000, pool_index: 1 },     // dust
-            Note { pool: 2, amount: 1_000_000, pool_index: 0 }, // only usable note
+            Note { pool: 1, amount: 120, pool_index: 0, asset_index: 0 },       // dust
+            Note { pool: 1, amount: 4_000, pool_index: 1, asset_index: 0 },     // dust
+            Note { pool: 2, amount: 1_000_000, pool_index: 0, asset_index: 0 }, // only usable note
         ];
-        let outputs = vec![Output { pool: 2, amount: 500_000 }];
+        let outputs = vec![Output { pool: 2, amount: 500_000, asset_index: 0 }];
         let f_unit = 5_000u64;
 
         let sel = select_notes(&notes, &outputs, f_unit, false, false, 0, Mode::Fee)
@@ -842,11 +887,11 @@ mod tests {
     #[test]
     fn test_select_notes_recipient_pays_fee() {
         let notes = vec![
-            Note { pool: 2, amount: 200_000, pool_index: 0 },
-            Note { pool: 2, amount: 100_000, pool_index: 1 },
-            Note { pool: 2, amount: 50_000, pool_index: 2 },
+            Note { pool: 2, amount: 200_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 2, amount: 100_000, pool_index: 1, asset_index: 0 },
+            Note { pool: 2, amount: 50_000, pool_index: 2, asset_index: 0 },
         ];
-        let outputs = vec![Output { pool: 2, amount: 150_000 }];
+        let outputs = vec![Output { pool: 2, amount: 150_000, asset_index: 0 }];
         let f_unit = 5_000u64;
 
         // First recipient has 200_000, fee will be well under that
@@ -868,12 +913,12 @@ mod tests {
     #[test]
     fn test_select_notes_recipient_pays_fee_too_high() {
         let notes = vec![
-            Note { pool: 2, amount: 200_000, pool_index: 0 },
-            Note { pool: 2, amount: 100_000, pool_index: 1 },
-            Note { pool: 1, amount: 300_000, pool_index: 0 },
-            Note { pool: 0, amount: 500_000, pool_index: 0 },
+            Note { pool: 2, amount: 200_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 2, amount: 100_000, pool_index: 1, asset_index: 0 },
+            Note { pool: 1, amount: 300_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 0, amount: 500_000, pool_index: 0, asset_index: 0 },
         ];
-        let outputs = vec![Output { pool: 2, amount: 150_000 }];
+        let outputs = vec![Output { pool: 2, amount: 150_000, asset_index: 0 }];
         let f_unit = 5_000u64;
 
         // First recipient only has 1_000 zats — fee will exceed that
@@ -890,9 +935,9 @@ mod tests {
     #[test]
     fn test_select_notes_insufficient_funds() {
         let notes = vec![
-            Note { pool: 2, amount: 10_000, pool_index: 0 },
+            Note { pool: 2, amount: 10_000, pool_index: 0, asset_index: 0 },
         ];
-        let outputs = vec![Output { pool: 2, amount: 1_000_000 }];
+        let outputs = vec![Output { pool: 2, amount: 1_000_000, asset_index: 0 }];
         let f_unit = 5_000u64;
 
         let result = select_notes(&notes, &outputs, f_unit, false, false, 0, Mode::Fee);

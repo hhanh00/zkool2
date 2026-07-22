@@ -11,11 +11,12 @@ use sqlx::{Row, SqliteConnection};
 use tokio::sync::mpsc::Sender;
 use tracing::{enabled, debug};
 
+use ::orchard::issuance::auth::{IssueValidatingKey, ZSASchnorr};
+use ::orchard::note::{AssetBase, AssetId};
+use crate::lwd::{CompactBlock, CompactIssueNote, CompactTx};
 use crate::warp::{Edge, Hasher, Witness, MERKLE_DEPTH};
 use crate::Hash32;
 use zcash_trees::types::{Note, Transaction, WarpSyncMessage, UTXO};
-
-use super::block::{SyncBlock, SyncTx};
 
 pub mod ironwood;
 pub mod orchard;
@@ -29,30 +30,17 @@ pub trait ShieldedProtocol {
     type Spend;
     type Output: Sync;
 
-    /// Issuance key type. Set to `()` for protocols that don't support issuance.
+    /// Issuance key type. Set to `()` for all protocols — issuance note
+    /// synthesis has been removed in favor of trial decryption via actions.
     type IssueAuth: Sync;
-
-    /// Whether this protocol supports issuance note synthesis.
-    fn supports_issuance() -> bool {
-        false
-    }
 
     fn extract_ivk(
         connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
     ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
-    /// Resolve issuance key per account. Only called when `supports_issuance()`.
-    /// Returns `(issue_auth, nk)` for ik-matching and nullifier derivation.
-    fn extract_issue_auth(
-        _connection: &mut SqliteConnection,
-        _account: u32,
-        _coin_type: u32,
-    ) -> impl std::future::Future<Output = Result<Option<(Self::IssueAuth, Self::NK)>>> {
-        async { Ok(None) }
-    }
-    fn extract_inputs(tx: &SyncTx) -> &Vec<Self::Spend>;
-    fn extract_outputs(tx: &SyncTx) -> &Vec<Self::Output>;
+    fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend>;
+    fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output>;
 
     fn extract_nf(i: &Self::Spend) -> Hash32;
     fn extract_cmx(o: &Self::Output) -> Hash32;
@@ -70,6 +58,36 @@ pub trait ShieldedProtocol {
     ) -> Result<Option<(Self::Note, Note)>>;
 
     fn derive_nf(nk: &Self::NK, position: u32, note: &mut Self::Note) -> Result<Hash32>;
+
+    /// Process a plaintext issuance note. No trial decryption — the note fields
+    /// are unencrypted. Checks if `recipient` matches `ivk`, constructs the
+    /// protocol note, computes its cmx, and returns the result.
+    #[allow(clippy::too_many_arguments)]
+    fn try_decrypt_issuance(
+        _network: &Network,
+        _account: u32,
+        _scope: u8,
+        _ivk: &Self::IVK,
+        _height: u32,
+        _ivtx: u32,
+        _vout: u32,
+        _issue_note: &CompactIssueNote,
+        _asset_base: &AssetBase,
+    ) -> Result<Option<(Self::Note, Note)>> {
+        Ok(None) // default: no issuance support
+    }
+
+    /// Compute the note commitment (cmx) for a plaintext issuance note.
+    /// This is independent of wallet keys — used for tree building for all
+    /// issuance notes, including ones we don't own.
+    /// Returns `Ok(None)` for protocols that don't support issuance;
+    /// `Ok(Some(cmx))` on success; `Err` only on malformed data.
+    fn compute_issuance_cmx(
+        _issue_note: &CompactIssueNote,
+        _asset_base: &AssetBase,
+    ) -> Result<Option<Hash32>> {
+        Ok(None) // default: issuance not supported
+    }
 }
 
 #[derive(Debug)]
@@ -175,7 +193,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         self.keys.is_empty()
     }
 
-    pub async fn add(&mut self, blocks: &[SyncBlock]) -> Result<()> {
+    pub async fn add(&mut self, blocks: &[CompactBlock]) -> Result<()> {
         if blocks.is_empty() {
             return Ok(());
         }
@@ -211,7 +229,91 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 })
             })
             .collect::<Vec<_>>();
-        debug!("Notes #{}", notes.len());
+        debug!("Action notes #{}", notes.len());
+
+        // Process issuance notes from vtx.issuances — plaintext, no trial
+        // decryption needed.  Per tx we track the cmxs (for tree building)
+        // and the total count (for position tracking).  Only the Orchard
+        // protocol supports ZSA issuance (gated by supports_issuance()).
+        let mut issuance_cmxs: Vec<(u32, u32, Vec<[u8; 32]>)> = Vec::new();
+        for cb in blocks.iter() {
+            for (ivtx, tx) in cb.vtx.iter().enumerate() {
+                let height = cb.height as u32;
+                let actions_len = P::extract_outputs(tx).len() as u32;
+                let mut tx_issuance_cmxs: Vec<[u8; 32]> = Vec::new();
+                let mut note_vout = actions_len;
+
+                for iss in &tx.issuances {
+                    let desc_hash: [u8; 32] = iss.asset_desc_hash.as_slice()
+                        .try_into()
+                        .map_err(|_| anyhow::anyhow!("Invalid asset_desc_hash length"))?;
+                    let ik = IssueValidatingKey::<ZSASchnorr>::decode(&iss.ik)
+                        .map_err(|e| anyhow::anyhow!("Invalid issuer key: {e}"))?;
+                    let asset_id = AssetId::new_v0(&ik, &desc_hash);
+                    let asset_base = AssetBase::custom(&asset_id);
+
+                    for note in &iss.notes {
+                        // Compute cmx for tree building. Returns None for
+                        // protocols that don't support issuance (Sapling, Ironwood).
+                        if let Some(cmx) = P::compute_issuance_cmx(note, &asset_base)? {
+                            debug!(
+                                "Issuance cmx: height={} ivtx={} vout={} cmx={}",
+                                height,
+                                ivtx,
+                                note_vout,
+                                hex::encode(cmx)
+                            );
+                            tx_issuance_cmxs.push(cmx);
+                        }
+
+                        // Check if this note belongs to any of our wallet keys.
+                        for (account, scope, ivk, nk) in &self.keys {
+                            if let Some((n, dbn)) = P::try_decrypt_issuance(
+                                &network,
+                                *account,
+                                *scope,
+                                ivk,
+                                height,
+                                ivtx as u32,
+                                note_vout,
+                                note,
+                                &asset_base,
+                            )
+                            .unwrap_or_else(|e| {
+                                tracing::warn!("issuance decrypt error: {e}");
+                                None
+                            }) {
+                                notes.push((n, dbn, nk));
+                            }
+                        }
+                        note_vout += 1;
+                    }
+                }
+
+                if !tx_issuance_cmxs.is_empty() {
+                    issuance_cmxs.push((height, ivtx as u32, tx_issuance_cmxs));
+                }
+            }
+        }
+        debug!("Notes total (actions + issuances) #{}", notes.len());
+
+        // Build a lookup of per-tx issuance note counts for position tracking.
+        let mut issuance_count: std::collections::HashMap<(u32, u32), u32> =
+            std::collections::HashMap::new();
+        for (height, ivtx, cmxs) in &issuance_cmxs {
+            issuance_count.insert((*height, *ivtx), cmxs.len() as u32);
+        }
+
+        // Sort by (height, ivtx, vout) so issuance notes are interleaved
+        // with action notes within the same transaction. Without this sort,
+        // issuance notes appended after all action notes would never be
+        // reached by the block-iteration note_iterator below.
+        notes.sort_by(|(_, a, _), (_, b, _)| {
+            a.height
+                .cmp(&b.height)
+                .then_with(|| a.ivtx.cmp(&b.ivtx))
+                .then_with(|| a.vout.cmp(&b.vout))
+        });
 
         let mut note_iterator = notes.iter_mut();
         let mut note = note_iterator.next();
@@ -252,7 +354,11 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                         _ => break,
                     }
                 }
-                position += P::extract_outputs(tx).len() as u32;
+                let extra = issuance_count
+                    .get(&(cb.height as u32, ivtx as u32))
+                    .copied()
+                    .unwrap_or(0);
+                position += P::extract_outputs(tx).len() as u32 + extra;
             }
         }
 
@@ -274,6 +380,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let mut cmxs = vec![];
         let mut count_cmxs = 0;
 
+        debug!("WS starting position {}-{}", self.position, position);
         for depth in 0..MERKLE_DEPTH as usize {
             let mut position = self.position >> depth;
             if position % 2 == 1 {
@@ -282,11 +389,24 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
 
             if depth == 0 {
+                // Build lookup for issuance cmxs per (height, ivtx)
+                let issuance_cmx_map: std::collections::HashMap<(u32, u32), &[[u8; 32]]> =
+                    issuance_cmxs.iter().map(|(h, i, c)| ((*h, *i), c.as_slice())).collect();
+
                 for cb in blocks.iter() {
-                    for vtx in cb.vtx.iter() {
+                    for (ivtx, vtx) in cb.vtx.iter().enumerate() {
                         for co in P::extract_outputs(vtx).iter() {
                             let cmx = P::extract_cmx(co);
                             cmxs.push(Some(cmx));
+                        }
+                        // Append issuance note cmxs after actions within the same tx
+                        if let Some(iss_cmxs) =
+                            issuance_cmx_map.get(&(cb.height as u32, ivtx as u32))
+                        {
+                            for cmx in *iss_cmxs {
+                                cmxs.push(Some(*cmx));
+                            }
+                            count_cmxs += iss_cmxs.len();
                         }
                         count_cmxs += P::extract_outputs(vtx).len();
                     }

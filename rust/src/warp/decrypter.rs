@@ -232,8 +232,12 @@ pub fn try_orchard_decrypt(
                     false
                 };
                 if matched {
-                    // Always 32 bytes: [0u8; 32] for ZEC, non-zero for ZSA
-                    let asset_base = note.asset().to_bytes().to_vec();
+                    let is_zec = bool::from(note.asset().is_zatoshi());
+                    let asset_base = if is_zec {
+                        vec![]
+                    } else {
+                        note.asset().to_bytes().to_vec()
+                    };
                     let dbn = Note {
                         pool: 2,
                         account,

@@ -1,22 +1,18 @@
 use std::{collections::HashSet, time::Duration};
 
 use anyhow::{Context as _, Result};
-use bip39::Mnemonic;
 use shielded::Synchronizer;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use std::collections::HashMap;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::debug;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 use zcash_trees::network::Network;
 
-use orchard::{
-    note::{AssetBase, AssetId, ExtractedNoteCommitment, RandomSeed, Rho},
-    issuance::auth::{IssueAuthKey, IssueValidatingKey, ZSASchnorr},
-    value::NoteValue,
-    Address,
-};
+use orchard::note::AssetBase;
+use orchard::issuance::auth::IssueValidatingKey;
+use orchard::note::AssetId;
+use orchard::issuance::auth::ZSASchnorr;
 
 use crate::{
     lwd::CompactBlock,
@@ -28,7 +24,6 @@ use super::legacy::CommitmentTreeFrontier;
 
 pub use zcash_trees::types::SyncError;
 
-pub mod block;
 mod shielded;
 
 pub type SaplingSync = Synchronizer<shielded::sapling::SaplingProtocol>;
@@ -41,126 +36,6 @@ pub enum BlockMessage {
     Cancel,
     StallAbort,
     Reorg(Vec<u32>, u32),
-}
-
-/// Preprocess CompactBlocks into SyncBlocks, merging issuance notes into the
-/// unified `orchard_outputs` list per transaction. Resolves ik→account ownership
-/// so `try_decrypt` can match issuance notes without re-deriving keys.
-async fn preprocess(
-    blocks: &[CompactBlock],
-    accounts: &[(u32, bool)],
-    connection: &mut SqliteConnection,
-    network: &Network,
-) -> Result<Vec<block::SyncBlock>> {
-    use orchard::note::{AssetBase as OrchardAssetBase, AssetId as OrchardAssetId};
-
-    // Resolve which accounts own which issuance keys
-    let mut ik_owners: HashMap<Vec<u8>, u32> = HashMap::new();
-    let coin_type = match network.network_type() {
-        zcash_protocol::consensus::NetworkType::Main => 133u32,
-        _ => 1u32,
-    };
-    for (account, _) in accounts.iter() {
-        if let Ok(Some(seed_info)) =
-            crate::account::get_account_seed(&mut *connection, *account).await
-        {
-            if let Ok(mnemonic) = Mnemonic::parse(seed_info.mnemonic) {
-                let seed = mnemonic.to_seed(&seed_info.phrase);
-                if let Ok(isk) =
-                    IssueAuthKey::<ZSASchnorr>::from_zip32_seed(&seed, coin_type, 0)
-                {
-                    let my_ik: IssueValidatingKey<ZSASchnorr> =
-                        IssueValidatingKey::from(&isk);
-                    ik_owners.insert(my_ik.encode(), *account);
-                }
-            }
-        }
-    }
-
-    let mut sync_blocks = Vec::with_capacity(blocks.len());
-    for cb in blocks {
-        let mut sync_vtx = Vec::with_capacity(cb.vtx.len());
-        for vtx in &cb.vtx {
-            // Copy orchard actions as OrchardOutput::Action
-            let mut orchard_outputs: Vec<block::OrchardOutput> = vtx
-                .actions
-                .iter()
-                .cloned()
-                .map(block::OrchardOutput::Action)
-                .collect();
-
-            // Append issuance notes as OrchardOutput::Issuance
-            for iss in &vtx.issuances {
-                let desc_hash: [u8; 32] =
-                    iss.asset_desc_hash.as_slice().try_into().unwrap();
-                let ik = IssueValidatingKey::<ZSASchnorr>::decode(&iss.ik)
-                    .expect("invalid issuer key in issuance");
-                let oasset_id = OrchardAssetId::new_v0(&ik, &desc_hash);
-                let asset_base = OrchardAssetBase::custom(&oasset_id);
-                let asset_base_bytes = asset_base.to_bytes().to_vec();
-                let ik_owner = ik_owners.get(&iss.ik).copied();
-
-                for note_data in &iss.notes {
-                    // Zip-227 requires a zero-value reference note as the
-                    // first note on first issuance. Its cmx must enter the
-                    // Merkle tree, but we must not create a wallet note for it.
-                    let owner = if note_data.value == 0 {
-                        None
-                    } else {
-                        ik_owner
-                    };
-                    // Compute cmx from plaintext note fields
-                    let recipient_bytes: [u8; 43] =
-                        note_data.recipient.as_slice().try_into().unwrap();
-                    let recipient =
-                        Address::from_raw_address_bytes(&recipient_bytes).unwrap();
-                    let rho_bytes: [u8; 32] =
-                        note_data.rho.as_slice().try_into().unwrap();
-                    let rho = Rho::from_bytes(&rho_bytes).unwrap();
-                    let rseed_bytes: [u8; 32] =
-                        note_data.rseed.as_slice().try_into().unwrap();
-                    let rseed = RandomSeed::from_bytes(rseed_bytes, &rho).unwrap();
-                    let note = orchard::note::Note::from_parts(
-                        recipient,
-                        NoteValue::from_raw(note_data.value),
-                        asset_base,
-                        rho,
-                        rseed,
-                    orchard::NoteVersion::V2)
-                    .unwrap();
-                    let cmx =
-                        ExtractedNoteCommitment::from(note.commitment()).to_bytes();
-
-                    orchard_outputs.push(block::OrchardOutput::Issuance {
-                        note: note_data.clone(),
-                        ik: iss.ik.clone(),
-                        asset_desc_hash: iss.asset_desc_hash.clone(),
-                        asset_base: asset_base_bytes.clone(),
-                        cmx,
-                        owner,
-                    });
-                }
-            }
-
-            sync_vtx.push(block::SyncTx {
-                hash: vtx.hash.clone(),
-                spends: vtx.spends.clone(),
-                sapling_outputs: vtx.outputs.clone(),
-                orchard_actions: vtx.actions.clone(),
-                orchard_outputs,
-                ironwood_actions: vtx.ironwood_actions.clone(),
-                issuances: vtx.issuances.clone(),
-            });
-        }
-        sync_blocks.push(block::SyncBlock {
-            height: cb.height,
-            hash: cb.hash.clone(),
-            prev_hash: cb.prev_hash.clone(),
-            time: cb.time,
-            vtx: sync_vtx,
-        });
-    }
-    Ok(sync_blocks)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -325,15 +200,9 @@ pub async fn warp_sync(
             BlockMessage::Chunk(bs) => {
                 debug!("Processing {} blocks", bs.len());
 
-                // Preprocess: convert CompactBlock → SyncBlock, merging
-                // issuance notes into orchard_outputs per transaction.
-                let sync_blocks = preprocess(&bs, accounts, &mut *connection, network)
-                    .await
-                    .context("preprocessing blocks")?;
-
                 // Send Issuance messages for asset storage before any Note
                 // messages (same transaction ordering guarantee).
-                for cb in &sync_blocks {
+                for cb in &bs {
                     for vtx in &cb.vtx {
                         for iss in &vtx.issuances {
                             let desc_hash: [u8; 32] =
@@ -356,15 +225,13 @@ pub async fn warp_sync(
                     }
                 }
 
-                sap_dec.add(&sync_blocks).await?;
-                orch_dec.add(&sync_blocks).await?;
+                sap_dec.add(&bs).await?;
+                orch_dec.add(&bs).await?;
                 if let Some(ref mut ironwood_dec) = ironwood_dec {
-                    ironwood_dec.add(&sync_blocks).await?;
+                    ironwood_dec.add(&bs).await?;
                 }
 
                 let lcb = bs.last().unwrap();
-                // Use the last original block for header (sync_blocks is
-                // already consumed by add()).
                 let bh = BlockHeader {
                     height: lcb.height as u32,
                     hash: lcb.hash.clone(),
