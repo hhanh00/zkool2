@@ -1,6 +1,7 @@
-//! Orchard-to-Orchard transfer integration test against a live LWD server.
+//! Orchard-to-Orchard transfer and ZSA issuance integration tests against
+//! a live LWD server.
 //!
-//! This test requires network access to `zsa.methyl.cc` and is ignored by
+//! These tests require network access to `zsa.methyl.cc` and are ignored by
 //! default. Run with:
 //!
 //! ```bash
@@ -9,18 +10,25 @@
 
 use rlz::api::account::{get_addresses, new_account, NewAccount};
 use rlz::api::coin::Coin;
+use rlz::api::issuance::issue_asset;
 use rlz::api::network::get_current_height;
 use rlz::api::pay::{broadcast_transaction, extract_transaction, sign_transaction, PaymentOptions};
+use rlz::api::zsa::list_zsa_holdings;
 use rlz::pay::pool::ALL_POOLS;
 use rlz::pay::Recipient;
 use rlz::sync::synchronize_impl;
 
 const SEED_PHRASE: &str = "equal clock rain latin plastic toss scrub modify clarify fold armor exchange gesture erase habit plug state forward demise demand limb risk only document";
 
-/// Sync a faucet account, then send half its Orchard balance to a recipient.
-#[tokio::test]
-#[ignore = "requires live connection to zsa.methyl.cc"]
-async fn test_orchard_transfer() {
+/// Shared test fixture: a synced, funded account on ZSA regtest.
+struct TestContext {
+    coin: Coin,
+    account_id: u32,
+    #[allow(dead_code)]
+    db_path: String,
+}
+
+async fn setup_zsa_test() -> TestContext {
     // Install rustls crypto provider (required for TLS to LWD server)
     let _ = rustls::crypto::ring::default_provider().install_default();
 
@@ -87,7 +95,24 @@ async fn test_orchard_transfer() {
     .expect("sync");
     println!("Synced to height: {height}");
 
-    // -- 4. Check ZEC balance (0=T,1=S,2=O,3=IW) --
+    TestContext {
+        coin,
+        account_id,
+        db_path,
+    }
+}
+
+/// Sync a faucet account, then send half its Orchard balance to a recipient.
+#[tokio::test]
+#[ignore = "requires live connection to zsa.methyl.cc"]
+async fn test_orchard_transfer() {
+    let TestContext {
+        coin,
+        account_id,
+        db_path: _,
+    } = setup_zsa_test().await;
+
+    // -- Check ZEC balance (0=T,1=S,2=O,3=IW) --
     let bal = rlz::api::sync::balance(&coin).await.expect("balance");
     println!(
         "ZEC balance: T={} S={} O={} IW={}",
@@ -101,64 +126,14 @@ async fn test_orchard_transfer() {
     let send_amount = orchard_bal / 2;
     println!("Sending {send_amount} zats from Orchard pool");
 
-    // // -- 5. Issue a new ZSA asset --
-    // let asset_name = format!("TEST{}", std::process::id());
-    // let issue_amount = 1_000_000u64;
-    // println!("Issuing asset '{asset_name}' amount={issue_amount}...");
-    //
-    // let tx_bytes = issue_asset(
-    //     asset_name.clone(),
-    //     issue_amount,
-    //     true,  // first_issuance
-    //     false, // finalize
-    //     None,  // desc_hash (computed from name)
-    //     account_id,
-    //     &coin,
-    // )
-    // .await
-    // .expect("issue asset");
-    // println!("Issuance tx: {} bytes", tx_bytes.len());
-    //
-    // // -- 6. Broadcast the issuance (must use real chain height for expiry) --
-    // let txid = broadcast_transaction(real_height, &tx_bytes, &coin)
-    //     .await
-    //     .expect("broadcast issuance");
-    // println!("Issuance broadcast: {txid}");
-    //
-    // // -- 7. Wait for mining and re-sync --
-    // println!("Waiting for mining...");
-    // tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-    //
-    // synchronize_impl(
-    //     (), vec![account_id], real_height, 10000, 100, 10000, false, &coin,
-    // ).await.expect("re-sync");
-    // println!("Re-synced to height: {real_height}");
-    //
-    // // -- 8. Verify the asset appears --
-    // let holdings = list_zsa_holdings(&coin).await.expect("list holdings after issuance");
-    // println!("ZSA holdings after issuance: {}", holdings.len());
-    // for h in &holdings {
-    //     println!(
-    //         "  {}: balance={} base={}",
-    //         h.asset_name,
-    //         h.balance,
-    //         hex::encode(&h.asset_base)
-    //     );
-    // }
-    // assert!(!holdings.is_empty(), "should have the issued asset");
-    //
-    // let zsa = holdings.iter().find(|h| h.asset_name == asset_name)
-    //     .expect("issued asset not found");
-    // assert!(zsa.balance >= issue_amount, "balance should be at least issued amount");
-
-    // -- 9. Get own UA for self-transfer --
+    // -- Get own UA for self-transfer --
     let addresses = get_addresses(ALL_POOLS, &coin)
         .await
         .expect("get addresses");
     let ua = addresses.ua.expect("own UA");
     println!("Own UA: {ua}");
 
-    // -- 10. Self-send half the Orchard balance --
+    // -- Self-send half the Orchard balance --
     let recipient = Recipient {
         address: ua,
         amount: send_amount,
@@ -192,14 +167,14 @@ async fn test_orchard_transfer() {
     let tx_bytes = extract_transaction(&signed).await.expect("extract");
     println!("Transfer tx: {} bytes", tx_bytes.len());
 
-    // -- 11. Broadcast the transfer --
+    // -- Broadcast the transfer --
     let height = get_current_height(&coin).await.expect("get current height");
     let txid = broadcast_transaction(height, &tx_bytes, &coin)
         .await
         .expect("broadcast transfer");
     println!("Transfer broadcast: {txid}");
 
-    // -- 12. Re-sync and verify --
+    // -- Re-sync and verify --
     println!("Waiting for mining...");
     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 
@@ -230,7 +205,99 @@ async fn test_orchard_transfer() {
         "should still have Orchard balance after self-transfer"
     );
 
-    // Clean up
-    let _ = std::fs::remove_file(&db_path);
+    println!("Test passed.");
+}
+
+/// Sync a faucet account, issue a new ZSA asset, and verify it appears in holdings.
+#[tokio::test]
+#[ignore = "requires live connection to zsa.methyl.cc"]
+async fn test_zsa_issuance() {
+    let TestContext {
+        coin,
+        account_id,
+        db_path: _,
+    } = setup_zsa_test().await;
+
+    // -- Check ZEC balance (need funds for the issuance fee) --
+    let bal = rlz::api::sync::balance(&coin).await.expect("balance");
+    println!(
+        "ZEC balance: T={} S={} O={} IW={}",
+        bal.0[0], bal.0[1], bal.0[2], bal.0[3]
+    );
+    assert!(
+        bal.0[2] > 0,
+        "faucet account should have Orchard balance for issuance fee"
+    );
+
+    // -- Issue a new ZSA asset --
+    let asset_name = format!("TEST{}", std::process::id());
+    let issue_amount = 1_000_000u64;
+    println!("Issuing asset '{asset_name}' amount={issue_amount}...");
+
+    let tx_bytes = issue_asset(
+        asset_name.clone(),
+        issue_amount,
+        true,  // first_issuance
+        true,  // finalize
+        None,  // desc_hash (computed from name)
+        account_id,
+        &coin,
+    )
+    .await
+    .expect("issue asset");
+    println!("Issuance tx: {} bytes", tx_bytes.len());
+
+    // -- Broadcast the issuance --
+    let height = get_current_height(&coin).await.expect("get current height");
+    let txid = broadcast_transaction(height, &tx_bytes, &coin)
+        .await
+        .expect("broadcast issuance");
+    println!("Issuance broadcast: {txid}");
+
+    // -- Wait for mining and re-sync --
+    println!("Waiting for mining...");
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+
+    let height = get_current_height(&coin).await.expect("get current height");
+    synchronize_impl(
+        (),
+        vec![account_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &coin,
+    )
+    .await
+    .expect("re-sync after issuance");
+    println!("Re-synced to height: {height}");
+
+    // -- Verify the asset appears in holdings --
+    let holdings = list_zsa_holdings(&coin)
+        .await
+        .expect("list holdings after issuance");
+    println!("ZSA holdings after issuance: {}", holdings.len());
+    for h in &holdings {
+        println!(
+            "  {}: balance={} base={} finalized={}",
+            h.asset_name,
+            h.balance,
+            hex::encode(&h.asset_base),
+            h.finalized,
+        );
+    }
+    assert!(!holdings.is_empty(), "should have the issued asset");
+
+    let zsa = holdings
+        .iter()
+        .find(|h| h.asset_name == asset_name)
+        .expect("issued asset not found in holdings");
+    assert!(
+        zsa.balance >= issue_amount,
+        "balance should be at least issued amount"
+    );
+    assert!(zsa.finalized, "asset should be finalized");
+
     println!("Test passed.");
 }

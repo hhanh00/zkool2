@@ -57,7 +57,7 @@ tower = "0.5"
 qrcode = "0.14.1"
 raptorq = "=2.0.0"
 
-orchard = {version = "0.15.0-pre.1", features = ["unstable-frost", "zsa"]}
+orchard = {version = "0.15.0-pre.1", features = ["unstable-frost", "zsa", "zsa-circuit"]}
 pczt = {version = "0.7", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233", "zsa"]}
 zcash_address = "0.13.0-pre.0"
 zcash_encoding = "0.4"
