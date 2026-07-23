@@ -1193,11 +1193,10 @@ pub async fn sign_transaction(
     });
     let sapling_prover = get_sapling_prover().await?;
 
-    let orchard_pk = get_orchard_pk(network, ironwood_active);
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
-        .create_orchard_proof(orchard_pk)
+        .create_orchard_proof(if *is_issuance { &ORCHARD_ZSA_PK } else { &ORCHARD_VANILLA_PK })
         .unwrap()
         .create_ironwood_proof(&IRONWOOD_PK)
         .unwrap()
@@ -1436,7 +1435,7 @@ pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
 pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> =
     LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::FixedPostNu6_2));
 pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> =
-    LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::ZsaFixed));
+    LazyLock::new(|| ProvingKey::build_zsa());
 pub static IRONWOOD_PK: LazyLock<ProvingKey> =
     LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::PostNu6_3));
 
