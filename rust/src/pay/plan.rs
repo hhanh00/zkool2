@@ -1187,6 +1187,7 @@ pub async fn sign_transaction(
         signer.sign_ironwood(*bundle_index, osak).unwrap();
     }
     let pczt = signer.finish();
+    let use_zsa_pk = is_zsa(*pczt.global().consensus_branch_id());
 
     span.in_scope(|| {
         info!("Adding Proofs to PCZT");
@@ -1196,7 +1197,7 @@ pub async fn sign_transaction(
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
         .unwrap()
-        .create_orchard_proof(if *is_issuance { &ORCHARD_ZSA_PK } else { &ORCHARD_VANILLA_PK })
+        .create_orchard_proof(if use_zsa_pk { &ORCHARD_ZSA_PK } else { &ORCHARD_VANILLA_PK })
         .unwrap()
         .create_ironwood_proof(&IRONWOOD_PK)
         .unwrap()
@@ -1460,4 +1461,9 @@ pub fn get_orchard_pk(
     } else {
         &ORCHARD_VANILLA_PK
     }
+}
+
+fn is_zsa(consensus_branch_id: u32) -> bool {
+    zcash_protocol::consensus::BranchId::try_from(consensus_branch_id)
+        .is_ok_and(|b| b == zcash_protocol::consensus::BranchId::Nu7)
 }
