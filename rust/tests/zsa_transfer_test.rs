@@ -208,7 +208,50 @@ async fn test_orchard_transfer() {
     println!("Test passed.");
 }
 
-/// Sync a faucet account, issue a new ZSA asset, and verify it appears in holdings.
+/// Use pre-synced DB to dump instance data for comparison with 6.22.0.
+#[tokio::test]
+#[ignore = "requires live connection to zsa.methyl.cc"]
+async fn test_dump_instances() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| "info".into()))
+        .try_init();
+
+    let src = "/tmp/zsa_compare.db";
+    let db_path = format!("/tmp/zsa_dump_{}.db", std::process::id());
+    std::fs::copy(src, &db_path).expect("copy db");
+
+    let coin = Coin::new(Some(3))
+        .open_database(db_path.clone(), None).await.expect("open")
+        .set_lwd(0, "https://zsa.methyl.cc".to_string()).expect("lwd");
+    let coin = coin.set_account(1).await.expect("set account");
+
+    let bal = rlz::api::sync::balance(&coin).await.expect("balance");
+    let orchard_bal = bal.0[2];
+    let send_amount = orchard_bal / 2;
+
+    let addresses = get_addresses(ALL_POOLS, &coin).await.expect("addresses");
+    let ua = addresses.ua.expect("UA");
+
+    let recipient = Recipient {
+        address: ua, amount: send_amount, pools: None,
+        user_memo: Some("dump".to_string()),
+        memo_bytes: None, price: None, asset_base: vec![], asset_name: None,
+    };
+    let options = PaymentOptions {
+        src_pools: ALL_POOLS, recipient_pays_fee: false,
+        smart_transparent: false, category: None, mode: 0,
+    };
+
+    let pczt = rlz::api::pay::prepare(&[recipient], options, &coin).await.expect("plan");
+    std::fs::write("/tmp/zsa_presign.pczt", &pczt.pczt).expect("save presign");
+    let signed = sign_transaction(&pczt, &coin).await.expect("sign");
+    std::fs::write("/tmp/zsa_postsigned.pczt", &signed.pczt).expect("save postsigned");
+    let _tx = extract_transaction(&signed).await.expect("extract");
+    let _ = std::fs::remove_file(&db_path);
+    println!("Done");
+}
 #[tokio::test]
 #[ignore = "requires live connection to zsa.methyl.cc"]
 async fn test_zsa_issuance() {
