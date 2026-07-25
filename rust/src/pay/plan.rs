@@ -898,6 +898,12 @@ pub async fn plan_transaction(
         builder.set_zsa_builder(zsa);
     }
 
+    info!(
+        "Building: n_spends T={} S={} O={} IW={}, n_outputs T={} S={} O={} IW={}",
+        n_spends[0], n_spends[1], n_spends[2], n_spends[3],
+        n_outputs[0], n_outputs[1], n_outputs[2], n_outputs[3],
+    );
+
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
     let sapling_meta = &r.sapling_meta;
     let orchard_meta = &r.orchard_meta;
