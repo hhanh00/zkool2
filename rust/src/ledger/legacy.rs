@@ -189,7 +189,6 @@ pub fn get_trusted_input(tx: &Transaction, index: u32) -> Result<Vec<Vec<u8>>> {
         .orchard_bundle()
         .map(|b| match b {
             OrchardBundle::OrchardVanilla(b) => b.actions().len(),
-            #[cfg(feature = "zsa")]
             OrchardBundle::OrchardZSA(b) => b.actions().len(),
         })
         .unwrap_or_default();
