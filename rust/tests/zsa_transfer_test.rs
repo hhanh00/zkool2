@@ -250,3 +250,147 @@ async fn test_orchard_transfer() {
     let _ = std::fs::remove_file(&db_path);
     println!("Test passed.");
 }
+
+/// Sync a faucet account, then issue a new ZSA asset (1M units, finalized),
+/// wait for a block, and verify it appears in holdings.
+#[tokio::test]
+#[ignore = "requires live connection to zsa.methyl.cc"]
+async fn test_zsa_issuance() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "rlz=debug,info".into()),
+        )
+        .try_init();
+
+    // -- 1. Initialize Coin for ZSA regtest --
+    let db_path = format!("/tmp/zsa_issuance_test_{}.db", std::process::id());
+    let _ = std::fs::remove_file(&db_path);
+
+    let coin = Coin::new(Some(3))
+        .open_database(db_path.clone(), None)
+        .await
+        .expect("open ZSA database")
+        .set_lwd(0, "https://zsa.methyl.cc".to_string())
+        .expect("set LWD URL");
+    println!("Coin initialized: coin={} db={db_path}", coin.coin);
+
+    // -- 2. Restore faucet account from seed --
+    let na = NewAccount {
+        icon: None,
+        name: "zsa_issuer".to_string(),
+        restore: true,
+        key: SEED_PHRASE.to_string(),
+        passphrase: Some("".to_string()),
+        fingerprint: None,
+        aindex: 0,
+        birth: None,
+        folder: "".to_string(),
+        pools: Some(ALL_POOLS),
+        use_internal: false,
+        internal: false,
+        ledger: false,
+    };
+    let account_id = new_account(&na, &coin)
+        .await
+        .expect("restore faucet account from seed");
+    let account = coin
+        .clone()
+        .set_account(account_id)
+        .await
+        .expect("set account");
+    println!("Account restored: id={account_id}");
+
+    // -- 3. Sync from LWD server to current height --
+    let height = get_current_height(&account).await.expect("get current height");
+    println!("Current height: {height}");
+
+    synchronize_impl(
+        (), vec![account_id], height, 10000, 100, 10000, false, &account,
+    ).await.expect("sync");
+    println!("Synced to height: {height}");
+
+    // -- 4. Issue a new ZSA asset: 1M units, finalized --
+    let asset_name = format!("TEST{}", std::process::id());
+    let issue_amount = 1_000_000u64;
+    println!("Issuing asset '{asset_name}' amount={issue_amount} finalized=true...");
+
+    let tx_bytes = rlz::api::issuance::issue_asset(
+        asset_name.clone(),
+        issue_amount,
+        true,  // first_issuance
+        true,  // finalize
+        None,  // desc_hash (computed from name)
+        account_id,
+        &account,
+    )
+    .await
+    .expect("issue asset");
+    println!("Issuance tx: {} bytes", tx_bytes.len());
+
+    // -- 5. Broadcast the issuance --
+    let height = get_current_height(&account).await.expect("get current height");
+    let txid = broadcast_transaction(height, &tx_bytes, &account)
+        .await
+        .expect("broadcast issuance");
+    println!("Issuance broadcast: {txid}");
+
+    // -- 6. Wait for at least 1 block to be mined --
+    println!("Waiting for mining...");
+    let start_height = get_current_height(&account).await.expect("get current height");
+    let mut attempts = 0;
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        let current = get_current_height(&account).await.expect("get current height");
+        attempts += 1;
+        if current > start_height {
+            println!("New block mined: {start_height} -> {current} (after {attempts} attempts)");
+            break;
+        }
+        if attempts % 5 == 0 {
+            println!("Still waiting for block after {attempts} attempts (height={current})");
+        }
+    }
+
+    // -- 7. Re-sync and verify the asset appears --
+    let height = get_current_height(&account).await.expect("get current height");
+    synchronize_impl(
+        (), vec![account_id], height, 10000, 100, 10000, false, &account,
+    ).await.expect("re-sync after issuance");
+    println!("Re-synced to height: {height}");
+
+    let holdings = rlz::api::zsa::list_zsa_holdings(&account)
+        .await
+        .expect("list holdings after issuance");
+    println!("ZSA holdings after issuance: {}", holdings.len());
+    for h in &holdings {
+        println!(
+            "  {}: balance={} base={}",
+            h.asset_name,
+            h.balance,
+            hex::encode(&h.asset_base)
+        );
+    }
+    assert!(!holdings.is_empty(), "should have the issued asset");
+
+    let zsa = holdings
+        .iter()
+        .find(|h| h.asset_name == asset_name)
+        .expect("issued asset not found by name");
+    assert!(
+        zsa.balance >= issue_amount,
+        "balance should be at least issued amount"
+    );
+    println!(
+        "Found asset: name={} balance={} base={}",
+        zsa.asset_name,
+        zsa.balance,
+        hex::encode(&zsa.asset_base)
+    );
+
+    // Clean up
+    let _ = std::fs::remove_file(&db_path);
+    println!("Test passed.");
+}
