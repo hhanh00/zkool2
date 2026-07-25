@@ -7,7 +7,7 @@ use tracing::debug;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 use zcash_primitives::transaction::{
-    components::sapling::zip212_enforcement,
+    components::sapling::zip212_enforcement, OrchardBundle,
 };
 use zcash_protocol::memo::Memo;
 
@@ -427,8 +427,16 @@ pub async fn decrypt_memo(
     }
 
     if let Some(bundle) = tx_data.orchard_bundle() {
-        debug!("decrypt_memo: orchard bundle with {} actions", bundle.actions().len());
-        process_orchard_memo!(bundle, 2, OrchardDomain);
+        match bundle {
+            OrchardBundle::OrchardVanilla(b) => {
+                debug!("decrypt_memo: orchard bundle with {} actions", b.actions().len());
+                process_orchard_memo!(b, 2, OrchardDomain);
+            }
+            OrchardBundle::OrchardZSA(_b) => {
+                // TODO: ZSA memo decryption — use OrchardZSADomain
+                debug!("decrypt_memo: skipping ZSA orchard bundle (not yet implemented)");
+            }
+        }
     }
     if let Some(bundle) = tx_data.ironwood_bundle() {
         debug!("decrypt_memo: ironwood bundle with {} actions", bundle.actions().len());
