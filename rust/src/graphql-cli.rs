@@ -85,6 +85,7 @@ async fn main() -> Result<()> {
 
     if let Some(hex) = decode_tx {
         use zcash_primitives::transaction::Transaction;
+        use zcash_primitives::transaction::OrchardBundle;
         use zcash_protocol::consensus::BranchId;
         let bytes = hex::decode(hex.trim())?;
         for branch in [BranchId::Nu6_3, BranchId::Nu6_2, BranchId::Nu6, BranchId::Nu5] {
@@ -96,7 +97,11 @@ async fn main() -> Result<()> {
                 eprintln!("Consensus branch: {:?}", tx.consensus_branch_id());
                 eprintln!("Transparent: {}", tx.transparent_bundle().is_some());
                 eprintln!("Sapling: {}", tx.sapling_bundle().is_some());
-                let oa = tx.orchard_bundle().map(|b| b.actions().iter().count()).unwrap_or(0);
+                let oa = tx.orchard_bundle().map(|b| match b {
+                    OrchardBundle::OrchardVanilla(b) => b.actions().len(),
+                    #[cfg(feature = "zsa")]
+                    OrchardBundle::OrchardZSA(b) => b.actions().len(),
+                }).unwrap_or(0);
                 let iw = tx.ironwood_bundle().map(|b| (b.actions().iter().count(), b.flags().clone()));
                 eprintln!("Orchard actions: {oa}");
                 if let Some((count, flags)) = iw {
