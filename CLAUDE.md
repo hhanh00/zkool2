@@ -14,3 +14,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   ```
 - **Never edit `.cargo/git` checkouts**. Always edit a local git clone and use a `[patch]` path override in `Cargo.toml`.
 - **If no local clone exists**, create one and add a path override. Do not create a new clone if one already exists in `Cargo.toml`.
+- Do not make any code changes unless explicitly instructed.
+- Do not revert your own changes unless asked.
+- If blocked, report the blockage instead of trying alternatives.
