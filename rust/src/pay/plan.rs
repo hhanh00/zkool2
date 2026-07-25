@@ -1019,7 +1019,7 @@ fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
 pub async fn sign_transaction(
     connection: &mut SqliteConnection,
     account: u32,
-    network: &crate::api::coin::Network,
+    _network: &crate::api::coin::Network,
     pczt: &PcztPackage,
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
@@ -1036,11 +1036,6 @@ pub async fn sign_transaction(
         ..
     } = pczt;
     let pczt = Pczt::parse(pczt).unwrap();
-
-    let ironwood_active = network.is_nu_active(
-        NetworkUpgrade::Nu6_3,
-        BlockHeight::from_u32(*pczt.global().expiry_height()),
-    );
 
     let dindex = get_account_dindex(connection, account).await?;
     let tkeys = select_account_transparent(connection, account, dindex).await?;
