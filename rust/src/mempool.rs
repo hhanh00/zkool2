@@ -16,7 +16,8 @@ use tokio_util::sync::CancellationToken;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::try_note_decryption;
 use zcash_primitives::transaction::{
-    components::sapling::zip212_enforcement, Authorized, Transaction, TransactionData,
+    components::sapling::zip212_enforcement, Authorized, OrchardBundle, Transaction,
+    TransactionData,
 };
 use zcash_protocol::memo::Memo;
 use zcash_transparent::address::TransparentAddress;
@@ -336,7 +337,14 @@ pub async fn decode_raw_transaction(
     }
 
     if let Some(obundle) = tx_data.orchard_bundle() {
-        process_orchard_bundle!(obundle, OrchardVanilla);
+        match obundle {
+            OrchardBundle::OrchardVanilla(b) => {
+                process_orchard_bundle!(b, OrchardVanilla);
+            }
+            OrchardBundle::OrchardZSA(_b) => {
+                // TODO: ZSA mempool processing
+            }
+        }
     }
     if let Some(iwbundle) = tx_data.ironwood_bundle() {
         process_orchard_bundle!(iwbundle, OrchardVanilla);

@@ -85,7 +85,7 @@ impl Coin {
         }
     }
 
-    pub(crate) fn network(&self) -> Network {
+    pub fn network(&self) -> Network {
         match self.coin {
             0 => Network::Main,
             1 => Network::Test,
@@ -175,7 +175,7 @@ impl Coin {
         Ok(Coin { proxy, ..self })
     }
 
-    pub(crate) async fn client(&self) -> Result<Client> {
+    pub async fn client(&self) -> Result<Client> {
         match self.server_type {
             // lightwalletd (gRPC). Precedence: Tor (arti) > external proxy > direct.
             0 if self.use_tor => {
@@ -468,7 +468,7 @@ fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteCo
     options
 }
 
-pub(crate) use zcash_trees::network::Network;
+pub use zcash_trees::network::Network;
 
 pub async fn init_datadir(directory: &str) -> Result<()> {
     let _ = DATADIR.set(directory.to_string());
