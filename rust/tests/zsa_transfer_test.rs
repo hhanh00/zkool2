@@ -481,10 +481,10 @@ async fn test_zsa_transfer() {
         .expect("broadcast issuance");
     println!("Issuance broadcast: {txid}");
 
-    // -- 6. Wait for 5 blocks so issuance is well-confirmed --
-    println!("Waiting for 5 blocks...");
+    // -- 6. Wait for 3 blocks so issuance is well-confirmed --
+    println!("Waiting for 3 blocks...");
     let start_height = get_current_height(&sender).await.expect("get current height");
-    let target = start_height + 5;
+    let target = start_height + 3;
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
