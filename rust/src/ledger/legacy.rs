@@ -8,7 +8,7 @@ use byteorder::{ReadBytesExt, LE};
 use pczt::Pczt;
 use sqlx::SqliteConnection;
 use zcash_keys::encoding::AddressCodec;
-use zcash_primitives::transaction::Transaction;
+use zcash_primitives::transaction::{OrchardBundle, Transaction};
 use zcash_transparent::address::TransparentAddress;
 
 use crate::api::coin::Network;
@@ -187,7 +187,11 @@ pub fn get_trusted_input(tx: &Transaction, index: u32) -> Result<Vec<Vec<u8>>> {
         .unwrap_or_default();
     let oact = tx
         .orchard_bundle()
-        .map(|b| b.actions().len())
+        .map(|b| match b {
+            OrchardBundle::OrchardVanilla(b) => b.actions().len(),
+            #[cfg(feature = "zsa")]
+            OrchardBundle::OrchardZSA(b) => b.actions().len(),
+        })
         .unwrap_or_default();
     buffer.write_u8(sin as u8)?; // TODO use compact
     buffer.write_u8(sout as u8)?; // TODO use compact
@@ -234,38 +238,44 @@ pub fn get_trusted_input(tx: &Transaction, index: u32) -> Result<Vec<Vec<u8>>> {
     }
 
     if let Some(obundle) = tx.orchard_bundle() {
-        for a in obundle.actions().iter() {
-            buffer.write_all(&a.nullifier().to_bytes())?;
-            buffer.write_all(&a.cmx().to_bytes())?;
-            buffer.write_all(&a.encrypted_note().epk_bytes)?;
-            buffer.write_all(&a.encrypted_note().enc_ciphertext[..52])?;
-            buffers.push(std::mem::take(&mut buffer));
-            buffer.clear();
-        }
-        for a in obundle.actions().iter() {
-            for i in 0..4 {
-                buffer.write_all(
-                    &a.encrypted_note().enc_ciphertext[52 + i * 128..52 + (i + 1) * 128],
-                )?;
+        match obundle {
+            OrchardBundle::OrchardVanilla(b) => {
+                for a in b.actions().iter() {
+                    buffer.write_all(&a.nullifier().to_bytes())?;
+                    buffer.write_all(&a.cmx().to_bytes())?;
+                    buffer.write_all(&a.encrypted_note().epk_bytes)?;
+                    buffer.write_all(&a.encrypted_note().enc_ciphertext[..52])?;
+                    buffers.push(std::mem::take(&mut buffer));
+                    buffer.clear();
+                }
+                for a in b.actions().iter() {
+                    for i in 0..4 {
+                        buffer.write_all(
+                            &a.encrypted_note().enc_ciphertext[52 + i * 128..52 + (i + 1) * 128],
+                        )?;
+                        buffers.push(std::mem::take(&mut buffer));
+                        buffer.clear();
+                    }
+                }
+                for a in b.actions().iter() {
+                    buffer.write_all(&a.cv_net().to_bytes())?;
+                    let rk: [u8; 32] = (a.rk()).into();
+                    buffer.write_all(&rk)?;
+                    buffer.write_all(&a.encrypted_note().enc_ciphertext[52 + 512..])?;
+                    buffer.write_all(&a.encrypted_note().out_ciphertext)?;
+                    buffers.push(std::mem::take(&mut buffer));
+                    buffer.clear();
+                }
+                buffer.write_u8(b.flags().to_byte())?;
+                buffer.write_i64::<LE>((*b.value_balance()).into())?;
+                buffer.write_all(&b.anchor().to_bytes())?;
                 buffers.push(std::mem::take(&mut buffer));
                 buffer.clear();
             }
+            OrchardBundle::OrchardZSA(_b) => {
+                // TODO: ZSA action processing for legacy ledger
+            }
         }
-        for a in obundle.actions().iter() {
-            buffer.write_all(&a.cv_net().to_bytes())?;
-            let rk: [u8; 32] = (a.rk()).into();
-            buffer.write_all(&rk)?;
-            buffer.write_all(&a.encrypted_note().enc_ciphertext[52 + 512..])?;
-            buffer.write_all(&a.encrypted_note().out_ciphertext)?;
-            buffers.push(std::mem::take(&mut buffer));
-            buffer.clear();
-        }
-
-        buffer.write_u8(obundle.flags().to_byte())?;
-        buffer.write_i64::<LE>(obundle.value_balance().into())?;
-        buffer.write_all(&obundle.anchor().to_bytes())?;
-        buffers.push(std::mem::take(&mut buffer));
-        buffer.clear();
     }
     buffer.write_u32::<LE>(tx.lock_time())?;
     buffer.write_u8(4)?; // len of extra data
