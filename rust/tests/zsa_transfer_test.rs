@@ -61,29 +61,30 @@ async fn test_orchard_transfer() {
         internal: false,
         ledger: false,
     };
-    let account_id = new_account(&na, &coin)
+    let sender_id = new_account(&na, &coin)
         .await
-        .expect("restore account from seed");
-    let coin = coin
-        .set_account(account_id)
+        .expect("restore sender account from seed");
+    let sender = coin
+        .clone()
+        .set_account(sender_id)
         .await
-        .expect("set current account");
-    println!("Account restored: id={account_id}");
+        .expect("set sender account");
+    println!("Sender account restored: id={sender_id}");
 
-    // -- 3. Sync from LWD server to current height --
-    let height = get_current_height(&coin).await.expect("get current height");
+    // -- 3. Sync sender from LWD server to current height --
+    let height = get_current_height(&sender).await.expect("get current height");
     println!("Current height: {height}");
 
     synchronize_impl(
-        (), vec![account_id], height, 10000, 100, 10000, false, &coin,
-    ).await.expect("sync");
-    println!("Synced to height: {height}");
+        (), vec![sender_id], height, 10000, 100, 10000, false, &sender,
+    ).await.expect("sync sender");
+    println!("Sender synced to height: {height}");
 
     // -- 4. Check ZEC balance (0=T,1=S,2=O,3=IW) --
-    let bal = rlz::api::sync::balance(&coin).await.expect("balance");
+    let bal = rlz::api::sync::balance(&sender).await.expect("sender balance");
     println!("ZEC balance: T={} S={} O={} IW={}", bal.0[0], bal.0[1], bal.0[2], bal.0[3]);
     let orchard_bal = bal.0[2];
-    assert!(orchard_bal > 0, "faucet account should have Orchard balance");
+    assert!(orchard_bal > 0, "sender should have Orchard balance");
     let send_amount = orchard_bal / 2;
     println!("Sending {send_amount} zats from Orchard pool");
 
@@ -153,24 +154,28 @@ async fn test_orchard_transfer() {
         internal: false,
         ledger: false,
     };
-    let recipient_account_id = new_account(&na2, &coin).await.expect("restore recipient");
-    println!("Recipient account restored: id={recipient_account_id}");
+    let recipient_id = new_account(&na2, &coin).await.expect("restore recipient");
+    println!("Recipient account restored: id={recipient_id}");
+
+    let recipient = coin
+        .clone()
+        .set_account(recipient_id)
+        .await
+        .expect("set recipient account");
 
     // Sync recipient account (just needs the UA, no notes needed)
-    let height = get_current_height(&coin).await.expect("get current height");
+    let height = get_current_height(&recipient).await.expect("get current height");
     synchronize_impl(
-        (), vec![recipient_account_id], height, 10000, 100, 10000, false, &coin,
+        (), vec![recipient_id], height, 10000, 100, 10000, false, &recipient,
     ).await.expect("sync recipient");
     println!("Recipient synced");
 
-    let recipient_addresses = get_addresses(ALL_POOLS, &coin).await.expect("get recipient addresses");
-    // Switch back to sender account for the transfer
-    let coin = coin.set_account(account_id).await.expect("switch back to sender");
+    let recipient_addresses = get_addresses(ALL_POOLS, &recipient).await.expect("get recipient addresses");
     let recipient_ua = recipient_addresses.ua.expect("recipient UA");
     println!("Recipient UA: {recipient_ua}");
 
     // -- 10. Send half the Orchard balance to the recipient --
-    let recipient = Recipient {
+    let pay_recipient = Recipient {
         address: recipient_ua,
         amount: send_amount,
         pools: None,
@@ -190,32 +195,32 @@ async fn test_orchard_transfer() {
     };
 
     println!("Planning O2O transfer of {send_amount} zats...");
-    let pczt = rlz::api::pay::prepare(&[recipient], options, &coin)
+    let pczt = rlz::api::pay::prepare(&[pay_recipient], options, &sender)
         .await
         .expect("plan O2O transfer");
     assert!(pczt.n_spends.iter().sum::<usize>() > 0, "should have spends");
     println!("  spends: {:?}", pczt.n_spends);
 
-    let signed = sign_transaction(&pczt, &coin).await.expect("sign");
+    let signed = sign_transaction(&pczt, &sender).await.expect("sign");
     std::fs::write("/tmp/zsa_postsigned.pczt", &signed.pczt).expect("save postsigned pczt");
     let tx_bytes = extract_transaction(&signed).await.expect("extract");
     std::fs::write("/tmp/zsa_tx.bin", &tx_bytes).expect("save tx bytes");
     println!("Transfer tx: {} bytes (saved /tmp/zsa_tx.bin)", tx_bytes.len());
 
     // -- 11. Broadcast the transfer --
-    let height = get_current_height(&coin).await.expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, &coin)
+    let height = get_current_height(&sender).await.expect("get current height");
+    let txid = broadcast_transaction(height, &tx_bytes, &sender)
         .await
         .expect("broadcast transfer");
     println!("Transfer broadcast: {txid}");
 
     // -- 12. Wait for at least 1 block to be mined --
     println!("Waiting for mining...");
-    let start_height = get_current_height(&coin).await.expect("get current height");
+    let start_height = get_current_height(&sender).await.expect("get current height");
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let current = get_current_height(&coin).await.expect("get current height");
+        let current = get_current_height(&sender).await.expect("get current height");
         attempts += 1;
         if current > start_height {
             println!("New block mined: {start_height} -> {current} (after {attempts} attempts)");
@@ -226,19 +231,18 @@ async fn test_orchard_transfer() {
         }
     }
 
-    let height = get_current_height(&coin).await.expect("get current height");
+    let height = get_current_height(&sender).await.expect("get current height");
     synchronize_impl(
-        (), vec![account_id, recipient_account_id], height, 10000, 100, 10000, false, &coin,
+        (), vec![sender_id, recipient_id], height, 10000, 100, 10000, false, &coin,
     ).await.expect("re-sync after transfer");
 
     // Verify sender balance decreased
-    let bal = rlz::api::sync::balance(&coin).await.expect("sender balance");
+    let bal = rlz::api::sync::balance(&sender).await.expect("sender balance");
     println!("Sender ZEC balance after transfer: T={} S={} O={} IW={}", bal.0[0], bal.0[1], bal.0[2], bal.0[3]);
     assert!(bal.0[2] < orchard_bal, "sender Orchard balance should have decreased");
 
     // Switch to recipient and verify receipt
-    let coin = coin.set_account(recipient_account_id).await.expect("switch to recipient");
-    let recv_bal = rlz::api::sync::balance(&coin).await.expect("recipient balance");
+    let recv_bal = rlz::api::sync::balance(&recipient).await.expect("recipient balance");
     println!("Recipient ZEC balance: T={} S={} O={} IW={}", recv_bal.0[0], recv_bal.0[1], recv_bal.0[2], recv_bal.0[3]);
     assert!(recv_bal.0[2] >= send_amount, "recipient should have received the ZEC");
 
