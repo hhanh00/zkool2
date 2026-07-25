@@ -99,7 +99,6 @@ async fn main() -> Result<()> {
                 eprintln!("Sapling: {}", tx.sapling_bundle().is_some());
                 let oa = tx.orchard_bundle().map(|b| match b {
                     OrchardBundle::OrchardVanilla(b) => b.actions().len(),
-                    #[cfg(feature = "zsa")]
                     OrchardBundle::OrchardZSA(b) => b.actions().len(),
                 }).unwrap_or(0);
                 let iw = tx.ironwood_bundle().map(|b| (b.actions().iter().count(), b.flags().clone()));
