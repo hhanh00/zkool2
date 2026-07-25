@@ -23,6 +23,7 @@ use tokio_rustls::TlsConnector;
 use tor_rtcompat::PreferredRuntime;
 use webpki_roots::TLS_SERVER_ROOTS;
 use zcash_primitives::{block::BlockHeader, transaction::Transaction};
+use zcash_primitives::transaction::OrchardBundle;
 
 use byteorder::{ReadBytesExt, LE};
 use tokio_stream::wrappers::ReceiverStream;
@@ -401,7 +402,12 @@ pub fn parse_block(
         }
         let mut actions = vec![];
         if let Some(orchard_bundle) = tx_data.orchard_bundle() {
-            push_actions!(orchard_bundle, actions);
+            match orchard_bundle {
+                OrchardBundle::OrchardVanilla(b) => push_actions!(b, actions),
+                OrchardBundle::OrchardZSA(_b) => {
+                    // TODO: ZSA compact action extraction
+                }
+            }
         }
         let mut ironwood_actions = vec![];
         if let Some(ironwood_bundle) = tx_data.ironwood_bundle() {
