@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.1...zkool-v6.25.0-rc.2) (2026-07-26)
+
+
+### Bug Fixes
+
+* remove cargo config ([da4dfae](https://github.com/hhanh00/zkool2/commit/da4dfae3cf2e5e2adc0e0ba2d134a25fb3f7a198))
+
 ## [6.25.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc...zkool-v6.25.0-rc.1) (2026-07-26)
 
 
