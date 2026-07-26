@@ -35,7 +35,7 @@ use zcash_primitives::transaction::{
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
-    consensus::{BlockHeight, NetworkType, NetworkUpgrade, Parameters},
+    consensus::{BlockHeight, BranchId, NetworkType, NetworkUpgrade, Parameters},
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
@@ -256,6 +256,12 @@ pub async fn plan_transaction(
 
     let ironwood_active = network
         .is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height));
+    let orchard_note_version =
+        if BranchId::for_height(network, BlockHeight::from_u32(height)) == BranchId::Nu7 {
+            orchard::NoteVersion::V3ZSA
+        } else {
+            orchard::NoteVersion::V2
+        };
     let decomposed: Vec<DecomposedRecipient> = recipients
         .iter()
         .map(|r| {
@@ -362,9 +368,27 @@ pub async fn plan_transaction(
         .enumerate()
         .flat_map(|(pool, notes)| {
             let zi = zi.clone();
-            notes.iter().enumerate().map(move |(idx, n)| {
-                let asset_index = resolve_asset_index(&n.asset_base, zec_key, &zi);
-                solve::Note { pool: pool as u8, amount: n.amount, pool_index: idx, asset_index }
+            notes.iter().enumerate().filter_map(move |(idx, n)| {
+                // Classify by the note's real asset: ZEC → 0, a recipient ZSA
+                // asset → its solver index. A ZSA note whose asset is NOT one of
+                // the recipient assets can't fund this payment (it isn't ZEC and
+                // has no matching output), so drop it from the candidate set.
+                // Mapping it to index 0 (the old `unwrap_or(0)` behaviour) let the
+                // solver treat it as spendable ZEC: it would then "pay" the fee
+                // with phantom ZEC while the builder spent the note as its real
+                // asset, leaving that asset over-spent and the ZEC change unbacked
+                // (Orchard IO-finalize → ValueCommitMismatch).
+                let asset_bytes: [u8; 32] =
+                    n.asset_base.clone().try_into().unwrap_or(zec_key);
+                let asset_index = if asset_bytes == zec_key {
+                    0
+                } else {
+                    match zi.get(&asset_bytes) {
+                        Some(&i) => i,
+                        None => return None,
+                    }
+                };
+                Some(solve::Note { pool: pool as u8, amount: n.amount, pool_index: idx, asset_index })
             })
         })
         .collect();
@@ -698,7 +722,7 @@ pub async fn plan_transaction(
                             ovk.as_ref().unwrap(),
                             &eo,
                             &ero,
-                            orchard::NoteVersion::V2,
+                            orchard_note_version,
                         )
                         .await?;
 
@@ -906,7 +930,6 @@ pub async fn plan_transaction(
 
     let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
     let sapling_meta = &r.sapling_meta;
-    let orchard_meta = &r.orchard_meta;
     let ironwood_meta = &r.ironwood_meta;
 
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
@@ -980,20 +1003,26 @@ pub async fn plan_transaction(
         pczt
     };
 
-    let n_orchard_actions = pczt.orchard().actions().len();
+    let orchard_indices = pczt
+        .orchard()
+        .actions()
+        .iter()
+        .enumerate()
+        .filter_map(|(index, action)| {
+            action
+                .spend()
+                .spend_auth_sig()
+                .is_none()
+                .then_some(index)
+        })
+        .collect();
     let pczt_package = PcztPackage {
         pczt: pczt.serialize().unwrap(),
         n_spends: [n_spends[0], n_spends[1], n_spends[2], n_spends[3]],
         sapling_indices: (0..n_spends[1])
             .map(|n| sapling_meta.spend_index(n).unwrap())
             .collect(),
-        orchard_indices: if ironwood_active {
-            (0..n_orchard_actions).collect()
-        } else {
-            (0..n_spends[2])
-                .map(|n| orchard_meta.spend_action_index(n).unwrap())
-                .collect()
-        },
+        orchard_indices,
         ironwood_indices: (0..n_spends[3])
             .map(|n| ironwood_meta.spend_action_index(n).unwrap())
             .collect(),
@@ -1178,7 +1207,11 @@ pub async fn sign_transaction(
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
-        signer.sign_orchard(*bundle_index, osak).unwrap();
+        signer.sign_orchard(*bundle_index, osak).map_err(|e| {
+            anyhow!(
+                "failed to sign Orchard action {bundle_index} (selected spend {index}): {e:?}"
+            )
+        })?;
     }
     for (index, bundle_index) in ironwood_indices.iter().enumerate() {
         info!("signing ironwood {index}");
