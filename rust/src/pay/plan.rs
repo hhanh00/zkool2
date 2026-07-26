@@ -1136,7 +1136,9 @@ pub async fn sign_transaction(
         is_issuance,
         ..
     } = pczt;
-    let pczt = Pczt::parse(pczt).unwrap();
+    let pczt = Pczt::parse(pczt)
+        .map_err(|error| anyhow!("failed to parse PCZT for signing: {error:?}"))?;
+    let orchard_pk = get_orchard_pk(*pczt.global().consensus_branch_id())?;
 
     let dindex = get_account_dindex(connection, account).await?;
     let tkeys = select_account_transparent(connection, account, dindex).await?;
@@ -1287,7 +1289,6 @@ pub async fn sign_transaction(
         signer.sign_ironwood(*bundle_index, osak).unwrap();
     }
     let pczt = signer.finish();
-    let use_zsa_pk = is_zsa(*pczt.global().consensus_branch_id());
 
     span.in_scope(|| {
         info!("Adding Proofs to PCZT");
@@ -1296,19 +1297,23 @@ pub async fn sign_transaction(
 
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(sapling_prover, sapling_prover)
-        .unwrap()
-        .create_orchard_proof(if use_zsa_pk { &ORCHARD_ZSA_PK } else { &ORCHARD_VANILLA_PK })
-        .unwrap()
+        .map_err(|error| anyhow!("failed to create Sapling proofs: {error:?}"))?
+        .create_orchard_proof(orchard_pk)
+        .map_err(|error| anyhow!("failed to create Orchard proof: {error:?}"))?
         .create_ironwood_proof(&IRONWOOD_PK)
-        .unwrap()
+        .map_err(|error| anyhow!("failed to create Ironwood proof: {error:?}"))?
         .finish();
     info!("Proved");
 
-    let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
+    let pczt = SpendFinalizer::new(pczt)
+        .finalize_spends()
+        .map_err(|error| anyhow!("failed to finalize PCZT spends: {error:?}"))?;
     info!("Spend Finalized");
 
     Ok(PcztPackage {
-        pczt: pczt.serialize().unwrap(),
+        pczt: pczt
+            .serialize()
+            .map_err(|error| anyhow!("failed to serialize signed PCZT: {error:?}"))?,
         n_spends: *n_spends,
         sapling_indices: sapling_indices.clone(),
         orchard_indices: orchard_indices.clone(),
@@ -1540,30 +1545,54 @@ pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> =
 pub static IRONWOOD_PK: LazyLock<ProvingKey> =
     LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::PostNu6_3));
 
-pub fn get_orchard_pk(
-    network: &crate::api::coin::Network,
-    ironwood_active: bool,
-) -> &'static ProvingKey {
-    // ZSA and Ironwood are mutually exclusive hard forks with different
-    // V6 version group IDs and circuit versions.
-    let uses_orchard_zsa = match network {
-        crate::api::coin::Network::Regtest(config)
-        | crate::api::coin::Network::ZsaRegtest(config) => {
-            config.orchard_mode() == zcash_protocol::consensus::OrchardMode::Zsa
-        }
-        _ => false,
-    };
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum OrchardProvingKeyKind {
+    Vanilla,
+    Zsa,
+    Ironwood,
+}
 
-    if uses_orchard_zsa {
-        &ORCHARD_ZSA_PK
-    } else if ironwood_active {
-        &IRONWOOD_PK
-    } else {
-        &ORCHARD_VANILLA_PK
+fn orchard_proving_key_kind(branch_id: BranchId) -> OrchardProvingKeyKind {
+    match branch_id {
+        BranchId::Nu7 => OrchardProvingKeyKind::Zsa,
+        BranchId::Nu6_3 => OrchardProvingKeyKind::Ironwood,
+        _ => OrchardProvingKeyKind::Vanilla,
     }
 }
 
-fn is_zsa(consensus_branch_id: u32) -> bool {
-    zcash_protocol::consensus::BranchId::try_from(consensus_branch_id)
-        .is_ok_and(|b| b == zcash_protocol::consensus::BranchId::Nu7)
+pub(crate) fn get_orchard_pk(consensus_branch_id: u32) -> Result<&'static ProvingKey> {
+    // ZSA and Ironwood are mutually exclusive hard forks with different
+    // V6 version group IDs and circuit versions.
+    let branch_id = BranchId::try_from(consensus_branch_id)
+        .map_err(|_| anyhow!("unsupported consensus branch ID: {consensus_branch_id:#x}"))?;
+    Ok(match orchard_proving_key_kind(branch_id) {
+        OrchardProvingKeyKind::Vanilla => &ORCHARD_VANILLA_PK,
+        OrchardProvingKeyKind::Zsa => &ORCHARD_ZSA_PK,
+        OrchardProvingKeyKind::Ironwood => &IRONWOOD_PK,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{orchard_proving_key_kind, BranchId, OrchardProvingKeyKind};
+
+    #[test]
+    fn ironwood_activation_selects_ironwood_orchard_proving_key() {
+        assert_eq!(
+            orchard_proving_key_kind(BranchId::Nu6_3),
+            OrchardProvingKeyKind::Ironwood,
+        );
+        assert_eq!(
+            orchard_proving_key_kind(BranchId::Nu6_2),
+            OrchardProvingKeyKind::Vanilla,
+        );
+    }
+
+    #[test]
+    fn zsa_selects_zsa_orchard_proving_key() {
+        assert_eq!(
+            orchard_proving_key_kind(BranchId::Nu7),
+            OrchardProvingKeyKind::Zsa,
+        );
+    }
 }
