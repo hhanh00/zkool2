@@ -293,7 +293,6 @@ pub async fn step(
             None,
             None,
             true, // migration
-            crate::pay::solve::Mode::Fee,
             Some(&preselected),
         )
         .await?;
@@ -366,7 +365,6 @@ pub async fn step(
             None,
             None,
             true, // migration — O→I
-            crate::pay::solve::Mode::Fee,
             Some(&preselected),
         )
         .await?;

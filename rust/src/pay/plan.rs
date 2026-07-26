@@ -236,7 +236,6 @@ pub async fn plan_transaction(
     category: Option<u32>,
     issuance: Option<&IssuanceInfo>,
     migration: bool,
-    mode: crate::pay::solve::Mode,
     preselected: Option<&[u32]>,
 ) -> Result<PcztPackage> {
     let mut input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
@@ -448,9 +447,9 @@ pub async fn plan_transaction(
         .collect();
 
     info!(
-        "plan: calling select_notes — {} input notes, {} outputs, migration={}, recipient_pays_fee={}, first_recipient={}, mode={:?}",
+        "plan: calling select_notes — {} input notes, {} outputs, migration={}, recipient_pays_fee={}, first_recipient={}",
         select_notes_input.len(), select_outputs.len(), migration, recipient_pays_fee,
-        recipients.first().map(|r| r.amount).unwrap_or(0), mode
+        recipients.first().map(|r| r.amount).unwrap_or(0)
     );
     for o in &select_outputs {
         info!("plan: output pool={} amount={}", o.pool, o.amount);
@@ -463,7 +462,6 @@ pub async fn plan_transaction(
         migration,
         recipient_pays_fee,
         recipients.first().map(|r| r.amount).unwrap_or(0),
-        mode,
     )
     .ok_or_else(|| anyhow!("No feasible note selection found"))?;
 
