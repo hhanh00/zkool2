@@ -149,10 +149,18 @@ impl BudgetTracker {
 // ---------------------------------------------------------------------
 
 /// ZIP-317 fee for a state, assuming change is assigned to `change_pool`.
-fn compute_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], change_pool: u8, f_unit: u64, migration: bool) -> u64 {
+///
+/// `zsa_change` is the number of *additional* Orchard change outputs the
+/// transaction will carry — one per non-ZEC asset whose selected inputs
+/// exceed what its recipients consume. These are distinct Orchard actions
+/// (ZSA notes aren't fungible with ZEC or each other), so they must be
+/// priced in or the planner underestimates the fee and the builder rejects
+/// the transaction for insufficient funds. See `zsa_change_outputs`.
+fn compute_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], change_pool: u8, f_unit: u64, migration: bool, zsa_change: u32) -> u64 {
     let cp = change_pool as usize;
     let mut n_outs = *n_outputs;
-    n_outs[cp] = n_outs[cp].saturating_add(1); // change output
+    n_outs[cp] = n_outs[cp].saturating_add(1); // ZEC change output
+    n_outs[2] = n_outs[2].saturating_add(zsa_change); // ZSA change outputs (always Orchard)
 
     // Transparent: max(inputs, outputs), no padding
     let t = n_inputs[0].max(n_outs[0]) as u64;
@@ -183,23 +191,42 @@ fn compute_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], change_poo
 /// Minimum possible fee for a state (no change output added yet).
 /// Used as the lower-bound estimate — since adding change can only add
 /// an output (monotonic), the actual final fee is >= this.
-fn compute_min_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], f_unit: u64, migration: bool) -> u64 {
-    let t = n_inputs[0].max(n_outputs[0]) as u64;
-    let s: u64 = if n_inputs[1] > 0 || n_outputs[1] > 0 {
-        n_inputs[1].max(n_outputs[1]).max(2) as u64
+fn compute_min_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], f_unit: u64, migration: bool, zsa_change: u32) -> u64 {
+    // ZSA change notes are already committed once their asset is over-selected,
+    // so they belong in even the no-ZEC-change lower bound (monotonic: adding
+    // notes can only keep an asset over-selected, never reverse it).
+    let mut n_outs = *n_outputs;
+    n_outs[2] = n_outs[2].saturating_add(zsa_change);
+    let t = n_inputs[0].max(n_outs[0]) as u64;
+    let s: u64 = if n_inputs[1] > 0 || n_outs[1] > 0 {
+        n_inputs[1].max(n_outs[1]).max(2) as u64
     } else { 0 };
-    let o: u64 = if n_inputs[2] > 0 || n_outputs[2] > 0 {
+    let o: u64 = if n_inputs[2] > 0 || n_outs[2] > 0 {
         if migration {
-            (n_inputs[2] as u64 + n_outputs[2] as u64).max(2)
+            (n_inputs[2] as u64 + n_outs[2] as u64).max(2)
         } else {
-            n_inputs[2].max(n_outputs[2]).max(2) as u64
+            n_inputs[2].max(n_outs[2]).max(2) as u64
         }
     } else { 0 };
-    let iw: u64 = if n_inputs[3] > 0 || n_outputs[3] > 0 {
-        n_inputs[3].max(n_outputs[3]).max(2) as u64
+    let iw: u64 = if n_inputs[3] > 0 || n_outs[3] > 0 {
+        n_inputs[3].max(n_outs[3]).max(2) as u64
     } else { 0 };
     let logical = (t + s + o + iw).max(GRACE_ACTIONS);
     logical * f_unit
+}
+
+/// Number of extra Orchard change outputs a ZSA transfer requires: one per
+/// non-ZEC asset (index ≥ 1) whose selected input sum exceeds the amount its
+/// recipient outputs consume. Each is a separate Orchard action the builder
+/// emits, because ZSA notes aren't fungible with ZEC or with each other, so
+/// the leftover of every asset needs its own change note. The fee model must
+/// count these or it underprices the transaction (the builder computes its
+/// fee from `max(orchard_spends, orchard_outputs)` including every change
+/// note, so a missed change output = one unpriced 5000-zat action).
+fn zsa_change_outputs(state: &State, ctx: &Context) -> u32 {
+    (1..ctx.n_assets as usize)
+        .filter(|&a| state.asset_sums[a] > ctx.asset_output_amounts[a])
+        .count() as u32
 }
 
 // ---------------------------------------------------------------------
@@ -251,9 +278,10 @@ fn is_feasible(state: &State, ctx: &Context, fee: u64) -> bool {
 fn evaluate_fee(state: &State, ctx: &Context) -> (u64, u8) {
     let mut best_fee = u64::MAX;
     let mut best_pool = 0u8;
+    let zsa_change = zsa_change_outputs(state, ctx);
 
     for cp in 0..N_POOLS as u8 {
-        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
+        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration, zsa_change);
 
         if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
             info!(
@@ -283,9 +311,10 @@ fn evaluate_fee(state: &State, ctx: &Context) -> (u64, u8) {
 fn evaluate_privacy(state: &State, ctx: &Context) -> (u64, u8) {
     let mut best_turnstile = u64::MAX;
     let mut best_pool = 0u8;
+    let zsa_change = zsa_change_outputs(state, ctx);
 
     for cp in 0..N_POOLS as u8 {
-        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
+        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration, zsa_change);
 
         if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
             continue;
@@ -340,8 +369,9 @@ fn lower_bound(state: &State, ctx: &Context) -> u64 {
 /// added, the current minimum fee is always a valid bound.
 fn lower_bound_fee(state: &State, ctx: &Context) -> u64 {
     let mut min_fee = u64::MAX;
+    let zsa_change = zsa_change_outputs(state, ctx);
     for cp in 0..N_POOLS as u8 {
-        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration);
+        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration, zsa_change);
         if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
             continue;
         }
@@ -358,8 +388,8 @@ fn lower_bound_fee(state: &State, ctx: &Context) -> u64 {
             min_fee = fee;
         }
     }
-    // Also try compute_min_fee (no change output) as a tighter bound
-    let min_no_change = compute_min_fee(&state.n_inputs, &ctx.n_outputs, ctx.f_unit, ctx.migration);
+    // Also try compute_min_fee (no ZEC change output) as a tighter bound
+    let min_no_change = compute_min_fee(&state.n_inputs, &ctx.n_outputs, ctx.f_unit, ctx.migration, zsa_change);
     if min_no_change < min_fee {
         min_fee = min_no_change;
     }
@@ -784,6 +814,7 @@ pub(super) fn select_notes(
             best_pool,
             ctx.f_unit,
             ctx.migration,
+            zsa_change_outputs(&best_state, &ctx),
         )
     };
 
@@ -954,11 +985,58 @@ mod tests {
         // Total logical = max(2+3,2) = 5, fee = 25000
         let n_inputs: [u32; 4] = [0, 2, 1, 0];
         let n_outputs: [u32; 4] = [0, 1, 2, 0];
-        let fee = compute_fee(&n_inputs, &n_outputs, 2, 5_000, false);
+        let fee = compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, 0);
         // With change in pool 2: n_outputs[2] becomes 3
         // Sapling: max(2,1,2) = 2
         // Orchard: max(1,3,2) = 3
         // Total: max(5, 2) = 5, fee = 25000
         assert_eq!(fee, 25_000);
+    }
+
+    #[test]
+    fn test_compute_fee_counts_zsa_change() {
+        // Reproduces the O2O ZSA transfer that under-priced by one action:
+        // spend 1 ZEC note + 1 asset note (2 Orchard inputs), send part of the
+        // asset to a recipient (1 Orchard output). The wallet then needs a ZEC
+        // change note *and* an asset change note (the asset was over-selected).
+        let n_inputs: [u32; 4] = [0, 0, 2, 0];
+        let n_outputs: [u32; 4] = [0, 0, 1, 0]; // recipient only
+        // Without counting the ZSA change note the planner saw
+        //   Orchard outputs = recipient(1) + ZEC change(1) = 2 → max(2,2)=2 → 10000
+        assert_eq!(compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, 0), 10_000);
+        // Counting the asset change note the builder actually emits
+        //   Orchard outputs = recipient(1) + ZEC change(1) + asset change(1) = 3
+        //   → max(2,3)=3 → 15000, matching the builder and closing the 5000 gap.
+        assert_eq!(compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, 1), 15_000);
+    }
+
+    #[test]
+    fn test_zsa_change_outputs_counts_over_selected_assets() {
+        let ctx = Context {
+            notes: &[],
+            n_assets: 3, // ZEC + 2 ZSA assets
+            asset_output_amounts: vec![0, 500_000, 300_000],
+            output_amounts: [0; N_POOLS],
+            n_outputs: [0; N_POOLS],
+            f_unit: 5_000,
+            migration: false,
+            recipient_pays_fee: false,
+            first_recipient_amount: 0,
+            mode: Mode::Fee,
+        };
+        let state = |sums: Vec<u64>| State {
+            asset_sums: sums,
+            balance: [0; N_POOLS],
+            n_inputs: [0; N_POOLS],
+            tin: 0,
+            tout: 0,
+            selected: vec![],
+        };
+        // Asset 1 exactly funded, asset 2 over-selected → 1 change note.
+        assert_eq!(zsa_change_outputs(&state(vec![0, 500_000, 400_000]), &ctx), 1);
+        // Both assets over-selected → 2 change notes.
+        assert_eq!(zsa_change_outputs(&state(vec![0, 600_000, 400_000]), &ctx), 2);
+        // Both exactly funded → no ZSA change.
+        assert_eq!(zsa_change_outputs(&state(vec![0, 500_000, 300_000]), &ctx), 0);
     }
 }

@@ -481,10 +481,10 @@ async fn test_zsa_transfer() {
         .expect("broadcast issuance");
     println!("Issuance broadcast: {txid}");
 
-    // -- 6. Wait for 3 blocks so issuance is well-confirmed --
-    println!("Waiting for 3 blocks...");
+    // -- 6. Wait for 2 blocks so issuance is well-confirmed --
+    println!("Waiting for 2 blocks...");
     let start_height = get_current_height(&sender).await.expect("get current height");
-    let target = start_height + 3;
+    let target = start_height + 2;
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -598,20 +598,21 @@ async fn test_zsa_transfer() {
         .expect("broadcast ZSA transfer");
     println!("ZSA transfer broadcast: {txid}");
 
-    // -- 11. Wait for a block --
-    println!("Waiting for mining...");
+    // -- 11. Wait for 2 blocks --
+    println!("Waiting for 2 blocks...");
     let start_height = get_current_height(&sender).await.expect("get current height");
+    let target = start_height + 2;
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         let current = get_current_height(&sender).await.expect("get current height");
         attempts += 1;
-        if current > start_height {
-            println!("New block mined: {start_height} -> {current} (after {attempts} attempts)");
+        if current >= target {
+            println!("Reached height {current} >= {target} (after {attempts} attempts)");
             break;
         }
         if attempts % 5 == 0 {
-            println!("Still waiting for block after {attempts} attempts (height={current})");
+            println!("Still waiting at height {current}/{target} (attempts {attempts})");
         }
     }
 
@@ -661,6 +662,6 @@ async fn test_zsa_transfer() {
     );
 
     // Clean up
-    let _ = std::fs::remove_file(&db_path);
+    // let _ = std::fs::remove_file(&db_path);
     println!("Test passed.");
 }
