@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.4...zkool-v6.25.0-rc.5) (2026-07-26)
+
+
+### Bug Fixes
+
+* finalize new ZSA issuance ([e9ee215](https://github.com/hhanh00/zkool2/commit/e9ee2157f08f83a87ce5ad0661aab0500f5a02df))
+
 ## [6.25.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.3...zkool-v6.25.0-rc.4) (2026-07-26)
 
 
