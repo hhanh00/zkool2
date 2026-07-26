@@ -570,7 +570,7 @@ async fn test_zsa_transfer() {
         memo_bytes: None,
         price: None,
         asset_base: zsa_base.clone(),
-        asset_name: None,
+        asset_name: Some(asset_name.clone()),
     };
 
     let options = PaymentOptions {
@@ -586,6 +586,16 @@ async fn test_zsa_transfer() {
         .expect("plan ZSA transfer");
     assert!(pczt.n_spends.iter().sum::<usize>() > 0, "should have spends");
     println!("  spends: {:?}", pczt.n_spends);
+
+    let tx_plan =
+        rlz::api::pay::to_plan(&pczt, &sender).expect("render ZSA transaction plan");
+    assert!(
+        tx_plan
+            .outputs
+            .iter()
+            .any(|output| output.amount == send_amount && output.asset_name == asset_name),
+        "ZSA recipient must be displayed with its asset name",
+    );
 
     let signed = sign_transaction(&pczt, &sender).await.expect("sign");
     let tx_bytes = extract_transaction(&signed).await.expect("extract");
