@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.6...zkool-v6.25.0-rc.7) (2026-07-26)
+
+
+### Bug Fixes
+
+* hide ZSA reissuance flow ([c5578bd](https://github.com/hhanh00/zkool2/commit/c5578bd12e266deca564d548ad3aa9d22ce1e61b))
+
 ## [6.25.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.5...zkool-v6.25.0-rc.6) (2026-07-26)
 
 
