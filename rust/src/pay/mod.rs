@@ -1,12 +1,17 @@
+use std::collections::BTreeMap;
+
 use crate::{api::pay::PcztPackage, Client};
 
 use crate::api::coin::Network;
 use anyhow::Result;
+use orchard::note::AssetBase;
 use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
 use serde::{Deserialize, Serialize};
 use tracing::{info, span, Level};
 use zcash_keys::encoding::AddressCodec as _;
+use zcash_note_encryption::Domain;
+use zcash_protocol::consensus::BranchId;
 use zcash_transparent::address::TransparentAddress;
 
 pub mod error;
@@ -125,15 +130,71 @@ pub struct TxPlan {
     pub can_broadcast: bool,
 }
 
+fn orchard_asset_name(
+    proprietary: &BTreeMap<String, Vec<u8>>,
+    asset: Option<AssetBase>,
+) -> String {
+    proprietary
+        .get("asset_name")
+        .and_then(|value| String::from_utf8(value.clone()).ok())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| match asset {
+            Some(asset) if asset != AssetBase::zatoshi() => hex::encode(&asset.to_bytes()[..8]),
+            _ => "ZEC".to_string(),
+        })
+}
+
+fn append_orchard_plan<D: Domain>(
+    bundle: &orchard::pczt::Bundle<D>,
+    inputs: &mut Vec<TxPlanIn>,
+    outputs: &mut Vec<TxPlanOut>,
+    fee: &mut i64,
+) -> Result<()> {
+    for action in bundle.actions() {
+        let input_asset_name =
+            orchard_asset_name(action.spend().proprietary(), action.spend().asset());
+        let output_asset_name =
+            orchard_asset_name(action.output().proprietary(), action.output().asset());
+        inputs.push(TxPlanIn {
+            pool: 2,
+            amount: action.spend().value().map(|value| value.inner()),
+            asset_name: input_asset_name,
+        });
+        outputs.push(TxPlanOut {
+            pool: 2,
+            amount: action
+                .output()
+                .value()
+                .ok_or_else(|| anyhow::anyhow!("Orchard PCZT output is missing its value"))?
+                .inner(),
+            address: action
+                .output()
+                .user_address()
+                .as_ref()
+                .cloned()
+                .unwrap_or_default(),
+            asset_name: output_asset_name,
+        });
+    }
+    let value_sum: i64 = (*bundle.value_sum())
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("Orchard PCZT value sum exceeds i64"))?;
+    *fee += value_sum;
+    Ok(())
+}
+
 impl TxPlan {
     pub fn from_package(network: &Network, package: &PcztPackage) -> Result<Self> {
         let mut inputs = vec![];
         let mut outputs = vec![];
 
-        let pczt = Pczt::parse(&package.pczt).unwrap();
+        let pczt = Pczt::parse(&package.pczt)
+            .map_err(|error| anyhow::anyhow!("Failed to parse PCZT: {error:?}"))?;
+        let is_zsa = BranchId::try_from(*pczt.global().consensus_branch_id())
+            .is_ok_and(|branch_id| branch_id == BranchId::Nu7);
         let height = *pczt.global().expiry_height();
-        let verifier = Verifier::new(pczt);
         let mut fee = 0i64;
+        let verifier = Verifier::new(pczt);
 
         let verifier = verifier
             .with_transparent(|bundle| {
@@ -183,43 +244,18 @@ impl TxPlan {
             })
             .unwrap();
 
-        let verifier = verifier
-            .with_orchard(|bundle| {
-                for a in bundle.actions().iter() {
-                    let input_asset_name = a
-                        .spend()
-                        .proprietary()
-                        .get("asset_name")
-                        .and_then(|v| String::from_utf8(v.clone()).ok())
-                        .unwrap_or_else(|| "ZEC".to_string());
-                    let output_asset_name = a
-                        .output()
-                        .proprietary()
-                        .get("asset_name")
-                        .and_then(|v| String::from_utf8(v.clone()).ok())
-                        .unwrap_or_else(|| "ZEC".to_string());
-                    inputs.push(TxPlanIn {
-                        pool: 2,
-                        amount: a.spend().value().map(|v| v.inner()),
-                        asset_name: input_asset_name,
-                    });
-                    outputs.push(TxPlanOut {
-                        pool: 2,
-                        amount: a.output().value().expect("value").inner(),
-                        address: a
-                            .output()
-                            .user_address()
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_default(),
-                        asset_name: output_asset_name,
-                    });
-                }
-                let f: i64 = (*bundle.value_sum()).try_into().unwrap();
-                fee += f;
-                Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
+        let verifier = if is_zsa {
+            verifier.with_orchard_zsa(|bundle| {
+                append_orchard_plan(bundle, &mut inputs, &mut outputs, &mut fee)
+                    .map_err(pczt::roles::verifier::OrchardError::Custom)
             })
-            .unwrap();
+        } else {
+            verifier.with_orchard(|bundle| {
+                append_orchard_plan(bundle, &mut inputs, &mut outputs, &mut fee)
+                    .map_err(pczt::roles::verifier::OrchardError::Custom)
+            })
+        }
+        .map_err(|error| anyhow::anyhow!("Failed to verify Orchard PCZT: {error:?}"))?;
 
         let _verifier = verifier
             .with_ironwood(|bundle| {
