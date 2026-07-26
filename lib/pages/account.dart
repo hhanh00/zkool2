@@ -17,7 +17,6 @@ import 'package:searchable_listview/searchable_listview.dart';
 
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
-import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -512,14 +511,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                 children: [
                   Expanded(
                     child: ListTile(
-                      onTap: () => GoRouter.of(context).push(
-                        "/zsa/issue",
-                        extra: IssuanceArgs(
-                          assetName: displayName,
-                          isReissuance: true,
-                          assetDescHash: h.assetDescHash,
-                        ),
-                      ),
                       leading: CircleAvatar(
                         backgroundColor: Colors.blue,
                         child: Text(

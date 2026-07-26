@@ -155,14 +155,6 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
                       children: [
                         Expanded(
                           child: ListTile(
-                            onTap: () => GoRouter.of(context).push(
-                              "/zsa/issue",
-                              extra: IssuanceArgs(
-                                assetName: displayName,
-                                isReissuance: true,
-                                assetDescHash: h.assetDescHash,
-                              ),
-                            ),
                             leading: CircleAvatar(
                               backgroundColor: Colors.blue,
                               child: Text(
