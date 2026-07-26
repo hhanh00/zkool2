@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.5...zkool-v6.25.0-rc.6) (2026-07-26)
+
+
+### Bug Fixes
+
+* retain ZSA notes below ZEC dust threshold ([429c51f](https://github.com/hhanh00/zkool2/commit/429c51fe657599b8644d47b35acff718680a99af))
+
 ## [6.25.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.4...zkool-v6.25.0-rc.5) (2026-07-26)
 
 
