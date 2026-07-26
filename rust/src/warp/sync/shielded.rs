@@ -229,7 +229,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 })
             })
             .collect::<Vec<_>>();
-        debug!("Action notes #{}", notes.len());
 
         // Process issuance notes from vtx.issuances — plaintext, no trial
         // decryption needed.  Per tx we track the cmxs (for tree building)
@@ -256,13 +255,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                         // Compute cmx for tree building. Returns None for
                         // protocols that don't support issuance (Sapling, Ironwood).
                         if let Some(cmx) = P::compute_issuance_cmx(note, &asset_base)? {
-                            debug!(
-                                "Issuance cmx: height={} ivtx={} vout={} cmx={}",
-                                height,
-                                ivtx,
-                                note_vout,
-                                hex::encode(cmx)
-                            );
                             tx_issuance_cmxs.push(cmx);
                         }
 
@@ -295,7 +287,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 }
             }
         }
-        debug!("Notes total (actions + issuances) #{}", notes.len());
 
         // Build a lookup of per-tx issuance note counts for position tracking.
         let mut issuance_count: std::collections::HashMap<(u32, u32), u32> =
@@ -380,7 +371,6 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let mut cmxs = vec![];
         let mut count_cmxs = 0;
 
-        debug!("WS starting position {}-{}", self.position, position);
         for depth in 0..MERKLE_DEPTH as usize {
             let mut position = self.position >> depth;
             if position % 2 == 1 {
