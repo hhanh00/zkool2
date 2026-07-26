@@ -1,5 +1,24 @@
 # Changelog
 
+## [6.25.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0...zkool-v6.25.0-rc) (2026-07-26)
+
+
+### Features
+
+* log per-pool spend/output counts before build_for_pczt ([d077ff8](https://github.com/hhanh00/zkool2/commit/d077ff8194b0232202e10ff57bccfa898ebeb689))
+* PCZT-DUMP with enc_ciphertext length, per-pool counts, block-wait loops in tests ([8d4d438](https://github.com/hhanh00/zkool2/commit/8d4d438bcad24f9888d427fc00412e8ed2b574f0))
+* re-enable ZSA support ([#1164](https://github.com/hhanh00/zkool2/issues/1164)) ([e67c0e0](https://github.com/hhanh00/zkool2/commit/e67c0e07924b95571e2f352b97bc2c565179f8a1))
+* TransactionData.orchard_bundle -&gt; OrchardBundle enum, ZSA PCZT domain support, test: block-mining wait loop, per-account coins ([fb06807](https://github.com/hhanh00/zkool2/commit/fb06807d5347114baa888f364aa5435ad139773b))
+* TransactionData.orchard_bundle uses OrchardBundle enum, ZSA PCZT domain support ([5513bbf](https://github.com/hhanh00/zkool2/commit/5513bbf3e51ef37c625c6a9bb533573aea4cc9b9))
+* ZSA circuit separation — use vanilla PK for O2O, ZSA PK for issuance; add zsa-circuit feature; add ZSA issuance test ([e2ee3e5](https://github.com/hhanh00/zkool2/commit/e2ee3e5f1eae3b6295a33c4348257f0ee7f819ef))
+* ZSA prover uses ORCHARD_ZSA_PK for all Nu7 txs, add pczt_replay CLI ([edfe526](https://github.com/hhanh00/zkool2/commit/edfe526935cf500fc221c6265708dd0d960756fe))
+
+
+### Bug Fixes
+
+* complete ZSA PCZT transaction support ([447bf68](https://github.com/hhanh00/zkool2/commit/447bf684702d8b7b9fc45e5ea8ef44304fc19212))
+* skip loading state on account page reload, enable prerelease versioning ([19a2e30](https://github.com/hhanh00/zkool2/commit/19a2e305204990f927d3e988787223cbe01fc23b))
+
 ## [6.24.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0...zkool-v6.24.0) (2026-07-20)
 
 
