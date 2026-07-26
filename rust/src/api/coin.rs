@@ -54,10 +54,13 @@ impl Coin {
 
         let mut connection = pool.acquire().await?;
 
-        let default_coin = self.coin.to_string();
+        let mut default_coin = self.coin;
+        if default_coin == 2 && self.db_filepath.to_lowercase().contains("zsa") {
+            default_coin = 3;
+        }
         let coin = crate::db::get_prop(&mut connection, "coin")
             .await?
-            .unwrap_or(default_coin);
+            .unwrap_or(default_coin.to_string());
         let coin = coin.parse::<u8>()?;
         let account = crate::db::get_prop(&mut connection, "account")
             .await?
@@ -90,11 +93,6 @@ impl Coin {
             0 => Network::Main,
             1 => Network::Test,
             2 => {
-                let orchard_mode = if self.db_filepath.to_lowercase().contains("zsa") {
-                    OrchardMode::Zsa
-                } else {
-                    OrchardMode::Normal
-                };
                 Network::Regtest(LocalNetwork {
                     overwinter: Some(BlockHeight::from_u32(1)),
                     sapling: Some(BlockHeight::from_u32(1)),
@@ -107,7 +105,7 @@ impl Coin {
                     nu6_2: Some(BlockHeight::from_u32(1)),
                     nu6_3: Some(BlockHeight::from_u32(250)),
                     nu7: None,
-                    orchard_mode,
+                    orchard_mode: OrchardMode::Normal,
                 })
             }
             3 => {

@@ -28,6 +28,7 @@ use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::{event, info, span, Level};
 use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
+use zcash_note_encryption::Domain;
 use zcash_protocol::{PoolType, ShieldedPool};
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder},
@@ -68,6 +69,38 @@ use crate::{
 };
 
 use zcash_primitives::transaction::zsa_builder::ZsaBuilder;
+
+fn attach_orchard_asset_names<D: Domain>(
+    mut updater: orchard::pczt::Updater<'_, D>,
+    asset_names: &HashMap<[u8; 32], String>,
+) -> Result<(), orchard::pczt::UpdaterError> {
+    for index in 0..updater.bundle().actions().len() {
+        let (spend_name, output_name) = {
+            let action = &updater.bundle().actions()[index];
+            (
+                action
+                    .spend()
+                    .asset()
+                    .and_then(|asset| asset_names.get(&asset.to_bytes()).cloned()),
+                action
+                    .output()
+                    .asset()
+                    .and_then(|asset| asset_names.get(&asset.to_bytes()).cloned()),
+            )
+        };
+
+        updater.update_action_with(index, |mut action| {
+            if let Some(name) = spend_name {
+                action.set_spend_proprietary("asset_name".to_string(), name.into_bytes());
+            }
+            if let Some(name) = output_name {
+                action.set_output_proprietary("asset_name".to_string(), name.into_bytes());
+            }
+            Ok(())
+        })?;
+    }
+    Ok(())
+}
 
 pub fn is_tex(network: &Network, address: &str) -> Result<bool> {
     let zaddress = ZcashAddress::from_str(address)?;
@@ -935,6 +968,36 @@ pub async fn plan_transaction(
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
     info!("Created");
 
+    let mut asset_names = sqlx::query(
+        "SELECT asset_base, asset_name FROM assets
+         WHERE asset_name IS NOT NULL AND asset_name != ''",
+    )
+    .map(|row: SqliteRow| {
+        let asset_base: Vec<u8> = row.get(0);
+        let asset_name: String = row.get(1);
+        (asset_base, asset_name)
+    })
+    .fetch_all(&mut *connection)
+    .await?
+    .into_iter()
+    .filter_map(|(asset_base, asset_name)| {
+        asset_base
+            .try_into()
+            .ok()
+            .map(|asset_base| (asset_base, asset_name))
+    })
+    .collect::<HashMap<[u8; 32], String>>();
+    for recipient in &recipient_states {
+        if let (Ok(asset_base), Some(asset_name)) = (
+            recipient.asset_base.as_slice().try_into(),
+            recipient.recipient.asset_name.as_ref(),
+        ) {
+            if !asset_name.is_empty() {
+                asset_names.insert(asset_base, asset_name.clone());
+            }
+        }
+    }
+
     let updater = Updater::new(pczt);
     let updater = updater
         .update_transparent_with(|mut u| {
@@ -974,6 +1037,15 @@ pub async fn plan_transaction(
             Ok(())
         })
         .unwrap();
+
+    let updater = if BranchId::for_height(network, BlockHeight::from_u32(target_height))
+        == BranchId::Nu7
+    {
+        updater.update_orchard_zsa_with(|u| attach_orchard_asset_names(u, &asset_names))
+    } else {
+        updater.update_orchard_with(|u| attach_orchard_asset_names(u, &asset_names))
+    }
+    .map_err(|error| anyhow!("Failed to attach Orchard asset names: {error:?}"))?;
 
     let pczt = updater.finish();
 
