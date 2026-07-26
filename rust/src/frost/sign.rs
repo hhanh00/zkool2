@@ -32,7 +32,6 @@ use tracing::info;
 use zcash_primitives::transaction::{
     sighash::SignableInput, sighash_v5::v5_signature_hash, txid::TxIdDigester,
 };
-use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
 use zcash_protocol::memo::Memo;
 
 use crate::{
@@ -697,7 +696,7 @@ pub async fn do_sign_impl(
 
         let sapling_prover = get_sapling_prover().await?;
 
-        let orchard_pk = get_orchard_pk(network, network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height)));
+        let orchard_pk = get_orchard_pk(*pczt.global().consensus_branch_id())?;
         let pczt = Prover::new(pczt)
             .create_sapling_proofs(sapling_prover, sapling_prover)
             .unwrap()

@@ -82,10 +82,11 @@ class _MigratePageState extends State<MigratePage>
             _countdown = null;
           }
         },
-        onError: (e) async {
-          final exc = e as AnyhowException;
-          if (!context.mounted) return;
-          await showException(context, exc.message);
+        onError: (e) {
+          if (!mounted) return;
+          final message =
+              e is AnyhowException ? e.message : e.toString();
+          showException(context, message);
         },
       );
     } on AnyhowException catch (e) {
