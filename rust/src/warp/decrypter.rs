@@ -153,9 +153,8 @@ pub fn try_orchard_decrypt(
         let mut plaintext = ca.ciphertext.clone();
         keystream.apply_keystream(&mut plaintext);
 
-        // ZSA notes use leadbyte 0x03, 84-byte plaintext.
-        // NU7 does not activate NoteVersion::V3 — commitments are V2.
-        // Parse with OrchardZSADomain to extract fields, then rebuild as V2.
+        // NU7 uses the asset-carrying V3ZSA note version for every Orchard
+        // note, including native ZEC.
         if plaintext[0] == 0x03 {
             use zcash_note_encryption::Domain;
             let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
@@ -165,40 +164,12 @@ pub fn try_orchard_decrypt(
             let rho = Option::<Rho>::from(Rho::from_bytes(&nullifier_bytes))
                 .ok_or_else(|| anyhow::anyhow!("Invalid Rho bytes"))?;
 
-            let is_zsa = true;
-            // Ciphertext may be >= 84 bytes (ZSA); take only the first 52 for CompactAction.
-            let note_ciphertext: [u8; 52] = ca.ciphertext[..52].try_into()
-                .map_err(|_| anyhow::anyhow!("ciphertext too short"))?;
-            let cmx_bytes: [u8; 32] = ca.cmx.clone()
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid cmx length"))?;
-            let ephemeral_key_bytes: [u8; 32] = ca.ephemeral_key.clone()
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid ephemeral key length"))?;
-            let cca = CompactAction::from_parts(
-                Option::<Nullifier>::from(Nullifier::from_bytes(&rho.to_bytes()))
-                    .ok_or_else(|| anyhow::anyhow!("Invalid nullifier"))?,
-                Option::<ExtractedNoteCommitment>::from(
-                    ExtractedNoteCommitment::from_bytes(&cmx_bytes)
-                ).ok_or_else(|| anyhow::anyhow!("Invalid cmx"))?,
-                EphemeralKeyBytes(ephemeral_key_bytes),
-                note_ciphertext,
-            );
             let note_plaintext = NoteBytesData::<84>::from_slice(&plaintext[..84])
                 .ok_or_else(|| anyhow::anyhow!("Invalid orchard note plaintext"))?;
-            // ZSA notes (lead byte 0x03) use OrchardZSADomain which parses V3 plaintext
-            // with the 32-byte asset field. Vanilla notes in 84-byte form use OrchardDomain.
-            let parsed = if is_zsa {
-                OrchardZSADomain { rho }.parse_note_plaintext_without_memo_ivk(
-                    &pivk,
-                    note_plaintext.as_ref(),
-                )
-            } else {
-                OrchardDomain::for_compact_action(&cca).parse_note_plaintext_without_memo_ivk(
-                    &pivk,
-                    note_plaintext.as_ref(),
-                )
-            };
+            let parsed = OrchardZSADomain { rho }.parse_note_plaintext_without_memo_ivk(
+                &pivk,
+                note_plaintext.as_ref(),
+            );
             tracing::debug!(
                 "ZSA parsed result: height={} vout={} is_some={}",
                 height, vout, parsed.is_some()
@@ -206,31 +177,7 @@ pub fn try_orchard_decrypt(
             if let Some((note, recipient)) = parsed {
                 let cmx = ExtractedNoteCommitment::from(note.commitment());
                 let value = note.value().inner();
-                let matched = if cmx.to_bytes() == *ca.cmx {
-                    true
-                } else if is_zsa {
-                    // Legacy cmx: orchard 0.14.0 (and earlier zcashd) computed
-                    // note commitments without the asset field. Try a V2 note
-                    // with zatoshi asset to match older chains.
-                    let legacy = orchard::note::Note::from_parts(
-                        recipient,
-                        orchard::value::NoteValue::from_raw(value),
-                        orchard::note::AssetBase::zatoshi(),
-                        rho,
-                        *note.rseed(),
-                        orchard::NoteVersion::V2,
-                    );
-                    let legacy_result = Option::<orchard::note::Note>::from(legacy)
-                        .map(|n| ExtractedNoteCommitment::from(n.commitment()).to_bytes() == *ca.cmx)
-                        .unwrap_or(false);
-                    tracing::debug!(
-                        "ZSA legacy cmx: height={} vout={} matched={}",
-                        height, vout, legacy_result
-                    );
-                    legacy_result
-                } else {
-                    false
-                };
+                let matched = cmx.to_bytes() == *ca.cmx;
                 if matched {
                     let is_zec = bool::from(note.asset().is_zatoshi());
                     let asset_base = if is_zec {
