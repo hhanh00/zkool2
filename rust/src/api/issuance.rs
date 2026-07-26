@@ -125,7 +125,6 @@ pub async fn issue_asset(
         None,          // category
         Some(&issuance_info),
         false,         // migration
-        crate::pay::solve::Mode::Fee,
         None,           // preselected
     )
     .await?;
