@@ -501,8 +501,10 @@ impl Ord for QueueItem {
 
 /// Select notes to cover `outputs`, minimizing privacy cost and then fee.
 ///
-/// `f_unit` is `COST_PER_ACTION` (5000).  Notes with `amount < f_unit` are
-/// filtered out — they can never pay for their own marginal fee.
+/// `f_unit` is `COST_PER_ACTION` (5000). ZEC notes with `amount < f_unit`
+/// are filtered out because they can never pay for their own marginal fee.
+/// ZSA notes are retained because their amounts are not denominated in
+/// zatoshis and cannot pay transaction fees.
 ///
 /// Returns `None` when the available notes cannot cover the outputs plus
 /// the required fee (or when `recipient_pays_fee` and the fee exceeds
@@ -524,11 +526,11 @@ pub(super) fn select_notes(
     );
     let filtered: Vec<Note> = notes
         .iter()
-        .filter(|n| n.amount >= f_unit)
+        .filter(|n| n.asset_index != 0 || n.amount >= f_unit)
         .cloned()
         .collect();
     info!(
-        "select_notes: after dust filter (>= {}): {} notes (removed {})",
+        "select_notes: after ZEC dust filter (< {}): {} notes (removed {})",
         f_unit,
         filtered.len(),
         total_notes - filtered.len()
@@ -785,6 +787,24 @@ mod tests {
         // Should only use the non-dust note
         assert_eq!(sel.inputs.len(), 1);
         assert_eq!(sel.inputs[0].pool, 2);
+    }
+
+    #[test]
+    fn test_zsa_note_below_fee_unit_is_not_dust() {
+        let notes = vec![
+            Note { pool: 2, amount: 1, pool_index: 0, asset_index: 1 },
+            Note { pool: 2, amount: 100_000, pool_index: 1, asset_index: 0 },
+        ];
+        let outputs = vec![Output { pool: 2, amount: 1, asset_index: 1 }];
+
+        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
+            .expect("sub-fee-unit ZSA note should remain selectable");
+
+        assert!(
+            sel.inputs
+                .iter()
+                .any(|note| note.asset_index == 1 && note.amount == 1)
+        );
     }
 
     #[test]
