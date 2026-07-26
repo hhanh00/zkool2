@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.2...zkool-v6.25.0-rc.3) (2026-07-26)
+
+
+### Bug Fixes
+
+* improve error handling and diagnostics - fix IRW detection ([828b5d3](https://github.com/hhanh00/zkool2/commit/828b5d3b038d766afe97f24ebdc917e7b448ddee))
+
 ## [6.25.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.1...zkool-v6.25.0-rc.2) (2026-07-26)
 
 
