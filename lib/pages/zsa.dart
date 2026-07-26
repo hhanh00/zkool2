@@ -243,8 +243,6 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
           key: _formKey,
           initialValue: {
             "asset_name": name,
-            "first_issuance": reissuance ? false : false,
-            "finalize": false,
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -273,18 +271,6 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
                   },
                 ]),
               ),
-              const Gap(16),
-              FormBuilderSwitch(
-                name: "first_issuance",
-                title: const Text("First Issuance"),
-                subtitle: const Text("Include a zero-value reference note (ZIP-227)"),
-                enabled: !reissuance,
-              ),
-              FormBuilderSwitch(
-                name: "finalize",
-                title: const Text("Finalize"),
-                subtitle: const Text("Prevent any future issuance of this asset"),
-              ),
             ],
           ),
         ),
@@ -298,14 +284,12 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
 
     final assetName = form.value["asset_name"] as String;
     final amount = form.value["amount"] as String;
-    final firstIssuance = _isReissuance ? false : form.value["first_issuance"] as bool;
-    final finalize = form.value["finalize"] as bool;
 
     final label = _isReissuance ? "more " : "";
     final confirmed = await confirmDialog(
       context,
       title: "Issue $assetName",
-      message: "Issue $amount ${label}units of $assetName?${finalize ? ' This will finalize the asset.' : ''}",
+      message: "Issue $amount ${label}units of $assetName? This will finalize the asset.",
     );
     if (!confirmed) return;
 
@@ -319,8 +303,8 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
       final txBytes = await issueAsset(
         assetName: assetName,
         amount: BigInt.parse(amount),
-        firstIssuance: firstIssuance,
-        finalize: finalize,
+        firstIssuance: true,
+        finalize: true,
         descHash: _descHash,
         idAccount: coinContext.coin.account,
         c: coinContext.coin,
