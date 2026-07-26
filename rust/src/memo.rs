@@ -411,10 +411,6 @@ pub async fn decrypt_memo(
                                 )
                                 .await?;
                             }
-                        } else {
-                            debug!(
-                                "decrypt_memo: both ivk and ovk decrypt failed for vout={vout} pool={pool}"
-                            );
                         }
                     } else {
                         debug!(
@@ -429,13 +425,9 @@ pub async fn decrypt_memo(
     if let Some(bundle) = tx_data.orchard_bundle() {
         match bundle {
             OrchardBundle::OrchardVanilla(b) => {
-                debug!("decrypt_memo: orchard bundle with {} actions", b.actions().len());
                 process_orchard_memo!(b, 2, OrchardDomain);
             }
-            OrchardBundle::OrchardZSA(_b) => {
-                // TODO: ZSA memo decryption — use OrchardZSADomain
-                debug!("decrypt_memo: skipping ZSA orchard bundle (not yet implemented)");
-            }
+            OrchardBundle::OrchardZSA(_) => {}
         }
     }
     if let Some(bundle) = tx_data.ironwood_bundle() {
