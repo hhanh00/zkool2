@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.3...zkool-v6.25.0-rc.4) (2026-07-26)
+
+
+### Bug Fixes
+
+* always select notes for privacy, with fee as tie-breaker ([038b5bd](https://github.com/hhanh00/zkool2/commit/038b5bd800ff74db1d014f67d6bdf7b33b6eef3f))
+
 ## [6.25.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.2...zkool-v6.25.0-rc.3) (2026-07-26)
 
 
