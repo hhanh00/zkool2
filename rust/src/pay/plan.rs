@@ -357,10 +357,15 @@ pub async fn plan_transaction(
             .fetch_one(&mut *connection)
             .await?;
 
-    // Remove dust notes (too small to pay for a single logical action)
+    // Remove ZEC dust notes (too small to pay for a single logical action).
+    // ZSA amounts are denominated in their own asset and cannot pay fees, so
+    // comparing them against the zatoshi fee threshold is meaningless.
     let before_dust: [usize; NUM_POOLS] = std::array::from_fn(|p| input_pools[p].len());
     for pool in input_pools.iter_mut() {
-        pool.retain(|n| n.amount >= COST_PER_ACTION);
+        pool.retain(|n| {
+            let is_zec = n.asset_base.is_empty() || n.asset_base.iter().all(|&byte| byte == 0);
+            !is_zec || n.amount >= COST_PER_ACTION
+        });
     }
     info!(
         "plan: after dust filter — t:{}→{}, s:{}→{}, o:{}→{}, iw:{}→{}",
