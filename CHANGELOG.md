@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.7...zkool-v6.25.0-rc.8) (2026-07-27)
+
+
+### Bug Fixes
+
+* correct ZSA action fees and transaction summaries ([500c6ac](https://github.com/hhanh00/zkool2/commit/500c6ac09d24accb5bd34b73377ee87123a15263))
+
 ## [6.25.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0-rc.6...zkool-v6.25.0-rc.7) (2026-07-26)
 
 
