@@ -22,7 +22,6 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';

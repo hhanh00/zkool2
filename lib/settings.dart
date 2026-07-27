@@ -873,7 +873,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             } else {
               prf = await authenticatePasskey();
             }
-            if (prf != null && mounted) {
+            if (mounted) {
               await ref.read(vaultProvider.notifier).registerDevice(
                 password: masterPassword!,
                 prf: prf,
