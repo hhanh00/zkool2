@@ -151,15 +151,21 @@ fn append_orchard_plan<D: Domain>(
     fee: &mut i64,
 ) -> Result<()> {
     for action in bundle.actions() {
-        let input_asset_name =
-            orchard_asset_name(action.spend().proprietary(), action.spend().asset());
         let output_asset_name =
             orchard_asset_name(action.output().proprietary(), action.output().asset());
-        inputs.push(TxPlanIn {
-            pool: 2,
-            amount: action.spend().value().map(|value| value.inner()),
-            asset_name: input_asset_name,
-        });
+        // A ZIP-226 split spend is a proof-level padding action derived from
+        // an existing ZSA note, not another wallet input. Showing it here
+        // duplicates the source note in the human-readable transaction plan.
+        if action.spend().rseed_split_note().is_none() {
+            inputs.push(TxPlanIn {
+                pool: 2,
+                amount: action.spend().value().map(|value| value.inner()),
+                asset_name: orchard_asset_name(
+                    action.spend().proprietary(),
+                    action.spend().asset(),
+                ),
+            });
+        }
         outputs.push(TxPlanOut {
             pool: 2,
             amount: action
