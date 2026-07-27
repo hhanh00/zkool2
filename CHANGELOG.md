@@ -1,5 +1,32 @@
 # Changelog
 
+## [6.25.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0...zkool-v6.25.0) (2026-07-27)
+
+
+### Features
+
+* log per-pool spend/output counts before build_for_pczt ([2aebcf5](https://github.com/hhanh00/zkool2/commit/2aebcf5a85dfd826dd632c16776bf4088b892d43))
+* PCZT-DUMP with enc_ciphertext length, per-pool counts, block-wait loops in tests ([e1b8868](https://github.com/hhanh00/zkool2/commit/e1b886859d231404bea910beeeea97ff5c3e76ad))
+* re-enable ZSA support ([#1164](https://github.com/hhanh00/zkool2/issues/1164)) ([4fd9c66](https://github.com/hhanh00/zkool2/commit/4fd9c66f1bc620ddc4821fe9d2279ac58b1a81c3))
+* TransactionData.orchard_bundle -&gt; OrchardBundle enum, ZSA PCZT domain support, test: block-mining wait loop, per-account coins ([0f75d5a](https://github.com/hhanh00/zkool2/commit/0f75d5aef2d8fe0fc5da37651197fd40fb49dc04))
+* TransactionData.orchard_bundle uses OrchardBundle enum, ZSA PCZT domain support ([314c281](https://github.com/hhanh00/zkool2/commit/314c2815b5e3e539d7d152dcc88fcaa975212fcb))
+* ZSA circuit separation — use vanilla PK for O2O, ZSA PK for issuance; add zsa-circuit feature; add ZSA issuance test ([38a3838](https://github.com/hhanh00/zkool2/commit/38a3838e44b9bdc045cea9b6030733791db483c7))
+* ZSA prover uses ORCHARD_ZSA_PK for all Nu7 txs, add pczt_replay CLI ([9a6d304](https://github.com/hhanh00/zkool2/commit/9a6d30465e881d238028a2d4e4e6a24baba2ae9d))
+
+
+### Bug Fixes
+
+* always select notes for privacy, with fee as tie-breaker ([329a1cf](https://github.com/hhanh00/zkool2/commit/329a1cf1373239a4dca5dafa4b3cf130f384958c))
+* auto-pin db to coin=3 when filename contains 'zsa' ([42ed01c](https://github.com/hhanh00/zkool2/commit/42ed01c8d69478e13a58054740505fd0f62792f4))
+* complete ZSA PCZT transaction support ([850ad82](https://github.com/hhanh00/zkool2/commit/850ad829e475ee2540a53737a47a462edbe123b1))
+* correct ZSA action fees and transaction summaries ([90a0286](https://github.com/hhanh00/zkool2/commit/90a02867f7517d89263ef0d3e34229f0dd87a08f))
+* finalize new ZSA issuance ([bebc3a5](https://github.com/hhanh00/zkool2/commit/bebc3a5075171800f22cc95ec6b137376168bf4c))
+* hide ZSA reissuance flow ([6550ad7](https://github.com/hhanh00/zkool2/commit/6550ad760faeb98e82231e46ba58abdc365d43da))
+* improve error handling and diagnostics - fix IRW detection ([b42acbb](https://github.com/hhanh00/zkool2/commit/b42acbbfda59bb237051b2cff4b669287bb571be))
+* remove cargo config ([484563c](https://github.com/hhanh00/zkool2/commit/484563c9347410d14c1e35bd5a57652e012dba67))
+* retain ZSA notes below ZEC dust threshold ([a611410](https://github.com/hhanh00/zkool2/commit/a611410b7b89091e8d0c33d687d5e2509539f5e3))
+* skip loading state on account page reload, enable prerelease versioning ([fabb1fe](https://github.com/hhanh00/zkool2/commit/fabb1feaf554a0729513bc3aedae56fe41bab984))
+
 ## [6.24.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.23.0...zkool-v6.24.0) (2026-07-20)
 
 
