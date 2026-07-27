@@ -74,6 +74,9 @@ struct State {
     balance: [i64; N_POOLS],
     /// Number of inputs selected per pool.  Drives the fee computation.
     n_inputs: [u32; N_POOLS],
+    /// Number of Orchard inputs selected per asset. ZSA Orchard actions must
+    /// pair spends and outputs within the same asset.
+    orchard_asset_inputs: Vec<u32>,
     /// Transparent input value (zats).
     tin: u64,
     /// Transparent output value (zats).  Fixed once from Context.
@@ -89,6 +92,7 @@ struct Context<'a> {
     asset_output_amounts: Vec<u64>,  // required output amount per asset (index 0 = ZEC)
     output_amounts: [u64; N_POOLS],  // output value per pool (zats)
     n_outputs: [u32; N_POOLS],       // number of fixed recipient outputs per pool
+    orchard_asset_outputs: Vec<u32>, // fixed Orchard recipient outputs per asset
     f_unit: u64,                     // COST_PER_ACTION (5000)
     migration: bool,                 // orchard fee = inputs+outputs instead of max
     recipient_pays_fee: bool,
@@ -134,17 +138,19 @@ impl BudgetTracker {
 
 /// ZIP-317 fee for a state, assuming change is assigned to `change_pool`.
 ///
-/// `zsa_change` is the number of *additional* Orchard change outputs the
-/// transaction will carry — one per non-ZEC asset whose selected inputs
-/// exceed what its recipients consume. These are distinct Orchard actions
-/// (ZSA notes aren't fungible with ZEC or each other), so they must be
-/// priced in or the planner underestimates the fee and the builder rejects
-/// the transaction for insufficient funds. See `zsa_change_outputs`.
-fn compute_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], change_pool: u8, f_unit: u64, migration: bool, zsa_change: u32) -> u64 {
+/// `orchard_actions` overrides the ordinary global input/output maximum for
+/// ZSA bundles, whose spends and outputs must instead be paired per asset.
+fn compute_fee(
+    n_inputs: &[u32; N_POOLS],
+    n_outputs: &[u32; N_POOLS],
+    change_pool: u8,
+    f_unit: u64,
+    migration: bool,
+    orchard_actions: Option<u64>,
+) -> u64 {
     let cp = change_pool as usize;
     let mut n_outs = *n_outputs;
     n_outs[cp] = n_outs[cp].saturating_add(1); // ZEC change output
-    n_outs[2] = n_outs[2].saturating_add(zsa_change); // ZSA change outputs (always Orchard)
 
     // Transparent: max(inputs, outputs), no padding
     let t = n_inputs[0].max(n_outs[0]) as u64;
@@ -155,13 +161,17 @@ fn compute_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], change_poo
     } else { 0 };
 
     // Orchard: migration? inputs+outputs : max(inputs,outputs); clamped to 2
-    let o: u64 = if n_inputs[2] > 0 || n_outs[2] > 0 {
-        if migration {
-            (n_inputs[2] as u64 + n_outs[2] as u64).max(2)
+    let o: u64 = orchard_actions.unwrap_or_else(|| {
+        if n_inputs[2] > 0 || n_outs[2] > 0 {
+            if migration {
+                (n_inputs[2] as u64 + n_outs[2] as u64).max(2)
+            } else {
+                n_inputs[2].max(n_outs[2]).max(2) as u64
+            }
         } else {
-            n_inputs[2].max(n_outs[2]).max(2) as u64
+            0
         }
-    } else { 0 };
+    });
 
     // Ironwood: same as Orchard non-migration
     let iw: u64 = if n_inputs[3] > 0 || n_outs[3] > 0 {
@@ -172,18 +182,27 @@ fn compute_fee(n_inputs: &[u32; N_POOLS], n_outputs: &[u32; N_POOLS], change_poo
     logical * f_unit
 }
 
-/// Number of extra Orchard change outputs a ZSA transfer requires: one per
-/// non-ZEC asset (index ≥ 1) whose selected input sum exceeds the amount its
-/// recipient outputs consume. Each is a separate Orchard action the builder
-/// emits, because ZSA notes aren't fungible with ZEC or with each other, so
-/// the leftover of every asset needs its own change note. The fee model must
-/// count these or it underprices the transaction (the builder computes its
-/// fee from `max(orchard_spends, orchard_outputs)` including every change
-/// note, so a missed change output = one unpriced 5000-zat action).
-fn zsa_change_outputs(state: &State, ctx: &Context) -> u32 {
-    (1..ctx.n_assets as usize)
-        .filter(|&a| state.asset_sums[a] > ctx.asset_output_amounts[a])
-        .count() as u32
+/// Orchard logical actions for a ZSA bundle. Spends and outputs can only be
+/// paired when they carry the same asset, so the bundle costs the sum of
+/// `max(spends, outputs)` for each asset rather than one global maximum.
+fn zsa_orchard_actions(state: &State, ctx: &Context, change_pool: u8) -> Option<u64> {
+    if ctx.n_assets <= 1 {
+        return None;
+    }
+
+    let actions = (0..ctx.n_assets as usize)
+        .map(|asset| {
+            let mut outputs = ctx.orchard_asset_outputs[asset];
+            if asset == 0 && change_pool == 2 {
+                outputs = outputs.saturating_add(1);
+            } else if asset > 0 && state.asset_sums[asset] > ctx.asset_output_amounts[asset] {
+                outputs = outputs.saturating_add(1);
+            }
+            state.orchard_asset_inputs[asset].max(outputs) as u64
+        })
+        .sum::<u64>();
+
+    Some(if actions > 0 { actions.max(2) } else { 0 })
 }
 
 // ---------------------------------------------------------------------
@@ -233,7 +252,7 @@ fn fee_for_change_pool(state: &State, ctx: &Context, change_pool: u8) -> u64 {
         change_pool,
         ctx.f_unit,
         ctx.migration,
-        zsa_change_outputs(state, ctx),
+        zsa_orchard_actions(state, ctx, change_pool),
     )
 }
 
@@ -257,10 +276,8 @@ fn evaluate_privacy(state: &State, ctx: &Context) -> (u64, u8) {
     let mut best_turnstile = u64::MAX;
     let mut best_fee = u64::MAX;
     let mut best_pool = 0u8;
-    let zsa_change = zsa_change_outputs(state, ctx);
-
     for cp in 0..N_POOLS as u8 {
-        let fee = compute_fee(&state.n_inputs, &ctx.n_outputs, cp, ctx.f_unit, ctx.migration, zsa_change);
+        let fee = fee_for_change_pool(state, ctx, cp);
 
         if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
             continue;
@@ -348,6 +365,7 @@ fn initial_state(ctx: &Context) -> State {
         asset_sums: vec![0u64; ctx.n_assets as usize],
         balance,
         n_inputs: [0; N_POOLS],
+        orchard_asset_inputs: vec![0; ctx.n_assets as usize],
         tin: 0,
         tout: ctx.output_amounts[0],
         selected: Vec::new(),
@@ -360,6 +378,10 @@ fn apply(state: &State, note_idx: usize, note: &Note) -> State {
     child.selected.push(note_idx);
     child.asset_sums[note.asset_index as usize] += note.amount;
     child.n_inputs[note.pool as usize] = child.n_inputs[note.pool as usize].saturating_add(1);
+    if note.pool == 2 {
+        child.orchard_asset_inputs[note.asset_index as usize] =
+            child.orchard_asset_inputs[note.asset_index as usize].saturating_add(1);
+    }
 
     match note.pool {
         0 => {
@@ -423,8 +445,8 @@ fn top_k_by_local_heuristic<'a>(
 /// Balances rounded to nearest QUANT zats to bound the `seen` map size.
 const QUANT: i64 = 1000;
 
-type StateKey = (Vec<i64>, [i64; N_POOLS], u64, [u32; N_POOLS]);
-//              asset_sums(q)  balance(q)     tout  n_inputs
+type StateKey = (Vec<i64>, [i64; N_POOLS], u64, [u32; N_POOLS], Vec<u32>);
+//              asset_sums(q)  balance(q)     tout  n_inputs       Orchard inputs/asset
 
 fn state_key(state: &State) -> StateKey {
     let q = |b: i64| (b / QUANT) * QUANT;
@@ -437,6 +459,7 @@ fn state_key(state: &State) -> StateKey {
         ],
         state.tout,
         state.n_inputs,
+        state.orchard_asset_inputs.clone(),
     )
 }
 
@@ -548,12 +571,17 @@ pub(super) fn select_notes(
     // Derive n_assets and per-asset output amounts from outputs
     let n_assets = outputs.iter().map(|o| o.asset_index).max().unwrap_or(0) + 1;
     let mut asset_output_amounts = vec![0u64; n_assets as usize];
+    let mut orchard_asset_outputs = vec![0u32; n_assets as usize];
 
     for o in outputs {
         let p = o.pool as usize;
         if p < N_POOLS {
             output_amounts[p] = output_amounts[p].saturating_add(o.amount);
             n_outputs[p] = n_outputs[p].saturating_add(1);
+            if p == 2 {
+                orchard_asset_outputs[o.asset_index as usize] =
+                    orchard_asset_outputs[o.asset_index as usize].saturating_add(1);
+            }
         }
         output_sum = output_sum.saturating_add(o.amount);
         asset_output_amounts[o.asset_index as usize] += o.amount;
@@ -579,6 +607,7 @@ pub(super) fn select_notes(
         asset_output_amounts,
         output_amounts,
         n_outputs,
+        orchard_asset_outputs,
         f_unit,
         migration,
         recipient_pays_fee,
@@ -872,7 +901,7 @@ mod tests {
         // Total logical = max(2+3,2) = 5, fee = 25000
         let n_inputs: [u32; 4] = [0, 2, 1, 0];
         let n_outputs: [u32; 4] = [0, 1, 2, 0];
-        let fee = compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, 0);
+        let fee = compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, None);
         // With change in pool 2: n_outputs[2] becomes 3
         // Sapling: max(2,1,2) = 2
         // Orchard: max(1,3,2) = 3
@@ -881,49 +910,53 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_fee_counts_zsa_change() {
-        // Reproduces the O2O ZSA transfer that under-priced by one action:
-        // spend 1 ZEC note + 1 asset note (2 Orchard inputs), send part of the
-        // asset to a recipient (1 Orchard output). The wallet then needs a ZEC
-        // change note *and* an asset change note (the asset was over-selected).
-        let n_inputs: [u32; 4] = [0, 0, 2, 0];
-        let n_outputs: [u32; 4] = [0, 0, 1, 0]; // recipient only
-        // Without counting the ZSA change note the planner saw
-        //   Orchard outputs = recipient(1) + ZEC change(1) = 2 → max(2,2)=2 → 10000
-        assert_eq!(compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, 0), 10_000);
-        // Counting the asset change note the builder actually emits
-        //   Orchard outputs = recipient(1) + ZEC change(1) + asset change(1) = 3
-        //   → max(2,3)=3 → 15000, matching the builder and closing the 5000 gap.
-        assert_eq!(compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, 1), 15_000);
-    }
-
-    #[test]
-    fn test_zsa_change_outputs_counts_over_selected_assets() {
+    fn test_zsa_fee_counts_orchard_actions_per_asset() {
+        // Two ZEC spends and one ZSA spend cannot be paired globally with one
+        // ZEC change and two ZSA outputs. ZEC requires 2 actions and the ZSA
+        // requires 2 more, for a total fee of 4 actions rather than 3.
         let ctx = Context {
             notes: &[],
-            n_assets: 3, // ZEC + 2 ZSA assets
-            asset_output_amounts: vec![0, 500_000, 300_000],
-            output_amounts: [0; N_POOLS],
-            n_outputs: [0; N_POOLS],
+            n_assets: 2,
+            asset_output_amounts: vec![0, 1_000],
+            output_amounts: [0, 0, 1_000, 0],
+            n_outputs: [0, 0, 1, 0],
+            orchard_asset_outputs: vec![0, 1],
             f_unit: 5_000,
             migration: false,
             recipient_pays_fee: false,
             first_recipient_amount: 0,
         };
-        let state = |sums: Vec<u64>| State {
-            asset_sums: sums,
+        let state = State {
+            asset_sums: vec![200_000_000, 499_500],
             balance: [0; N_POOLS],
-            n_inputs: [0; N_POOLS],
+            n_inputs: [0, 0, 3, 0],
+            orchard_asset_inputs: vec![2, 1],
             tin: 0,
             tout: 0,
             selected: vec![],
         };
-        // Asset 1 exactly funded, asset 2 over-selected → 1 change note.
-        assert_eq!(zsa_change_outputs(&state(vec![0, 500_000, 400_000]), &ctx), 1);
-        // Both assets over-selected → 2 change notes.
-        assert_eq!(zsa_change_outputs(&state(vec![0, 600_000, 400_000]), &ctx), 2);
-        // Both exactly funded → no ZSA change.
-        assert_eq!(zsa_change_outputs(&state(vec![0, 500_000, 300_000]), &ctx), 0);
+
+        assert_eq!(zsa_orchard_actions(&state, &ctx, 2), Some(4));
+        assert_eq!(fee_for_change_pool(&state, &ctx, 2), 20_000);
+    }
+
+    #[test]
+    fn test_zsa_selection_uses_per_asset_fee_as_tiebreaker() {
+        let notes = vec![
+            Note { pool: 2, amount: 20_082_510_000, pool_index: 0, asset_index: 0 },
+            Note { pool: 2, amount: 200_000_000, pool_index: 1, asset_index: 0 },
+            Note { pool: 2, amount: 499_500, pool_index: 2, asset_index: 1 },
+        ];
+        let outputs = vec![Output { pool: 2, amount: 1_000, asset_index: 1 }];
+
+        let selection = select_notes(&notes, &outputs, 5_000, false, false, 0)
+            .expect("ZSA transfer should be selectable");
+
+        // One ZEC spend pairs with ZEC change. The ZSA spend needs one
+        // recipient output and one asset-change output, so it costs two more
+        // actions: 3 actions total.
+        assert_eq!(selection.inputs.len(), 2);
+        assert_eq!(selection.fee, 15_000);
     }
 
     #[test]
@@ -934,6 +967,7 @@ mod tests {
             asset_output_amounts: vec![40_000],
             output_amounts: [40_000, 0, 0, 0],
             n_outputs: [2, 0, 0, 0],
+            orchard_asset_outputs: vec![0],
             f_unit: 5_000,
             migration: false,
             recipient_pays_fee: false,
@@ -943,6 +977,7 @@ mod tests {
             asset_sums: vec![100_000],
             balance: [-40_000, 20_000, 0, 0],
             n_inputs: [2, 1, 0, 0],
+            orchard_asset_inputs: vec![0],
             tin: 80_000,
             tout: 40_000,
             selected: vec![],
