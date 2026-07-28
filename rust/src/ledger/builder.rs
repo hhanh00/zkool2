@@ -471,7 +471,10 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             buffers.push(data);
         }
         // Read zkproof from sapling-crypto types (pczt types don't expose it)
-        let anchor = *pczt.sapling().anchor();
+        let anchor = pczt
+            .sapling()
+            .anchor()
+            .expect("a Sapling bundle with spends must have an anchor");
         // Use update_sapling_with to access sapling-crypto Spend/Output which have full
         // getters including zkproof()
         let mut proof_bufs: Vec<Vec<u8>> = vec![];
