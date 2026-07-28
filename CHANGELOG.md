@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0...zkool-v6.25.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* ZSA dependency compatibility - Use production versions of lrz ([2dbe9a3](https://github.com/hhanh00/zkool2/commit/2dbe9a393d3f7a6149812605a89e817769b4b001))
+
 ## [6.25.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.24.0...zkool-v6.25.0) (2026-07-27)
 
 
