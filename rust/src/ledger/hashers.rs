@@ -107,9 +107,13 @@ pub fn sp_compact_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
 
 pub fn sp_noncompact_hasher(pczt: &Pczt) -> Result<[u8; 32]> {
     let mut hasher = create_hasher(b"ZTxIdSSpendNHash");
+    let anchor = pczt
+        .sapling()
+        .anchor()
+        .expect("a Sapling bundle with spends must have an anchor");
     for sin in pczt.sapling().spends() {
         hasher.update(sin.cv());
-        hasher.update(pczt.sapling().anchor());
+        hasher.update(&anchor);
         hasher.update(sin.rk());
     }
     Ok(hasher.finalize().as_bytes().try_into().unwrap())
