@@ -31,7 +31,7 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_protocol::{PoolType, ShieldedPool};
 use zcash_primitives::transaction::{
-    builder::{BuildConfig, Builder},
+    builder::{BuildConfig, Builder, BundlePadding},
     fees::zip317::FeeRule,
 };
 use zcash_proofs::prover::LocalTxProver;
@@ -653,6 +653,8 @@ pub async fn plan_transaction(
         } else {
             None
         },
+        orchard_padding: BundlePadding::DEFAULT,
+        ironwood_padding: BundlePadding::DEFAULT,
     };
     let mut builder = Builder::new(network, BlockHeight::from_u32(target_height), build_config);
 
