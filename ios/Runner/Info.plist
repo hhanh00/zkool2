@@ -32,6 +32,8 @@
 	<string>We need access to your camera to scan QR codes if requested.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>We need access to your contacts to import Zcash addresses.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Zkool may use your location when capturing an image so iOS can include location metadata with the photo. Your location is not otherwise collected or stored.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to import QR codes if requested.</string>
 	<key>UIApplicationSceneManifest</key>
