@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.25.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.1...zkool-v6.25.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* restore Ledger build compatibility ([f3f5230](https://github.com/hhanh00/zkool2/commit/f3f5230ea449924764c2abfc0f54c334a5538813))
+
 ## [6.25.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0...zkool-v6.25.1) (2026-07-28)
 
 
