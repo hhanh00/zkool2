@@ -6,25 +6,25 @@ resolver = "2"
 
 [patch.crates-io]
 # -- ZSA support branches --
-orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "9f4d3561f142c5698cb25b674e89af0592e15ffd" }
-sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "bf29f9732eeaa417b63982aa8001acb542343b83" }
-zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "57d048381d376f71ce6ba753d7876ef04b6e57cb" }
+orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "4cf06bc19e52d1e8e43438cdbdd703ac2565bff6" }
+sapling-crypto = { git = "https://github.com/hhanh00/sapling-crypto", rev = "fb16242558b7119d2cb29e752ba9590ad905a5bf" }
+zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "bc7a9370e1a7253cf496f24aa0bd4d0e49c3977e" }
 
 # -- lrz ZSA branch --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85151b802284ef70baa295823b81dc062f0c7626" }
+pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
+zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "f8684db9e984a894f0d91012d02241812cd6e1cf" }
 
 # -- remaining transitive deps --
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
 sinsemilla = { git = "https://github.com/zcash/sinsemilla", rev = "aabb707e862bc3d7b803c77d14e5a771bcee3e8c" }
 zcash_spec = { git = "https://github.com/zcash-shielded-assets/zcash_spec", rev = "d5e84264d2ad0646b587a837f4e2424ca64d3a05" }
-halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "d687ce0e3e913549cab370ec66765e6d59d4612f" }
-halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "d687ce0e3e913549cab370ec66765e6d59d4612f" }
-halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "d687ce0e3e913549cab370ec66765e6d59d4612f" }
+halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
+halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
+halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
