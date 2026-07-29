@@ -1,5 +1,16 @@
 # Changelog
 
+## [6.26.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.1...zkool-v6.26.0-rc) (2026-07-29)
+
+
+### Features
+
+* add dust filter toggle for notes (hide ZEC notes &lt;= 5000 zats) ([2a88180](https://github.com/hhanh00/zkool2/commit/2a881800a774d43536ecb7a3d332b7f6ee129836))
+* add group by pool toggle for notes view ([ea1d6e6](https://github.com/hhanh00/zkool2/commit/ea1d6e6c11bd6ea837ece7adafe4693dd5ad1f26))
+* add lock/unlock all button per pool section header ([8767bc1](https://github.com/hhanh00/zkool2/commit/8767bc1ada81439e8efd9ba5453a3cd3b25a19fd))
+* add toggle all notes button to invert lock state of every note ([1ad5cf8](https://github.com/hhanh00/zkool2/commit/1ad5cf8deabe64567513a811fb197b4889833b2a))
+* skip migration step when no new blocks since last broadcast ([2553ef5](https://github.com/hhanh00/zkool2/commit/2553ef58905179befc4a00d79fbc0052504634b4))
+
 ## [6.25.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0...zkool-v6.25.1) (2026-07-28)
 
 
