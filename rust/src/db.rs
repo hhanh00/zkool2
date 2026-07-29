@@ -2070,6 +2070,14 @@ pub async fn lock_recent_notes(
     Ok(())
 }
 
+pub async fn toggle_all_notes(connection: &mut SqliteConnection, account: u32) -> Result<()> {
+    sqlx::query("UPDATE notes SET locked = NOT locked WHERE account = ?1")
+        .bind(account)
+        .execute(connection)
+        .await?;
+    Ok(())
+}
+
 pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -> Result<()> {
     sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ?1")
         .bind(account)

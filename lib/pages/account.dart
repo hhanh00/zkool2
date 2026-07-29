@@ -1012,6 +1012,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes) {
         return OverflowBar(
           children: [
             IconButton(onPressed: () => onLockRecent(ref, context, currentHeight), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
+            IconButton(onPressed: () => onToggleAll(ref, context), tooltip: "Toggle all notes", icon: Icon(Icons.sync_alt)),
             IconButton(onPressed: () => onUnlockAll(ref, context), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
           ],
         );
@@ -1053,6 +1054,16 @@ void onUnlockAll(WidgetRef ref, BuildContext context) async {
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
     await unlockAllNotes(c: c);
+    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+    ref.invalidate(accountProvider(selectedAccount.id));
+  }
+}
+
+void onToggleAll(WidgetRef ref, BuildContext context) async {
+  final c = coinContext.coin;
+  final confirmed = await confirmDialog(context, title: "Toggle All", message: "Do you want to toggle the lock state of every note?");
+  if (confirmed) {
+    await toggleAllNotes(c: c);
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
     ref.invalidate(accountProvider(selectedAccount.id));
   }

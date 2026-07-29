@@ -738,6 +738,12 @@ pub async fn unlock_all_notes(c: &Coin) -> Result<()> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+pub async fn toggle_all_notes(c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    crate::db::toggle_all_notes(&mut connection, c.account).await
+}
+
+#[cfg_attr(feature = "flutter", frb)]
 pub async fn max_spendable(c: &Coin) -> Result<u64> {
     let mut connection = c.get_connection().await?;
     crate::db::max_spendable(&mut connection, c.account).await
