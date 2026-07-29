@@ -1060,14 +1060,27 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
         for (final g in groups) {
           // Header
           if (offset == index) {
+            final allLocked = g.poolNotes.every((n) => n.locked);
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                poolToString(g.pool),
-                style: t.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: t.colorScheme.primary,
-                ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      poolToString(g.pool),
+                      style: t.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: t.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => onTogglePoolNotes(ref, context, g.poolNotes),
+                    tooltip: allLocked ? "Unlock all in pool" : "Lock all in pool",
+                    icon: Icon(allLocked ? Icons.lock_open : Icons.lock_outline),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
               ),
             );
           }
@@ -1143,6 +1156,17 @@ void onToggleAll(WidgetRef ref, BuildContext context) async {
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
     ref.invalidate(accountProvider(selectedAccount.id));
   }
+}
+
+void onTogglePoolNotes(WidgetRef ref, BuildContext context, List<TxNote> poolNotes) async {
+  final allLocked = poolNotes.every((n) => n.locked);
+  final target = !allLocked;
+  final c = coinContext.coin;
+  for (final note in poolNotes) {
+    await lockNote(id: note.id, locked: target, c: c);
+  }
+  final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+  ref.invalidate(accountProvider(selectedAccount.id));
 }
 
 void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
