@@ -56,6 +56,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   final _txSearchController = TextEditingController();
   String _txSearchQuery = '';
   bool _showDustNotes = true;
+  bool _groupByPool = false;
 
   @override
   void initState() {
@@ -412,7 +413,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                     ref.invalidate(
                         accountProvider(selectedAccount.id));
                   }),
-                  showNotes(ref, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes)),
+                  showNotes(ref, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes), _groupByPool, () => setState(() => _groupByPool = !_groupByPool)),
                   _showZsaHoldings(context, account.zsas),
                 ],
               ));
@@ -1003,15 +1004,36 @@ Widget showMemos(BuildContext context, List<Memo> memos, VoidCallback onMemoChan
   );
 }
 
-Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback onToggleDust) {
+Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback onToggleDust, bool groupByPool, VoidCallback onToggleGroup) {
   final t = Theme.of(navigatorKey.currentContext!);
   final currentHeight = ref.read(currentHeightProvider).value;
   final dustThreshold = BigInt.from(5000);
   final filtered = showDust
       ? notes
       : notes.where((n) => n.idAsset != null || n.value > dustThreshold).toList();
+
+  // Build grouped items: header + its notes
+  List<({int pool, List<TxNote> poolNotes})> groups = [];
+  if (groupByPool) {
+    final grouped = <int, List<TxNote>>{};
+    for (final n in filtered) {
+      grouped.putIfAbsent(n.pool, () => []).add(n);
+    }
+    // Sort pools in display order: Transparent, Sapling, Orchard, Ironwood
+    final poolOrder = [0, 1, 2, 3];
+    groups = poolOrder
+        .where((p) => grouped.containsKey(p))
+        .map((p) => (pool: p, poolNotes: grouped[p]!))
+        .toList();
+  }
+
+  // Flattened item count: toolbar + (header + notes per group) or all notes flat
+  final totalItems = groupByPool
+      ? 1 + groups.fold<int>(0, (sum, g) => sum + 1 + g.poolNotes.length)
+      : filtered.length + 1;
+
   return ListView.builder(
-    itemCount: filtered.length + 1,
+    itemCount: totalItems,
     itemBuilder: (context, index) {
       if (index == 0)
         return OverflowBar(
@@ -1024,8 +1046,52 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
               tooltip: showDust ? "Hide dust notes" : "Show dust notes",
               icon: Icon(showDust ? Icons.filter_alt_off : Icons.filter_alt),
             ),
+            IconButton(
+              onPressed: onToggleGroup,
+              tooltip: groupByPool ? "Ungroup notes" : "Group by pool",
+              icon: Icon(groupByPool ? Icons.dashboard : Icons.view_list),
+            ),
           ],
         );
+
+      if (groupByPool) {
+        // Walk the grouped structure
+        int offset = 1;
+        for (final g in groups) {
+          // Header
+          if (offset == index) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                poolToString(g.pool),
+                style: t.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: t.colorScheme.primary,
+                ),
+              ),
+            );
+          }
+          offset++;
+          // Notes in this group
+          if (index < offset + g.poolNotes.length) {
+            final note = g.poolNotes[index - offset];
+            return ListTile(
+              key: ValueKey(note.id),
+              dense: true,
+              onTap: () => toggleLock(ref, context, note.id, !note.locked),
+              leading: Text("${note.height}"),
+              title: Text(poolToString(note.pool)),
+              trailing: note.idAsset != null
+                  ? Text("${note.value} ${note.assetDisplay}", softWrap: false)
+                  : zatToText(note.value, selectable: false),
+              textColor: note.locked ? t.disabledColor : null,
+            );
+          }
+          offset += g.poolNotes.length;
+        }
+        // Shouldn't reach here
+        return const SizedBox.shrink();
+      }
 
       final noteIndex = index - 1;
       final note = filtered[noteIndex];
