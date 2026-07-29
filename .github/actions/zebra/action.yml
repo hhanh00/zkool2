@@ -17,7 +17,7 @@ runs:
       with:
         path: |
           ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-6.0.0-rc.0
+        key: ${{ runner.os }}-zebra-lwd-6.2.1
 
     - name: Install zebra & zaino
       if: steps.cache-zebra.outputs.cache-hit != 'true'
@@ -25,7 +25,7 @@ runs:
       run: |
         sudo apt update && sudo apt install -y libclang-dev clang
         rm -rf ./tools
-        cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.0.0-rc.0 --features=internal-miner --root ./tools zebrad
+        cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.2.1 --features=internal-miner --root ./tools zebrad
         git clone https://github.com/zecrocks/lightwalletd.git
         cd lightwalletd
         git checkout 9b69519c57785e04e92a16365483f869dd878700
@@ -34,14 +34,14 @@ runs:
     - name: Install zkool
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.24.0-rc.21 --features=graphql --root ./tools --force --bin zkool_graphql
+      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.25.1 --features=graphql --root ./tools --force --bin zkool_graphql
 
     - name: Save cache
       if: steps.cache-zebra.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5
       with:
         path: ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-6.0.0-rc.0
+        key: ${{ runner.os }}-zebra-lwd-6.2.1
 
     - name: Install config
       if: github.repository != 'hhanh00/zkool2'
