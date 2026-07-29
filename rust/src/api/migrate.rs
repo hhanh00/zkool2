@@ -75,26 +75,53 @@ pub async fn run_migration(
 
     let mut acc_split = 0u64;
     let mut acc_migrate = 0u64;
+    let mut last_action_height: Option<u32> = None;
+    let mut last_phase = String::new();
+    let mut last_sd_count = 0u32;
+    let mut last_non_sd_count = 0u32;
+    let mut last_iw_count = 0u32;
+    let mut last_progress = 0.0;
+    let mut last_work = String::new();
 
     loop {
-        let (event, status) = do_step(c, acc_split, acc_migrate).await?;
+        let skip = match last_action_height {
+            Some(h) => client.latest_height().await? <= h,
+            None => false,
+        };
 
-        // Accumulate fees from broadcast events.
-        match &event {
-            crate::migrate::MigrationEvent::SplitComplete { fee } => acc_split += fee,
-            crate::migrate::MigrationEvent::MigrateComplete { fee } => acc_migrate += fee,
-            _ => {}
+        if !skip {
+            let (event, status) = do_step(c, acc_split, acc_migrate).await?;
+
+            // Track latest counts for the waiting display.
+            last_phase = status.phase.clone();
+            last_sd_count = status.sd_notes_count;
+            last_non_sd_count = status.non_sd_notes_count;
+            last_iw_count = status.ironwood_sd_count;
+            last_progress = status.progress;
+            last_work = status.work_summary.clone();
+
+            // Accumulate fees from broadcast events.
+            match &event {
+                crate::migrate::MigrationEvent::SplitComplete { fee } => {
+                    acc_split += fee;
+                    last_action_height = Some(client.latest_height().await?);
+                }
+                crate::migrate::MigrationEvent::MigrateComplete { fee } => {
+                    acc_migrate += fee;
+                    last_action_height = Some(client.latest_height().await?);
+                }
+                _ => {}
+            }
+
+            if matches!(event, crate::migrate::MigrationEvent::Complete) {
+                sink.add(status).ok();
+                break;
+            }
+
+            sink.add(status).ok();
         }
 
-        let is_complete = matches!(event, crate::migrate::MigrationEvent::Complete);
-
-        sink.add(status.clone()).ok();
-
-        if is_complete {
-            break;
-        }
-
-        // Exponential delay between steps.
+        // Exponential delay between steps (shared by skip and normal paths).
         let mean = mean_delay_ms as f64;
         let u = (OsRng.next_u32() as f64 + 1.0) / (u32::MAX as f64 + 2.0);
         let delay_ms = ((-mean * u.ln()) as u64).min(mean_delay_ms * 4);
@@ -105,18 +132,19 @@ pub async fn run_migration(
             delay_ms, mean_delay_ms, u
         );
 
-        // Notify UI of the delay before sleeping, preserving phase + counts.
+        // Notify UI of the delay before sleeping, preserving the last
+        // phase/counts so the progress display doesn't blank out.
         sink.add(MigrationStatus {
-            phase: status.phase.clone(),
+            phase: last_phase.clone(),
             split_fees: acc_split,
             migrate_fees: acc_migrate,
             total_fees: acc_split + acc_migrate,
-            sd_notes_count: status.sd_notes_count,
-            non_sd_notes_count: status.non_sd_notes_count,
-            ironwood_sd_count: status.ironwood_sd_count,
-            progress: status.progress,
+            sd_notes_count: last_sd_count,
+            non_sd_notes_count: last_non_sd_count,
+            ironwood_sd_count: last_iw_count,
+            progress: last_progress,
             next_action: format!("Waiting {}s...", delay_secs),
-            work_summary: status.work_summary.clone(),
+            work_summary: last_work.clone(),
         })
         .ok();
 

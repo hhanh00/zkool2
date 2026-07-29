@@ -321,10 +321,13 @@ String poolToString(int pool) {
 }
 
 SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
+  final hasInputs = txPlan.inputs.isNotEmpty;
+  final hasOutputs = txPlan.outputs.isNotEmpty;
+  final separatorCount = (hasInputs && hasOutputs) ? 1 : 0;
   return SliverList.builder(
-    itemCount: txPlan.inputs.length + txPlan.outputs.length,
+    itemCount: txPlan.inputs.length + txPlan.outputs.length + separatorCount,
     itemBuilder: (context, index) {
-      if (index < txPlan.inputs.length) {
+      if (hasInputs && index < txPlan.inputs.length) {
         final input = txPlan.inputs[index];
         final isZsa = input.assetName != "ZEC";
         return ListTile(
@@ -339,12 +342,14 @@ SliverList showTxPlan(BuildContext context, TxPlan txPlan) {
             if (isZsa) input.assetName,
           ].join(" · ")),
         );
+      } else if (separatorCount == 1 && index == txPlan.inputs.length) {
+        return const Divider(height: 24, thickness: 1, indent: 16, endIndent: 16);
       } else {
-        final index2 = index - txPlan.inputs.length;
-        final output = txPlan.outputs[index2];
+        final outputIndex = index - txPlan.inputs.length - separatorCount;
+        final output = txPlan.outputs[outputIndex];
         final isZsa = output.assetName != "ZEC";
         return ListTile(
-          leading: Text("Output ${index2 + 1}"),
+          leading: Text("Output ${outputIndex + 1}"),
           title: Text("Address: ${output.address}"),
           trailing: isZsa
               ? Text(output.amount.toString(), style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold))
