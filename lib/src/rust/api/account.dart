@@ -160,6 +160,9 @@ Future<void> lockRecentNotes(
 Future<void> unlockAllNotes({required Coin c}) =>
     RustLib.instance.api.crateApiAccountUnlockAllNotes(c: c);
 
+Future<void> toggleAllNotes({required Coin c}) =>
+    RustLib.instance.api.crateApiAccountToggleAllNotes(c: c);
+
 Future<BigInt> maxSpendable({required Coin c}) =>
     RustLib.instance.api.crateApiAccountMaxSpendable(c: c);
 
