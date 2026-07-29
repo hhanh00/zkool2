@@ -55,6 +55,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   // Tx search
   final _txSearchController = TextEditingController();
   String _txSearchQuery = '';
+  bool _showDustNotes = true;
 
   @override
   void initState() {
@@ -411,7 +412,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                     ref.invalidate(
                         accountProvider(selectedAccount.id));
                   }),
-                  showNotes(ref, account.notes),
+                  showNotes(ref, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes)),
                   _showZsaHoldings(context, account.zsas),
                 ],
               ));
@@ -1002,11 +1003,15 @@ Widget showMemos(BuildContext context, List<Memo> memos, VoidCallback onMemoChan
   );
 }
 
-Widget showNotes(WidgetRef ref, List<TxNote> notes) {
+Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback onToggleDust) {
   final t = Theme.of(navigatorKey.currentContext!);
   final currentHeight = ref.read(currentHeightProvider).value;
+  final dustThreshold = BigInt.from(5000);
+  final filtered = showDust
+      ? notes
+      : notes.where((n) => n.idAsset != null || n.value > dustThreshold).toList();
   return ListView.builder(
-    itemCount: notes.length + 1,
+    itemCount: filtered.length + 1,
     itemBuilder: (context, index) {
       if (index == 0)
         return OverflowBar(
@@ -1014,11 +1019,16 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes) {
             IconButton(onPressed: () => onLockRecent(ref, context, currentHeight), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
             IconButton(onPressed: () => onToggleAll(ref, context), tooltip: "Toggle all notes", icon: Icon(Icons.sync_alt)),
             IconButton(onPressed: () => onUnlockAll(ref, context), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
+            IconButton(
+              onPressed: onToggleDust,
+              tooltip: showDust ? "Hide dust notes" : "Show dust notes",
+              icon: Icon(showDust ? Icons.filter_alt_off : Icons.filter_alt),
+            ),
           ],
         );
 
       final noteIndex = index - 1;
-      final note = notes[noteIndex];
+      final note = filtered[noteIndex];
       return ListTile(
         key: ValueKey(note.id),
         onTap: () => toggleLock(ref, context, note.id, !note.locked),
