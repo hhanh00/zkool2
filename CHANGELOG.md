@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.26.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.3...zkool-v6.26.0-rc.4) (2026-07-30)
+
+
+### Features
+
+* identify migration txs in history ([3a72389](https://github.com/hhanh00/zkool2/commit/3a723891bcd38399d0a4b667ca71fada15432106))
+
 ## [6.26.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.2...zkool-v6.26.0-rc.3) (2026-07-30)
 
 
