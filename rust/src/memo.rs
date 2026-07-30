@@ -21,6 +21,8 @@ use crate::{
     Client,
 };
 
+const TX_TYPE_MIGRATION: u8 = 16;
+
 pub async fn fetch_tx_details(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -105,18 +107,44 @@ async fn summarize_tx(
         Ok((2, value, asset_id, zsa_value))
     } else {
         // self transfer
-        let has_tspend = sqlx::query("SELECT 1 FROM spends WHERE tx = ? AND pool = 0")
-            .bind(tx)
-            .fetch_optional(&mut *connection)
-            .await?
-            .is_some();
-        let has_tnote = sqlx::query("SELECT 1 FROM notes WHERE tx = ? AND pool = 0")
-            .bind(tx)
-            .fetch_optional(&mut *connection)
-            .await?
-            .is_some();
-        let tpe: u8 = (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 });
+        let (has_tspend, has_tnote, has_ospend, has_inote) = sqlx::query(
+            "SELECT
+                EXISTS(SELECT 1 FROM spends WHERE tx = ? AND pool = 0),
+                EXISTS(SELECT 1 FROM notes WHERE tx = ? AND pool = 0),
+                EXISTS(SELECT 1 FROM spends WHERE tx = ? AND pool = 2),
+                EXISTS(SELECT 1 FROM notes WHERE tx = ? AND pool = 3)",
+        )
+        .bind(tx)
+        .bind(tx)
+        .bind(tx)
+        .bind(tx)
+        .map(|row: SqliteRow| {
+            (
+                row.get::<bool, _>(0),
+                row.get::<bool, _>(1),
+                row.get::<bool, _>(2),
+                row.get::<bool, _>(3),
+            )
+        })
+        .fetch_one(&mut *connection)
+        .await?;
+        let tpe = self_transfer_type(value, fee, has_tspend, has_tnote, has_ospend, has_inote);
         Ok((tpe, value, asset_id, zsa_value))
+    }
+}
+
+fn self_transfer_type(
+    value: i64,
+    fee: i64,
+    has_tspend: bool,
+    has_tnote: bool,
+    has_ospend: bool,
+    has_inote: bool,
+) -> u8 {
+    if has_ospend && has_inote && value == -fee {
+        TX_TYPE_MIGRATION
+    } else {
+        (if has_tspend { 8 } else { 0 }) | (if has_tnote { 4 } else { 0 })
     }
 }
 
@@ -554,4 +582,41 @@ async fn store_output(
             .context("Failed to find output")?;
 
     Ok(id_output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn orchard_to_ironwood_fee_only_transfer_is_migration() {
+        assert_eq!(
+            self_transfer_type(-10_000, 10_000, false, false, true, true),
+            TX_TYPE_MIGRATION
+        );
+    }
+
+    #[test]
+    fn migration_requires_exact_fee_value_and_both_pools() {
+        assert_eq!(
+            self_transfer_type(-9_999, 10_000, false, false, true, true),
+            0
+        );
+        assert_eq!(
+            self_transfer_type(-10_000, 10_000, false, false, true, false),
+            0
+        );
+        assert_eq!(
+            self_transfer_type(-10_000, 10_000, false, false, false, true),
+            0
+        );
+    }
+
+    #[test]
+    fn existing_transparent_self_transfer_types_are_preserved() {
+        assert_eq!(
+            self_transfer_type(-10_000, 10_000, true, true, false, false),
+            12
+        );
+    }
 }
