@@ -39,8 +39,6 @@ pub async fn synchronize(
     .await
 }
 
-
-
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn balance(c: &Coin) -> Result<PoolBalance> {
     let mut connection = c.get_connection().await?;

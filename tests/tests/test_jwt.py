@@ -27,14 +27,13 @@ def generate_jwt_keypair():
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    ).decode('utf-8')
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
 
     # Serialize public key to PEM format (SubjectPublicKeyInfo)
     public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    ).decode('utf-8')
+        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+    ).decode("utf-8")
 
     return private_pem, public_pem
 
@@ -105,9 +104,7 @@ def create_jwt_token(private_pem: str, account_id: int) -> str:
     from cryptography.hazmat.primitives import serialization
 
     private_key = serialization.load_pem_private_key(
-        private_pem.encode('utf-8'),
-        password=None,
-        backend=default_backend()
+        private_pem.encode("utf-8"), password=None, backend=default_backend()
     )
 
     # Sign with ES256
@@ -147,9 +144,12 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
 
         cmd = [
             zkool_binary,
-            "-d", DB_PATH,
-            "-p", str(PORT),
-            "-l", lwd_url,
+            "-d",
+            DB_PATH,
+            "-p",
+            str(PORT),
+            "-l",
+            lwd_url,
         ]
         if with_jwt:
             cmd.extend(["-j", JWT_KEY_PATH])
@@ -326,7 +326,11 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
-                    variable_values={"account": admin_id, "address": account1_address, "amount": "0.05"}
+                    variable_values={
+                        "account": admin_id,
+                        "address": account1_address,
+                        "amount": "0.05",
+                    },
                 )
             )
             txid = result["pay"]
@@ -413,7 +417,11 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
-                    variable_values={"account": admin_id, "address": account2_address, "amount": "0.05"}
+                    variable_values={
+                        "account": admin_id,
+                        "address": account2_address,
+                        "amount": "0.05",
+                    },
                 )
             )
             height_before = await get_current_height(client)
@@ -433,7 +441,11 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 result = await jwt1_client.execute_async(
                     GraphQLRequest(
                         pay_mutation,
-                        variable_values={"account": account1_id, "address": account2_address, "amount": "0.025"}
+                        variable_values={
+                            "account": account1_id,
+                            "address": account2_address,
+                            "amount": "0.025",
+                        },
                     )
                 )
                 txid = result["pay"]
@@ -457,7 +469,11 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                     result = await no_jwt_client.execute_async(
                         GraphQLRequest(
                             pay_mutation,
-                            variable_values={"account": account1_id, "address": account2_address, "amount": "0.025"}
+                            variable_values={
+                                "account": account1_id,
+                                "address": account2_address,
+                                "amount": "0.025",
+                            },
                         )
                     )
                     print(f"ERROR: Should not be able to send without JWT!")
@@ -471,7 +487,11 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                     result = await jwt2_client.execute_async(
                         GraphQLRequest(
                             pay_mutation,
-                            variable_values={"account": account1_id, "address": account2_address, "amount": "0.025"}
+                            variable_values={
+                                "account": account1_id,
+                                "address": account2_address,
+                                "amount": "0.025",
+                            },
                         )
                     )
                     print(f"ERROR: Should not be able to send from account 1 using JWT 2!")
@@ -542,23 +562,29 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                     async def run_subscription():
                         try:
                             self.ws = await websockets.connect(
-                                ws_url,
-                                close_timeout=60,
-                                subprotocols=["graphql-ws"]
+                                ws_url, close_timeout=60, subprotocols=["graphql-ws"]
                             )
 
                             # Send connection init with JWT
                             init_payload = {"authToken": self.jwt_token}
-                            await self.ws.send(json.dumps({"type": "connection_init", "payload": init_payload}))
+                            await self.ws.send(
+                                json.dumps({"type": "connection_init", "payload": init_payload})
+                            )
 
                             # Wait for connection_ack
                             try:
-                                init_msg = json.loads(await asyncio.wait_for(self.ws.recv(), timeout=5.0))
+                                init_msg = json.loads(
+                                    await asyncio.wait_for(self.ws.recv(), timeout=5.0)
+                                )
                                 if init_msg.get("type") != "connection_ack":
-                                    print(f"  [Account {self.account_id}] Warning: Expected connection_ack, got: {init_msg}")
+                                    print(
+                                        f"  [Account {self.account_id}] Warning: Expected connection_ack, got: {init_msg}"
+                                    )
                                     return
                             except asyncio.TimeoutError:
-                                print(f"  [Account {self.account_id}] Warning: No connection_ack received")
+                                print(
+                                    f"  [Account {self.account_id}] Warning: No connection_ack received"
+                                )
                                 return
 
                             # Subscribe to account
@@ -576,8 +602,8 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                                                 value
                                             }
                                         }
-                                    """
-                                }
+                                    """,
+                                },
                             }
                             await self.ws.send(json.dumps(subscription_query))
                             await asyncio.sleep(1)
@@ -602,12 +628,20 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                                         if isinstance(payload, dict):
                                             if "errors" in payload:
                                                 for error in payload["errors"]:
-                                                    print(f"  [Account {self.account_id}] Subscription error: {error.get('message', str(error))}")
+                                                    print(
+                                                        f"  [Account {self.account_id}] Subscription error: {error.get('message', str(error))}"
+                                                    )
                                             elif "data" in payload:
-                                                event_data = payload["data"].get("events") if isinstance(payload["data"], dict) else None
+                                                event_data = (
+                                                    payload["data"].get("events")
+                                                    if isinstance(payload["data"], dict)
+                                                    else None
+                                                )
                                                 if event_data and isinstance(event_data, dict):
                                                     self.events.append(event_data)
-                                                    print(f"  [Account {self.account_id}] Event: type={event_data.get('type')}, txid={event_data.get('txid', 'N/A')}")
+                                                    print(
+                                                        f"  [Account {self.account_id}] Event: type={event_data.get('type')}, txid={event_data.get('txid', 'N/A')}"
+                                                    )
                                 except (asyncio.TimeoutError, json.JSONDecodeError):
                                     continue
 
@@ -639,7 +673,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                             }
                         }
                     """),
-                    variable_values={"account": account2_id}
+                    variable_values={"account": account2_id},
                 )
             )
             account2_address = result["newAddresses"]["ironwood"]
@@ -662,7 +696,11 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
-                    variable_values={"account": account1_id, "address": account2_address, "amount": "0.01"}
+                    variable_values={
+                        "account": account1_id,
+                        "address": account2_address,
+                        "amount": "0.01",
+                    },
                 )
             )
             txid_from_account1 = result["pay"]
@@ -691,7 +729,9 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             account1_tx_events = [e for e in account1_sub.events if e["type"] == "TX"]
             print(f"Account 1 (sender) JWT received {len(account1_tx_events)} TX events")
 
-            account1_own_events = [e for e in account1_tx_events if not e.get('txid', '').lower().startswith('failed')]
+            account1_own_events = [
+                e for e in account1_tx_events if not e.get("txid", "").lower().startswith("failed")
+            ]
 
             if account1_own_events:
                 print(f"  ✓ Account 1 (sender) correctly received their own TX event(s)")
@@ -707,7 +747,9 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             print(f"Account 2 (receiver) JWT received {len(account2_tx_events)} TX events")
 
             if account2_tx_events:
-                print(f"  ERROR: Account 2 should NOT receive TX events for transactions sent TO them!")
+                print(
+                    f"  ERROR: Account 2 should NOT receive TX events for transactions sent TO them!"
+                )
                 for e in account2_tx_events:
                     print(f"    - txid: {e.get('txid')}, value: {e.get('value')}")
                 assert False, "Account 2 should not receive TX events for incoming transactions!"
@@ -726,9 +768,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 """Try to subscribe to an account we don't have access to."""
                 try:
                     ws = await websockets.connect(
-                        ws_url,
-                        close_timeout=60,
-                        subprotocols=["graphql-ws"]
+                        ws_url, close_timeout=60, subprotocols=["graphql-ws"]
                     )
 
                     init_payload = {"authToken": jwt_token}
@@ -749,8 +789,8 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                                         type
                                     }
                                 }
-                            """
-                        }
+                            """,
+                        },
                     }
                     await ws.send(json.dumps(subscription_query))
 
@@ -765,7 +805,10 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                                 payload = data.get("payload", {})
                                 if "errors" in payload:
                                     await ws.close()
-                                    return {"blocked": True, "error": payload["errors"][0].get("message")}
+                                    return {
+                                        "blocked": True,
+                                        "error": payload["errors"][0].get("message"),
+                                    }
                         except asyncio.TimeoutError:
                             continue
 
@@ -800,9 +843,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 events = []
                 try:
                     ws = await websockets.connect(
-                        ws_url,
-                        close_timeout=60,
-                        subprotocols=["graphql-ws"]
+                        ws_url, close_timeout=60, subprotocols=["graphql-ws"]
                     )
 
                     init_payload = {}
@@ -827,8 +868,8 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                                         height
                                     }
                                 }
-                            """
-                        }
+                            """,
+                        },
                     }
                     await ws.send(json.dumps(subscription_query))
 
@@ -869,7 +910,6 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 print(f"  ✓ BLOCK events sent to authenticated users")
             else:
                 print(f"  Note: No BLOCK events received (events may be delayed)")
-
 
             print("\n✅ Subscription access control test passed!")
 

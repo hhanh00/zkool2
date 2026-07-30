@@ -11,7 +11,7 @@ pub struct PluginRow {
     pub author: Option<String>,
     pub description: Option<String>,
     pub min_app_version: String,
-    pub types: String,       // JSON array: ["memo"]
+    pub types: String, // JSON array: ["memo"]
     pub enabled: bool,
     pub install_dir: String,
     pub script: String,

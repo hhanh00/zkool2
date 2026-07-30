@@ -171,11 +171,27 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             )
             addresses = result["addressByAccount"]
             print(f"Account 1 addresses:")
-            print(f"  Unified: {addresses['ua'][:50]}..." if addresses['ua'] else "  Unified: None")
-            print(f"  Transparent: {addresses['transparent'][:50]}..." if addresses['transparent'] else "  Transparent: None")
-            print(f"  Sapling: {addresses['sapling'][:50]}..." if addresses['sapling'] else "  Sapling: None")
-            print(f"  Orchard: {addresses['orchard'][:50]}..." if addresses['orchard'] else "  Orchard: None")
-            print(f"  Ironwood: {addresses['ironwood'][:50]}..." if addresses['ironwood'] else "  Ironwood: None")
+            print(f"  Unified: {addresses['ua'][:50]}..." if addresses["ua"] else "  Unified: None")
+            print(
+                f"  Transparent: {addresses['transparent'][:50]}..."
+                if addresses["transparent"]
+                else "  Transparent: None"
+            )
+            print(
+                f"  Sapling: {addresses['sapling'][:50]}..."
+                if addresses["sapling"]
+                else "  Sapling: None"
+            )
+            print(
+                f"  Orchard: {addresses['orchard'][:50]}..."
+                if addresses["orchard"]
+                else "  Orchard: None"
+            )
+            print(
+                f"  Ironwood: {addresses['ironwood'][:50]}..."
+                if addresses["ironwood"]
+                else "  Ironwood: None"
+            )
 
             assert addresses["ironwood"], "Ironwood address should be present"
 
@@ -198,7 +214,9 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                 GraphQLRequest(new_addresses_mutation, variable_values={"account": account1_id})
             )
             new_addresses = result["newAddresses"]
-            print(f"Generated new addresses for account 1, diversifier index: {new_addresses['diversifierIndex']}")
+            print(
+                f"Generated new addresses for account 1, diversifier index: {new_addresses['diversifierIndex']}"
+            )
             assert new_addresses["ironwood"], "New Ironwood address should be present"
 
             print("\n=== Step 7: Send transaction from funding to account 1 ===")
@@ -220,8 +238,8 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                     variable_values={
                         "account": funding_id,
                         "address": addresses["ironwood"],
-                        "amount": "0.05"
-                    }
+                        "amount": "0.05",
+                    },
                 )
             )
             txid = result["pay"]
@@ -263,7 +281,9 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print(f"  Orchard: {balance['orchard']} ZEC")
             print(f"  Ironwood: {balance['ironwood']} ZEC")
             print(f"  Total: {balance['total']} ZEC")
-            assert balance["ironwood"] == "0.05000000", f"Expected 0.05 ZEC in Ironwood, got {balance['ironwood']}"
+            assert balance["ironwood"] == "0.05000000", (
+                f"Expected 0.05 ZEC in Ironwood, got {balance['ironwood']}"
+            )
 
             print("\n=== Step 9: Test transactions_by_account query ===")
             transactions_query = gql(
@@ -280,7 +300,9 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                 """
             )
             result = await client.execute_async(
-                GraphQLRequest(transactions_query, variable_values={"account": account1_id, "height": None})
+                GraphQLRequest(
+                    transactions_query, variable_values={"account": account1_id, "height": None}
+                )
             )
             transactions = result["transactionsByAccount"]
             print(f"Found {len(transactions)} transactions for account 1")
@@ -304,8 +326,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             )
             result = await client.execute_async(
                 GraphQLRequest(
-                    transaction_by_id_query,
-                    variable_values={"account": account1_id, "txid": txid}
+                    transaction_by_id_query, variable_values={"account": account1_id, "txid": txid}
                 )
             )
             transaction = result["transactionById"]
@@ -328,8 +349,8 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
                     variable_values={
                         "account": account1_id,
                         "address": account2_address,
-                        "amount": "0.025"
-                    }
+                        "amount": "0.025",
+                    },
                 )
             )
             txid2 = result["pay"]
@@ -349,13 +370,17 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
 
             print("\n=== Step 12: Verify transaction history for both accounts ===")
             result = await client.execute_async(
-                GraphQLRequest(transactions_query, variable_values={"account": account1_id, "height": None})
+                GraphQLRequest(
+                    transactions_query, variable_values={"account": account1_id, "height": None}
+                )
             )
             account1_txs = result["transactionsByAccount"]
             print(f"Account 1 has {len(account1_txs)} transactions")
 
             result = await client.execute_async(
-                GraphQLRequest(transactions_query, variable_values={"account": account2_id, "height": None})
+                GraphQLRequest(
+                    transactions_query, variable_values={"account": account2_id, "height": None}
+                )
             )
             account2_txs = result["transactionsByAccount"]
             print(f"Account 2 has {len(account2_txs)} transactions")
@@ -364,8 +389,7 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             print("\n=== Step 13: Test transactions_by_account with height filter ===")
             result = await client.execute_async(
                 GraphQLRequest(
-                    transactions_query,
-                    variable_values={"account": account1_id, "height": 1}
+                    transactions_query, variable_values={"account": account1_id, "height": 1}
                 )
             )
             all_txs = result["transactionsByAccount"]
@@ -376,13 +400,15 @@ async def test_transactions_and_addresses(gql_client_factory, rpc_url, seed, zko
             result = await client.execute_async(
                 GraphQLRequest(
                     transactions_query,
-                    variable_values={"account": account1_id, "height": current_height - 1}
+                    variable_values={"account": account1_id, "height": current_height - 1},
                 )
             )
             filtered_txs = result["transactionsByAccount"]
             print(f"Transactions from height {current_height - 1}: {len(filtered_txs)}")
             print(f"All transactions: {len(all_txs)}")
-            assert len(filtered_txs) <= len(all_txs), "Filtered should have fewer or equal transactions"
+            assert len(filtered_txs) <= len(all_txs), (
+                "Filtered should have fewer or equal transactions"
+            )
 
             print("\n✅ Transactions and addresses test passed!")
 

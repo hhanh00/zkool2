@@ -12,9 +12,7 @@ abstract class TransparentScanner implements RustOpaqueInterface {
   Future<void> cancel();
 
   // HINT: Make it `#[frb(sync)]` to let it become the default constructor of Dart class.
-  static Future<TransparentScanner> newInstance() =>
-      RustLib.instance.api.crateApiSweepTransparentScannerNew();
+  static Future<TransparentScanner> newInstance() => RustLib.instance.api.crateApiSweepTransparentScannerNew();
 
-  Stream<String> run(
-      {required int endHeight, required int gapLimit, required Coin c});
+  Stream<String> run({required int endHeight, required int gapLimit, required Coin c});
 }

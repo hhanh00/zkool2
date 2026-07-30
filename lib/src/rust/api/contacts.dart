@@ -11,46 +11,28 @@ part 'contacts.freezed.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`
 
-Future<List<Contact>> listContacts({required Coin c}) =>
-    RustLib.instance.api.crateApiContactsListContacts(c: c);
+Future<List<Contact>> listContacts({required Coin c}) => RustLib.instance.api.crateApiContactsListContacts(c: c);
 
-Future<Contact> createContact(
-        {required String name,
-        required List<String> addresses,
-        required String notes,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiContactsCreateContact(
-        name: name, addresses: addresses, notes: notes, c: c);
+Future<Contact> createContact({required String name, required List<String> addresses, required String notes, required Coin c}) =>
+    RustLib.instance.api.crateApiContactsCreateContact(name: name, addresses: addresses, notes: notes, c: c);
 
-Future<void> updateContact(
-        {required int id,
-        String? name,
-        List<String>? addresses,
-        String? notes,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiContactsUpdateContact(
-        id: id, name: name, addresses: addresses, notes: notes, c: c);
+Future<void> updateContact({required int id, String? name, List<String>? addresses, String? notes, required Coin c}) =>
+    RustLib.instance.api.crateApiContactsUpdateContact(id: id, name: name, addresses: addresses, notes: notes, c: c);
 
-Future<void> deleteContacts({required List<int> ids, required Coin c}) =>
-    RustLib.instance.api.crateApiContactsDeleteContacts(ids: ids, c: c);
+Future<void> deleteContacts({required List<int> ids, required Coin c}) => RustLib.instance.api.crateApiContactsDeleteContacts(ids: ids, c: c);
 
 /// Find contacts whose stored addresses match the given address.
 ///
 /// The input address can be either a unified address (which will be expanded
 /// to its constituent receivers) or a single-pool receiver address.
 /// Returns matching contacts with the original address that produced the match.
-Future<List<ContactMatch>> findContactsForAddress(
-        {required String address, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiContactsFindContactsForAddress(address: address, c: c);
+Future<List<ContactMatch>> findContactsForAddress({required String address, required Coin c}) =>
+    RustLib.instance.api.crateApiContactsFindContactsForAddress(address: address, c: c);
 
-Future<String> exportContactsVcard({required Coin c}) =>
-    RustLib.instance.api.crateApiContactsExportContactsVcard(c: c);
+Future<String> exportContactsVcard({required Coin c}) => RustLib.instance.api.crateApiContactsExportContactsVcard(c: c);
 
-Future<List<Contact>> importContactsVcard(
-        {required String vcardData, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiContactsImportContactsVcard(vcardData: vcardData, c: c);
+Future<List<Contact>> importContactsVcard({required String vcardData, required Coin c}) =>
+    RustLib.instance.api.crateApiContactsImportContactsVcard(vcardData: vcardData, c: c);
 
 @freezed
 sealed class Contact with _$Contact {

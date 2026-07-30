@@ -30,7 +30,6 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
   late var c = coinContext.coin;
   var _addresses = <String>[''];
 
-
   bool get isEditing => widget.contact != null;
 
   @override
@@ -53,89 +52,87 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
         onSaveAndPop();
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? "Edit Contact" : "New Contact"),
-        actions: [
-          IconButton(onPressed: onImport, tooltip: "Import from vCard", icon: Icon(Icons.download)),
-          IconButton(onPressed: onImportFromContacts, tooltip: "Import from Contacts", icon: Icon(Icons.contacts)),
-          IconButton(onPressed: onExport, tooltip: "Export as vCard", icon: Icon(Icons.upload_file)),
-          if (isEditing) IconButton(onPressed: onDelete, tooltip: "Delete contact", icon: Icon(Icons.delete)),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: FormBuilder(
-          key: _formKey,
-          child: Column(
-            children: [
-              Gap(16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      FormBuilderTextField(
-                        name: "name",
-                        decoration: const InputDecoration(
-                          labelText: "Name",
-                          prefixIcon: Icon(Icons.person_outline),
-                        ),
-                        initialValue: widget.contact?.name ?? '',
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Gap(12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Addresses",
-                              style: Theme.of(context).textTheme.titleMedium),
-                          IconButton(
-                            icon: Icon(Icons.dns_outlined),
-                            tooltip: "Import from OpenAlias",
-                            onPressed: () => onImportOpenalias(),
+        appBar: AppBar(
+          title: Text(isEditing ? "Edit Contact" : "New Contact"),
+          actions: [
+            IconButton(onPressed: onImport, tooltip: "Import from vCard", icon: Icon(Icons.download)),
+            IconButton(onPressed: onImportFromContacts, tooltip: "Import from Contacts", icon: Icon(Icons.contacts)),
+            IconButton(onPressed: onExport, tooltip: "Export as vCard", icon: Icon(Icons.upload_file)),
+            if (isEditing) IconButton(onPressed: onDelete, tooltip: "Delete contact", icon: Icon(Icons.delete)),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: FormBuilder(
+            key: _formKey,
+            child: Column(
+              children: [
+                Gap(16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          name: "name",
+                          decoration: const InputDecoration(
+                            labelText: "Name",
+                            prefixIcon: Icon(Icons.person_outline),
                           ),
-                        ],
-                      ),
-                      Gap(8),
-                      ..._buildAddressFields(),
-                    ],
-                  ),
-                ),
-              ),
-              Gap(12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      FormBuilderTextField(
-                        name: "notes",
-                        decoration: const InputDecoration(
-                          labelText: "Notes",
-                          prefixIcon: Icon(Icons.notes),
+                          initialValue: widget.contact?.name ?? '',
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
                         ),
-                        initialValue: widget.contact?.notes ?? '',
-                        maxLines: 3,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                Gap(12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Addresses", style: Theme.of(context).textTheme.titleMedium),
+                            IconButton(
+                              icon: Icon(Icons.dns_outlined),
+                              tooltip: "Import from OpenAlias",
+                              onPressed: () => onImportOpenalias(),
+                            ),
+                          ],
+                        ),
+                        Gap(8),
+                        ..._buildAddressFields(),
+                      ],
+                    ),
+                  ),
+                ),
+                Gap(12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          name: "notes",
+                          decoration: const InputDecoration(
+                            labelText: "Notes",
+                            prefixIcon: Icon(Icons.notes),
+                          ),
+                          initialValue: widget.contact?.notes ?? '',
+                          maxLines: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }

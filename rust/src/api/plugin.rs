@@ -1,6 +1,6 @@
-use anyhow::Result;
 use crate::api::coin::Coin;
 use crate::plugin;
+use anyhow::Result;
 
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;

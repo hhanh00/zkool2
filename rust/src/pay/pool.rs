@@ -75,14 +75,10 @@ impl PoolMask {
         if address.can_receive_as(PoolType::Transparent) {
             pool_mask |= 1;
         }
-        if address.can_receive_as(PoolType::Shielded(
-            ShieldedPool::Sapling,
-        )) {
+        if address.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
             pool_mask |= 2;
         }
-        if address.can_receive_as(PoolType::Shielded(
-            ShieldedPool::Orchard,
-        )) {
+        if address.can_receive_as(PoolType::Shielded(ShieldedPool::Orchard)) {
             pool_mask |= 4 | 8; // I and O share the same addresses
         }
         Ok(PoolMask(pool_mask))

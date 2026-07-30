@@ -72,17 +72,33 @@ async fn test_orchard_transfer() {
     println!("Sender account restored: id={sender_id}");
 
     // -- 3. Sync sender from LWD server to current height --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     println!("Current height: {height}");
 
     synchronize_impl(
-        (), vec![sender_id], height, 10000, 100, 10000, false, &sender,
-    ).await.expect("sync sender");
+        (),
+        vec![sender_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &sender,
+    )
+    .await
+    .expect("sync sender");
     println!("Sender synced to height: {height}");
 
     // -- 4. Check ZEC balance (0=T,1=S,2=O,3=IW) --
-    let bal = rlz::api::sync::balance(&sender).await.expect("sender balance");
-    println!("ZEC balance: T={} S={} O={} IW={}", bal.0[0], bal.0[1], bal.0[2], bal.0[3]);
+    let bal = rlz::api::sync::balance(&sender)
+        .await
+        .expect("sender balance");
+    println!(
+        "ZEC balance: T={} S={} O={} IW={}",
+        bal.0[0], bal.0[1], bal.0[2], bal.0[3]
+    );
     let orchard_bal = bal.0[2];
     assert!(orchard_bal > 0, "sender should have Orchard balance");
     let send_amount = orchard_bal / 2;
@@ -164,13 +180,26 @@ async fn test_orchard_transfer() {
         .expect("set recipient account");
 
     // Sync recipient account (just needs the UA, no notes needed)
-    let height = get_current_height(&recipient).await.expect("get current height");
+    let height = get_current_height(&recipient)
+        .await
+        .expect("get current height");
     synchronize_impl(
-        (), vec![recipient_id], height, 10000, 100, 10000, false, &recipient,
-    ).await.expect("sync recipient");
+        (),
+        vec![recipient_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &recipient,
+    )
+    .await
+    .expect("sync recipient");
     println!("Recipient synced");
 
-    let recipient_addresses = get_addresses(ALL_POOLS, &recipient).await.expect("get recipient addresses");
+    let recipient_addresses = get_addresses(ALL_POOLS, &recipient)
+        .await
+        .expect("get recipient addresses");
     let recipient_ua = recipient_addresses.ua.expect("recipient UA");
     println!("Recipient UA: {recipient_ua}");
 
@@ -197,17 +226,25 @@ async fn test_orchard_transfer() {
     let pczt = rlz::api::pay::prepare(&[pay_recipient], options, &sender)
         .await
         .expect("plan O2O transfer");
-    assert!(pczt.n_spends.iter().sum::<usize>() > 0, "should have spends");
+    assert!(
+        pczt.n_spends.iter().sum::<usize>() > 0,
+        "should have spends"
+    );
     println!("  spends: {:?}", pczt.n_spends);
 
     let signed = sign_transaction(&pczt, &sender).await.expect("sign");
     std::fs::write("/tmp/zsa_postsigned.pczt", &signed.pczt).expect("save postsigned pczt");
     let tx_bytes = extract_transaction(&signed).await.expect("extract");
     std::fs::write("/tmp/zsa_tx.bin", &tx_bytes).expect("save tx bytes");
-    println!("Transfer tx: {} bytes (saved /tmp/zsa_tx.bin)", tx_bytes.len());
+    println!(
+        "Transfer tx: {} bytes (saved /tmp/zsa_tx.bin)",
+        tx_bytes.len()
+    );
 
     // -- 11. Broadcast the transfer --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     let txid = broadcast_transaction(height, &tx_bytes, &sender)
         .await
         .expect("broadcast transfer");
@@ -215,11 +252,15 @@ async fn test_orchard_transfer() {
 
     // -- 12. Wait for at least 1 block to be mined --
     println!("Waiting for mining...");
-    let start_height = get_current_height(&sender).await.expect("get current height");
+    let start_height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let current = get_current_height(&sender).await.expect("get current height");
+        let current = get_current_height(&sender)
+            .await
+            .expect("get current height");
         attempts += 1;
         if current > start_height {
             println!("New block mined: {start_height} -> {current} (after {attempts} attempts)");
@@ -230,20 +271,47 @@ async fn test_orchard_transfer() {
         }
     }
 
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     synchronize_impl(
-        (), vec![sender_id, recipient_id], height, 10000, 100, 10000, false, &coin,
-    ).await.expect("re-sync after transfer");
+        (),
+        vec![sender_id, recipient_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &coin,
+    )
+    .await
+    .expect("re-sync after transfer");
 
     // Verify sender balance decreased
-    let bal = rlz::api::sync::balance(&sender).await.expect("sender balance");
-    println!("Sender ZEC balance after transfer: T={} S={} O={} IW={}", bal.0[0], bal.0[1], bal.0[2], bal.0[3]);
-    assert!(bal.0[2] < orchard_bal, "sender Orchard balance should have decreased");
+    let bal = rlz::api::sync::balance(&sender)
+        .await
+        .expect("sender balance");
+    println!(
+        "Sender ZEC balance after transfer: T={} S={} O={} IW={}",
+        bal.0[0], bal.0[1], bal.0[2], bal.0[3]
+    );
+    assert!(
+        bal.0[2] < orchard_bal,
+        "sender Orchard balance should have decreased"
+    );
 
     // Switch to recipient and verify receipt
-    let recv_bal = rlz::api::sync::balance(&recipient).await.expect("recipient balance");
-    println!("Recipient ZEC balance: T={} S={} O={} IW={}", recv_bal.0[0], recv_bal.0[1], recv_bal.0[2], recv_bal.0[3]);
-    assert!(recv_bal.0[2] >= send_amount, "recipient should have received the ZEC");
+    let recv_bal = rlz::api::sync::balance(&recipient)
+        .await
+        .expect("recipient balance");
+    println!(
+        "Recipient ZEC balance: T={} S={} O={} IW={}",
+        recv_bal.0[0], recv_bal.0[1], recv_bal.0[2], recv_bal.0[3]
+    );
+    assert!(
+        recv_bal.0[2] >= send_amount,
+        "recipient should have received the ZEC"
+    );
 
     // Clean up
     let _ = std::fs::remove_file(&db_path);
@@ -303,12 +371,23 @@ async fn test_zsa_issuance() {
     println!("Account restored: id={account_id}");
 
     // -- 3. Sync from LWD server to current height --
-    let height = get_current_height(&account).await.expect("get current height");
+    let height = get_current_height(&account)
+        .await
+        .expect("get current height");
     println!("Current height: {height}");
 
     synchronize_impl(
-        (), vec![account_id], height, 10000, 100, 10000, false, &account,
-    ).await.expect("sync");
+        (),
+        vec![account_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &account,
+    )
+    .await
+    .expect("sync");
     println!("Synced to height: {height}");
 
     // -- 4. Issue a new ZSA asset: 1M units, finalized --
@@ -319,9 +398,9 @@ async fn test_zsa_issuance() {
     let tx_bytes = rlz::api::issuance::issue_asset(
         asset_name.clone(),
         issue_amount,
-        true,  // first_issuance
-        true,  // finalize
-        None,  // desc_hash (computed from name)
+        true, // first_issuance
+        true, // finalize
+        None, // desc_hash (computed from name)
         account_id,
         &account,
     )
@@ -330,7 +409,9 @@ async fn test_zsa_issuance() {
     println!("Issuance tx: {} bytes", tx_bytes.len());
 
     // -- 5. Broadcast the issuance --
-    let height = get_current_height(&account).await.expect("get current height");
+    let height = get_current_height(&account)
+        .await
+        .expect("get current height");
     let txid = broadcast_transaction(height, &tx_bytes, &account)
         .await
         .expect("broadcast issuance");
@@ -338,11 +419,15 @@ async fn test_zsa_issuance() {
 
     // -- 6. Wait for at least 1 block to be mined --
     println!("Waiting for mining...");
-    let start_height = get_current_height(&account).await.expect("get current height");
+    let start_height = get_current_height(&account)
+        .await
+        .expect("get current height");
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let current = get_current_height(&account).await.expect("get current height");
+        let current = get_current_height(&account)
+            .await
+            .expect("get current height");
         attempts += 1;
         if current > start_height {
             println!("New block mined: {start_height} -> {current} (after {attempts} attempts)");
@@ -354,10 +439,21 @@ async fn test_zsa_issuance() {
     }
 
     // -- 7. Re-sync and verify the asset appears --
-    let height = get_current_height(&account).await.expect("get current height");
+    let height = get_current_height(&account)
+        .await
+        .expect("get current height");
     synchronize_impl(
-        (), vec![account_id], height, 10000, 100, 10000, false, &account,
-    ).await.expect("re-sync after issuance");
+        (),
+        vec![account_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &account,
+    )
+    .await
+    .expect("re-sync after issuance");
     println!("Re-synced to height: {height}");
 
     let holdings = rlz::api::zsa::list_zsa_holdings(&account)
@@ -447,12 +543,23 @@ async fn test_zsa_transfer() {
     println!("Sender account restored: id={sender_id}");
 
     // -- 3. Sync sender from LWD server --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     println!("Current height: {height}");
 
     synchronize_impl(
-        (), vec![sender_id], height, 10000, 100, 10000, false, &sender,
-    ).await.expect("sync sender");
+        (),
+        vec![sender_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &sender,
+    )
+    .await
+    .expect("sync sender");
     println!("Sender synced to height: {height}");
 
     // -- 4. Issue a new ZSA asset: 1M units, finalized --
@@ -463,8 +570,8 @@ async fn test_zsa_transfer() {
     let tx_bytes = rlz::api::issuance::issue_asset(
         asset_name.clone(),
         issue_amount,
-        true,  // first_issuance
-        true,  // finalize
+        true, // first_issuance
+        true, // finalize
         None,
         sender_id,
         &sender,
@@ -474,7 +581,9 @@ async fn test_zsa_transfer() {
     println!("Issuance tx: {} bytes", tx_bytes.len());
 
     // -- 5. Broadcast issuance --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     let txid = broadcast_transaction(height, &tx_bytes, &sender)
         .await
         .expect("broadcast issuance");
@@ -482,12 +591,16 @@ async fn test_zsa_transfer() {
 
     // -- 6. Wait for 2 blocks so issuance is well-confirmed --
     println!("Waiting for 2 blocks...");
-    let start_height = get_current_height(&sender).await.expect("get current height");
+    let start_height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     let target = start_height + 2;
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let current = get_current_height(&sender).await.expect("get current height");
+        let current = get_current_height(&sender)
+            .await
+            .expect("get current height");
         attempts += 1;
         if current >= target {
             println!("Reached height {current} >= {target} (after {attempts} attempts)");
@@ -499,10 +612,21 @@ async fn test_zsa_transfer() {
     }
 
     // -- 7. Re-sync and verify the asset --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     synchronize_impl(
-        (), vec![sender_id], height, 10000, 100, 10000, false, &sender,
-    ).await.expect("re-sync after issuance");
+        (),
+        vec![sender_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &sender,
+    )
+    .await
+    .expect("re-sync after issuance");
     println!("Re-synced to height: {height}");
 
     let holdings = rlz::api::zsa::list_zsa_holdings(&sender)
@@ -513,12 +637,17 @@ async fn test_zsa_transfer() {
         .iter()
         .find(|h| h.asset_name == asset_name)
         .expect("issued asset not found");
-    assert!(zsa.balance >= issue_amount, "balance should be at least issued amount");
+    assert!(
+        zsa.balance >= issue_amount,
+        "balance should be at least issued amount"
+    );
     let zsa_balance = zsa.balance;
     let zsa_base = zsa.asset_base.clone();
     println!(
         "Sender ZSA: name={} balance={} base={}",
-        asset_name, zsa_balance, hex::encode(&zsa_base)
+        asset_name,
+        zsa_balance,
+        hex::encode(&zsa_base)
     );
 
     // -- 8. Restore recipient account --
@@ -546,14 +675,27 @@ async fn test_zsa_transfer() {
     println!("Recipient account restored: id={recipient_id}");
 
     // Sync recipient (just needs the UA)
-    let height = get_current_height(&recipient).await.expect("get current height");
+    let height = get_current_height(&recipient)
+        .await
+        .expect("get current height");
     synchronize_impl(
-        (), vec![recipient_id], height, 10000, 100, 10000, false, &recipient,
-    ).await.expect("sync recipient");
+        (),
+        vec![recipient_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &recipient,
+    )
+    .await
+    .expect("sync recipient");
     println!("Recipient synced");
 
     // Get recipient's UA for the transfer
-    let recipient_addresses = get_addresses(ALL_POOLS, &recipient).await.expect("get recipient addresses");
+    let recipient_addresses = get_addresses(ALL_POOLS, &recipient)
+        .await
+        .expect("get recipient addresses");
     let recipient_ua = recipient_addresses.ua.expect("recipient UA");
     println!("Recipient UA: {recipient_ua}");
 
@@ -582,11 +724,13 @@ async fn test_zsa_transfer() {
     let pczt = rlz::api::pay::prepare(&[pay_recipient], options, &sender)
         .await
         .expect("plan ZSA transfer");
-    assert!(pczt.n_spends.iter().sum::<usize>() > 0, "should have spends");
+    assert!(
+        pczt.n_spends.iter().sum::<usize>() > 0,
+        "should have spends"
+    );
     println!("  spends: {:?}", pczt.n_spends);
 
-    let tx_plan =
-        rlz::api::pay::to_plan(&pczt, &sender).expect("render ZSA transaction plan");
+    let tx_plan = rlz::api::pay::to_plan(&pczt, &sender).expect("render ZSA transaction plan");
     assert!(
         tx_plan
             .outputs
@@ -600,7 +744,9 @@ async fn test_zsa_transfer() {
     println!("ZSA transfer tx: {} bytes", tx_bytes.len());
 
     // -- 10. Broadcast the ZSA transfer --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     let txid = broadcast_transaction(height, &tx_bytes, &sender)
         .await
         .expect("broadcast ZSA transfer");
@@ -608,12 +754,16 @@ async fn test_zsa_transfer() {
 
     // -- 11. Wait for 2 blocks --
     println!("Waiting for 2 blocks...");
-    let start_height = get_current_height(&sender).await.expect("get current height");
+    let start_height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     let target = start_height + 2;
     let mut attempts = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let current = get_current_height(&sender).await.expect("get current height");
+        let current = get_current_height(&sender)
+            .await
+            .expect("get current height");
         attempts += 1;
         if current >= target {
             println!("Reached height {current} >= {target} (after {attempts} attempts)");
@@ -625,10 +775,21 @@ async fn test_zsa_transfer() {
     }
 
     // -- 12. Re-sync both accounts --
-    let height = get_current_height(&sender).await.expect("get current height");
+    let height = get_current_height(&sender)
+        .await
+        .expect("get current height");
     synchronize_impl(
-        (), vec![sender_id, recipient_id], height, 10000, 100, 10000, false, &sender,
-    ).await.expect("re-sync after transfer");
+        (),
+        vec![sender_id, recipient_id],
+        height,
+        10000,
+        100,
+        10000,
+        false,
+        &sender,
+    )
+    .await
+    .expect("re-sync after transfer");
     println!("Synced to height: {height}");
 
     // -- 13. Verify sender ZSA balance decreased --
@@ -653,7 +814,9 @@ async fn test_zsa_transfer() {
     for h in &recv_holdings {
         println!(
             "  {}: balance={} base={}",
-            h.asset_name, h.balance, hex::encode(&h.asset_base)
+            h.asset_name,
+            h.balance,
+            hex::encode(&h.asset_base)
         );
     }
     let recv_zsa = recv_holdings

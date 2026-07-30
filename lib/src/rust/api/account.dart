@@ -14,171 +14,107 @@ part 'account.freezed.dart';
 // These functions are ignored because they are not marked as `pub`: `get_ledger`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
-Future<int> getAccountPools({required int account, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAccountPools(account: account, c: c);
+Future<int> getAccountPools({required int account, required Coin c}) => RustLib.instance.api.crateApiAccountGetAccountPools(account: account, c: c);
 
-Future<String> getAccountUfvk(
-        {required int account, required int pools, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountGetAccountUfvk(account: account, pools: pools, c: c);
+Future<String> getAccountUfvk({required int account, required int pools, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountUfvk(account: account, pools: pools, c: c);
 
-Future<Seed?> getAccountSeed({required int account, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAccountSeed(account: account, c: c);
+Future<Seed?> getAccountSeed({required int account, required Coin c}) => RustLib.instance.api.crateApiAccountGetAccountSeed(account: account, c: c);
 
-Future<String?> getAccountFingerprint(
-        {required int account, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountGetAccountFingerprint(account: account, c: c);
+Future<String?> getAccountFingerprint({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountFingerprint(account: account, c: c);
 
-String uaFromUfvk({required String ufvk, int? di, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di, c: c);
+String uaFromUfvk({required String ufvk, int? di, required Coin c}) => RustLib.instance.api.crateApiAccountUaFromUfvk(ufvk: ufvk, di: di, c: c);
 
-Receivers receiversFromUa({required String ua, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountReceiversFromUa(ua: ua, c: c);
+Receivers receiversFromUa({required String ua, required Coin c}) => RustLib.instance.api.crateApiAccountReceiversFromUa(ua: ua, c: c);
 
-Future<List<Account>> listAccounts({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListAccounts(c: c);
+Future<List<Account>> listAccounts({required Coin c}) => RustLib.instance.api.crateApiAccountListAccounts(c: c);
 
-Future<void> updateAccount({required AccountUpdate update, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountUpdateAccount(update: update, c: c);
+Future<void> updateAccount({required AccountUpdate update, required Coin c}) => RustLib.instance.api.crateApiAccountUpdateAccount(update: update, c: c);
 
-Future<void> deleteAccount({required int account, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountDeleteAccount(account: account, c: c);
+Future<void> deleteAccount({required int account, required Coin c}) => RustLib.instance.api.crateApiAccountDeleteAccount(account: account, c: c);
 
-Future<void> reorderAccount(
-        {required int oldPosition,
-        required int newPosition,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiAccountReorderAccount(
-        oldPosition: oldPosition, newPosition: newPosition, c: c);
+Future<void> reorderAccount({required int oldPosition, required int newPosition, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountReorderAccount(oldPosition: oldPosition, newPosition: newPosition, c: c);
 
-Future<int> newAccount({required NewAccount na, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountNewAccount(na: na, c: c);
+Future<int> newAccount({required NewAccount na, required Coin c}) => RustLib.instance.api.crateApiAccountNewAccount(na: na, c: c);
 
-Future<bool> hasTransparentPubKey({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountHasTransparentPubKey(c: c);
+Future<bool> hasTransparentPubKey({required Coin c}) => RustLib.instance.api.crateApiAccountHasTransparentPubKey(c: c);
 
-Future<int> generateNextDindex({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGenerateNextDindex(c: c);
+Future<int> generateNextDindex({required Coin c}) => RustLib.instance.api.crateApiAccountGenerateNextDindex(c: c);
 
-Future<String?> generateNextChangeAddress({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGenerateNextChangeAddress(c: c);
+Future<String?> generateNextChangeAddress({required Coin c}) => RustLib.instance.api.crateApiAccountGenerateNextChangeAddress(c: c);
 
-Future<void> resetSync({required int id, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountResetSync(id: id, c: c);
+Future<void> resetSync({required int id, required Coin c}) => RustLib.instance.api.crateApiAccountResetSync(id: id, c: c);
 
-Future<void> removeAccount({required int accountId, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountRemoveAccount(accountId: accountId, c: c);
+Future<void> removeAccount({required int accountId, required Coin c}) => RustLib.instance.api.crateApiAccountRemoveAccount(accountId: accountId, c: c);
 
-Future<List<Tx>> listTxHistory({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListTxHistory(c: c);
+Future<List<Tx>> listTxHistory({required Coin c}) => RustLib.instance.api.crateApiAccountListTxHistory(c: c);
 
-Future<List<Memo>> listMemos({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListMemos(c: c);
+Future<List<Memo>> listMemos({required Coin c}) => RustLib.instance.api.crateApiAccountListMemos(c: c);
 
-Future<Addresses> getAddresses({required int uaPools, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools, c: c);
+Future<Addresses> getAddresses({required int uaPools, required Coin c}) => RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools, c: c);
 
-Future<Addresses> getAccountAddresses(
-        {required int account, required int uaPools, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAccountAddresses(
-        account: account, uaPools: uaPools, c: c);
+Future<Addresses> getAccountAddresses({required int account, required int uaPools, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountGetAccountAddresses(account: account, uaPools: uaPools, c: c);
 
-Future<TxAccount> getTxDetails({required int idTx, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx, c: c);
+Future<TxAccount> getTxDetails({required int idTx, required Coin c}) => RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx, c: c);
 
-Future<List<TxNote>> listNotes({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListNotes(c: c);
+Future<List<TxNote>> listNotes({required Coin c}) => RustLib.instance.api.crateApiAccountListNotes(c: c);
 
-Future<void> lockNote(
-        {required int id, required bool locked, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked, c: c);
+Future<void> lockNote({required int id, required bool locked, required Coin c}) => RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked, c: c);
 
-Future<List<TAddressTxCount>> fetchTransparentAddressTxCount(
-        {required Coin c}) =>
-    RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount(c: c);
+Future<List<TAddressTxCount>> fetchTransparentAddressTxCount({required Coin c}) => RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount(c: c);
 
-Future<List<TAddressTxCount>> fetchAddressTxCount(
-        {required Coin c, required bool aggregate, required int poolFilter}) =>
-    RustLib.instance.api.crateApiAccountFetchAddressTxCount(
-        c: c, aggregate: aggregate, poolFilter: poolFilter);
+Future<List<TAddressTxCount>> fetchAddressTxCount({required Coin c, required bool aggregate, required int poolFilter}) =>
+    RustLib.instance.api.crateApiAccountFetchAddressTxCount(c: c, aggregate: aggregate, poolFilter: poolFilter);
 
-Future<Uint8List> exportAccount(
-        {required int id, required String passphrase, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountExportAccount(id: id, passphrase: passphrase, c: c);
+Future<Uint8List> exportAccount({required int id, required String passphrase, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountExportAccount(id: id, passphrase: passphrase, c: c);
 
-Future<void> importAccount(
-        {required String passphrase,
-        required List<int> data,
-        required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountImportAccount(passphrase: passphrase, data: data, c: c);
+Future<void> importAccount({required String passphrase, required List<int> data, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountImportAccount(passphrase: passphrase, data: data, c: c);
 
-Future<void> printKeys({required int id, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountPrintKeys(id: id, c: c);
+Future<void> printKeys({required int id, required Coin c}) => RustLib.instance.api.crateApiAccountPrintKeys(id: id, c: c);
 
-Future<FrostParams?> getAccountFrostParams({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAccountFrostParams(c: c);
+Future<FrostParams?> getAccountFrostParams({required Coin c}) => RustLib.instance.api.crateApiAccountGetAccountFrostParams(c: c);
 
-Future<List<Folder>> listFolders({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListFolders(c: c);
+Future<List<Folder>> listFolders({required Coin c}) => RustLib.instance.api.crateApiAccountListFolders(c: c);
 
-Future<Folder> createNewFolder({required String name, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountCreateNewFolder(name: name, c: c);
+Future<Folder> createNewFolder({required String name, required Coin c}) => RustLib.instance.api.crateApiAccountCreateNewFolder(name: name, c: c);
 
-Future<void> renameFolder(
-        {required int id, required String name, required Coin c}) =>
+Future<void> renameFolder({required int id, required String name, required Coin c}) =>
     RustLib.instance.api.crateApiAccountRenameFolder(id: id, name: name, c: c);
 
-Future<void> deleteFolders({required List<int> ids, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountDeleteFolders(ids: ids, c: c);
+Future<void> deleteFolders({required List<int> ids, required Coin c}) => RustLib.instance.api.crateApiAccountDeleteFolders(ids: ids, c: c);
 
-Future<List<Category>> listCategories({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListCategories(c: c);
+Future<List<Category>> listCategories({required Coin c}) => RustLib.instance.api.crateApiAccountListCategories(c: c);
 
-Future<int> createNewCategory({required Category category, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountCreateNewCategory(category: category, c: c);
+Future<int> createNewCategory({required Category category, required Coin c}) => RustLib.instance.api.crateApiAccountCreateNewCategory(category: category, c: c);
 
-Future<void> renameCategory({required Category category, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountRenameCategory(category: category, c: c);
+Future<void> renameCategory({required Category category, required Coin c}) => RustLib.instance.api.crateApiAccountRenameCategory(category: category, c: c);
 
-Future<void> deleteCategories({required List<int> ids, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids, c: c);
+Future<void> deleteCategories({required List<int> ids, required Coin c}) => RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids, c: c);
 
-Future<String> getExportedData({required int type, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetExportedData(type: type, c: c);
+Future<String> getExportedData({required int type, required Coin c}) => RustLib.instance.api.crateApiAccountGetExportedData(type: type, c: c);
 
-Future<void> lockRecentNotes(
-        {required int height, required int threshold, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountLockRecentNotes(
-        height: height, threshold: threshold, c: c);
+Future<void> lockRecentNotes({required int height, required int threshold, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountLockRecentNotes(height: height, threshold: threshold, c: c);
 
-Future<void> unlockAllNotes({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountUnlockAllNotes(c: c);
+Future<void> unlockAllNotes({required Coin c}) => RustLib.instance.api.crateApiAccountUnlockAllNotes(c: c);
 
-Future<void> toggleAllNotes({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountToggleAllNotes(c: c);
+Future<void> toggleAllNotes({required Coin c}) => RustLib.instance.api.crateApiAccountToggleAllNotes(c: c);
 
-Future<BigInt> maxSpendable({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountMaxSpendable(c: c);
+Future<BigInt> maxSpendable({required Coin c}) => RustLib.instance.api.crateApiAccountMaxSpendable(c: c);
 
-Future<String> showLedgerSaplingAddress({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountShowLedgerSaplingAddress(c: c);
+Future<String> showLedgerSaplingAddress({required Coin c}) => RustLib.instance.api.crateApiAccountShowLedgerSaplingAddress(c: c);
 
-Future<String> showLedgerTransparentAddress({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress(c: c);
+Future<String> showLedgerTransparentAddress({required Coin c}) => RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress(c: c);
 
-Stream<SigningEvent> signLedgerTransaction(
-        {required PcztPackage package, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountSignLedgerTransaction(package: package, c: c);
+Stream<SigningEvent> signLedgerTransaction({required PcztPackage package, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountSignLedgerTransaction(package: package, c: c);
 
-Future<void> dummyExport({required SigningEvent a}) =>
-    RustLib.instance.api.crateApiAccountDummyExport(a: a);
+Future<void> dummyExport({required SigningEvent a}) => RustLib.instance.api.crateApiAccountDummyExport(a: a);
 
 @freezed
 sealed class Account with _$Account {
@@ -236,12 +172,7 @@ class Addresses {
   });
 
   @override
-  int get hashCode =>
-      taddr.hashCode ^
-      saddr.hashCode ^
-      oaddr.hashCode ^
-      ua.hashCode ^
-      diversifierIndex.hashCode;
+  int get hashCode => taddr.hashCode ^ saddr.hashCode ^ oaddr.hashCode ^ ua.hashCode ^ diversifierIndex.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -327,20 +258,14 @@ class Receivers {
     this.oaddr,
   });
 
-  static Future<Receivers> default_() =>
-      RustLib.instance.api.crateApiAccountReceiversDefault();
+  static Future<Receivers> default_() => RustLib.instance.api.crateApiAccountReceiversDefault();
 
   @override
   int get hashCode => taddr.hashCode ^ saddr.hashCode ^ oaddr.hashCode;
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Receivers &&
-          runtimeType == other.runtimeType &&
-          taddr == other.taddr &&
-          saddr == other.saddr &&
-          oaddr == other.oaddr;
+      identical(this, other) || other is Receivers && runtimeType == other.runtimeType && taddr == other.taddr && saddr == other.saddr && oaddr == other.oaddr;
 }
 
 @freezed
@@ -372,14 +297,7 @@ class TAddressTxCount {
   });
 
   @override
-  int get hashCode =>
-      pool.hashCode ^
-      address.hashCode ^
-      scope.hashCode ^
-      dindex.hashCode ^
-      amount.hashCode ^
-      txCount.hashCode ^
-      time.hashCode;
+  int get hashCode => pool.hashCode ^ address.hashCode ^ scope.hashCode ^ dindex.hashCode ^ amount.hashCode ^ txCount.hashCode ^ time.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -444,8 +362,7 @@ class TxAccount {
     this.userMemo,
   });
 
-  static Future<TxAccount> default_() =>
-      RustLib.instance.api.crateApiAccountTxAccountDefault();
+  static Future<TxAccount> default_() => RustLib.instance.api.crateApiAccountTxAccountDefault();
 
   @override
   int get hashCode =>
@@ -496,16 +413,10 @@ class TxMemo {
     required this.memoBytes,
   });
 
-  static Future<TxMemo> default_() =>
-      RustLib.instance.api.crateApiAccountTxMemoDefault();
+  static Future<TxMemo> default_() => RustLib.instance.api.crateApiAccountTxMemoDefault();
 
   @override
-  int get hashCode =>
-      note.hashCode ^
-      output.hashCode ^
-      pool.hashCode ^
-      memo.hashCode ^
-      memoBytes.hashCode;
+  int get hashCode => note.hashCode ^ output.hashCode ^ pool.hashCode ^ memo.hashCode ^ memoBytes.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -548,8 +459,7 @@ class TxNote {
     required this.assetDisplay,
   });
 
-  static Future<TxNote> default_() =>
-      RustLib.instance.api.crateApiAccountTxNoteDefault();
+  static Future<TxNote> default_() => RustLib.instance.api.crateApiAccountTxNoteDefault();
 
   @override
   int get hashCode =>
@@ -602,17 +512,10 @@ class TxOutput {
     this.contactName,
   });
 
-  static Future<TxOutput> default_() =>
-      RustLib.instance.api.crateApiAccountTxOutputDefault();
+  static Future<TxOutput> default_() => RustLib.instance.api.crateApiAccountTxOutputDefault();
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      pool.hashCode ^
-      height.hashCode ^
-      value.hashCode ^
-      address.hashCode ^
-      contactName.hashCode;
+  int get hashCode => id.hashCode ^ pool.hashCode ^ height.hashCode ^ value.hashCode ^ address.hashCode ^ contactName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -644,17 +547,10 @@ class TxSpend {
     required this.assetDisplay,
   });
 
-  static Future<TxSpend> default_() =>
-      RustLib.instance.api.crateApiAccountTxSpendDefault();
+  static Future<TxSpend> default_() => RustLib.instance.api.crateApiAccountTxSpendDefault();
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      pool.hashCode ^
-      height.hashCode ^
-      value.hashCode ^
-      idAsset.hashCode ^
-      assetDisplay.hashCode;
+  int get hashCode => id.hashCode ^ pool.hashCode ^ height.hashCode ^ value.hashCode ^ idAsset.hashCode ^ assetDisplay.hashCode;
 
   @override
   bool operator ==(Object other) =>

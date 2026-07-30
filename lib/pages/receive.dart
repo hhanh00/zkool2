@@ -259,23 +259,28 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
   }
 
   ButtonStyle get _segmentedStyle => SegmentedButton.styleFrom(
-    backgroundColor: Colors.grey[200],
-    foregroundColor: Colors.red,
-    selectedForegroundColor: Colors.white,
-    selectedBackgroundColor: Colors.green,
-  );
+        backgroundColor: Colors.grey[200],
+        foregroundColor: Colors.red,
+        selectedForegroundColor: Colors.white,
+        selectedBackgroundColor: Colors.green,
+      );
 
   List<TAddressTxCount> _filtered() => _txCounts.where((tx) {
-    switch (_scopeFilter) {
-      case 1: if (tx.scope != 0) return false;
-      case 2: if (tx.scope != 1) return false;
-    }
-    switch (_usageFilter) {
-      case 1: return tx.txCount > 0;
-      case 2: return tx.txCount == 0;
-      default: return true;
-    }
-  }).toList();
+        switch (_scopeFilter) {
+          case 1:
+            if (tx.scope != 0) return false;
+          case 2:
+            if (tx.scope != 1) return false;
+        }
+        switch (_usageFilter) {
+          case 1:
+            return tx.txCount > 0;
+          case 2:
+            return tx.txCount == 0;
+          default:
+            return true;
+        }
+      }).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -368,9 +373,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
               itemBuilder: (context, index) {
                 final tx = filtered[index];
                 final lastUsed = tx.time > 0 ? timeToString(tx.time) : "Never";
-                final trimmed = tx.address.length > 20
-                    ? '${tx.address.substring(0, 10)}...${tx.address.substring(tx.address.length - 8)}'
-                    : tx.address;
+                final trimmed = tx.address.length > 20 ? '${tx.address.substring(0, 10)}...${tx.address.substring(tx.address.length - 8)}' : tx.address;
                 return ListTile(
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,

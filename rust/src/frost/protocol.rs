@@ -47,59 +47,107 @@ pub trait FrostBytes: Sized {
 
 // DKG types — all use the frost library's serialize/deserialize methods
 impl FrostBytes for round1::SecretPackage {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for round2::SecretPackage {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for round1::Package {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for round2::Package {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for KeyPackage<P> {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for PublicKeyPackage<P> {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 // SIGN types
 impl FrostBytes for SigningNonces<P> {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for SigningCommitments<P> {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for SigningPackage<P> {
-    fn to_bytes(&self) -> Result<Vec<u8>> { self.serialize().map_err(|e| anyhow::anyhow!("{e}")) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        self.serialize().map_err(|e| anyhow::anyhow!("{e}"))
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for SignatureShare<P> {
-    fn to_bytes(&self) -> Result<Vec<u8>> { Ok(self.serialize()) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        Ok(self.serialize())
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(data).map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl FrostBytes for Randomizer {
-    fn to_bytes(&self) -> Result<Vec<u8>> { Ok(self.serialize().to_vec()) }
-    fn from_bytes(data: &[u8]) -> Result<Self> { Self::deserialize(data.try_into().map_err(|_| anyhow::anyhow!("bad randomizer length"))?).map_err(|e| anyhow::anyhow!("{e}")) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        Ok(self.serialize().to_vec())
+    }
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        Self::deserialize(
+            data.try_into()
+                .map_err(|_| anyhow::anyhow!("bad randomizer length"))?,
+        )
+        .map_err(|e| anyhow::anyhow!("{e}"))
+    }
 }
 
 impl<T: FrostBytes + bincode::Encode + bincode::Decode<()>> FrostBytes for Vec<T> {
@@ -123,7 +171,10 @@ pub struct Indexed {
 
 impl Indexed {
     pub fn new<T: FrostBytes>(idx: u32, value: &T) -> Result<Self> {
-        Ok(Self { idx, data: value.to_bytes()? })
+        Ok(Self {
+            idx,
+            data: value.to_bytes()?,
+        })
     }
     pub fn decode<T: FrostBytes>(&self) -> Result<T> {
         T::from_bytes(&self.data)
@@ -198,9 +249,10 @@ impl<P: FrostBytes> Dispatch for PerPeer<P> {
             .into_iter()
             .map(|(from_id, pkg)| {
                 let idx = from_id as usize - 1;
-                let addr = ctx.peer_addresses.get(idx).ok_or_else(|| {
-                    anyhow::anyhow!("no address for participant {}", from_id)
-                })?;
+                let addr = ctx
+                    .peer_addresses
+                    .get(idx)
+                    .ok_or_else(|| anyhow::anyhow!("no address for participant {}", from_id))?;
                 Ok((addr.clone(), pkg.to_bytes()?))
             })
             .collect()
@@ -223,8 +275,12 @@ impl<P: FrostBytes + bincode::Encode + bincode::Decode<()>> Dispatch for ToCoord
 }
 
 impl FrostBytes for () {
-    fn to_bytes(&self) -> Result<Vec<u8>> { Ok(vec![]) }
-    fn from_bytes(_: &[u8]) -> Result<Self> { Ok(()) }
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        Ok(vec![])
+    }
+    fn from_bytes(_: &[u8]) -> Result<Self> {
+        Ok(())
+    }
 }
 
 // ── Round ─────────────────────────────────────────────────────────────────────
@@ -274,10 +330,8 @@ pub trait Round {
     // ── DB operations (each impl maps to concrete columns / tables) ──────────
 
     /// Load our own secret for this round, if already computed.
-    async fn load_secret(
-        conn: &mut SqliteConnection,
-        account: u32,
-    ) -> Result<Option<Self::Secret>>;
+    async fn load_secret(conn: &mut SqliteConnection, account: u32)
+        -> Result<Option<Self::Secret>>;
 
     /// Persist our secret for this round.
     async fn store_secret(
@@ -364,8 +418,8 @@ pub async fn run_round<R: Round>(
 
     // 2. Produce our own secret + outgoing packages if not yet done
     if R::load_secret(conn, account).await?.is_none() {
-        let (secret, outgoing) = R::produce(&input)
-            .context(format!("Round produce failed for account {}", account))?;
+        let (secret, outgoing) =
+            R::produce(&input).context(format!("Round produce failed for account {}", account))?;
         let recipients_raw = outgoing.into_recipients(route_ctx)?;
 
         let mut tx = conn.begin().await?;
@@ -374,13 +428,18 @@ pub async fn run_round<R: Round>(
             let recipients: Vec<(String, Vec<u8>)> = recipients_raw
                 .into_iter()
                 .map(|(addr, data)| {
-                    let msg = FrostMessage { from_id: self_id, data };
+                    let msg = FrostMessage {
+                        from_id: self_id,
+                        data,
+                    };
                     let bytes = msg.encode_with_prefix(&R::PREFIX)?;
                     Ok((addr, bytes))
                 })
                 .collect::<Result<_>>()?;
-            let refs: Vec<(&str, Vec<u8>)> =
-                recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
+            let refs: Vec<(&str, Vec<u8>)> = recipients
+                .iter()
+                .map(|(a, d)| (a.as_str(), d.clone()))
+                .collect();
             publish(network, &mut *tx, funding_account, client, height, &refs).await?;
         }
         tx.commit().await?;
@@ -390,7 +449,8 @@ pub async fn run_round<R: Round>(
     let peers = R::load_publics(conn, account).await?;
     // Filter out our own package, then check threshold (accounting that we have our own package)
     let peer_count = peers.iter().filter(|(id, _)| *id != self_id).count();
-    if peer_count + 1 < R::threshold(n, t) {  // +1 for our own package
+    if peer_count + 1 < R::threshold(n, t) {
+        // +1 for our own package
         return Ok(None);
     }
 
@@ -486,12 +546,15 @@ pub async fn publish(
     )
     .await
     .context("plan_transaction in DKG publish")?;
-    let pczt = sign_transaction(connection, account, network, &pczt).await
-    .context("sign_transaction in DKG publish")?;
-    let txb = extract_transaction(&pczt).await
-    .context("extract_transaction in DKG publish")?;
-    let result = crate::pay::send(client, height, &txb).await
-    .context("send in DKG publish")?;
+    let pczt = sign_transaction(connection, account, network, &pczt)
+        .await
+        .context("sign_transaction in DKG publish")?;
+    let txb = extract_transaction(&pczt)
+        .await
+        .context("extract_transaction in DKG publish")?;
+    let result = crate::pay::send(client, height, &txb)
+        .await
+        .context("send in DKG publish")?;
     if hex::decode(&result).is_err() {
         anyhow::bail!(result);
     }

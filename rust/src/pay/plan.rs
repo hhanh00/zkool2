@@ -29,7 +29,6 @@ use tracing::{event, info, span, Level};
 use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
-use zcash_protocol::{PoolType, ShieldedPool};
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder, BundlePadding},
     fees::zip317::FeeRule,
@@ -40,6 +39,7 @@ use zcash_protocol::{
     memo::{Memo, MemoBytes},
     value::Zatoshis,
 };
+use zcash_protocol::{PoolType, ShieldedPool};
 use zcash_transparent::{
     address::TransparentAddress,
     builder::{SpendInfo, TransparentInputInfo},
@@ -62,7 +62,7 @@ use crate::{
         fee::COST_PER_ACTION,
         pool::{PoolMask, NUM_POOLS},
         prepare::to_zec,
-        solve, InputNote, Recipient, RecipientState, ReceiverOption, DecomposedRecipient,
+        solve, DecomposedRecipient, InputNote, ReceiverOption, Recipient, RecipientState,
     },
     warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
     Client,
@@ -192,7 +192,11 @@ fn decompose_address(
             TransparentAddress::PublicKeyHash(hash) => Receiver::P2pkh(hash),
             TransparentAddress::ScriptHash(hash) => Receiver::P2sh(hash),
         };
-        return Ok(ReceiverOption { receiver, pool: 0, remaining: 0 });
+        return Ok(ReceiverOption {
+            receiver,
+            pool: 0,
+            remaining: 0,
+        });
     }
 
     if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
@@ -287,8 +291,8 @@ pub async fn plan_transaction(
         (input_pools, recipients, recipient_pays_fee)
     };
 
-    let ironwood_active = network
-        .is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height));
+    let ironwood_active =
+        network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height));
     let orchard_note_version =
         if BranchId::for_height(network, BlockHeight::from_u32(height)) == BranchId::Nu7 {
             orchard::NoteVersion::V3ZSA
@@ -316,7 +320,9 @@ pub async fn plan_transaction(
         .collect::<Result<Vec<_>>>()?;
 
     // ZSA and Ironwood are mutually exclusive (different V6 version group IDs).
-    let has_zsa = decomposed.iter().any(|d| d.asset_base != [0u8; 32].to_vec())
+    let has_zsa = decomposed
+        .iter()
+        .any(|d| d.asset_base != [0u8; 32].to_vec())
         || issuance.is_some();
     if has_zsa && ironwood_active {
         anyhow::bail!("ZSA and Ironwood are incompatible");
@@ -370,10 +376,14 @@ pub async fn plan_transaction(
     }
     info!(
         "plan: after dust filter — t:{}→{}, s:{}→{}, o:{}→{}, iw:{}→{}",
-        before_dust[0], input_pools[0].len(),
-        before_dust[1], input_pools[1].len(),
-        before_dust[2], input_pools[2].len(),
-        before_dust[3], input_pools[3].len(),
+        before_dust[0],
+        input_pools[0].len(),
+        before_dust[1],
+        input_pools[1].len(),
+        before_dust[2],
+        input_pools[2].len(),
+        before_dust[3],
+        input_pools[3].len(),
     );
 
     // Build asset→index lookup: 0 = ZEC, 1+ = index into zsa_assets
@@ -416,8 +426,7 @@ pub async fn plan_transaction(
                 // with phantom ZEC while the builder spent the note as its real
                 // asset, leaving that asset over-spent and the ZEC change unbacked
                 // (Orchard IO-finalize → ValueCommitMismatch).
-                let asset_bytes: [u8; 32] =
-                    n.asset_base.clone().try_into().unwrap_or(zec_key);
+                let asset_bytes: [u8; 32] = n.asset_base.clone().try_into().unwrap_or(zec_key);
                 let asset_index = if asset_bytes == zec_key {
                     0
                 } else {
@@ -426,7 +435,12 @@ pub async fn plan_transaction(
                         None => return None,
                     }
                 };
-                Some(solve::Note { pool: pool as u8, amount: n.amount, pool_index: idx, asset_index })
+                Some(solve::Note {
+                    pool: pool as u8,
+                    amount: n.amount,
+                    pool_index: idx,
+                    asset_index,
+                })
             })
         })
         .collect();
@@ -448,7 +462,11 @@ pub async fn plan_transaction(
         .zip(decomposed.iter())
         .map(|(&pool, dr)| {
             let asset_index = resolve_asset_index(&dr.asset_base, zec_key, &zsa_index);
-            solve::Output { pool, amount: dr.amount, asset_index }
+            solve::Output {
+                pool,
+                amount: dr.amount,
+                asset_index,
+            }
         })
         .collect();
 
@@ -473,7 +491,9 @@ pub async fn plan_transaction(
 
     info!(
         "plan: select_notes succeeded — fee={}, change_pool={}, selected_inputs={}",
-        selection.fee, selection.change_pool, selection.inputs.len()
+        selection.fee,
+        selection.change_pool,
+        selection.inputs.len()
     );
 
     // Mark selected notes as fully consumed (select_notes uses 0/1 knapsack)
@@ -595,8 +615,7 @@ pub async fn plan_transaction(
         "Anchor height {anchor_height} is ahead of checkpoint {}",
         h.height,
     );
-    let (ts, to, ti) =
-        crate::sync::get_tree_state(network, client, anchor_height).await?;
+    let (ts, to, ti) = crate::sync::get_tree_state(network, client, anchor_height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
     let ei = ti.to_edge(&OrchardHasher::default());
@@ -609,7 +628,9 @@ pub async fn plan_transaction(
     for pool in 1..NUM_POOLS {
         let p = pool as u8;
         has_pool[pool] = input_pools[pool].iter().any(|inp| inp.is_used())
-            || recipient_states.iter().any(|r| r.pool_mask.to_best_pool() == Some(p))
+            || recipient_states
+                .iter()
+                .any(|r| r.pool_mask.to_best_pool() == Some(p))
             || change_pool == p;
     }
     has_pool[3] &= ironwood_active;
@@ -720,23 +741,19 @@ pub async fn plan_transaction(
                         } else {
                             pubkey.serialize().to_vec()
                         };
-                        let pkh: [u8; 20] =
-                            Ripemd160::digest(Sha256::digest(&pk_bytes)).into();
+                        let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&pk_bytes)).into();
                         let addr = TransparentAddress::PublicKeyHash(pkh);
-                        let coin = TxOut::new(
-                            Zatoshis::from_u64(*amount).unwrap(),
-                            addr.script().into(),
-                        );
+                        let coin =
+                            TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
 
-                        builder
-                            .add_transparent_input(
-                                TransparentInputInfo::from_parts(
-                                    utxo,
-                                    coin,
-                                    SpendInfo::P2pkh { pubkey },
-                                )
-                                .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
-                            );
+                        builder.add_transparent_input(
+                            TransparentInputInfo::from_parts(
+                                utxo,
+                                coin,
+                                SpendInfo::P2pkh { pubkey },
+                            )
+                            .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
+                        );
                         tsk_dindex.push((pubkey, scope, dindex_t, taddress, uncompressed));
                     }
                     1 => {
@@ -760,7 +777,6 @@ pub async fn plan_transaction(
                         s_scope.push(scope);
                     }
                     2 => {
-
                         let (note, merkle_path) = get_orchard_note(
                             connection,
                             *id,
@@ -845,11 +861,13 @@ pub async fn plan_transaction(
                 let asset_base = if r.asset_base == [0u8; 32].to_vec() {
                     AssetBase::zatoshi()
                 } else {
-                    let asset_bytes: [u8; 32] = r.asset_base.clone().try_into().map_err(
-                        |v: Vec<u8>| anyhow!("Invalid asset_base length: expected 32, got {}", v.len()),
-                    )?;
-                    Option::from(AssetBase::from_bytes(&asset_bytes))
-                        .ok_or_else(|| anyhow!("Invalid asset_base bytes: {}", hex::encode(&asset_bytes)))?
+                    let asset_bytes: [u8; 32] =
+                        r.asset_base.clone().try_into().map_err(|v: Vec<u8>| {
+                            anyhow!("Invalid asset_base length: expected 32, got {}", v.len())
+                        })?;
+                    Option::from(AssetBase::from_bytes(&asset_bytes)).ok_or_else(|| {
+                        anyhow!("Invalid asset_base bytes: {}", hex::encode(&asset_bytes))
+                    })?
                 };
                 if ironwood_active {
                     // O->O self-send: use change output to avoid dummy-spend
@@ -1047,14 +1065,13 @@ pub async fn plan_transaction(
         })
         .unwrap();
 
-    let updater = if BranchId::for_height(network, BlockHeight::from_u32(target_height))
-        == BranchId::Nu7
-    {
-        updater.update_orchard_zsa_with(|u| attach_orchard_asset_names(u, &asset_names))
-    } else {
-        updater.update_orchard_with(|u| attach_orchard_asset_names(u, &asset_names))
-    }
-    .map_err(|error| anyhow!("Failed to attach Orchard asset names: {error:?}"))?;
+    let updater =
+        if BranchId::for_height(network, BlockHeight::from_u32(target_height)) == BranchId::Nu7 {
+            updater.update_orchard_zsa_with(|u| attach_orchard_asset_names(u, &asset_names))
+        } else {
+            updater.update_orchard_with(|u| attach_orchard_asset_names(u, &asset_names))
+        }
+        .map_err(|error| anyhow!("Failed to attach Orchard asset names: {error:?}"))?;
 
     let pczt = updater.finish();
 
@@ -1089,13 +1106,7 @@ pub async fn plan_transaction(
         .actions()
         .iter()
         .enumerate()
-        .filter_map(|(index, action)| {
-            action
-                .spend()
-                .spend_auth_sig()
-                .is_none()
-                .then_some(index)
-        })
+        .filter_map(|(index, action)| action.spend().spend_auth_sig().is_none().then_some(index))
         .collect();
     let pczt_package = PcztPackage {
         pczt: pczt.serialize().unwrap(),
@@ -1291,9 +1302,7 @@ pub async fn sign_transaction(
             return Err(Error::NoSigningKey.into());
         };
         signer.sign_orchard(*bundle_index, osak).map_err(|e| {
-            anyhow!(
-                "failed to sign Orchard action {bundle_index} (selected spend {index}): {e:?}"
-            )
+            anyhow!("failed to sign Orchard action {bundle_index} (selected spend {index}): {e:?}")
         })?;
     }
     for (index, bundle_index) in ironwood_indices.iter().enumerate() {
@@ -1449,7 +1458,6 @@ fn get_orchard_address(network: &Network, address: &str) -> Result<Address> {
     }
 }
 
-
 pub async fn fetch_unspent_notes_grouped_by_pool(
     connection: &mut SqliteConnection,
     account: u32,
@@ -1555,8 +1563,7 @@ pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
 }
 pub static ORCHARD_VANILLA_PK: LazyLock<ProvingKey> =
     LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::FixedPostNu6_2));
-pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> =
-    LazyLock::new(|| ProvingKey::build_zsa());
+pub static ORCHARD_ZSA_PK: LazyLock<ProvingKey> = LazyLock::new(|| ProvingKey::build_zsa());
 pub static IRONWOOD_PK: LazyLock<ProvingKey> =
     LazyLock::new(|| ProvingKey::build(orchard::circuit::OrchardCircuitVersion::PostNu6_3));
 

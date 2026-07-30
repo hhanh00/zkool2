@@ -7,13 +7,10 @@ use crate::{
     api::coin::Network,
     db::get_account_hw,
     pay::{
-        fee::{COST_PER_ACTION, FeeManager},
-        plan::{
-            extract_transaction, plan_transaction,
-            sign_transaction,
-        },
+        fee::{FeeManager, COST_PER_ACTION},
+        plan::{extract_transaction, plan_transaction, sign_transaction},
         pool::PoolMask,
-        Recipient, send,
+        send, Recipient,
     },
     Client,
 };
@@ -34,7 +31,6 @@ pub const ANCHOR_BUCKET_SIZE: u32 = 144;
 /// Covers Orchard input + change (2 actions in sum mode) and Ironwood
 /// output (2 actions, padded) = 4 × COST_PER_ACTION = 20,000 zats.
 const SD_FEE_PAD: u64 = 4 * COST_PER_ACTION;
-
 
 /// Decompose a total amount into standard denomination notes with embedded fees.
 ///
@@ -154,14 +150,12 @@ async fn fetch_unspent_orchard_notes_with_cmx(
     )
     .bind(checkpoint_height)
     .bind(account)
-    .map(|row| {
-        OrchardZecNote {
-            id: row.get(0),
-            height: row.get(1),
-            value: row.get::<i64, _>(2) as u64,
-            cmx: row.get(3),
-            has_checkpoint: row.get(4),
-        }
+    .map(|row| OrchardZecNote {
+        id: row.get(0),
+        height: row.get(1),
+        value: row.get::<i64, _>(2) as u64,
+        cmx: row.get(3),
+        has_checkpoint: row.get(4),
     })
     .fetch_all(connection)
     .await
@@ -190,21 +184,17 @@ pub async fn step(
     account: u32,
 ) -> Result<MigrationEvent> {
     let height = client.latest_height().await?;
-    let checkpoint_height =
-        crate::sync::get_db_height(&mut *connection, account).await?.height;
+    let checkpoint_height = crate::sync::get_db_height(&mut *connection, account)
+        .await?
+        .height;
 
     // Get the wallet's own Orchard/Ironwood address
     let hw = get_account_hw(&mut *connection, account).await?;
-    let own_address =
-        get_account_full_address(network, &mut *connection, account, 0, hw).await?;
+    let own_address = get_account_full_address(network, &mut *connection, account, 0, hw).await?;
 
     // Fetch all unspent Orchard ZEC notes with cmx.
-    let orchard_zec = fetch_unspent_orchard_notes_with_cmx(
-        &mut *connection,
-        account,
-        checkpoint_height,
-    )
-    .await?;
+    let orchard_zec =
+        fetch_unspent_orchard_notes_with_cmx(&mut *connection, account, checkpoint_height).await?;
 
     info!(
         "Migration step: {} Orchard ZEC notes found",
@@ -215,8 +205,7 @@ pub async fn step(
     }
 
     // Separate SD vs non-SD
-    let sd_notes: Vec<&OrchardZecNote> =
-        orchard_zec.iter().filter(|n| is_sd(n.value)).collect();
+    let sd_notes: Vec<&OrchardZecNote> = orchard_zec.iter().filter(|n| is_sd(n.value)).collect();
     let non_sd_notes: Vec<&OrchardZecNote> =
         orchard_zec.iter().filter(|n| !is_sd(n.value)).collect();
     info!(
@@ -241,122 +230,114 @@ pub async fn step(
     let total: u64 = capped_non_sd.iter().map(|n| n.value).sum();
 
     if total >= MIN_SD {
-    // Decompose into standard denomination counts (digits) and remainder.
-    let (mut digits, mut remainder) = decompose_to_sd(total);
-    info!(
-        "SD split: {:?}",
-        digits,
-    );
+        // Decompose into standard denomination counts (digits) and remainder.
+        let (mut digits, mut remainder) = decompose_to_sd(total);
+        info!("SD split: {:?}", digits,);
 
-    // If the natural remainder is too small to cover the transaction fee,
-    // carve out MIN_SD from the decomposable pool as a fee buffer.
-    if remainder < MIN_SD / 2 {
-        let (d, r) = decompose_to_sd(total.saturating_sub(MIN_SD));
-        digits = d;
-        remainder = r + MIN_SD;
-        info!(
-            "SD split (reserved {} for fees): {:?}",
-            MIN_SD, digits,
-        );
-    }
-
-    let mut num_outputs: u64 = digits.iter().map(|&(_, c)| c as u64).sum();
-    let num_inputs = capped_non_sd.len() as u64;
-
-    // Build a FeeManager matching what plan_transaction will construct,
-    // including the change output, so our fee estimate is exact.
-    let mut fm = FeeManager {
-        migration: true,
-        ..FeeManager::default()
-    };
-    for _ in 0..num_inputs {
-        fm.add_input(2);
-    }
-    for _ in 0..num_outputs {
-        fm.add_output(2);
-    }
-    fm.add_output(2); // change output
-
-    // Fee loop: if fee exceeds remainder, trim the lowest-denomination
-    // output to make room, then retry. Exit when fee fits or no outputs
-    // remain (fall through to migration).
-    loop {
-        let fee = fm.fee();
-
-        if fee <= remainder || num_outputs == 0 {
-            break;
+        // If the natural remainder is too small to cover the transaction fee,
+        // carve out MIN_SD from the decomposable pool as a fee buffer.
+        if remainder < MIN_SD / 2 {
+            let (d, r) = decompose_to_sd(total.saturating_sub(MIN_SD));
+            digits = d;
+            remainder = r + MIN_SD;
+            info!("SD split (reserved {} for fees): {:?}", MIN_SD, digits,);
         }
 
-        // Remove one unit from the lowest denomination (last, since
-        // denominations are sorted largest-first).
-        if let Some((denom, count)) = digits.last_mut() {
-            *count -= 1;
-            remainder += *denom;
-            num_outputs -= 1;
-            fm.remove_output(2);
-            if *count == 0 {
-                digits.pop();
+        let mut num_outputs: u64 = digits.iter().map(|&(_, c)| c as u64).sum();
+        let num_inputs = capped_non_sd.len() as u64;
+
+        // Build a FeeManager matching what plan_transaction will construct,
+        // including the change output, so our fee estimate is exact.
+        let mut fm = FeeManager {
+            migration: true,
+            ..FeeManager::default()
+        };
+        for _ in 0..num_inputs {
+            fm.add_input(2);
+        }
+        for _ in 0..num_outputs {
+            fm.add_output(2);
+        }
+        fm.add_output(2); // change output
+
+        // Fee loop: if fee exceeds remainder, trim the lowest-denomination
+        // output to make room, then retry. Exit when fee fits or no outputs
+        // remain (fall through to migration).
+        loop {
+            let fee = fm.fee();
+
+            if fee <= remainder || num_outputs == 0 {
+                break;
             }
-        }
-    }
 
-    if num_outputs > 0 {
-        // Build recipients from (denom, count) pairs.
-        let mut recipients: Vec<Recipient> = Vec::new();
-        for &(denom, count) in &digits {
-            for _ in 0..count {
-                recipients.push(Recipient {
-                    address: own_address.clone(),
-                    amount: denom,
-                    pools: Some(PoolMask::from_pool(2).0), // Orchard only
-                    ..Recipient::default()
-                });
+            // Remove one unit from the lowest denomination (last, since
+            // denominations are sorted largest-first).
+            if let Some((denom, count)) = digits.last_mut() {
+                *count -= 1;
+                remainder += *denom;
+                num_outputs -= 1;
+                fm.remove_output(2);
+                if *count == 0 {
+                    digits.pop();
+                }
             }
         }
 
-        info!(
-            "Migration split: {} non-SD notes (total {}) → {} SD outputs (remainder {})",
-            capped_non_sd.len(),
-            total,
-            recipients.len(),
-            remainder,
-        );
+        if num_outputs > 0 {
+            // Build recipients from (denom, count) pairs.
+            let mut recipients: Vec<Recipient> = Vec::new();
+            for &(denom, count) in &digits {
+                for _ in 0..count {
+                    recipients.push(Recipient {
+                        address: own_address.clone(),
+                        amount: denom,
+                        pools: Some(PoolMask::from_pool(2).0), // Orchard only
+                        ..Recipient::default()
+                    });
+                }
+            }
 
-        let preselected: Vec<u32> = capped_non_sd.iter().map(|n| n.id).collect();
+            info!(
+                "Migration split: {} non-SD notes (total {}) → {} SD outputs (remainder {})",
+                capped_non_sd.len(),
+                total,
+                recipients.len(),
+                remainder,
+            );
 
-        let pczt = plan_transaction(
-            network,
-            &mut *connection,
-            client,
-            account,
-            PoolMask::from_pool(2).0, // Orchard source
-            &recipients,
-            false,
-            None,
-            false,
-            None,
-            None,
-            true, // migration
-            Some(&preselected),
-            None, // anchor_height
-        )
-        .await?;
+            let preselected: Vec<u32> = capped_non_sd.iter().map(|n| n.id).collect();
 
-        let fee = crate::pay::TxPlan::from_package(network, &pczt)
-            .map(|p| p.fee)
-            .unwrap_or(0);
-        let pczt =
-            sign_transaction(&mut *connection, account, network, &pczt).await?;
-        let tx_bytes = extract_transaction(&pczt).await?;
-        let _txid = send(client, height, &tx_bytes).await?;
+            let pczt = plan_transaction(
+                network,
+                &mut *connection,
+                client,
+                account,
+                PoolMask::from_pool(2).0, // Orchard source
+                &recipients,
+                false,
+                None,
+                false,
+                None,
+                None,
+                true, // migration
+                Some(&preselected),
+                None, // anchor_height
+            )
+            .await?;
 
-        return Ok(MigrationEvent::SplitComplete { fee });
-    }
-    // If no outputs after trimming, fall through to migration phase.
+            let fee = crate::pay::TxPlan::from_package(network, &pczt)
+                .map(|p| p.fee)
+                .unwrap_or(0);
+            let pczt = sign_transaction(&mut *connection, account, network, &pczt).await?;
+            let tx_bytes = extract_transaction(&pczt).await?;
+            let _txid = send(client, height, &tx_bytes).await?;
+
+            return Ok(MigrationEvent::SplitComplete { fee });
+        }
+        // If no outputs after trimming, fall through to migration phase.
     } // end if total >= MIN_SD
 
     if !sd_notes.is_empty() {
-
         /*
         # migrate one orchard SD note at a time
         - inputs:
@@ -435,8 +416,7 @@ pub async fn step(
         let fee = crate::pay::TxPlan::from_package(network, &pczt)
             .map(|p| p.fee)
             .unwrap_or(0);
-        let pczt =
-            sign_transaction(&mut *connection, account, network, &pczt).await?;
+        let pczt = sign_transaction(&mut *connection, account, network, &pczt).await?;
         let tx_bytes = extract_transaction(&pczt).await?;
         let _txid = send(client, height, &tx_bytes).await?;
 
@@ -454,14 +434,14 @@ mod tests {
     #[test]
     fn test_is_sd() {
         // SD_FEE_PAD = 20_000, so SD = 10^k + 20_000
-        assert!(!is_sd(10_001));     // not a multiple of 10,000
-        assert!(!is_sd(20_001));     // (20001-20000) % 100000 = 1 ≠ 0
-        assert!(is_sd(120_000));     // 10^5 + 20_000
-        assert!(is_sd(1_020_000));   // 10^6 + 20_000
-        assert!(is_sd(10_020_000));  // 10^7 + 20_000
-        assert!(!is_sd(1_000_000));  // missing +base
-        assert!(!is_sd(120_001));    // (120001-20000) % 100000 = 1 ≠ 0
-        // Old P=10_000 values are no longer SD
+        assert!(!is_sd(10_001)); // not a multiple of 10,000
+        assert!(!is_sd(20_001)); // (20001-20000) % 100000 = 1 ≠ 0
+        assert!(is_sd(120_000)); // 10^5 + 20_000
+        assert!(is_sd(1_020_000)); // 10^6 + 20_000
+        assert!(is_sd(10_020_000)); // 10^7 + 20_000
+        assert!(!is_sd(1_000_000)); // missing +base
+        assert!(!is_sd(120_001)); // (120001-20000) % 100000 = 1 ≠ 0
+                                  // Old P=10_000 values are no longer SD
         assert!(!is_sd(110_000));
         assert!(!is_sd(1_010_000));
     }

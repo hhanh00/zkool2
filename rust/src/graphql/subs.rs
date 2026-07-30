@@ -7,7 +7,7 @@ use tokio_stream::wrappers::ReceiverStream;
 
 use crate::graphql::{
     data::{Event, EventStream},
-    {Context, check_auth},
+    {check_auth, Context},
 };
 
 pub struct Subscription {}

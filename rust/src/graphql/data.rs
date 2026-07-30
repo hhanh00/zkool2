@@ -1,9 +1,9 @@
 use std::pin::Pin;
 
-use futures::Stream;
-use juniper::{FieldResult, GraphQLEnum, GraphQLObject};
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
+use futures::Stream;
+use juniper::{FieldResult, GraphQLEnum, GraphQLObject};
 
 #[derive(Clone, Debug)]
 pub struct Account {
@@ -103,7 +103,8 @@ pub struct Event {
 
 #[derive(Clone, GraphQLEnum, Default)]
 pub enum EventType {
-    #[default] Block,
+    #[default]
+    Block,
     Tx,
     DKG,
 }

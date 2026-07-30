@@ -39,10 +39,10 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
         # Clear mempool to avoid conflicts from previous test runs
         print("Clearing mempool...")
         import httpx
+
         async with httpx.AsyncClient() as rpc_client:
             await rpc_client.post(
-                rpc_url,
-                json={"jsonrpc": "2.0", "id": 1, "method": "clearmempool"}
+                rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": "clearmempool"}
             )
             print("Mempool cleared")
 
@@ -137,7 +137,11 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             result = await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
-                    variable_values={"account": funding_id, "address": test_address, "amount": "0.1"}
+                    variable_values={
+                        "account": funding_id,
+                        "address": test_address,
+                        "amount": "0.1",
+                    },
                 )
             )
             txid = result["pay"]
@@ -158,6 +162,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
 
             # Get block hash via RPC (GraphQL doesn't expose block hashes)
             import httpx
+
             async with httpx.AsyncClient() as rpc_client:
                 response = await rpc_client.post(
                     rpc_url,
@@ -165,8 +170,8 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
                         "jsonrpc": "2.0",
                         "id": 1,
                         "method": "getblockhash",
-                        "params": [height_before]
-                    }
+                        "params": [height_before],
+                    },
                 )
                 block_hash = response.json().get("result")
                 print(f"Block hash at height {height_before}: {block_hash}")
@@ -198,7 +203,9 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             balance_before_reorg = result["balanceByAccount"]["ironwood"]
             print(f"Test account balance before reorg: {balance_before_reorg} ZEC")
 
-            assert float(balance_before_reorg) > 0, f"Balance should be > 0, got {balance_before_reorg}"
+            assert float(balance_before_reorg) > 0, (
+                f"Balance should be > 0, got {balance_before_reorg}"
+            )
             print("✓ Balance is > 0 as expected")
 
             print("\n=== Step 8: Invalidate block to trigger reorg ===")
@@ -214,8 +221,8 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
                         "jsonrpc": "2.0",
                         "id": 1,
                         "method": "invalidateblock",
-                        "params": [block_hash]
-                    }
+                        "params": [block_hash],
+                    },
                 )
                 print(f"Invalidate block response: {response.json()}")
             # Mine 10 blocks to ensure that the new chain is longer
@@ -230,8 +237,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             print("Clearing mempool to prevent transaction from being re-included...")
             async with httpx.AsyncClient() as rpc_client:
                 await rpc_client.post(
-                    rpc_url,
-                    json={"jsonrpc": "2.0", "id": 1, "method": "clearmempool"}
+                    rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": "clearmempool"}
                 )
             print("Mempool cleared")
 
@@ -252,8 +258,7 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             print("\n=== Debug: Check transaction status ===")
             async with httpx.AsyncClient() as rpc_client:
                 response = await rpc_client.post(
-                    rpc_url,
-                    json={"jsonrpc": "2.0", "id": 1, "method": "getrawmempool"}
+                    rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": "getrawmempool"}
                 )
                 mempool = response.json().get("result", [])
                 print(f"Mempool: {len(mempool)} transactions")
@@ -264,7 +269,12 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
 
                 response = await rpc_client.post(
                     rpc_url,
-                    json={"jsonrpc": "2.0", "id": 1, "method": "getrawtransaction", "params": [txid, 1]}
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "getrawtransaction",
+                        "params": [txid, 1],
+                    },
                 )
                 tx_result = response.json()
                 if "result" in tx_result:
@@ -282,11 +292,13 @@ async def test_reorg(gql_client_factory, rpc_url, seed, zkool_binary, lwd_url):
             balance_after_reorg = result["balanceByAccount"]["ironwood"]
             print(f"Test account balance after reorg: {balance_after_reorg} ZEC")
 
-            assert float(balance_after_reorg) == 0, f"Balance should be 0 after reorg, got {balance_after_reorg}"
+            assert float(balance_after_reorg) == 0, (
+                f"Balance should be 0 after reorg, got {balance_after_reorg}"
+            )
             print("✓ Balance is 0 as expected (transaction was in orphaned chain)")
 
             print("\n✅ Reorganization test passed!")
 
     finally:
         await stop_zkool_instance(process)
-        #cleanup_test_files(DB_PATH, LOG_PATH)
+        # cleanup_test_files(DB_PATH, LOG_PATH)

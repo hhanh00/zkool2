@@ -87,14 +87,14 @@ struct State {
 
 /// Fixed, precomputed context for a single selection run.
 struct Context<'a> {
-    notes: &'a [Note],               // sorted: shielded pools first, then transparent; within pool descending by amount
-    n_assets: u8,                    // total number of distinct assets (1 = ZEC only)
-    asset_output_amounts: Vec<u64>,  // required output amount per asset (index 0 = ZEC)
-    output_amounts: [u64; N_POOLS],  // output value per pool (zats)
-    n_outputs: [u32; N_POOLS],       // number of fixed recipient outputs per pool
+    notes: &'a [Note], // sorted: shielded pools first, then transparent; within pool descending by amount
+    n_assets: u8,      // total number of distinct assets (1 = ZEC only)
+    asset_output_amounts: Vec<u64>, // required output amount per asset (index 0 = ZEC)
+    output_amounts: [u64; N_POOLS], // output value per pool (zats)
+    n_outputs: [u32; N_POOLS], // number of fixed recipient outputs per pool
     orchard_asset_outputs: Vec<u32>, // fixed Orchard recipient outputs per asset
-    f_unit: u64,                     // COST_PER_ACTION (5000)
-    migration: bool,                 // orchard fee = inputs+outputs instead of max
+    f_unit: u64,       // COST_PER_ACTION (5000)
+    migration: bool,   // orchard fee = inputs+outputs instead of max
     recipient_pays_fee: bool,
     first_recipient_amount: u64,
 }
@@ -111,7 +111,11 @@ pub(super) struct Budget {
 
 impl Default for Budget {
     fn default() -> Self {
-        Budget { max_nodes: 100_000, max_time: Duration::from_millis(200), beam_width: 24 }
+        Budget {
+            max_nodes: 100_000,
+            max_time: Duration::from_millis(200),
+            beam_width: 24,
+        }
     }
 }
 
@@ -124,7 +128,12 @@ struct BudgetTracker {
 
 impl BudgetTracker {
     fn new(b: &Budget) -> Self {
-        BudgetTracker { start: Instant::now(), limit: b.max_time, max_nodes: b.max_nodes, nodes: 0 }
+        BudgetTracker {
+            start: Instant::now(),
+            limit: b.max_time,
+            max_nodes: b.max_nodes,
+            nodes: 0,
+        }
     }
     fn exceeded(&mut self) -> bool {
         self.nodes += 1;
@@ -158,7 +167,9 @@ fn compute_fee(
     // Sapling: if any activity, max(inputs, outputs, 2)
     let s: u64 = if n_inputs[1] > 0 || n_outs[1] > 0 {
         n_inputs[1].max(n_outs[1]).max(2) as u64
-    } else { 0 };
+    } else {
+        0
+    };
 
     // Orchard: migration? inputs+outputs : max(inputs,outputs); clamped to 2
     let o: u64 = orchard_actions.unwrap_or_else(|| {
@@ -176,7 +187,9 @@ fn compute_fee(
     // Ironwood: same as Orchard non-migration
     let iw: u64 = if n_inputs[3] > 0 || n_outs[3] > 0 {
         n_inputs[3].max(n_outs[3]).max(2) as u64
-    } else { 0 };
+    } else {
+        0
+    };
 
     let logical = (t + s + o + iw).max(GRACE_ACTIONS);
     logical * f_unit
@@ -216,9 +229,15 @@ fn zsa_orchard_actions(state: &State, ctx: &Context, change_pool: u8) -> Option<
 fn evaluate(state: &State, ctx: &Context) -> (u64, u8) {
     let (cost, pool) = evaluate_privacy(state, ctx);
     if cost == u64::MAX {
-        info!("evaluate: asset_sums[0]={}, INFEASIBLE", state.asset_sums[0]);
+        info!(
+            "evaluate: asset_sums[0]={}, INFEASIBLE",
+            state.asset_sums[0]
+        );
     } else {
-        info!("evaluate: asset_sums[0]={}, privacy_cost={}, change_pool={}", state.asset_sums[0], cost, pool);
+        info!(
+            "evaluate: asset_sums[0]={}, privacy_cost={}, change_pool={}",
+            state.asset_sums[0], cost, pool
+        );
     }
     (cost, pool)
 }
@@ -256,12 +275,7 @@ fn fee_for_change_pool(state: &State, ctx: &Context, change_pool: u8) -> u64 {
     )
 }
 
-fn is_better_solution(
-    cost: u64,
-    fee: u64,
-    best_cost: u64,
-    best_fee: u64,
-) -> bool {
+fn is_better_solution(cost: u64, fee: u64, best_cost: u64, best_fee: u64) -> bool {
     (cost, fee) < (best_cost, best_fee)
 }
 
@@ -298,17 +312,19 @@ fn evaluate_privacy(state: &State, ctx: &Context) -> (u64, u8) {
         // All transparent value passes through the turnstile.
         let turnstile = state.tin
             + state.tout
-            + (1..N_POOLS).map(|p| {
-                let bal = state.balance[p];
-                // Change output adds to the change-pool's output side,
-                // deepening any deficit or reducing any surplus.
-                let adjusted = if p == cp as usize {
-                    (bal - change as i64).unsigned_abs()
-                } else {
-                    bal.unsigned_abs()
-                };
-                adjusted
-            }).sum::<u64>();
+            + (1..N_POOLS)
+                .map(|p| {
+                    let bal = state.balance[p];
+                    // Change output adds to the change-pool's output side,
+                    // deepening any deficit or reducing any surplus.
+                    let adjusted = if p == cp as usize {
+                        (bal - change as i64).unsigned_abs()
+                    } else {
+                        bal.unsigned_abs()
+                    };
+                    adjusted
+                })
+                .sum::<u64>();
 
         if (turnstile, fee) < (best_turnstile, best_fee) {
             best_turnstile = turnstile;
@@ -435,7 +451,11 @@ fn top_k_by_local_heuristic<'a>(
         .map(|&(idx, n)| (local_score(n, state), idx, n))
         .collect();
     scored.sort_by(|a, b| b.0.cmp(&a.0)); // descending
-    scored.into_iter().take(k).map(|(_, idx, n)| (idx, n)).collect()
+    scored
+        .into_iter()
+        .take(k)
+        .map(|(_, idx, n)| (idx, n))
+        .collect()
 }
 
 // ---------------------------------------------------------------------
@@ -454,8 +474,10 @@ fn state_key(state: &State) -> StateKey {
     (
         state.asset_sums.iter().map(|&s| q_u64(s)).collect(),
         [
-            q(state.balance[0]), q(state.balance[1]),
-            q(state.balance[2]), q(state.balance[3]),
+            q(state.balance[0]),
+            q(state.balance[1]),
+            q(state.balance[2]),
+            q(state.balance[3]),
         ],
         state.tout,
         state.n_inputs,
@@ -665,7 +687,11 @@ pub(super) fn select_notes(
     let start = initial_state(&ctx);
     let start_bound = lower_bound(&start, &ctx);
     if bound_can_beat(start_bound, best_cost) {
-        heap.push(Reverse(QueueItem { bound: start_bound, seq, state: start }));
+        heap.push(Reverse(QueueItem {
+            bound: start_bound,
+            seq,
+            state: start,
+        }));
     }
 
     // ---- 7. Best-first branch-and-bound -----------------------------------
@@ -683,9 +709,7 @@ pub(super) fn select_notes(
         // Feasibility check: evaluate with change-pool folding
         let (cost, pool) = evaluate(&state, &ctx);
         let fee = fee_for_change_pool(&state, &ctx, pool);
-        if cost != u64::MAX
-            && is_better_solution(cost, fee, best_cost, best_fee)
-        {
+        if cost != u64::MAX && is_better_solution(cost, fee, best_cost, best_fee) {
             best_cost = cost;
             best_fee = fee;
             best_state = state.clone();
@@ -709,7 +733,6 @@ pub(super) fn select_notes(
         let candidates = top_k_by_local_heuristic(&remaining, &state, budget.beam_width);
 
         for (note_idx, note) in candidates {
-
             let child = apply(&state, note_idx, note);
             let child_bound = lower_bound(&child, &ctx);
 
@@ -726,7 +749,11 @@ pub(super) fn select_notes(
             seen.insert(key, child_bound);
 
             seq = seq.saturating_add(1);
-            heap.push(Reverse(QueueItem { bound: child_bound, seq, state: child }));
+            heap.push(Reverse(QueueItem {
+                bound: child_bound,
+                seq,
+                state: child,
+            }));
         }
     }
 
@@ -737,7 +764,11 @@ pub(super) fn select_notes(
     let fee = best_fee;
 
     // Gather inputs and per-pool indices
-    let inputs: Vec<Note> = best_state.selected.iter().map(|&idx| ctx.notes[idx].clone()).collect();
+    let inputs: Vec<Note> = best_state
+        .selected
+        .iter()
+        .map(|&idx| ctx.notes[idx].clone())
+        .collect();
 
     let mut per_pool_indices: [Vec<usize>; N_POOLS] = Default::default();
     for &idx in &best_state.selected {
@@ -764,18 +795,61 @@ mod tests {
     #[test]
     fn test_select_notes_basic() {
         let notes = vec![
-            Note { pool: 1, amount: 120_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 1, amount: 80_000, pool_index: 1, asset_index: 0 },
-            Note { pool: 1, amount: 30_000, pool_index: 2, asset_index: 0 },
-            Note { pool: 2, amount: 200_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 2, amount: 15_000, pool_index: 1, asset_index: 0 },
-            Note { pool: 3, amount: 60_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 0, amount: 500_000, pool_index: 0, asset_index: 0 },
+            Note {
+                pool: 1,
+                amount: 120_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 1,
+                amount: 80_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
+            Note {
+                pool: 1,
+                amount: 30_000,
+                pool_index: 2,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 200_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 15_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
+            Note {
+                pool: 3,
+                amount: 60_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 0,
+                amount: 500_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
         ];
 
         let outputs = vec![
-            Output { pool: 1, amount: 150_000, asset_index: 0 },
-            Output { pool: 2, amount: 100_000, asset_index: 0 },
+            Output {
+                pool: 1,
+                amount: 150_000,
+                asset_index: 0,
+            },
+            Output {
+                pool: 2,
+                amount: 100_000,
+                asset_index: 0,
+            },
         ];
 
         let f_unit = 5_000u64;
@@ -789,7 +863,9 @@ mod tests {
         assert!(
             total_input >= total_output + sel.fee,
             "total input {} should cover outputs {} + fee {}",
-            total_input, total_output, sel.fee
+            total_input,
+            total_output,
+            sel.fee
         );
 
         // Fee should be positive
@@ -803,11 +879,30 @@ mod tests {
     fn test_select_notes_dust_filtered() {
         // Notes below f_unit (5000) should be filtered out
         let notes = vec![
-            Note { pool: 1, amount: 120, pool_index: 0, asset_index: 0 },       // dust
-            Note { pool: 1, amount: 4_000, pool_index: 1, asset_index: 0 },     // dust
-            Note { pool: 2, amount: 1_000_000, pool_index: 0, asset_index: 0 }, // only usable note
+            Note {
+                pool: 1,
+                amount: 120,
+                pool_index: 0,
+                asset_index: 0,
+            }, // dust
+            Note {
+                pool: 1,
+                amount: 4_000,
+                pool_index: 1,
+                asset_index: 0,
+            }, // dust
+            Note {
+                pool: 2,
+                amount: 1_000_000,
+                pool_index: 0,
+                asset_index: 0,
+            }, // only usable note
         ];
-        let outputs = vec![Output { pool: 2, amount: 500_000, asset_index: 0 }];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 500_000,
+            asset_index: 0,
+        }];
         let f_unit = 5_000u64;
 
         let sel = select_notes(&notes, &outputs, f_unit, false, false, 0)
@@ -821,29 +916,61 @@ mod tests {
     #[test]
     fn test_zsa_note_below_fee_unit_is_not_dust() {
         let notes = vec![
-            Note { pool: 2, amount: 1, pool_index: 0, asset_index: 1 },
-            Note { pool: 2, amount: 100_000, pool_index: 1, asset_index: 0 },
+            Note {
+                pool: 2,
+                amount: 1,
+                pool_index: 0,
+                asset_index: 1,
+            },
+            Note {
+                pool: 2,
+                amount: 100_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
         ];
-        let outputs = vec![Output { pool: 2, amount: 1, asset_index: 1 }];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 1,
+            asset_index: 1,
+        }];
 
         let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
             .expect("sub-fee-unit ZSA note should remain selectable");
 
-        assert!(
-            sel.inputs
-                .iter()
-                .any(|note| note.asset_index == 1 && note.amount == 1)
-        );
+        assert!(sel
+            .inputs
+            .iter()
+            .any(|note| note.asset_index == 1 && note.amount == 1));
     }
 
     #[test]
     fn test_select_notes_recipient_pays_fee() {
         let notes = vec![
-            Note { pool: 2, amount: 200_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 2, amount: 100_000, pool_index: 1, asset_index: 0 },
-            Note { pool: 2, amount: 50_000, pool_index: 2, asset_index: 0 },
+            Note {
+                pool: 2,
+                amount: 200_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 100_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 50_000,
+                pool_index: 2,
+                asset_index: 0,
+            },
         ];
-        let outputs = vec![Output { pool: 2, amount: 150_000, asset_index: 0 }];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 150_000,
+            asset_index: 0,
+        }];
         let f_unit = 5_000u64;
 
         // First recipient has 200_000, fee will be well under that
@@ -854,18 +981,45 @@ mod tests {
         let total_input: u64 = sel.inputs.iter().map(|n| n.amount).sum();
         let total_output: u64 = outputs.iter().map(|o| o.amount).sum();
         assert!(total_input >= total_output);
-        assert!(sel.fee <= 200_000, "fee must not exceed first recipient amount");
+        assert!(
+            sel.fee <= 200_000,
+            "fee must not exceed first recipient amount"
+        );
     }
 
     #[test]
     fn test_select_notes_recipient_pays_fee_too_high() {
         let notes = vec![
-            Note { pool: 2, amount: 200_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 2, amount: 100_000, pool_index: 1, asset_index: 0 },
-            Note { pool: 1, amount: 300_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 0, amount: 500_000, pool_index: 0, asset_index: 0 },
+            Note {
+                pool: 2,
+                amount: 200_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 100_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
+            Note {
+                pool: 1,
+                amount: 300_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 0,
+                amount: 500_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
         ];
-        let outputs = vec![Output { pool: 2, amount: 150_000, asset_index: 0 }];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 150_000,
+            asset_index: 0,
+        }];
         let f_unit = 5_000u64;
 
         // First recipient only has 1_000 zats — fee will exceed that
@@ -875,20 +1029,33 @@ mod tests {
         // This may or may not find a solution depending on fee structure.
         // Just verify it doesn't panic.
         if let Some(sel) = result {
-            assert!(sel.fee <= 1_000, "if solution found, fee must fit recipient");
+            assert!(
+                sel.fee <= 1_000,
+                "if solution found, fee must fit recipient"
+            );
         }
     }
 
     #[test]
     fn test_select_notes_insufficient_funds() {
-        let notes = vec![
-            Note { pool: 2, amount: 10_000, pool_index: 0, asset_index: 0 },
-        ];
-        let outputs = vec![Output { pool: 2, amount: 1_000_000, asset_index: 0 }];
+        let notes = vec![Note {
+            pool: 2,
+            amount: 10_000,
+            pool_index: 0,
+            asset_index: 0,
+        }];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 1_000_000,
+            asset_index: 0,
+        }];
         let f_unit = 5_000u64;
 
         let result = select_notes(&notes, &outputs, f_unit, false, false, 0);
-        assert!(result.is_none(), "should return None for insufficient funds");
+        assert!(
+            result.is_none(),
+            "should return None for insufficient funds"
+        );
     }
 
     #[test]
@@ -943,11 +1110,30 @@ mod tests {
     #[test]
     fn test_zsa_selection_uses_per_asset_fee_as_tiebreaker() {
         let notes = vec![
-            Note { pool: 2, amount: 20_082_510_000, pool_index: 0, asset_index: 0 },
-            Note { pool: 2, amount: 200_000_000, pool_index: 1, asset_index: 0 },
-            Note { pool: 2, amount: 499_500, pool_index: 2, asset_index: 1 },
+            Note {
+                pool: 2,
+                amount: 20_082_510_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 200_000_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 499_500,
+                pool_index: 2,
+                asset_index: 1,
+            },
         ];
-        let outputs = vec![Output { pool: 2, amount: 1_000, asset_index: 1 }];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 1_000,
+            asset_index: 1,
+        }];
 
         let selection = select_notes(&notes, &outputs, 5_000, false, false, 0)
             .expect("ZSA transfer should be selectable");

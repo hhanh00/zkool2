@@ -111,9 +111,12 @@ class TxPageState extends ConsumerState<TxPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(_sendStep,
-                                        style: t.bodyMedium
-                                            ?.copyWith(fontWeight: FontWeight.w600,),),
+                                    Text(
+                                      _sendStep,
+                                      style: t.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                     Text(
                                       "Tx will be sent in the background if this page is closed",
                                       style: t.bodySmall,
@@ -125,8 +128,7 @@ class TxPageState extends ConsumerState<TxPage> {
                           ),
                           Divider(height: 24),
                         ],
-                        if (success)
-                          Text("Tx Sent Successfully", style: t.titleSmall),
+                        if (success) Text("Tx Sent Successfully", style: t.titleSmall),
                         Text("Fee: ${zatToString(txPlan.fee)}"),
                         Gap(8),
                         if (txId != null)
@@ -138,8 +140,7 @@ class TxPageState extends ConsumerState<TxPage> {
                     ),
                   ),
                 ),
-                if (!success)
-                  showTxPlan(context, txPlan),
+                if (!success) showTxPlan(context, txPlan),
               ],
             ),
           ),

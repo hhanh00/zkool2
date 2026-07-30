@@ -11,7 +11,7 @@ pub mod db;
 pub mod rhai_api;
 
 use anyhow::{anyhow, bail, Context, Result};
-use rhai::{AST, Dynamic, Engine, Scope};
+use rhai::{Dynamic, Engine, Scope, AST};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -22,8 +22,8 @@ use std::sync::OnceLock;
 use crate::api::coin::Coin;
 use crate::plugin::db as plugin_db;
 use crate::plugin::rhai_api::{
-    create_sandboxed_engine, extract_prefixes, extract_sections, with_memo_bytes,
-    ParsedMemoCell, ParsedMemoSection,
+    create_sandboxed_engine, extract_prefixes, extract_sections, with_memo_bytes, ParsedMemoCell,
+    ParsedMemoSection,
 };
 
 // ── AST cache ───────────────────────────────────────────────────────────
@@ -199,9 +199,7 @@ pub async fn parse_memo_with_plugins(c: &Coin, memo_bytes: &[u8]) -> Result<Vec<
     let prefix = &payload[0..4];
 
     // Clone out of lock — must not hold MutexGuard across await
-    let plugins: Vec<CachedMemoPlugin> = {
-        PLUGIN_INDEX.lock().unwrap().clone()
-    };
+    let plugins: Vec<CachedMemoPlugin> = { PLUGIN_INDEX.lock().unwrap().clone() };
     let plugins = if plugins.is_empty() {
         refresh_plugin_index(c).await?;
         PLUGIN_INDEX.lock().unwrap().clone()
@@ -263,8 +261,7 @@ pub async fn install_plugin_from_url(c: &Coin, url: &str) -> Result<Plugin> {
 /// Install a plugin from an archive (zip). Works entirely in memory — no disk writes.
 pub async fn install_plugin_from_bytes(c: &Coin, archive: &[u8]) -> Result<Plugin> {
     let cursor = Cursor::new(archive);
-    let mut zip =
-        zip::ZipArchive::new(cursor).context("Failed to open plugin archive")?;
+    let mut zip = zip::ZipArchive::new(cursor).context("Failed to open plugin archive")?;
 
     // Read manifest.json from zip
     let manifest_entry = zip
@@ -289,8 +286,8 @@ pub async fn install_plugin_from_bytes(c: &Coin, archive: &[u8]) -> Result<Plugi
     let script_entry = zip
         .by_name(&manifest.entry_point)
         .context(format!("Archive missing {}", manifest.entry_point))?;
-    let script = std::io::read_to_string(script_entry)
-        .context("Failed to read script from archive")?;
+    let script =
+        std::io::read_to_string(script_entry).context("Failed to read script from archive")?;
 
     // Compile and discover prefixes
     let ast = compile_plugin(&manifest.id, &script)?;

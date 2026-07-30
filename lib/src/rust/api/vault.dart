@@ -8,28 +8,17 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
-Future<DartVault> initVault(
-        {required FutureOr<void> Function(Uint8List) append}) =>
-    RustLib.instance.api.crateApiVaultInitVault(append: append);
+Future<DartVault> initVault({required FutureOr<void> Function(Uint8List) append}) => RustLib.instance.api.crateApiVaultInitVault(append: append);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DartVault>>
 abstract class DartVault implements RustOpaqueInterface {
-  Future<List<RestoredAccount>> recover(
-      {required List<int> vaultBytes, required String masterPassword});
+  Future<List<RestoredAccount>> recover({required List<int> vaultBytes, required String masterPassword});
 
-  Future<List<RestoredAccount>> recoverWithPrf(
-      {required List<int> vaultBytes,
-      required String deviceIdStr,
-      required List<int> prfOutput});
+  Future<List<RestoredAccount>> recoverWithPrf({required List<int> vaultBytes, required String deviceIdStr, required List<int> prfOutput});
 
-  Future<void> registerDevice(
-      {required List<int> initBytes,
-      required String masterPassword,
-      required String deviceIdStr,
-      required List<int> prfOutput});
+  Future<void> registerDevice({required List<int> initBytes, required String masterPassword, required String deviceIdStr, required List<int> prfOutput});
 
-  Future<Uint8List> setMasterPassword(
-      {String? oldPassword, required String newPassword, Uint8List? oldBytes});
+  Future<Uint8List> setMasterPassword({String? oldPassword, required String newPassword, Uint8List? oldBytes});
 
   Future<void> storeAccount(
       {required int timestamp,
@@ -61,13 +50,7 @@ class RestoredAccount {
   });
 
   @override
-  int get hashCode =>
-      timestamp.hashCode ^
-      name.hashCode ^
-      seed.hashCode ^
-      aindex.hashCode ^
-      useInternal.hashCode ^
-      birthHeight.hashCode;
+  int get hashCode => timestamp.hashCode ^ name.hashCode ^ seed.hashCode ^ aindex.hashCode ^ useInternal.hashCode ^ birthHeight.hashCode;
 
   @override
   bool operator ==(Object other) =>

@@ -25,9 +25,7 @@ class _PluginManagerPageState extends ConsumerState<PluginManagerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _selectedIds.isEmpty
-              ? 'Plugin Manager'
-              : '${_selectedIds.length} selected',
+          _selectedIds.isEmpty ? 'Plugin Manager' : '${_selectedIds.length} selected',
         ),
         actions: [
           if (_selectedIds.isEmpty)
@@ -116,8 +114,7 @@ class _PluginManagerPageState extends ConsumerState<PluginManagerPage> {
     final confirmed = await confirmDialog(
       context,
       title: 'Remove Plugins',
-      message:
-          'Remove $count selected plugin${count > 1 ? 's' : ''}? This cannot be undone.',
+      message: 'Remove $count selected plugin${count > 1 ? 's' : ''}? This cannot be undone.',
     );
     if (!confirmed) return;
 
@@ -170,10 +167,7 @@ class _PluginListTile extends ConsumerWidget {
           Text('v${plugin.version}'),
           if (plugin.memoPrefixes.length > 1)
             Text(
-              plugin.memoPrefixes
-                  .skip(1)
-                  .map((p) => _prefixAscii([p]))
-                  .join(', '),
+              plugin.memoPrefixes.skip(1).map((p) => _prefixAscii([p])).join(', '),
               style: TextStyle(
                 fontSize: 12,
                 fontFamily: 'monospace',
@@ -191,26 +185,20 @@ class _PluginListTile extends ConsumerWidget {
               )
             : prefixLabel != null
                 ? CircleAvatar(
-                    backgroundColor: plugin.enabled
-                        ? t.colorScheme.primaryContainer
-                        : t.disabledColor.withAlpha(40),
+                    backgroundColor: plugin.enabled ? t.colorScheme.primaryContainer : t.disabledColor.withAlpha(40),
                     child: Text(
                       prefixLabel,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'monospace',
-                        color: plugin.enabled
-                            ? t.colorScheme.onPrimaryContainer
-                            : t.disabledColor,
+                        color: plugin.enabled ? t.colorScheme.onPrimaryContainer : t.disabledColor,
                       ),
                     ),
                   )
                 : Icon(
                     plugin.enabled ? Icons.extension : Icons.extension_off,
-                    color: plugin.enabled
-                        ? t.colorScheme.primary
-                        : t.disabledColor,
+                    color: plugin.enabled ? t.colorScheme.primary : t.disabledColor,
                   ),
       ),
       trailing: Switch(
@@ -233,8 +221,6 @@ String? _prefixAscii(List<String> prefixes) {
     final ascii = String.fromCharCodes(bytes);
     return ascii.length > 4 ? ascii.substring(0, 4) : ascii;
   } catch (_) {
-    return prefixes.first.length > 4
-        ? prefixes.first.substring(0, 4)
-        : prefixes.first;
+    return prefixes.first.length > 4 ? prefixes.first.substring(0, 4) : prefixes.first;
   }
 }

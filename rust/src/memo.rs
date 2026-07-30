@@ -1,18 +1,24 @@
 use anyhow::{Context as _, Result};
-use orchard::{keys::Scope, note::ExtractedNoteCommitment, note_encryption::{IronwoodDomain, OrchardDomain}, zsa::OrchardZSADomain};
-use zcash_note_encryption::note_bytes::NoteBytesData;
+use orchard::{
+    keys::Scope,
+    note::ExtractedNoteCommitment,
+    note_encryption::{IronwoodDomain, OrchardDomain},
+    zsa::OrchardZSADomain,
+};
 use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::debug;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
+use zcash_note_encryption::note_bytes::NoteBytesData;
 use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
-use zcash_primitives::transaction::{
-    components::sapling::zip212_enforcement, OrchardBundle,
-};
+use zcash_primitives::transaction::{components::sapling::zip212_enforcement, OrchardBundle};
 use zcash_protocol::memo::Memo;
 
 use crate::{
-    account::{get_orchard_vk, get_sapling_vk}, api::coin::Network, pay::fee::FeeManager, Client
+    account::{get_orchard_vk, get_sapling_vk},
+    api::coin::Network,
+    pay::fee::FeeManager,
+    Client,
 };
 
 pub async fn fetch_tx_details(
@@ -51,7 +57,10 @@ pub async fn fetch_tx_details(
     Ok(())
 }
 
-async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8, i64, Option<i32>, i64)> {
+async fn summarize_tx(
+    connection: &mut SqliteConnection,
+    tx: u32,
+) -> Result<(u8, i64, Option<i32>, i64)> {
     let (value, fee) = sqlx::query(
         "WITH n AS (SELECT value, tx FROM notes WHERE id_asset IS NULL
                     UNION ALL
@@ -114,15 +123,13 @@ async fn summarize_tx(connection: &mut SqliteConnection, tx: u32) -> Result<(u8,
 /// Try ZSA decryption using the raw 612-byte enc_ciphertext with OrchardZSADomain.
 /// Called when vanilla OrchardDomain decryption fails and raw ZSA ciphertext is available.
 fn try_zsa_decrypt(
-    action: &orchard::Action<<orchard::bundle::Authorized as orchard::bundle::Authorization>::SpendAuth>,
+    action: &orchard::Action<
+        <orchard::bundle::Authorized as orchard::bundle::Authorization>::SpendAuth,
+    >,
     raw_enc: &[u8],
     pivk: &orchard::keys::PreparedIncomingViewingKey,
     ovk: &orchard::keys::OutgoingViewingKey,
-) -> Option<(
-    orchard::Note,
-    orchard::Address,
-    [u8; 512],
-)> {
+) -> Option<(orchard::Note, orchard::Address, [u8; 512])> {
     use orchard::note::TransmittedNoteCiphertext;
     use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
 
@@ -148,10 +155,11 @@ fn try_zsa_decrypt(
     )
     .ok()?;
 
-    let zsa_domain = OrchardZSADomain { rho: zsa_action.rho() };
+    let zsa_domain = OrchardZSADomain {
+        rho: zsa_action.rho(),
+    };
 
-    if let Some((note, _address, memo_bytes)) =
-        try_note_decryption(&zsa_domain, pivk, &zsa_action)
+    if let Some((note, _address, memo_bytes)) = try_note_decryption(&zsa_domain, pivk, &zsa_action)
     {
         Some((note, _address, memo_bytes))
     } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
@@ -431,10 +439,16 @@ pub async fn decrypt_memo(
         }
     }
     if let Some(bundle) = tx_data.ironwood_bundle() {
-        debug!("decrypt_memo: ironwood bundle with {} actions", bundle.actions().len());
+        debug!(
+            "decrypt_memo: ironwood bundle with {} actions",
+            bundle.actions().len()
+        );
         process_orchard_memo!(bundle, 3, IronwoodDomain);
     } else {
-        debug!("decrypt_memo: no ironwood bundle in tx {}", hex::encode(txid));
+        debug!(
+            "decrypt_memo: no ironwood bundle in tx {}",
+            hex::encode(txid)
+        );
     }
     let fee = fee_manager.fee();
     sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")

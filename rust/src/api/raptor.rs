@@ -1,10 +1,14 @@
-use std::{fs::File, io::Read, sync::{LazyLock, Mutex}};
+use std::{
+    fs::File,
+    io::Read,
+    sync::{LazyLock, Mutex},
+};
 
 use anyhow::Result;
-use qrcode::{bits::Bits, EcLevel};
-use raptorq::{Decoder, Encoder, EncodingPacket, ObjectTransmissionInformation};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
+use qrcode::{bits::Bits, EcLevel};
+use raptorq::{Decoder, Encoder, EncodingPacket, ObjectTransmissionInformation};
 
 pub struct RaptorQParams {
     pub version: u16,
@@ -87,13 +91,11 @@ fn ec_level_of(level: u8) -> EcLevel {
     }
 }
 
-#[cfg(feature="flutter")]
+#[cfg(feature = "flutter")]
 #[frb(init)]
 pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-pub static DECODER: LazyLock<Mutex<Option<Decoder>>> =
-    LazyLock::new(|| Mutex::new(None));
-
+pub static DECODER: LazyLock<Mutex<Option<Decoder>>> = LazyLock::new(|| Mutex::new(None));

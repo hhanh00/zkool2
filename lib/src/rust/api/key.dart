@@ -9,24 +9,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 String generateSeed() => RustLib.instance.api.crateApiKeyGenerateSeed();
 
-bool isValidPhrase({required String phrase}) =>
-    RustLib.instance.api.crateApiKeyIsValidPhrase(phrase: phrase);
+bool isValidPhrase({required String phrase}) => RustLib.instance.api.crateApiKeyIsValidPhrase(phrase: phrase);
 
-bool isValidFvk({required String fvk, required Coin c}) =>
-    RustLib.instance.api.crateApiKeyIsValidFvk(fvk: fvk, c: c);
+bool isValidFvk({required String fvk, required Coin c}) => RustLib.instance.api.crateApiKeyIsValidFvk(fvk: fvk, c: c);
 
-bool isValidKey({required String key, required Coin c}) =>
-    RustLib.instance.api.crateApiKeyIsValidKey(key: key, c: c);
+bool isValidKey({required String key, required Coin c}) => RustLib.instance.api.crateApiKeyIsValidKey(key: key, c: c);
 
-bool isValidAddress({required String address}) =>
-    RustLib.instance.api.crateApiKeyIsValidAddress(address: address);
+bool isValidAddress({required String address}) => RustLib.instance.api.crateApiKeyIsValidAddress(address: address);
 
-bool isValidTransparentAddress({required String address, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiKeyIsValidTransparentAddress(address: address, c: c);
+bool isValidTransparentAddress({required String address, required Coin c}) => RustLib.instance.api.crateApiKeyIsValidTransparentAddress(address: address, c: c);
 
-bool isTexAddress({required String address, required Coin c}) =>
-    RustLib.instance.api.crateApiKeyIsTexAddress(address: address, c: c);
+bool isTexAddress({required String address, required Coin c}) => RustLib.instance.api.crateApiKeyIsTexAddress(address: address, c: c);
 
-int getKeyPools({required String key, required Coin c}) =>
-    RustLib.instance.api.crateApiKeyGetKeyPools(key: key, c: c);
+int getKeyPools({required String key, required Coin c}) => RustLib.instance.api.crateApiKeyGetKeyPools(key: key, c: c);

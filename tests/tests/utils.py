@@ -73,9 +73,7 @@ async def gql_client(url: str, timeout: float = 300.0):
     """
     http_timeout = httpx.Timeout(timeout, connect=60.0)
     transport = HTTPXAsyncTransport(url=url, timeout=http_timeout)
-    client = Client(
-        transport=transport, fetch_schema_from_transport=False, execute_timeout=timeout
-    )
+    client = Client(transport=transport, fetch_schema_from_transport=False, execute_timeout=timeout)
     try:
         yield client
     finally:
@@ -152,9 +150,9 @@ def dump_server_log(log_path: str, label: str = "SERVER LOG") -> str:
     except OSError:
         return ""
     if content:
-        print(f"\n{'='*60}\n{label} ({log_path})\n{'='*60}")
+        print(f"\n{'=' * 60}\n{label} ({log_path})\n{'=' * 60}")
         print(content)
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
     return content
 
 
@@ -340,6 +338,8 @@ async def pay(client, account_id: int, recipients: list[dict]) -> str:
         Transaction ID
     """
     result = await client.execute_async(
-        GraphQLRequest(PAY_MUTATION, variable_values={"account": account_id, "recipients": recipients})
+        GraphQLRequest(
+            PAY_MUTATION, variable_values={"account": account_id, "recipients": recipients}
+        )
     )
     return result["pay"]
