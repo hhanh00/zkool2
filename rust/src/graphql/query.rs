@@ -389,6 +389,7 @@ pub async fn prepare_tx(
         None,
         false, // migration
         None,  // preselected
+        None,  // anchor_height
     )
     .await?;
     Ok(pczt)

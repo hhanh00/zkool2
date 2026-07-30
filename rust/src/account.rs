@@ -577,11 +577,12 @@ pub async fn get_orchard_vk(
 pub async fn get_orchard_note(
     connection: &mut SqliteConnection,
     id: u32,
-    height: u32,
+    witness_height: u32,
     ovk: &orchard::keys::FullViewingKey,
     eo: &FragmentAuthPath,
     ero: &AuthPath,
     note_version: NoteVersion,
+    rewind_to_position: Option<u32>,
 ) -> Result<(orchard::Note, orchard::tree::MerklePath)> {
     let (scope, position, diversifier, value, rcm, rho, witness, asset_base) = sqlx::query(
         "SELECT scope, position, diversifier, value, rcm, rho, witness,
@@ -592,7 +593,7 @@ pub async fn get_orchard_note(
          WHERE id_note = ? AND w.height = ?",
     )
     .bind(id)
-    .bind(height)
+    .bind(witness_height)
     .map(|row: SqliteRow| {
         let scope: Option<u8> = row.get(0);
         let position: u32 = row.get(1);
@@ -611,6 +612,17 @@ pub async fn get_orchard_note(
     let scope = scope.unwrap_or(0);
     let scope = scope.orchard_scope();
     let (witness, _) = bincode::decode_from_slice::<Witness, _>(&witness, legacy()).unwrap();
+    let witness = match rewind_to_position {
+        Some(position) => {
+            anyhow::ensure!(
+                witness.position <= position,
+                "Note position {} is after anchor edge position {position}",
+                witness.position,
+            );
+            witness.rewind(position)
+        }
+        None => witness,
+    };
     let rho = Rho::from_bytes(&rho.try_into().unwrap()).unwrap();
 
     let diversifer = orchard::keys::Diversifier::from_bytes(diversifier.try_into().unwrap());
