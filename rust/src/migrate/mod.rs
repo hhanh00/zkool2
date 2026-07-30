@@ -85,6 +85,14 @@ pub fn is_sd(value: u64) -> bool {
     value > SD_FEE_PAD && is_iw_sd(value - SD_FEE_PAD)
 }
 
+/// Whether the next migration action can split the currently known non-SD
+/// notes. This mirrors the input cap and ordering used by `step`.
+pub(crate) fn has_split_transaction(mut values: Vec<u64>) -> bool {
+    values.sort_unstable_by(|a, b| b.cmp(a));
+    values.truncate(MAX_SPLIT_INPUTS);
+    values.into_iter().sum::<u64>() >= MIN_SD
+}
+
 /// Result of a migration step.
 pub enum MigrationEvent {
     /// A split transaction was broadcast.
@@ -162,6 +170,16 @@ async fn fetch_unspent_orchard_notes_with_cmx(
 
 fn anchor_bucket_height(height: u32) -> u32 {
     height - height % ANCHOR_BUCKET_SIZE
+}
+
+/// Return the first migration anchor boundary at or above `height`.
+pub(crate) fn next_anchor_bucket_height(height: u32) -> u32 {
+    let remainder = height % ANCHOR_BUCKET_SIZE;
+    if remainder == 0 {
+        height
+    } else {
+        height.saturating_add(ANCHOR_BUCKET_SIZE - remainder)
+    }
 }
 
 /// Run one migration step. Fully idempotent — re-scans notes on every call.
@@ -455,6 +473,22 @@ mod tests {
         assert_eq!(anchor_bucket_height(144), 144);
         assert_eq!(anchor_bucket_height(145), 144);
         assert_eq!(anchor_bucket_height(288), 288);
+    }
+
+    #[test]
+    fn test_next_anchor_bucket_height() {
+        assert_eq!(next_anchor_bucket_height(0), 0);
+        assert_eq!(next_anchor_bucket_height(1), 144);
+        assert_eq!(next_anchor_bucket_height(143), 144);
+        assert_eq!(next_anchor_bucket_height(144), 144);
+        assert_eq!(next_anchor_bucket_height(145), 288);
+    }
+
+    #[test]
+    fn test_has_split_transaction_applies_input_cap() {
+        assert!(has_split_transaction(vec![MIN_SD]));
+        assert!(!has_split_transaction(vec![MIN_SD - 1]));
+        assert!(!has_split_transaction(vec![MIN_SD / 100; 100]));
     }
 
     #[test]
