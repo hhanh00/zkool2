@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.26.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.2...zkool-v6.26.0-rc.3) (2026-07-30)
+
+
+### Bug Fixes
+
+* add error log printer utility ([1d71c9c](https://github.com/hhanh00/zkool2/commit/1d71c9c9fa36735e85ce336a49f6a59ec0c5fea5))
+
 ## [6.26.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.1...zkool-v6.26.0-rc.2) (2026-07-30)
 
 
