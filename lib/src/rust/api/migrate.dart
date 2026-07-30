@@ -9,26 +9,26 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'migrate.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `compute_migration_status`, `do_step_status_only`, `do_step`
+// These functions are ignored because they are not marked as `pub`: `do_step`, `run_migration`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Single-shot step (kept for FRB generated-code compatibility).
 Future<MigrationEvent> stepMigration({required Coin c}) =>
     RustLib.instance.api.crateApiMigrateStepMigration(c: c);
 
-/// Run migration to completion, streaming MigrationStatus to Flutter.
-///
-/// `mean_delay_ms` controls the mean wait time (in milliseconds) of the
-/// exponential random delay between migration steps. Longer delays make
-/// it harder for an observer to correlate the transactions.
-Stream<MigrationStatus> runMigration(
-        {required Coin c, required BigInt meanDelayMs}) =>
-    RustLib.instance.api
-        .crateApiMigrateRunMigration(c: c, meanDelayMs: meanDelayMs);
-
 /// Stub kept for FRB generated-code compatibility.
 Future<MigrationStatus> getMigrationStatus({required Coin c}) =>
     RustLib.instance.api.crateApiMigrateGetMigrationStatus(c: c);
+
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NoteMigration>>
+abstract class NoteMigration implements RustOpaqueInterface {
+  Future<void> cancel();
+
+  factory NoteMigration() =>
+      RustLib.instance.api.crateApiMigrateNoteMigrationNew();
+
+  Stream<MigrationStatus> run({required Coin c, required BigInt meanDelayMs});
+}
 
 @freezed
 sealed class MigrationEvent with _$MigrationEvent {
