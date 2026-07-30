@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:toastification/toastification.dart';
+import 'package:zkool/error_log_printer.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart';
@@ -13,7 +14,7 @@ import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-final logger = Logger(filter: ProductionFilter());
+final logger = Logger(filter: ProductionFilter(), printer: ErrorLogPrinter());
 
 const String appName = "zkool";
 
