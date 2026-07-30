@@ -9,10 +9,10 @@ use tracing::debug;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 use zcash_trees::network::Network;
 
-use orchard::note::AssetBase;
 use orchard::issuance::auth::IssueValidatingKey;
-use orchard::note::AssetId;
 use orchard::issuance::auth::ZSASchnorr;
+use orchard::note::AssetBase;
+use orchard::note::AssetId;
 
 use crate::{
     lwd::CompactBlock,
@@ -80,9 +80,7 @@ pub async fn warp_sync(
     )
     .await?;
 
-    let ironwood_active = network
-        .activation_height(NetworkUpgrade::Nu6_3)
-        .is_some();
+    let ironwood_active = network.activation_height(NetworkUpgrade::Nu6_3).is_some();
     let ironwood_hasher = OrchardHasher::default();
     let mut ironwood_dec = if ironwood_active {
         Some(
@@ -102,9 +100,7 @@ pub async fn warp_sync(
         None
     };
 
-    let ironwood_has_keys = ironwood_dec
-        .as_ref()
-        .map_or(false, |d| !d.has_no_keys());
+    let ironwood_has_keys = ironwood_dec.as_ref().map_or(false, |d| !d.has_no_keys());
     if sap_dec.has_no_keys() && orch_dec.has_no_keys() && !ironwood_has_keys {
         debug!("No keys to sync");
         return Ok(());

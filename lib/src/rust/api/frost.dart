@@ -15,58 +15,32 @@ part 'frost.freezed.dart';
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
-Future<void> setDkgParams(
-        {required String name,
-        required int id,
-        required int n,
-        required int t,
-        required int fundingAccount,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiFrostSetDkgParams(
-        name: name, id: id, n: n, t: t, fundingAccount: fundingAccount, c: c);
+Future<void> setDkgParams({required String name, required int id, required int n, required int t, required int fundingAccount, required Coin c}) =>
+    RustLib.instance.api.crateApiFrostSetDkgParams(name: name, id: id, n: n, t: t, fundingAccount: fundingAccount, c: c);
 
-Future<bool> hasDkgParams({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostHasDkgParams(c: c);
+Future<bool> hasDkgParams({required Coin c}) => RustLib.instance.api.crateApiFrostHasDkgParams(c: c);
 
-Future<void> initDkg({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostInitDkg(c: c);
+Future<void> initDkg({required Coin c}) => RustLib.instance.api.crateApiFrostInitDkg(c: c);
 
-Future<bool> hasDkgAddresses({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostHasDkgAddresses(c: c);
+Future<bool> hasDkgAddresses({required Coin c}) => RustLib.instance.api.crateApiFrostHasDkgAddresses(c: c);
 
-Stream<DKGStatus> doDkg({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostDoDkg(c: c);
+Stream<DKGStatus> doDkg({required Coin c}) => RustLib.instance.api.crateApiFrostDoDkg(c: c);
 
-Future<List<String>> getDkgAddresses({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostGetDkgAddresses(c: c);
+Future<List<String>> getDkgAddresses({required Coin c}) => RustLib.instance.api.crateApiFrostGetDkgAddresses(c: c);
 
-Future<void> setDkgAddress(
-        {required int id, required String address, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiFrostSetDkgAddress(id: id, address: address, c: c);
+Future<void> setDkgAddress({required int id, required String address, required Coin c}) =>
+    RustLib.instance.api.crateApiFrostSetDkgAddress(id: id, address: address, c: c);
 
-Future<void> cancelDkg({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostCancelDkg(c: c);
+Future<void> cancelDkg({required Coin c}) => RustLib.instance.api.crateApiFrostCancelDkg(c: c);
 
-Future<void> resetSign({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostResetSign(c: c);
+Future<void> resetSign({required Coin c}) => RustLib.instance.api.crateApiFrostResetSign(c: c);
 
-Future<void> initSign(
-        {required int coordinator,
-        required int fundingAccount,
-        required PcztPackage pczt,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiFrostInitSign(
-        coordinator: coordinator,
-        fundingAccount: fundingAccount,
-        pczt: pczt,
-        c: c);
+Future<void> initSign({required int coordinator, required int fundingAccount, required PcztPackage pczt, required Coin c}) =>
+    RustLib.instance.api.crateApiFrostInitSign(coordinator: coordinator, fundingAccount: fundingAccount, pczt: pczt, c: c);
 
-Future<bool> isSigningInProgress({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
+Future<bool> isSigningInProgress({required Coin c}) => RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
 
-Stream<SigningStatus> doSign({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostDoSign(c: c);
+Stream<SigningStatus> doSign({required Coin c}) => RustLib.instance.api.crateApiFrostDoSign(c: c);
 
 @freezed
 sealed class DKGStatus with _$DKGStatus {
@@ -94,32 +68,22 @@ sealed class FrostSignParams with _$FrostSignParams {
     required int coordinator,
     required int fundingAccount,
   }) = _FrostSignParams;
-  static Future<FrostSignParams> default_() =>
-      RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
+  static Future<FrostSignParams> default_() => RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
 }
 
 @freezed
 sealed class SigningStatus with _$SigningStatus {
   const SigningStatus._();
 
-  const factory SigningStatus.sendingCommitment() =
-      SigningStatus_SendingCommitment;
-  const factory SigningStatus.waitingForCommitments() =
-      SigningStatus_WaitingForCommitments;
-  const factory SigningStatus.sendingSigningPackage() =
-      SigningStatus_SendingSigningPackage;
-  const factory SigningStatus.waitingForSigningPackage() =
-      SigningStatus_WaitingForSigningPackage;
-  const factory SigningStatus.sendingSignatureShare() =
-      SigningStatus_SendingSignatureShare;
-  const factory SigningStatus.signingCompleted() =
-      SigningStatus_SigningCompleted;
-  const factory SigningStatus.waitingForSignatureShares() =
-      SigningStatus_WaitingForSignatureShares;
-  const factory SigningStatus.preparingTransaction() =
-      SigningStatus_PreparingTransaction;
-  const factory SigningStatus.sendingTransaction() =
-      SigningStatus_SendingTransaction;
+  const factory SigningStatus.sendingCommitment() = SigningStatus_SendingCommitment;
+  const factory SigningStatus.waitingForCommitments() = SigningStatus_WaitingForCommitments;
+  const factory SigningStatus.sendingSigningPackage() = SigningStatus_SendingSigningPackage;
+  const factory SigningStatus.waitingForSigningPackage() = SigningStatus_WaitingForSigningPackage;
+  const factory SigningStatus.sendingSignatureShare() = SigningStatus_SendingSignatureShare;
+  const factory SigningStatus.signingCompleted() = SigningStatus_SigningCompleted;
+  const factory SigningStatus.waitingForSignatureShares() = SigningStatus_WaitingForSignatureShares;
+  const factory SigningStatus.preparingTransaction() = SigningStatus_PreparingTransaction;
+  const factory SigningStatus.sendingTransaction() = SigningStatus_SendingTransaction;
   const factory SigningStatus.transactionSent(
     String field0,
   ) = SigningStatus_TransactionSent;

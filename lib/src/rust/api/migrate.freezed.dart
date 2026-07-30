@@ -16,8 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$MigrationEvent {
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is MigrationEvent);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is MigrationEvent);
   }
 
   @override
@@ -90,8 +89,7 @@ extension MigrationEventPatterns on MigrationEvent {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(MigrationEvent_SplitComplete value) splitComplete,
-    required TResult Function(MigrationEvent_MigrateComplete value)
-        migrateComplete,
+    required TResult Function(MigrationEvent_MigrateComplete value) migrateComplete,
     required TResult Function(MigrationEvent_Complete value) complete,
     required TResult Function(MigrationEvent_NothingToDo value) nothingToDo,
     required TResult Function(MigrationEvent_Error value) error,
@@ -271,16 +269,13 @@ class MigrationEvent_SplitComplete extends MigrationEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MigrationEvent_SplitCompleteCopyWith<MigrationEvent_SplitComplete>
-      get copyWith => _$MigrationEvent_SplitCompleteCopyWithImpl<
-          MigrationEvent_SplitComplete>(this, _$identity);
+  $MigrationEvent_SplitCompleteCopyWith<MigrationEvent_SplitComplete> get copyWith =>
+      _$MigrationEvent_SplitCompleteCopyWithImpl<MigrationEvent_SplitComplete>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is MigrationEvent_SplitComplete &&
-            (identical(other.fee, fee) || other.fee == fee));
+        (other.runtimeType == runtimeType && other is MigrationEvent_SplitComplete && (identical(other.fee, fee) || other.fee == fee));
   }
 
   @override
@@ -293,19 +288,15 @@ class MigrationEvent_SplitComplete extends MigrationEvent {
 }
 
 /// @nodoc
-abstract mixin class $MigrationEvent_SplitCompleteCopyWith<$Res>
-    implements $MigrationEventCopyWith<$Res> {
-  factory $MigrationEvent_SplitCompleteCopyWith(
-          MigrationEvent_SplitComplete value,
-          $Res Function(MigrationEvent_SplitComplete) _then) =
+abstract mixin class $MigrationEvent_SplitCompleteCopyWith<$Res> implements $MigrationEventCopyWith<$Res> {
+  factory $MigrationEvent_SplitCompleteCopyWith(MigrationEvent_SplitComplete value, $Res Function(MigrationEvent_SplitComplete) _then) =
       _$MigrationEvent_SplitCompleteCopyWithImpl;
   @useResult
   $Res call({BigInt fee});
 }
 
 /// @nodoc
-class _$MigrationEvent_SplitCompleteCopyWithImpl<$Res>
-    implements $MigrationEvent_SplitCompleteCopyWith<$Res> {
+class _$MigrationEvent_SplitCompleteCopyWithImpl<$Res> implements $MigrationEvent_SplitCompleteCopyWith<$Res> {
   _$MigrationEvent_SplitCompleteCopyWithImpl(this._self, this._then);
 
   final MigrationEvent_SplitComplete _self;
@@ -337,16 +328,13 @@ class MigrationEvent_MigrateComplete extends MigrationEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MigrationEvent_MigrateCompleteCopyWith<MigrationEvent_MigrateComplete>
-      get copyWith => _$MigrationEvent_MigrateCompleteCopyWithImpl<
-          MigrationEvent_MigrateComplete>(this, _$identity);
+  $MigrationEvent_MigrateCompleteCopyWith<MigrationEvent_MigrateComplete> get copyWith =>
+      _$MigrationEvent_MigrateCompleteCopyWithImpl<MigrationEvent_MigrateComplete>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is MigrationEvent_MigrateComplete &&
-            (identical(other.fee, fee) || other.fee == fee));
+        (other.runtimeType == runtimeType && other is MigrationEvent_MigrateComplete && (identical(other.fee, fee) || other.fee == fee));
   }
 
   @override
@@ -359,19 +347,15 @@ class MigrationEvent_MigrateComplete extends MigrationEvent {
 }
 
 /// @nodoc
-abstract mixin class $MigrationEvent_MigrateCompleteCopyWith<$Res>
-    implements $MigrationEventCopyWith<$Res> {
-  factory $MigrationEvent_MigrateCompleteCopyWith(
-          MigrationEvent_MigrateComplete value,
-          $Res Function(MigrationEvent_MigrateComplete) _then) =
+abstract mixin class $MigrationEvent_MigrateCompleteCopyWith<$Res> implements $MigrationEventCopyWith<$Res> {
+  factory $MigrationEvent_MigrateCompleteCopyWith(MigrationEvent_MigrateComplete value, $Res Function(MigrationEvent_MigrateComplete) _then) =
       _$MigrationEvent_MigrateCompleteCopyWithImpl;
   @useResult
   $Res call({BigInt fee});
 }
 
 /// @nodoc
-class _$MigrationEvent_MigrateCompleteCopyWithImpl<$Res>
-    implements $MigrationEvent_MigrateCompleteCopyWith<$Res> {
+class _$MigrationEvent_MigrateCompleteCopyWithImpl<$Res> implements $MigrationEvent_MigrateCompleteCopyWith<$Res> {
   _$MigrationEvent_MigrateCompleteCopyWithImpl(this._self, this._then);
 
   final MigrationEvent_MigrateComplete _self;
@@ -399,8 +383,7 @@ class MigrationEvent_Complete extends MigrationEvent {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is MigrationEvent_Complete);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is MigrationEvent_Complete);
   }
 
   @override
@@ -419,9 +402,7 @@ class MigrationEvent_NothingToDo extends MigrationEvent {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is MigrationEvent_NothingToDo);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is MigrationEvent_NothingToDo);
   }
 
   @override
@@ -444,16 +425,12 @@ class MigrationEvent_Error extends MigrationEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MigrationEvent_ErrorCopyWith<MigrationEvent_Error> get copyWith =>
-      _$MigrationEvent_ErrorCopyWithImpl<MigrationEvent_Error>(
-          this, _$identity);
+  $MigrationEvent_ErrorCopyWith<MigrationEvent_Error> get copyWith => _$MigrationEvent_ErrorCopyWithImpl<MigrationEvent_Error>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is MigrationEvent_Error &&
-            (identical(other.message, message) || other.message == message));
+        (other.runtimeType == runtimeType && other is MigrationEvent_Error && (identical(other.message, message) || other.message == message));
   }
 
   @override
@@ -466,18 +443,14 @@ class MigrationEvent_Error extends MigrationEvent {
 }
 
 /// @nodoc
-abstract mixin class $MigrationEvent_ErrorCopyWith<$Res>
-    implements $MigrationEventCopyWith<$Res> {
-  factory $MigrationEvent_ErrorCopyWith(MigrationEvent_Error value,
-          $Res Function(MigrationEvent_Error) _then) =
-      _$MigrationEvent_ErrorCopyWithImpl;
+abstract mixin class $MigrationEvent_ErrorCopyWith<$Res> implements $MigrationEventCopyWith<$Res> {
+  factory $MigrationEvent_ErrorCopyWith(MigrationEvent_Error value, $Res Function(MigrationEvent_Error) _then) = _$MigrationEvent_ErrorCopyWithImpl;
   @useResult
   $Res call({String message});
 }
 
 /// @nodoc
-class _$MigrationEvent_ErrorCopyWithImpl<$Res>
-    implements $MigrationEvent_ErrorCopyWith<$Res> {
+class _$MigrationEvent_ErrorCopyWithImpl<$Res> implements $MigrationEvent_ErrorCopyWith<$Res> {
   _$MigrationEvent_ErrorCopyWithImpl(this._self, this._then);
 
   final MigrationEvent_Error _self;

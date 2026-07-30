@@ -1,11 +1,12 @@
 use anyhow::Result;
-use rand_core::{OsRng, RngCore as _};
-use zcash_keys::keys::UnifiedFullViewingKey;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
+use rand_core::{OsRng, RngCore as _};
+use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::{
-    api::coin::Coin, key::{is_valid_sapling_key, is_valid_transparent_key}
+    api::coin::Coin,
+    key::{is_valid_sapling_key, is_valid_transparent_key},
 };
 
 #[cfg_attr(feature = "flutter", frb(sync))]
@@ -94,10 +95,17 @@ pub fn get_key_pools(key: &str, c: &Coin) -> Result<u8> {
 
     if crate::key::is_valid_ufvk(network, key) {
         let mut pools = 0;
-        let ufvk = UnifiedFullViewingKey::decode(network, key).map_err(|_| anyhow::anyhow!("Invalid UFVK"))?;
-        if ufvk.transparent().is_some() { pools |= 1; }
-        if ufvk.sapling().is_some() { pools |= 2; }
-        if ufvk.orchard().is_some() { pools |= 4; }
+        let ufvk = UnifiedFullViewingKey::decode(network, key)
+            .map_err(|_| anyhow::anyhow!("Invalid UFVK"))?;
+        if ufvk.transparent().is_some() {
+            pools |= 1;
+        }
+        if ufvk.sapling().is_some() {
+            pools |= 2;
+        }
+        if ufvk.orchard().is_some() {
+            pools |= 4;
+        }
         return Ok(pools);
     }
 

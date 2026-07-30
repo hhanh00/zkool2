@@ -370,8 +370,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                         Text("Downloaded", style: TextStyle(color: Colors.green)),
                       ])
                     else ...[
-                      Text("Not Downloaded",
-                          style: TextStyle(color: Colors.orange.shade700)),
+                      Text("Not Downloaded", style: TextStyle(color: Colors.orange.shade700)),
                       Gap(8),
                       if (saplingDownloading)
                         SizedBox(
@@ -875,9 +874,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             }
             if (mounted) {
               await ref.read(vaultProvider.notifier).registerDevice(
-                password: masterPassword!,
-                prf: prf,
-              );
+                    password: masterPassword!,
+                    prf: prf,
+                  );
             }
           } catch (e) {
             logger.w("[Recover] passkey registration failed: $e");
@@ -904,7 +903,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         await showException(
           context,
           "The local database must be empty before compressing the vault. "
-              "Please delete all accounts first.",
+          "Please delete all accounts first.",
         );
       }
       return;
@@ -924,12 +923,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     List<RestoredAccount> recovered;
     AwesomeDialog? compressLoading = showLoadingDialog(context, "Downloading vault...");
     try {
-      vaultBytes = await ref
-          .read(vaultProvider.notifier)
-          .downloadVaultBytes();
-      recovered = await ref
-          .read(vaultProvider.notifier)
-          .recoverVault(vaultBytes: vaultBytes, masterPassword: password);
+      vaultBytes = await ref.read(vaultProvider.notifier).downloadVaultBytes();
+      recovered = await ref.read(vaultProvider.notifier).recoverVault(vaultBytes: vaultBytes, masterPassword: password);
       compressLoading.dismiss();
     } catch (e) {
       compressLoading.dismiss();
@@ -969,8 +964,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     final switchAccount = await confirmDialog(
       context,
       title: "Switch Google Account?",
-      message:
-          "Do you want to create the new vault on a different Google account?",
+      message: "Do you want to create the new vault on a different Google account?",
     );
     if (!mounted) return;
 

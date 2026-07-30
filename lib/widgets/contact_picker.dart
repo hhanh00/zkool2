@@ -24,8 +24,7 @@ Future<List<ContactCandidate>?> showContactPicker(
   final status = await fc.FlutterContacts.permissions.request(
     fc.PermissionType.read,
   );
-  if (status != fc.PermissionStatus.granted &&
-      status != fc.PermissionStatus.limited) {
+  if (status != fc.PermissionStatus.granted && status != fc.PermissionStatus.limited) {
     if (context.mounted) {
       await showMessage(
         context,
@@ -194,9 +193,7 @@ class _ContactPickerDialogState extends State<_ContactPickerDialog> {
   List<ContactCandidate> get _filtered {
     if (_query.isEmpty) return widget.candidates;
     final q = _query.toLowerCase();
-    return widget.candidates
-        .where((c) => c.name.toLowerCase().contains(q))
-        .toList();
+    return widget.candidates.where((c) => c.name.toLowerCase().contains(q)).toList();
   }
 
   @override
@@ -232,20 +229,13 @@ class _ContactPickerDialogState extends State<_ContactPickerDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _query.isEmpty
-                              ? Icons.contact_phone
-                              : Icons.search_off,
+                          _query.isEmpty ? Icons.contact_phone : Icons.search_off,
                           size: 64,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withAlpha(100),
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                         ),
                         Gap(16),
                         Text(
-                          _query.isEmpty
-                              ? "No contacts available"
-                              : "No contacts matching \"$_query\"",
+                          _query.isEmpty ? "No contacts available" : "No contacts matching \"$_query\"",
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ],
@@ -273,9 +263,7 @@ class _ContactPickerDialogState extends State<_ContactPickerDialog> {
                             : const Icon(Icons.person),
                         title: Text(candidate.name),
                         subtitle: Text(
-                          candidate.addresses.length == 1
-                              ? "1 Zcash address found"
-                              : "${candidate.addresses.length} Zcash addresses found",
+                          candidate.addresses.length == 1 ? "1 Zcash address found" : "${candidate.addresses.length} Zcash addresses found",
                         ),
                         onTap: () {
                           if (widget.multiSelect) {
@@ -287,8 +275,7 @@ class _ContactPickerDialogState extends State<_ContactPickerDialog> {
                               }
                             });
                           } else {
-                            Navigator.of(context)
-                                .pop([candidate]);
+                            Navigator.of(context).pop([candidate]);
                           }
                         },
                       );

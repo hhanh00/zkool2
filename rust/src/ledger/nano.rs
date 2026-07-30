@@ -4,7 +4,14 @@ use sqlx::SqliteConnection;
 use tonic::async_trait;
 use zcash_transparent::address::TransparentAddress;
 
-use crate::{api::{coin::{Coin, Network}, pay::{PcztPackage, SigningEvent}}, frb_generated::StreamSink, ledger::HWAPI};
+use crate::{
+    api::{
+        coin::{Coin, Network},
+        pay::{PcztPackage, SigningEvent},
+    },
+    frb_generated::StreamSink,
+    ledger::HWAPI,
+};
 
 pub struct NanoLedger {}
 

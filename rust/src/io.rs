@@ -408,17 +408,15 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     io_account.transactions = transactions;
 
     // Export user memos
-    let user_memos = sqlx::query(
-        "SELECT id_tx, user_memo FROM user_memos WHERE account = ?",
-    )
-    .bind(account)
-    .map(|row: SqliteRow| {
-        let id_tx: u32 = row.get(0);
-        let user_memo: String = row.get(1);
-        IOUserMemo { id_tx, user_memo }
-    })
-    .fetch_all(&mut *connection)
-    .await?;
+    let user_memos = sqlx::query("SELECT id_tx, user_memo FROM user_memos WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| {
+            let id_tx: u32 = row.get(0);
+            let user_memo: String = row.get(1);
+            IOUserMemo { id_tx, user_memo }
+        })
+        .fetch_all(&mut *connection)
+        .await?;
     io_account.user_memos = user_memos;
 
     let dkg_params =
@@ -521,13 +519,12 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .execute(&mut *tx)
         .await?;
         // Look up the id_asset (either newly created or existing)
-        let new_id_asset: (u32,) = sqlx::query_as(
-            "SELECT id_asset FROM assets WHERE asset_desc_hash = ?1 AND ik = ?2",
-        )
-        .bind(&asset.asset_desc_hash)
-        .bind(&asset.ik)
-        .fetch_one(&mut *tx)
-        .await?;
+        let new_id_asset: (u32,) =
+            sqlx::query_as("SELECT id_asset FROM assets WHERE asset_desc_hash = ?1 AND ik = ?2")
+                .bind(&asset.asset_desc_hash)
+                .bind(&asset.ik)
+                .fetch_one(&mut *tx)
+                .await?;
         new_assets.insert(asset.id_asset, new_id_asset.0);
     }
 
@@ -672,9 +669,7 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
             let new_taddress = note
                 .taddress
                 .and_then(|id_taddress| new_taddresses.get(&id_taddress));
-            let new_id_asset = note
-                .id_asset
-                .and_then(|id_asset| new_assets.get(&id_asset));
+            let new_id_asset = note.id_asset.and_then(|id_asset| new_assets.get(&id_asset));
             let r = sqlx::query("INSERT INTO notes
                 (tx, height, account, pool, scope, nullifier, value, cmx, taddress, position, diversifier,
                 rcm, rho, locked, id_asset)

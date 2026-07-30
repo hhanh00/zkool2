@@ -26,8 +26,7 @@ mixin _$Coin {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $CoinCopyWith<Coin> get copyWith =>
-      _$CoinCopyWithImpl<Coin>(this as Coin, _$identity);
+  $CoinCopyWith<Coin> get copyWith => _$CoinCopyWithImpl<Coin>(this as Coin, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -36,18 +35,15 @@ mixin _$Coin {
             other is Coin &&
             (identical(other.coin, coin) || other.coin == coin) &&
             (identical(other.account, account) || other.account == account) &&
-            (identical(other.dbFilepath, dbFilepath) ||
-                other.dbFilepath == dbFilepath) &&
+            (identical(other.dbFilepath, dbFilepath) || other.dbFilepath == dbFilepath) &&
             (identical(other.url, url) || other.url == url) &&
-            (identical(other.serverType, serverType) ||
-                other.serverType == serverType) &&
+            (identical(other.serverType, serverType) || other.serverType == serverType) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
             (identical(other.proxy, proxy) || other.proxy == proxy));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
+  int get hashCode => Object.hash(runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
 
   @override
   String toString() {
@@ -57,17 +53,9 @@ mixin _$Coin {
 
 /// @nodoc
 abstract mixin class $CoinCopyWith<$Res> {
-  factory $CoinCopyWith(Coin value, $Res Function(Coin) _then) =
-      _$CoinCopyWithImpl;
+  factory $CoinCopyWith(Coin value, $Res Function(Coin) _then) = _$CoinCopyWithImpl;
   @useResult
-  $Res call(
-      {int coin,
-      int account,
-      String dbFilepath,
-      String url,
-      int serverType,
-      bool useTor,
-      String proxy});
+  $Res call({int coin, int account, String dbFilepath, String url, int serverType, bool useTor, String proxy});
 }
 
 /// @nodoc
@@ -214,16 +202,13 @@ extension CoinPatterns on Coin {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor, String proxy)?
-        raw,
+    TResult Function(int coin, int account, String dbFilepath, String url, int serverType, bool useTor, String proxy)? raw,
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _Coin() when raw != null:
-        return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor, _that.proxy);
+        return raw(_that.coin, _that.account, _that.dbFilepath, _that.url, _that.serverType, _that.useTor, _that.proxy);
       case _:
         return orElse();
     }
@@ -244,15 +229,12 @@ extension CoinPatterns on Coin {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(int coin, int account, String dbFilepath,
-            String url, int serverType, bool useTor, String proxy)
-        raw,
+    required TResult Function(int coin, int account, String dbFilepath, String url, int serverType, bool useTor, String proxy) raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin():
-        return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor, _that.proxy);
+        return raw(_that.coin, _that.account, _that.dbFilepath, _that.url, _that.serverType, _that.useTor, _that.proxy);
     }
   }
 
@@ -270,15 +252,12 @@ extension CoinPatterns on Coin {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor, String proxy)?
-        raw,
+    TResult? Function(int coin, int account, String dbFilepath, String url, int serverType, bool useTor, String proxy)? raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin() when raw != null:
-        return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor, _that.proxy);
+        return raw(_that.coin, _that.account, _that.dbFilepath, _that.url, _that.serverType, _that.useTor, _that.proxy);
       case _:
         return null;
     }
@@ -318,8 +297,7 @@ class _Coin extends Coin {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$CoinCopyWith<_Coin> get copyWith =>
-      __$CoinCopyWithImpl<_Coin>(this, _$identity);
+  _$CoinCopyWith<_Coin> get copyWith => __$CoinCopyWithImpl<_Coin>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -328,18 +306,15 @@ class _Coin extends Coin {
             other is _Coin &&
             (identical(other.coin, coin) || other.coin == coin) &&
             (identical(other.account, account) || other.account == account) &&
-            (identical(other.dbFilepath, dbFilepath) ||
-                other.dbFilepath == dbFilepath) &&
+            (identical(other.dbFilepath, dbFilepath) || other.dbFilepath == dbFilepath) &&
             (identical(other.url, url) || other.url == url) &&
-            (identical(other.serverType, serverType) ||
-                other.serverType == serverType) &&
+            (identical(other.serverType, serverType) || other.serverType == serverType) &&
             (identical(other.useTor, useTor) || other.useTor == useTor) &&
             (identical(other.proxy, proxy) || other.proxy == proxy));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
+  int get hashCode => Object.hash(runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
 
   @override
   String toString() {
@@ -349,18 +324,10 @@ class _Coin extends Coin {
 
 /// @nodoc
 abstract mixin class _$CoinCopyWith<$Res> implements $CoinCopyWith<$Res> {
-  factory _$CoinCopyWith(_Coin value, $Res Function(_Coin) _then) =
-      __$CoinCopyWithImpl;
+  factory _$CoinCopyWith(_Coin value, $Res Function(_Coin) _then) = __$CoinCopyWithImpl;
   @override
   @useResult
-  $Res call(
-      {int coin,
-      int account,
-      String dbFilepath,
-      String url,
-      int serverType,
-      bool useTor,
-      String proxy});
+  $Res call({int coin, int account, String dbFilepath, String url, int serverType, bool useTor, String proxy});
 }
 
 /// @nodoc

@@ -4,10 +4,7 @@ use zcash_primitives::transaction::Transaction;
 
 use tonic::async_trait;
 
-use crate::{
-    api::coin::Network,
-    lwd::*,
-};
+use crate::{api::coin::Network, lwd::*};
 
 pub mod lwd;
 pub mod zebra;

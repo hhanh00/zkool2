@@ -16,8 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$DKGStatus {
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is DKGStatus);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus);
   }
 
   @override
@@ -100,11 +99,9 @@ extension DKGStatusPatterns on DKGStatus {
   TResult map<TResult extends Object?>({
     required TResult Function(DKGStatus_WaitParams value) waitParams,
     required TResult Function(DKGStatus_WaitAddresses value) waitAddresses,
-    required TResult Function(DKGStatus_PublishRound1Pkg value)
-        publishRound1Pkg,
+    required TResult Function(DKGStatus_PublishRound1Pkg value) publishRound1Pkg,
     required TResult Function(DKGStatus_WaitRound1Pkg value) waitRound1Pkg,
-    required TResult Function(DKGStatus_PublishRound2Pkg value)
-        publishRound2Pkg,
+    required TResult Function(DKGStatus_PublishRound2Pkg value) publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
@@ -322,8 +319,7 @@ class DKGStatus_WaitParams extends DKGStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is DKGStatus_WaitParams);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus_WaitParams);
   }
 
   @override
@@ -353,21 +349,16 @@ class DKGStatus_WaitAddresses extends DKGStatus {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $DKGStatus_WaitAddressesCopyWith<DKGStatus_WaitAddresses> get copyWith =>
-      _$DKGStatus_WaitAddressesCopyWithImpl<DKGStatus_WaitAddresses>(
-          this, _$identity);
+  $DKGStatus_WaitAddressesCopyWith<DKGStatus_WaitAddresses> get copyWith => _$DKGStatus_WaitAddressesCopyWithImpl<DKGStatus_WaitAddresses>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is DKGStatus_WaitAddresses &&
-            const DeepCollectionEquality().equals(other._field0, _field0));
+        (other.runtimeType == runtimeType && other is DKGStatus_WaitAddresses && const DeepCollectionEquality().equals(other._field0, _field0));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, const DeepCollectionEquality().hash(_field0));
+  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(_field0));
 
   @override
   String toString() {
@@ -376,18 +367,14 @@ class DKGStatus_WaitAddresses extends DKGStatus {
 }
 
 /// @nodoc
-abstract mixin class $DKGStatus_WaitAddressesCopyWith<$Res>
-    implements $DKGStatusCopyWith<$Res> {
-  factory $DKGStatus_WaitAddressesCopyWith(DKGStatus_WaitAddresses value,
-          $Res Function(DKGStatus_WaitAddresses) _then) =
-      _$DKGStatus_WaitAddressesCopyWithImpl;
+abstract mixin class $DKGStatus_WaitAddressesCopyWith<$Res> implements $DKGStatusCopyWith<$Res> {
+  factory $DKGStatus_WaitAddressesCopyWith(DKGStatus_WaitAddresses value, $Res Function(DKGStatus_WaitAddresses) _then) = _$DKGStatus_WaitAddressesCopyWithImpl;
   @useResult
   $Res call({List<String> field0});
 }
 
 /// @nodoc
-class _$DKGStatus_WaitAddressesCopyWithImpl<$Res>
-    implements $DKGStatus_WaitAddressesCopyWith<$Res> {
+class _$DKGStatus_WaitAddressesCopyWithImpl<$Res> implements $DKGStatus_WaitAddressesCopyWith<$Res> {
   _$DKGStatus_WaitAddressesCopyWithImpl(this._self, this._then);
 
   final DKGStatus_WaitAddresses _self;
@@ -415,9 +402,7 @@ class DKGStatus_PublishRound1Pkg extends DKGStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is DKGStatus_PublishRound1Pkg);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus_PublishRound1Pkg);
   }
 
   @override
@@ -436,8 +421,7 @@ class DKGStatus_WaitRound1Pkg extends DKGStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is DKGStatus_WaitRound1Pkg);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus_WaitRound1Pkg);
   }
 
   @override
@@ -456,9 +440,7 @@ class DKGStatus_PublishRound2Pkg extends DKGStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is DKGStatus_PublishRound2Pkg);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus_PublishRound2Pkg);
   }
 
   @override
@@ -477,8 +459,7 @@ class DKGStatus_WaitRound2Pkg extends DKGStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is DKGStatus_WaitRound2Pkg);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus_WaitRound2Pkg);
   }
 
   @override
@@ -497,8 +478,7 @@ class DKGStatus_Finalize extends DKGStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is DKGStatus_Finalize);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is DKGStatus_Finalize);
   }
 
   @override
@@ -521,16 +501,12 @@ class DKGStatus_SharedAddress extends DKGStatus {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $DKGStatus_SharedAddressCopyWith<DKGStatus_SharedAddress> get copyWith =>
-      _$DKGStatus_SharedAddressCopyWithImpl<DKGStatus_SharedAddress>(
-          this, _$identity);
+  $DKGStatus_SharedAddressCopyWith<DKGStatus_SharedAddress> get copyWith => _$DKGStatus_SharedAddressCopyWithImpl<DKGStatus_SharedAddress>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is DKGStatus_SharedAddress &&
-            (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType && other is DKGStatus_SharedAddress && (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -543,18 +519,14 @@ class DKGStatus_SharedAddress extends DKGStatus {
 }
 
 /// @nodoc
-abstract mixin class $DKGStatus_SharedAddressCopyWith<$Res>
-    implements $DKGStatusCopyWith<$Res> {
-  factory $DKGStatus_SharedAddressCopyWith(DKGStatus_SharedAddress value,
-          $Res Function(DKGStatus_SharedAddress) _then) =
-      _$DKGStatus_SharedAddressCopyWithImpl;
+abstract mixin class $DKGStatus_SharedAddressCopyWith<$Res> implements $DKGStatusCopyWith<$Res> {
+  factory $DKGStatus_SharedAddressCopyWith(DKGStatus_SharedAddress value, $Res Function(DKGStatus_SharedAddress) _then) = _$DKGStatus_SharedAddressCopyWithImpl;
   @useResult
   $Res call({String field0});
 }
 
 /// @nodoc
-class _$DKGStatus_SharedAddressCopyWithImpl<$Res>
-    implements $DKGStatus_SharedAddressCopyWith<$Res> {
+class _$DKGStatus_SharedAddressCopyWithImpl<$Res> implements $DKGStatus_SharedAddressCopyWith<$Res> {
   _$DKGStatus_SharedAddressCopyWithImpl(this._self, this._then);
 
   final DKGStatus_SharedAddress _self;
@@ -585,9 +557,7 @@ mixin _$FrostSignParams {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $FrostSignParamsCopyWith<FrostSignParams> get copyWith =>
-      _$FrostSignParamsCopyWithImpl<FrostSignParams>(
-          this as FrostSignParams, _$identity);
+  $FrostSignParamsCopyWith<FrostSignParams> get copyWith => _$FrostSignParamsCopyWithImpl<FrostSignParams>(this as FrostSignParams, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -595,15 +565,12 @@ mixin _$FrostSignParams {
         (other.runtimeType == runtimeType &&
             other is FrostSignParams &&
             (identical(other.account, account) || other.account == account) &&
-            (identical(other.coordinator, coordinator) ||
-                other.coordinator == coordinator) &&
-            (identical(other.fundingAccount, fundingAccount) ||
-                other.fundingAccount == fundingAccount));
+            (identical(other.coordinator, coordinator) || other.coordinator == coordinator) &&
+            (identical(other.fundingAccount, fundingAccount) || other.fundingAccount == fundingAccount));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, account, coordinator, fundingAccount);
+  int get hashCode => Object.hash(runtimeType, account, coordinator, fundingAccount);
 
   @override
   String toString() {
@@ -613,16 +580,13 @@ mixin _$FrostSignParams {
 
 /// @nodoc
 abstract mixin class $FrostSignParamsCopyWith<$Res> {
-  factory $FrostSignParamsCopyWith(
-          FrostSignParams value, $Res Function(FrostSignParams) _then) =
-      _$FrostSignParamsCopyWithImpl;
+  factory $FrostSignParamsCopyWith(FrostSignParams value, $Res Function(FrostSignParams) _then) = _$FrostSignParamsCopyWithImpl;
   @useResult
   $Res call({int account, int coordinator, int fundingAccount});
 }
 
 /// @nodoc
-class _$FrostSignParamsCopyWithImpl<$Res>
-    implements $FrostSignParamsCopyWith<$Res> {
+class _$FrostSignParamsCopyWithImpl<$Res> implements $FrostSignParamsCopyWith<$Res> {
   _$FrostSignParamsCopyWithImpl(this._self, this._then);
 
   final FrostSignParams _self;
@@ -745,8 +709,7 @@ extension FrostSignParamsPatterns on FrostSignParams {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int account, int coordinator, int fundingAccount)?
-        $default, {
+    TResult Function(int account, int coordinator, int fundingAccount)? $default, {
     required TResult orElse(),
   }) {
     final _that = this;
@@ -796,8 +759,7 @@ extension FrostSignParamsPatterns on FrostSignParams {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int account, int coordinator, int fundingAccount)?
-        $default,
+    TResult? Function(int account, int coordinator, int fundingAccount)? $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -812,11 +774,7 @@ extension FrostSignParamsPatterns on FrostSignParams {
 /// @nodoc
 
 class _FrostSignParams extends FrostSignParams {
-  const _FrostSignParams(
-      {required this.account,
-      required this.coordinator,
-      required this.fundingAccount})
-      : super._();
+  const _FrostSignParams({required this.account, required this.coordinator, required this.fundingAccount}) : super._();
 
   @override
   final int account;
@@ -830,8 +788,7 @@ class _FrostSignParams extends FrostSignParams {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$FrostSignParamsCopyWith<_FrostSignParams> get copyWith =>
-      __$FrostSignParamsCopyWithImpl<_FrostSignParams>(this, _$identity);
+  _$FrostSignParamsCopyWith<_FrostSignParams> get copyWith => __$FrostSignParamsCopyWithImpl<_FrostSignParams>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -839,15 +796,12 @@ class _FrostSignParams extends FrostSignParams {
         (other.runtimeType == runtimeType &&
             other is _FrostSignParams &&
             (identical(other.account, account) || other.account == account) &&
-            (identical(other.coordinator, coordinator) ||
-                other.coordinator == coordinator) &&
-            (identical(other.fundingAccount, fundingAccount) ||
-                other.fundingAccount == fundingAccount));
+            (identical(other.coordinator, coordinator) || other.coordinator == coordinator) &&
+            (identical(other.fundingAccount, fundingAccount) || other.fundingAccount == fundingAccount));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, account, coordinator, fundingAccount);
+  int get hashCode => Object.hash(runtimeType, account, coordinator, fundingAccount);
 
   @override
   String toString() {
@@ -856,19 +810,15 @@ class _FrostSignParams extends FrostSignParams {
 }
 
 /// @nodoc
-abstract mixin class _$FrostSignParamsCopyWith<$Res>
-    implements $FrostSignParamsCopyWith<$Res> {
-  factory _$FrostSignParamsCopyWith(
-          _FrostSignParams value, $Res Function(_FrostSignParams) _then) =
-      __$FrostSignParamsCopyWithImpl;
+abstract mixin class _$FrostSignParamsCopyWith<$Res> implements $FrostSignParamsCopyWith<$Res> {
+  factory _$FrostSignParamsCopyWith(_FrostSignParams value, $Res Function(_FrostSignParams) _then) = __$FrostSignParamsCopyWithImpl;
   @override
   @useResult
   $Res call({int account, int coordinator, int fundingAccount});
 }
 
 /// @nodoc
-class __$FrostSignParamsCopyWithImpl<$Res>
-    implements _$FrostSignParamsCopyWith<$Res> {
+class __$FrostSignParamsCopyWithImpl<$Res> implements _$FrostSignParamsCopyWith<$Res> {
   __$FrostSignParamsCopyWithImpl(this._self, this._then);
 
   final _FrostSignParams _self;
@@ -904,8 +854,7 @@ class __$FrostSignParamsCopyWithImpl<$Res>
 mixin _$SigningStatus {
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is SigningStatus);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus);
   }
 
   @override
@@ -939,21 +888,14 @@ extension SigningStatusPatterns on SigningStatus {
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
     TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
-    TResult Function(SigningStatus_WaitingForCommitments value)?
-        waitingForCommitments,
-    TResult Function(SigningStatus_SendingSigningPackage value)?
-        sendingSigningPackage,
-    TResult Function(SigningStatus_WaitingForSigningPackage value)?
-        waitingForSigningPackage,
-    TResult Function(SigningStatus_SendingSignatureShare value)?
-        sendingSignatureShare,
+    TResult Function(SigningStatus_WaitingForCommitments value)? waitingForCommitments,
+    TResult Function(SigningStatus_SendingSigningPackage value)? sendingSigningPackage,
+    TResult Function(SigningStatus_WaitingForSigningPackage value)? waitingForSigningPackage,
+    TResult Function(SigningStatus_SendingSignatureShare value)? sendingSignatureShare,
     TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
-    TResult Function(SigningStatus_WaitingForSignatureShares value)?
-        waitingForSignatureShares,
-    TResult Function(SigningStatus_PreparingTransaction value)?
-        preparingTransaction,
-    TResult Function(SigningStatus_SendingTransaction value)?
-        sendingTransaction,
+    TResult Function(SigningStatus_WaitingForSignatureShares value)? waitingForSignatureShares,
+    TResult Function(SigningStatus_PreparingTransaction value)? preparingTransaction,
+    TResult Function(SigningStatus_SendingTransaction value)? sendingTransaction,
     TResult Function(SigningStatus_TransactionSent value)? transactionSent,
     required TResult orElse(),
   }) {
@@ -961,25 +903,19 @@ extension SigningStatusPatterns on SigningStatus {
     switch (_that) {
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment(_that);
-      case SigningStatus_WaitingForCommitments()
-          when waitingForCommitments != null:
+      case SigningStatus_WaitingForCommitments() when waitingForCommitments != null:
         return waitingForCommitments(_that);
-      case SigningStatus_SendingSigningPackage()
-          when sendingSigningPackage != null:
+      case SigningStatus_SendingSigningPackage() when sendingSigningPackage != null:
         return sendingSigningPackage(_that);
-      case SigningStatus_WaitingForSigningPackage()
-          when waitingForSigningPackage != null:
+      case SigningStatus_WaitingForSigningPackage() when waitingForSigningPackage != null:
         return waitingForSigningPackage(_that);
-      case SigningStatus_SendingSignatureShare()
-          when sendingSignatureShare != null:
+      case SigningStatus_SendingSignatureShare() when sendingSignatureShare != null:
         return sendingSignatureShare(_that);
       case SigningStatus_SigningCompleted() when signingCompleted != null:
         return signingCompleted(_that);
-      case SigningStatus_WaitingForSignatureShares()
-          when waitingForSignatureShares != null:
+      case SigningStatus_WaitingForSignatureShares() when waitingForSignatureShares != null:
         return waitingForSignatureShares(_that);
-      case SigningStatus_PreparingTransaction()
-          when preparingTransaction != null:
+      case SigningStatus_PreparingTransaction() when preparingTransaction != null:
         return preparingTransaction(_that);
       case SigningStatus_SendingTransaction() when sendingTransaction != null:
         return sendingTransaction(_that);
@@ -1005,26 +941,16 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(SigningStatus_SendingCommitment value)
-        sendingCommitment,
-    required TResult Function(SigningStatus_WaitingForCommitments value)
-        waitingForCommitments,
-    required TResult Function(SigningStatus_SendingSigningPackage value)
-        sendingSigningPackage,
-    required TResult Function(SigningStatus_WaitingForSigningPackage value)
-        waitingForSigningPackage,
-    required TResult Function(SigningStatus_SendingSignatureShare value)
-        sendingSignatureShare,
-    required TResult Function(SigningStatus_SigningCompleted value)
-        signingCompleted,
-    required TResult Function(SigningStatus_WaitingForSignatureShares value)
-        waitingForSignatureShares,
-    required TResult Function(SigningStatus_PreparingTransaction value)
-        preparingTransaction,
-    required TResult Function(SigningStatus_SendingTransaction value)
-        sendingTransaction,
-    required TResult Function(SigningStatus_TransactionSent value)
-        transactionSent,
+    required TResult Function(SigningStatus_SendingCommitment value) sendingCommitment,
+    required TResult Function(SigningStatus_WaitingForCommitments value) waitingForCommitments,
+    required TResult Function(SigningStatus_SendingSigningPackage value) sendingSigningPackage,
+    required TResult Function(SigningStatus_WaitingForSigningPackage value) waitingForSigningPackage,
+    required TResult Function(SigningStatus_SendingSignatureShare value) sendingSignatureShare,
+    required TResult Function(SigningStatus_SigningCompleted value) signingCompleted,
+    required TResult Function(SigningStatus_WaitingForSignatureShares value) waitingForSignatureShares,
+    required TResult Function(SigningStatus_PreparingTransaction value) preparingTransaction,
+    required TResult Function(SigningStatus_SendingTransaction value) sendingTransaction,
+    required TResult Function(SigningStatus_TransactionSent value) transactionSent,
   }) {
     final _that = this;
     switch (_that) {
@@ -1066,46 +992,33 @@ extension SigningStatusPatterns on SigningStatus {
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
-    TResult? Function(SigningStatus_WaitingForCommitments value)?
-        waitingForCommitments,
-    TResult? Function(SigningStatus_SendingSigningPackage value)?
-        sendingSigningPackage,
-    TResult? Function(SigningStatus_WaitingForSigningPackage value)?
-        waitingForSigningPackage,
-    TResult? Function(SigningStatus_SendingSignatureShare value)?
-        sendingSignatureShare,
+    TResult? Function(SigningStatus_WaitingForCommitments value)? waitingForCommitments,
+    TResult? Function(SigningStatus_SendingSigningPackage value)? sendingSigningPackage,
+    TResult? Function(SigningStatus_WaitingForSigningPackage value)? waitingForSigningPackage,
+    TResult? Function(SigningStatus_SendingSignatureShare value)? sendingSignatureShare,
     TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
-    TResult? Function(SigningStatus_WaitingForSignatureShares value)?
-        waitingForSignatureShares,
-    TResult? Function(SigningStatus_PreparingTransaction value)?
-        preparingTransaction,
-    TResult? Function(SigningStatus_SendingTransaction value)?
-        sendingTransaction,
+    TResult? Function(SigningStatus_WaitingForSignatureShares value)? waitingForSignatureShares,
+    TResult? Function(SigningStatus_PreparingTransaction value)? preparingTransaction,
+    TResult? Function(SigningStatus_SendingTransaction value)? sendingTransaction,
     TResult? Function(SigningStatus_TransactionSent value)? transactionSent,
   }) {
     final _that = this;
     switch (_that) {
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment(_that);
-      case SigningStatus_WaitingForCommitments()
-          when waitingForCommitments != null:
+      case SigningStatus_WaitingForCommitments() when waitingForCommitments != null:
         return waitingForCommitments(_that);
-      case SigningStatus_SendingSigningPackage()
-          when sendingSigningPackage != null:
+      case SigningStatus_SendingSigningPackage() when sendingSigningPackage != null:
         return sendingSigningPackage(_that);
-      case SigningStatus_WaitingForSigningPackage()
-          when waitingForSigningPackage != null:
+      case SigningStatus_WaitingForSigningPackage() when waitingForSigningPackage != null:
         return waitingForSigningPackage(_that);
-      case SigningStatus_SendingSignatureShare()
-          when sendingSignatureShare != null:
+      case SigningStatus_SendingSignatureShare() when sendingSignatureShare != null:
         return sendingSignatureShare(_that);
       case SigningStatus_SigningCompleted() when signingCompleted != null:
         return signingCompleted(_that);
-      case SigningStatus_WaitingForSignatureShares()
-          when waitingForSignatureShares != null:
+      case SigningStatus_WaitingForSignatureShares() when waitingForSignatureShares != null:
         return waitingForSignatureShares(_that);
-      case SigningStatus_PreparingTransaction()
-          when preparingTransaction != null:
+      case SigningStatus_PreparingTransaction() when preparingTransaction != null:
         return preparingTransaction(_that);
       case SigningStatus_SendingTransaction() when sendingTransaction != null:
         return sendingTransaction(_that);
@@ -1146,25 +1059,19 @@ extension SigningStatusPatterns on SigningStatus {
     switch (_that) {
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment();
-      case SigningStatus_WaitingForCommitments()
-          when waitingForCommitments != null:
+      case SigningStatus_WaitingForCommitments() when waitingForCommitments != null:
         return waitingForCommitments();
-      case SigningStatus_SendingSigningPackage()
-          when sendingSigningPackage != null:
+      case SigningStatus_SendingSigningPackage() when sendingSigningPackage != null:
         return sendingSigningPackage();
-      case SigningStatus_WaitingForSigningPackage()
-          when waitingForSigningPackage != null:
+      case SigningStatus_WaitingForSigningPackage() when waitingForSigningPackage != null:
         return waitingForSigningPackage();
-      case SigningStatus_SendingSignatureShare()
-          when sendingSignatureShare != null:
+      case SigningStatus_SendingSignatureShare() when sendingSignatureShare != null:
         return sendingSignatureShare();
       case SigningStatus_SigningCompleted() when signingCompleted != null:
         return signingCompleted();
-      case SigningStatus_WaitingForSignatureShares()
-          when waitingForSignatureShares != null:
+      case SigningStatus_WaitingForSignatureShares() when waitingForSignatureShares != null:
         return waitingForSignatureShares();
-      case SigningStatus_PreparingTransaction()
-          when preparingTransaction != null:
+      case SigningStatus_PreparingTransaction() when preparingTransaction != null:
         return preparingTransaction();
       case SigningStatus_SendingTransaction() when sendingTransaction != null:
         return sendingTransaction();
@@ -1255,25 +1162,19 @@ extension SigningStatusPatterns on SigningStatus {
     switch (_that) {
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment();
-      case SigningStatus_WaitingForCommitments()
-          when waitingForCommitments != null:
+      case SigningStatus_WaitingForCommitments() when waitingForCommitments != null:
         return waitingForCommitments();
-      case SigningStatus_SendingSigningPackage()
-          when sendingSigningPackage != null:
+      case SigningStatus_SendingSigningPackage() when sendingSigningPackage != null:
         return sendingSigningPackage();
-      case SigningStatus_WaitingForSigningPackage()
-          when waitingForSigningPackage != null:
+      case SigningStatus_WaitingForSigningPackage() when waitingForSigningPackage != null:
         return waitingForSigningPackage();
-      case SigningStatus_SendingSignatureShare()
-          when sendingSignatureShare != null:
+      case SigningStatus_SendingSignatureShare() when sendingSignatureShare != null:
         return sendingSignatureShare();
       case SigningStatus_SigningCompleted() when signingCompleted != null:
         return signingCompleted();
-      case SigningStatus_WaitingForSignatureShares()
-          when waitingForSignatureShares != null:
+      case SigningStatus_WaitingForSignatureShares() when waitingForSignatureShares != null:
         return waitingForSignatureShares();
-      case SigningStatus_PreparingTransaction()
-          when preparingTransaction != null:
+      case SigningStatus_PreparingTransaction() when preparingTransaction != null:
         return preparingTransaction();
       case SigningStatus_SendingTransaction() when sendingTransaction != null:
         return sendingTransaction();
@@ -1292,9 +1193,7 @@ class SigningStatus_SendingCommitment extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_SendingCommitment);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_SendingCommitment);
   }
 
   @override
@@ -1313,9 +1212,7 @@ class SigningStatus_WaitingForCommitments extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_WaitingForCommitments);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_WaitingForCommitments);
   }
 
   @override
@@ -1334,9 +1231,7 @@ class SigningStatus_SendingSigningPackage extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_SendingSigningPackage);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_SendingSigningPackage);
   }
 
   @override
@@ -1355,9 +1250,7 @@ class SigningStatus_WaitingForSigningPackage extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_WaitingForSigningPackage);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_WaitingForSigningPackage);
   }
 
   @override
@@ -1376,9 +1269,7 @@ class SigningStatus_SendingSignatureShare extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_SendingSignatureShare);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_SendingSignatureShare);
   }
 
   @override
@@ -1397,9 +1288,7 @@ class SigningStatus_SigningCompleted extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_SigningCompleted);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_SigningCompleted);
   }
 
   @override
@@ -1418,9 +1307,7 @@ class SigningStatus_WaitingForSignatureShares extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_WaitingForSignatureShares);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_WaitingForSignatureShares);
   }
 
   @override
@@ -1439,9 +1326,7 @@ class SigningStatus_PreparingTransaction extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_PreparingTransaction);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_PreparingTransaction);
   }
 
   @override
@@ -1460,9 +1345,7 @@ class SigningStatus_SendingTransaction extends SigningStatus {
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_SendingTransaction);
+    return identical(this, other) || (other.runtimeType == runtimeType && other is SigningStatus_SendingTransaction);
   }
 
   @override
@@ -1485,16 +1368,13 @@ class SigningStatus_TransactionSent extends SigningStatus {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $SigningStatus_TransactionSentCopyWith<SigningStatus_TransactionSent>
-      get copyWith => _$SigningStatus_TransactionSentCopyWithImpl<
-          SigningStatus_TransactionSent>(this, _$identity);
+  $SigningStatus_TransactionSentCopyWith<SigningStatus_TransactionSent> get copyWith =>
+      _$SigningStatus_TransactionSentCopyWithImpl<SigningStatus_TransactionSent>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SigningStatus_TransactionSent &&
-            (identical(other.field0, field0) || other.field0 == field0));
+        (other.runtimeType == runtimeType && other is SigningStatus_TransactionSent && (identical(other.field0, field0) || other.field0 == field0));
   }
 
   @override
@@ -1507,19 +1387,15 @@ class SigningStatus_TransactionSent extends SigningStatus {
 }
 
 /// @nodoc
-abstract mixin class $SigningStatus_TransactionSentCopyWith<$Res>
-    implements $SigningStatusCopyWith<$Res> {
-  factory $SigningStatus_TransactionSentCopyWith(
-          SigningStatus_TransactionSent value,
-          $Res Function(SigningStatus_TransactionSent) _then) =
+abstract mixin class $SigningStatus_TransactionSentCopyWith<$Res> implements $SigningStatusCopyWith<$Res> {
+  factory $SigningStatus_TransactionSentCopyWith(SigningStatus_TransactionSent value, $Res Function(SigningStatus_TransactionSent) _then) =
       _$SigningStatus_TransactionSentCopyWithImpl;
   @useResult
   $Res call({String field0});
 }
 
 /// @nodoc
-class _$SigningStatus_TransactionSentCopyWithImpl<$Res>
-    implements $SigningStatus_TransactionSentCopyWith<$Res> {
+class _$SigningStatus_TransactionSentCopyWithImpl<$Res> implements $SigningStatus_TransactionSentCopyWith<$Res> {
   _$SigningStatus_TransactionSentCopyWithImpl(this._self, this._then);
 
   final SigningStatus_TransactionSent _self;

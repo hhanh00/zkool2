@@ -52,7 +52,8 @@ fn parse_shield_tx() {
         println!("spends: {}", sb.shielded_spends().len());
         println!("outputs: {}", sb.shielded_outputs().len());
         for (i, out) in sb.shielded_outputs().iter().enumerate() {
-            println!("  output[{}]: enc_ciphertext_len={}, out_ciphertext_len={}",
+            println!(
+                "  output[{}]: enc_ciphertext_len={}, out_ciphertext_len={}",
                 i,
                 out.enc_ciphertext().as_ref().len(),
                 out.out_ciphertext().len(),
@@ -65,7 +66,10 @@ fn parse_shield_tx() {
 
     println!("\n=== Orchard Bundle ===");
     if let Some(ob) = tx.orchard_bundle() {
-        println!("has orchard bundle, value_balance: {:?}", ob.value_balance());
+        println!(
+            "has orchard bundle, value_balance: {:?}",
+            ob.value_balance()
+        );
     } else {
         println!("NONE");
     }

@@ -1,3 +1,4 @@
+use crate::keys::ScopeExt;
 use anyhow::Result;
 use orchard::{
     keys::{FullViewingKey, IncomingViewingKey},
@@ -6,7 +7,6 @@ use orchard::{
     Address, Note,
 };
 use sqlx::SqliteConnection;
-use crate::keys::ScopeExt;
 
 use crate::{
     lwd::{CompactIssueNote, CompactOrchardAction, CompactTx},
@@ -98,7 +98,10 @@ impl ShieldedProtocol for OrchardProtocol {
         issue_note: &CompactIssueNote,
         asset_base: &AssetBase,
     ) -> Result<Option<(Self::Note, types::Note)>> {
-        let recipient_bytes: [u8; 43] = issue_note.recipient.as_slice().try_into()
+        let recipient_bytes: [u8; 43] = issue_note
+            .recipient
+            .as_slice()
+            .try_into()
             .map_err(|_| anyhow::anyhow!("Invalid issuance note recipient length"))?;
         let parsed_addr = Address::from_raw_address_bytes(&recipient_bytes);
         if parsed_addr.is_none().into() {
@@ -127,7 +130,11 @@ impl ShieldedProtocol for OrchardProtocol {
             diversifier: our_addr.diversifier().as_array().to_vec(),
             ivtx,
             cmx: cmx_bytes.to_vec(),
-            asset_base: if is_zec { vec![] } else { note.asset().to_bytes().to_vec() },
+            asset_base: if is_zec {
+                vec![]
+            } else {
+                note.asset().to_bytes().to_vec()
+            },
             ..types::Note::default()
         };
         Ok(Some((note, dbn)))
@@ -145,7 +152,10 @@ fn construct_issuance_note(
     issue_note: &CompactIssueNote,
     asset_base: &AssetBase,
 ) -> Result<(Note, Hash32)> {
-    let recipient_bytes: [u8; 43] = issue_note.recipient.as_slice().try_into()
+    let recipient_bytes: [u8; 43] = issue_note
+        .recipient
+        .as_slice()
+        .try_into()
         .map_err(|_| anyhow::anyhow!("Invalid issuance note recipient length"))?;
     let addr = Address::from_raw_address_bytes(&recipient_bytes);
     if addr.is_none().into() {
@@ -155,7 +165,10 @@ fn construct_issuance_note(
 
     let value = NoteValue::from_raw(issue_note.value);
     let rho = Rho::from_bytes(
-        issue_note.rho.as_slice().try_into()
+        issue_note
+            .rho
+            .as_slice()
+            .try_into()
             .map_err(|_| anyhow::anyhow!("Invalid issuance note rho length"))?,
     );
     if rho.is_none().into() {
@@ -163,7 +176,10 @@ fn construct_issuance_note(
     }
     let rho = rho.unwrap();
     let rseed = RandomSeed::from_bytes(
-        issue_note.rseed.as_slice().try_into()
+        issue_note
+            .rseed
+            .as_slice()
+            .try_into()
             .map_err(|_| anyhow::anyhow!("Invalid issuance note rseed length"))?,
         &rho,
     );

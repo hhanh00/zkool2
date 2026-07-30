@@ -1,7 +1,7 @@
+use crate::keys::sapling_ivk_nk_for_scope;
 use anyhow::Result;
 use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqliteConnection;
-use crate::keys::sapling_ivk_nk_for_scope;
 
 use crate::{
     lwd::{CompactSaplingOutput, CompactSaplingSpend, CompactTx},

@@ -15,39 +15,32 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 ///
 /// Performs DNS TXT lookup, parses OA1 records, filters for Zcash
 /// addresses, and validates them against the wallet's network type.
-Future<OpenAliasResolution> resolveOpenalias(
-        {required String alias, required Coin c}) =>
+Future<OpenAliasResolution> resolveOpenalias({required String alias, required Coin c}) =>
     RustLib.instance.api.crateApiOpenaliasResolveOpenalias(alias: alias, c: c);
 
 /// Resolve an OpenAlias name and return ALL cryptocurrency addresses
 /// found (not just Zcash) as [`Recipient`]s.
-Future<OpenAliasResolution> resolveOpenaliasAll({required String alias}) =>
-    RustLib.instance.api.crateApiOpenaliasResolveOpenaliasAll(alias: alias);
+Future<OpenAliasResolution> resolveOpenaliasAll({required String alias}) => RustLib.instance.api.crateApiOpenaliasResolveOpenaliasAll(alias: alias);
 
 /// Validate whether a string looks like a valid OpenAlias name format.
 /// Returns true/false without performing any DNS lookup.
-bool validateOpenaliasName({required String alias}) =>
-    RustLib.instance.api.crateApiOpenaliasValidateOpenaliasName(alias: alias);
+bool validateOpenaliasName({required String alias}) => RustLib.instance.api.crateApiOpenaliasValidateOpenaliasName(alias: alias);
 
 /// Validate that an address string is a syntactically valid Zcash address
 /// for the wallet's network (convenience wrapper returning bool).
 ///
 /// See [`try_validate_zcash_address`] for the `Result`-returning variant
 /// that provides error details.
-bool validateZcashAddress({required String address, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiOpenaliasValidateZcashAddress(address: address, c: c);
+bool validateZcashAddress({required String address, required Coin c}) => RustLib.instance.api.crateApiOpenaliasValidateZcashAddress(address: address, c: c);
 
 /// Try to validate that an address string is a syntactically valid Zcash
 /// address for the wallet's network, returning `Ok(())` or an error with
 /// details about why validation failed.
 void tryValidateZcashAddress({required String address, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiOpenaliasTryValidateZcashAddress(address: address, c: c);
+    RustLib.instance.api.crateApiOpenaliasTryValidateZcashAddress(address: address, c: c);
 
 /// Get the raw OpenAlias TXT record strings for diagnostic purposes.
-Future<RawOpenAliasResolution> resolveOpenaliasRaw({required String alias}) =>
-    RustLib.instance.api.crateApiOpenaliasResolveOpenaliasRaw(alias: alias);
+Future<RawOpenAliasResolution> resolveOpenaliasRaw({required String alias}) => RustLib.instance.api.crateApiOpenaliasResolveOpenaliasRaw(alias: alias);
 
 /// Result of an OpenAlias resolution, including DNSSEC verification status.
 class OpenAliasResolution {
@@ -67,10 +60,7 @@ class OpenAliasResolution {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is OpenAliasResolution &&
-          runtimeType == other.runtimeType &&
-          recipients == other.recipients &&
-          dnssecStatus == other.dnssecStatus;
+      other is OpenAliasResolution && runtimeType == other.runtimeType && recipients == other.recipients && dnssecStatus == other.dnssecStatus;
 }
 
 /// Result of a raw OpenAlias resolution, including DNSSEC verification status.
@@ -91,8 +81,5 @@ class RawOpenAliasResolution {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RawOpenAliasResolution &&
-          runtimeType == other.runtimeType &&
-          records == other.records &&
-          dnssecStatus == other.dnssecStatus;
+      other is RawOpenAliasResolution && runtimeType == other.runtimeType && records == other.records && dnssecStatus == other.dnssecStatus;
 }

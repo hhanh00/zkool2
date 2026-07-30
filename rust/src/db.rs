@@ -1,11 +1,11 @@
 use std::fs::File;
 
+use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, SpendingKey};
 use sapling_crypto::PaymentAddress;
-use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
@@ -256,25 +256,20 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .await?;
 
     // Migration: add id_asset to notes for ZSA note→asset linking
-    let _ = sqlx::query(
-        "ALTER TABLE notes ADD COLUMN id_asset INTEGER REFERENCES assets(id_asset)",
-    )
-    .execute(&mut *connection)
-    .await;
+    let _ =
+        sqlx::query("ALTER TABLE notes ADD COLUMN id_asset INTEGER REFERENCES assets(id_asset)")
+            .execute(&mut *connection)
+            .await;
 
     // Migration: add diversifier_index to notes for per-address shielded tx counts
-    let _ = sqlx::query(
-        "ALTER TABLE notes ADD COLUMN diversifier_index INTEGER",
-    )
-    .execute(&mut *connection)
-    .await;
+    let _ = sqlx::query("ALTER TABLE notes ADD COLUMN diversifier_index INTEGER")
+        .execute(&mut *connection)
+        .await;
 
     // Migration: add asset_name to assets for human-readable naming
-    let _ = sqlx::query(
-        "ALTER TABLE assets ADD COLUMN asset_name TEXT",
-    )
-    .execute(&mut *connection)
-    .await;
+    let _ = sqlx::query("ALTER TABLE assets ADD COLUMN asset_name TEXT")
+        .execute(&mut *connection)
+        .await;
 
     // Migration: ensure asset_base is unique to prevent duplicate note inserts
     // caused by duplicate issuances with the same asset_base.
@@ -398,9 +393,11 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN zsa_value INTEGER NOT NULL DEFAULT 0")
         .execute(&mut *connection)
         .await;
-    let _ = sqlx::query("ALTER TABLE transactions ADD COLUMN asset_id INTEGER REFERENCES assets(id_asset)")
-        .execute(&mut *connection)
-        .await;
+    let _ = sqlx::query(
+        "ALTER TABLE transactions ADD COLUMN asset_id INTEGER REFERENCES assets(id_asset)",
+    )
+    .execute(&mut *connection)
+    .await;
     if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='categories'")
         .fetch_optional(&mut *connection)
         .await?
@@ -673,26 +670,24 @@ pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Re
 
     for (account,) in accounts {
         // Load Sapling DFVK for this account
-        let sapling_dfvk: Option<DiversifiableFullViewingKey> = sqlx::query_as(
-            "SELECT xvk FROM sapling_accounts WHERE account = ?",
-        )
-        .bind(account)
-        .fetch_optional(&mut *connection)
-        .await?
-        .map(|(xvk,): (Vec<u8>,)| {
-            DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()
-        });
+        let sapling_dfvk: Option<DiversifiableFullViewingKey> =
+            sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
+                .bind(account)
+                .fetch_optional(&mut *connection)
+                .await?
+                .map(|(xvk,): (Vec<u8>,)| {
+                    DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()
+                });
 
         // Load Orchard FVK for this account
-        let orchard_fvk: Option<FullViewingKey> = sqlx::query_as(
-            "SELECT xvk FROM orchard_accounts WHERE account = ?",
-        )
-        .bind(account)
-        .fetch_optional(&mut *connection)
-        .await?
-        .map(|(xvk,): (Vec<u8>,)| {
-            FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()
-        });
+        let orchard_fvk: Option<FullViewingKey> =
+            sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
+                .bind(account)
+                .fetch_optional(&mut *connection)
+                .await?
+                .map(|(xvk,): (Vec<u8>,)| {
+                    FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()
+                });
 
         // Fetch unbackfilled notes for this account
         let notes: Vec<(u32, u8, u8, Vec<u8>)> = sqlx::query_as(

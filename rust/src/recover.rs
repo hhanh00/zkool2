@@ -2,9 +2,7 @@ use anyhow::Result;
 use bip39::Mnemonic;
 use sapling_crypto::zip32::ExtendedSpendingKey;
 use tracing::debug;
-use zcash_protocol::{
-    consensus::{MainNetwork, NetworkConstants},
-};
+use zcash_protocol::consensus::{MainNetwork, NetworkConstants};
 
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha512};
@@ -193,13 +191,16 @@ mod tests {
         // let s = m.to_seed("");
         let s = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let m = ledger_derivation_from_seed(s)?;
-        let k = derive_hardened_ed25519(&m, &[
-            0x8000_0000,
-            0x8000_0001,
-            0x8000_0002,
-            0x8000_0002,
-            0x8000_0000 | 1000000000,
-            ])?;
+        let k = derive_hardened_ed25519(
+            &m,
+            &[
+                0x8000_0000,
+                0x8000_0001,
+                0x8000_0002,
+                0x8000_0002,
+                0x8000_0000 | 1000000000,
+            ],
+        )?;
         println!("{}", hex::encode(k.key));
         println!("{}", hex::encode(k.chain_code));
 

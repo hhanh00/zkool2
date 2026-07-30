@@ -38,10 +38,7 @@ fn status_to_string(status: DnssecStatus) -> String {
 /// Performs DNS TXT lookup, parses OA1 records, filters for Zcash
 /// addresses, and validates them against the wallet's network type.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn resolve_openalias(
-    alias: String,
-    c: &Coin,
-) -> Result<OpenAliasResolution> {
+pub async fn resolve_openalias(alias: String, c: &Coin) -> Result<OpenAliasResolution> {
     let net = c.network().network_type();
     let (recipients, status) = openalias::resolve_zcash_for_network(&alias, net).await?;
     Ok(OpenAliasResolution {

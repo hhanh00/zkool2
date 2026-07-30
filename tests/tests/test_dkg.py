@@ -44,6 +44,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
 
     try:
         from utils import kill_existing_zkool_processes
+
         await kill_existing_zkool_processes()
 
         print("=== Setting up 3-out-of-3 FROST DKG Test ===")
@@ -138,7 +139,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
                 """
             )
             result = await participant.execute(
-                GraphQLRequest(address_query, variable_values={"account": participant.funding_account})
+                GraphQLRequest(
+                    address_query, variable_values={"account": participant.funding_account}
+                )
             )
             participant.funding_address = result["addressByAccount"]["ironwood"]
 
@@ -175,9 +178,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
 
         print("\n=== Step 4: Fund each participant's funding address ===")
         async with gql_client_factory(graphql_url) as client:
-            recipients = [
-                {"address": p.funding_address, "amount": "0.01"} for p in participants
-            ]
+            recipients = [{"address": p.funding_address, "amount": "0.01"} for p in participants]
 
             pay_mutation = gql(
                 """
@@ -212,7 +213,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
         )
         for i, participant in enumerate(participants, 1):
             await participant.execute(
-                GraphQLRequest(sync_mutation, variable_values={"account": participant.funding_account})
+                GraphQLRequest(
+                    sync_mutation, variable_values={"account": participant.funding_account}
+                )
             )
             print(f"Synchronized participant {i} funding account")
 
@@ -228,7 +231,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
         )
         for i, participant in enumerate(participants, 1):
             result = await participant.execute(
-                GraphQLRequest(balance_query, variable_values={"account": participant.funding_account})
+                GraphQLRequest(
+                    balance_query, variable_values={"account": participant.funding_account}
+                )
             )
             balance = result["balanceByAccount"]["ironwood"]
             print(f"Participant {i} funding account balance: {balance}")
@@ -249,7 +254,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
 
                 target_address = participants[j - 1].dkg_address
                 await sender.execute(
-                    GraphQLRequest(set_address_mutation, variable_values={"id": j, "address": target_address})
+                    GraphQLRequest(
+                        set_address_mutation, variable_values={"id": j, "address": target_address}
+                    )
                 )
                 print(f"Participant {i} set address for participant {j}")
 
@@ -266,6 +273,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             print(f"Initiated DKG on participant {i}")
 
         print("\n=== Step 10: Wait for DKG completion ===")
+
         async def all_dkg_completed():
             return all(p.get_frost_account_id() is not None for p in participants)
 
@@ -290,7 +298,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             assert participant.frost_account, f"No FROST account found for participant {i}"
 
             result = await participant.execute(
-                GraphQLRequest(address_query, variable_values={"account": participant.frost_account})
+                GraphQLRequest(
+                    address_query, variable_values={"account": participant.frost_account}
+                )
             )
             frost_address = result["addressByAccount"]["ironwood"]
             print(f"Participant {i} shared address: {frost_address}")
@@ -312,7 +322,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
                 }
                 """
             )
-            await client.execute_async(GraphQLRequest(sync_mutation, variable_values={"account": main_wallet}))
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": main_wallet})
+            )
 
             balance_query = gql(
                 """
@@ -341,7 +353,11 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
             result = await client.execute_async(
                 GraphQLRequest(
                     pay_mutation,
-                    variable_values={"account": main_wallet, "address": shared_address, "amount": "0.1"},
+                    variable_values={
+                        "account": main_wallet,
+                        "address": shared_address,
+                        "amount": "0.1",
+                    },
                 )
             )
             txid = result["pay"]
@@ -364,7 +380,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
         )
         for i, participant in enumerate(participants, 1):
             await participant.execute(
-                GraphQLRequest(sync_mutation, variable_values={"account": participant.frost_account})
+                GraphQLRequest(
+                    sync_mutation, variable_values={"account": participant.frost_account}
+                )
             )
             print(f"Synchronized participant {i} FROST account")
 
@@ -380,7 +398,9 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
         )
         for i, participant in enumerate(participants, 1):
             result = await participant.execute(
-                GraphQLRequest(balance_query, variable_values={"account": participant.frost_account})
+                GraphQLRequest(
+                    balance_query, variable_values={"account": participant.frost_account}
+                )
             )
             final_balance = result["balanceByAccount"]["ironwood"]
             print(f"Participant {i} FROST balance: {final_balance}")

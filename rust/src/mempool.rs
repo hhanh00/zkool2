@@ -1,12 +1,11 @@
 use crate::api::coin::Network;
 use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
+use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
 use orchard::{keys::Scope, note_encryption::OrchardDomain};
-use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use sapling_crypto::{
-    keys::PreparedIncomingViewingKey,
-    note_encryption::SaplingDomain,
+    keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain,
     zip32::DiversifiableFullViewingKey,
 };
 use sqlx::SqliteConnection;
@@ -22,9 +21,9 @@ use zcash_primitives::transaction::{
 use zcash_protocol::memo::Memo;
 use zcash_transparent::address::TransparentAddress;
 
-use crate::{Client, Sink};
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
+use crate::{Client, Sink};
 
 #[cfg(feature = "flutter")]
 pub async fn run_mempool(

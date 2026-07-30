@@ -106,9 +106,7 @@ class SendPageState extends ConsumerState<SendPage> {
         .mapIndexed(
           (i, r) => ListTile(
             title: Text(r.address),
-            subtitle: r.assetBase.every((b) => b == 0)
-                ? zatToText(r.amount, selectable: false)
-                : Text("${r.amount} ${r.assetName!}"),
+            subtitle: r.assetBase.every((b) => b == 0) ? zatToText(r.amount, selectable: false) : Text("${r.amount} ${r.assetName!}"),
             trailing: IconButton(
               icon: Icon(Icons.delete),
               onPressed: () {

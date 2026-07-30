@@ -5,7 +5,7 @@ from graphql_mcp import GraphQLMCP
 server = GraphQLMCP.from_remote_url(
     url="http://localhost:8000/graphql",
     name="Zcash",
-    headers={}  # Optional: auth headers
+    headers={},  # Optional: auth headers
 )
 
 app = server.http_app()

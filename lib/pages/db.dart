@@ -74,13 +74,11 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
                 setState(() => dbNames[index] = (dbName.$1, v ?? false));
               },
             ),
-            title: Text(dbName.$1,
-              style: isLastOpened
-                  ? TextStyle(fontWeight: FontWeight.bold)
-                  : null,),
-            trailing: isLastOpened
-                ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-                : null,
+            title: Text(
+              dbName.$1,
+              style: isLastOpened ? TextStyle(fontWeight: FontWeight.bold) : null,
+            ),
+            trailing: isLastOpened ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
             onTap: () => onSelect(dbName.$1),
           );
         },
@@ -104,9 +102,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
 
     if (!mounted) return;
 
-    final message = accountsInfo != null
-        ? 'Open database "$dbName"?\nAccounts: $accountsInfo'
-        : 'Open database "$dbName"?';
+    final message = accountsInfo != null ? 'Open database "$dbName"?\nAccounts: $accountsInfo' : 'Open database "$dbName"?';
 
     final confirmed = await confirmDialog(context, title: "Open Database", message: message);
     if (!mounted) return;

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use flutter_rust_bridge::{DartFnFuture};
+use flutter_rust_bridge::DartFnFuture;
 use tonic::async_trait;
 
 use crate::vault::VaultIO;
@@ -33,8 +33,6 @@ impl VaultIO for DartVaultIO {
 
 impl super::Vault<DartVaultIO> {
     pub fn new(io_handler: DartVaultIO) -> Self {
-        Self {
-            io_handler,
-        }
+        Self { io_handler }
     }
 }

@@ -1,7 +1,10 @@
 use anyhow::Result;
 use bincode::{config::legacy, Decode, Encode};
 
-use crate::{api::coin::Coin, pay::{Recipient, TxPlan, plan::plan_transaction}};
+use crate::{
+    api::coin::Coin,
+    pay::{plan::plan_transaction, Recipient, TxPlan},
+};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
@@ -18,7 +21,11 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin) -> Result<PcztPackage> {
+pub async fn prepare(
+    recipients: &[Recipient],
+    options: PaymentOptions,
+    c: &Coin,
+) -> Result<PcztPackage> {
     let account = c.account;
     let network = &c.network();
     let mut connection = c.get_connection().await?;
@@ -35,7 +42,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         None,
         options.smart_transparent,
         options.category,
-        None, // issuance — normal sends have no issuance
+        None,  // issuance — normal sends have no issuance
         false, // migration — only used by note migration
         None,  // preselected
         None,  // anchor_height
@@ -64,13 +71,13 @@ pub async fn prepare_migration(
         src_pools,
         recipients,
         false, // recipient_pays_fee
-        None,   // confirmations
-        false,  // smart_transparent
-        None,   // category
-        None,   // issuance
-        true,   // migration
-        None,   // preselected
-        None,   // anchor_height
+        None,  // confirmations
+        false, // smart_transparent
+        None,  // category
+        None,  // issuance
+        true,  // migration
+        None,  // preselected
+        None,  // anchor_height
     )
     .await
 }
@@ -146,8 +153,13 @@ pub async fn send(height: u32, data: &[u8], c: &Coin) -> Result<String> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn store_pending_tx(height: u32, txid: &[u8],
-    price: Option<f64>, category: Option<u32>, c: &Coin) -> Result<()> {
+pub async fn store_pending_tx(
+    height: u32,
+    txid: &[u8],
+    price: Option<f64>,
+    category: Option<u32>,
+    c: &Coin,
+) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::store_pending_tx(&mut connection, c.account, height, txid, price, category).await?;
 

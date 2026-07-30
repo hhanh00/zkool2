@@ -4,7 +4,7 @@ use std::sync::{LazyLock, OnceLock};
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
 use arti_client::TorClient;
-#[cfg(feature="flutter")]
+#[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use hyper_util::rt::TokioIo;
 use sqlx::pool::PoolConnection;
@@ -21,7 +21,6 @@ use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addre
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::net::zebra::ZebraClient;
 use crate::{Client, IntoAnyhow};
-
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone)]
@@ -45,7 +44,11 @@ impl Coin {
     ) -> Result<Coin> {
         let network = self.network();
 
-        let hint_coin = if self.coin != 0 { Some(self.coin) } else { None };
+        let hint_coin = if self.coin != 0 {
+            Some(self.coin)
+        } else {
+            None
+        };
         let pool = try_open(&db_filepath, &password, hint_coin).await?;
         {
             let mut pools = POOLS.lock().unwrap();
@@ -92,22 +95,20 @@ impl Coin {
         match self.coin {
             0 => Network::Main,
             1 => Network::Test,
-            2 => {
-                Network::Regtest(LocalNetwork {
-                    overwinter: Some(BlockHeight::from_u32(1)),
-                    sapling: Some(BlockHeight::from_u32(1)),
-                    blossom: Some(BlockHeight::from_u32(1)),
-                    heartwood: Some(BlockHeight::from_u32(1)),
-                    canopy: Some(BlockHeight::from_u32(1)),
-                    nu5: Some(BlockHeight::from_u32(1)),
-                    nu6: Some(BlockHeight::from_u32(1)),
-                    nu6_1: Some(BlockHeight::from_u32(1)),
-                    nu6_2: Some(BlockHeight::from_u32(1)),
-                    nu6_3: Some(BlockHeight::from_u32(250)),
-                    nu7: None,
-                    orchard_mode: OrchardMode::Normal,
-                })
-            }
+            2 => Network::Regtest(LocalNetwork {
+                overwinter: Some(BlockHeight::from_u32(1)),
+                sapling: Some(BlockHeight::from_u32(1)),
+                blossom: Some(BlockHeight::from_u32(1)),
+                heartwood: Some(BlockHeight::from_u32(1)),
+                canopy: Some(BlockHeight::from_u32(1)),
+                nu5: Some(BlockHeight::from_u32(1)),
+                nu6: Some(BlockHeight::from_u32(1)),
+                nu6_1: Some(BlockHeight::from_u32(1)),
+                nu6_2: Some(BlockHeight::from_u32(1)),
+                nu6_3: Some(BlockHeight::from_u32(250)),
+                nu7: None,
+                orchard_mode: OrchardMode::Normal,
+            }),
             3 => {
                 // ZSA regtest: NU7 active, no Ironwood (NU6.3 not active).
                 // Orchard protocol V2 with cross-address transfers enabled.
@@ -145,18 +146,12 @@ impl Coin {
     pub async fn set_account(self, account: u32) -> Result<Self> {
         let mut conn = self.get_connection().await?;
         put_prop(&mut *conn, "account", &account.to_string()).await?;
-        Ok(Coin {
-            account,
-            ..self
-        })
+        Ok(Coin { account, ..self })
     }
 
     #[cfg_attr(feature = "flutter", frb)]
     pub fn set_use_tor(self, use_tor: bool) -> Result<Coin> {
-        Ok(Coin {
-            use_tor,
-            ..self
-        })
+        Ok(Coin { use_tor, ..self })
     }
 
     #[cfg_attr(feature = "flutter", frb(sync))]
@@ -369,16 +364,12 @@ pub(crate) async fn open_proxied_stream(
         // proxy. We resolve here explicitly so the distinction from socks5h is
         // honoured even though tokio-socks would otherwise defer to the proxy.
         "socks5" => {
-            let mut addrs =
-                tokio::net::lookup_host((target_host, target_port)).await?;
+            let mut addrs = tokio::net::lookup_host((target_host, target_port)).await?;
             let target_addr = addrs
                 .next()
                 .ok_or_else(|| anyhow::anyhow!("could not resolve {target_host}"))?;
-            let stream = tokio_socks::tcp::Socks5Stream::connect(
-                (phost, pport),
-                target_addr,
-            )
-            .await?;
+            let stream =
+                tokio_socks::tcp::Socks5Stream::connect((phost, pport), target_addr).await?;
             Ok(stream.into_inner())
         }
         "http" | "https" => http_connect_tunnel(phost, pport, target_host, target_port).await,

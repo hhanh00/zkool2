@@ -4,15 +4,18 @@ use sqlx::SqliteConnection;
 use tonic::async_trait;
 use zcash_transparent::address::TransparentAddress;
 
-use crate::{api::{coin::{Coin, Network}, pay::{PcztPackage, SigningEvent}}, frb_generated::StreamSink, ledger::HWAPI};
+use crate::{
+    api::{
+        coin::{Coin, Network},
+        pay::{PcztPackage, SigningEvent},
+    },
+    frb_generated::StreamSink,
+    ledger::HWAPI,
+};
 
 #[async_trait]
 impl HWAPI for () {
-    async fn get_hw_fvk(
-        &self,
-        _network: &Network,
-        _aindex: u32,
-    ) -> Result<FullViewingKey> {
+    async fn get_hw_fvk(&self, _network: &Network, _aindex: u32) -> Result<FullViewingKey> {
         unimplemented!()
     }
     async fn get_hw_sapling_address(&self, _network: &Network, _aindex: u32) -> Result<String> {
@@ -60,4 +63,3 @@ impl HWAPI for () {
         unimplemented!()
     }
 }
-

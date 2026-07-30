@@ -41,6 +41,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
 
     try:
         from utils import kill_existing_zkool_processes
+
         await kill_existing_zkool_processes()
 
         print("=== Setting up 3-out-of-3 FROST SIGN Test ===")
@@ -65,6 +66,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
         default_participant = DkgParticipant(DEFAULT_PORT, default_db, LWD_URL)
         default_participant.start(zkool_binary)
         import asyncio
+
         await asyncio.sleep(2)
 
         print("\n=== Step 1: Start participant instances ===")
@@ -159,8 +161,8 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
                 variable_values={
                     "account": coordinator_frost_account,
                     "address": receiver_address,
-                    "amount": "0.05"
-                }
+                    "amount": "0.05",
+                },
             )
         )
         pczt = result["prepareSend"]
@@ -193,8 +195,8 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
                         "account": frost_account,
                         "coordinator": 2,
                         "funding": funding_account,
-                        "pczt": pczt
-                    }
+                        "pczt": pczt,
+                    },
                 )
             )
             sign_result = result["frostSign"]

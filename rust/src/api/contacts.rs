@@ -35,7 +35,8 @@ pub async fn create_contact(
 ) -> Result<Contact> {
     let mut connection = c.get_connection().await?;
     let network = c.network();
-    let result = contacts::create_contact(&mut connection, name, &addresses, notes, &network).await?;
+    let result =
+        contacts::create_contact(&mut connection, name, &addresses, notes, &network).await?;
     Ok(result.into())
 }
 
@@ -83,8 +84,7 @@ pub async fn find_contacts_for_address(address: &str, c: &Coin) -> Result<Vec<Co
     let mut seen_ids = std::collections::HashSet::new();
 
     for (receiver, pool) in &expanded {
-        let matches =
-            contacts::find_contacts_for_address(&mut connection, receiver, *pool).await?;
+        let matches = contacts::find_contacts_for_address(&mut connection, receiver, *pool).await?;
         for (contact, matched_address) in matches {
             if seen_ids.insert((contact.id, matched_address.clone())) {
                 results.push(ContactMatch {

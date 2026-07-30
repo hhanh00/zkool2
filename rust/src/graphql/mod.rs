@@ -1,12 +1,15 @@
-use crate::{api::coin::Coin, graphql::query::{TxLoader, new_tx_loader}};
 use crate::graphql::jwt::Claims;
-use juniper::{FieldResult, FieldError};
+use crate::{
+    api::coin::Coin,
+    graphql::query::{new_tx_loader, TxLoader},
+};
+use juniper::{FieldError, FieldResult};
 
-pub mod jwt;
 pub mod data;
 pub mod frost;
-pub mod query;
+pub mod jwt;
 pub mod mutation;
+pub mod query;
 pub mod subs;
 
 #[derive(Clone)]
@@ -34,12 +37,10 @@ pub fn check_auth(context: &Context, id_account: i32, check_write: bool) -> Fiel
         if auth.sub == 0 {
             return Ok(()); // has admin rights
         }
-        if auth.sub == id_account as u32 &&
-            (!check_write || auth.write)
-        {
+        if auth.sub == id_account as u32 && (!check_write || auth.write) {
             return Ok(());
         }
-        return Err(FieldError::new("Unauthorized", juniper::Value::Null))
+        return Err(FieldError::new("Unauthorized", juniper::Value::Null));
     }
     Ok(())
 }
@@ -47,7 +48,7 @@ pub fn check_auth(context: &Context, id_account: i32, check_write: bool) -> Fiel
 pub fn check_admin_auth(context: &Context) -> FieldResult<()> {
     if let Some(auth) = &context.auth {
         if auth.sub != 0 {
-            return Err(FieldError::new("Unauthorized", juniper::Value::Null))
+            return Err(FieldError::new("Unauthorized", juniper::Value::Null));
         }
     }
     Ok(())

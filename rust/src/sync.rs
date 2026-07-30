@@ -27,10 +27,7 @@ use crate::{
         store_account_transparent_addr,
     },
     lwd::CompactBlock,
-    warp::{
-        legacy::CommitmentTreeFrontier,
-        sync::warp_sync,
-    },
+    warp::{legacy::CommitmentTreeFrontier, sync::warp_sync},
 };
 use bincode::config;
 use sqlx::pool::PoolConnection;
@@ -44,8 +41,8 @@ use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
 pub const DEFAULT_TRANSPARENT_LIMIT: u32 = 100u32;
 
-pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
 pub use zcash_trees::types::SyncError;
+pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
 
 pub struct NoteExtended {
     pub id: u32,
@@ -128,7 +125,12 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             .fetch_one(&mut *connection)
             .await?;
             if let (Some(account), Some(height)) = r {
-                debug!("Account {} - current DB sync height: {}, next sync height: {}", account, height, height + 1);
+                debug!(
+                    "Account {} - current DB sync height: {}, next sync height: {}",
+                    account,
+                    height,
+                    height + 1
+                );
                 account_heights.insert(account, height + 1);
 
                 let (use_internal,): (bool,) =
@@ -141,14 +143,20 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
                 // Check which pools this account has
                 let t_count: (i64,) = sqlx::query_as(
-                    "SELECT COUNT(*) FROM transparent_address_accounts WHERE account = ?"
-                ).bind(account).fetch_one(&mut *connection).await?;
+                    "SELECT COUNT(*) FROM transparent_address_accounts WHERE account = ?",
+                )
+                .bind(account)
+                .fetch_one(&mut *connection)
+                .await?;
                 debug!(
                     "Account {} - has {} transparent addresses, use_internal={}",
                     account, t_count.0, use_internal
                 );
             } else {
-                debug!("Account {} - NO sync_heights entry found, will be skipped", account);
+                debug!(
+                    "Account {} - NO sync_heights entry found, will be skipped",
+                    account
+                );
             }
         }
 
@@ -156,7 +164,10 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
         unique_heights.sort_unstable();
         unique_heights.dedup();
-        debug!("Unique sync start heights for accounts: {:?}", unique_heights);
+        debug!(
+            "Unique sync start heights for accounts: {:?}",
+            unique_heights
+        );
 
         let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
 
@@ -191,7 +202,12 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                 continue;
             }
 
-            debug!("Syncing accounts {:?} from height {} to {}", accounts_to_sync.iter().map(|(a, _)| a).collect::<Vec<_>>(), start_height, end_height);
+            debug!(
+                "Syncing accounts {:?} from height {} to {}",
+                accounts_to_sync.iter().map(|(a, _)| a).collect::<Vec<_>>(),
+                start_height,
+                end_height
+            );
 
             let pool = c.get_pool()?;
             // Update the sync heights for these accounts
@@ -530,7 +546,11 @@ pub async fn get_tree_state(
     network: &Network,
     client: &mut Client,
     height: u32,
-) -> Result<(CommitmentTreeFrontier, CommitmentTreeFrontier, CommitmentTreeFrontier)> {
+) -> Result<(
+    CommitmentTreeFrontier,
+    CommitmentTreeFrontier,
+    CommitmentTreeFrontier,
+)> {
     let min_height: u32 = network
         .activation_height(zcash_protocol::consensus::NetworkUpgrade::Sapling)
         .unwrap()
@@ -626,14 +646,12 @@ fn resolve_diversifier_index(
     diversifier: &[u8],
 ) -> Option<i64> {
     match pool {
-        1 => cache
-            .sapling
-            .get(&account)
-            .and_then(|keys| crate::db::resolve_sapling_diversifier_index(&keys.dfvk, scope, diversifier)),
-        2 => cache
-            .orchard
-            .get(&account)
-            .and_then(|keys| crate::db::resolve_orchard_diversifier_index(&keys.fvk, scope, diversifier)),
+        1 => cache.sapling.get(&account).and_then(|keys| {
+            crate::db::resolve_sapling_diversifier_index(&keys.dfvk, scope, diversifier)
+        }),
+        2 => cache.orchard.get(&account).and_then(|keys| {
+            crate::db::resolve_orchard_diversifier_index(&keys.fvk, scope, diversifier)
+        }),
         _ => None,
     }
 }
@@ -688,7 +706,9 @@ pub async fn shielded_sync(
                     let mut new_messages = vec![];
                     mem::swap(&mut new_messages, &mut messages);
                     for msg in new_messages {
-                        match handle_message(&network, &mut db_tx, msg, &tx_progress, &key_cache).await {
+                        match handle_message(&network, &mut db_tx, msg, &tx_progress, &key_cache)
+                            .await
+                        {
                             Ok(_) => {}
                             Err(e) => {
                                 info!("ERROR HANDLING MESSAGE: {:?}", e);
