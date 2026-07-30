@@ -36,8 +36,8 @@ futures = "0.3"
 serde = "1.0"
 serde_json = "1.0"
 serde_with = {version = "3.17", features = ["hex"]}
-sqlx = {version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"]}
-tokio = {version = "1", features = ["full"]}
+sqlx = {version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"]}
+tokio = {version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"]}
 tokio-rustls = "0.26"
 tokio-stream = "0.1"
 tokio-util = "0.7"
@@ -47,7 +47,7 @@ arti-client = {version = "0.31", features = ["tokio", "native-tls", "onion-servi
 httparse = "1.10.1"
 hyper-util = {version = "0.1", features = ["tokio"]}
 rayon = "1.10"
-reqwest = {version = "0.12", features = ["json", "rustls-tls", "socks"]}
+reqwest = {version = "0.12", default-features = false, features = ["json", "rustls-tls", "socks"]}
 rhai = {version = "1.25", features = ["sync", "serde"]}
 zip = {version = "2", default-features = false, features = ["deflate"]}
 tokio-socks = "0.5.2"
@@ -142,9 +142,6 @@ unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 [dev-dependencies]
 chrono = "0.4"
 rand = "0.6"
-
-[build-dependencies]
-tonic-prost-build = "0.14"
 
 [features]
 default = ["flutter"]

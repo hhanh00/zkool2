@@ -4,6 +4,18 @@ members = [
 ]
 resolver = "2"
 
+[profile.dev]
+debug = 1
+
+[profile.dev.package."*"]
+debug = 0
+
+[profile.test]
+debug = 1
+
+[profile.test.package."*"]
+debug = 0
+
 [patch.crates-io]
 # -- ZSA support branches --
 orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "4cf06bc19e52d1e8e43438cdbdd703ac2565bff6" }
