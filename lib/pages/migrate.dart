@@ -25,6 +25,7 @@ class _MigratePageState extends State<MigratePage>
   int _countdownSecs = 0;
   bool _started = false;
   bool _didShowCompleteDialog = false;
+  bool _handlingLeave = false;
   double _speedIndex = 1; // default: Fast (60s)
 
   static const _speedLabels = ["Very Fast", "Fast", "Medium", "Slow"];
@@ -171,19 +172,61 @@ class _MigratePageState extends State<MigratePage>
     }
 
     if (status == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Note Migration")),
-        body: _started
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+      return _withLeaveGuard(
+        context,
+        confirmLeave: _started,
+        child: Scaffold(
+          appBar: AppBar(
+            leading: BackButton(
+              onPressed: () => _requestLeave(
+                context,
+                confirmLeave: _started,
+              ),
+            ),
+            title: const Text("Note Migration"),
+          ),
+          body: _started
+              ? Center(
+                  child: Card(
+                    margin: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            Gap(20),
+                            Text(
+                              "Preparing Migration",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Gap(8),
+                            Text(
+                              "Syncing your wallet and scanning Orchard notes "
+                              "before the first migration step. This may take "
+                              "a moment.",
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           Text("Orchard to Ironwood Migration",
                               style: Theme.of(context).textTheme.headlineSmall),
                           const Gap(12),
@@ -274,20 +317,21 @@ class _MigratePageState extends State<MigratePage>
                             ),
                           ),
                           const Gap(16),
-                          FilledButton.icon(
-                            onPressed: () {
-                              setState(() => _started = true);
-                              _startMigration();
-                            },
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text("Start Migration"),
-                          ),
-                        ],
+                            FilledButton.icon(
+                              onPressed: () {
+                                setState(() => _started = true);
+                                _startMigration();
+                              },
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text("Start Migration"),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       );
     }
 
@@ -297,21 +341,34 @@ class _MigratePageState extends State<MigratePage>
     final waiting = status.nextAction.startsWith('Waiting');
     final isComplete = phase == 'complete';
     final isActive = phase == 'splitting' || phase == 'migrating' || waiting;
+    final confirmLeave = _started && !isComplete;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Note Migration"),
-        actions: [
-          IconButton(
-            tooltip: "Close",
-            onPressed: () => GoRouter.of(context).pop(),
-            icon: const Icon(Icons.close),
+    return _withLeaveGuard(
+      context,
+      confirmLeave: confirmLeave,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: BackButton(
+            onPressed: () => _requestLeave(
+              context,
+              confirmLeave: confirmLeave,
+            ),
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+          title: const Text("Note Migration"),
+          actions: [
+            IconButton(
+              tooltip: "Close",
+              onPressed: () => _requestLeave(
+                context,
+                confirmLeave: confirmLeave,
+              ),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
           // Phase indicator
           Card(
             child: Padding(
@@ -432,8 +489,46 @@ class _MigratePageState extends State<MigratePage>
               onPressed: () => GoRouter.of(context).pop(),
               child: const Text("Done"),
             ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _withLeaveGuard(
+    BuildContext context, {
+    required bool confirmLeave,
+    required Widget child,
+  }) {
+    return PopScope(
+      canPop: !confirmLeave,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        await _requestLeave(context, confirmLeave: confirmLeave);
+      },
+      child: child,
+    );
+  }
+
+  Future<void> _requestLeave(
+    BuildContext context, {
+    required bool confirmLeave,
+  }) async {
+    if (_handlingLeave) return;
+    _handlingLeave = true;
+    try {
+      if (confirmLeave && !await _confirmLeave(context)) return;
+      if (context.mounted) GoRouter.of(context).pop();
+    } finally {
+      _handlingLeave = false;
+    }
+  }
+
+  Future<bool> _confirmLeave(BuildContext context) async {
+    return confirmDialog(
+      context,
+      title: "Migration in Progress",
+      message: "The migration is still running. Are you sure you want to leave?",
     );
   }
 
