@@ -70,7 +70,7 @@ impl NoteMigration {
 /// Single-shot step (kept for FRB generated-code compatibility).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
-    let (event, _status) = do_step(c, 0, 0).await?;
+    let (event, _status) = do_step(c, 0, 0, true, true).await?;
     Ok(match event {
         crate::migrate::MigrationEvent::SplitComplete { fee } => MigrationEvent::SplitComplete { fee },
         crate::migrate::MigrationEvent::MigrateComplete { fee } => MigrationEvent::MigrateComplete { fee },
@@ -82,8 +82,9 @@ pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
 /// Run migration to completion, streaming MigrationStatus to Flutter.
 ///
 /// `mean_delay_ms` controls the mean wait time (in milliseconds) of the
-/// exponential random delay between migration steps. Longer delays make
-/// it harder for an observer to correlate the transactions.
+/// exponential random delay before migration steps. O→I steps additionally
+/// wait for the next anchor bucket boundary before syncing, preparing, and
+/// broadcasting.
 #[cfg(feature = "flutter")]
 async fn run_migration(
     sink: StreamSink<MigrationStatus>,
@@ -112,65 +113,16 @@ async fn run_migration(
     let mut acc_split = 0u64;
     let mut acc_migrate = 0u64;
     let mut last_action_height: Option<u32> = None;
-    let mut last_phase = String::new();
-    let mut last_sd_count = 0u32;
-    let mut last_non_sd_count = 0u32;
-    let mut last_iw_count = 0u32;
-    let mut last_progress = 0.0;
-    let mut last_work = String::new();
+    let mut status = current_migration_status(c, acc_split, acc_migrate).await?;
+    sink.add(status.clone()).ok();
 
     loop {
-        let complete = tokio::select! {
-            biased;
-            _ = cancellation_token.cancelled() => {
-                tracing::info!("Note migration cancelled");
-                break;
-            }
-            result = async {
-                let skip = match last_action_height {
-                    Some(h) => client.latest_height().await? <= h,
-                    None => false,
-                };
-
-                if skip {
-                    return Ok::<bool, anyhow::Error>(false);
-                }
-
-                let (event, status) = do_step(c, acc_split, acc_migrate).await?;
-
-                // Track latest counts for the waiting display.
-                last_phase = status.phase.clone();
-                last_sd_count = status.sd_notes_count;
-                last_non_sd_count = status.non_sd_notes_count;
-                last_iw_count = status.ironwood_sd_count;
-                last_progress = status.progress;
-                last_work = status.work_summary.clone();
-
-                // Accumulate fees from broadcast events.
-                match &event {
-                    crate::migrate::MigrationEvent::SplitComplete { fee } => {
-                        acc_split += fee;
-                        last_action_height = Some(client.latest_height().await?);
-                    }
-                    crate::migrate::MigrationEvent::MigrateComplete { fee } => {
-                        acc_migrate += fee;
-                        last_action_height = Some(client.latest_height().await?);
-                    }
-                    _ => {}
-                }
-
-                let complete =
-                    matches!(event, crate::migrate::MigrationEvent::Complete);
-                sink.add(status).ok();
-                Ok(complete)
-            } => result?,
-        };
-
-        if complete {
+        if status.phase == "complete" {
             break;
         }
 
-        // Exponential delay between steps (shared by skip and normal paths).
+        // Delay before doing any migration-specific network activity. This
+        // also applies to the first transaction.
         let mean = mean_delay_ms as f64;
         let u = (OsRng.next_u32() as f64 + 1.0) / (u32::MAX as f64 + 2.0);
         let delay_ms = ((-mean * u.ln()) as u64).min(mean_delay_ms * 4);
@@ -181,30 +133,82 @@ async fn run_migration(
             delay_ms, mean_delay_ms, u
         );
 
-        // Notify UI of the delay before sleeping, preserving the last
-        // phase/counts so the progress display doesn't blank out.
-        sink.add(MigrationStatus {
-            phase: last_phase.clone(),
-            split_fees: acc_split,
-            migrate_fees: acc_migrate,
-            total_fees: acc_split + acc_migrate,
-            sd_notes_count: last_sd_count,
-            non_sd_notes_count: last_non_sd_count,
-            ironwood_sd_count: last_iw_count,
-            progress: last_progress,
-            next_action: format!("Waiting {}s...", delay_secs),
-            work_summary: last_work.clone(),
-        })
-        .ok();
+        status.next_action = format!("Waiting {}s...", delay_secs);
+        sink.add(status.clone()).ok();
 
-        tokio::select! {
+        let cancelled = tokio::select! {
+            biased;
+            _ = cancellation_token.cancelled() => {
+                tracing::info!("Note migration cancelled");
+                true
+            }
+            _ = tokio::time::sleep(std::time::Duration::from_millis(delay_ms)) => false,
+        };
+        if cancelled {
+            break;
+        }
+
+        if let Some(height) = last_action_height {
+            if client.latest_height().await? <= height {
+                continue;
+            }
+        }
+
+        // O→I transactions are prepared only when the wallet checkpoint and
+        // the current anchor are the same shared bucket boundary. Until then,
+        // only query the tip height; do not fetch or synchronize tree state.
+        let align_to_boundary = status.phase == "migrating";
+        if align_to_boundary {
+            let reached_boundary = tokio::select! {
+                biased;
+                _ = cancellation_token.cancelled() => {
+                    tracing::info!("Note migration cancelled");
+                    false
+                }
+                result = wait_for_anchor_boundary(&sink, c, &mut client, &status) => {
+                    result?;
+                    true
+                }
+            };
+            if !reached_boundary {
+                break;
+            }
+        }
+
+        let (event, next_status) = tokio::select! {
             biased;
             _ = cancellation_token.cancelled() => {
                 tracing::info!("Note migration cancelled");
                 break;
             }
-            _ = tokio::time::sleep(std::time::Duration::from_millis(delay_ms)) => {}
+            result = do_step(
+                c,
+                acc_split,
+                acc_migrate,
+                align_to_boundary,
+                !align_to_boundary,
+            ) => result?,
+        };
+
+        match event {
+            crate::migrate::MigrationEvent::SplitComplete { fee } => {
+                acc_split += fee;
+                last_action_height = Some(client.latest_height().await?);
+            }
+            crate::migrate::MigrationEvent::MigrateComplete { fee } => {
+                acc_migrate += fee;
+                last_action_height = Some(client.latest_height().await?);
+            }
+            _ => {}
         }
+
+        status = MigrationStatus {
+            split_fees: acc_split,
+            migrate_fees: acc_migrate,
+            total_fees: acc_split + acc_migrate,
+            ..next_status
+        };
+        sink.add(status.clone()).ok();
     }
 
     Ok(())
@@ -233,49 +237,42 @@ async fn do_step(
     c: &Coin,
     acc_split: u64,
     acc_migrate: u64,
+    allow_migrate: bool,
+    sync_before: bool,
 ) -> Result<(crate::migrate::MigrationEvent, MigrationStatus)> {
     let network = c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
-    let current_height = client.latest_height().await?;
-    let _ = crate::sync::synchronize_impl(
-        (),
-        vec![c.account],
-        current_height,
-        100_000,
-        10_000,
-        10_000,
-        false,
-        c,
-    )
-    .await;
-
-    let event = crate::migrate::step(&network, &mut connection, &mut client, c.account)
-        .await
-        .map_err(|e| anyhow::anyhow!("step: {e}"))?;
-
-    let needs_sync = matches!(
-        event,
-        crate::migrate::MigrationEvent::SplitComplete { .. }
-            | crate::migrate::MigrationEvent::MigrateComplete { .. }
-    );
-    if needs_sync {
-        let height = client.latest_height().await?;
-        let _ = crate::sync::synchronize_impl(
-            (),
-            vec![c.account],
-            height,
-            100_000,
-            10_000,
-            10_000,
-            false,
-            c,
-        )
-        .await;
+    if sync_before {
+        let current_height = client.latest_height().await?;
+        let _ = synchronize_to(c, current_height).await;
     }
 
-    // Re-read for updated counts after potential broadcast + sync.
+    let before = current_migration_status(c, acc_split, acc_migrate).await?;
+    let event = if before.phase == "complete" {
+        crate::migrate::MigrationEvent::Complete
+    } else if before.phase == "migrating" && !allow_migrate {
+        // A normal sync may finish the splitting phase at a non-boundary
+        // height. Return to the runner so it can delay and align the O→I
+        // transaction instead of broadcasting it immediately.
+        crate::migrate::MigrationEvent::NothingToDo
+    } else {
+        crate::migrate::step(&network, &mut connection, &mut client, c.account)
+            .await
+            .map_err(|e| anyhow::anyhow!("step: {e}"))?
+    };
+
+    let status = current_migration_status(c, acc_split, acc_migrate).await?;
+    Ok((event, status))
+}
+
+async fn current_migration_status(
+    c: &Coin,
+    acc_split: u64,
+    acc_migrate: u64,
+) -> Result<MigrationStatus> {
+    let mut connection = c.get_connection().await?;
     let all_notes = crate::pay::plan::fetch_unspent_notes_grouped_by_pool(&mut connection, c.account).await?;
     let orchard_zec: Vec<&crate::pay::InputNote> = all_notes
         .iter()
@@ -287,8 +284,8 @@ async fn do_step(
         .filter(|n| !crate::migrate::is_sd(n.amount))
         .map(|n| n.amount)
         .collect();
-    let non_sd_total: u64 = non_sd_vals.iter().sum();
-    let effective_non_sd = if non_sd_total >= crate::migrate::MIN_SD {
+    let has_split = crate::migrate::has_split_transaction(non_sd_vals.clone());
+    let effective_non_sd = if has_split {
         non_sd_vals.len() as u32
     } else {
         0
@@ -301,10 +298,8 @@ async fn do_step(
         .count() as u32;
     let total_sd = sd_count + ironwood_sd;
 
-    // Determine phase from current (post-sync) counts.
-    let phase = match &event {
-        crate::migrate::MigrationEvent::Complete => "complete",
-        _ if effective_non_sd > 0 => "splitting",
+    let phase = match () {
+        _ if has_split => "splitting",
         _ if sd_count > 0 => "migrating",
         _ => "complete",
     };
@@ -319,7 +314,7 @@ async fn do_step(
         _ => 1.0,
     };
 
-    Ok((event, MigrationStatus {
+    Ok(MigrationStatus {
         phase: phase.to_string(),
         split_fees: acc_split,
         migrate_fees: acc_migrate,
@@ -330,5 +325,100 @@ async fn do_step(
         progress,
         next_action: String::new(),
         work_summary: format!("SD: {}, non-SD: {}", sd_count, effective_non_sd),
-    }))
+    })
+}
+
+async fn synchronize_to(c: &Coin, height: u32) -> Result<u32> {
+    crate::sync::synchronize_impl(
+        (),
+        vec![c.account],
+        height,
+        100_000,
+        10_000,
+        10_000,
+        false,
+        c,
+    )
+    .await
+}
+
+/// Poll only the network height until the next shared anchor boundary. Tree
+/// state is synchronized exactly once, while that boundary is the current tip.
+#[cfg(feature = "flutter")]
+async fn wait_for_anchor_boundary(
+    sink: &StreamSink<MigrationStatus>,
+    c: &Coin,
+    client: &mut crate::Client,
+    status: &MigrationStatus,
+) -> Result<()> {
+    const HEIGHT_POLL_INTERVAL: std::time::Duration =
+        std::time::Duration::from_secs(10);
+
+    let observed_height = client.latest_height().await?;
+    let db_height = wallet_height(c).await?;
+    let mut boundary =
+        crate::migrate::next_anchor_bucket_height(observed_height.max(db_height));
+
+    let mut waiting = status.clone();
+    waiting.next_action = format!("Waiting for anchor block {}...", boundary);
+    sink.add(waiting).ok();
+
+    loop {
+        let tip = client.latest_height().await?;
+        if tip > boundary {
+            // If height polling missed the boundary, do not fetch its
+            // historical tree state. Wait for a boundary that is observed as
+            // the current tip.
+            boundary = crate::migrate::next_anchor_bucket_height(
+                tip.saturating_add(1),
+            );
+            let mut waiting = status.clone();
+            waiting.next_action = format!("Waiting for anchor block {}...", boundary);
+            sink.add(waiting).ok();
+            continue;
+        }
+
+        if tip == boundary {
+            tracing::info!(
+                "Migration anchor boundary reached: tip={}, boundary={}",
+                tip,
+                boundary,
+            );
+            synchronize_to(c, boundary).await?;
+            let synced_height = wallet_height(c).await?;
+            if synced_height == boundary {
+                return Ok(());
+            }
+
+            if synced_height > boundary {
+                // Another sync advanced the wallet while we were waiting.
+                // Move to a future boundary instead of preparing from a
+                // checkpoint that no longer represents the current tip.
+                boundary = crate::migrate::next_anchor_bucket_height(
+                    tip.max(synced_height).saturating_add(1),
+                );
+                let mut waiting = status.clone();
+                waiting.next_action =
+                    format!("Waiting for anchor block {}...", boundary);
+                sink.add(waiting).ok();
+                continue;
+            }
+
+            tracing::warn!(
+                "Migration boundary sync did not advance: wallet={}, boundary={}",
+                synced_height,
+                boundary,
+            );
+        }
+
+        tokio::time::sleep(HEIGHT_POLL_INTERVAL).await;
+    }
+}
+
+#[cfg(feature = "flutter")]
+async fn wallet_height(c: &Coin) -> Result<u32> {
+    let mut connection = c.get_connection().await?;
+    Ok(crate::sync::get_db_height(&mut connection, c.account)
+        .await?
+        .height)
 }
