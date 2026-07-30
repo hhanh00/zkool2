@@ -24,8 +24,12 @@ pub const MIN_SD: u64 = 100 * COST_PER_ACTION;
 /// Caps transaction size to avoid oversized bundles that nodes reject.
 const MAX_SPLIT_INPUTS: usize = 50;
 
-/// Migration anchors are rounded down to this block interval.
+/// Maximum migration anchor interval specified by the migration protocol.
 pub const ANCHOR_BUCKET_SIZE: u32 = 144;
+
+/// Zcash's target block spacing, used to scale the anchor interval to the
+/// selected migration speed.
+const TARGET_BLOCK_SPACING_MS: u64 = 75_000;
 
 /// Fee padding embedded in each standard denomination.
 /// Covers Orchard input + change (2 actions in sum mode) and Ironwood
@@ -162,17 +166,21 @@ async fn fetch_unspent_orchard_notes_with_cmx(
     .map_err(Into::into)
 }
 
-fn anchor_bucket_height(height: u32) -> u32 {
-    height - height % ANCHOR_BUCKET_SIZE
+pub(crate) fn migration_anchor_bucket_size(mean_delay_ms: u64) -> u32 {
+    let blocks =
+        mean_delay_ms.saturating_add(TARGET_BLOCK_SPACING_MS - 1) / TARGET_BLOCK_SPACING_MS;
+    u32::try_from(blocks)
+        .unwrap_or(u32::MAX)
+        .clamp(1, ANCHOR_BUCKET_SIZE)
 }
 
 /// Return the first migration anchor boundary at or above `height`.
-pub(crate) fn next_anchor_bucket_height(height: u32) -> u32 {
-    let remainder = height % ANCHOR_BUCKET_SIZE;
+pub(crate) fn next_anchor_bucket_height(height: u32, bucket_size: u32) -> u32 {
+    let remainder = height % bucket_size;
     if remainder == 0 {
         height
     } else {
-        height.saturating_add(ANCHOR_BUCKET_SIZE - remainder)
+        height.saturating_add(bucket_size - remainder)
     }
 }
 
@@ -182,6 +190,7 @@ pub async fn step(
     connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
+    anchor_bucket_size: u32,
 ) -> Result<MigrationEvent> {
     let height = client.latest_height().await?;
     let checkpoint_height = crate::sync::get_db_height(&mut *connection, account)
@@ -349,11 +358,15 @@ pub async fn step(
          */
 
         // ── Migrating phase ──
-        let anchor_height = anchor_bucket_height(checkpoint_height);
+        anyhow::ensure!(
+            checkpoint_height % anchor_bucket_size == 0,
+            "Migration checkpoint {checkpoint_height} is not on a \
+             {anchor_bucket_size}-block anchor boundary",
+        );
+        let anchor_height = checkpoint_height;
 
-        // A witness can only be rewound to an anchor whose tree already
-        // contains the note. The latest checkpoint must also contain the note
-        // so its witness is available for Witness::rewind().
+        // The selected note must exist at the current boundary checkpoint.
+        // Migration never rewinds a witness to a historical anchor.
         let mut sorted_sd: Vec<&OrchardZecNote> = sd_notes
             .iter()
             .copied()
@@ -361,8 +374,8 @@ pub async fn step(
             .collect();
         if sorted_sd.is_empty() {
             info!(
-                "Migration waiting: no SD note can be rewound from checkpoint {} to anchor {}",
-                checkpoint_height, anchor_height,
+                "Migration waiting: no SD note is available at checkpoint {}",
+                checkpoint_height,
             );
             return Ok(MigrationEvent::NothingToDo);
         }
@@ -447,21 +460,22 @@ mod tests {
     }
 
     #[test]
-    fn test_anchor_bucket_height() {
-        assert_eq!(anchor_bucket_height(0), 0);
-        assert_eq!(anchor_bucket_height(143), 0);
-        assert_eq!(anchor_bucket_height(144), 144);
-        assert_eq!(anchor_bucket_height(145), 144);
-        assert_eq!(anchor_bucket_height(288), 288);
+    fn test_next_anchor_bucket_height() {
+        assert_eq!(next_anchor_bucket_height(0, 144), 0);
+        assert_eq!(next_anchor_bucket_height(1, 144), 144);
+        assert_eq!(next_anchor_bucket_height(143, 144), 144);
+        assert_eq!(next_anchor_bucket_height(144, 144), 144);
+        assert_eq!(next_anchor_bucket_height(145, 144), 288);
+        assert_eq!(next_anchor_bucket_height(145, 4), 148);
     }
 
     #[test]
-    fn test_next_anchor_bucket_height() {
-        assert_eq!(next_anchor_bucket_height(0), 0);
-        assert_eq!(next_anchor_bucket_height(1), 144);
-        assert_eq!(next_anchor_bucket_height(143), 144);
-        assert_eq!(next_anchor_bucket_height(144), 144);
-        assert_eq!(next_anchor_bucket_height(145), 288);
+    fn test_migration_anchor_bucket_size() {
+        assert_eq!(migration_anchor_bucket_size(60_000), 1);
+        assert_eq!(migration_anchor_bucket_size(900_000), 12);
+        assert_eq!(migration_anchor_bucket_size(3_600_000), 48);
+        assert_eq!(migration_anchor_bucket_size(10_800_000), 144);
+        assert_eq!(migration_anchor_bucket_size(u64::MAX), 144);
     }
 
     #[test]
