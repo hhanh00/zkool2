@@ -735,7 +735,7 @@ final class CurrentHeightProvider extends $AsyncNotifierProvider<CurrentHeight, 
   CurrentHeight create() => CurrentHeight();
 }
 
-String _$currentHeightHash() => r'83f6fa7bfb3bee9f854fdc8c7ecc96c04075c8be';
+String _$currentHeightHash() => r'0710021baa0ed9a9ad29fc8d49cefd60f3712134';
 
 abstract class _$CurrentHeight extends $AsyncNotifier<int?> {
   FutureOr<int?> build();
@@ -825,7 +825,7 @@ final class SynchronizerNotifierProvider extends $NotifierProvider<SynchronizerN
   }
 }
 
-String _$synchronizerNotifierHash() => r'049414ae8378414353563749d26326461231fee4';
+String _$synchronizerNotifierHash() => r'3bab6681ff1ee0f1161575e4690f143aa9e72f7b';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

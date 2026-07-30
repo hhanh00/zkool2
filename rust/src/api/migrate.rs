@@ -1,4 +1,5 @@
 use anyhow::Result;
+use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "flutter")]
@@ -36,13 +37,16 @@ pub enum MigrationEvent {
 #[cfg_attr(feature = "flutter", frb(opaque))]
 pub struct NoteMigration {
     cancellation_token: CancellationToken,
+    block_height_tx: watch::Sender<Option<u32>>,
 }
 
 impl NoteMigration {
     #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn new() -> Self {
+        let (block_height_tx, _) = watch::channel(None);
         Self {
             cancellation_token: CancellationToken::new(),
+            block_height_tx,
         }
     }
 
@@ -53,18 +57,31 @@ impl NoteMigration {
         c: &Coin,
         mean_delay_ms: u64,
     ) -> Result<()> {
-        run_migration(sink, c, mean_delay_ms, self.cancellation_token.clone()).await
+        run_migration(
+            sink,
+            c,
+            mean_delay_ms,
+            self.cancellation_token.clone(),
+            self.block_height_tx.clone(),
+        )
+        .await
     }
 
     pub fn cancel(&self) {
         self.cancellation_token.cancel();
+    }
+
+    /// Supplies a height observed by the shared Dart block-height service.
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn update_height(&self, height: u32) {
+        self.block_height_tx.send_replace(Some(height));
     }
 }
 
 /// Single-shot step (kept for FRB generated-code compatibility).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
-    let (event, _status) = do_step(c, 0, 0, true, true).await?;
+    let (event, _status) = do_step(c, 0, 0, true, true, crate::migrate::ANCHOR_BUCKET_SIZE).await?;
     Ok(match event {
         crate::migrate::MigrationEvent::SplitComplete { fee } => {
             MigrationEvent::SplitComplete { fee }
@@ -89,6 +106,7 @@ async fn run_migration(
     c: &Coin,
     mean_delay_ms: u64,
     cancellation_token: CancellationToken,
+    block_height_tx: watch::Sender<Option<u32>>,
 ) -> Result<()> {
     use rand_core::{OsRng, RngCore};
     use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
@@ -117,6 +135,12 @@ async fn run_migration(
     let mut acc_split = 0u64;
     let mut acc_migrate = 0u64;
     let mut last_action_height: Option<u32> = None;
+    let anchor_bucket_size = crate::migrate::migration_anchor_bucket_size(mean_delay_ms);
+    tracing::info!(
+        "Migration anchor interval: {} blocks for mean delay {}ms",
+        anchor_bucket_size,
+        mean_delay_ms,
+    );
     let mut status = current_migration_status(c, acc_split, acc_migrate).await?;
     sink.add(status.clone()).ok();
 
@@ -165,13 +189,20 @@ async fn run_migration(
         // only query the tip height; do not fetch or synchronize tree state.
         let align_to_boundary = status.phase == "migrating";
         if align_to_boundary {
+            block_height_tx.send_replace(None);
             let reached_boundary = tokio::select! {
                 biased;
                 _ = cancellation_token.cancelled() => {
                     tracing::info!("Note migration cancelled");
                     false
                 }
-                result = wait_for_anchor_boundary(&sink, c, &mut client, &status) => {
+                result = wait_for_anchor_boundary(
+                    &sink,
+                    c,
+                    block_height_tx.subscribe(),
+                    &status,
+                    anchor_bucket_size,
+                ) => {
                     result?;
                     true
                 }
@@ -179,6 +210,9 @@ async fn run_migration(
             if !reached_boundary {
                 break;
             }
+
+            status.next_action = "Preparing migration transaction...".into();
+            sink.add(status.clone()).ok();
         }
 
         let (event, next_status) = tokio::select! {
@@ -193,6 +227,7 @@ async fn run_migration(
                 acc_migrate,
                 align_to_boundary,
                 !align_to_boundary,
+                anchor_bucket_size,
             ) => result?,
         };
 
@@ -245,6 +280,7 @@ async fn do_step(
     acc_migrate: u64,
     allow_migrate: bool,
     sync_before: bool,
+    anchor_bucket_size: u32,
 ) -> Result<(crate::migrate::MigrationEvent, MigrationStatus)> {
     let network = c.network();
     let mut connection = c.get_connection().await?;
@@ -264,9 +300,15 @@ async fn do_step(
         // transaction instead of broadcasting it immediately.
         crate::migrate::MigrationEvent::NothingToDo
     } else {
-        crate::migrate::step(&network, &mut connection, &mut client, c.account)
-            .await
-            .map_err(|e| anyhow::anyhow!("step: {e}"))?
+        crate::migrate::step(
+            &network,
+            &mut connection,
+            &mut client,
+            c.account,
+            anchor_bucket_size,
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("step: {e}"))?
     };
 
     let status = current_migration_status(c, acc_split, acc_migrate).await?;
@@ -352,71 +394,91 @@ async fn synchronize_to(c: &Coin, height: u32) -> Result<u32> {
     .await
 }
 
-/// Poll only the network height until the next shared anchor boundary. Tree
-/// state is synchronized exactly once, while that boundary is the current tip.
+/// Wait for heights supplied by Dart's shared block-height service. Tree state
+/// is synchronized exactly once, while the boundary is the current tip.
 #[cfg(feature = "flutter")]
 async fn wait_for_anchor_boundary(
     sink: &StreamSink<MigrationStatus>,
     c: &Coin,
-    client: &mut crate::Client,
+    mut block_heights: watch::Receiver<Option<u32>>,
     status: &MigrationStatus,
+    anchor_bucket_size: u32,
 ) -> Result<()> {
-    const HEIGHT_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(10);
-
-    let observed_height = client.latest_height().await?;
-    let db_height = wallet_height(c).await?;
-    let mut boundary = crate::migrate::next_anchor_bucket_height(observed_height.max(db_height));
-
     let mut waiting = status.clone();
-    waiting.next_action = format!("Waiting for anchor block {}...", boundary);
+    waiting.next_action = "Waiting for anchor block...".into();
     sink.add(waiting).ok();
 
+    let mut boundary = None;
     loop {
-        let tip = client.latest_height().await?;
-        if tip > boundary {
-            // If height polling missed the boundary, do not fetch its
-            // historical tree state. Wait for a boundary that is observed as
-            // the current tip.
-            boundary = crate::migrate::next_anchor_bucket_height(tip.saturating_add(1));
-            let mut waiting = status.clone();
-            waiting.next_action = format!("Waiting for anchor block {}...", boundary);
-            sink.add(waiting).ok();
+        block_heights.changed().await?;
+        let Some(tip) = *block_heights.borrow_and_update() else {
             continue;
-        }
+        };
 
-        if tip == boundary {
-            tracing::info!(
-                "Migration anchor boundary reached: tip={}, boundary={}",
-                tip,
-                boundary,
-            );
-            synchronize_to(c, boundary).await?;
-            let synced_height = wallet_height(c).await?;
-            if synced_height == boundary {
-                return Ok(());
-            }
-
-            if synced_height > boundary {
-                // Another sync advanced the wallet while we were waiting.
-                // Move to a future boundary instead of preparing from a
-                // checkpoint that no longer represents the current tip.
-                boundary = crate::migrate::next_anchor_bucket_height(
-                    tip.max(synced_height).saturating_add(1),
+        let target = match boundary {
+            Some(boundary) => boundary,
+            None => {
+                let db_height = wallet_height(c).await?;
+                let boundary = crate::migrate::next_anchor_bucket_height(
+                    tip.max(db_height),
+                    anchor_bucket_size,
                 );
                 let mut waiting = status.clone();
                 waiting.next_action = format!("Waiting for anchor block {}...", boundary);
                 sink.add(waiting).ok();
+                boundary
+            }
+        };
+
+        if tip > target {
+            // If height polling missed the boundary, do not fetch its
+            // historical tree state. Wait for a boundary that is observed as
+            // the current tip.
+            let next_boundary = crate::migrate::next_anchor_bucket_height(
+                tip.saturating_add(1),
+                anchor_bucket_size,
+            );
+            boundary = Some(next_boundary);
+            let mut waiting = status.clone();
+            waiting.next_action = format!("Waiting for anchor block {}...", next_boundary);
+            sink.add(waiting).ok();
+            continue;
+        }
+
+        boundary = Some(target);
+        if tip == target {
+            tracing::info!(
+                "Migration anchor boundary reached: tip={}, boundary={}",
+                tip,
+                target,
+            );
+            synchronize_to(c, target).await?;
+            let synced_height = wallet_height(c).await?;
+            if synced_height == target {
+                return Ok(());
+            }
+
+            if synced_height > target {
+                // Another sync advanced the wallet while we were waiting.
+                // Move to a future boundary instead of preparing from a
+                // checkpoint that no longer represents the current tip.
+                let next_boundary = crate::migrate::next_anchor_bucket_height(
+                    tip.max(synced_height).saturating_add(1),
+                    anchor_bucket_size,
+                );
+                boundary = Some(next_boundary);
+                let mut waiting = status.clone();
+                waiting.next_action = format!("Waiting for anchor block {}...", next_boundary);
+                sink.add(waiting).ok();
                 continue;
             }
 
-            tracing::warn!(
+            anyhow::bail!(
                 "Migration boundary sync did not advance: wallet={}, boundary={}",
                 synced_height,
-                boundary,
+                target,
             );
         }
-
-        tokio::time::sleep(HEIGHT_POLL_INTERVAL).await;
     }
 }
 

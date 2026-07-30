@@ -5,6 +5,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zkool/main.dart' show logger;
 import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -19,6 +20,7 @@ class MigratePage extends StatefulWidget {
 
 class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
   StreamSubscription<MigrationStatus>? _sub;
+  StreamSubscription<int>? _blockHeightSubscription;
   MigrationStatus? _status;
   Timer? _countdown;
   int _countdownSecs = 0;
@@ -26,15 +28,21 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
   bool _started = false;
   bool _didShowCompleteDialog = false;
   bool _handlingLeave = false;
-  double _speedIndex = 1; // default: Fast (60s)
+  double _speedIndex = 1; // default: Fast (15m)
 
-  static const _speedLabels = ["Very Fast", "Fast", "Medium", "Slow"];
-  static const _speedMeanMs = [15000, 60000, 300000, 3600000];
+  static const _targetBlockSpacingMs = 75000;
+  static const _speedLabels = ["Ultra Fast", "Fast", "Medium", "Slow"];
+  static const _speedMeanMs = [
+    60000,
+    12 * _targetBlockSpacingMs,
+    48 * _targetBlockSpacingMs,
+    144 * _targetBlockSpacingMs,
+  ];
   static const _speedDescriptions = [
-    "~15s between steps",
     "~1m between steps",
-    "~5m between steps",
+    "~15m between steps",
     "~1h between steps",
+    "~3h between steps",
   ];
 
   Stream<MigrationStatus> _runCancellableMigration({
@@ -51,9 +59,18 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
     controller = StreamController<MigrationStatus>(
       onListen: () {
         sourceSubscription = source.listen(
-          controller.add,
-          onError: controller.addError,
-          onDone: controller.close,
+          (status) {
+            _updateBlockHeightSubscription(migration, status);
+            controller.add(status);
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            unawaited(_stopBlockHeightSubscription());
+            controller.addError(error, stackTrace);
+          },
+          onDone: () {
+            unawaited(_stopBlockHeightSubscription());
+            controller.close();
+          },
         );
       },
       onPause: () => sourceSubscription?.pause(),
@@ -62,11 +79,35 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
         await Future.wait([
           migration.cancel(),
           if (sourceSubscription != null) sourceSubscription!.cancel(),
+          _stopBlockHeightSubscription(),
         ]);
       },
     );
 
     return controller.stream;
+  }
+
+  void _updateBlockHeightSubscription(
+    NoteMigration migration,
+    MigrationStatus status,
+  ) {
+    final waitingForBoundary = status.nextAction.startsWith("Waiting for anchor block");
+    if (waitingForBoundary) {
+      _blockHeightSubscription ??= blockHeightService.heights.listen(
+        (height) => migration.updateHeight(height: height),
+        onError: (Object error, StackTrace stackTrace) {
+          logger.e("Block height polling failed", error: error, stackTrace: stackTrace);
+        },
+      );
+    } else {
+      unawaited(_stopBlockHeightSubscription());
+    }
+  }
+
+  Future<void> _stopBlockHeightSubscription() async {
+    final subscription = _blockHeightSubscription;
+    _blockHeightSubscription = null;
+    await subscription?.cancel();
   }
 
   @override
@@ -135,6 +176,7 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     _sub = null;
+    unawaited(_stopBlockHeightSubscription());
     _countdown?.cancel();
     _countdown = null;
     super.dispose();
