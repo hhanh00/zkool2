@@ -23,6 +23,7 @@ class _MigratePageState extends State<MigratePage>
   MigrationStatus? _status;
   Timer? _countdown;
   int _countdownSecs = 0;
+  bool _hasCountdown = false;
   bool _started = false;
   bool _didShowCompleteDialog = false;
   bool _handlingLeave = false;
@@ -91,6 +92,7 @@ class _MigratePageState extends State<MigratePage>
             final m =
                 RegExp(r'Waiting (\d+)s').firstMatch(status.nextAction);
             if (m != null) {
+              _hasCountdown = true;
               _countdownSecs = int.parse(m.group(1)!);
               _countdown?.cancel();
               _countdown = Timer.periodic(
@@ -101,6 +103,10 @@ class _MigratePageState extends State<MigratePage>
                   }
                 },
               );
+            } else {
+              _hasCountdown = false;
+              _countdown?.cancel();
+              _countdown = null;
             }
 
             ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +116,7 @@ class _MigratePageState extends State<MigratePage>
               ),
             );
           } else {
+            _hasCountdown = false;
             _countdown?.cancel();
             _countdown = null;
           }
@@ -402,7 +409,9 @@ class _MigratePageState extends State<MigratePage>
                   const Gap(4),
                   Text(
                     waiting
-                        ? "Waiting ${_countdownSecs}s..."
+                        ? _hasCountdown
+                            ? "Waiting ${_countdownSecs}s..."
+                            : status.nextAction
                         : phase == 'splitting'
                             ? "Phase 1: Splitting into standard denominations"
                             : phase == 'migrating'
