@@ -12,6 +12,7 @@ import 'package:toastification/toastification.dart';
 import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
+import 'package:zkool/services/block_height_service.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
@@ -68,6 +69,9 @@ class CoinContext {
 }
 
 final coinContext = CoinContext();
+final blockHeightService = BlockHeightService(
+  fetchHeight: () => getCurrentHeight(c: coinContext.coin),
+);
 
 @freezed
 sealed class SyncState with _$SyncState {
@@ -527,7 +531,8 @@ class CurrentHeight extends _$CurrentHeight {
 
   @override
   Future<int?> build() async {
-    return await _doFetch();
+    _cachedHeight = blockHeightService.lastHeight;
+    return _cachedHeight;
   }
 
   /// Get current height, cached up to 15s. Respects offline mode.
@@ -547,10 +552,16 @@ class CurrentHeight extends _$CurrentHeight {
   }
 
   Future<int?> _doFetch() async {
-    _cachedHeight = await getCurrentHeight(c: coinContext.coin);
+    _cachedHeight = await blockHeightService.fetchCurrent();
     _lastFetch = DateTime.now();
     state = AsyncData(_cachedHeight);
     return _cachedHeight;
+  }
+
+  void updateFromService(int height) {
+    _cachedHeight = height;
+    _lastFetch = DateTime.now();
+    state = AsyncData(height);
   }
 }
 
@@ -665,12 +676,18 @@ void runLogListener() async {
 @Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
   bool syncInProgress = false;
-  bool _autoSyncActive = false;
+  StreamSubscription<int>? _autoSyncSubscription;
+  bool _handlingAutoSyncHeight = false;
+  bool _forceNextAutoSync = false;
+  int? _pendingAutoSyncHeight;
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   int retryCount = 0;
 
   @override
   SyncState build() {
+    ref.onDispose(() {
+      unawaited(_autoSyncSubscription?.cancel());
+    });
     return SyncState(
       start: 0,
       end: 0,
@@ -708,7 +725,10 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     );
   }
 
-  Future<void> startSynchronize(List<Account> accounts) async {
+  Future<void> startSynchronize(
+    List<Account> accounts, {
+    int? currentHeight,
+  }) async {
     if (syncInProgress) return;
 
     final c = coinContext.coin;
@@ -718,6 +738,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     syncInProgress = true;
     retryCount = 0;
     final completer = Completer<void>();
+    var requestedHeight = currentHeight;
 
     while (true) {
       try {
@@ -725,13 +746,14 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
           showSnackbar("Starting Synchronization");
         }
-        final currentHeight = await getCurrentHeight(c: c);
+        final syncHeight = requestedHeight ?? await blockHeightService.fetchCurrent();
+        requestedHeight = null;
 
-        begin(accounts, currentHeight);
+        begin(accounts, syncHeight);
 
         final progress = synchronize(
           accounts: accounts.map((a) => a.id).toList(),
-          currentHeight: currentHeight,
+          currentHeight: syncHeight,
           actionsPerSync: int.parse(settings.actionsPerSync),
           transparentLimit: 100,
           checkpointAge: 500_000,
@@ -804,29 +826,57 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     }
   }
 
-  void autoSync({bool now = false}) async {
-    if (_autoSyncActive) return;
-    _autoSyncActive = true;
-    try {
-      final settings = await ref.read(appSettingsProvider.future);
-      final interval = int.tryParse(settings.syncInterval) ?? 0;
+  Future<void> autoSync({bool now = false}) async {
+    final settings = await ref.read(appSettingsProvider.future);
+    final interval = int.tryParse(settings.syncInterval) ?? 0;
 
-      if (settings.offline || interval <= 0) {
-        return;
-      }
-      try {
-        final currentHeight = await ref.read(currentHeightProvider.notifier).fetch();
-        if (currentHeight != null) {
-          await syncIfNeeded(currentHeight, now: now);
+    if (settings.offline || interval <= 0) {
+      await _autoSyncSubscription?.cancel();
+      _autoSyncSubscription = null;
+      return;
+    }
+
+    if (_autoSyncSubscription == null) {
+      var forceFirstHeight = now;
+      _autoSyncSubscription = blockHeightService.heights.listen(
+        (height) {
+          ref.read(currentHeightProvider.notifier).updateFromService(height);
+          _queueAutoSync(height, force: forceFirstHeight);
+          forceFirstHeight = false;
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          logger.e("Block height polling failed", error: error, stackTrace: stackTrace);
+        },
+      );
+    } else if (now) {
+      final height = blockHeightService.lastHeight ?? await blockHeightService.fetchCurrent();
+      _queueAutoSync(height, force: true);
+    }
+  }
+
+  void _queueAutoSync(int height, {required bool force}) {
+    _pendingAutoSyncHeight = max(_pendingAutoSyncHeight ?? height, height);
+    _forceNextAutoSync |= force;
+    if (_handlingAutoSyncHeight) return;
+    unawaited(_drainAutoSyncQueue());
+  }
+
+  Future<void> _drainAutoSyncQueue() async {
+    _handlingAutoSyncHeight = true;
+    try {
+      while (_pendingAutoSyncHeight != null) {
+        final height = _pendingAutoSyncHeight!;
+        final force = _forceNextAutoSync;
+        _pendingAutoSyncHeight = null;
+        _forceNextAutoSync = false;
+        try {
+          await syncIfNeeded(height, now: force);
+        } on AnyhowException catch (error, stackTrace) {
+          logger.e("AutoSync failed", error: error, stackTrace: stackTrace);
         }
-      } on AnyhowException catch (e) {
-        logger.e(e);
-        // ignore
-      } finally {
-        if (interval > 0) Timer(Duration(seconds: 15), () => autoSync());
       }
     } finally {
-      _autoSyncActive = false;
+      _handlingAutoSyncHeight = false;
     }
   }
 
@@ -844,7 +894,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       }
     }
     if (accountsToSync.isNotEmpty) {
-      await startSynchronize(accountsToSync);
+      await startSynchronize(accountsToSync, currentHeight: currentHeight);
     }
   }
 }

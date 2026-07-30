@@ -615,6 +615,11 @@ pub async fn plan_transaction(
         "Anchor height {anchor_height} is ahead of checkpoint {}",
         h.height,
     );
+    anyhow::ensure!(
+        !migration || anchor_height == h.height,
+        "Migration anchor {anchor_height} no longer matches checkpoint {}",
+        h.height,
+    );
     let (ts, to, ti) = crate::sync::get_tree_state(network, client, anchor_height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
@@ -785,7 +790,7 @@ pub async fn plan_transaction(
                             &eo,
                             &ero,
                             orchard_note_version,
-                            (anchor_height < h.height).then_some(eo.1),
+                            (!migration && anchor_height < h.height).then_some(eo.1),
                         )
                         .await?;
 
@@ -808,7 +813,7 @@ pub async fn plan_transaction(
                             &ei,
                             &ero,
                             orchard::NoteVersion::V3,
-                            (anchor_height < h.height).then_some(ei.1),
+                            (!migration && anchor_height < h.height).then_some(ei.1),
                         )
                         .await?;
 
