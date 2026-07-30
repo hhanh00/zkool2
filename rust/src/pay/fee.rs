@@ -79,9 +79,9 @@ impl FeeManager {
             0
         };
         let f = (t as u64 + s as u64 + o + i as u64).max(2); // minimum 2 logical actions
-        // Issuance actions are counted by the builder as orchard actions,
-        // so we don't add them separately here. The issuance counts are
-        // informational for logging only.
+                                                             // Issuance actions are counted by the builder as orchard actions,
+                                                             // so we don't add them separately here. The issuance counts are
+                                                             // informational for logging only.
         f as u64 * COST_PER_ACTION
     }
 

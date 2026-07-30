@@ -56,9 +56,12 @@ class DkgParticipant:
         self.process = subprocess.Popen(
             [
                 zkool_binary,
-                "-d", self.db_path,
-                "-p", str(self.port),
-                "-l", self.lwd_url,
+                "-d",
+                self.db_path,
+                "-p",
+                str(self.port),
+                "-l",
+                self.lwd_url,
             ],
             stdout=open(log_path, "w"),
             stderr=subprocess.STDOUT,

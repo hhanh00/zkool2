@@ -5,8 +5,8 @@ use bincode::{
     config::{self, legacy},
     Decode, Encode,
 };
-use ed25519_dalek::{Signature, SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
 use ed25519_dalek::Signer as Ed25519Signer;
+use ed25519_dalek::{Signature, SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
 use frost_rerandomized::{aggregate, sign, RandomizedParams};
 use halo2_proofs::pasta::Fq;
 use pczt::{
@@ -42,8 +42,8 @@ use crate::{
         sync::SYNCING,
     },
     frost::dkg::{
-        delete_frost_state, get_coordinator_broadcast_account, get_dkg_params,
-        get_mailbox_account, publish,
+        delete_frost_state, get_coordinator_broadcast_account, get_dkg_params, get_mailbox_account,
+        publish,
     },
     pay::{
         plan::{get_orchard_pk, get_sapling_prover},
@@ -85,7 +85,10 @@ const SIGPACKAGE_PREFIX: &[u8] = b"SPK5";
 const SIGSHARE_PREFIX: &[u8] = b"SSH3";
 
 /// Load the ed25519 signing key from the database, if available.
-async fn load_signing_key(connection: &mut SqliteConnection, account: u32) -> Result<Option<SigningKey>> {
+async fn load_signing_key(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<SigningKey>> {
     let result = sqlx::query_as::<_, (Vec<u8>,)>(
         "SELECT signing_keypair FROM dkg_state WHERE account = ? AND signing_keypair IS NOT NULL",
     )
@@ -95,9 +98,7 @@ async fn load_signing_key(connection: &mut SqliteConnection, account: u32) -> Re
     match result {
         Some((b,)) => {
             // Validation is performed before storing to DB, so we can use expect here
-            let arr: [u8; SECRET_KEY_LENGTH] = b
-                .try_into()
-                .expect("invalid SigningKey length");
+            let arr: [u8; SECRET_KEY_LENGTH] = b.try_into().expect("invalid SigningKey length");
             Ok(Some(SigningKey::from_bytes(&arr)))
         }
         None => Ok(None),
@@ -120,10 +121,10 @@ async fn load_peer_verifying_key(
     match result {
         Some((b,)) => {
             // Validation is performed before storing to DB, so we can use expect here
-            let arr: [u8; 32] = b
-                .try_into()
-                .expect("invalid VerifyingKey length");
-            Ok(Some(VerifyingKey::from_bytes(&arr).expect("invalid VerifyingKey")))
+            let arr: [u8; 32] = b.try_into().expect("invalid VerifyingKey length");
+            Ok(Some(
+                VerifyingKey::from_bytes(&arr).expect("invalid VerifyingKey"),
+            ))
         }
         None => Ok(None),
     }
@@ -177,7 +178,10 @@ pub async fn init_sign(
     coordinator: u8,
     pczt: &PcztPackage,
 ) -> Result<()> {
-    info!("init_sign: account={}, funding_account={}, coordinator={}", account, funding_account, coordinator);
+    info!(
+        "init_sign: account={}, funding_account={}, coordinator={}",
+        account, funding_account, coordinator
+    );
     let pczt = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?) ON CONFLICT DO NOTHING")
         .bind(&pczt)
@@ -240,7 +244,10 @@ pub async fn do_sign_impl(
 
     let birth_height = height.saturating_sub(10000) + 1;
     let params = get_sign_params(&mut *connection).await?;
-    info!("sign: got signing params: account={}, coordinator={}", params.account, params.coordinator);
+    info!(
+        "sign: got signing params: account={}, coordinator={}",
+        params.account, params.coordinator
+    );
     let account = params.account;
     let coordinator_address =
         get_coordinator_address(connection, account, params.coordinator).await?;
@@ -297,7 +304,10 @@ pub async fn do_sign_impl(
     info!("Processing commitments for account {}", account);
 
     let commitments_vec = loop {
-        info!("sign: checking if we have commitments for sighash={}", hex::encode(&sighash));
+        info!(
+            "sign: checking if we have commitments for sighash={}",
+            hex::encode(&sighash)
+        );
         let commitments_vec = get_commitments(connection, account, &sighash, nsigs).await?;
         info!("sign: got {} commitments", commitments_vec.len());
         // does the commitment table have our commitments?
@@ -367,7 +377,10 @@ pub async fn do_sign_impl(
         // the coordinator does not need to send a message to itself,
         //   (the commitments are already in the database)
         if dkg_params.id as u8 != params.coordinator {
-            info!("sign: sending {} commitment messages to coordinator", recipients.len());
+            info!(
+                "sign: sending {} commitment messages to coordinator",
+                recipients.len()
+            );
             status.send(SigningStatus::SendingCommitment).await;
             let txid = publish(
                 network,
@@ -527,7 +540,7 @@ pub async fn do_sign_impl(
     // ── Phase 3: Sigshares ────────────────────────────────────────────────────
     let nonces = get_nonces(connection, account, &sighash).await?;
 
-    loop {
+    let _ = loop {
         // get the sigshares from the database
         // if we have them all, we have already signed the sigpackages and we are done
         let sigshares = get_sigshares(connection, account, &sighash).await?;
@@ -682,13 +695,13 @@ pub async fn do_sign_impl(
             hex::encode(&sighash)
         );
         for (idx, signature) in orchard_sigs.iter().enumerate() {
-            signer.apply_orchard_signature(
-                pczt_pkg.orchard_indices[idx], signature.clone())
+            signer
+                .apply_orchard_signature(pczt_pkg.orchard_indices[idx], signature.clone())
                 .expect("apply_orchard_signature must succeed");
         }
         for (idx, signature) in ironwood_sigs.iter().enumerate() {
-            signer.apply_ironwood_signature(
-                pczt_pkg.ironwood_indices[idx], signature.clone())
+            signer
+                .apply_ironwood_signature(pczt_pkg.ironwood_indices[idx], signature.clone())
                 .expect("apply_ironwood_signature must succeed");
         }
         let pczt = signer.finish();
@@ -734,7 +747,7 @@ pub async fn do_sign_impl(
 }
 
 fn get_sighash(pczt: Pczt) -> Vec<u8> {
-    use zcash_primitives::transaction::{TxVersion, sighash_v6::v6_signature_hash};
+    use zcash_primitives::transaction::{sighash_v6::v6_signature_hash, TxVersion};
     let tx = pczt.into_effects().unwrap();
     let txid_parts = tx.digest(TxIdDigester);
     let shielded_sighash = match tx.version() {
@@ -793,12 +806,11 @@ async fn get_keys(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<(KeyPackage<P>, PublicKeyPackage<P>)> {
-    let (data,) = sqlx::query_as::<_, (Vec<u8>,)>(
-        "SELECT key_pkg FROM dkg_state WHERE account = ?",
-    )
-    .bind(account)
-    .fetch_one(&mut *connection)
-    .await?;
+    let (data,) =
+        sqlx::query_as::<_, (Vec<u8>,)>("SELECT key_pkg FROM dkg_state WHERE account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
     let spkg = KeyPackage::<P>::deserialize(&data)?;
 
     let (data,) = sqlx::query_as::<_, (Vec<u8>,)>(
@@ -844,7 +856,9 @@ async fn decode_memos(
 
     for pkg in pkgs.into_iter().flatten() {
         // Verify signature if present
-        if let Some(verifying_key) = load_peer_verifying_key(connection, account, pkg.from_id).await? {
+        if let Some(verifying_key) =
+            load_peer_verifying_key(connection, account, pkg.from_id).await?
+        {
             if !verify_message(&pkg, &verifying_key) {
                 info!(
                     "decode_memos: rejecting message from participant {} due to invalid signature",

@@ -120,7 +120,7 @@ async def test_zebra_wallet_sync(gql_client_factory, rpc_url, seed, zkool_binary
             with open(LOG_PATH) as f:
                 log_content = f.read()
                 print(f"\n=== Server log (last 50 lines) ===")
-                log_lines = log_content.strip().split('\n')
+                log_lines = log_content.strip().split("\n")
                 for line in log_lines[-50:]:
                     print(f"  {line}")
                 print(f"=== End server log ===\n")

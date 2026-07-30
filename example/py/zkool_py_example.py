@@ -23,7 +23,5 @@ getAddressReq = gql.gql("""query ($idAccount: Int!) {
     ua
     }
 }""")
-result = client.execute(getAddressReq, variable_values = {
-    "idAccount": idAccount
-})
+result = client.execute(getAddressReq, variable_values={"idAccount": idAccount})
 print(result["addressByAccount"]["ua"])

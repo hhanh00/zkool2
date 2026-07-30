@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use sqlx::{Row, SqliteConnection};
 use sqlx::sqlite::SqliteRow;
+use sqlx::{Row, SqliteConnection};
 use tracing::info;
 use vcard4::property::{AnyProperty, TextProperty};
 
@@ -78,7 +78,8 @@ pub fn expand_address_to_receivers_with_pool(
     }
 
     // Fallback: single-pool address (transparent, sapling)
-    let zaddr = ZcashAddress::try_from_encoded(addr).map_err(|e| anyhow!("Invalid address: {e}"))?;
+    let zaddr =
+        ZcashAddress::try_from_encoded(addr).map_err(|e| anyhow!("Invalid address: {e}"))?;
     let pool = if zaddr.can_receive_as(PoolType::Transparent) {
         0u8
     } else if zaddr.can_receive_as(PoolType::Shielded(ShieldedPool::Sapling)) {
@@ -160,11 +161,10 @@ pub async fn create_contact(
         .execute(&mut *connection)
         .await?;
 
-    let id: u32 =
-        sqlx::query_scalar("SELECT id_contact FROM contacts WHERE name = ?1")
-            .bind(name)
-            .fetch_one(&mut *connection)
-            .await?;
+    let id: u32 = sqlx::query_scalar("SELECT id_contact FROM contacts WHERE name = ?1")
+        .bind(name)
+        .fetch_one(&mut *connection)
+        .await?;
 
     // Expand each address and store (receiver, pool) rows
     for (ordinal, addr) in addresses.iter().enumerate() {
@@ -325,7 +325,12 @@ pub async fn export_contacts_vcard(connection: &mut SqliteConnection) -> Result<
         if !contact.addresses.is_empty() {
             note_parts.push(format!(
                 "Zcash addresses:\n{}",
-                contact.addresses.iter().map(|a| format!("zcash:{a}")).collect::<Vec<_>>().join("\n")
+                contact
+                    .addresses
+                    .iter()
+                    .map(|a| format!("zcash:{a}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             ));
         }
         let note = note_parts.join("\n\n");
@@ -439,12 +444,11 @@ pub async fn import_contacts_vcard(
         }
 
         // Check for duplicate name
-        let existing: Option<u32> = sqlx::query_scalar(
-            "SELECT id_contact FROM contacts WHERE name = ?1",
-        )
-        .bind(&name)
-        .fetch_optional(&mut *connection)
-        .await?;
+        let existing: Option<u32> =
+            sqlx::query_scalar("SELECT id_contact FROM contacts WHERE name = ?1")
+                .bind(&name)
+                .fetch_optional(&mut *connection)
+                .await?;
 
         if let Some(id) = existing {
             // Update existing contact

@@ -202,8 +202,8 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
                     variable_values={
                         "account": funding_id,
                         "address": account1_address,
-                        "amount": "0.05"
-                    }
+                        "amount": "0.05",
+                    },
                 )
             )
             txid1 = result["pay"]
@@ -225,8 +225,8 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
                     variable_values={
                         "account": account1_id,
                         "address": account2_address,
-                        "amount": "0.025"
-                    }
+                        "amount": "0.025",
+                    },
                 )
             )
             txid2 = result["pay"]
@@ -277,9 +277,13 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
                     break
 
             assert tx_with_notes is not None, "Should have at least one transaction with notes"
-            print(f"Transaction {tx_with_notes['txid'][:16]}... has {len(tx_with_notes['notes'])} notes:")
+            print(
+                f"Transaction {tx_with_notes['txid'][:16]}... has {len(tx_with_notes['notes'])} notes:"
+            )
             for note in tx_with_notes["notes"]:
-                print(f"  - Note ID: {note['id']}, Value: {note['value']} ZEC, Pool: {note['pool']}, Scope: {note['scope']}")
+                print(
+                    f"  - Note ID: {note['id']}, Value: {note['value']} ZEC, Pool: {note['pool']}, Scope: {note['scope']}"
+                )
 
             print("\n=== Step 7: Test Transaction.outputs() field ===")
             tx_outputs_query = gql(
@@ -312,10 +316,14 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
                     break
 
             assert tx_with_outputs is not None, "Should have at least one transaction with outputs"
-            print(f"Transaction {tx_with_outputs['txid'][:16]}... has {len(tx_with_outputs['outputs'])} outputs:")
+            print(
+                f"Transaction {tx_with_outputs['txid'][:16]}... has {len(tx_with_outputs['outputs'])} outputs:"
+            )
             for output in tx_with_outputs["outputs"]:
-                memo_str = f", Memo: {output['memo'][:30]}..." if output['memo'] else ""
-                print(f"  - Output ID: {output['id']}, Pool: {output['pool']}, Vout: {output['vout']}, Value: {output['value']} ZEC{memo_str}")
+                memo_str = f", Memo: {output['memo'][:30]}..." if output["memo"] else ""
+                print(
+                    f"  - Output ID: {output['id']}, Pool: {output['pool']}, Vout: {output['vout']}, Value: {output['value']} ZEC{memo_str}"
+                )
 
             print("\n=== Step 8: Test Transaction.spends() field ===")
             tx_spends_query = gql(
@@ -347,9 +355,13 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
                     break
 
             if tx_with_spends:
-                print(f"Transaction {tx_with_spends['txid'][:16]}... has {len(tx_with_spends['spends'])} spends:")
+                print(
+                    f"Transaction {tx_with_spends['txid'][:16]}... has {len(tx_with_spends['spends'])} spends:"
+                )
                 for spend in tx_with_spends["spends"]:
-                    print(f"  - Spend Note ID: {spend['id']}, Value: {spend['value']} ZEC, Pool: {spend['pool']}")
+                    print(
+                        f"  - Spend Note ID: {spend['id']}, Value: {spend['value']} ZEC, Pool: {spend['pool']}"
+                    )
             else:
                 print("No spends found (transaction may not have spent any notes yet)")
 
@@ -380,7 +392,9 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
             print(f"Account 2 has {len(notes)} notes with transaction details:")
             for note in notes[:2]:
                 print(f"  - Note ID: {note['id']}, Value: {note['value']} ZEC")
-                print(f"    Transaction: {note['tx']['txid'][:16]}..., Height: {note['tx']['height']}, TX Value: {note['tx']['value']} ZEC")
+                print(
+                    f"    Transaction: {note['tx']['txid'][:16]}..., Height: {note['tx']['height']}, TX Value: {note['tx']['value']} ZEC"
+                )
             assert notes[0]["tx"] is not None, "Note should have associated transaction"
             assert notes[0]["tx"]["txid"] is not None, "Transaction should have txid"
 

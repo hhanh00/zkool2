@@ -1,11 +1,17 @@
-use std::sync::LazyLock;
-use std::io::Write;
 use byteorder::{WriteBytesExt, BE};
 use hidapi::{HidApi, HidDevice};
-use tokio::{runtime::Builder, sync::{Mutex, mpsc, oneshot}};
+use std::io::Write;
+use std::sync::LazyLock;
+use tokio::{
+    runtime::Builder,
+    sync::{mpsc, oneshot, Mutex},
+};
 use tonic::async_trait;
 
-use crate::{IntoAnyhow, ledger::{LedgerError, LedgerResult}};
+use crate::{
+    ledger::{LedgerError, LedgerResult},
+    IntoAnyhow,
+};
 
 pub fn open_ledger(api: &HidApi) -> LedgerResult<HidDevice> {
     for devinfo in api.device_list() {

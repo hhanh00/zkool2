@@ -100,8 +100,7 @@ fn closest_subset_sum(notes: &[u64], target: u64, slack: u64) -> Option<(u64, Ve
             continue; // this note alone overshoots the window, never useful here
         }
         // snapshot existing keys before mutating (0/1 knapsack: each note used once)
-        let existing: Vec<(u64, Vec<usize>)> =
-            dp.iter().map(|(&s, v)| (s, v.clone())).collect();
+        let existing: Vec<(u64, Vec<usize>)> = dp.iter().map(|(&s, v)| (s, v.clone())).collect();
 
         for (s, path) in existing {
             let ns = s + amt;
@@ -120,7 +119,9 @@ fn closest_subset_sum(notes: &[u64], target: u64, slack: u64) -> Option<(u64, Ve
         .map(|(&s, path)| (s, path.clone()))
         .or_else(|| {
             // nothing covers target: return largest reachable sum below it
-            dp.iter().max_by_key(|&(&s, _)| s).map(|(&s, path)| (s, path.clone()))
+            dp.iter()
+                .max_by_key(|&(&s, _)| s)
+                .map(|(&s, path)| (s, path.clone()))
         })
 }
 
@@ -170,7 +171,12 @@ struct TrialResult {
 // Main selection algorithm
 // ---------------------------------------------------------------------
 
-pub fn select_notes(notes: &[Note], outputs: &[Output], f_unit: u64, slack: u64) -> Option<Selection> {
+pub fn select_notes(
+    notes: &[Note],
+    outputs: &[Output],
+    f_unit: u64,
+    slack: u64,
+) -> Option<Selection> {
     let notes_by_pool = group_notes_by_pool(notes);
     let (out_sum, out_count) = out_sum_and_count(outputs);
     let a_o: u64 = out_sum.iter().sum();
@@ -179,7 +185,10 @@ pub fn select_notes(notes: &[Note], outputs: &[Output], f_unit: u64, slack: u64)
     let mut plain: [PoolSolution; NUM_POOLS] = Default::default();
     for p in 1..NUM_POOLS {
         if let Some((sum, idx)) = closest_subset_sum(&notes_by_pool[p], out_sum[p], slack) {
-            plain[p] = PoolSolution { note_indices: idx, sum };
+            plain[p] = PoolSolution {
+                note_indices: idx,
+                sum,
+            };
         }
     }
 
@@ -221,25 +230,45 @@ pub fn select_notes(notes: &[Note], outputs: &[Output], f_unit: u64, slack: u64)
         let change = total_input.saturating_sub(a_o + fee);
 
         let mut per_pool: [PoolSolution; NUM_POOLS] = Default::default();
-        per_pool[cp] = PoolSolution { note_indices: idx_cp.clone(), sum: gross_cp };
+        per_pool[cp] = PoolSolution {
+            note_indices: idx_cp.clone(),
+            sum: gross_cp,
+        };
         for p in 1..NUM_POOLS {
             if p != cp {
                 per_pool[p] = plain[p].clone();
             }
         }
 
-        let t0 = if cp == 0 { gross_cp + out_sum[0] } else { out_sum[0] };
+        let t0 = if cp == 0 {
+            gross_cp + out_sum[0]
+        } else {
+            out_sum[0]
+        };
         let t_shielded: u64 = (1..NUM_POOLS)
             .map(|p| {
-                let target = if p == cp { out_sum[p] + change } else { out_sum[p] };
+                let target = if p == cp {
+                    out_sum[p] + change
+                } else {
+                    out_sum[p]
+                };
                 (per_pool[p].sum as i64 - target as i64).unsigned_abs()
             })
             .sum();
         let turnstile = t0 + t_shielded;
 
-        let candidate = TrialResult { change_pool, per_pool, fee, change, turnstile };
+        let candidate = TrialResult {
+            change_pool,
+            per_pool,
+            fee,
+            change,
+            turnstile,
+        };
 
-        if best.as_ref().map_or(true, |b| candidate.turnstile < b.turnstile) {
+        if best
+            .as_ref()
+            .map_or(true, |b| candidate.turnstile < b.turnstile)
+        {
             best = Some(candidate);
         }
     }
@@ -266,7 +295,10 @@ fn fallback_with_pool0(
         let idx: Vec<usize> = (0..notes_by_pool[p].len()).collect();
         let sum: u64 = notes_by_pool[p].iter().sum();
         covered += sum;
-        per_pool[p] = PoolSolution { note_indices: idx, sum };
+        per_pool[p] = PoolSolution {
+            note_indices: idx,
+            sum,
+        };
     }
 
     let fixed_fee: u64 = (1..NUM_POOLS)
@@ -279,7 +311,10 @@ fn fallback_with_pool0(
     let (n0, gross0, idx0) =
         solve_with_folded_fee(&notes_by_pool[0], out_count[0], required, f_unit, 0)?;
 
-    per_pool[0] = PoolSolution { note_indices: idx0, sum: gross0 };
+    per_pool[0] = PoolSolution {
+        note_indices: idx0,
+        sum: gross0,
+    };
     let fee0 = pool_fee(n0, out_count[0], 0);
     let fee = fixed_fee + fee0 * f_unit;
 
@@ -294,7 +329,11 @@ fn fallback_with_pool0(
     for p in 0..NUM_POOLS {
         let t: u64 = (1..NUM_POOLS)
             .map(|q| {
-                let target = if q == p { out_sum[q] + change } else { out_sum[q] };
+                let target = if q == p {
+                    out_sum[q] + change
+                } else {
+                    out_sum[q]
+                };
                 (per_pool[q].sum as i64 - target as i64).unsigned_abs()
             })
             .sum();
@@ -318,7 +357,10 @@ fn finalize_selection(trial: TrialResult, notes_by_pool: &[Vec<u64>; NUM_POOLS])
     let mut per_pool_indices: [Vec<usize>; NUM_POOLS] = Default::default();
     for p in 0..NUM_POOLS {
         for &idx in &trial.per_pool[p].note_indices {
-            inputs.push(Note { pool: p as u8, amount: notes_by_pool[p][idx] });
+            inputs.push(Note {
+                pool: p as u8,
+                amount: notes_by_pool[p][idx],
+            });
         }
         per_pool_indices[p] = trial.per_pool[p].note_indices.clone();
     }
@@ -346,18 +388,45 @@ mod tests {
         let slack = 50u64; // DP search window for the plain (non-change) pools
 
         let notes = vec![
-            Note { pool: 1, amount: 120 },
-            Note { pool: 1, amount: 80 },
-            Note { pool: 1, amount: 30 },
-            Note { pool: 2, amount: 200 },
-            Note { pool: 2, amount: 15 },
-            Note { pool: 3, amount: 60 },
-            Note { pool: 0, amount: 500 }, // last resort only
+            Note {
+                pool: 1,
+                amount: 120,
+            },
+            Note {
+                pool: 1,
+                amount: 80,
+            },
+            Note {
+                pool: 1,
+                amount: 30,
+            },
+            Note {
+                pool: 2,
+                amount: 200,
+            },
+            Note {
+                pool: 2,
+                amount: 15,
+            },
+            Note {
+                pool: 3,
+                amount: 60,
+            },
+            Note {
+                pool: 0,
+                amount: 500,
+            }, // last resort only
         ];
 
         let outputs = vec![
-            Output { pool: 1, amount: 150 },
-            Output { pool: 2, amount: 100 },
+            Output {
+                pool: 1,
+                amount: 150,
+            },
+            Output {
+                pool: 2,
+                amount: 100,
+            },
         ];
 
         let sel = select_notes(&notes, &outputs, f_unit, slack)

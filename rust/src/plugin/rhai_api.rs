@@ -59,12 +59,7 @@ fn memo_read_u32_le(offset: i64) -> RhaiResult<i64> {
     let idx = offset as usize;
     let guard = CURRENT_MEMO.lock().unwrap();
     Ok(if idx + 3 < guard.len() {
-        u32::from_le_bytes([
-            guard[idx],
-            guard[idx + 1],
-            guard[idx + 2],
-            guard[idx + 3],
-        ]) as i64
+        u32::from_le_bytes([guard[idx], guard[idx + 1], guard[idx + 2], guard[idx + 3]]) as i64
     } else {
         0
     })
@@ -346,10 +341,10 @@ mod tests {
         let engine = create_sandboxed_engine();
         // Build a DK00 memo: prefix + from_id(1) + data_len(32u64 LE) + 32 zero bytes
         let mut data = vec![0u8; 45];
-        data[0..4].copy_from_slice(b"DK00");        // prefix
-        data[4] = 1;                                 // from_id = 1
+        data[0..4].copy_from_slice(b"DK00"); // prefix
+        data[4] = 1; // from_id = 1
         data[5..13].copy_from_slice(&32u64.to_le_bytes()); // data_len = 32
-        // data[13..45] = zeros (VerifyingKey placeholder)
+                                                           // data[13..45] = zeros (VerifyingKey placeholder)
 
         let script = r#"
             fn get_prefixes() { return ["444b3030"]; }
@@ -373,8 +368,8 @@ mod tests {
             assert_eq!(sections.len(), 1);
             assert_eq!(sections[0].title, "DKG Message");
             assert_eq!(sections[0].rows[0][1].value, "DKG Round 0");
-            assert_eq!(sections[0].rows[1][1].value, "1");       // from_id
-            assert_eq!(sections[0].rows[2][1].value, "32");      // data_len
+            assert_eq!(sections[0].rows[1][1].value, "1"); // from_id
+            assert_eq!(sections[0].rows[2][1].value, "32"); // data_len
         });
     }
 }

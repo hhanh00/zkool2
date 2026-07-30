@@ -10,30 +10,23 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'plugin.freezed.dart';
 
 /// List all installed plugins.
-Future<List<PluginInfo>> listPlugins({required Coin c}) =>
-    RustLib.instance.api.crateApiPluginListPlugins(c: c);
+Future<List<PluginInfo>> listPlugins({required Coin c}) => RustLib.instance.api.crateApiPluginListPlugins(c: c);
 
 /// Install a plugin from a URL (downloads a .zip archive).
-Future<PluginInfo> installPlugin({required String url, required Coin c}) =>
-    RustLib.instance.api.crateApiPluginInstallPlugin(url: url, c: c);
+Future<PluginInfo> installPlugin({required String url, required Coin c}) => RustLib.instance.api.crateApiPluginInstallPlugin(url: url, c: c);
 
 /// Remove a plugin completely (files + DB).
-Future<void> removePlugin({required String id, required Coin c}) =>
-    RustLib.instance.api.crateApiPluginRemovePlugin(id: id, c: c);
+Future<void> removePlugin({required String id, required Coin c}) => RustLib.instance.api.crateApiPluginRemovePlugin(id: id, c: c);
 
 /// Enable or disable a plugin.
-Future<void> setPluginEnabled(
-        {required String id, required bool enabled, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiPluginSetPluginEnabled(id: id, enabled: enabled, c: c);
+Future<void> setPluginEnabled({required String id, required bool enabled, required Coin c}) =>
+    RustLib.instance.api.crateApiPluginSetPluginEnabled(id: id, enabled: enabled, c: c);
 
 /// Parse a memo with all matching plugins.
 /// `memo_bytes` is the full 512-byte memo (including the 0xFF type byte).
 /// Returns sections from all plugins whose prefixes match.
-Future<List<MemoSection>> parseMemoWithPlugins(
-        {required List<int> memoBytes, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiPluginParseMemoWithPlugins(memoBytes: memoBytes, c: c);
+Future<List<MemoSection>> parseMemoWithPlugins({required List<int> memoBytes, required Coin c}) =>
+    RustLib.instance.api.crateApiPluginParseMemoWithPlugins(memoBytes: memoBytes, c: c);
 
 /// Initialize the plugin system at app startup (creates plugins directory).
 void initPlugins() => RustLib.instance.api.crateApiPluginInitPlugins();

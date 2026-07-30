@@ -4,7 +4,7 @@ use sqlx::Row;
 
 use crate::api::coin::Coin;
 use anyhow::Result;
-#[cfg(feature="flutter")]
+#[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -38,11 +38,9 @@ pub async fn list_db_accounts(db_filepath: &str) -> Result<Vec<DbAccountPreview>
         Err(_) => return Ok(vec![]),
     };
 
-    let rows = match sqlx::query(
-        "SELECT id_account, name FROM accounts ORDER BY position",
-    )
-    .fetch_all(&mut *connection)
-    .await
+    let rows = match sqlx::query("SELECT id_account, name FROM accounts ORDER BY position")
+        .fetch_all(&mut *connection)
+        .await
     {
         Ok(rows) => rows,
         Err(_) => return Ok(vec![]),

@@ -233,9 +233,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "toggle_tx_view":
-                  ref.read(appSettingsProvider.notifier)
-                      .setTransactionViewMode(
-                          !(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
+                  ref.read(appSettingsProvider.notifier).setTransactionViewMode(!(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
                 case "charts":
                   GoRouter.of(context).push("/chart");
                 case "migration":
@@ -277,9 +275,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               ),
               PopupMenuItem<String>(
                 value: "toggle_tx_view",
-                child: Text((ref.read(appSettingsProvider).value?.transactionTableMode ?? false)
-                    ? "View: List"
-                    : "View: Table"),
+                child: Text((ref.read(appSettingsProvider).value?.transactionTableMode ?? false) ? "View: List" : "View: Table"),
               ),
               if (!Platform.isLinux)
                 const PopupMenuItem<String>(
@@ -408,12 +404,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                     ],
                   ),
                   showMemos(context, account.memos, () {
-                    final selectedAccount =
-                        ref.read(selectedAccountProvider).requireValue!;
-                    ref.invalidate(
-                        accountProvider(selectedAccount.id));
+                    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
+                    ref.invalidate(accountProvider(selectedAccount.id));
                   }),
-                  showNotes(ref, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes), _groupByPool, () => setState(() => _groupByPool = !_groupByPool)),
+                  showNotes(ref, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes), _groupByPool,
+                      () => setState(() => _groupByPool = !_groupByPool)),
                   _showZsaHoldings(context, account.zsas),
                 ],
               ));
@@ -989,9 +984,7 @@ Uint8List trimTrailingZeros(Uint8List bytes) {
 Widget showMemos(BuildContext context, List<Memo> memos, VoidCallback onMemoChanged) {
   // Use a key derived from the memo list content to force rebuild when memos update,
   // since SearchableList only reads initialList once.
-  final memoKey = memos.isEmpty
-      ? 'empty'
-      : '${memos.first.id}_${memos.last.id}_${memos.length}';
+  final memoKey = memos.isEmpty ? 'empty' : '${memos.first.id}_${memos.last.id}_${memos.length}';
   return SearchableList(
     key: ValueKey(memoKey),
     initialList: memos,
@@ -1008,9 +1001,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
   final t = Theme.of(navigatorKey.currentContext!);
   final currentHeight = ref.read(currentHeightProvider).value;
   final dustThreshold = BigInt.from(5000);
-  final filtered = showDust
-      ? notes
-      : notes.where((n) => n.idAsset != null || n.value > dustThreshold).toList();
+  final filtered = showDust ? notes : notes.where((n) => n.idAsset != null || n.value > dustThreshold).toList();
 
   // Build grouped items: header + its notes
   List<({int pool, List<TxNote> poolNotes})> groups = [];
@@ -1021,16 +1012,11 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
     }
     // Sort pools in display order: Transparent, Sapling, Orchard, Ironwood
     final poolOrder = [0, 1, 2, 3];
-    groups = poolOrder
-        .where((p) => grouped.containsKey(p))
-        .map((p) => (pool: p, poolNotes: grouped[p]!))
-        .toList();
+    groups = poolOrder.where((p) => grouped.containsKey(p)).map((p) => (pool: p, poolNotes: grouped[p]!)).toList();
   }
 
   // Flattened item count: toolbar + (header + notes per group) or all notes flat
-  final totalItems = groupByPool
-      ? 1 + groups.fold<int>(0, (sum, g) => sum + 1 + g.poolNotes.length)
-      : filtered.length + 1;
+  final totalItems = groupByPool ? 1 + groups.fold<int>(0, (sum, g) => sum + 1 + g.poolNotes.length) : filtered.length + 1;
 
   return ListView.builder(
     itemCount: totalItems,
@@ -1094,9 +1080,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
               onTap: () => toggleLock(ref, context, note.id, !note.locked),
               leading: Text("${note.height}"),
               title: Text(poolToString(note.pool)),
-              trailing: note.idAsset != null
-                  ? Text("${note.value} ${note.assetDisplay}", softWrap: false)
-                  : zatToText(note.value, selectable: false),
+              trailing: note.idAsset != null ? Text("${note.value} ${note.assetDisplay}", softWrap: false) : zatToText(note.value, selectable: false),
               textColor: note.locked ? t.disabledColor : null,
             );
           }
@@ -1113,9 +1097,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
         onTap: () => toggleLock(ref, context, note.id, !note.locked),
         leading: Text("${note.height}"),
         title: Text(poolToString(note.pool)),
-        trailing: note.idAsset != null
-            ? Text("${note.value} ${note.assetDisplay}", softWrap: false)
-            : zatToText(note.value, selectable: false),
+        trailing: note.idAsset != null ? Text("${note.value} ${note.assetDisplay}", softWrap: false) : zatToText(note.value, selectable: false),
         textColor: note.locked ? t.disabledColor : null,
       );
     },

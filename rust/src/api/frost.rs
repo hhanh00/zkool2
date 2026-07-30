@@ -1,6 +1,6 @@
-use anyhow::{Ok, Result};
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
+use anyhow::{Ok, Result};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};

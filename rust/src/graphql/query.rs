@@ -10,17 +10,19 @@ use zcash_keys::keys::UnifiedFullViewingKey;
 use crate::api::coin::{Coin, Network};
 use crate::api::pay::PcztPackage;
 use crate::db::{calculate_balance, get_sync_height};
-use crate::graphql::data::{Account, Addresses, AssetInfo, Balance, Note, Transaction, UnconfirmedTx};
+use crate::graphql::data::{
+    Account, Addresses, AssetInfo, Balance, Note, Transaction, UnconfirmedTx,
+};
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
-use crate::graphql::{Context, check_admin_auth, check_auth};
-use crate::pay::{TxPlan, pool::ALL_POOLS};
+use crate::graphql::{check_admin_auth, check_auth, Context};
+use crate::pay::{pool::ALL_POOLS, TxPlan};
 
+use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
-use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use sqlx::{query, sqlite::SqliteRow, Row};
 
 pub struct Query {}
@@ -183,7 +185,10 @@ impl Query {
         Ok(addresses)
     }
 
-    async fn unconfirmed_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<UnconfirmedTx>> {
+    async fn unconfirmed_by_account(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<Vec<UnconfirmedTx>> {
         check_auth(context, id_account, false)?;
         let mempool = MEMPOOL.lock().await;
         if let Some(unconfirmed_txs) = mempool.unconfirmed.get(&(id_account as u32)) {
@@ -282,7 +287,8 @@ impl Query {
             bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
         let network = context.coin.network();
         let signed =
-            crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?;
+            crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &network, &pczt)
+                .await?;
         let tx_bin = crate::pay::plan::extract_transaction(&signed).await?;
         let tx = hex::encode(&tx_bin);
         Ok(tx)
@@ -358,7 +364,9 @@ pub async fn prepare_tx(
         let amount: u64 = if asset_base == [0u8; 32] {
             zec_to_zats(r.amount)? as u64
         } else {
-            r.amount.to_string().parse::<u64>()
+            r.amount
+                .to_string()
+                .parse::<u64>()
                 .map_err(|e| format!("Invalid ZSA amount: {e}"))?
         };
 
@@ -407,11 +415,10 @@ fn resolve_note(
                 .as_ref()
                 .ok_or_else(|| "Sapling note missing diversifier".to_string())?
                 .clone();
-            let d = sapling_crypto::keys::Diversifier(
-                div.clone()
-                    .try_into()
-                    .map_err(|_| format!("Sapling diversifier wrong length: {} bytes", div.len()))?,
-            );
+            let d =
+                sapling_crypto::keys::Diversifier(div.clone().try_into().map_err(|_| {
+                    format!("Sapling diversifier wrong length: {} bytes", div.len())
+                })?);
             let sfvk = ufvk
                 .sapling()
                 .ok_or_else(|| "UFVK missing sapling key".to_string())?;
@@ -429,19 +436,19 @@ fn resolve_note(
                 .as_ref()
                 .ok_or_else(|| "Orchard/Ironwood note missing diversifier".to_string())?
                 .clone();
-            let d = orchard::keys::Diversifier::from_bytes(
-                div.clone()
-                    .try_into()
-                    .map_err(|_| format!("Orchard diversifier wrong length: {} bytes", div.len()))?,
-            );
+            let d =
+                orchard::keys::Diversifier::from_bytes(div.clone().try_into().map_err(|_| {
+                    format!("Orchard diversifier wrong length: {} bytes", div.len())
+                })?);
             let ofvk = ufvk
                 .orchard()
                 .ok_or_else(|| "UFVK missing orchard key".to_string())?;
             let scope = n.scope.orchard_scope();
             let ivk = ofvk.to_ivk(scope);
             let address = ofvk.address(d, scope);
-            let diversifier_index: Option<u64> =
-                ivk.diversifier_index(&address).and_then(|d| d.try_into().ok());
+            let diversifier_index: Option<u64> = ivk
+                .diversifier_index(&address)
+                .and_then(|d| d.try_into().ok());
             let ua = UnifiedAddress::from_receivers(Some(address), None, None)
                 .ok_or_else(|| "UnifiedAddress::from_receivers returned None".to_string())?;
             (Some(ua.encode(&network)), diversifier_index)
@@ -602,11 +609,7 @@ impl Transaction {
                 locked: r.get(7),
                 memo: r.get(8),
                 id_asset: id_asset.map(|v| v as u32),
-                asset_display: crate::account::asset_display(
-                    id_asset,
-                    r.get(10),
-                    r.get(11),
-                ),
+                asset_display: crate::account::asset_display(id_asset, r.get(10), r.get(11)),
             }
         })
         .fetch_all(&mut *conn)
@@ -713,9 +716,7 @@ impl dataloader::BatchFn<i32, Result<Transaction, Arc<Error>>> for TxBatcher {
             query("CREATE TEMP TABLE IF NOT EXISTS tmp_ids (id INTEGER PRIMARY KEY)")
                 .execute(&mut *conn)
                 .await?;
-            query("DELETE FROM tmp_ids")
-                .execute(&mut *conn)
-                .await?;
+            query("DELETE FROM tmp_ids").execute(&mut *conn).await?;
             for id in keys {
                 query("INSERT INTO tmp_ids(id) VALUES (?1)")
                     .bind(*id)

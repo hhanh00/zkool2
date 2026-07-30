@@ -15,11 +15,7 @@ pub type LedgerResult<T> = std::result::Result<T, LedgerError>;
 
 #[async_trait]
 pub trait HWAPI {
-    async fn get_hw_fvk(
-        &self,
-        network: &Network,
-        aindex: u32,
-    ) -> Result<FullViewingKey>;
+    async fn get_hw_fvk(&self, network: &Network, aindex: u32) -> Result<FullViewingKey>;
     async fn get_hw_sapling_address(&self, network: &Network, aindex: u32) -> Result<String>;
     async fn get_hw_transparent_address(
         &self,
@@ -69,4 +65,3 @@ cfg_if::cfg_if! {
         mod tests;
     }
 }
-

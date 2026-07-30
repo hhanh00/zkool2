@@ -1,15 +1,22 @@
 use std::{collections::HashMap, sync::LazyLock};
 
+use crate::graphql::{check_admin_auth, check_auth};
 use crate::{
-    Sink, account::generate_next_dindex, api::mempool::MempoolMsg, graphql::{
-        Context, data::{Addresses, Event, EventType, MigrationEvent, UnconfirmedNote}, query::{prepare_tx, zats_to_zec}, subs::SUBS
-    }, pay::plan::{extract_transaction, sign_transaction}
+    account::generate_next_dindex,
+    api::mempool::MempoolMsg,
+    graphql::{
+        data::{Addresses, Event, EventType, MigrationEvent, UnconfirmedNote},
+        query::{prepare_tx, zats_to_zec},
+        subs::SUBS,
+        Context,
+    },
+    pay::plan::{extract_transaction, sign_transaction},
+    Sink,
 };
 use bigdecimal::BigDecimal;
-use juniper::{graphql_object, FieldResult, GraphQLObject, GraphQLInputObject};
+use juniper::{graphql_object, FieldResult, GraphQLInputObject, GraphQLObject};
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio_util::sync::CancellationToken;
-use crate::graphql::{check_admin_auth, check_auth};
 
 pub struct Mutation {}
 
@@ -61,7 +68,6 @@ pub struct UnsignedTx {
     pub recipients: Vec<Output>,
     pub fee: BigDecimal,
 }
-
 
 #[graphql_object]
 #[graphql(
@@ -122,7 +128,12 @@ impl Mutation {
         Ok(true)
     }
 
-    async fn synchronize(id_accounts: Vec<i32>, fast: Option<bool>, transparent_limit: Option<i32>, context: &Context) -> FieldResult<i32> {
+    async fn synchronize(
+        id_accounts: Vec<i32>,
+        fast: Option<bool>,
+        transparent_limit: Option<i32>,
+        context: &Context,
+    ) -> FieldResult<i32> {
         check_admin_auth(context)?;
         let fast = fast.unwrap_or_default();
         let transparent_limit = transparent_limit
@@ -144,7 +155,12 @@ impl Mutation {
         Ok(height as i32)
     }
 
-    async fn synchronize_account(id_account: i32, fast: Option<bool>, transparent_limit: Option<i32>, context: &Context) -> FieldResult<i32> {
+    async fn synchronize_account(
+        id_account: i32,
+        fast: Option<bool>,
+        transparent_limit: Option<i32>,
+        context: &Context,
+    ) -> FieldResult<i32> {
         check_auth(context, id_account, false)?;
         let fast = fast.unwrap_or_default();
         let transparent_limit = transparent_limit
@@ -173,7 +189,8 @@ impl Mutation {
         let mut client = coin.client().await?;
         let height = client.latest_height().await?;
         let network = coin.network();
-        let signed_pczt = sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?;
+        let signed_pczt =
+            sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?;
         let tx_bytes = extract_transaction(&signed_pczt).await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
         Ok(txid)
@@ -195,9 +212,16 @@ impl Mutation {
             .parse()
             .map_err(|_| "Invalid amount: must be a non-negative integer")?;
         let coin = &context.coin;
-        let tx_bytes =
-            crate::api::issuance::issue_asset(asset_name, amount, first_issuance, finalize, None, id_account as u32, coin)
-                .await?;
+        let tx_bytes = crate::api::issuance::issue_asset(
+            asset_name,
+            amount,
+            first_issuance,
+            finalize,
+            None,
+            id_account as u32,
+            coin,
+        )
+        .await?;
         let mut client = coin.client().await?;
         let height = client.latest_height().await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
@@ -208,22 +232,16 @@ impl Mutation {
     ///
     /// This is needed for assets discovered via blockchain scan (where the
     /// name is not transmitted on-chain). Also useful for renaming.
-    async fn set_asset_name(
-        id_asset: i32,
-        name: String,
-        context: &Context,
-    ) -> FieldResult<bool> {
+    async fn set_asset_name(id_asset: i32, name: String, context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
         let coin = &context.coin;
         let mut connection = coin.get_connection().await?;
-        let r = sqlx::query(
-            "UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2",
-        )
-        .bind(&name)
-        .bind(id_asset)
-        .execute(&mut *connection)
-        .await
-        .map_err(|e| format!("Failed to set asset name: {e}"))?;
+        let r = sqlx::query("UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2")
+            .bind(&name)
+            .bind(id_asset)
+            .execute(&mut *connection)
+            .await
+            .map_err(|e| format!("Failed to set asset name: {e}"))?;
         if r.rows_affected() == 0 {
             return Err(format!("No asset with id_asset={id_asset}").into());
         }
@@ -272,7 +290,11 @@ impl Mutation {
         crate::graphql::frost::dkg_cancel(context).await
     }
 
-    pub async fn dkg_set_address(id_participant: i32, address: String, context: &Context) -> FieldResult<bool> {
+    pub async fn dkg_set_address(
+        id_participant: i32,
+        address: String,
+        context: &Context,
+    ) -> FieldResult<bool> {
         crate::graphql::frost::dkg_set_address(id_participant, address, context).await
     }
 
@@ -280,22 +302,31 @@ impl Mutation {
         crate::graphql::frost::do_dkg(context).await
     }
 
-    pub async fn frost_sign(id_coordinator: i32, id_account: i32, message_account: i32, pczt: String, context: &Context) -> FieldResult<bool> {
-        crate::graphql::frost::frost_sign(id_coordinator, id_account, message_account, pczt, context).await
+    pub async fn frost_sign(
+        id_coordinator: i32,
+        id_account: i32,
+        message_account: i32,
+        pczt: String,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        crate::graphql::frost::frost_sign(
+            id_coordinator,
+            id_account,
+            message_account,
+            pczt,
+            context,
+        )
+        .await
     }
 
     /// Run one step of the note migration process (split non-SD → SD, then
     /// migrate SD to Ironwood). Idempotent — call every ~6 seconds until
     /// Complete.
-    async fn step_migration(
-        id_account: i32,
-        context: &Context,
-    ) -> FieldResult<MigrationEvent> {
+    async fn step_migration(id_account: i32, context: &Context) -> FieldResult<MigrationEvent> {
         check_auth(context, id_account, true)?;
-        let event =
-            crate::api::migrate::step_migration(&context.coin)
-                .await
-                .map_err(|e| format!("Migration error: {e}"))?;
+        let event = crate::api::migrate::step_migration(&context.coin)
+            .await
+            .map_err(|e| format!("Migration error: {e}"))?;
         Ok(match event {
             crate::api::migrate::MigrationEvent::SplitComplete { fee } => MigrationEvent {
                 event: "SplitComplete".to_string(),
@@ -365,7 +396,9 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                                     pool: n.pool as i32,
                                     scope: n.scope as i32,
                                     value: zats_to_zec(n.value),
-                                    diversifier: n.diversifier.as_deref()
+                                    diversifier: n
+                                        .diversifier
+                                        .as_deref()
                                         .map(hex::encode)
                                         .unwrap_or_default(),
                                     diversifier_index: n.diversifier_index.map(BigDecimal::from),
