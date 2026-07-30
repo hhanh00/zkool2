@@ -237,6 +237,7 @@ pub async fn plan_transaction(
     issuance: Option<&IssuanceInfo>,
     migration: bool,
     preselected: Option<&[u32]>,
+    anchor_height: Option<u32>,
 ) -> Result<PcztPackage> {
     let mut input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
     let height = client.latest_height().await?;
@@ -588,7 +589,14 @@ pub async fn plan_transaction(
 
     // ── Fetch tree states and anchors ────────────────────────────────────
     let h = crate::sync::get_db_height(connection, account).await?;
-    let (ts, to, ti) = crate::sync::get_tree_state(network, client, h.height).await?;
+    let anchor_height = anchor_height.unwrap_or(h.height);
+    anyhow::ensure!(
+        anchor_height <= h.height,
+        "Anchor height {anchor_height} is ahead of checkpoint {}",
+        h.height,
+    );
+    let (ts, to, ti) =
+        crate::sync::get_tree_state(network, client, anchor_height).await?;
     let es = ts.to_edge(&SaplingHasher::default());
     let eo = to.to_edge(&OrchardHasher::default());
     let ei = ti.to_edge(&OrchardHasher::default());
@@ -761,6 +769,7 @@ pub async fn plan_transaction(
                             &eo,
                             &ero,
                             orchard_note_version,
+                            (anchor_height < h.height).then_some(eo.1),
                         )
                         .await?;
 
@@ -783,6 +792,7 @@ pub async fn plan_transaction(
                             &ei,
                             &ero,
                             orchard::NoteVersion::V3,
+                            (anchor_height < h.height).then_some(ei.1),
                         )
                         .await?;
 

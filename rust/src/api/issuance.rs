@@ -125,7 +125,8 @@ pub async fn issue_asset(
         None,          // category
         Some(&issuance_info),
         false,         // migration
-        None,           // preselected
+        None,          // preselected
+        None,          // anchor_height
     )
     .await?;
 
