@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.26.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.1...zkool-v6.26.0-rc.2) (2026-07-30)
+
+
+### Features
+
+* enhance migration with streaming and progress tracking ([513ad4f](https://github.com/hhanh00/zkool2/commit/513ad4fc3b28ac4813c28edac9da03c18721ecf7))
+* improve migration flow ([eedc281](https://github.com/hhanh00/zkool2/commit/eedc281ca8e6fab56392bd737054e265ae7d3104))
+
+
+### Bug Fixes
+
+* address review comments ([4f71675](https://github.com/hhanh00/zkool2/commit/4f71675dea03d97683031c9af2e990b1a17e683a))
+
 ## [6.26.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc...zkool-v6.26.0-rc.1) (2026-07-30)
 
 
