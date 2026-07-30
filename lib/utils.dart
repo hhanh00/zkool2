@@ -198,6 +198,8 @@ String compactBetween(DateTime from, DateTime to) {
       return (Colors.blue, Icons.shield, "Shield");
     case 12:
       return (Colors.grey, Icons.drag_handle, "T. Self Transfer");
+    case 16:
+      return (Colors.teal, Icons.sync_alt, "Migration");
     default:
       return (Colors.grey, Icons.question_mark, "Unknown");
   }
