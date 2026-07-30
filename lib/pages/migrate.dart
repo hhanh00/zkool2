@@ -36,6 +36,38 @@ class _MigratePageState extends State<MigratePage>
     "~1h between steps",
   ];
 
+  Stream<MigrationStatus> _runCancellableMigration({
+    required BigInt meanDelayMs,
+  }) {
+    final migration = NoteMigration();
+    final source = migration.run(
+      c: coinContext.coin,
+      meanDelayMs: meanDelayMs,
+    );
+    StreamSubscription<MigrationStatus>? sourceSubscription;
+    late final StreamController<MigrationStatus> controller;
+
+    controller = StreamController<MigrationStatus>(
+      onListen: () {
+        sourceSubscription = source.listen(
+          controller.add,
+          onError: controller.addError,
+          onDone: controller.close,
+        );
+      },
+      onPause: () => sourceSubscription?.pause(),
+      onResume: () => sourceSubscription?.resume(),
+      onCancel: () async {
+        await Future.wait([
+          migration.cancel(),
+          if (sourceSubscription != null) sourceSubscription!.cancel(),
+        ]);
+      },
+    );
+
+    return controller.stream;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,12 +77,12 @@ class _MigratePageState extends State<MigratePage>
   void _startMigration() {
     try {
       _sub?.cancel();
-      final c = coinContext.coin;
       final meanDelayMs =
           BigInt.from(_speedMeanMs[_speedIndex.round()]);
-      final stream = runMigration(c: c, meanDelayMs: meanDelayMs);
+      final stream = _runCancellableMigration(meanDelayMs: meanDelayMs);
       _sub = stream.listen(
         (status) {
+          if (!mounted) return;
           setState(() => _status = status);
 
           if (status.nextAction.startsWith('Waiting')) {
@@ -366,7 +398,8 @@ class _MigratePageState extends State<MigratePage>
                         phase == 'migrating'
                             ? "Orchard: ${status.sdNotesCount} SD  |  Ironwood: ${status.ironwoodSdCount} SD"
                             : "SD: ${status.sdNotesCount}  |  Non-SD: ${status.nonSdNotesCount}",
-                        style: tt.bodyLarge),
+                        style: tt.bodyLarge,
+                      ),
                   ],
                 ),
               ),

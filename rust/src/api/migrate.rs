@@ -1,4 +1,5 @@
 use anyhow::Result;
+use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
@@ -32,6 +33,40 @@ pub enum MigrationEvent {
     Error { message: String },
 }
 
+#[cfg_attr(feature = "flutter", frb(opaque))]
+pub struct NoteMigration {
+    cancellation_token: CancellationToken,
+}
+
+impl NoteMigration {
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn new() -> Self {
+        Self {
+            cancellation_token: CancellationToken::new(),
+        }
+    }
+
+    #[cfg(feature = "flutter")]
+    pub async fn run(
+        &self,
+        sink: StreamSink<MigrationStatus>,
+        c: &Coin,
+        mean_delay_ms: u64,
+    ) -> Result<()> {
+        run_migration(
+            sink,
+            c,
+            mean_delay_ms,
+            self.cancellation_token.clone(),
+        )
+        .await
+    }
+
+    pub fn cancel(&self) {
+        self.cancellation_token.cancel();
+    }
+}
+
 /// Single-shot step (kept for FRB generated-code compatibility).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
@@ -49,11 +84,12 @@ pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
 /// `mean_delay_ms` controls the mean wait time (in milliseconds) of the
 /// exponential random delay between migration steps. Longer delays make
 /// it harder for an observer to correlate the transactions.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn run_migration(
+#[cfg(feature = "flutter")]
+async fn run_migration(
     sink: StreamSink<MigrationStatus>,
     c: &Coin,
     mean_delay_ms: u64,
+    cancellation_token: CancellationToken,
 ) -> Result<()> {
     use rand_core::{OsRng, RngCore};
     use zcash_protocol::consensus::{BlockHeight, NetworkUpgrade, Parameters};
@@ -84,41 +120,54 @@ pub async fn run_migration(
     let mut last_work = String::new();
 
     loop {
-        let skip = match last_action_height {
-            Some(h) => client.latest_height().await? <= h,
-            None => false,
-        };
-
-        if !skip {
-            let (event, status) = do_step(c, acc_split, acc_migrate).await?;
-
-            // Track latest counts for the waiting display.
-            last_phase = status.phase.clone();
-            last_sd_count = status.sd_notes_count;
-            last_non_sd_count = status.non_sd_notes_count;
-            last_iw_count = status.ironwood_sd_count;
-            last_progress = status.progress;
-            last_work = status.work_summary.clone();
-
-            // Accumulate fees from broadcast events.
-            match &event {
-                crate::migrate::MigrationEvent::SplitComplete { fee } => {
-                    acc_split += fee;
-                    last_action_height = Some(client.latest_height().await?);
-                }
-                crate::migrate::MigrationEvent::MigrateComplete { fee } => {
-                    acc_migrate += fee;
-                    last_action_height = Some(client.latest_height().await?);
-                }
-                _ => {}
-            }
-
-            if matches!(event, crate::migrate::MigrationEvent::Complete) {
-                sink.add(status).ok();
+        let complete = tokio::select! {
+            biased;
+            _ = cancellation_token.cancelled() => {
+                tracing::info!("Note migration cancelled");
                 break;
             }
+            result = async {
+                let skip = match last_action_height {
+                    Some(h) => client.latest_height().await? <= h,
+                    None => false,
+                };
 
-            sink.add(status).ok();
+                if skip {
+                    return Ok::<bool, anyhow::Error>(false);
+                }
+
+                let (event, status) = do_step(c, acc_split, acc_migrate).await?;
+
+                // Track latest counts for the waiting display.
+                last_phase = status.phase.clone();
+                last_sd_count = status.sd_notes_count;
+                last_non_sd_count = status.non_sd_notes_count;
+                last_iw_count = status.ironwood_sd_count;
+                last_progress = status.progress;
+                last_work = status.work_summary.clone();
+
+                // Accumulate fees from broadcast events.
+                match &event {
+                    crate::migrate::MigrationEvent::SplitComplete { fee } => {
+                        acc_split += fee;
+                        last_action_height = Some(client.latest_height().await?);
+                    }
+                    crate::migrate::MigrationEvent::MigrateComplete { fee } => {
+                        acc_migrate += fee;
+                        last_action_height = Some(client.latest_height().await?);
+                    }
+                    _ => {}
+                }
+
+                let complete =
+                    matches!(event, crate::migrate::MigrationEvent::Complete);
+                sink.add(status).ok();
+                Ok(complete)
+            } => result?,
+        };
+
+        if complete {
+            break;
         }
 
         // Exponential delay between steps (shared by skip and normal paths).
@@ -148,7 +197,14 @@ pub async fn run_migration(
         })
         .ok();
 
-        tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        tokio::select! {
+            biased;
+            _ = cancellation_token.cancelled() => {
+                tracing::info!("Note migration cancelled");
+                break;
+            }
+            _ = tokio::time::sleep(std::time::Duration::from_millis(delay_ms)) => {}
+        }
     }
 
     Ok(())
