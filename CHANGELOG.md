@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.26.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc...zkool-v6.26.0-rc.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* add cancellation support for note migration ([1190629](https://github.com/hhanh00/zkool2/commit/11906291a6a94619c75a1591f358c83b2b70c40c))
+* confirm before leaving active migration ([766abbd](https://github.com/hhanh00/zkool2/commit/766abbdb8dfe4099ee4f444085575b7b0d534764))
+
 ## [6.26.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.1...zkool-v6.26.0-rc) (2026-07-29)
 
 
