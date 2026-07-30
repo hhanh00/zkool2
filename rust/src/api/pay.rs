@@ -38,6 +38,7 @@ pub async fn prepare(recipients: &[Recipient], options: PaymentOptions, c: &Coin
         None, // issuance — normal sends have no issuance
         false, // migration — only used by note migration
         None,  // preselected
+        None,  // anchor_height
     )
     .await
 }
@@ -68,7 +69,8 @@ pub async fn prepare_migration(
         None,   // category
         None,   // issuance
         true,   // migration
-        None,  // preselected
+        None,   // preselected
+        None,   // anchor_height
     )
     .await
 }

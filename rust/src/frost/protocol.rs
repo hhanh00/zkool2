@@ -482,6 +482,7 @@ pub async fn publish(
         None,
         false, // migration
         None,  // preselected
+        None,  // anchor_height
     )
     .await
     .context("plan_transaction in DKG publish")?;

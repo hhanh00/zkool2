@@ -27,6 +27,9 @@ pub const MIN_SD: u64 = 100 * COST_PER_ACTION;
 /// Caps transaction size to avoid oversized bundles that nodes reject.
 const MAX_SPLIT_INPUTS: usize = 50;
 
+/// Migration anchors are rounded down to this block interval.
+pub const ANCHOR_BUCKET_SIZE: u32 = 144;
+
 /// Fee padding embedded in each standard denomination.
 /// Covers Orchard input + change (2 actions in sum mode) and Ironwood
 /// output (2 actions, padded) = 4 × COST_PER_ACTION = 20,000 zats.
@@ -108,8 +111,10 @@ pub struct MigrationStatus {
 /// Notes grouped by pool and ZEC/ZSA.
 struct OrchardZecNote {
     id: u32,
+    height: u32,
     value: u64,
     cmx: Option<Vec<u8>>,
+    has_checkpoint: bool,
 }
 
 /// Fetch unspent Orchard ZEC notes with their cmx values.
@@ -120,28 +125,43 @@ struct OrchardZecNote {
 async fn fetch_unspent_orchard_notes_with_cmx(
     connection: &mut SqliteConnection,
     account: u32,
+    checkpoint_height: u32,
 ) -> Result<Vec<OrchardZecNote>> {
     sqlx::query(
-        "SELECT a.id_note, a.value, a.cmx
+        "SELECT a.id_note, a.height, a.value, a.cmx,
+                EXISTS (
+                    SELECT 1
+                    FROM witnesses w
+                    WHERE w.account = a.account
+                    AND w.note = a.id_note
+                    AND w.height = ?1
+                )
          FROM notes a
          LEFT JOIN spends b ON a.id_note = b.id_note
          WHERE b.id_note IS NULL
-         AND a.account = ?
+         AND a.account = ?2
          AND a.pool = 2
          AND a.id_asset IS NULL
          AND a.locked = 0",
     )
+    .bind(checkpoint_height)
     .bind(account)
     .map(|row| {
         OrchardZecNote {
             id: row.get(0),
-            value: row.get::<i64, _>(1) as u64,
-            cmx: row.get(2),
+            height: row.get(1),
+            value: row.get::<i64, _>(2) as u64,
+            cmx: row.get(3),
+            has_checkpoint: row.get(4),
         }
     })
     .fetch_all(connection)
     .await
     .map_err(Into::into)
+}
+
+fn anchor_bucket_height(height: u32) -> u32 {
+    height - height % ANCHOR_BUCKET_SIZE
 }
 
 /// Run one migration step. Fully idempotent — re-scans notes on every call.
@@ -152,6 +172,8 @@ pub async fn step(
     account: u32,
 ) -> Result<MigrationEvent> {
     let height = client.latest_height().await?;
+    let checkpoint_height =
+        crate::sync::get_db_height(&mut *connection, account).await?.height;
 
     // Get the wallet's own Orchard/Ironwood address
     let hw = get_account_hw(&mut *connection, account).await?;
@@ -159,8 +181,12 @@ pub async fn step(
         get_account_full_address(network, &mut *connection, account, 0, hw).await?;
 
     // Fetch all unspent Orchard ZEC notes with cmx.
-    let orchard_zec =
-        fetch_unspent_orchard_notes_with_cmx(&mut *connection, account).await?;
+    let orchard_zec = fetch_unspent_orchard_notes_with_cmx(
+        &mut *connection,
+        account,
+        checkpoint_height,
+    )
+    .await?;
 
     info!(
         "Migration step: {} Orchard ZEC notes found",
@@ -294,6 +320,7 @@ pub async fn step(
             None,
             true, // migration
             Some(&preselected),
+            None, // anchor_height
         )
         .await?;
 
@@ -323,8 +350,25 @@ pub async fn step(
          */
 
         // ── Migrating phase ──
+        let anchor_height = anchor_bucket_height(checkpoint_height);
+
+        // A witness can only be rewound to an anchor whose tree already
+        // contains the note. The latest checkpoint must also contain the note
+        // so its witness is available for Witness::rewind().
+        let mut sorted_sd: Vec<&OrchardZecNote> = sd_notes
+            .iter()
+            .copied()
+            .filter(|n| n.height <= anchor_height && n.has_checkpoint)
+            .collect();
+        if sorted_sd.is_empty() {
+            info!(
+                "Migration waiting: no SD note can be rewound from checkpoint {} to anchor {}",
+                checkpoint_height, anchor_height,
+            );
+            return Ok(MigrationEvent::NothingToDo);
+        }
+
         // Sort by cmx for deterministic random order
-        let mut sorted_sd: Vec<&&OrchardZecNote> = sd_notes.iter().collect();
         sorted_sd.sort_by(|a, b| {
             let a_cmx = a.cmx.as_deref().unwrap_or(&[]);
             let b_cmx = b.cmx.as_deref().unwrap_or(&[]);
@@ -346,8 +390,8 @@ pub async fn step(
         }];
 
         info!(
-            "Migration: note id={} value={} → Ironwood amount={}",
-            note.id, note.value, ironwood_amount,
+            "Migration: note id={} value={} → Ironwood amount={}, anchor={} (checkpoint={})",
+            note.id, note.value, ironwood_amount, anchor_height, checkpoint_height,
         );
 
         let preselected: Vec<u32> = vec![note.id];
@@ -366,6 +410,7 @@ pub async fn step(
             None,
             true, // migration — O→I
             Some(&preselected),
+            Some(anchor_height),
         )
         .await?;
 
@@ -401,6 +446,15 @@ mod tests {
         // Old P=10_000 values are no longer SD
         assert!(!is_sd(110_000));
         assert!(!is_sd(1_010_000));
+    }
+
+    #[test]
+    fn test_anchor_bucket_height() {
+        assert_eq!(anchor_bucket_height(0), 0);
+        assert_eq!(anchor_bucket_height(143), 0);
+        assert_eq!(anchor_bucket_height(144), 144);
+        assert_eq!(anchor_bucket_height(145), 144);
+        assert_eq!(anchor_bucket_height(288), 288);
     }
 
     #[test]
