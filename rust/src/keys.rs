@@ -254,10 +254,7 @@ pub fn sapling_ivk_nk_for_scope(
     sapling_crypto::keys::NullifierDerivingKey,
 ) {
     if scope.is_external() {
-        (
-            vk.fvk().vk.ivk(),
-            vk.to_nk(zip32::Scope::External),
-        )
+        (vk.fvk().vk.ivk(), vk.to_nk(zip32::Scope::External))
     } else {
         (
             vk.to_internal_fvk().vk.ivk(),

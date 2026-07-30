@@ -9,7 +9,14 @@ use zcash_protocol::consensus::NetworkConstants;
 use zcash_transparent::address::TransparentAddress;
 
 use crate::{
-    IntoAnyhow, account::get_sapling_address, api::coin::Network, db::{get_account_aindex, get_account_dindex}, ledger::{LedgerError, LedgerResult, transport::{APDUCommand, Device, connect_ledger}}, tiu
+    account::get_sapling_address,
+    api::coin::Network,
+    db::{get_account_aindex, get_account_dindex},
+    ledger::{
+        transport::{connect_ledger, APDUCommand, Device},
+        LedgerError, LedgerResult,
+    },
+    tiu, IntoAnyhow,
 };
 
 pub async fn get_fvk<D: Device>(ledger: &D, aindex: u32) -> LedgerResult<FullViewingKey> {
@@ -143,7 +150,11 @@ pub async fn get_hw_transparent_address<D: Device>(
     Ok((pk.to_vec(), taddress))
 }
 
-pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConnection, account: u32) -> LedgerResult<String> {
+pub async fn show_sapling_address(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> LedgerResult<String> {
     let ledger = connect_ledger().await?;
     let aindex = get_account_aindex(connection, account).await? | 0x80000000u32;
     // We SHOULD be using the diversifier index and ask the device
@@ -193,7 +204,11 @@ pub async fn show_sapling_address(network: &Network, connection: &mut SqliteConn
     Ok(address.encode(network))
 }
 
-pub async fn show_transparent_address(network: &Network, connection: &mut SqliteConnection, account: u32) -> LedgerResult<String> {
+pub async fn show_transparent_address(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> LedgerResult<String> {
     let ledger = connect_ledger().await?;
     let aindex = get_account_aindex(connection, account).await?;
     let dindex = get_account_dindex(connection, account).await?;
@@ -227,7 +242,10 @@ mod tests {
     use zcash_keys::encoding::AddressCodec;
     use zcash_protocol::consensus::MainNetwork;
 
-    use crate::{ledger::transport::{APDUCommand, Device, LEDGER_ZEMU}, tiu};
+    use crate::{
+        ledger::transport::{APDUCommand, Device, LEDGER_ZEMU},
+        tiu,
+    };
     use std::io::Write;
 
     #[tokio::test]
@@ -278,7 +296,10 @@ mod tests {
         let address: [u8; 43] = tiu!(res.data[0..43]);
         let address = PaymentAddress::from_bytes(&address).unwrap();
         let address = address.encode(&MainNetwork);
-        assert_eq!(address, "zs157m24pkqcq09edxz9p0p653xcsfpdpcspcad5wkkp3pq29hvc7h2uvs7wncakwqtl6jqkxn939p");
+        assert_eq!(
+            address,
+            "zs157m24pkqcq09edxz9p0p653xcsfpdpcspcad5wkkp3pq29hvc7h2uvs7wncakwqtl6jqkxn939p"
+        );
         Ok(())
     }
 }

@@ -63,9 +63,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   }
 
   void _startMemoEditing(TxAccount txd) {
-    final firstTextMemo = txd.memos
-        .map((m) => m.memo)
-        .firstWhere((m) => m != null && m.isNotEmpty, orElse: () => null);
+    final firstTextMemo = txd.memos.map((m) => m.memo).firstWhere((m) => m != null && m.isNotEmpty, orElse: () => null);
     _memoController.text = txd.userMemo ?? firstTextMemo ?? '';
     _memoController.selection = TextSelection.fromPosition(
       TextPosition(offset: _memoController.text.length),
@@ -83,9 +81,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
     final newText = _memoController.text.trim();
     // Compute the effective memo before editing
-    final firstTextMemo = txd.memos
-        .map((m) => m.memo)
-        .firstWhere((m) => m != null && m.isNotEmpty, orElse: () => null);
+    final firstTextMemo = txd.memos.map((m) => m.memo).firstWhere((m) => m != null && m.isNotEmpty, orElse: () => null);
     final oldText = txd.userMemo ?? firstTextMemo ?? '';
 
     setState(() {});
@@ -149,14 +145,8 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   List<Widget> show(TxAccount txd) {
     final t = Theme.of(context).textTheme;
     // ZEC totals (idAsset == null)
-    final zecSpent = txd.spends
-        .where((n) => n.idAsset == null)
-        .map((n) => n.value)
-        .fold(BigInt.zero, (a, b) => a + b);
-    final zecReceived = txd.notes
-        .where((n) => n.idAsset == null)
-        .map((n) => n.value)
-        .fold(BigInt.zero, (a, b) => a + b);
+    final zecSpent = txd.spends.where((n) => n.idAsset == null).map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
+    final zecReceived = txd.notes.where((n) => n.idAsset == null).map((n) => n.value).fold(BigInt.zero, (a, b) => a + b);
 
     // ZSA totals grouped by assetDisplay
     final zsaSpent = <String, BigInt>{};

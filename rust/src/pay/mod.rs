@@ -130,10 +130,7 @@ pub struct TxPlan {
     pub can_broadcast: bool,
 }
 
-fn orchard_asset_name(
-    proprietary: &BTreeMap<String, Vec<u8>>,
-    asset: Option<AssetBase>,
-) -> String {
+fn orchard_asset_name(proprietary: &BTreeMap<String, Vec<u8>>, asset: Option<AssetBase>) -> String {
     proprietary
         .get("asset_name")
         .and_then(|value| String::from_utf8(value.clone()).ok())

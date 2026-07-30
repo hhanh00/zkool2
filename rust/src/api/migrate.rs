@@ -53,13 +53,7 @@ impl NoteMigration {
         c: &Coin,
         mean_delay_ms: u64,
     ) -> Result<()> {
-        run_migration(
-            sink,
-            c,
-            mean_delay_ms,
-            self.cancellation_token.clone(),
-        )
-        .await
+        run_migration(sink, c, mean_delay_ms, self.cancellation_token.clone()).await
     }
 
     pub fn cancel(&self) {
@@ -72,8 +66,12 @@ impl NoteMigration {
 pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
     let (event, _status) = do_step(c, 0, 0, true, true).await?;
     Ok(match event {
-        crate::migrate::MigrationEvent::SplitComplete { fee } => MigrationEvent::SplitComplete { fee },
-        crate::migrate::MigrationEvent::MigrateComplete { fee } => MigrationEvent::MigrateComplete { fee },
+        crate::migrate::MigrationEvent::SplitComplete { fee } => {
+            MigrationEvent::SplitComplete { fee }
+        }
+        crate::migrate::MigrationEvent::MigrateComplete { fee } => {
+            MigrationEvent::MigrateComplete { fee }
+        }
         crate::migrate::MigrationEvent::Complete => MigrationEvent::Complete,
         crate::migrate::MigrationEvent::NothingToDo => MigrationEvent::NothingToDo,
     })
@@ -102,11 +100,17 @@ async fn run_migration(
     if !network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height)) {
         sink.add(MigrationStatus {
             phase: "complete".into(),
-            split_fees: 0, migrate_fees: 0, total_fees: 0,
-            sd_notes_count: 0, non_sd_notes_count: 0, ironwood_sd_count: 0,
+            split_fees: 0,
+            migrate_fees: 0,
+            total_fees: 0,
+            sd_notes_count: 0,
+            non_sd_notes_count: 0,
+            ironwood_sd_count: 0,
             progress: 1.0,
-            next_action: String::new(), work_summary: String::new(),
-        }).ok();
+            next_action: String::new(),
+            work_summary: String::new(),
+        })
+        .ok();
         return Ok(());
     }
 
@@ -130,7 +134,9 @@ async fn run_migration(
 
         tracing::info!(
             "Migration delay: {}ms (mean={}ms, u={:.6})",
-            delay_ms, mean_delay_ms, u
+            delay_ms,
+            mean_delay_ms,
+            u
         );
 
         status.next_action = format!("Waiting {}s...", delay_secs);
@@ -273,12 +279,16 @@ async fn current_migration_status(
     acc_migrate: u64,
 ) -> Result<MigrationStatus> {
     let mut connection = c.get_connection().await?;
-    let all_notes = crate::pay::plan::fetch_unspent_notes_grouped_by_pool(&mut connection, c.account).await?;
+    let all_notes =
+        crate::pay::plan::fetch_unspent_notes_grouped_by_pool(&mut connection, c.account).await?;
     let orchard_zec: Vec<&crate::pay::InputNote> = all_notes
         .iter()
         .filter(|n| n.pool == 2 && n.asset_base == vec![0u8; 32])
         .collect();
-    let sd_count = orchard_zec.iter().filter(|n| crate::migrate::is_sd(n.amount)).count() as u32;
+    let sd_count = orchard_zec
+        .iter()
+        .filter(|n| crate::migrate::is_sd(n.amount))
+        .count() as u32;
     let non_sd_vals: Vec<u64> = orchard_zec
         .iter()
         .filter(|n| !crate::migrate::is_sd(n.amount))
@@ -294,7 +304,9 @@ async fn current_migration_status(
     // Count Ironwood SD notes for phase 2 progress (amount is value - SD_FEE_PAD).
     let ironwood_sd = all_notes
         .iter()
-        .filter(|n| n.pool == 3 && n.asset_base == vec![0u8; 32] && crate::migrate::is_iw_sd(n.amount))
+        .filter(|n| {
+            n.pool == 3 && n.asset_base == vec![0u8; 32] && crate::migrate::is_iw_sd(n.amount)
+        })
         .count() as u32;
     let total_sd = sd_count + ironwood_sd;
 
@@ -308,9 +320,7 @@ async fn current_migration_status(
         "splitting" if sd_count + effective_non_sd > 0 => {
             sd_count as f64 / (sd_count + effective_non_sd) as f64
         }
-        "migrating" if total_sd > 0 => {
-            ironwood_sd as f64 / total_sd as f64
-        }
+        "migrating" if total_sd > 0 => ironwood_sd as f64 / total_sd as f64,
         _ => 1.0,
     };
 
@@ -351,13 +361,11 @@ async fn wait_for_anchor_boundary(
     client: &mut crate::Client,
     status: &MigrationStatus,
 ) -> Result<()> {
-    const HEIGHT_POLL_INTERVAL: std::time::Duration =
-        std::time::Duration::from_secs(10);
+    const HEIGHT_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(10);
 
     let observed_height = client.latest_height().await?;
     let db_height = wallet_height(c).await?;
-    let mut boundary =
-        crate::migrate::next_anchor_bucket_height(observed_height.max(db_height));
+    let mut boundary = crate::migrate::next_anchor_bucket_height(observed_height.max(db_height));
 
     let mut waiting = status.clone();
     waiting.next_action = format!("Waiting for anchor block {}...", boundary);
@@ -369,9 +377,7 @@ async fn wait_for_anchor_boundary(
             // If height polling missed the boundary, do not fetch its
             // historical tree state. Wait for a boundary that is observed as
             // the current tip.
-            boundary = crate::migrate::next_anchor_bucket_height(
-                tip.saturating_add(1),
-            );
+            boundary = crate::migrate::next_anchor_bucket_height(tip.saturating_add(1));
             let mut waiting = status.clone();
             waiting.next_action = format!("Waiting for anchor block {}...", boundary);
             sink.add(waiting).ok();
@@ -398,8 +404,7 @@ async fn wait_for_anchor_boundary(
                     tip.max(synced_height).saturating_add(1),
                 );
                 let mut waiting = status.clone();
-                waiting.next_action =
-                    format!("Waiting for anchor block {}...", boundary);
+                waiting.next_action = format!("Waiting for anchor block {}...", boundary);
                 sink.add(waiting).ok();
                 continue;
             }

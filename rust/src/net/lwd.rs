@@ -7,7 +7,10 @@ use tonic::{async_trait, Request};
 use zcash_protocol::consensus::{BlockHeight, BranchId};
 
 use crate::{
-    GRPCClient, api::{coin::Network, network::LWDInfo}, lwd::*, net::LwdServer
+    api::{coin::Network, network::LWDInfo},
+    lwd::*,
+    net::LwdServer,
+    GRPCClient,
 };
 
 #[async_trait]
@@ -182,8 +185,7 @@ impl LwdServer for GRPCClient {
             hex::decode(&state.sapling_tree).expect("Failed to decode sapling tree hex");
         let orchard_tree =
             hex::decode(&state.orchard_tree).expect("Failed to decode sapling tree hex");
-        let ironwood_tree =
-            hex::decode(&state.ironwood_tree).unwrap_or_default();
+        let ironwood_tree = hex::decode(&state.ironwood_tree).unwrap_or_default();
         Ok((sapling_tree, orchard_tree, ironwood_tree))
     }
 }
@@ -207,7 +209,11 @@ pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
     for item in servers {
         let hostname = item["hostname"].as_str().unwrap_or_default();
         let port = item["port"].as_u64().unwrap_or(9067);
-        let scheme = if hostname.ends_with(".onion") { "http" } else { "https" };
+        let scheme = if hostname.ends_with(".onion") {
+            "http"
+        } else {
+            "https"
+        };
         let url = format!("{}://{}:{}", scheme, hostname, port);
         let is_tor = hostname.ends_with(".onion");
         let height = item["height"].as_u64().unwrap_or(0) as u32;

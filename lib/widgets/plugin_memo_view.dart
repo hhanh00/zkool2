@@ -21,8 +21,7 @@ class PluginMemoView extends ConsumerWidget {
     }
 
     final c = coinContext.coin;
-    final sectionsAsync =
-        ref.watch(pluginMemoSectionsProvider(memoBytes, c));
+    final sectionsAsync = ref.watch(pluginMemoSectionsProvider(memoBytes, c));
 
     return sectionsAsync.when(
       data: (sections) {
@@ -61,15 +60,13 @@ class PluginMemoView extends ConsumerWidget {
                 headingTextStyle: t.textTheme.labelMedium,
                 dataTextStyle: t.textTheme.bodySmall,
                 columns: [
-                  for (final header in section.headers)
-                    DataColumn(label: Text(header)),
+                  for (final header in section.headers) DataColumn(label: Text(header)),
                 ],
                 rows: [
                   for (final row in section.rows)
                     DataRow(
                       cells: [
-                        for (final cell in row.cells)
-                          DataCell(_renderCell(cell, t)),
+                        for (final cell in row.cells) DataCell(_renderCell(cell, t)),
                       ],
                     ),
                 ],
@@ -103,8 +100,7 @@ class PluginMemoView extends ConsumerWidget {
       case 'date':
         final ts = int.tryParse(cell.value);
         if (ts != null) {
-          final dt =
-              DateTime.fromMillisecondsSinceEpoch(ts * 1000).toLocal();
+          final dt = DateTime.fromMillisecondsSinceEpoch(ts * 1000).toLocal();
           return Text(
             '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
             '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}',

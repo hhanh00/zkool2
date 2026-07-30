@@ -87,7 +87,8 @@ pub async fn issue_asset(
     // ── 2. Compute or use provided asset description hash ────────────────
     let is_reissuance = desc_hash.is_some();
     let desc_hash: [u8; 32] = if let Some(hash) = desc_hash {
-        hash.clone().try_into()
+        hash.clone()
+            .try_into()
             .map_err(|_| anyhow!("desc_hash must be exactly 32 bytes"))?
     } else {
         let name_bytes = asset_name.as_bytes().to_vec();
@@ -118,15 +119,15 @@ pub async fn issue_asset(
         &mut client,
         account,
         ALL_POOLS,
-        &[],           // no recipients — issuance output goes to issuer
-        false,         // recipient_pays_fee
-        None,          // confirmations
-        false,         // smart_transparent
-        None,          // category
+        &[],   // no recipients — issuance output goes to issuer
+        false, // recipient_pays_fee
+        None,  // confirmations
+        false, // smart_transparent
+        None,  // category
         Some(&issuance_info),
-        false,         // migration
-        None,          // preselected
-        None,          // anchor_height
+        false, // migration
+        None,  // preselected
+        None,  // anchor_height
     )
     .await?;
 

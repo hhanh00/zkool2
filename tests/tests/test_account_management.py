@@ -116,7 +116,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             result = await client.execute_async(
                 GraphQLRequest(
                     edit_account_mutation,
-                    variable_values={"account": test_account_id, "name": "RenamedAccount"}
+                    variable_values={"account": test_account_id, "name": "RenamedAccount"},
                 )
             )
             assert result["editAccount"] == True, "editAccount should return true"
@@ -139,7 +139,9 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             )
             accounts = result["accounts"]
             assert len(accounts) == 1
-            assert accounts[0]["name"] == "RenamedAccount", f"Expected 'RenamedAccount', got '{accounts[0]['name']}'"
+            assert accounts[0]["name"] == "RenamedAccount", (
+                f"Expected 'RenamedAccount', got '{accounts[0]['name']}'"
+            )
             print("✓ Verified name change via accounts query")
 
             print("\n=== Step 4: Send funds to test account to generate notes ===")
@@ -175,8 +177,8 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                     variable_values={
                         "account": funding_id,
                         "address": test_address,
-                        "amount": "0.05"
-                    }
+                        "amount": "0.05",
+                    },
                 )
             )
             txid1 = result["pay"]
@@ -213,7 +215,9 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             print(f"Found {len(notes)} notes for test account")
             assert len(notes) >= 1, "Should have at least one note"
             for note in notes[:3]:
-                print(f"  - Note ID: {note['id']}, Value: {note['value']} ZEC, Pool: {note['pool']}, Scope: {note['scope']}")
+                print(
+                    f"  - Note ID: {note['id']}, Value: {note['value']} ZEC, Pool: {note['pool']}, Scope: {note['scope']}"
+                )
             assert notes[0]["value"] == "0.05000000", f"Expected 0.05 ZEC, got {notes[0]['value']}"
 
             print("\n=== Step 6: Test memos_by_transaction query ===")
@@ -243,7 +247,9 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 """
             )
             result = await client.execute_async(
-                GraphQLRequest(memos_query, variable_values={"account": test_account_id, "tx": tx_id})
+                GraphQLRequest(
+                    memos_query, variable_values={"account": test_account_id, "tx": tx_id}
+                )
             )
             memos = result["memosByTransaction"]
             print(f"Found {len(memos)} memos for transaction {tx_id}")
@@ -285,8 +291,8 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                         "account": test_account_id,
                         "address": receiver_address,
                         "amount": "0.025",
-                        "memo": "Test memo for account management"
-                    }
+                        "memo": "Test memo for account management",
+                    },
                 )
             )
             txid2 = result["pay"]
@@ -310,8 +316,7 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
                 receiver_tx_id = receiver_txs[0]["id"]
                 result = await client.execute_async(
                     GraphQLRequest(
-                        memos_query,
-                        variable_values={"account": receiver_id, "tx": receiver_tx_id}
+                        memos_query, variable_values={"account": receiver_id, "tx": receiver_tx_id}
                     )
                 )
                 memos = result["memosByTransaction"]
@@ -346,7 +351,9 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             )
             reset_height = result["accounts"][0]["height"]
             print(f"Height after reset: {reset_height}")
-            assert reset_height < original_height, f"Height should be lower after reset, was {original_height}, now {reset_height}"
+            assert reset_height < original_height, (
+                f"Height should be lower after reset, was {original_height}, now {reset_height}"
+            )
 
             print("\n=== Step 9: Re-sync account after reset ===")
             await client.execute_async(
@@ -374,7 +381,9 @@ async def test_account_management(gql_client_factory, rpc_url, seed, zkool_binar
             print("✓ Deleted receiver account")
 
             # Verify account is deleted
-            result = await client.execute_async(GraphQLRequest(gql("query { accounts { id name } }")))
+            result = await client.execute_async(
+                GraphQLRequest(gql("query { accounts { id name } }"))
+            )
             accounts = result["accounts"]
             account_names = [a["name"] for a in accounts]
             assert "Receiver" not in account_names, "Receiver account should be deleted"

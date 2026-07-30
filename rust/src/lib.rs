@@ -13,7 +13,7 @@ pub mod bip38;
 pub mod budget;
 pub mod contacts;
 pub mod db;
-#[cfg(feature="flutter")]
+#[cfg(feature = "flutter")]
 mod frb_generated;
 pub mod frost;
 #[cfg(feature = "graphql")]
@@ -25,15 +25,15 @@ pub mod ledger;
 pub mod lwd;
 pub mod memo;
 pub mod mempool;
-pub mod openalias;
-pub mod net;
 pub mod migrate;
+pub mod net;
+pub mod openalias;
 pub mod pay;
 pub mod plugin;
 pub mod recover;
 pub mod sync;
-pub mod warp;
 pub mod vault;
+pub mod warp;
 
 pub type Hash32 = [u8; 32];
 pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;
@@ -69,7 +69,7 @@ pub trait Sink<V>: Clone {
     fn send_error(&self, e: Error) -> impl std::future::Future<Output = ()> + Send;
 }
 
-#[cfg(feature="flutter")]
+#[cfg(feature = "flutter")]
 impl<T: Clone + frb_generated::SseEncode + Send + Sync> Sink<T> for StreamSink<T> {
     async fn send(&self, value: T) {
         let _ = self.add(value);

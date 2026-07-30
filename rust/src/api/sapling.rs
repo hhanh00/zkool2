@@ -52,10 +52,7 @@ pub struct SaplingParamsStatus {
 pub fn check_sapling_params() -> SaplingParamsStatus {
     let params_dir = resolve_params_dir();
     let downloaded = params_dir
-        .map(|dir| {
-            dir.join(SAPLING_SPEND_NAME).exists()
-                && dir.join(SAPLING_OUTPUT_NAME).exists()
-        })
+        .map(|dir| dir.join(SAPLING_SPEND_NAME).exists() && dir.join(SAPLING_OUTPUT_NAME).exists())
         .unwrap_or(false);
     SaplingParamsStatus { downloaded }
 }
@@ -66,20 +63,30 @@ pub fn check_sapling_params() -> SaplingParamsStatus {
 /// Safe to call even if they are already downloaded (no-op if valid).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn download_sapling_params() -> Result<()> {
-    let params_dir = resolve_params_dir()
-        .context("Could not resolve Sapling parameters directory")?;
+    let params_dir =
+        resolve_params_dir().context("Could not resolve Sapling parameters directory")?;
 
     // Ensure the params directory exists.
     std::fs::create_dir_all(&params_dir)
         .with_context(|| format!("Failed to create params directory: {:?}", params_dir))?;
 
-    download_and_verify(&params_dir, SAPLING_SPEND_NAME, SAPLING_SPEND_HASH, SAPLING_SPEND_BYTES)
-        .await
-        .context("Failed to download/verify sapling-spend.params")?;
+    download_and_verify(
+        &params_dir,
+        SAPLING_SPEND_NAME,
+        SAPLING_SPEND_HASH,
+        SAPLING_SPEND_BYTES,
+    )
+    .await
+    .context("Failed to download/verify sapling-spend.params")?;
 
-    download_and_verify(&params_dir, SAPLING_OUTPUT_NAME, SAPLING_OUTPUT_HASH, SAPLING_OUTPUT_BYTES)
-        .await
-        .context("Failed to download/verify sapling-output.params")?;
+    download_and_verify(
+        &params_dir,
+        SAPLING_OUTPUT_NAME,
+        SAPLING_OUTPUT_HASH,
+        SAPLING_OUTPUT_BYTES,
+    )
+    .await
+    .context("Failed to download/verify sapling-output.params")?;
 
     Ok(())
 }

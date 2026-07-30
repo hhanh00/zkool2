@@ -27,9 +27,7 @@ use crate::{
     pay::pool::ALL_POOLS,
 };
 use secp256k1::{PublicKey, SecretKey};
-use zcash_keys::keys::{
-    sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey,
-};
+use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
 use zcash_transparent::address::TransparentAddress;
 
 use anyhow::{anyhow, Context, Result};
@@ -379,8 +377,7 @@ pub async fn new_account(
             _ => {}
         }
         update_dindex(&mut db_tx, account, dindex, true).await?;
-    }
-    else {
+    } else {
         anyhow::bail!("Unsupported key");
     }
     db_tx.commit().await?;
@@ -946,10 +943,7 @@ pub async fn init_sync_heights(
     account: u32,
     birth_height: u32,
 ) -> Result<()> {
-    let max_pool = if network
-        .activation_height(NetworkUpgrade::Nu6_3)
-        .is_some()
-    {
+    let max_pool = if network.activation_height(NetworkUpgrade::Nu6_3).is_some() {
         4
     } else {
         3
@@ -981,15 +975,17 @@ pub async fn init_sync_heights(
     Ok(())
 }
 
-pub(crate) fn asset_display(id_asset: Option<i32>, asset_name: Option<String>, asset_desc_hash: Option<Vec<u8>>) -> String {
+pub(crate) fn asset_display(
+    id_asset: Option<i32>,
+    asset_name: Option<String>,
+    asset_desc_hash: Option<Vec<u8>>,
+) -> String {
     match id_asset {
-        Some(_) => asset_name
-            .filter(|n| !n.is_empty())
-            .unwrap_or_else(|| {
-                asset_desc_hash
-                    .map(|h| hex::encode(&h[..8.min(h.len())]))
-                    .unwrap_or_else(|| "ZSA".to_string())
-            }),
+        Some(_) => asset_name.filter(|n| !n.is_empty()).unwrap_or_else(|| {
+            asset_desc_hash
+                .map(|h| hex::encode(&h[..8.min(h.len())]))
+                .unwrap_or_else(|| "ZSA".to_string())
+        }),
         None => "ZEC".to_string(),
     }
 }

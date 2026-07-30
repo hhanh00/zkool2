@@ -39,9 +39,14 @@ impl FrostBytes for SigningKey {
 
     fn from_bytes(data: &[u8]) -> Result<Self> {
         if data.len() != SECRET_KEY_LENGTH {
-            anyhow::bail!("Invalid SigningKey length: expected {}, got {}", SECRET_KEY_LENGTH, data.len());
+            anyhow::bail!(
+                "Invalid SigningKey length: expected {}, got {}",
+                SECRET_KEY_LENGTH,
+                data.len()
+            );
         }
-        let arr: [u8; SECRET_KEY_LENGTH] = data[..SECRET_KEY_LENGTH].try_into()
+        let arr: [u8; SECRET_KEY_LENGTH] = data[..SECRET_KEY_LENGTH]
+            .try_into()
             .map_err(|_| anyhow::anyhow!("Failed to convert slice to array"))?;
         Ok(SigningKey::from_bytes(&arr))
     }
@@ -54,9 +59,13 @@ impl FrostBytes for VerifyingKey {
 
     fn from_bytes(data: &[u8]) -> Result<Self> {
         if data.len() != 32 {
-            anyhow::bail!("Invalid VerifyingKey length: expected 32, got {}", data.len());
+            anyhow::bail!(
+                "Invalid VerifyingKey length: expected 32, got {}",
+                data.len()
+            );
         }
-        let arr: [u8; 32] = data.try_into()
+        let arr: [u8; 32] = data
+            .try_into()
             .map_err(|_| anyhow::anyhow!("Failed to convert slice to array"))?;
         VerifyingKey::from_bytes(&arr).map_err(|e| anyhow::anyhow!("Invalid VerifyingKey: {}", e))
     }
@@ -112,10 +121,16 @@ impl Round for DkgRound0 {
     }
 
     fn produce(input: &DkgInit) -> Result<(SigningKey, Broadcast<VerifyingKey>)> {
-        info!("DKG Round0: generating signing keypair (self_id={}, n={}, t={})", input.self_id, input.n, input.t);
+        info!(
+            "DKG Round0: generating signing keypair (self_id={}, n={}, t={})",
+            input.self_id, input.n, input.t
+        );
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
-        info!("DKG Round0: signing keypair generated, public key: {}", hex::encode(verifying_key.as_bytes()));
+        info!(
+            "DKG Round0: signing keypair generated, public key: {}",
+            hex::encode(verifying_key.as_bytes())
+        );
         Ok((signing_key, Broadcast(verifying_key.clone())))
     }
 
@@ -127,10 +142,13 @@ impl Round for DkgRound0 {
         let verifying_key = signing_key.verifying_key().clone();
         let peer_verifying_keys: BTreeMap<u8, VerifyingKey> = peers
             .into_iter()
-            .filter(|(id, _)| *id != input.self_id)  // Skip our own key
+            .filter(|(id, _)| *id != input.self_id) // Skip our own key
             .map(|(id, pk)| (id, pk))
             .collect();
-        info!("DKG Round0: collected {} peer verifying keys", peer_verifying_keys.len());
+        info!(
+            "DKG Round0: collected {} peer verifying keys",
+            peer_verifying_keys.len()
+        );
         Ok(DkgState0 {
             init: input,
             signing_key,
@@ -147,9 +165,14 @@ impl Round for DkgRound0 {
         match result {
             Some((b,)) => {
                 if b.len() != SECRET_KEY_LENGTH {
-                    anyhow::bail!("Invalid SigningKey length in DB: expected {}, got {}", SECRET_KEY_LENGTH, b.len());
+                    anyhow::bail!(
+                        "Invalid SigningKey length in DB: expected {}, got {}",
+                        SECRET_KEY_LENGTH,
+                        b.len()
+                    );
                 }
-                let arr: [u8; SECRET_KEY_LENGTH] = b.try_into()
+                let arr: [u8; SECRET_KEY_LENGTH] = b
+                    .try_into()
                     .map_err(|_| anyhow::anyhow!("Failed to convert DB bytes to array"))?;
                 Ok(Some(SigningKey::from_bytes(&arr)))
             }
@@ -169,7 +192,12 @@ impl Round for DkgRound0 {
         Ok(())
     }
 
-    async fn store_public(conn: &mut SqliteConnection, account: u32, from_id: u8, p: &VerifyingKey) -> Result<()> {
+    async fn store_public(
+        conn: &mut SqliteConnection,
+        account: u32,
+        from_id: u8,
+        p: &VerifyingKey,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 0, ?2, ?3)
             ON CONFLICT DO NOTHING",
@@ -182,22 +210,35 @@ impl Round for DkgRound0 {
         Ok(())
     }
 
-    async fn load_publics(conn: &mut SqliteConnection, account: u32) -> Result<Vec<(u8, VerifyingKey)>> {
-        let rows = sqlx::query("SELECT from_id, data FROM dkg_peers WHERE account = ? AND round = 0")
-            .bind(account)
-            .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<Vec<u8>, _>(1)))
-            .fetch_all(&mut *conn)
-            .await?;
+    async fn load_publics(
+        conn: &mut SqliteConnection,
+        account: u32,
+    ) -> Result<Vec<(u8, VerifyingKey)>> {
+        let rows =
+            sqlx::query("SELECT from_id, data FROM dkg_peers WHERE account = ? AND round = 0")
+                .bind(account)
+                .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<Vec<u8>, _>(1)))
+                .fetch_all(&mut *conn)
+                .await?;
 
         let mut result = Vec::new();
         for (id, data) in rows {
             if data.len() != 32 {
-                anyhow::bail!("Invalid VerifyingKey length for participant {}: expected 32, got {}", id, data.len());
+                anyhow::bail!(
+                    "Invalid VerifyingKey length for participant {}: expected 32, got {}",
+                    id,
+                    data.len()
+                );
             }
-            let arr: [u8; 32] = data.try_into()
-                .map_err(|_| anyhow::anyhow!("Failed to convert VerifyingKey bytes for participant {}", id))?;
-            let vk = VerifyingKey::from_bytes(&arr)
-                .map_err(|e| anyhow::anyhow!("Invalid VerifyingKey for participant {}: {}", id, e))?;
+            let arr: [u8; 32] = data.try_into().map_err(|_| {
+                anyhow::anyhow!(
+                    "Failed to convert VerifyingKey bytes for participant {}",
+                    id
+                )
+            })?;
+            let vk = VerifyingKey::from_bytes(&arr).map_err(|e| {
+                anyhow::anyhow!("Invalid VerifyingKey for participant {}: {}", id, e)
+            })?;
             result.push((id, vk));
         }
         Ok(result)
@@ -223,7 +264,10 @@ impl Round for DkgRound1 {
     }
 
     fn produce(input: &DkgState0) -> Result<(round1::SecretPackage, Broadcast<round1::Package>)> {
-        info!("DKG: calling dkg::part1 (self_id={}, n={}, t={})", input.init.self_id, input.init.n, input.init.t);
+        info!(
+            "DKG: calling dkg::part1 (self_id={}, n={}, t={})",
+            input.init.self_id, input.init.n, input.init.t
+        );
         let (spkg1, ppkg1) = dkg::part1(
             (input.init.self_id as u16).try_into()?,
             input.init.n as u16,
@@ -241,22 +285,35 @@ impl Round for DkgRound1 {
     ) -> Result<DkgState1> {
         let ppkg1s = peers
             .into_iter()
-            .filter(|(id, _)| *id != input.init.self_id)  // Skip our own package
+            .filter(|(id, _)| *id != input.init.self_id) // Skip our own package
             .map(|(id, pkg)| Ok(((id as u16).try_into()?, pkg)))
             .collect::<Result<_>>()?;
-        Ok(DkgState1 { state0: input, spkg1, ppkg1s })
+        Ok(DkgState1 {
+            state0: input,
+            spkg1,
+            ppkg1s,
+        })
     }
 
-    async fn load_secret(conn: &mut SqliteConnection, account: u32) -> Result<Option<round1::SecretPackage>> {
-        sqlx::query_as::<_, (Vec<u8>,)>("SELECT spkg1 FROM dkg_state WHERE account = ? AND spkg1 IS NOT NULL")
-            .bind(account)
-            .fetch_optional(&mut *conn)
-            .await?
-            .map(|(b,)| round1::SecretPackage::from_bytes(&b))
-            .transpose()
+    async fn load_secret(
+        conn: &mut SqliteConnection,
+        account: u32,
+    ) -> Result<Option<round1::SecretPackage>> {
+        sqlx::query_as::<_, (Vec<u8>,)>(
+            "SELECT spkg1 FROM dkg_state WHERE account = ? AND spkg1 IS NOT NULL",
+        )
+        .bind(account)
+        .fetch_optional(&mut *conn)
+        .await?
+        .map(|(b,)| round1::SecretPackage::from_bytes(&b))
+        .transpose()
     }
 
-    async fn store_secret(conn: &mut SqliteConnection, account: u32, s: &round1::SecretPackage) -> Result<()> {
+    async fn store_secret(
+        conn: &mut SqliteConnection,
+        account: u32,
+        s: &round1::SecretPackage,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO dkg_state(account, spkg1) VALUES(?1, ?2)
             ON CONFLICT(account) DO UPDATE SET spkg1 = excluded.spkg1",
@@ -268,7 +325,12 @@ impl Round for DkgRound1 {
         Ok(())
     }
 
-    async fn store_public(conn: &mut SqliteConnection, account: u32, from_id: u8, p: &round1::Package) -> Result<()> {
+    async fn store_public(
+        conn: &mut SqliteConnection,
+        account: u32,
+        from_id: u8,
+        p: &round1::Package,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 1, ?2, ?3)
             ON CONFLICT DO NOTHING",
@@ -281,7 +343,10 @@ impl Round for DkgRound1 {
         Ok(())
     }
 
-    async fn load_publics(conn: &mut SqliteConnection, account: u32) -> Result<Vec<(u8, round1::Package)>> {
+    async fn load_publics(
+        conn: &mut SqliteConnection,
+        account: u32,
+    ) -> Result<Vec<(u8, round1::Package)>> {
         sqlx::query("SELECT from_id, data FROM dkg_peers WHERE account = ? AND round = 1")
             .bind(account)
             .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<Vec<u8>, _>(1)))
@@ -313,7 +378,10 @@ impl Round for DkgRound2 {
 
     fn produce(input: &DkgState1) -> Result<(round2::SecretPackage, PerPeer<round2::Package>)> {
         // part2 takes spkg1 by value — clone since input is borrowed
-        info!("DKG: calling dkg::part2 (self_id={}, n={}, t={})", input.state0.init.self_id, input.state0.init.n, input.state0.init.t);
+        info!(
+            "DKG: calling dkg::part2 (self_id={}, n={}, t={})",
+            input.state0.init.self_id, input.state0.init.n, input.state0.init.t
+        );
         info!("DKG: have {} peer packages for part2", input.ppkg1s.len());
         let (spkg2, ppkg2s) = dkg::part2(input.spkg1.clone(), &input.ppkg1s)?;
         info!("DKG: dkg::part2 completed successfully");
@@ -335,22 +403,35 @@ impl Round for DkgRound2 {
     ) -> Result<DkgState2> {
         let ppkg2s = peers
             .into_iter()
-            .filter(|(id, _)| *id != state1.state0.init.self_id)  // Skip our own package
+            .filter(|(id, _)| *id != state1.state0.init.self_id) // Skip our own package
             .map(|(id, pkg)| Ok(((id as u16).try_into()?, pkg)))
             .collect::<Result<_>>()?;
-        Ok(DkgState2 { state1, spkg2, ppkg2s })
+        Ok(DkgState2 {
+            state1,
+            spkg2,
+            ppkg2s,
+        })
     }
 
-    async fn load_secret(conn: &mut SqliteConnection, account: u32) -> Result<Option<round2::SecretPackage>> {
-        sqlx::query_as::<_, (Vec<u8>,)>("SELECT spkg2 FROM dkg_state WHERE account = ? AND spkg2 IS NOT NULL")
-            .bind(account)
-            .fetch_optional(&mut *conn)
-            .await?
-            .map(|(b,)| round2::SecretPackage::from_bytes(&b))
-            .transpose()
+    async fn load_secret(
+        conn: &mut SqliteConnection,
+        account: u32,
+    ) -> Result<Option<round2::SecretPackage>> {
+        sqlx::query_as::<_, (Vec<u8>,)>(
+            "SELECT spkg2 FROM dkg_state WHERE account = ? AND spkg2 IS NOT NULL",
+        )
+        .bind(account)
+        .fetch_optional(&mut *conn)
+        .await?
+        .map(|(b,)| round2::SecretPackage::from_bytes(&b))
+        .transpose()
     }
 
-    async fn store_secret(conn: &mut SqliteConnection, account: u32, s: &round2::SecretPackage) -> Result<()> {
+    async fn store_secret(
+        conn: &mut SqliteConnection,
+        account: u32,
+        s: &round2::SecretPackage,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO dkg_state(account, spkg2) VALUES(?1, ?2)
             ON CONFLICT(account) DO UPDATE SET spkg2 = excluded.spkg2",
@@ -362,7 +443,12 @@ impl Round for DkgRound2 {
         Ok(())
     }
 
-    async fn store_public(conn: &mut SqliteConnection, account: u32, from_id: u8, p: &round2::Package) -> Result<()> {
+    async fn store_public(
+        conn: &mut SqliteConnection,
+        account: u32,
+        from_id: u8,
+        p: &round2::Package,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 2, ?2, ?3)
             ON CONFLICT DO NOTHING",
@@ -375,7 +461,10 @@ impl Round for DkgRound2 {
         Ok(())
     }
 
-    async fn load_publics(conn: &mut SqliteConnection, account: u32) -> Result<Vec<(u8, round2::Package)>> {
+    async fn load_publics(
+        conn: &mut SqliteConnection,
+        account: u32,
+    ) -> Result<Vec<(u8, round2::Package)>> {
         sqlx::query("SELECT from_id, data FROM dkg_peers WHERE account = ? AND round = 2")
             .bind(account)
             .map(|row: SqliteRow| (row.get::<u8, _>(0), row.get::<Vec<u8>, _>(1)))
@@ -444,11 +533,7 @@ pub async fn set_dkg_address(
     Ok(())
 }
 
-pub async fn is_dkg_ready(
-    connection: &mut SqliteConnection,
-    account: u32,
-    n: u8,
-) -> Result<bool> {
+pub async fn is_dkg_ready(connection: &mut SqliteConnection, account: u32, n: u8) -> Result<bool> {
     let addresses = get_addresses(&mut *connection, account, n).await?;
     Ok(addresses.iter().all(|a| !a.is_empty()))
 }
@@ -483,30 +568,51 @@ pub async fn in_dkg(connection: &mut SqliteConnection) -> Result<bool> {
     if n == 0 {
         return Ok(false);
     }
-    let (n_addresses,): (u32,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM dkg_addresses WHERE account = ?1",
-    )
-    .bind(account)
-    .fetch_one(&mut *connection)
-    .await?;
+    let (n_addresses,): (u32,) =
+        sqlx::query_as("SELECT COUNT(*) FROM dkg_addresses WHERE account = ?1")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
     Ok(n_addresses == n)
 }
 
 pub async fn cancel_dkg(connection: &mut SqliteConnection, account: u32) -> Result<()> {
-    sqlx::query("DELETE FROM dkg_state WHERE account = ?").bind(account).execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM dkg_peers WHERE account = ?").bind(account).execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM dkg_addresses WHERE account = ?").bind(account).execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM dkg_params WHERE account = ?").bind(account).execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'").execute(&mut *connection).await?;
+    sqlx::query("DELETE FROM dkg_state WHERE account = ?")
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM dkg_peers WHERE account = ?")
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM dkg_addresses WHERE account = ?")
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM dkg_params WHERE account = ?")
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
+        .execute(&mut *connection)
+        .await?;
     delete_frost_state(&mut *connection).await
 }
 
 pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()> {
     info!("delete_frost_state");
-    sqlx::query("DELETE FROM frost_signatures").execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM frost_commitments").execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'").execute(&mut *connection).await?;
-    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'").execute(&mut *connection).await?;
+    sqlx::query("DELETE FROM frost_signatures")
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM frost_commitments")
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM props WHERE key LIKE 'frost_%'")
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
+        .execute(&mut *connection)
+        .await?;
     let frost_accounts = sqlx::query_as::<_, (u32,)>(
         "SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1",
     )
@@ -550,7 +656,12 @@ pub async fn do_dkg_impl(
         return Ok(());
     }
 
-    let DKGParams { id: self_id, n, t, birth_height } = get_dkg_params(connection, account).await?;
+    let DKGParams {
+        id: self_id,
+        n,
+        t,
+        birth_height,
+    } = get_dkg_params(connection, account).await?;
 
     let (mailbox_account, _) =
         get_mailbox_account(network, connection, account, self_id, birth_height).await?;
@@ -569,9 +680,11 @@ pub async fn do_dkg_impl(
     let Some(state0) = run_round::<DkgRound0>(
         connection,
         account,
-        n, t, self_id,
-        account,            // funding_account
-        broadcast_account,  // incoming memos arrive at broadcast
+        n,
+        t,
+        self_id,
+        account,           // funding_account
+        broadcast_account, // incoming memos arrive at broadcast
         init,
         &route_ctx,
         network,
@@ -583,15 +696,20 @@ pub async fn do_dkg_impl(
         status.send(DKGStatus::WaitRound1Pkg).await; // TODO: add WaitRound0Pkg status
         return Ok(());
     };
-    info!("Round 0 complete - collected {} peer signing keys", state0.peer_verifying_keys.len());
+    info!(
+        "Round 0 complete - collected {} peer signing keys",
+        state0.peer_verifying_keys.len()
+    );
 
     // ── Round 1: everyone broadcasts one package to the shared address ────────
     let Some(state1) = run_round::<DkgRound1>(
         connection,
         account,
-        n, t, self_id,
-        account,            // funding_account
-        broadcast_account,  // incoming memos arrive at broadcast
+        n,
+        t,
+        self_id,
+        account,           // funding_account
+        broadcast_account, // incoming memos arrive at broadcast
         state0,
         &route_ctx,
         network,
@@ -609,9 +727,11 @@ pub async fn do_dkg_impl(
     let Some(state2) = run_round::<DkgRound2>(
         connection,
         account,
-        n, t, self_id,
-        account,           // funding_account
-        mailbox_account,   // incoming memos arrive at our private mailbox
+        n,
+        t,
+        self_id,
+        account,         // funding_account
+        mailbox_account, // incoming memos arrive at our private mailbox
         state1,
         &route_ctx,
         network,
@@ -644,16 +764,17 @@ pub async fn do_dkg_impl(
         .await?;
         (kp, PublicKeyPackage::from_bytes(&pp_data)?)
     } else {
-        info!("DKG: calling dkg::part3 (self_id={}, n={}, t={})", self_id, n, t);
+        info!(
+            "DKG: calling dkg::part3 (self_id={}, n={}, t={})",
+            self_id, n, t
+        );
         let (kp, pp) = dkg::part3(&state2.spkg2, &state2.state1.ppkg1s, &state2.ppkg2s)?;
         info!("DKG: dkg::part3 completed successfully");
-        sqlx::query(
-            "UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2",
-        )
-        .bind(kp.to_bytes()?)
-        .bind(account)
-        .execute(&mut *connection)
-        .await?;
+        sqlx::query("UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2")
+            .bind(kp.to_bytes()?)
+            .bind(account)
+            .execute(&mut *connection)
+            .await?;
         sqlx::query(
             "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 3, ?2, ?3)
             ON CONFLICT DO NOTHING",
@@ -691,16 +812,21 @@ pub async fn do_dkg_impl(
     init_account_orchard(network, connection, frost_account, height).await?;
     store_account_orchard_vk(connection, frost_account, &shared_fvk).await?;
 
-    dkg_finalize(connection, account, frost_account, mailbox_account, broadcast_account).await?;
+    dkg_finalize(
+        connection,
+        account,
+        frost_account,
+        mailbox_account,
+        broadcast_account,
+    )
+    .await?;
 
     // Store key material under the frost account
-    sqlx::query(
-        "UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2",
-    )
-    .bind(key_pkg.to_bytes()?)
-    .bind(frost_account)
-    .execute(&mut *connection)
-    .await?;
+    sqlx::query("UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2")
+        .bind(key_pkg.to_bytes()?)
+        .bind(frost_account)
+        .execute(&mut *connection)
+        .await?;
 
     status.send(DKGStatus::SharedAddress(sua)).await;
 
@@ -716,21 +842,37 @@ async fn dkg_finalize(
     broadcast_account: u32,
 ) -> Result<()> {
     sqlx::query("UPDATE dkg_params SET account = ?1 WHERE account = ?2")
-        .bind(frost_account).bind(account).execute(&mut *connection).await?;
+        .bind(frost_account)
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
     sqlx::query("UPDATE dkg_state SET account = ?1 WHERE account = ?2")
-        .bind(frost_account).bind(account).execute(&mut *connection).await?;
+        .bind(frost_account)
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
     sqlx::query("UPDATE dkg_peers SET account = ?1 WHERE account = ?2")
-        .bind(frost_account).bind(account).execute(&mut *connection).await?;
+        .bind(frost_account)
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
     sqlx::query("UPDATE dkg_addresses SET account = ?1 WHERE account = ?2")
-        .bind(frost_account).bind(account).execute(&mut *connection).await?;
+        .bind(frost_account)
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
     sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
-        .execute(&mut *connection).await?;
+        .execute(&mut *connection)
+        .await?;
     let seed = get_account_seed(&mut *connection, mailbox_account)
         .await?
         .expect("mailbox seed not found")
         .mnemonic;
     sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
-        .bind(seed).bind(frost_account).execute(&mut *connection).await?;
+        .bind(seed)
+        .bind(frost_account)
+        .execute(&mut *connection)
+        .await?;
     delete_account(&mut *connection, mailbox_account).await?;
     delete_account(&mut *connection, broadcast_account).await?;
     Ok(())

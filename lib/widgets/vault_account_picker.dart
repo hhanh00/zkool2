@@ -9,8 +9,7 @@ Future<List<RestoredAccount>?> showVaultAccountPicker(
 }) async {
   if (accounts.isEmpty) {
     if (context.mounted) {
-      await showMessage(context, "No accounts found in the vault backup.",
-          title: "Recovery");
+      await showMessage(context, "No accounts found in the vault backup.", title: "Recovery");
     }
     return null;
   }
@@ -29,8 +28,7 @@ class _VaultAccountPickerDialog extends StatefulWidget {
   const _VaultAccountPickerDialog({required this.accounts});
 
   @override
-  State<_VaultAccountPickerDialog> createState() =>
-      _VaultAccountPickerDialogState();
+  State<_VaultAccountPickerDialog> createState() => _VaultAccountPickerDialogState();
 }
 
 class _VaultAccountPickerDialogState extends State<_VaultAccountPickerDialog> {
@@ -56,9 +54,7 @@ class _VaultAccountPickerDialogState extends State<_VaultAccountPickerDialog> {
   List<RestoredAccount> get _filtered {
     if (_query.isEmpty) return widget.accounts;
     final q = _query.toLowerCase();
-    return widget.accounts
-        .where((a) => a.name.toLowerCase().contains(q))
-        .toList();
+    return widget.accounts.where((a) => a.name.toLowerCase().contains(q)).toList();
   }
 
   void _toggleAll() {
@@ -116,17 +112,13 @@ class _VaultAccountPickerDialogState extends State<_VaultAccountPickerDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _query.isEmpty
-                              ? Icons.account_balance_wallet_outlined
-                              : Icons.search_off,
+                          _query.isEmpty ? Icons.account_balance_wallet_outlined : Icons.search_off,
                           size: 64,
                           color: cs.onSurface.withAlpha(100),
                         ),
                         const Gap(16),
                         Text(
-                          _query.isEmpty
-                              ? "No accounts available"
-                              : "No accounts matching \"$_query\"",
+                          _query.isEmpty ? "No accounts available" : "No accounts matching \"$_query\"",
                           style: tt.bodyLarge,
                         ),
                       ],
@@ -137,25 +129,19 @@ class _VaultAccountPickerDialogState extends State<_VaultAccountPickerDialog> {
                     itemBuilder: (context, index) {
                       final ra = filtered[index];
                       final isSelected = _selected.contains(ra);
-                      final initialsText = ra.name.length > 1
-                          ? ra.name.substring(0, 2).toUpperCase()
-                          : ra.name.toUpperCase();
+                      final initialsText = ra.name.length > 1 ? ra.name.substring(0, 2).toUpperCase() : ra.name.toUpperCase();
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: isSelected
-                              ? Colors.blue.shade700
-                              : cs.primaryContainer,
+                          backgroundColor: isSelected ? Colors.blue.shade700 : cs.primaryContainer,
                           child: isSelected
                               ? const Icon(Icons.check, color: Colors.white)
                               : Text(
                                   initialsText,
-                                  style: TextStyle(
-                                      color: cs.onPrimaryContainer),
+                                  style: TextStyle(color: cs.onPrimaryContainer),
                                 ),
                         ),
-                        title: Text(ra.name,
-                            overflow: TextOverflow.ellipsis),
+                        title: Text(ra.name, overflow: TextOverflow.ellipsis),
                         subtitle: Text(
                           "Birth height: ${ra.birthHeight}",
                           style: tt.bodySmall,

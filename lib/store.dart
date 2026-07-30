@@ -539,8 +539,7 @@ class CurrentHeight extends _$CurrentHeight {
     }
     if (!force) {
       final now = DateTime.now();
-      if (_cachedHeight != null && _lastFetch != null &&
-          now.difference(_lastFetch!) < _ttl) {
+      if (_cachedHeight != null && _lastFetch != null && now.difference(_lastFetch!) < _ttl) {
         return _cachedHeight;
       }
     }
@@ -799,8 +798,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         }
 
         await Future.delayed(Duration(seconds: delay));
-      }
-      finally {
+      } finally {
         syncInProgress = false;
       }
     }
@@ -1172,4 +1170,3 @@ Future<List<plugin_api.MemoSection>> pluginMemoSections(
 final ironwoodActiveProvider = FutureProvider<bool>((ref) async {
   return await isIronwoodActive(c: coinContext.coin);
 });
-

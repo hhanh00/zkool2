@@ -5,8 +5,8 @@ use byteorder::{WriteBytesExt, LE};
 use jubjub::Fr;
 use pczt::{
     roles::{
-        io_finalizer::IoFinalizer, prover::Prover,
-        spend_finalizer::SpendFinalizer, updater::Updater,
+        io_finalizer::IoFinalizer, prover::Prover, spend_finalizer::SpendFinalizer,
+        updater::Updater,
     },
     Pczt,
 };
@@ -24,15 +24,17 @@ use secp256k1::PublicKey;
 use sqlx::{pool::PoolConnection, Sqlite, SqliteConnection};
 use tracing::info;
 use zcash_keys::encoding::AddressCodec;
-use zcash_note_encryption::{try_output_recovery_with_ovk, Domain, EphemeralKeyBytes, OutgoingCipherKey};
-use zcash_script::script::Evaluable;
-use zcash_transparent::address::TransparentAddress;
+use zcash_note_encryption::{
+    try_output_recovery_with_ovk, Domain, EphemeralKeyBytes, OutgoingCipherKey,
+};
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{consensus::NetworkConstants, memo::Memo};
+use zcash_script::script::Evaluable;
+use zcash_transparent::address::TransparentAddress;
 
 use crate::{
-    api::pay::{PcztPackage, SigningEvent},
     api::coin::Network,
+    api::pay::{PcztPackage, SigningEvent},
     db::get_account_aindex,
     ledger::{
         hashers::{
@@ -202,7 +204,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                     let memo_bytes = memo.encode();
                     let memo: [u8; 512] = tiu!(*memo_bytes.as_array());
                     memo
-                },
+                }
             };
             let memo_type = memo[0];
             memos.push(memo);
@@ -363,12 +365,10 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                     u.update_spend_with(i, |mut su_updater| {
                         let rcv = ValueCommitTrapdoor::from_bytes(su.rcv).unwrap();
                         let alpha = jubjub::Fr::from_bytes(&su.alpha).unwrap();
-                        let cv = ValueCommitment::derive(
-                            NoteValue::from_raw(su.value),
-                            rcv,
-                        );
+                        let cv = ValueCommitment::derive(NoteValue::from_raw(su.value), rcv);
                         let pk: VerificationKeyBytes<SpendAuth> = su.ak.into();
-                        let pk: VerificationKey<SpendAuth> = pk.try_into().expect("valid ak from Ledger");
+                        let pk: VerificationKey<SpendAuth> =
+                            pk.try_into().expect("valid ak from Ledger");
                         let rk = pk.randomize(&alpha);
                         // Re-derive rcv since ValueCommitment::derive consumed it
                         let rcv2 = ValueCommitTrapdoor::from_bytes(su.rcv).unwrap();
@@ -378,7 +378,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                         su_updater.set_alpha(alpha);
                         su_updater.set_rseed(su.rseed);
                         Ok(())
-                    }).unwrap();
+                    })
+                    .unwrap();
                 }
                 for (i, ou) in output_updates.iter().enumerate() {
                     u.update_output_with(i, |mut ou_updater| {
@@ -387,11 +388,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                         let cv = ValueCommitment::derive(value_note, rcv);
                         let rcv2 = ValueCommitTrapdoor::from_bytes(ou.rcv).unwrap();
                         let recipient = PaymentAddress::from_bytes(&ou.recipient_bytes).unwrap();
-                        let note = Note::from_parts(
-                            recipient,
-                            value_note,
-                            Rseed::AfterZip212(ou.rseed),
-                        );
+                        let note =
+                            Note::from_parts(recipient, value_note, Rseed::AfterZip212(ou.rseed));
                         let cmu = note.cmu();
                         let epk = EphemeralKeyBytes(ou.epk_bytes);
                         let ock = OutgoingCipherKey(ou.ock_bytes);
@@ -404,7 +402,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                         ou_updater.set_rseed(ou.rseed);
                         ou_updater.set_ock(ock);
                         Ok(())
-                    }).unwrap();
+                    })
+                    .unwrap();
                 }
                 Ok(())
             })
@@ -490,7 +489,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                         data.write_all(sin.nullifier().as_ref()).unwrap();
                         let rk_bytes: [u8; 32] = VerificationKeyBytes::from(*sin.rk()).into();
                         data.write_all(&rk_bytes).unwrap();
-                        let zkp = sin.zkproof().expect("spend must have zkproof after proving");
+                        let zkp = sin
+                            .zkproof()
+                            .expect("spend must have zkproof after proving");
                         data.write_all(zkp.as_ref()).unwrap();
                         assert_eq!(data.len(), 320);
                         proof_bufs.push(data);
@@ -502,7 +503,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                         data.write_all(sout.ephemeral_key().as_ref()).unwrap();
                         data.write_all(sout.enc_ciphertext()).unwrap();
                         data.write_all(sout.out_ciphertext()).unwrap();
-                        let zkp = sout.zkproof().expect("output must have zkproof after proving");
+                        let zkp = sout
+                            .zkproof()
+                            .expect("output must have zkproof after proving");
                         data.write_all(zkp.as_ref()).unwrap();
                         assert_eq!(data.len(), 948);
                         proof_bufs.push(data);
@@ -610,7 +613,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 
         let mut signer = pczt::roles::signer::Signer::new(pczt).unwrap();
         for (index, signature) in tsigs.iter().enumerate() {
-            signer.append_transparent_signature(index, *signature).unwrap();
+            signer
+                .append_transparent_signature(index, *signature)
+                .unwrap();
         }
         for (index, signature) in ssigs.iter().enumerate() {
             signer.apply_sapling_signature(index, *signature).unwrap();
