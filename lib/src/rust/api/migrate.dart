@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'migrate.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `do_step`, `run_migration`
+// These functions are ignored because they are not marked as `pub`: `current_migration_status`, `do_step`, `run_migration`, `synchronize_to`, `wait_for_anchor_boundary`, `wallet_height`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Single-shot step (kept for FRB generated-code compatibility).
@@ -25,6 +25,9 @@ abstract class NoteMigration implements RustOpaqueInterface {
   factory NoteMigration() => RustLib.instance.api.crateApiMigrateNoteMigrationNew();
 
   Stream<MigrationStatus> run({required Coin c, required BigInt meanDelayMs});
+
+  /// Supplies a height observed by the shared Dart block-height service.
+  void updateHeight({required int height});
 }
 
 @freezed
