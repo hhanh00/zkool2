@@ -23,7 +23,8 @@ mixin _$Contact {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $ContactCopyWith<Contact> get copyWith => _$ContactCopyWithImpl<Contact>(this as Contact, _$identity);
+  $ContactCopyWith<Contact> get copyWith =>
+      _$ContactCopyWithImpl<Contact>(this as Contact, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -37,7 +38,8 @@ mixin _$Contact {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, const DeepCollectionEquality().hash(addresses), notes);
+  int get hashCode => Object.hash(runtimeType, id, name,
+      const DeepCollectionEquality().hash(addresses), notes);
 
   @override
   String toString() {
@@ -47,7 +49,8 @@ mixin _$Contact {
 
 /// @nodoc
 abstract mixin class $ContactCopyWith<$Res> {
-  factory $ContactCopyWith(Contact value, $Res Function(Contact) _then) = _$ContactCopyWithImpl;
+  factory $ContactCopyWith(Contact value, $Res Function(Contact) _then) =
+      _$ContactCopyWithImpl;
   @useResult
   $Res call({int id, String name, List<String> addresses, String notes});
 }
@@ -181,7 +184,8 @@ extension ContactPatterns on Contact {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int id, String name, List<String> addresses, String notes)? $default, {
+    TResult Function(int id, String name, List<String> addresses, String notes)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
@@ -208,7 +212,8 @@ extension ContactPatterns on Contact {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int id, String name, List<String> addresses, String notes) $default,
+    TResult Function(int id, String name, List<String> addresses, String notes)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -231,7 +236,9 @@ extension ContactPatterns on Contact {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int id, String name, List<String> addresses, String notes)? $default,
+    TResult? Function(
+            int id, String name, List<String> addresses, String notes)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -246,7 +253,12 @@ extension ContactPatterns on Contact {
 /// @nodoc
 
 class _Contact implements Contact {
-  const _Contact({required this.id, required this.name, required final List<String> addresses, required this.notes}) : _addresses = addresses;
+  const _Contact(
+      {required this.id,
+      required this.name,
+      required final List<String> addresses,
+      required this.notes})
+      : _addresses = addresses;
 
   @override
   final int id;
@@ -268,7 +280,8 @@ class _Contact implements Contact {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$ContactCopyWith<_Contact> get copyWith => __$ContactCopyWithImpl<_Contact>(this, _$identity);
+  _$ContactCopyWith<_Contact> get copyWith =>
+      __$ContactCopyWithImpl<_Contact>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -277,12 +290,14 @@ class _Contact implements Contact {
             other is _Contact &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            const DeepCollectionEquality().equals(other._addresses, _addresses) &&
+            const DeepCollectionEquality()
+                .equals(other._addresses, _addresses) &&
             (identical(other.notes, notes) || other.notes == notes));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, const DeepCollectionEquality().hash(_addresses), notes);
+  int get hashCode => Object.hash(runtimeType, id, name,
+      const DeepCollectionEquality().hash(_addresses), notes);
 
   @override
   String toString() {
@@ -292,7 +307,8 @@ class _Contact implements Contact {
 
 /// @nodoc
 abstract mixin class _$ContactCopyWith<$Res> implements $ContactCopyWith<$Res> {
-  factory _$ContactCopyWith(_Contact value, $Res Function(_Contact) _then) = __$ContactCopyWithImpl;
+  factory _$ContactCopyWith(_Contact value, $Res Function(_Contact) _then) =
+      __$ContactCopyWithImpl;
   @override
   @useResult
   $Res call({int id, String name, List<String> addresses, String notes});
@@ -345,7 +361,9 @@ mixin _$ContactMatch {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $ContactMatchCopyWith<ContactMatch> get copyWith => _$ContactMatchCopyWithImpl<ContactMatch>(this as ContactMatch, _$identity);
+  $ContactMatchCopyWith<ContactMatch> get copyWith =>
+      _$ContactMatchCopyWithImpl<ContactMatch>(
+          this as ContactMatch, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -353,7 +371,8 @@ mixin _$ContactMatch {
         (other.runtimeType == runtimeType &&
             other is ContactMatch &&
             (identical(other.contact, contact) || other.contact == contact) &&
-            (identical(other.matchedAddress, matchedAddress) || other.matchedAddress == matchedAddress));
+            (identical(other.matchedAddress, matchedAddress) ||
+                other.matchedAddress == matchedAddress));
   }
 
   @override
@@ -367,7 +386,9 @@ mixin _$ContactMatch {
 
 /// @nodoc
 abstract mixin class $ContactMatchCopyWith<$Res> {
-  factory $ContactMatchCopyWith(ContactMatch value, $Res Function(ContactMatch) _then) = _$ContactMatchCopyWithImpl;
+  factory $ContactMatchCopyWith(
+          ContactMatch value, $Res Function(ContactMatch) _then) =
+      _$ContactMatchCopyWithImpl;
   @useResult
   $Res call({Contact contact, String matchedAddress});
 
@@ -580,7 +601,8 @@ class _ContactMatch implements ContactMatch {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$ContactMatchCopyWith<_ContactMatch> get copyWith => __$ContactMatchCopyWithImpl<_ContactMatch>(this, _$identity);
+  _$ContactMatchCopyWith<_ContactMatch> get copyWith =>
+      __$ContactMatchCopyWithImpl<_ContactMatch>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -588,7 +610,8 @@ class _ContactMatch implements ContactMatch {
         (other.runtimeType == runtimeType &&
             other is _ContactMatch &&
             (identical(other.contact, contact) || other.contact == contact) &&
-            (identical(other.matchedAddress, matchedAddress) || other.matchedAddress == matchedAddress));
+            (identical(other.matchedAddress, matchedAddress) ||
+                other.matchedAddress == matchedAddress));
   }
 
   @override
@@ -601,8 +624,11 @@ class _ContactMatch implements ContactMatch {
 }
 
 /// @nodoc
-abstract mixin class _$ContactMatchCopyWith<$Res> implements $ContactMatchCopyWith<$Res> {
-  factory _$ContactMatchCopyWith(_ContactMatch value, $Res Function(_ContactMatch) _then) = __$ContactMatchCopyWithImpl;
+abstract mixin class _$ContactMatchCopyWith<$Res>
+    implements $ContactMatchCopyWith<$Res> {
+  factory _$ContactMatchCopyWith(
+          _ContactMatch value, $Res Function(_ContactMatch) _then) =
+      __$ContactMatchCopyWithImpl;
   @override
   @useResult
   $Res call({Contact contact, String matchedAddress});
@@ -612,7 +638,8 @@ abstract mixin class _$ContactMatchCopyWith<$Res> implements $ContactMatchCopyWi
 }
 
 /// @nodoc
-class __$ContactMatchCopyWithImpl<$Res> implements _$ContactMatchCopyWith<$Res> {
+class __$ContactMatchCopyWithImpl<$Res>
+    implements _$ContactMatchCopyWith<$Res> {
   __$ContactMatchCopyWithImpl(this._self, this._then);
 
   final _ContactMatch _self;

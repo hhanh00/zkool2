@@ -16,9 +16,11 @@ part 'init.freezed.dart';
 /// Enable expert mode, which lowers the log filter to allow
 /// sync, mempool, and memo target debug messages
 /// while keeping everything else at `info`.
-void setExpertMode({required bool enabled}) => RustLib.instance.api.crateApiInitSetExpertMode(enabled: enabled);
+void setExpertMode({required bool enabled}) =>
+    RustLib.instance.api.crateApiInitSetExpertMode(enabled: enabled);
 
-Stream<LogMessage> setLogStream() => RustLib.instance.api.crateApiInitSetLogStream();
+Stream<LogMessage> setLogStream() =>
+    RustLib.instance.api.crateApiInitSetLogStream();
 
 @freezed
 sealed class LogMessage with _$LogMessage {
