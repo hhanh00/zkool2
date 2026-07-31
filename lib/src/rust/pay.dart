@@ -29,7 +29,14 @@ class Recipient {
 
   @override
   int get hashCode =>
-      address.hashCode ^ amount.hashCode ^ pools.hashCode ^ userMemo.hashCode ^ memoBytes.hashCode ^ price.hashCode ^ assetBase.hashCode ^ assetName.hashCode;
+      address.hashCode ^
+      amount.hashCode ^
+      pools.hashCode ^
+      userMemo.hashCode ^
+      memoBytes.hashCode ^
+      price.hashCode ^
+      assetBase.hashCode ^
+      assetName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -64,7 +71,13 @@ class TxPlan {
   });
 
   @override
-  int get hashCode => height.hashCode ^ inputs.hashCode ^ outputs.hashCode ^ fee.hashCode ^ canSign.hashCode ^ canBroadcast.hashCode;
+  int get hashCode =>
+      height.hashCode ^
+      inputs.hashCode ^
+      outputs.hashCode ^
+      fee.hashCode ^
+      canSign.hashCode ^
+      canBroadcast.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -96,7 +109,11 @@ class TxPlanIn {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TxPlanIn && runtimeType == other.runtimeType && pool == other.pool && amount == other.amount && assetName == other.assetName;
+      other is TxPlanIn &&
+          runtimeType == other.runtimeType &&
+          pool == other.pool &&
+          amount == other.amount &&
+          assetName == other.assetName;
 }
 
 class TxPlanOut {
@@ -113,7 +130,8 @@ class TxPlanOut {
   });
 
   @override
-  int get hashCode => pool.hashCode ^ amount.hashCode ^ address.hashCode ^ assetName.hashCode;
+  int get hashCode =>
+      pool.hashCode ^ amount.hashCode ^ address.hashCode ^ assetName.hashCode;
 
   @override
   bool operator ==(Object other) =>

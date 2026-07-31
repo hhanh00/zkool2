@@ -23,21 +23,27 @@ mixin _$ExchangeRate {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $ExchangeRateCopyWith<ExchangeRate> get copyWith => _$ExchangeRateCopyWithImpl<ExchangeRate>(this as ExchangeRate, _$identity);
+  $ExchangeRateCopyWith<ExchangeRate> get copyWith =>
+      _$ExchangeRateCopyWithImpl<ExchangeRate>(
+          this as ExchangeRate, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is ExchangeRate &&
-            (identical(other.fromPrice, fromPrice) || other.fromPrice == fromPrice) &&
+            (identical(other.fromPrice, fromPrice) ||
+                other.fromPrice == fromPrice) &&
             (identical(other.toPrice, toPrice) || other.toPrice == toPrice) &&
-            (identical(other.fromCurrency, fromCurrency) || other.fromCurrency == fromCurrency) &&
-            (identical(other.toCurrency, toCurrency) || other.toCurrency == toCurrency));
+            (identical(other.fromCurrency, fromCurrency) ||
+                other.fromCurrency == fromCurrency) &&
+            (identical(other.toCurrency, toCurrency) ||
+                other.toCurrency == toCurrency));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, fromPrice, toPrice, fromCurrency, toCurrency);
+  int get hashCode =>
+      Object.hash(runtimeType, fromPrice, toPrice, fromCurrency, toCurrency);
 
   @override
   String toString() {
@@ -47,9 +53,15 @@ mixin _$ExchangeRate {
 
 /// @nodoc
 abstract mixin class $ExchangeRateCopyWith<$Res> {
-  factory $ExchangeRateCopyWith(ExchangeRate value, $Res Function(ExchangeRate) _then) = _$ExchangeRateCopyWithImpl;
+  factory $ExchangeRateCopyWith(
+          ExchangeRate value, $Res Function(ExchangeRate) _then) =
+      _$ExchangeRateCopyWithImpl;
   @useResult
-  $Res call({double fromPrice, double toPrice, String fromCurrency, String toCurrency});
+  $Res call(
+      {double fromPrice,
+      double toPrice,
+      String fromCurrency,
+      String toCurrency});
 }
 
 /// @nodoc
@@ -181,13 +193,16 @@ extension ExchangeRatePatterns on ExchangeRate {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(double fromPrice, double toPrice, String fromCurrency, String toCurrency)? $default, {
+    TResult Function(double fromPrice, double toPrice, String fromCurrency,
+            String toCurrency)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _ExchangeRate() when $default != null:
-        return $default(_that.fromPrice, _that.toPrice, _that.fromCurrency, _that.toCurrency);
+        return $default(_that.fromPrice, _that.toPrice, _that.fromCurrency,
+            _that.toCurrency);
       case _:
         return orElse();
     }
@@ -208,12 +223,15 @@ extension ExchangeRatePatterns on ExchangeRate {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(double fromPrice, double toPrice, String fromCurrency, String toCurrency) $default,
+    TResult Function(double fromPrice, double toPrice, String fromCurrency,
+            String toCurrency)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _ExchangeRate():
-        return $default(_that.fromPrice, _that.toPrice, _that.fromCurrency, _that.toCurrency);
+        return $default(_that.fromPrice, _that.toPrice, _that.fromCurrency,
+            _that.toCurrency);
     }
   }
 
@@ -231,12 +249,15 @@ extension ExchangeRatePatterns on ExchangeRate {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(double fromPrice, double toPrice, String fromCurrency, String toCurrency)? $default,
+    TResult? Function(double fromPrice, double toPrice, String fromCurrency,
+            String toCurrency)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _ExchangeRate() when $default != null:
-        return $default(_that.fromPrice, _that.toPrice, _that.fromCurrency, _that.toCurrency);
+        return $default(_that.fromPrice, _that.toPrice, _that.fromCurrency,
+            _that.toCurrency);
       case _:
         return null;
     }
@@ -246,7 +267,11 @@ extension ExchangeRatePatterns on ExchangeRate {
 /// @nodoc
 
 class _ExchangeRate implements ExchangeRate {
-  const _ExchangeRate({required this.fromPrice, required this.toPrice, required this.fromCurrency, required this.toCurrency});
+  const _ExchangeRate(
+      {required this.fromPrice,
+      required this.toPrice,
+      required this.fromCurrency,
+      required this.toCurrency});
 
   @override
   final double fromPrice;
@@ -262,21 +287,26 @@ class _ExchangeRate implements ExchangeRate {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$ExchangeRateCopyWith<_ExchangeRate> get copyWith => __$ExchangeRateCopyWithImpl<_ExchangeRate>(this, _$identity);
+  _$ExchangeRateCopyWith<_ExchangeRate> get copyWith =>
+      __$ExchangeRateCopyWithImpl<_ExchangeRate>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _ExchangeRate &&
-            (identical(other.fromPrice, fromPrice) || other.fromPrice == fromPrice) &&
+            (identical(other.fromPrice, fromPrice) ||
+                other.fromPrice == fromPrice) &&
             (identical(other.toPrice, toPrice) || other.toPrice == toPrice) &&
-            (identical(other.fromCurrency, fromCurrency) || other.fromCurrency == fromCurrency) &&
-            (identical(other.toCurrency, toCurrency) || other.toCurrency == toCurrency));
+            (identical(other.fromCurrency, fromCurrency) ||
+                other.fromCurrency == fromCurrency) &&
+            (identical(other.toCurrency, toCurrency) ||
+                other.toCurrency == toCurrency));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, fromPrice, toPrice, fromCurrency, toCurrency);
+  int get hashCode =>
+      Object.hash(runtimeType, fromPrice, toPrice, fromCurrency, toCurrency);
 
   @override
   String toString() {
@@ -285,15 +315,23 @@ class _ExchangeRate implements ExchangeRate {
 }
 
 /// @nodoc
-abstract mixin class _$ExchangeRateCopyWith<$Res> implements $ExchangeRateCopyWith<$Res> {
-  factory _$ExchangeRateCopyWith(_ExchangeRate value, $Res Function(_ExchangeRate) _then) = __$ExchangeRateCopyWithImpl;
+abstract mixin class _$ExchangeRateCopyWith<$Res>
+    implements $ExchangeRateCopyWith<$Res> {
+  factory _$ExchangeRateCopyWith(
+          _ExchangeRate value, $Res Function(_ExchangeRate) _then) =
+      __$ExchangeRateCopyWithImpl;
   @override
   @useResult
-  $Res call({double fromPrice, double toPrice, String fromCurrency, String toCurrency});
+  $Res call(
+      {double fromPrice,
+      double toPrice,
+      String fromCurrency,
+      String toCurrency});
 }
 
 /// @nodoc
-class __$ExchangeRateCopyWithImpl<$Res> implements _$ExchangeRateCopyWith<$Res> {
+class __$ExchangeRateCopyWithImpl<$Res>
+    implements _$ExchangeRateCopyWith<$Res> {
   __$ExchangeRateCopyWithImpl(this._self, this._then);
 
   final _ExchangeRate _self;
@@ -344,7 +382,8 @@ mixin _$LWDInfo {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $LWDInfoCopyWith<LWDInfo> get copyWith => _$LWDInfoCopyWithImpl<LWDInfo>(this as LWDInfo, _$identity);
+  $LWDInfoCopyWith<LWDInfo> get copyWith =>
+      _$LWDInfoCopyWithImpl<LWDInfo>(this as LWDInfo, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -361,7 +400,8 @@ mixin _$LWDInfo {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, url, isTor, height, status, uptime, version, ping);
+  int get hashCode => Object.hash(
+      runtimeType, url, isTor, height, status, uptime, version, ping);
 
   @override
   String toString() {
@@ -371,9 +411,17 @@ mixin _$LWDInfo {
 
 /// @nodoc
 abstract mixin class $LWDInfoCopyWith<$Res> {
-  factory $LWDInfoCopyWith(LWDInfo value, $Res Function(LWDInfo) _then) = _$LWDInfoCopyWithImpl;
+  factory $LWDInfoCopyWith(LWDInfo value, $Res Function(LWDInfo) _then) =
+      _$LWDInfoCopyWithImpl;
   @useResult
-  $Res call({String url, bool isTor, int height, String status, int uptime, String version, int ping});
+  $Res call(
+      {String url,
+      bool isTor,
+      int height,
+      String status,
+      int uptime,
+      String version,
+      int ping});
 }
 
 /// @nodoc
@@ -520,13 +568,16 @@ extension LWDInfoPatterns on LWDInfo {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(String url, bool isTor, int height, String status, int uptime, String version, int ping)? $default, {
+    TResult Function(String url, bool isTor, int height, String status,
+            int uptime, String version, int ping)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _LWDInfo() when $default != null:
-        return $default(_that.url, _that.isTor, _that.height, _that.status, _that.uptime, _that.version, _that.ping);
+        return $default(_that.url, _that.isTor, _that.height, _that.status,
+            _that.uptime, _that.version, _that.ping);
       case _:
         return orElse();
     }
@@ -547,12 +598,15 @@ extension LWDInfoPatterns on LWDInfo {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(String url, bool isTor, int height, String status, int uptime, String version, int ping) $default,
+    TResult Function(String url, bool isTor, int height, String status,
+            int uptime, String version, int ping)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _LWDInfo():
-        return $default(_that.url, _that.isTor, _that.height, _that.status, _that.uptime, _that.version, _that.ping);
+        return $default(_that.url, _that.isTor, _that.height, _that.status,
+            _that.uptime, _that.version, _that.ping);
     }
   }
 
@@ -570,12 +624,15 @@ extension LWDInfoPatterns on LWDInfo {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(String url, bool isTor, int height, String status, int uptime, String version, int ping)? $default,
+    TResult? Function(String url, bool isTor, int height, String status,
+            int uptime, String version, int ping)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _LWDInfo() when $default != null:
-        return $default(_that.url, _that.isTor, _that.height, _that.status, _that.uptime, _that.version, _that.ping);
+        return $default(_that.url, _that.isTor, _that.height, _that.status,
+            _that.uptime, _that.version, _that.ping);
       case _:
         return null;
     }
@@ -586,7 +643,13 @@ extension LWDInfoPatterns on LWDInfo {
 
 class _LWDInfo implements LWDInfo {
   const _LWDInfo(
-      {required this.url, required this.isTor, required this.height, required this.status, required this.uptime, required this.version, required this.ping});
+      {required this.url,
+      required this.isTor,
+      required this.height,
+      required this.status,
+      required this.uptime,
+      required this.version,
+      required this.ping});
 
   @override
   final String url;
@@ -608,7 +671,8 @@ class _LWDInfo implements LWDInfo {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$LWDInfoCopyWith<_LWDInfo> get copyWith => __$LWDInfoCopyWithImpl<_LWDInfo>(this, _$identity);
+  _$LWDInfoCopyWith<_LWDInfo> get copyWith =>
+      __$LWDInfoCopyWithImpl<_LWDInfo>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -625,7 +689,8 @@ class _LWDInfo implements LWDInfo {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, url, isTor, height, status, uptime, version, ping);
+  int get hashCode => Object.hash(
+      runtimeType, url, isTor, height, status, uptime, version, ping);
 
   @override
   String toString() {
@@ -635,10 +700,18 @@ class _LWDInfo implements LWDInfo {
 
 /// @nodoc
 abstract mixin class _$LWDInfoCopyWith<$Res> implements $LWDInfoCopyWith<$Res> {
-  factory _$LWDInfoCopyWith(_LWDInfo value, $Res Function(_LWDInfo) _then) = __$LWDInfoCopyWithImpl;
+  factory _$LWDInfoCopyWith(_LWDInfo value, $Res Function(_LWDInfo) _then) =
+      __$LWDInfoCopyWithImpl;
   @override
   @useResult
-  $Res call({String url, bool isTor, int height, String status, int uptime, String version, int ping});
+  $Res call(
+      {String url,
+      bool isTor,
+      int height,
+      String status,
+      int uptime,
+      String version,
+      int ping});
 }
 
 /// @nodoc

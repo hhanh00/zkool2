@@ -22,5 +22,10 @@ class SyncHeight {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is SyncHeight && runtimeType == other.runtimeType && pool == other.pool && height == other.height && time == other.time;
+      identical(this, other) ||
+      other is SyncHeight &&
+          runtimeType == other.runtimeType &&
+          pool == other.pool &&
+          height == other.height &&
+          time == other.time;
 }
