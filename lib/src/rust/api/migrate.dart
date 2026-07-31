@@ -13,16 +13,19 @@ part 'migrate.freezed.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Single-shot step (kept for FRB generated-code compatibility).
-Future<MigrationEvent> stepMigration({required Coin c}) => RustLib.instance.api.crateApiMigrateStepMigration(c: c);
+Future<MigrationEvent> stepMigration({required Coin c}) =>
+    RustLib.instance.api.crateApiMigrateStepMigration(c: c);
 
 /// Stub kept for FRB generated-code compatibility.
-Future<MigrationStatus> getMigrationStatus({required Coin c}) => RustLib.instance.api.crateApiMigrateGetMigrationStatus(c: c);
+Future<MigrationStatus> getMigrationStatus({required Coin c}) =>
+    RustLib.instance.api.crateApiMigrateGetMigrationStatus(c: c);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NoteMigration>>
 abstract class NoteMigration implements RustOpaqueInterface {
   Future<void> cancel();
 
-  factory NoteMigration() => RustLib.instance.api.crateApiMigrateNoteMigrationNew();
+  factory NoteMigration() =>
+      RustLib.instance.api.crateApiMigrateNoteMigrationNew();
 
   Stream<MigrationStatus> run({required Coin c, required BigInt meanDelayMs});
 

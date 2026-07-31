@@ -21,14 +21,16 @@ mixin _$MemoCell {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MemoCellCopyWith<MemoCell> get copyWith => _$MemoCellCopyWithImpl<MemoCell>(this as MemoCell, _$identity);
+  $MemoCellCopyWith<MemoCell> get copyWith =>
+      _$MemoCellCopyWithImpl<MemoCell>(this as MemoCell, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is MemoCell &&
-            (identical(other.cellType, cellType) || other.cellType == cellType) &&
+            (identical(other.cellType, cellType) ||
+                other.cellType == cellType) &&
             (identical(other.value, value) || other.value == value));
   }
 
@@ -43,7 +45,8 @@ mixin _$MemoCell {
 
 /// @nodoc
 abstract mixin class $MemoCellCopyWith<$Res> {
-  factory $MemoCellCopyWith(MemoCell value, $Res Function(MemoCell) _then) = _$MemoCellCopyWithImpl;
+  factory $MemoCellCopyWith(MemoCell value, $Res Function(MemoCell) _then) =
+      _$MemoCellCopyWithImpl;
   @useResult
   $Res call({String cellType, String value});
 }
@@ -244,14 +247,16 @@ class _MemoCell implements MemoCell {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$MemoCellCopyWith<_MemoCell> get copyWith => __$MemoCellCopyWithImpl<_MemoCell>(this, _$identity);
+  _$MemoCellCopyWith<_MemoCell> get copyWith =>
+      __$MemoCellCopyWithImpl<_MemoCell>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _MemoCell &&
-            (identical(other.cellType, cellType) || other.cellType == cellType) &&
+            (identical(other.cellType, cellType) ||
+                other.cellType == cellType) &&
             (identical(other.value, value) || other.value == value));
   }
 
@@ -265,8 +270,10 @@ class _MemoCell implements MemoCell {
 }
 
 /// @nodoc
-abstract mixin class _$MemoCellCopyWith<$Res> implements $MemoCellCopyWith<$Res> {
-  factory _$MemoCellCopyWith(_MemoCell value, $Res Function(_MemoCell) _then) = __$MemoCellCopyWithImpl;
+abstract mixin class _$MemoCellCopyWith<$Res>
+    implements $MemoCellCopyWith<$Res> {
+  factory _$MemoCellCopyWith(_MemoCell value, $Res Function(_MemoCell) _then) =
+      __$MemoCellCopyWithImpl;
   @override
   @useResult
   $Res call({String cellType, String value});
@@ -308,15 +315,20 @@ mixin _$MemoRow {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MemoRowCopyWith<MemoRow> get copyWith => _$MemoRowCopyWithImpl<MemoRow>(this as MemoRow, _$identity);
+  $MemoRowCopyWith<MemoRow> get copyWith =>
+      _$MemoRowCopyWithImpl<MemoRow>(this as MemoRow, _$identity);
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType && other is MemoRow && const DeepCollectionEquality().equals(other.cells, cells));
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is MemoRow &&
+            const DeepCollectionEquality().equals(other.cells, cells));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(cells));
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(cells));
 
   @override
   String toString() {
@@ -326,7 +338,8 @@ mixin _$MemoRow {
 
 /// @nodoc
 abstract mixin class $MemoRowCopyWith<$Res> {
-  factory $MemoRowCopyWith(MemoRow value, $Res Function(MemoRow) _then) = _$MemoRowCopyWithImpl;
+  factory $MemoRowCopyWith(MemoRow value, $Res Function(MemoRow) _then) =
+      _$MemoRowCopyWithImpl;
   @useResult
   $Res call({List<MemoCell> cells});
 }
@@ -525,15 +538,20 @@ class _MemoRow implements MemoRow {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$MemoRowCopyWith<_MemoRow> get copyWith => __$MemoRowCopyWithImpl<_MemoRow>(this, _$identity);
+  _$MemoRowCopyWith<_MemoRow> get copyWith =>
+      __$MemoRowCopyWithImpl<_MemoRow>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType && other is _MemoRow && const DeepCollectionEquality().equals(other._cells, _cells));
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _MemoRow &&
+            const DeepCollectionEquality().equals(other._cells, _cells));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, const DeepCollectionEquality().hash(_cells));
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(_cells));
 
   @override
   String toString() {
@@ -543,7 +561,8 @@ class _MemoRow implements MemoRow {
 
 /// @nodoc
 abstract mixin class _$MemoRowCopyWith<$Res> implements $MemoRowCopyWith<$Res> {
-  factory _$MemoRowCopyWith(_MemoRow value, $Res Function(_MemoRow) _then) = __$MemoRowCopyWithImpl;
+  factory _$MemoRowCopyWith(_MemoRow value, $Res Function(_MemoRow) _then) =
+      __$MemoRowCopyWithImpl;
   @override
   @useResult
   $Res call({List<MemoCell> cells});
@@ -582,7 +601,8 @@ mixin _$MemoSection {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $MemoSectionCopyWith<MemoSection> get copyWith => _$MemoSectionCopyWithImpl<MemoSection>(this as MemoSection, _$identity);
+  $MemoSectionCopyWith<MemoSection> get copyWith =>
+      _$MemoSectionCopyWithImpl<MemoSection>(this as MemoSection, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -595,7 +615,11 @@ mixin _$MemoSection {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, title, const DeepCollectionEquality().hash(headers), const DeepCollectionEquality().hash(rows));
+  int get hashCode => Object.hash(
+      runtimeType,
+      title,
+      const DeepCollectionEquality().hash(headers),
+      const DeepCollectionEquality().hash(rows));
 
   @override
   String toString() {
@@ -605,7 +629,9 @@ mixin _$MemoSection {
 
 /// @nodoc
 abstract mixin class $MemoSectionCopyWith<$Res> {
-  factory $MemoSectionCopyWith(MemoSection value, $Res Function(MemoSection) _then) = _$MemoSectionCopyWithImpl;
+  factory $MemoSectionCopyWith(
+          MemoSection value, $Res Function(MemoSection) _then) =
+      _$MemoSectionCopyWithImpl;
   @useResult
   $Res call({String title, List<String> headers, List<MemoRow> rows});
 }
@@ -734,7 +760,8 @@ extension MemoSectionPatterns on MemoSection {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(String title, List<String> headers, List<MemoRow> rows)? $default, {
+    TResult Function(String title, List<String> headers, List<MemoRow> rows)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
@@ -761,7 +788,8 @@ extension MemoSectionPatterns on MemoSection {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(String title, List<String> headers, List<MemoRow> rows) $default,
+    TResult Function(String title, List<String> headers, List<MemoRow> rows)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -784,7 +812,8 @@ extension MemoSectionPatterns on MemoSection {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(String title, List<String> headers, List<MemoRow> rows)? $default,
+    TResult? Function(String title, List<String> headers, List<MemoRow> rows)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -799,7 +828,10 @@ extension MemoSectionPatterns on MemoSection {
 /// @nodoc
 
 class _MemoSection implements MemoSection {
-  const _MemoSection({required this.title, required final List<String> headers, required final List<MemoRow> rows})
+  const _MemoSection(
+      {required this.title,
+      required final List<String> headers,
+      required final List<MemoRow> rows})
       : _headers = headers,
         _rows = rows;
 
@@ -826,7 +858,8 @@ class _MemoSection implements MemoSection {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$MemoSectionCopyWith<_MemoSection> get copyWith => __$MemoSectionCopyWithImpl<_MemoSection>(this, _$identity);
+  _$MemoSectionCopyWith<_MemoSection> get copyWith =>
+      __$MemoSectionCopyWithImpl<_MemoSection>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -839,7 +872,11 @@ class _MemoSection implements MemoSection {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, title, const DeepCollectionEquality().hash(_headers), const DeepCollectionEquality().hash(_rows));
+  int get hashCode => Object.hash(
+      runtimeType,
+      title,
+      const DeepCollectionEquality().hash(_headers),
+      const DeepCollectionEquality().hash(_rows));
 
   @override
   String toString() {
@@ -848,8 +885,11 @@ class _MemoSection implements MemoSection {
 }
 
 /// @nodoc
-abstract mixin class _$MemoSectionCopyWith<$Res> implements $MemoSectionCopyWith<$Res> {
-  factory _$MemoSectionCopyWith(_MemoSection value, $Res Function(_MemoSection) _then) = __$MemoSectionCopyWithImpl;
+abstract mixin class _$MemoSectionCopyWith<$Res>
+    implements $MemoSectionCopyWith<$Res> {
+  factory _$MemoSectionCopyWith(
+          _MemoSection value, $Res Function(_MemoSection) _then) =
+      __$MemoSectionCopyWithImpl;
   @override
   @useResult
   $Res call({String title, List<String> headers, List<MemoRow> rows});
@@ -903,7 +943,8 @@ mixin _$PluginInfo {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $PluginInfoCopyWith<PluginInfo> get copyWith => _$PluginInfoCopyWithImpl<PluginInfo>(this as PluginInfo, _$identity);
+  $PluginInfoCopyWith<PluginInfo> get copyWith =>
+      _$PluginInfoCopyWithImpl<PluginInfo>(this as PluginInfo, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -914,14 +955,24 @@ mixin _$PluginInfo {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.version, version) || other.version == version) &&
             (identical(other.author, author) || other.author == author) &&
-            (identical(other.description, description) || other.description == description) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
             (identical(other.enabled, enabled) || other.enabled == enabled) &&
             const DeepCollectionEquality().equals(other.types, types) &&
-            const DeepCollectionEquality().equals(other.memoPrefixes, memoPrefixes));
+            const DeepCollectionEquality()
+                .equals(other.memoPrefixes, memoPrefixes));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, version, author, description, enabled, const DeepCollectionEquality().hash(types),
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      name,
+      version,
+      author,
+      description,
+      enabled,
+      const DeepCollectionEquality().hash(types),
       const DeepCollectionEquality().hash(memoPrefixes));
 
   @override
@@ -932,9 +983,19 @@ mixin _$PluginInfo {
 
 /// @nodoc
 abstract mixin class $PluginInfoCopyWith<$Res> {
-  factory $PluginInfoCopyWith(PluginInfo value, $Res Function(PluginInfo) _then) = _$PluginInfoCopyWithImpl;
+  factory $PluginInfoCopyWith(
+          PluginInfo value, $Res Function(PluginInfo) _then) =
+      _$PluginInfoCopyWithImpl;
   @useResult
-  $Res call({String id, String name, String version, String? author, String? description, bool enabled, List<String> types, List<String> memoPrefixes});
+  $Res call(
+      {String id,
+      String name,
+      String version,
+      String? author,
+      String? description,
+      bool enabled,
+      List<String> types,
+      List<String> memoPrefixes});
 }
 
 /// @nodoc
@@ -1086,14 +1147,23 @@ extension PluginInfoPatterns on PluginInfo {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(String id, String name, String version, String? author, String? description, bool enabled, List<String> types, List<String> memoPrefixes)?
+    TResult Function(
+            String id,
+            String name,
+            String version,
+            String? author,
+            String? description,
+            bool enabled,
+            List<String> types,
+            List<String> memoPrefixes)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _PluginInfo() when $default != null:
-        return $default(_that.id, _that.name, _that.version, _that.author, _that.description, _that.enabled, _that.types, _that.memoPrefixes);
+        return $default(_that.id, _that.name, _that.version, _that.author,
+            _that.description, _that.enabled, _that.types, _that.memoPrefixes);
       case _:
         return orElse();
     }
@@ -1114,13 +1184,22 @@ extension PluginInfoPatterns on PluginInfo {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(String id, String name, String version, String? author, String? description, bool enabled, List<String> types, List<String> memoPrefixes)
+    TResult Function(
+            String id,
+            String name,
+            String version,
+            String? author,
+            String? description,
+            bool enabled,
+            List<String> types,
+            List<String> memoPrefixes)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _PluginInfo():
-        return $default(_that.id, _that.name, _that.version, _that.author, _that.description, _that.enabled, _that.types, _that.memoPrefixes);
+        return $default(_that.id, _that.name, _that.version, _that.author,
+            _that.description, _that.enabled, _that.types, _that.memoPrefixes);
     }
   }
 
@@ -1138,13 +1217,22 @@ extension PluginInfoPatterns on PluginInfo {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(String id, String name, String version, String? author, String? description, bool enabled, List<String> types, List<String> memoPrefixes)?
+    TResult? Function(
+            String id,
+            String name,
+            String version,
+            String? author,
+            String? description,
+            bool enabled,
+            List<String> types,
+            List<String> memoPrefixes)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _PluginInfo() when $default != null:
-        return $default(_that.id, _that.name, _that.version, _that.author, _that.description, _that.enabled, _that.types, _that.memoPrefixes);
+        return $default(_that.id, _that.name, _that.version, _that.author,
+            _that.description, _that.enabled, _that.types, _that.memoPrefixes);
       case _:
         return null;
     }
@@ -1199,7 +1287,8 @@ class _PluginInfo implements PluginInfo {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  _$PluginInfoCopyWith<_PluginInfo> get copyWith => __$PluginInfoCopyWithImpl<_PluginInfo>(this, _$identity);
+  _$PluginInfoCopyWith<_PluginInfo> get copyWith =>
+      __$PluginInfoCopyWithImpl<_PluginInfo>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
@@ -1210,14 +1299,24 @@ class _PluginInfo implements PluginInfo {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.version, version) || other.version == version) &&
             (identical(other.author, author) || other.author == author) &&
-            (identical(other.description, description) || other.description == description) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
             (identical(other.enabled, enabled) || other.enabled == enabled) &&
             const DeepCollectionEquality().equals(other._types, _types) &&
-            const DeepCollectionEquality().equals(other._memoPrefixes, _memoPrefixes));
+            const DeepCollectionEquality()
+                .equals(other._memoPrefixes, _memoPrefixes));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, version, author, description, enabled, const DeepCollectionEquality().hash(_types),
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      name,
+      version,
+      author,
+      description,
+      enabled,
+      const DeepCollectionEquality().hash(_types),
       const DeepCollectionEquality().hash(_memoPrefixes));
 
   @override
@@ -1227,11 +1326,22 @@ class _PluginInfo implements PluginInfo {
 }
 
 /// @nodoc
-abstract mixin class _$PluginInfoCopyWith<$Res> implements $PluginInfoCopyWith<$Res> {
-  factory _$PluginInfoCopyWith(_PluginInfo value, $Res Function(_PluginInfo) _then) = __$PluginInfoCopyWithImpl;
+abstract mixin class _$PluginInfoCopyWith<$Res>
+    implements $PluginInfoCopyWith<$Res> {
+  factory _$PluginInfoCopyWith(
+          _PluginInfo value, $Res Function(_PluginInfo) _then) =
+      __$PluginInfoCopyWithImpl;
   @override
   @useResult
-  $Res call({String id, String name, String version, String? author, String? description, bool enabled, List<String> types, List<String> memoPrefixes});
+  $Res call(
+      {String id,
+      String name,
+      String version,
+      String? author,
+      String? description,
+      bool enabled,
+      List<String> types,
+      List<String> memoPrefixes});
 }
 
 /// @nodoc
