@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.26.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.4...zkool-v6.26.0-rc.5) (2026-07-31)
+
+
+### Features
+
+* add one-shot Orchard migration ([b708435](https://github.com/hhanh00/zkool2/commit/b708435c6f80d158c01a18a14999faa34fc23a08))
+
 ## [6.26.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0-rc.3...zkool-v6.26.0-rc.4) (2026-07-30)
 
 
