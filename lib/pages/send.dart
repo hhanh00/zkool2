@@ -22,6 +22,7 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/transfer.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/address_resolver.dart';
@@ -308,21 +309,11 @@ class SendPageState extends ConsumerState<SendPage> {
       if (!confirmed) return;
     }
     try {
-      final options = PaymentOptions(
-        srcPools: 1, // Only the transparent pool (mask)
-        recipientPaysFee: true,
-        smartTransparent: smartTransparent,
-      );
-      final pczt = await prepare(
-        recipients: [
-          Recipient(
-            address: addresses?.oaddr ?? addresses?.saddr ?? "", // Shield to Orchard or Sapling address
-            amount: pbalance?.field0[0] ?? BigInt.zero,
-            assetBase: zecBase,
-          ),
-        ],
-        options: options,
+      final pczt = await transferAllBetweenPools(
         c: c,
+        sourcePools: 1,
+        destinationAddress: addresses?.oaddr ?? addresses?.saddr ?? "",
+        smartTransparent: smartTransparent,
       );
 
       GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
@@ -333,17 +324,10 @@ class SendPageState extends ConsumerState<SendPage> {
 
   void onUnshield() async {
     try {
-      final options = PaymentOptions(
-        srcPools: 6, // Only the sapling and orchard pool (mask)
-        recipientPaysFee: true,
-        smartTransparent: false,
-      );
-      final pczt = await prepare(
-        recipients: [
-          Recipient(address: addresses?.taddr ?? "", amount: (pbalance?.field0[1] ?? BigInt.zero) + (pbalance?.field0[2] ?? BigInt.zero), assetBase: zecBase)
-        ],
-        options: options,
+      final pczt = await transferAllBetweenPools(
         c: c,
+        sourcePools: 6,
+        destinationAddress: addresses?.taddr ?? "",
       );
 
       GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
