@@ -6,8 +6,10 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zkool/main.dart' show logger;
+import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/transfer.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
@@ -167,7 +169,37 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
       );
     } on AnyhowException catch (e) {
       if (!context.mounted) return;
-      showException(context, e.message);
+      unawaited(showException(context, e.message));
+    }
+  }
+
+  Future<void> _startOneShotMigration() async {
+    final confirmed = await confirmDialog(
+      context,
+      title: "One-Shot Migration",
+      message: "This will spend every unlocked Orchard ZEC note worth at least "
+          "0.00005000 ZEC in one transaction and send their total, minus the "
+          "network fee, to Ironwood. Smaller notes will remain in Orchard.\n\n"
+          "This bypasses the privacy-preserving migration workflow. Continue?",
+    );
+    if (!confirmed || !mounted) return;
+
+    try {
+      final c = coinContext.coin;
+      final addresses = await getAddresses(uaPools: 4, c: c);
+      if (!mounted) return;
+      final pczt = await transferAllBetweenPools(
+        c: c,
+        sourcePools: 4,
+        destinationAddress: addresses.oaddr ?? "",
+        destinationPools: 8,
+      );
+      if (!mounted) return;
+
+      await GoRouter.of(context).push("/tx", extra: pczt);
+    } on AnyhowException catch (e) {
+      if (!mounted) return;
+      await showException(context, e.message);
     }
   }
 
@@ -342,13 +374,31 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
                               ),
                             ),
                             const Gap(16),
-                            FilledButton.icon(
-                              onPressed: () {
-                                setState(() => _started = true);
-                                _startMigration();
-                              },
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text("Start Migration"),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: () {
+                                      setState(() => _started = true);
+                                      _startMigration();
+                                    },
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: const Text("Start Migration"),
+                                  ),
+                                ),
+                                const Gap(12),
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Theme.of(context).colorScheme.error,
+                                      foregroundColor: Theme.of(context).colorScheme.onError,
+                                    ),
+                                    onPressed: _startOneShotMigration,
+                                    icon: const Icon(Icons.warning_amber_rounded),
+                                    label: const Text("One Shot"),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
