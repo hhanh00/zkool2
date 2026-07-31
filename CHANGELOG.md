@@ -1,5 +1,28 @@
 # Changelog
 
+## [6.26.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.1...zkool-v6.26.0) (2026-07-31)
+
+
+### Features
+
+* add dust filter toggle for notes (hide ZEC notes &lt;= 5000 zats) ([531e4d8](https://github.com/hhanh00/zkool2/commit/531e4d8d77a9736eaebed9cb404c31db0673ce7d))
+* add group by pool toggle for notes view ([b785872](https://github.com/hhanh00/zkool2/commit/b785872644a2c683ff0c1260cba122dcd87c7d6c))
+* add lock/unlock all button per pool section header ([3e63ea7](https://github.com/hhanh00/zkool2/commit/3e63ea7d022c401a762e456020a854a2944b1aa1))
+* add one-shot Orchard migration ([d4aae4d](https://github.com/hhanh00/zkool2/commit/d4aae4d227ecf4ba98ecca683786855409d4cda2))
+* add toggle all notes button to invert lock state of every note ([ecb0a61](https://github.com/hhanh00/zkool2/commit/ecb0a6116889b4fdc9c057d24d9e98e33fdb35fb))
+* enhance migration with streaming and progress tracking ([71bab2b](https://github.com/hhanh00/zkool2/commit/71bab2b46676d08df269802015fc1d4f37c76832))
+* identify migration txs in history ([b28998e](https://github.com/hhanh00/zkool2/commit/b28998e7ee91cfa435bf99b70e7f90762877022c))
+* improve migration flow ([e448ff4](https://github.com/hhanh00/zkool2/commit/e448ff4c02886559bdb9fefb62a3ebae6888237b))
+* skip migration step when no new blocks since last broadcast ([d025a94](https://github.com/hhanh00/zkool2/commit/d025a9459f11c7d5808807ac1f9e99f5e96f0413))
+
+
+### Bug Fixes
+
+* add cancellation support for note migration ([11fe166](https://github.com/hhanh00/zkool2/commit/11fe1665bb30410e003b4be890dbd3505cbb8e78))
+* add error log printer utility ([85d17a1](https://github.com/hhanh00/zkool2/commit/85d17a1118f84c834839a6867f4130d0f30608b6))
+* address review comments ([09ac425](https://github.com/hhanh00/zkool2/commit/09ac4256ed26ef836177e5535a8f1763c667bbd1))
+* confirm before leaving active migration ([961a8a8](https://github.com/hhanh00/zkool2/commit/961a8a8bd905d8d0051bffffe90c5655f504ff56))
+
 ## [6.25.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.0...zkool-v6.25.1) (2026-07-28)
 
 
