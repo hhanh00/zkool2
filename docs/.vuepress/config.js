@@ -88,12 +88,21 @@ export default defineUserConfig({
         ],
       },
       {
-        text: "Coin Weighted Voting",
-        prefix: "/vote/",
+        text: "ZSA",
+        prefix: "/zsa/",
         children: [
-          "howto",
-        ],
+          "shielded-assets",
+          "testnet",
+          "using-zsa",
+        ]
       },
+      // {
+      //   text: "Coin Weighted Voting",
+      //   prefix: "/vote/",
+      //   children: [
+      //     "howto",
+      //   ],
+      // },
       {
         text: "Zcash tech",
         prefix: "/tech/",
