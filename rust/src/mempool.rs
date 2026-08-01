@@ -43,53 +43,53 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
     client: &mut Client,
     cancel_token: CancellationToken,
 ) -> Result<()> {
-    let transparent_accounts = sqlx::query(
-        r#"SELECT a.id_account, a.name, ta.address FROM accounts a
-        JOIN transparent_address_accounts ta
-        ON a.id_account = ta.account"#,
-    )
-    .map(|row: SqliteRow| {
-        let account: u32 = row.get(0);
-        let name: String = row.get(1);
-        let address: String = row.get(2);
-        let address = TransparentAddress::decode(network, &address).unwrap();
-        (account, name, address)
-    })
-    .fetch_all(&mut *connection)
-    .await
-    .context("transparent_accounts")?;
-
-    let sapling_accounts = sqlx::query(
-        r#"SELECT account, name, xvk FROM accounts a JOIN sapling_accounts s
-        ON a.id_account = s.account"#,
-    )
-    .map(|row: SqliteRow| {
-        let account: u32 = row.get(0);
-        let name: String = row.get(1);
-        let xvk: Vec<u8> = row.get(2);
-        let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
-        (account, name, fvk)
-    })
-    .fetch_all(&mut *connection)
-    .await
-    .context("sapling_accounts")?;
-
-    let orchard_accounts = sqlx::query(
-        r#"SELECT account, name, xvk FROM accounts a JOIN orchard_accounts o
-        ON a.id_account = o.account"#,
-    )
-    .map(|row: SqliteRow| {
-        let account: u32 = row.get(0);
-        let name: String = row.get(1);
-        let xvk: Vec<u8> = row.get(2);
-        let fvk = orchard::keys::FullViewingKey::read(&*xvk).unwrap();
-        (account, name, fvk)
-    })
-    .fetch_all(&mut *connection)
-    .await
-    .context("orchard_accounts")?;
-
     'outer: loop {
+        let transparent_accounts = sqlx::query(
+            r#"SELECT a.id_account, a.name, ta.address FROM accounts a
+            JOIN transparent_address_accounts ta
+            ON a.id_account = ta.account"#,
+        )
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let name: String = row.get(1);
+            let address: String = row.get(2);
+            let address = TransparentAddress::decode(network, &address).unwrap();
+            (account, name, address)
+        })
+        .fetch_all(&mut *connection)
+        .await
+        .context("transparent_accounts")?;
+
+        let sapling_accounts = sqlx::query(
+            r#"SELECT account, name, xvk FROM accounts a JOIN sapling_accounts s
+            ON a.id_account = s.account"#,
+        )
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let name: String = row.get(1);
+            let xvk: Vec<u8> = row.get(2);
+            let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+            (account, name, fvk)
+        })
+        .fetch_all(&mut *connection)
+        .await
+        .context("sapling_accounts")?;
+
+        let orchard_accounts = sqlx::query(
+            r#"SELECT account, name, xvk FROM accounts a JOIN orchard_accounts o
+            ON a.id_account = o.account"#,
+        )
+        .map(|row: SqliteRow| {
+            let account: u32 = row.get(0);
+            let name: String = row.get(1);
+            let xvk: Vec<u8> = row.get(2);
+            let fvk = orchard::keys::FullViewingKey::read(&*xvk).unwrap();
+            (account, name, fvk)
+        })
+        .fetch_all(&mut *connection)
+        .await
+        .context("orchard_accounts")?;
+
         let height = client.latest_height().await?;
         mempool_tx.send(MempoolMsg::BlockHeight(height)).await;
 
