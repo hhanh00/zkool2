@@ -680,7 +680,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             print(f"Generated new address for account 2")
 
             # Test 1: Set up subscriptions for BOTH accounts BEFORE transaction
-            print("\n--- Test 1: TX events sent to sender only, not receiver ---")
+            print("\n--- Test 1: TX events sent to sender and receiver ---")
 
             # Create subscriptions for both accounts
             account1_sub = EventSubscription(jwt1_token, account1_id)
@@ -742,20 +742,16 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
                 print(f"    All events: {account1_sub.events}")
                 assert False, "Account 1 JWT should receive their own account TX events!"
 
-            # Check if Account 2 (receiver) received the TX event
+            # Check if Account 2 (receiver) received the incoming TX event
             account2_tx_events = [e for e in account2_sub.events if e["type"] == "TX"]
             print(f"Account 2 (receiver) JWT received {len(account2_tx_events)} TX events")
 
-            if account2_tx_events:
-                print(
-                    f"  ERROR: Account 2 should NOT receive TX events for transactions sent TO them!"
-                )
-                for e in account2_tx_events:
-                    print(f"    - txid: {e.get('txid')}, value: {e.get('value')}")
-                assert False, "Account 2 should not receive TX events for incoming transactions!"
-            else:
-                print(f"  ✓ Account 2 (receiver) correctly did NOT receive the TX event")
-                print(f"    This confirms TX events are sent to the SENDER only")
+            assert account2_tx_events, "Account 2 should receive incoming TX events!"
+            assert any(
+                e.get("txid", "").lower() == txid_from_account1.lower()
+                for e in account2_tx_events
+            ), "Account 2 should receive the transaction sent to it"
+            print("  ✓ Account 2 (receiver) correctly received the incoming TX event")
 
             # Stop both subscriptions
             await account1_sub.stop()
