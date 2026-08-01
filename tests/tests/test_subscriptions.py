@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+from decimal import Decimal
 
 import pytest
 from gql import GraphQLRequest, gql
@@ -128,6 +129,14 @@ async def test_websocket_subscriptions(
             )
             receiver_address = result["addressByAccount"]["ironwood"]
             print(f"Receiver address: {receiver_address}")
+
+            # The mempool monitor reloads account viewing keys when it restarts
+            # after a new block. Mine a setup block so it sees the receiver
+            # account before testing the pending transaction.
+            setup_height = await get_current_height(client)
+            await mine_blocks(rpc_url, 1)
+            await wait_for_blocks(client, setup_height, 1)
+            await asyncio.sleep(3)
 
             print("\n=== Setting up WebSocket subscription ===")
 
@@ -312,7 +321,7 @@ async def test_websocket_subscriptions(
             assert ironwood_notes, (
                 f"Incoming note should be Ironwood (pool 3), got {receiver_notes}"
             )
-            assert any(n["value"] == "0.01" for n in ironwood_notes), (
+            assert any(Decimal(n["value"]) == Decimal("0.01") for n in ironwood_notes), (
                 f"Ironwood note should be 0.01, got {ironwood_notes}"
             )
             print("✓ Receiver sees the incoming Ironwood note (pool 3, value 0.01)")
