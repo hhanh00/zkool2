@@ -286,6 +286,37 @@ async def test_websocket_subscriptions(
 
             print("✓ unconfirmedByAccount API structure is correct")
 
+            # Test 1c: the receiver's incoming Ironwood note must be visible
+            # in the mempool before the transaction is mined
+            print("\n=== Test 1c: Incoming Ironwood note in unconfirmed API ===")
+
+            result = await client.execute_async(
+                GraphQLRequest(unconfirmed_query, variable_values={"account": receiver_id})
+            )
+            receiver_unconfirmed = result["unconfirmedByAccount"]
+            print(f"Receiver unconfirmed transactions: {len(receiver_unconfirmed)}")
+
+            receiver_notes = [
+                note
+                for tx in receiver_unconfirmed
+                if tx["txid"].lower() == txid.lower()
+                for note in tx["notes"]
+            ]
+            print(f"Receiver notes for {txid}: {receiver_notes}")
+
+            assert receiver_notes, (
+                f"Receiver should see the incoming Ironwood note in unconfirmed, "
+                f"got {receiver_unconfirmed}"
+            )
+            ironwood_notes = [n for n in receiver_notes if n["pool"] == 3]
+            assert ironwood_notes, (
+                f"Incoming note should be Ironwood (pool 3), got {receiver_notes}"
+            )
+            assert any(n["value"] == "0.01" for n in ironwood_notes), (
+                f"Ironwood note should be 0.01, got {ironwood_notes}"
+            )
+            print("✓ Receiver sees the incoming Ironwood note (pool 3, value 0.01)")
+
             # Mine a block
             height_before = await get_current_height(client)
             await mine_blocks(rpc_url, 1)
