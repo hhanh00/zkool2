@@ -3,7 +3,7 @@ use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::{keys::Scope, note_encryption::OrchardDomain};
+use orchard::{keys::Scope, note_encryption::{IronwoodDomain, OrchardDomain}};
 use sapling_crypto::{
     keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain,
     zip32::DiversifiableFullViewingKey,
@@ -273,8 +273,9 @@ pub async fn decode_raw_transaction(
     }
 
     macro_rules! process_orchard_bundle {
-        ($bundle:expr, $flavor:ty) => {{
+        ($bundle:expr, $pool:expr, $domain:ident) => {{
             let bundle = $bundle;
+            let pool: u8 = $pool;
             for v in bundle.actions().iter() {
                 let nf = v.nullifier().to_bytes().to_vec();
                 let spent_amount = sqlx::query(
@@ -300,7 +301,7 @@ pub async fn decode_raw_transaction(
                 .await?;
                 notes.extend(spent_amount);
 
-                let domain = OrchardDomain::for_action(v);
+                let domain = $domain::for_action(v);
                 for (account, name, fvk) in okeys.iter() {
                     for scope in [Scope::External, Scope::Internal] {
                         let ivk = fvk.to_ivk(scope);
@@ -320,7 +321,7 @@ pub async fn decode_raw_transaction(
                                 account: *account,
                                 name: name.clone(),
                                 value: note.value().inner() as i64,
-                                pool: 2,
+                                pool,
                                 scope: orchard_scope_to_u8(scope),
                                 diversifier: Some(diversifier),
                                 diversifier_index,
@@ -338,7 +339,7 @@ pub async fn decode_raw_transaction(
     if let Some(obundle) = tx_data.orchard_bundle() {
         match obundle {
             OrchardBundle::OrchardVanilla(b) => {
-                process_orchard_bundle!(b, OrchardVanilla);
+                process_orchard_bundle!(b, 2, OrchardDomain);
             }
             OrchardBundle::OrchardZSA(_b) => {
                 // TODO: ZSA mempool processing
@@ -346,7 +347,7 @@ pub async fn decode_raw_transaction(
         }
     }
     if let Some(iwbundle) = tx_data.ironwood_bundle() {
-        process_orchard_bundle!(iwbundle, OrchardVanilla);
+        process_orchard_bundle!(iwbundle, 3, IronwoodDomain);
     }
     Ok(notes)
 }
