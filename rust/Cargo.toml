@@ -11,6 +11,11 @@ name = "zkool_graphql"
 path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
+[[bin]]
+name = "zkool_rpc"
+path = "src/rpc-cli.rs"
+required-features = ["rpc"]
+
 [dependencies]
 zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "1c820645e9116bbdfed5719ba8ff1d89b9be6cb1" }
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
@@ -147,6 +152,7 @@ rand = "0.6"
 default = ["flutter"]
 flutter = ["flutter_rust_bridge"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
+rpc = ["graphql"]
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]
 flutter_rust_bridge = ["dep:flutter_rust_bridge"]

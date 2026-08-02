@@ -18,6 +18,8 @@ mod frb_generated;
 pub mod frost;
 #[cfg(feature = "graphql")]
 pub mod graphql;
+#[cfg(feature = "rpc")]
+pub mod rpc;
 pub mod io;
 pub mod key;
 pub mod keys;
