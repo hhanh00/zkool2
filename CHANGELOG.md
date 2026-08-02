@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.26.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0...zkool-v6.26.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* ironwood tx detection in mempool ([cef5160](https://github.com/hhanh00/zkool2/commit/cef5160c39f6354f60d40f0c04df8e2a585f1a8b))
+* refresh mempool keys after new blocks ([ce74c2f](https://github.com/hhanh00/zkool2/commit/ce74c2fd1e86f1851fe9cfa57ba85357eed4bf14))
+
 ## [6.26.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.25.1...zkool-v6.26.0) (2026-07-31)
 
 
