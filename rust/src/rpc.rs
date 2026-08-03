@@ -55,6 +55,7 @@ pub struct RpcState {
     pub notify_tx_url: Option<String>,
     pub notify_block_url: Option<String>,
     pub address_creation_lock: Arc<Mutex<()>>,
+    pub scan_lock: Arc<Mutex<()>>,
     pub http: reqwest::Client,
 }
 
@@ -463,6 +464,10 @@ pub async fn get_confirmed_transfers_impl(
 
     // diversifier_index -> address_index, from rpc_subaddresses.
     let addr_map = address_index_map(conn, account).await?;
+    // address_index -> ua, from rpc_subaddresses. This is the address
+    // BTCPay/monero-rpc callers expect (the account's unified address),
+    // not the single-pool address derived in resolve_note.
+    let ua_map = address_ua_map(conn, account).await?;
 
     let mut grouped: HashMap<(u32, u32), (u64, String)> = HashMap::new(); // (id_tx, address_index) -> (value, address)
 
@@ -493,9 +498,17 @@ pub async fn get_confirmed_transfers_impl(
             continue;
         }
 
+        // Prefer the account's stored UA for this address_index; fall back
+        // to the pool-derived address only if it's missing (e.g. address
+        // index 0 / base account before any rpc_subaddresses row exists).
+        let address = ua_map
+            .get(&address_index)
+            .cloned()
+            .unwrap_or_else(|| resolved.address.clone());
+
         let entry = grouped
             .entry((id_tx, address_index))
-            .or_insert((0, resolved.address.clone()));
+            .or_insert((0, address));
         entry.0 += value;
     }
 
@@ -648,7 +661,7 @@ async fn unconfirmed_to_transfer(
     value: &BigDecimal,
     notes: &[UnconfirmedNote],
 ) -> anyhow::Result<Transfer> {
-    let amount = zec_bigdecimal_to_zats(value);
+    let amount: u64 = value.to_string().parse().unwrap_or(0);
 
     // Resolve the subaddress index from the first note's diversifier_index,
     // using the same rpc_subaddresses mapping as confirmed transfers.
@@ -659,6 +672,14 @@ async fn unconfirmed_to_transfer(
         .and_then(|d| d.to_string().parse::<i64>().ok())
         .and_then(|d| addr_map.get(&d).copied())
         .unwrap_or(0);
+
+    // Prefer the account's stored UA for this address_index over the raw
+    // per-note address (which may be sapling/orchard-only), to match
+    // BTCPay's expectations.
+    let ua_map = address_ua_map(conn, account_index).await?;
+    let address = ua_map.get(&address_index).cloned().or_else(|| {
+        notes.first().and_then(|n| n.address.clone())
+    }).unwrap_or_default();
 
     Ok(Transfer {
         txid: txid.to_string(),
@@ -674,10 +695,7 @@ async fn unconfirmed_to_transfer(
             major: account_index,
             minor: address_index,
         },
-        address: notes
-            .first()
-            .and_then(|n| n.address.clone())
-            .unwrap_or_default(),
+        address,
     })
 }
 
@@ -723,6 +741,26 @@ async fn address_index_map(
     .fetch_all(&mut *conn)
     .await?;
     Ok(rows.into_iter().map(|(d, a)| (d, a as u32)).collect())
+}
+
+/// Build an address_index -> ua map for one account, from the RPC-only
+/// bookkeeping table. This is the unified address BTCPay/monero-rpc
+/// clients expect to see in `Transfer.address`, as opposed to the
+/// single-pool address derived directly from a note's diversifier.
+async fn address_ua_map(
+    conn: &mut SqliteConnection,
+    account: u32,
+) -> anyhow::Result<HashMap<u32, String>> {
+    let rows: Vec<(i64, Option<String>)> = sqlx::query_as(
+        "SELECT address_index, ua FROM rpc_subaddresses WHERE account = ?",
+    )
+    .bind(account)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(idx, ua)| ua.map(|ua| (idx as u32, ua)))
+        .collect())
 }
 
 #[derive(Clone, Debug)]
@@ -953,6 +991,36 @@ async fn sync_info(_req: SyncInfoRequest, state: RpcState) -> Result<impl Reply,
     Ok(warp::reply::json(&resp))
 }
 
+async fn run_scan(
+    state: &RpcState,
+    account_index: u32,
+    fast: bool,
+    transparent_limit: u32,
+) -> anyhow::Result<Option<u32>> {
+    let Ok(_guard) = state.scan_lock.try_lock() else {
+        tracing::info!(
+            "scan already in progress, skipping scan for account {account_index}"
+        );
+        return Ok(None);
+    };
+
+    let current_height = crate::api::network::get_current_height(&state.coin).await?;
+
+    let height = crate::sync::synchronize_impl(
+        (),
+        vec![account_index],
+        current_height,
+        100_000,
+        transparent_limit,
+        10_000,
+        fast,
+        &state.coin,
+    )
+    .await?;
+
+    Ok(Some(height as u32))
+}
+
 // ---------------------------------------------------------------------
 // request_scan
 // ---------------------------------------------------------------------
@@ -967,6 +1035,8 @@ struct RequestSyncRequest {
 #[derive(Serialize)]
 struct RequestSyncResponse {
     height: u32,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    busy: bool,
 }
 
 async fn request_scan(
@@ -979,23 +1049,21 @@ async fn request_scan(
             .transparent_limit
             .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
 
-        let current_height = crate::api::network::get_current_height(&state.coin).await?;
-
-        let height = crate::sync::synchronize_impl(
-            (),
-            vec![req.account_index],
-            current_height,
-            100_000,
-            transparent_limit,
-            10_000,
-            fast,
-            &state.coin,
-        )
-        .await?;
-
-        Ok::<_, anyhow::Error>(RequestSyncResponse {
-            height: height as u32,
-        })
+        match run_scan(&state, req.account_index, fast, transparent_limit).await? {
+            Some(height) => Ok::<_, anyhow::Error>(RequestSyncResponse {
+                height,
+                busy: false,
+            }),
+            None => {
+                // A scan was already running; report current known height
+                // instead of blocking the caller.
+                let mut conn = state.coin.get_connection().await?;
+                let height = get_sync_height(&mut conn, req.account_index)
+                    .await?
+                    .unwrap_or(0);
+                Ok(RequestSyncResponse { height, busy: true })
+            }
+        }
     };
     let resp = inner.await.map_err(reject)?;
     Ok(warp::reply::json(&resp))
@@ -1185,7 +1253,7 @@ pub async fn run_rpc_mempool(state: RpcState) {
                                 let mut mempool = MEMPOOL.lock().await;
                                 let e = mempool.unconfirmed.entry(account);
                                 let e = e.or_insert_with(HashMap::new);
-                                e.insert(txid.clone(), (zats_to_zec(value), notes.clone()));
+                                e.insert(txid.clone(), (BigDecimal::from(value), notes.clone()));
                                 tracing::info!("notify_mempool end {txid}");
                             }
                             {
@@ -1202,10 +1270,10 @@ pub async fn run_rpc_mempool(state: RpcState) {
                         }
                     }
                     MempoolMsg::BlockHeight(height) => {
-                        tracing::info!("notify_block {height}");
-                        if let Some(url) = &notify_state.notify_block_url {
-                            notify_block(&notify_state.http, url, height).await;
-                        }
+                        // tracing::info!("notify_block {height}");
+                        // if let Some(url) = &notify_state.notify_block_url {
+                        //     notify_block(&notify_state.http, url, height).await;
+                        // }
 
                         // A new block landed: reconcile the mempool cache
                         // against confirmed transactions so we don't show
@@ -1217,6 +1285,50 @@ pub async fn run_rpc_mempool(state: RpcState) {
                         {
                             tracing::warn!("mempool reconciliation failed: {e:#}");
                         }
+                        // let accounts = list_accounts(&mut conn, state.coin.coin).await?;
+
+                        let scanned = match notify_state.coin.get_connection().await {
+                        Ok(mut conn) => match list_accounts(&mut conn, notify_state.coin.coin).await {
+                            Ok(accounts) => {
+                                drop(conn);
+                                let mut any_scanned = false;
+                                for a in accounts {
+                                    match run_scan(
+                                        &notify_state,
+                                        a.id as u32,
+                                        false,
+                                        crate::sync::DEFAULT_TRANSPARENT_LIMIT,
+                                    )
+                                    .await
+                                    {
+                                        Ok(Some(_)) => any_scanned = true,
+                                        Ok(None) => {
+                                            tracing::info!("scan already in progress, skipping notify for this block");
+                                            break;
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!("scan failed for account {}: {e:#}", a.id);
+                                        }
+                                    }
+                                }
+                                any_scanned
+                            }
+                            Err(e) => {
+                                tracing::warn!("list_accounts failed: {e:#}");
+                                false
+                            }
+                        },
+                        Err(e) => {
+                            tracing::warn!("get_connection failed: {e:#}");
+                            false
+                        }
+                    };
+
+                    if scanned {
+                        if let Some(url) = &notify_state.notify_block_url {
+                            notify_block(&notify_state.http, url, height).await;
+                        }
+                    }
                     }
                 }
             }
@@ -1289,6 +1401,7 @@ async fn notify_tx(http: &reqwest::Client, url_template: &str, txid: &str, accou
     let url = url_template
         .replace("%s", txid)
         .replace("%w", &account_index.to_string());
+    tracing::info!("notify_tx url: {url}");
     if let Err(e) = http.get(&url).send().await {
         tracing::warn!("notify_tx failed for {txid}: {e:#}");
     }
@@ -1315,6 +1428,7 @@ pub async fn run_rpc_server(
         notify_tx_url,
         notify_block_url,
         address_creation_lock: Arc::new(Mutex::new(())),
+        scan_lock: Arc::new(Mutex::new(())),
         http: reqwest::Client::new(),
     };
 
