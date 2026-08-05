@@ -60,8 +60,14 @@ async fn main() -> Result<()> {
     rustls::crypto::ring::default_provider()
         .install_default()
         .unwrap();
+    // Without an EnvFilter the subscriber is pinned at INFO and RUST_LOG is
+    // silently ignored, so no debug! output from the sync path is ever visible.
     let subscriber = tracing_subscriber::fmt()
         .with_ansi(false)
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
         .compact()
         .finish();
     let c = Config::parse();
