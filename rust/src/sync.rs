@@ -40,6 +40,9 @@ use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
 pub const DEFAULT_TRANSPARENT_LIMIT: u32 = 100u32;
+/// Unused look-ahead addresses kept beyond the highest address that has
+/// received funds (BIP44 gap limit, as used by other Zcash wallets).
+pub const TRANSPARENT_GAP_LIMIT: u32 = 20u32;
 
 pub use zcash_trees::types::SyncError;
 pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
@@ -308,6 +311,63 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
     Ok(current_height)
 }
 
+/// Materialize look-ahead transparent addresses so `transparent_sync` actually
+/// queries them. Without this only addresses the user happened to generate are
+/// ever scanned, so funds received on the next unused address stay invisible
+/// no matter how far the chain is synced.
+async fn extend_transparent_gap(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<()> {
+    let tk = select_account_transparent(&mut *connection, account, 0).await?;
+    let Some(xvk) = tk.xvk.as_ref() else {
+        return Ok(()); // imported single address / no xpub: nothing to derive
+    };
+    for scope in 0..2u32 {
+        let (last_used,): (Option<u32>,) = sqlx::query_as(
+            "SELECT MAX(ta.dindex) FROM transparent_address_accounts ta
+            JOIN notes n ON n.taddress = ta.id_taddress
+            WHERE ta.account = ?1 AND ta.scope = ?2",
+        )
+        .bind(account)
+        .bind(scope)
+        .fetch_one(&mut *connection)
+        .await?;
+        let (last_stored,): (Option<u32>,) = sqlx::query_as(
+            "SELECT MAX(dindex) FROM transparent_address_accounts
+            WHERE account = ?1 AND scope = ?2",
+        )
+        .bind(account)
+        .bind(scope)
+        .fetch_one(&mut *connection)
+        .await?;
+
+        let target = last_used.map_or(TRANSPARENT_GAP_LIMIT - 1, |u| u + TRANSPARENT_GAP_LIMIT);
+        let start = last_stored.map_or(0, |h| h + 1);
+        for dindex in start..=target {
+            let (pk, taddr) = derive_transparent_address(xvk, scope, dindex, false)?;
+            let sk = tk
+                .xsk
+                .as_ref()
+                .map(|xsk| derive_transparent_sk(xsk, scope, dindex))
+                .transpose()?;
+            store_account_transparent_addr(
+                &mut *connection,
+                account,
+                scope,
+                dindex,
+                sk,
+                &pk,
+                &taddr.encode(network),
+                false,
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn transparent_sync(
     network: &Network,
@@ -324,6 +384,12 @@ pub(crate) async fn transparent_sync(
         "transparent_sync: scanning accounts {:?} from height {} to {} with limit {}",
         accounts, start_height, end_height, limit
     );
+    // Keep a gap-limit window of look-ahead addresses before building the scan
+    // list below, otherwise addresses that were never generated locally are
+    // never queried and their funds are missed.
+    for account in accounts {
+        extend_transparent_gap(network, &mut *connection, *account).await?;
+    }
     for account in accounts {
         // scan the most recent receive and change addresses, bounded by `limit`
         let mut rows = sqlx::query("
