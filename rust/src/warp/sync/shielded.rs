@@ -116,14 +116,16 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         tree_state: Edge,
     ) -> Result<Self> {
         let mut keys = vec![];
-        for (id, use_internal) in accounts.iter() {
+        for (id, _use_internal) in accounts.iter() {
             if let Some((ivk, nk)) = P::extract_ivk(&mut *connection, *id, 0).await? {
                 keys.push((*id, 0u8, ivk, nk));
             }
-            if *use_internal {
-                if let Some((ivk, nk)) = P::extract_ivk(&mut *connection, *id, 1).await? {
-                    keys.push((*id, 1u8, ivk, nk));
-                }
+            // Always trial-decrypt with the internal scope key. `use_internal`
+            // only decides where *new* change is sent (see pay/plan.rs); gating
+            // discovery on it makes notes already received on the internal
+            // scope permanently invisible and their value disappear.
+            if let Some((ivk, nk)) = P::extract_ivk(&mut *connection, *id, 1).await? {
+                keys.push((*id, 1u8, ivk, nk));
             }
         }
 
