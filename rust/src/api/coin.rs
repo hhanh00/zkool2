@@ -30,7 +30,9 @@ pub struct Coin {
     pub db_filepath: String,
     pub url: String,
     pub server_type: u8,
-    pub use_tor: bool,
+    /// Transport: 0 = direct, 1 = Tor (arti), 2 = Nym mixnet,
+    /// 3 = external proxy (uses `proxy`).
+    pub transport: u8,
     /// Optional external proxy URL: socks5://, socks5h://, http://, https://.
     /// Empty string means a direct connection.
     pub proxy: String,
@@ -149,9 +151,9 @@ impl Coin {
         Ok(Coin { account, ..self })
     }
 
-    #[cfg_attr(feature = "flutter", frb)]
-    pub fn set_use_tor(self, use_tor: bool) -> Result<Coin> {
-        Ok(Coin { use_tor, ..self })
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn set_transport(self, transport: u8) -> Result<Coin> {
+        Ok(Coin { transport, ..self })
     }
 
     #[cfg_attr(feature = "flutter", frb(sync))]
@@ -170,31 +172,31 @@ impl Coin {
 
     pub(crate) async fn client(&self) -> Result<Client> {
         match self.server_type {
-            // lightwalletd (gRPC). Precedence: Tor (arti) > external proxy > direct.
-            0 if self.use_tor => {
-                let channel = connect_over_tor(&self.url).await?;
-                let client = CompactTxStreamerClient::new(channel);
-                Ok(Box::new(client) as Client)
-            }
-
-            0 if !self.proxy.is_empty() => {
-                let channel = connect_over_proxy(&self.url, &self.proxy).await?;
-                let client = CompactTxStreamerClient::new(channel);
-                Ok(Box::new(client) as Client)
-            }
-
+            // lightwalletd (gRPC): transport chosen explicitly by the enum.
             0 => {
-                let mut channel = tonic::transport::Channel::from_shared(self.url.clone())?;
-                if self.url.starts_with("https") {
-                    let tls = ClientTlsConfig::new().with_enabled_roots();
-                    channel = channel.tls_config(tls)?;
-                }
-                let client = CompactTxStreamerClient::connect(channel).await?;
+                let channel = match self.transport {
+                    1 => connect_over_tor(&self.url).await?,
+                    2 => connect_over_nym(&self.url).await?,
+                    3 if !self.proxy.is_empty() => {
+                        connect_over_proxy(&self.url, &self.proxy).await?
+                    }
+                    _ => {
+                        let mut endpoint =
+                            tonic::transport::Channel::from_shared(self.url.clone())?;
+                        if self.url.starts_with("https") {
+                            let tls = ClientTlsConfig::new().with_enabled_roots();
+                            endpoint = endpoint.tls_config(tls)?;
+                        }
+                        endpoint.connect().await?
+                    }
+                };
+                let client = CompactTxStreamerClient::new(channel);
                 Ok(Box::new(client) as Client)
             }
 
             1 => {
-                let client = ZebraClient::new(&self.network(), &self.url, &self.proxy)?;
+                let client =
+                    ZebraClient::new(&self.network(), &self.url, self.transport, &self.proxy)?;
                 Ok(Box::new(client) as Client)
             }
 
@@ -280,6 +282,40 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
             // Convert to a type that implements hyper::rt::Read + Write
             let compat_stream = TokioIo::new(stream);
             Ok::<_, anyhow::Error>(compat_stream)
+        }
+    });
+
+    let mut endpoint = Endpoint::from_shared(url.to_string())?;
+    if url.starts_with("https") {
+        let tls = ClientTlsConfig::new().with_enabled_roots();
+        endpoint = endpoint.tls_config(tls)?;
+    }
+
+    Ok(endpoint.connect_with_connector(connector).await?)
+}
+
+async fn connect_over_nym(url: &str) -> anyhow::Result<Channel> {
+    let uri = url.parse::<Uri>()?;
+
+    let host = uri
+        .host()
+        .ok_or_else(|| anyhow::anyhow!("no host"))?
+        .to_string();
+    let port = uri.port_u16().unwrap_or_else(|| {
+        if uri.scheme_str() == Some("https") {
+            443
+        } else {
+            80
+        }
+    });
+
+    let connector = service_fn(move |_dst| {
+        let host = host.clone();
+        async move {
+            // DNS + TCP both go through the mixnet; TLS (with SNI/cert
+            // checks against the hostname) runs on top via the endpoint.
+            let stream = crate::net::nym::nym_connect(&host, port).await?;
+            Ok::<_, anyhow::Error>(TokioIo::new(stream))
         }
     });
 
@@ -437,7 +473,7 @@ impl Coin {
             db_filepath: String::new(),
             server_type: 0,
             url: String::new(),
-            use_tor: false,
+            transport: 0,
             proxy: String::new(),
         }
     }

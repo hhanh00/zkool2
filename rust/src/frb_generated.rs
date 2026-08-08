@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 151776773;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1757622320;
 
 // Section: executor
 
@@ -1463,17 +1463,16 @@ fn wire__crate__api__coin__coin_set_proxy_impl(
         },
     )
 }
-fn wire__crate__api__coin__coin_set_use_tor_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
+fn wire__crate__api__coin__coin_set_transport_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_set_use_tor",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+            debug_name: "coin_set_transport",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
         move || {
             let message = unsafe {
@@ -1486,16 +1485,14 @@ fn wire__crate__api__coin__coin_set_use_tor_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_use_tor = <bool>::sse_decode(&mut deserializer);
+            let api_transport = <u8>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let output_ok = crate::api::coin::Coin::set_use_tor(api_that, api_use_tor)?;
-                        Ok(output_ok)
-                    })(),
-                )
-            }
+            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                (move || {
+                    let output_ok = crate::api::coin::Coin::set_transport(api_that, api_transport)?;
+                    Ok(output_ok)
+                })(),
+            )
         },
     )
 }
@@ -7195,7 +7192,7 @@ impl SseDecode for crate::api::coin::Coin {
         let mut var_dbFilepath = <String>::sse_decode(deserializer);
         let mut var_url = <String>::sse_decode(deserializer);
         let mut var_serverType = <u8>::sse_decode(deserializer);
-        let mut var_useTor = <bool>::sse_decode(deserializer);
+        let mut var_transport = <u8>::sse_decode(deserializer);
         let mut var_proxy = <String>::sse_decode(deserializer);
         return crate::api::coin::Coin {
             coin: var_coin,
@@ -7203,7 +7200,7 @@ impl SseDecode for crate::api::coin::Coin {
             db_filepath: var_dbFilepath,
             url: var_url,
             server_type: var_serverType,
-            use_tor: var_useTor,
+            transport: var_transport,
             proxy: var_proxy,
         };
     }
@@ -8853,7 +8850,6 @@ fn pde_ffi_dispatcher_primary_impl(
         26 => wire__crate__api__coin__coin_get_name_impl(port, ptr, rust_vec_len, data_len),
         28 => wire__crate__api__coin__coin_open_database_impl(port, ptr, rust_vec_len, data_len),
         29 => wire__crate__api__coin__coin_set_account_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__coin__coin_set_use_tor_impl(port, ptr, rust_vec_len, data_len),
         33 => wire__crate__api__contacts__create_contact_impl(port, ptr, rust_vec_len, data_len),
         34 => {
             wire__crate__api__account__create_new_category_impl(port, ptr, rust_vec_len, data_len)
@@ -9122,6 +9118,7 @@ fn pde_ffi_dispatcher_sync_impl(
         27 => wire__crate__api__coin__coin_new_impl(ptr, rust_vec_len, data_len),
         30 => wire__crate__api__coin__coin_set_lwd_impl(ptr, rust_vec_len, data_len),
         31 => wire__crate__api__coin__coin_set_proxy_impl(ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__coin__coin_set_transport_impl(ptr, rust_vec_len, data_len),
         60 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
         74 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
         79 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
@@ -9335,7 +9332,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::coin::Coin {
             self.db_filepath.into_into_dart().into_dart(),
             self.url.into_into_dart().into_dart(),
             self.server_type.into_into_dart().into_dart(),
-            self.use_tor.into_into_dart().into_dart(),
+            self.transport.into_into_dart().into_dart(),
             self.proxy.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -10690,7 +10687,7 @@ impl SseEncode for crate::api::coin::Coin {
         <String>::sse_encode(self.db_filepath, serializer);
         <String>::sse_encode(self.url, serializer);
         <u8>::sse_encode(self.server_type, serializer);
-        <bool>::sse_encode(self.use_tor, serializer);
+        <u8>::sse_encode(self.transport, serializer);
         <String>::sse_encode(self.proxy, serializer);
     }
 }

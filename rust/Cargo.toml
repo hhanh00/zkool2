@@ -44,6 +44,7 @@ tokio-util = "0.7"
 webpki-roots = "1.0.2"
 
 arti-client = {version = "0.31", features = ["tokio", "native-tls", "onion-service-client"]}
+nym-smolmix = "=1.21.5-rc.3"
 httparse = "1.10.1"
 hyper-util = {version = "0.1", features = ["tokio"]}
 rayon = "1.10"

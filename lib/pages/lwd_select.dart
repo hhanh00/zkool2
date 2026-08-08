@@ -31,12 +31,11 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
       final scheme = server.isTor ? 'http' : 'https';
       url = '$scheme://$url';
     }
-    // Enable Tor for onion addresses
+    // Enable Tor transport for onion addresses
     if (server.isTor) {
       final prefs = SharedPreferencesAsync();
-      await prefs.setBool("use_tor", true);
-      final c = coinContext.coin;
-      await c.setUseTor(useTor: true);
+      await prefs.setInt("transport", 1);
+      coinContext.set(coin: coinContext.coin.setTransport(transport: 1));
       ref.invalidate(appSettingsProvider);
     }
     if (mounted) {

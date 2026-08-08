@@ -103,7 +103,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
       serverType: settings.isLightNode ? 0 : 1,
       url: settings.lwd,
     );
-    c = await c.setUseTor(useTor: settings.useTor);
+    c = c.setTransport(transport: settings.transport);
     c = c.setProxy(proxy: settings.proxy);
     coinContext.set(coin: c);
     final synchronizer = ref.read(synchronizerProvider.notifier);

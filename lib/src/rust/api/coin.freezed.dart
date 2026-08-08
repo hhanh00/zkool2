@@ -19,7 +19,7 @@ mixin _$Coin {
   String get dbFilepath;
   String get url;
   int get serverType;
-  bool get useTor;
+  int get transport;
   String get proxy;
 
   /// Create a copy of Coin
@@ -41,17 +41,18 @@ mixin _$Coin {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.serverType, serverType) ||
                 other.serverType == serverType) &&
-            (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.transport, transport) ||
+                other.transport == transport) &&
             (identical(other.proxy, proxy) || other.proxy == proxy));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
+  int get hashCode => Object.hash(runtimeType, coin, account, dbFilepath, url,
+      serverType, transport, proxy);
 
   @override
   String toString() {
-    return 'Coin(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor, proxy: $proxy)';
+    return 'Coin(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, transport: $transport, proxy: $proxy)';
   }
 }
 
@@ -66,7 +67,7 @@ abstract mixin class $CoinCopyWith<$Res> {
       String dbFilepath,
       String url,
       int serverType,
-      bool useTor,
+      int transport,
       String proxy});
 }
 
@@ -87,7 +88,7 @@ class _$CoinCopyWithImpl<$Res> implements $CoinCopyWith<$Res> {
     Object? dbFilepath = null,
     Object? url = null,
     Object? serverType = null,
-    Object? useTor = null,
+    Object? transport = null,
     Object? proxy = null,
   }) {
     return _then(_self.copyWith(
@@ -111,10 +112,10 @@ class _$CoinCopyWithImpl<$Res> implements $CoinCopyWith<$Res> {
           ? _self.serverType
           : serverType // ignore: cast_nullable_to_non_nullable
               as int,
-      useTor: null == useTor
-          ? _self.useTor
-          : useTor // ignore: cast_nullable_to_non_nullable
-              as bool,
+      transport: null == transport
+          ? _self.transport
+          : transport // ignore: cast_nullable_to_non_nullable
+              as int,
       proxy: null == proxy
           ? _self.proxy
           : proxy // ignore: cast_nullable_to_non_nullable
@@ -215,7 +216,7 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor, String proxy)?
+            int serverType, int transport, String proxy)?
         raw,
     required TResult orElse(),
   }) {
@@ -223,7 +224,7 @@ extension CoinPatterns on Coin {
     switch (_that) {
       case _Coin() when raw != null:
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor, _that.proxy);
+            _that.serverType, _that.transport, _that.proxy);
       case _:
         return orElse();
     }
@@ -245,14 +246,14 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(int coin, int account, String dbFilepath,
-            String url, int serverType, bool useTor, String proxy)
+            String url, int serverType, int transport, String proxy)
         raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin():
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor, _that.proxy);
+            _that.serverType, _that.transport, _that.proxy);
     }
   }
 
@@ -271,14 +272,14 @@ extension CoinPatterns on Coin {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function(int coin, int account, String dbFilepath, String url,
-            int serverType, bool useTor, String proxy)?
+            int serverType, int transport, String proxy)?
         raw,
   }) {
     final _that = this;
     switch (_that) {
       case _Coin() when raw != null:
         return raw(_that.coin, _that.account, _that.dbFilepath, _that.url,
-            _that.serverType, _that.useTor, _that.proxy);
+            _that.serverType, _that.transport, _that.proxy);
       case _:
         return null;
     }
@@ -294,7 +295,7 @@ class _Coin extends Coin {
       required this.dbFilepath,
       required this.url,
       required this.serverType,
-      required this.useTor,
+      required this.transport,
       required this.proxy})
       : super._();
 
@@ -309,7 +310,7 @@ class _Coin extends Coin {
   @override
   final int serverType;
   @override
-  final bool useTor;
+  final int transport;
   @override
   final String proxy;
 
@@ -333,17 +334,18 @@ class _Coin extends Coin {
             (identical(other.url, url) || other.url == url) &&
             (identical(other.serverType, serverType) ||
                 other.serverType == serverType) &&
-            (identical(other.useTor, useTor) || other.useTor == useTor) &&
+            (identical(other.transport, transport) ||
+                other.transport == transport) &&
             (identical(other.proxy, proxy) || other.proxy == proxy));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, coin, account, dbFilepath, url, serverType, useTor, proxy);
+  int get hashCode => Object.hash(runtimeType, coin, account, dbFilepath, url,
+      serverType, transport, proxy);
 
   @override
   String toString() {
-    return 'Coin.raw(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, useTor: $useTor, proxy: $proxy)';
+    return 'Coin.raw(coin: $coin, account: $account, dbFilepath: $dbFilepath, url: $url, serverType: $serverType, transport: $transport, proxy: $proxy)';
   }
 }
 
@@ -359,7 +361,7 @@ abstract mixin class _$CoinCopyWith<$Res> implements $CoinCopyWith<$Res> {
       String dbFilepath,
       String url,
       int serverType,
-      bool useTor,
+      int transport,
       String proxy});
 }
 
@@ -380,7 +382,7 @@ class __$CoinCopyWithImpl<$Res> implements _$CoinCopyWith<$Res> {
     Object? dbFilepath = null,
     Object? url = null,
     Object? serverType = null,
-    Object? useTor = null,
+    Object? transport = null,
     Object? proxy = null,
   }) {
     return _then(_Coin(
@@ -404,10 +406,10 @@ class __$CoinCopyWithImpl<$Res> implements _$CoinCopyWith<$Res> {
           ? _self.serverType
           : serverType // ignore: cast_nullable_to_non_nullable
               as int,
-      useTor: null == useTor
-          ? _self.useTor
-          : useTor // ignore: cast_nullable_to_non_nullable
-              as bool,
+      transport: null == transport
+          ? _self.transport
+          : transport // ignore: cast_nullable_to_non_nullable
+              as int,
       proxy: null == proxy
           ? _self.proxy
           : proxy // ignore: cast_nullable_to_non_nullable
