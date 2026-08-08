@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
+import 'package:zkool/src/rust/api/network.dart' show isValidNymUrl;
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/sapling.dart';
@@ -201,12 +202,29 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                           ButtonSegment(value: 2, label: Text("Nym")),
                           ButtonSegment(value: 3, label: Text("Proxy")),
                         ],
-                        selected: {settings.transport},
-                        onSelectionChanged: onChangedTransport,
+                        selected: {isNymServer ? 0 : settings.transport},
+                        onSelectionChanged: isNymServer ? null : onChangedTransport,
                       ),
                     ],
                   ),
                 ),
+                if (isNymServer)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
+                        const Gap(8),
+                        Expanded(
+                          child: Text(
+                            "Nym service address: traffic is routed natively through the "
+                            "Nym mixnet. Transport selection is disabled.",
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Tooltip(
                   message: "Route connections through an external proxy. "
                       "Supports socks5://, socks5h://, http:// and https://. "
@@ -218,7 +236,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                       hintText: "socks5h://127.0.0.1:9050",
                     ),
                     initialValue: settings.proxy,
-                    enabled: settings.transport == 3,
+                    enabled: !isNymServer && settings.transport == 3,
                     onChanged: onChangedProxy,
                   ),
                 ),
@@ -442,10 +460,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
+  /// Mixnet-native server address (nym:// URL): the mixnet is the
+  /// transport, so the transport selector is forced to Direct.
+  bool get isNymServer => isValidNymUrl(url: settings.lwd);
+
   void onChangedLWD(String? value) async {
     if (value == null) return;
     setState(() {
-      settings = settings.copyWith(lwd: value);
+      settings = settings.copyWith(
+        lwd: value,
+        // Force Direct when a Nym service address is entered.
+        transport: isValidNymUrl(url: value) ? 0 : settings.transport,
+      );
       widget.onChanged(settings);
     });
   }

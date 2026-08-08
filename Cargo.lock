@@ -5049,6 +5049,7 @@ dependencies = [
 [[package]]
 name = "jwt-simple"
 version = "0.12.12"
+source = "git+https://github.com/rachyandco/rust-jwt-simple?rev=e8177eab707d27d7ea94b6799204e48e11b65e19#e8177eab707d27d7ea94b6799204e48e11b65e19"
 dependencies = [
  "anyhow",
  "binstring",
@@ -9227,6 +9228,7 @@ dependencies = [
  "arti-client",
  "bech32 0.11.1",
  "bigdecimal",
+ "bincode 1.3.3",
  "bincode 2.0.1",
  "bip32 0.6.0-pre.1",
  "bip39",
@@ -9269,6 +9271,8 @@ dependencies = [
  "libsqlite3-sys",
  "log",
  "nonempty",
+ "nym-network-defaults",
+ "nym-sdk",
  "nym-smolmix",
  "orchard",
  "pczt",
@@ -9303,6 +9307,7 @@ dependencies = [
  "tower",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "vcard4",
  "warp",
  "webpki-roots 1.0.9",

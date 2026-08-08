@@ -171,6 +171,17 @@ impl Coin {
     }
 
     pub(crate) async fn client(&self) -> Result<Client> {
+        // Mixnet-native endpoint (nym:// URL, a nym-rpc service): bypasses
+        // the transport enum entirely — the mixnet IS the transport.
+        if let Some(recipient) = crate::net::nym_service::parse_nym_url(&self.url) {
+            if self.server_type != 0 {
+                anyhow::bail!("Nym service addresses only support lightwalletd (gRPC) servers");
+            }
+            let channel = crate::net::nym_service::grpc_channel(recipient).await?;
+            let client = CompactTxStreamerClient::new(channel);
+            return Ok(Box::new(client) as Client);
+        }
+
         match self.server_type {
             // lightwalletd (gRPC): transport chosen explicitly by the enum.
             0 => {
