@@ -15,6 +15,10 @@ class LWDSelectPage extends ConsumerStatefulWidget {
   ConsumerState<LWDSelectPage> createState() => _LWDSelectPageState();
 }
 
+/// Default mixnet-native lightwalletd endpoint (nym-rpc service).
+const defaultNymUrl =
+    "nym://BbTPrU1gNTsPiieXdC58xkp5QFSHhUUM98BP1Rm2adf9.GKiGLNQB116YszFwbuweeL2GsrfpHpuUzq6JuqFQ8EEE@ZXSDhRTKU5HgMpH8ma78FftvLiKyZ6jWL1e2U7GD7gQ";
+
 class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
   int _sortColumnIndex = 3; // Uptime
   bool _sortAscending = false; // descending
@@ -31,17 +35,91 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
       final scheme = server.isTor ? 'http' : 'https';
       url = '$scheme://$url';
     }
-    // Enable Tor for onion addresses
+    // Enable Tor transport for onion addresses
     if (server.isTor) {
       final prefs = SharedPreferencesAsync();
-      await prefs.setBool("use_tor", true);
-      final c = coinContext.coin;
-      await c.setUseTor(useTor: true);
+      await prefs.setInt("transport", 1);
+      coinContext.set(coin: coinContext.coin.setTransport(transport: 1));
       ref.invalidate(appSettingsProvider);
     }
     if (mounted) {
       Navigator.of(context).pop(url);
     }
+  }
+
+  /// Select a mixnet-native (nym://) endpoint: the mixnet is the transport,
+  /// so the transport setting is forced to Direct.
+  Future<void> _onSelectNym(String url) async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setInt("transport", 0);
+    coinContext.set(coin: coinContext.coin.setTransport(transport: 0));
+    ref.invalidate(appSettingsProvider);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop(url);
+    messenger.showSnackBar(const SnackBar(
+      content: Text("Nym service address selected — traffic is routed natively "
+          "through the mixnet; transport is forced to Direct."),
+    ));
+  }
+
+  Future<void> _onPasteNym() async {
+    final controller = TextEditingController();
+    String? errorText;
+    final url = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text("Nym service address"),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: "nym://identity.encryption@gateway",
+              errorText: errorText,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                var input = controller.text.trim();
+                if (!input.startsWith("nym://")) input = "nym://$input";
+                if (isValidNymUrl(url: input)) {
+                  Navigator.of(context).pop(input);
+                } else {
+                  setState(() => errorText = "Not a valid Nym address");
+                }
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (url != null) await _onSelectNym(url);
+  }
+
+  Widget _nymSection(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    final shortAddr = "${defaultNymUrl.substring(0, 14)}…${defaultNymUrl.substring(defaultNymUrl.length - 8)}";
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: ListTile(
+        leading: const Icon(Icons.hub, color: Colors.teal),
+        title: const Text("Zcash over Nym mixnet (nym-rpc)"),
+        subtitle: Text(shortAddr, style: tt.bodySmall, overflow: TextOverflow.ellipsis),
+        trailing: IconButton(
+          tooltip: "Paste a Nym service address",
+          icon: const Icon(Icons.edit),
+          onPressed: _onPasteNym,
+        ),
+        onTap: () => _onSelectNym(defaultNymUrl),
+      ),
+    );
   }
 
   @override
@@ -77,142 +155,147 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
       appBar: AppBar(
         title: const Text("Select Lightwalletd Server"),
       ),
-      body: Builder(
-        builder: (context) {
-          if (_loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (_error != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  "Failed to load server list: $_error",
-                  style: tt.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
+      body: Column(
+        children: [
+          _nymSection(context),
+          Expanded(child: _serverList(context, tt)),
+        ],
+      ),
+    );
+  }
 
-          final servers = _servers!;
-          if (servers.isEmpty) {
-            return Center(
-              child: Text("No servers available", style: tt.bodyLarge),
-            );
-          }
+  Widget _serverList(BuildContext context, TextTheme tt) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            "Failed to load server list: $_error",
+            style: tt.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
 
-          // Filter
-          final filtered = servers.where((s) {
-            if (_onlineFilter == null) return true;
-            final isOnline = s.status == "online";
-            return _onlineFilter! ? isOnline : !isOnline;
-          }).toList();
+    final servers = _servers!;
+    if (servers.isEmpty) {
+      return Center(
+        child: Text("No servers available", style: tt.bodyLarge),
+      );
+    }
 
-          // Sort
-          filtered.sort((a, b) {
-            int cmp;
-            switch (_sortColumnIndex) {
-              case 0:
-                cmp = a.url.compareTo(b.url);
-              case 1:
-                cmp = a.ping.compareTo(b.ping);
-              case 2:
-                cmp = a.height.compareTo(b.height);
-              case 3:
-                cmp = a.uptime.compareTo(b.uptime);
-              default:
-                cmp = 0;
-            }
-            return _sortAscending ? cmp : -cmp;
-          });
+    // Filter
+    final filtered = servers.where((s) {
+      if (_onlineFilter == null) return true;
+      final isOnline = s.status == "online";
+      return _onlineFilter! ? isOnline : !isOnline;
+    }).toList();
 
-          return Column(
+    // Sort
+    filtered.sort((a, b) {
+      int cmp;
+      switch (_sortColumnIndex) {
+        case 0:
+          cmp = a.url.compareTo(b.url);
+        case 1:
+          cmp = a.ping.compareTo(b.ping);
+        case 2:
+          cmp = a.height.compareTo(b.height);
+        case 3:
+          cmp = a.uptime.compareTo(b.uptime);
+        default:
+          cmp = 0;
+      }
+      return _sortAscending ? cmp : -cmp;
+    });
+
+    return Column(
+      children: [
+        // Online/offline filter
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
             children: [
-              // Online/offline filter
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    SegmentedButton<bool?>(
-                      segments: const [
-                        ButtonSegment<bool?>(
-                          value: null,
-                          label: Text("All"),
-                        ),
-                        ButtonSegment<bool?>(
-                          value: true,
-                          label: Text("Online"),
-                          icon: Icon(Icons.circle, color: Colors.green, size: 12),
-                        ),
-                        ButtonSegment<bool?>(
-                          value: false,
-                          label: Text("Offline"),
-                          icon: Icon(Icons.circle, color: Colors.red, size: 12),
-                        ),
-                      ],
-                      selected: {_onlineFilter},
-                      onSelectionChanged: (selected) {
-                        _applyFilter(selected.first);
-                      },
-                      style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text("${filtered.length} servers", style: tt.bodySmall),
-                  ],
+              SegmentedButton<bool?>(
+                segments: const [
+                  ButtonSegment<bool?>(
+                    value: null,
+                    label: Text("All"),
+                  ),
+                  ButtonSegment<bool?>(
+                    value: true,
+                    label: Text("Online"),
+                    icon: Icon(Icons.circle, color: Colors.green, size: 12),
+                  ),
+                  ButtonSegment<bool?>(
+                    value: false,
+                    label: Text("Offline"),
+                    icon: Icon(Icons.circle, color: Colors.red, size: 12),
+                  ),
+                ],
+                selected: {_onlineFilter},
+                onSelectionChanged: (selected) {
+                  _applyFilter(selected.first);
+                },
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
-              // Paginated DataTable
-              Expanded(
-                child: PaginatedDataTable2(
-                  key: ValueKey(_onlineFilter),
-                  sortColumnIndex: _sortColumnIndex,
-                  sortAscending: _sortAscending,
-                  headingRowColor: WidgetStateProperty.all(
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
-                  ),
-                  columnSpacing: 12,
-                  horizontalMargin: 12,
-                  minWidth: 600,
-                  fixedLeftColumns: 1,
-                  rowsPerPage: 10,
-                  availableRowsPerPage: const [10, 20, 50],
-                  onRowsPerPageChanged: (_) {},
-                  columns: [
-                    DataColumn2(
-                      label: const Text("Server"),
-                      onSort: (i, asc) => _onSort(i, asc),
-                      size: ColumnSize.L,
-                    ),
-                    DataColumn2(
-                      label: const Text("Ping (ms)"),
-                      numeric: true,
-                      onSort: (i, asc) => _onSort(i, asc),
-                      size: ColumnSize.S,
-                    ),
-                    DataColumn2(
-                      label: const Text("Height"),
-                      numeric: true,
-                      onSort: (i, asc) => _onSort(i, asc),
-                      size: ColumnSize.S,
-                    ),
-                    DataColumn2(
-                      label: const Text("Uptime"),
-                      numeric: true,
-                      onSort: (i, asc) => _onSort(i, asc),
-                      size: ColumnSize.S,
-                    ),
-                  ],
-                  source: _LwdDataSource(filtered, context, _onSelectServer),
-                ),
+              const Spacer(),
+              Text("${filtered.length} servers", style: tt.bodySmall),
+            ],
+          ),
+        ),
+        // Paginated DataTable
+        Expanded(
+          child: PaginatedDataTable2(
+            key: ValueKey(_onlineFilter),
+            sortColumnIndex: _sortColumnIndex,
+            sortAscending: _sortAscending,
+            headingRowColor: WidgetStateProperty.all(
+              Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+            columnSpacing: 12,
+            horizontalMargin: 12,
+            minWidth: 600,
+            fixedLeftColumns: 1,
+            rowsPerPage: 10,
+            availableRowsPerPage: const [10, 20, 50],
+            onRowsPerPageChanged: (_) {},
+            columns: [
+              DataColumn2(
+                label: const Text("Server"),
+                onSort: (i, asc) => _onSort(i, asc),
+                size: ColumnSize.L,
+              ),
+              DataColumn2(
+                label: const Text("Ping (ms)"),
+                numeric: true,
+                onSort: (i, asc) => _onSort(i, asc),
+                size: ColumnSize.S,
+              ),
+              DataColumn2(
+                label: const Text("Height"),
+                numeric: true,
+                onSort: (i, asc) => _onSort(i, asc),
+                size: ColumnSize.S,
+              ),
+              DataColumn2(
+                label: const Text("Uptime"),
+                numeric: true,
+                onSort: (i, asc) => _onSort(i, asc),
+                size: ColumnSize.S,
               ),
             ],
-          );
-        },
-      ),
+            source: _LwdDataSource(filtered, context, _onSelectServer),
+          ),
+        ),
+      ],
     );
   }
 

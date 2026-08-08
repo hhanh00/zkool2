@@ -5,7 +5,6 @@ import 'package:flutter_passkey_service/pigeons/messages.g.dart' show PasskeyExc
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
@@ -15,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/coin.dart';
+import 'package:zkool/src/rust/api/network.dart' show isValidNymUrl;
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/sapling.dart';
@@ -71,7 +71,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "sync_interval", value: settings.syncInterval, c: c);
         await prefs.setBool("pin_lock", settings.needPin);
         await prefs.setBool("offline", settings.offline);
-        await prefs.setBool("use_tor", settings.useTor);
+        await prefs.setInt("transport", settings.transport);
         await putProp(key: "proxy", value: settings.proxy, c: c);
         await prefs.setBool("get_fx", settings.getFx);
         await prefs.setString("coingecko", settings.coingecko);
@@ -81,7 +81,7 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
         await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString(), c: c);
         await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
         c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
-        c = await c.setUseTor(useTor: settings.useTor);
+        c = c.setTransport(transport: settings.transport);
         c = c.setProxy(proxy: settings.proxy);
         await prefs.setBool("vault", settings.vault);
         await prefs.setBool("expert_mode", settings.expertMode);
@@ -190,42 +190,55 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    IconButton.outlined(
-                      tooltip: settings.useTor ? "Disable Arti Tor" : "Enable Arti Tor (embedded Tor client)",
-                      onPressed: onToggleTor,
-                      icon: SvgPicture.asset(
-                        "assets/tor.svg",
-                        width: 22,
-                        height: 22,
-                        colorFilter: ColorFilter.mode(
-                          settings.useTor ? Colors.green : Theme.of(context).colorScheme.primary,
-                          BlendMode.srcIn,
-                        ),
+                Tooltip(
+                  message: "Network transport: connect directly, through the embedded "
+                      "Tor (Arti) client, through the Nym mixnet, or via an external proxy",
+                  child: Row(
+                    children: [
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment(value: 0, label: Text("Direct")),
+                          ButtonSegment(value: 1, label: Text("Tor")),
+                          ButtonSegment(value: 2, label: Text("Nym")),
+                          ButtonSegment(value: 3, label: Text("Proxy")),
+                        ],
+                        selected: {isNymServer ? 0 : settings.transport},
+                        onSelectionChanged: isNymServer ? null : onChangedTransport,
                       ),
-                    ),
-                    const Gap(4),
-                    Text(settings.useTor ? "Arti Tor enabled" : "Arti Tor disabled"),
-                    const Gap(24),
-                    Expanded(
-                      child: Tooltip(
-                        message: "Route connections through an external proxy. "
-                            "Supports socks5://, socks5h://, http:// and https://. "
-                            "Disabled when Arti Tor is enabled.",
-                        child: FormBuilderTextField(
-                          name: "proxy",
-                          decoration: const InputDecoration(
-                            labelText: "HTTP / SOCKS5 Proxy",
-                            hintText: "socks5h://127.0.0.1:9050",
+                    ],
+                  ),
+                ),
+                if (isNymServer)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
+                        const Gap(8),
+                        Expanded(
+                          child: Text(
+                            "Nym service address: traffic is routed natively through the "
+                            "Nym mixnet. Transport selection is disabled.",
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                          initialValue: settings.proxy,
-                          enabled: !settings.useTor,
-                          onChanged: onChangedProxy,
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
+                Tooltip(
+                  message: "Route connections through an external proxy. "
+                      "Supports socks5://, socks5h://, http:// and https://. "
+                      "Used when the Proxy transport is selected.",
+                  child: FormBuilderTextField(
+                    name: "proxy",
+                    decoration: const InputDecoration(
+                      labelText: "HTTP / SOCKS5 Proxy",
+                      hintText: "socks5h://127.0.0.1:9050",
+                    ),
+                    initialValue: settings.proxy,
+                    enabled: !isNymServer && settings.transport == 3,
+                    onChanged: onChangedProxy,
+                  ),
                 ),
                 Tooltip(
                   message: "Number actions per synchronization chunk",
@@ -447,10 +460,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
+  /// Mixnet-native server address (nym:// URL): the mixnet is the
+  /// transport, so the transport selector is forced to Direct.
+  bool get isNymServer => isValidNymUrl(url: settings.lwd);
+
   void onChangedLWD(String? value) async {
     if (value == null) return;
     setState(() {
-      settings = settings.copyWith(lwd: value);
+      settings = settings.copyWith(
+        lwd: value,
+        // Force Direct when a Nym service address is entered.
+        transport: isValidNymUrl(url: value) ? 0 : settings.transport,
+      );
       widget.onChanged(settings);
     });
   }
@@ -487,9 +508,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
-  void onToggleTor() async {
+  void onChangedTransport(Set<int> selection) {
     setState(() {
-      settings = settings.copyWith(useTor: !settings.useTor);
+      settings = settings.copyWith(transport: selection.first);
       widget.onChanged(settings);
     });
   }

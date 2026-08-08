@@ -12,7 +12,6 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use arti_client::TorClient;
 use httparse::Status;
 use reqwest::Url;
 use rustls::{pki_types::ServerName, ClientConfig, RootCertStore};
@@ -20,7 +19,6 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio_rustls::TlsConnector;
-use tor_rtcompat::PreferredRuntime;
 use webpki_roots::TLS_SERVER_ROOTS;
 use zcash_primitives::transaction::OrchardBundle;
 use zcash_primitives::{block::BlockHeader, transaction::Transaction};
@@ -32,17 +30,13 @@ use zcash_protocol::consensus::{BlockHeight, BranchId};
 
 const COMPACT_NOTE_SIZE: usize = 52;
 
-use crate::{
-    api::coin::{Network, TOR},
-    lwd::*,
-    net::LwdServer,
-    IntoAnyhow,
-};
+use crate::{api::coin::Network, lwd::*, net::LwdServer, IntoAnyhow};
 
 #[derive(Clone)]
 pub struct ZebraClient {
     url: String,
     client: reqwest::Client,
+    transport: u8,
 
     ssl: bool,
     host: String,
@@ -52,16 +46,17 @@ pub struct ZebraClient {
 }
 
 impl ZebraClient {
-    pub fn new(network: &Network, url: &str, proxy: &str) -> Result<Self> {
-        // Route Zebra (full node) JSON-RPC through the configured proxy when set.
+    pub fn new(network: &Network, url: &str, transport: u8, proxy: &str) -> Result<Self> {
+        // Direct/proxy Zebra JSON-RPC uses reqwest; the proxy applies only
+        // when the Proxy transport (3) is selected.
         // reqwest natively supports socks5/socks5h/http/https proxy URLs.
-        let client = if proxy.is_empty() {
-            reqwest::Client::new()
-        } else {
+        let client = if transport == 3 && !proxy.is_empty() {
             reqwest::Client::builder()
                 .proxy(reqwest::Proxy::all(proxy).anyhow()?)
                 .build()
                 .anyhow()?
+        } else {
+            reqwest::Client::new()
         };
 
         let url = Url::parse(url).anyhow()?;
@@ -86,6 +81,7 @@ impl ZebraClient {
         Ok(Self {
             url: url.to_string(),
             client,
+            transport,
             ssl,
             host: host.to_string(),
             port,
@@ -118,29 +114,40 @@ impl ZebraClient {
     where
         R: for<'de> Deserialize<'de>,
     {
-        let rep = if let Some(tor_client) = TOR.get() {
-            let tor = &*tor_client.lock().await;
-            self.post_tor(tor, req).await?
-        } else {
-            let body: Value = self
-                .client
-                .post(&self.url)
-                .json(&req)
-                .send()
-                .await?
-                .error_for_status()?
-                .json::<Value>()
-                .await?;
-            if let Some(error) = body.pointer("/error") {
-                if !error.is_null() {
-                    let msg = error
-                        .pointer("/message")
-                        .and_then(|m| m.as_str())
-                        .unwrap_or("unknown error");
-                    anyhow::bail!("JSON RPC error: {}", msg);
-                }
+        let rep = match self.transport {
+            // Tor and Nym hand a raw stream to post_stream; Direct and
+            // Proxy keep the reqwest path.
+            1 => {
+                let tor_client = crate::api::coin::get_tor_client().await.lock().await;
+                let stream = tor_client.connect((self.host.clone(), self.port)).await?;
+                drop(tor_client);
+                self.post_stream(Box::pin(stream), req).await?
             }
-            body
+            2 => {
+                let stream = crate::net::nym::nym_connect(&self.host, self.port).await?;
+                self.post_stream(Box::pin(stream), req).await?
+            }
+            _ => {
+                let body: Value = self
+                    .client
+                    .post(&self.url)
+                    .json(&req)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json::<Value>()
+                    .await?;
+                if let Some(error) = body.pointer("/error") {
+                    if !error.is_null() {
+                        let msg = error
+                            .pointer("/message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("unknown error");
+                        anyhow::bail!("JSON RPC error: {}", msg);
+                    }
+                }
+                body
+            }
         };
         let result = rep
             .pointer("/result")
@@ -149,26 +156,21 @@ impl ZebraClient {
         Ok(res)
     }
 
-    pub async fn post_tor(
+    async fn post_stream(
         &self,
-        tor_client: &TorClient<PreferredRuntime>,
+        stream: Pin<Box<dyn AsyncRW + Send>>,
         req: Value,
     ) -> Result<Value> {
-        let connector = TlsConnector::from(self.tls_config.clone());
-
-        let host = self.host.clone();
-        let server_name: ServerName = host.clone().try_into().anyhow()?;
-
-        let stream = tor_client.connect((host, self.port)).await?;
-
         let mut stream: Pin<Box<dyn AsyncRW + Send>> = if self.ssl {
+            let connector = TlsConnector::from(self.tls_config.clone());
+            let server_name: ServerName = self.host.clone().try_into().anyhow()?;
             let tls_stream = connector
                 .connect(server_name, stream)
                 .await
-                .context("TLS handshake failed over Tor stream")?;
+                .context("TLS handshake failed over transport stream")?;
             Box::pin(tls_stream)
         } else {
-            Box::pin(stream)
+            stream
         };
 
         let request_json = req.to_string();

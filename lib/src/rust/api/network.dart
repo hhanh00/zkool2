@@ -45,6 +45,11 @@ Future<String> getNetworkName({required Coin c}) =>
 Future<List<LWDInfo>> queryLwdList({required int coin}) =>
     RustLib.instance.api.crateApiNetworkQueryLwdList(coin: coin);
 
+/// True when `url` is a mixnet-native server address
+/// (`nym://<identity>.<encryption>@<gateway>`).
+bool isValidNymUrl({required String url}) =>
+    RustLib.instance.api.crateApiNetworkIsValidNymUrl(url: url);
+
 @freezed
 sealed class ExchangeRate with _$ExchangeRate {
   const factory ExchangeRate({
