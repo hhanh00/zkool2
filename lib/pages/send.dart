@@ -832,7 +832,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       }
     }
 
-    final srcPools = form.fields['source pools']?.value ?? (hasTex ? 1 : 15);
+    final srcPools = hasTex ? 1 : (form.fields['source pools']?.value ?? 15);
 
     try {
       final options = PaymentOptions(
