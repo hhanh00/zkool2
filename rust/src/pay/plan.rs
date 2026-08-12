@@ -186,11 +186,16 @@ fn decompose_address(
     let zaddr = ZcashAddress::try_from_encoded(address)?;
 
     if zaddr.can_receive_as(PoolType::Transparent) {
-        let taddr = TransparentAddress::decode(network, address)
-            .map_err(|e| anyhow!("Failed to decode transparent address: {e:?}"))?;
-        let receiver = match taddr {
-            TransparentAddress::PublicKeyHash(hash) => Receiver::P2pkh(hash),
-            TransparentAddress::ScriptHash(hash) => Receiver::P2sh(hash),
+        let receiver = match zaddr.convert_if_network(network.network_type()) {
+            Ok(zcash_keys::address::Address::Tex(data)) => Receiver::P2pkh(data),
+            _ => {
+                let taddr = TransparentAddress::decode(network, address)
+                    .map_err(|e| anyhow!("Failed to decode transparent address: {e:?}"))?;
+                match taddr {
+                    TransparentAddress::PublicKeyHash(hash) => Receiver::P2pkh(hash),
+                    TransparentAddress::ScriptHash(hash) => Receiver::P2sh(hash),
+                }
+            }
         };
         return Ok(ReceiverOption {
             receiver,
@@ -1621,5 +1626,21 @@ mod tests {
             orchard_proving_key_kind(BranchId::Nu7),
             OrchardProvingKeyKind::Zsa,
         );
+    }
+
+    #[test]
+    fn tex_addresses_are_detected() {
+        use super::is_tex;
+        use crate::api::coin::Network;
+        // Test vectors from zcash_address encoding.rs (same hash as the
+        // t1.../tm... P2PKH addresses on the same line).
+        assert!(is_tex(&Network::Main, "tex1s2rt77ggv6q989lr49rkgzmh5slsksa9khdgte").unwrap());
+        assert!(!is_tex(&Network::Main, "t1VmmGiyjVNeCjxDZzg7vZmd99WyzVby9yC").unwrap());
+        assert!(is_tex(
+            &Network::Test,
+            "textest1qyqszqgpqyqszqgpqyqszqgpqyqszqgpfcjgfy"
+        )
+        .unwrap());
+        assert!(!is_tex(&Network::Test, "tm9ofD7kHR7AF8MsJomEzLqGcrLCBkD9gDj").unwrap());
     }
 }
