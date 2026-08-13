@@ -26,6 +26,7 @@ import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
+import 'api/voting.dart';
 import 'api/zsa.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -231,6 +232,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_u_8(dynamic raw);
 
   @protected
+  VotingPirLayout dco_decode_box_autoadd_voting_pir_layout(dynamic raw);
+
+  @protected
   Category dco_decode_category(dynamic raw);
 
   @protected
@@ -374,6 +378,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TxSpend> dco_decode_list_tx_spend(dynamic raw);
+
+  @protected
+  List<VotingEncryptedShare> dco_decode_list_voting_encrypted_share(
+      dynamic raw);
+
+  @protected
+  List<VotingSharePayload> dco_decode_list_voting_share_payload(dynamic raw);
+
+  @protected
+  List<VotingSignedVoteCommitment>
+      dco_decode_list_voting_signed_vote_commitment(dynamic raw);
 
   @protected
   List<ZsaHolding> dco_decode_list_zsa_holding(dynamic raw);
@@ -562,6 +577,48 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray4 dco_decode_usize_array_4(dynamic raw);
 
   @protected
+  VotingDelegationConfirmation dco_decode_voting_delegation_confirmation(
+      dynamic raw);
+
+  @protected
+  VotingDelegationSetup dco_decode_voting_delegation_setup(dynamic raw);
+
+  @protected
+  VotingDelegationSubmission dco_decode_voting_delegation_submission(
+      dynamic raw);
+
+  @protected
+  VotingEncryptedShare dco_decode_voting_encrypted_share(dynamic raw);
+
+  @protected
+  VotingPirLayout dco_decode_voting_pir_layout(dynamic raw);
+
+  @protected
+  VotingPreparedInfo dco_decode_voting_prepared_info(dynamic raw);
+
+  @protected
+  VotingSharePayload dco_decode_voting_share_payload(dynamic raw);
+
+  @protected
+  VotingSignedVoteCommitment dco_decode_voting_signed_vote_commitment(
+      dynamic raw);
+
+  @protected
+  VotingVanWitness dco_decode_voting_van_witness(dynamic raw);
+
+  @protected
+  VotingVoteCommitments dco_decode_voting_vote_commitments(dynamic raw);
+
+  @protected
+  VotingVoteConfirmation dco_decode_voting_vote_confirmation(dynamic raw);
+
+  @protected
+  VotingVotePayloads dco_decode_voting_vote_payloads(dynamic raw);
+
+  @protected
+  VotingVoteSubmission dco_decode_voting_vote_submission(dynamic raw);
+
+  @protected
   ZsaHolding dco_decode_zsa_holding(dynamic raw);
 
   @protected
@@ -741,6 +798,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
 
   @protected
+  VotingPirLayout sse_decode_box_autoadd_voting_pir_layout(
+      SseDeserializer deserializer);
+
+  @protected
   Category sse_decode_category(SseDeserializer deserializer);
 
   @protected
@@ -891,6 +952,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TxSpend> sse_decode_list_tx_spend(SseDeserializer deserializer);
+
+  @protected
+  List<VotingEncryptedShare> sse_decode_list_voting_encrypted_share(
+      SseDeserializer deserializer);
+
+  @protected
+  List<VotingSharePayload> sse_decode_list_voting_share_payload(
+      SseDeserializer deserializer);
+
+  @protected
+  List<VotingSignedVoteCommitment>
+      sse_decode_list_voting_signed_vote_commitment(
+          SseDeserializer deserializer);
 
   @protected
   List<ZsaHolding> sse_decode_list_zsa_holding(SseDeserializer deserializer);
@@ -1084,6 +1158,56 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer);
 
   @protected
+  VotingDelegationConfirmation sse_decode_voting_delegation_confirmation(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingDelegationSetup sse_decode_voting_delegation_setup(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingDelegationSubmission sse_decode_voting_delegation_submission(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingEncryptedShare sse_decode_voting_encrypted_share(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingPirLayout sse_decode_voting_pir_layout(SseDeserializer deserializer);
+
+  @protected
+  VotingPreparedInfo sse_decode_voting_prepared_info(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingSharePayload sse_decode_voting_share_payload(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingSignedVoteCommitment sse_decode_voting_signed_vote_commitment(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingVanWitness sse_decode_voting_van_witness(SseDeserializer deserializer);
+
+  @protected
+  VotingVoteCommitments sse_decode_voting_vote_commitments(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingVoteConfirmation sse_decode_voting_vote_confirmation(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingVotePayloads sse_decode_voting_vote_payloads(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingVoteSubmission sse_decode_voting_vote_submission(
+      SseDeserializer deserializer);
+
+  @protected
   ZsaHolding sse_decode_zsa_holding(SseDeserializer deserializer);
 
   @protected
@@ -1274,6 +1398,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_voting_pir_layout(
+      VotingPirLayout self, SseSerializer serializer);
+
+  @protected
   void sse_encode_category(Category self, SseSerializer serializer);
 
   @protected
@@ -1437,6 +1565,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_tx_spend(List<TxSpend> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_voting_encrypted_share(
+      List<VotingEncryptedShare> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_voting_share_payload(
+      List<VotingSharePayload> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_voting_signed_vote_commitment(
+      List<VotingSignedVoteCommitment> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_zsa_holding(
@@ -1638,6 +1778,58 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_delegation_confirmation(
+      VotingDelegationConfirmation self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_delegation_setup(
+      VotingDelegationSetup self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_delegation_submission(
+      VotingDelegationSubmission self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_encrypted_share(
+      VotingEncryptedShare self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_pir_layout(
+      VotingPirLayout self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_prepared_info(
+      VotingPreparedInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_share_payload(
+      VotingSharePayload self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_signed_vote_commitment(
+      VotingSignedVoteCommitment self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_van_witness(
+      VotingVanWitness self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_vote_commitments(
+      VotingVoteCommitments self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_vote_confirmation(
+      VotingVoteConfirmation self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_vote_payloads(
+      VotingVotePayloads self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_vote_submission(
+      VotingVoteSubmission self, SseSerializer serializer);
 
   @protected
   void sse_encode_zsa_holding(ZsaHolding self, SseSerializer serializer);
