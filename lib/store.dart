@@ -352,8 +352,15 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     String dbName = await prefs.getString("database") ?? appName;
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
-    final useTor = await prefs.getBool("use_tor") ?? false;
     final proxy = (hasDb ? await getProp(key: "proxy", c: c) : null) ?? "";
+    // Transport: 0 = direct, 1 = Tor (arti), 2 = Nym mixnet, 3 = proxy.
+    // Migrate from the legacy use_tor bool / proxy-implies-proxy behavior.
+    int transport = await prefs.getInt("transport") ??
+        ((await prefs.getBool("use_tor") ?? false)
+            ? 1
+            : proxy.isNotEmpty
+                ? 3
+                : 0);
     final getFx = await prefs.getBool("get_fx") ?? false;
     final coingecko = await prefs.getString("coingecko") ?? "";
     final recovery = await prefs.getBool("recovery") ?? false;
@@ -393,7 +400,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       needPin: needPin,
       pinUnlockedAt: DateTime.now(),
       offline: offline,
-      useTor: useTor,
+      transport: transport,
       proxy: proxy,
       getFx: getFx,
       coingecko: coingecko,
@@ -493,7 +500,7 @@ sealed class AppSettings with _$AppSettings {
     required String blockExplorer,
     required String syncInterval, // in blocks
     required String actionsPerSync,
-    required bool useTor,
+    required int transport,
     required String proxy,
     required String coingecko,
     required bool recovery,

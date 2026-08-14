@@ -17,6 +17,13 @@ debug = 1
 debug = 0
 
 [patch.crates-io]
+# -- Nym transport --
+# jwt-simple <=0.12.15 pins rand =0.8.5, which conflicts with the nym
+# crates (rand ^0.8.6); >=0.12.16 conflicts with the librustzcash fork's
+# crypto-common =0.2.0-rc.1 pin via superboring/ml-dsa. Fork of 0.12.12
+# with the rand pin relaxed to ^0.8.5.
+jwt-simple = { git = "https://github.com/rachyandco/rust-jwt-simple", rev = "e8177eab707d27d7ea94b6799204e48e11b65e19" }
+
 # -- ZSA support branches --
 orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "4cf06bc19e52d1e8e43438cdbdd703ac2565bff6" }
 sapling-crypto = { git = "https://github.com/zcash-shielded-assets/sapling-crypto", rev = "4c47c84845436aa1b650bd5367ed4de67421cc0d" }

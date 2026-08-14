@@ -26,7 +26,7 @@ async fn run_mempool(
     match r {
         Ok(_) => {}
         Err(e) => {
-            tracing::error!("Error running mempool: {}", e);
+            tracing::error!("Error running mempool: {:#}", e);
             return Err(e);
         }
     }
@@ -96,7 +96,7 @@ impl Mempool {
         self.cancel_token = Some(ct.clone());
         self.runtime.spawn(async move {
             if let Err(e) = run_mempool(mempool_sink, ct, &c).await {
-                tracing::error!("Error running mempool: {}", e);
+                tracing::error!("Error running mempool: {:#}", e);
             }
         });
         Ok(())
