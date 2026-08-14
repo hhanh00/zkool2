@@ -18,4 +18,5 @@ pub mod sweep;
 pub mod sync;
 pub mod transaction;
 pub mod vault;
+pub mod voting;
 pub mod zsa;
