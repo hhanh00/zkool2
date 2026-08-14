@@ -7,6 +7,8 @@ use tonic::async_trait;
 use crate::{api::coin::Network, lwd::*};
 
 pub mod lwd;
+pub mod nym;
+pub mod nym_service;
 pub mod zebra;
 
 #[async_trait]
