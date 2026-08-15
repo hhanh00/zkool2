@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.28.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.27.0...zkool-v6.28.0-rc) (2026-08-15)
+
+
+### Features
+
+* shielded voting UI (ZIP 262) ([1e5564c](https://github.com/hhanh00/zkool2/commit/1e5564ca8808768b2b2959484e7372f76a2083d2))
+
 ## [6.27.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.1...zkool-v6.27.0) (2026-08-15)
 
 
