@@ -463,6 +463,49 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
           voteNodeUrl: url,
         ));
   }
+
+  /// Persist all settings to prefs/DB props and apply live coin changes
+  /// (lwd/transport/proxy). Called once when leaving the settings page.
+  Future<void> save(AppSettings settings) async {
+    final c = coinContext.coin;
+    final prefs = SharedPreferencesAsync();
+    await prefs.setString("database", settings.dbName);
+    await putProp(key: "is_light_node", value: settings.isLightNode.toString(), c: c);
+    await putProp(key: "lwd", value: settings.lwd, c: c);
+    await putProp(key: "block_explorer", value: settings.blockExplorer, c: c);
+    await putProp(key: "actions_per_sync", value: settings.actionsPerSync, c: c);
+    await putProp(key: "sync_interval", value: settings.syncInterval, c: c);
+    await prefs.setBool("pin_lock", settings.needPin);
+    await prefs.setBool("offline", settings.offline);
+    await prefs.setInt("transport", settings.transport);
+    await putProp(key: "proxy", value: settings.proxy, c: c);
+    await prefs.setBool("get_fx", settings.getFx);
+    await prefs.setString("coingecko", settings.coingecko);
+    await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
+    await putProp(key: "qr_size", value: settings.qrSettings.size.toString(), c: c);
+    await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString(), c: c);
+    await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString(), c: c);
+    await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
+    await prefs.setBool("vault", settings.vault);
+    await prefs.setBool("expert_mode", settings.expertMode);
+    await prefs.setString("palette_name", settings.paletteName);
+    await prefs.setBool("dark_mode", settings.darkMode);
+    await putProp(key: "currency", value: settings.currency, c: c);
+    await putProp(key: "voting_config_url", value: settings.votingConfigUrl, c: c);
+    await putProp(key: "vote_node_url", value: settings.voteNodeUrl, c: c);
+    coinContext.set(
+      coin: c
+          .setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1)
+          .setTransport(transport: settings.transport)
+          .setProxy(proxy: settings.proxy),
+    );
+    ref.read(priceProvider.notifier).setAutoFetchFx(
+      settings.getFx,
+      settings.coingecko,
+      settings.currency,
+    );
+    state = AsyncValue.data(settings);
+  }
 }
 
 @Riverpod(keepAlive: true)
@@ -1310,7 +1353,9 @@ Future<List<VotingRoundInfo>> votingRoundList(Ref ref) async {
 }
 
 /// Resolved and authenticated voting config for the configured source URL.
-/// Resolves fresh on build; on failure falls back to the last cached config.
+/// `build()` returns the last cached resolved config without touching the
+/// network (so merely reading the provider never triggers a fetch); call
+/// `resolve()` to fetch fresh, falling back to cached on failure.
 @Riverpod(keepAlive: true)
 class VotingConfigNotifier extends _$VotingConfigNotifier {
   @override
@@ -1318,7 +1363,7 @@ class VotingConfigNotifier extends _$VotingConfigNotifier {
     final settings = await ref.watch(appSettingsProvider.future);
     final source = settings.votingConfigUrl;
     if (source.isEmpty) return null;
-    return _resolve(source);
+    return votingConfigCached(source: source, c: coinContext.coin);
   }
 
   Future<VotingConfig?> _resolve(String source) async {
@@ -1330,9 +1375,10 @@ class VotingConfigNotifier extends _$VotingConfigNotifier {
     }
   }
 
-  Future<VotingConfig?> resolve() async {
-    final settings = await ref.read(appSettingsProvider.future);
-    final source = settings.votingConfigUrl;
+  /// Resolve the voting config, using [source] when provided or the
+  /// configured URL from app settings otherwise.
+  Future<VotingConfig?> resolve({String? source}) async {
+    source ??= (await ref.read(appSettingsProvider.future)).votingConfigUrl;
     state = const AsyncValue.loading();
     final result = source.isEmpty ? null : await _resolve(source);
     state = AsyncValue.data(result);
