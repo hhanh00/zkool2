@@ -742,6 +742,14 @@ pub async fn get_prop(connection: &mut SqliteConnection, key: &str) -> Result<Op
     Ok(value.map(|v| v.0))
 }
 
+pub async fn delete_prop_prefix(connection: &mut SqliteConnection, prefix: &str) -> Result<()> {
+    sqlx::query("DELETE FROM props WHERE key LIKE ?")
+        .bind(format!("{prefix}%"))
+        .execute(&mut *connection)
+        .await?;
+    Ok(())
+}
+
 pub async fn store_account_metadata(
     connection: &mut SqliteConnection,
     name: &str,
