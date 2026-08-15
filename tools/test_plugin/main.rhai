@@ -12,9 +12,9 @@ fn get_prefixes() {
     return ["444b3030"];  // "DK00" in hex
 }
 
-fn process_memo() {
-    let from_id = memo::read_u8(4);
-    let data_len = memo::read_u64_le(5);
+fn process_memo(memo) {
+    let from_id = memo.read_u8(4);
+    let data_len = memo.read_u64_le(5);
 
     let headers = ["Field", "Value"];
     let rows = [

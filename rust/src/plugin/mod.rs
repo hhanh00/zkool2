@@ -4,7 +4,7 @@
 //! 1. **Install**: download archive → extract to `$DATADIR/plugins/<id>/` → validate manifest →
 //!    create engine → compile script → call `get_prefixes()` → store in DB.
 //! 2. **Load (startup)**: read all enabled plugins from DB → compile AST → cache AST.
-//! 3. **Dispatch**: given memo bytes, find plugins whose prefixes match → call `process_memo()`.
+//! 3. **Dispatch**: given memo bytes, find plugins whose prefixes match → call `process_memo(memo)`.
 //! 4. **Remove**: delete plugin directory → remove DB row → evict AST cache.
 
 pub mod db;
@@ -22,7 +22,7 @@ use std::sync::OnceLock;
 use crate::api::coin::Coin;
 use crate::plugin::db as plugin_db;
 use crate::plugin::rhai_api::{
-    create_sandboxed_engine, extract_prefixes, extract_sections, with_memo_bytes, ParsedMemoCell,
+    create_sandboxed_engine, extract_prefixes, extract_sections, Memo, ParsedMemoCell,
     ParsedMemoSection,
 };
 
@@ -223,18 +223,17 @@ pub async fn parse_memo_with_plugins(c: &Coin, memo_bytes: &[u8]) -> Result<Vec<
             }
         };
 
-        with_memo_bytes(payload, || {
-            match engine.call_fn::<Dynamic>(&mut Scope::new(), &ast, "process_memo", ()) {
-                Ok(result) => {
-                    for section in extract_sections(result) {
-                        sections.push(MemoSection::from(section));
-                    }
-                }
-                Err(e) => {
-                    tracing::warn!("Plugin process_memo failed: {e}");
+        let memo = Memo::new(payload.to_vec());
+        match engine.call_fn::<Dynamic>(&mut Scope::new(), &ast, "process_memo", (memo,)) {
+            Ok(result) => {
+                for section in extract_sections(result) {
+                    sections.push(MemoSection::from(section));
                 }
             }
-        });
+            Err(e) => {
+                tracing::warn!("Plugin process_memo failed: {e}");
+            }
+        }
     }
 
     Ok(sections)
