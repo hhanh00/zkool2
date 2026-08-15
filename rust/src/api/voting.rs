@@ -1844,7 +1844,6 @@ fn config_switch_kind_string(kind: zcash_voting::config::ConfigSwitchKind) -> St
         }
         zcash_voting::config::ConfigSwitchKind::NewChainOrRound => "new_chain_or_round".to_string(),
         zcash_voting::config::ConfigSwitchKind::ProtocolChanged => "protocol_changed".to_string(),
-        _ => "unchanged".to_string(),
     }
 }
 
