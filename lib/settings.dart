@@ -13,9 +13,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zkool/router.dart';
-import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/network.dart' show isValidNymUrl;
-import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/sapling.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -35,7 +33,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
-  late Coin c = coinContext.coin;
   AppSettings? settings;
 
   @override
@@ -61,38 +58,19 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
     if (settings == null) return blank(context);
     return SettingsForm(
       settings!,
-      onChanged: (settings) async {
-        final prefs = SharedPreferencesAsync();
-        await prefs.setString("database", settings.dbName);
-        await putProp(key: "is_light_node", value: settings.isLightNode.toString(), c: c);
-        await putProp(key: "lwd", value: settings.lwd, c: c);
-        await putProp(key: "block_explorer", value: settings.blockExplorer, c: c);
-        await putProp(key: "actions_per_sync", value: settings.actionsPerSync, c: c);
-        await putProp(key: "sync_interval", value: settings.syncInterval, c: c);
-        await prefs.setBool("pin_lock", settings.needPin);
-        await prefs.setBool("offline", settings.offline);
-        await prefs.setInt("transport", settings.transport);
-        await putProp(key: "proxy", value: settings.proxy, c: c);
-        await prefs.setBool("get_fx", settings.getFx);
-        await prefs.setString("coingecko", settings.coingecko);
-        await putProp(key: "qr_enabled", value: settings.qrSettings.enabled.toString(), c: c);
-        await putProp(key: "qr_size", value: settings.qrSettings.size.toString(), c: c);
-        await putProp(key: "qr_ecLevel", value: settings.qrSettings.ecLevel.toString(), c: c);
-        await putProp(key: "qr_delay", value: settings.qrSettings.delay.toString(), c: c);
-        await putProp(key: "qr_repair", value: settings.qrSettings.repair.toString(), c: c);
-        c = c.setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1);
-        c = c.setTransport(transport: settings.transport);
-        c = c.setProxy(proxy: settings.proxy);
-        await prefs.setBool("vault", settings.vault);
-        await prefs.setBool("expert_mode", settings.expertMode);
-        await prefs.setString("palette_name", settings.paletteName);
-        await prefs.setBool("dark_mode", settings.darkMode);
-        await putProp(key: "currency", value: settings.currency, c: c);
-        coinContext.set(coin: c);
-        ref.read(priceProvider.notifier).setAutoFetchFx(settings.getFx, settings.coingecko, settings.currency);
-        ref.invalidate(appSettingsProvider);
-      },
+      // Keep a snapshot of the latest edits; the changes are applied only
+      // when leaving this page (see didPop), matching the sub-page pattern.
+      onChanged: (settings) => this.settings = settings,
     );
+  }
+
+  @override
+  void didPop() {
+    super.didPop();
+    final s = settings;
+    if (s != null) {
+      ref.read(appSettingsProvider.notifier).save(s);
+    }
   }
 }
 
@@ -563,8 +541,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   Future<void> _fetchVotingConfig(BuildContext context) async {
     try {
-      final config =
-          await ref.read(votingConfigProvider.notifier).resolve();
+      final config = await ref
+          .read(votingConfigProvider.notifier)
+          .resolve(source: settings.votingConfigUrl);
       if (!context.mounted) return;
       if (config == null) {
         await showMessage(
