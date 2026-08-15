@@ -619,7 +619,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'7772fb1c14262ec8f76f7d44c600d06358ec5ebb';
+    r'2892f9bcc456a390e78cdbc18d88bd913c00158c';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -1564,17 +1564,23 @@ final class VotingRoundListProvider extends $FunctionalProvider<
 String _$votingRoundListHash() => r'12d2cfda4753a04d9343e21a6637789106c3ffb5';
 
 /// Resolved and authenticated voting config for the configured source URL.
-/// Resolves fresh on build; on failure falls back to the last cached config.
+/// `build()` returns the last cached resolved config without touching the
+/// network (so merely reading the provider never triggers a fetch); call
+/// `resolve()` to fetch fresh, falling back to cached on failure.
 
 @ProviderFor(VotingConfigNotifier)
 const votingConfigProvider = VotingConfigNotifierProvider._();
 
 /// Resolved and authenticated voting config for the configured source URL.
-/// Resolves fresh on build; on failure falls back to the last cached config.
+/// `build()` returns the last cached resolved config without touching the
+/// network (so merely reading the provider never triggers a fetch); call
+/// `resolve()` to fetch fresh, falling back to cached on failure.
 final class VotingConfigNotifierProvider
     extends $AsyncNotifierProvider<VotingConfigNotifier, VotingConfig?> {
   /// Resolved and authenticated voting config for the configured source URL.
-  /// Resolves fresh on build; on failure falls back to the last cached config.
+  /// `build()` returns the last cached resolved config without touching the
+  /// network (so merely reading the provider never triggers a fetch); call
+  /// `resolve()` to fetch fresh, falling back to cached on failure.
   const VotingConfigNotifierProvider._()
       : super(
           from: null,
@@ -1595,10 +1601,12 @@ final class VotingConfigNotifierProvider
 }
 
 String _$votingConfigNotifierHash() =>
-    r'ed064685d2a96f9c26b4e3e40636d03d32287caf';
+    r'bf23634dc2f92cf3ccff2282522f6629e7dc81db';
 
 /// Resolved and authenticated voting config for the configured source URL.
-/// Resolves fresh on build; on failure falls back to the last cached config.
+/// `build()` returns the last cached resolved config without touching the
+/// network (so merely reading the provider never triggers a fetch); call
+/// `resolve()` to fetch fresh, falling back to cached on failure.
 
 abstract class _$VotingConfigNotifier extends $AsyncNotifier<VotingConfig?> {
   FutureOr<VotingConfig?> build();
@@ -1740,7 +1748,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'5dfea23a8350a2f2194fe16b725caffd2a1f33a6';
+    r'1009f94a4ecc110d5b99e5eef2edcc075608246e';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →
